@@ -224,6 +224,81 @@ func RequestTask(c pb.LaforgeClient) {
 			md5hash := taskArgs[1]
 			taskerr := ValidateMD5Hash(filepath, md5hash)
 			RequestTaskStatusRequest(taskerr, clientID, c)
+		case pb.TaskReply_VALIDATOR: // new agent command type processing
+			taskArgs := strings.Split(r.Args, ",")
+			// example validator string
+			// validation_name,
+			validatorName := taskArgs[0]
+			var validationArgs []string
+			if len(taskArgs) > 1 {
+				validationArgs = taskArgs[1:]
+			}
+			switch validatorName {
+			case "net-banner":
+				fmt.Println("hi")
+			case "win-registry-hive":
+				fmt.Println("hi")
+			case "win-netbios-ping":
+				fmt.Println("hi")
+			case "host-ip-config":
+				fmt.Println("hi")
+			case "host-in-subnet":
+				fmt.Println("hi")
+			case "host-ntp-server":
+				fmt.Println("hi")
+			case "linux-apt-installed":
+				fmt.Println("hi")
+			case "linux-yum-installed":
+				fmt.Println("hi")
+			case "linux-ssh-key-authorized":
+				fmt.Println("hi")
+			case "linux-apparmor":
+				fmt.Println("hi")
+			case "linux-selinux":
+				fmt.Println("hi")
+			case "net-tcp-open":
+				fmt.Println("hi")
+			case "net-udp-open":
+				fmt.Println("hi")
+			case "net-http-content-regex":
+				fmt.Println("hi")
+			case "file-exists":
+				fmt.Println("hi")
+			case "file-hash":
+				fmt.Println("hi")
+			case "file-content-regex":
+				fmt.Println("hi")
+			case "dir-exists":
+				fmt.Println("hi")
+			case "user-exists":
+				fmt.Println("hi")
+			case "user-group-membership":
+				fmt.Println("hi")
+			case "host-port-open":
+				fmt.Println("hi")
+			case "host-process-running":
+				fmt.Println("hi")
+			case "host-service-state":
+				fmt.Println("hi")
+			case "net-icmp":
+				fmt.Println("hi")
+			case "net-http-content-hash":
+				fmt.Println("hi")
+			case "file-content-string":
+				fmt.Println("hi")
+			case "file-permission":
+				fmt.Println("hi")
+			case "win-registry-setting":
+				fmt.Println("hi")
+			case "win-domain-membership":
+				fmt.Println("hi")
+			case "host-firewall-port":
+				fmt.Println("hi")
+			case "log-match":
+				fmt.Println("hi")
+
+			}
+
 		default:
 			logger.Infof("Response Message: %v", r)
 			RequestTaskStatusRequest(nil, clientID, c)

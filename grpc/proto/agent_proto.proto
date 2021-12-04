@@ -54,7 +54,8 @@ message TaskReply {
     CREATEUSERPASS = 6;
     ADDTOGROUP = 7;
     EXECUTE = 8;
-    VALIDATE = 9;
+    VALIDATE = 9; // for checking md5 hash only
+    VALIDATOR = 10; // validation task
   }
   Command command = 2;
   string args = 3;
