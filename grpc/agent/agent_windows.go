@@ -4,9 +4,11 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	s "os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -129,4 +131,29 @@ func SystemExecuteCommand(command string, args ...string) (string, error) {
 
 func GetSystemDependencies() []string {
 	return []string{}
+}
+
+// Validate file system
+
+// Validation functions
+func GetNetBanner(portnum int64) (bool, error) { // exists (boolean)
+	return true, nil
+}
+
+func NetHttpContentRegex(full_url string) (string, error) {
+
+	return "false", nil
+}
+
+func FileExists(file_location string) (bool, error) {
+	stat_info, read_err := s.Stat(file_location)
+	if read_err != nil {
+		return false, read_err
+	}
+	return !stat_info.IsDir(), nil
+}
+
+func main() {
+	fmt.Println("windows")
+	fmt.Println(FileExists("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go"))
 }
