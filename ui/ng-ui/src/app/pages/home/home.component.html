@@ -1,0 +1,68 @@
+<div class="page-controls">
+  <button class="btn btn-success"><i class="fab fa-git-alt"></i>Clone Env from Git</button>
+</div>
+<div class="env-list">
+  <div class="env-container">
+    <div class="env env-header">
+      <div class="name">Name</div>
+      <div class="latest-commit">Latest Commit</div>
+      <div class="owner">Owner</div>
+      <div class="team-count">Team Count</div>
+      <div class="network-count">Network Count</div>
+      <div class="host-count">Host Count</div>
+      <div class="controls">Controls</div>
+    </div>
+  </div>
+  <div class="env-container">
+    <div class="env">
+      <div class="name"><b>us-east-01</b></div>
+      <div class="latest-commit"><a href="#">735fbc2</a></div>
+      <div class="owner">emperorcow</div>
+      <div class="team-count">1 Team</div>
+      <div class="network-count">5 Networks</div>
+      <div class="host-count">48 Hosts</div>
+      <div class="controls">
+        <div class="btn-group">
+          <button class="btn btn-warning">Manage</button>
+          <button class="btn btn-success">Build</button>
+          <button class="btn btn-info">Pull</button>
+          <button class="btn btn-danger">Destroy</button>
+        </div>
+      </div>
+    </div>
+    <div class="builds expanded">
+      <div class="build build-header">
+        <div class="commit-hash">Referenced Git Commit</div>
+        <div class="owner">Author</div>
+        <div class="time">Start/End</div>
+        <div class="status">Status</div>
+        <div class="logs">Logs</div>
+        <div class="type">Commit Type</div>
+      </div>
+      <div class="build">
+        <div class="commit-hash"><a href="#">735fbc2</a></div>
+        <div class="owner">BradHacker</div>
+        <div class="time">Started 4 mins ago</div>
+        <div class="status"><span class="badge bg-warning">In Progress</span></div>
+        <div class="logs"><a href="#">View Logs</a></div>
+        <div class="type"><span class="badge bg-info">REBUILD</span></div>
+      </div>
+      <div class="build">
+        <div class="commit-hash"><a href="#">e4be782</a></div>
+        <div class="owner">emperorcow</div>
+        <div class="time">Took 12mins</div>
+        <div class="status"><span class="badge bg-danger">Failed</span></div>
+        <div class="logs"><a href="#">View Logs</a></div>
+        <div class="type"><span class="badge bg-info">REBUILD</span></div>
+      </div>
+      <div class="build">
+        <div class="commit-hash"><a href="#">0f68ac4</a></div>
+        <div class="owner">BradHacker</div>
+        <div class="time">Took 32mins</div>
+        <div class="status"><span class="badge bg-success">Complete</span></div>
+        <div class="logs"><a href="#">View Logs</a></div>
+        <div class="type"><span class="badge bg-dark">ROOT</span></div>
+      </div>
+    </div>
+  </div>
+</div>

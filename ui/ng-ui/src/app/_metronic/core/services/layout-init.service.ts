@@ -2,11 +2,10 @@ import { Injectable } from '@angular/core';
 import { LayoutService } from './layout.service';
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class LayoutInitService {
-  constructor(private layout: LayoutService) {
-  }
+  constructor(private layout: LayoutService) {}
 
   init() {
     this.layout.initConfig();
@@ -23,7 +22,7 @@ export class LayoutInitService {
     // init content
     this.initContent();
     // init aside and aside menu
-    this.initAside();
+    // this.initAside();
 
     // init footer
     this.initFooter();
@@ -36,9 +35,7 @@ export class LayoutInitService {
     const config = this.layout.getConfig();
     const updatedConfig = Object.assign({}, config);
     const subheaderFixed = this.layout.getProp('subheader.fixed');
-    const headerSelfFixedDesktop = this.layout.getProp(
-      'header.self.fixed.desktop'
-    );
+    const headerSelfFixedDesktop = this.layout.getProp('header.self.fixed.desktop');
     if (subheaderFixed && headerSelfFixedDesktop) {
       updatedConfig.subheader.style = 'solid';
     } else {
@@ -49,16 +46,12 @@ export class LayoutInitService {
   }
 
   private initLayout() {
-    const selfBodyBackgroundImage = this.layout.getProp(
-      'self.body.background-image'
-    );
+    const selfBodyBackgroundImage = this.layout.getProp('self.body.background-image');
     if (selfBodyBackgroundImage) {
       document.body.style.backgroundImage = `url("${selfBodyBackgroundImage}")`;
     }
 
-    const selfBodyClass = (
-      this.layout.getProp('self.body.class') || ''
-    ).toString();
+    const selfBodyClass = (this.layout.getProp('self.body.class') || '').toString();
     if (selfBodyClass) {
       const bodyClasses: string[] = selfBodyClass.split(' ');
       bodyClasses.forEach((cssClass) => document.body.classList.add(cssClass));
@@ -70,9 +63,7 @@ export class LayoutInitService {
   // init header and subheader menu
   private initHeader() {
     // Fixed header
-    const headerSelfFixedDesktop = this.layout.getProp(
-      'header.self.fixed.desktop'
-    );
+    const headerSelfFixedDesktop = this.layout.getProp('header.self.fixed.desktop');
     if (headerSelfFixedDesktop) {
       document.body.classList.add('header-fixed');
       this.layout.setCSSClass('header', 'header-fixed');
@@ -80,24 +71,17 @@ export class LayoutInitService {
       document.body.classList.add('header-static');
     }
 
-    const headerSelfFixedMobile = this.layout.getProp(
-      'header.self.fixed.mobile'
-    );
+    const headerSelfFixedMobile = this.layout.getProp('header.self.fixed.mobile');
     if (headerSelfFixedMobile) {
       document.body.classList.add('header-mobile-fixed');
       this.layout.setCSSClass('header_mobile', 'header-mobile-fixed');
     }
 
     // Menu
-    const headerMenuSelfDisplay = this.layout.getProp(
-      'header.menu.self.display'
-    );
+    const headerMenuSelfDisplay = this.layout.getProp('header.menu.self.display');
     const headerMenuSelfLayout = this.layout.getProp('header.menu.self.layout');
     if (headerMenuSelfDisplay) {
-      this.layout.setCSSClass(
-        'header_menu',
-        `header-menu-layout-${headerMenuSelfLayout}`
-      );
+      this.layout.setCSSClass('header_menu', `header-menu-layout-${headerMenuSelfLayout}`);
 
       if (this.layout.getProp('header.menu.self.rootArrow')) {
         this.layout.setCSSClass('header_menu', 'header-menu-root-arrow');
@@ -121,9 +105,7 @@ export class LayoutInitService {
 
     // Fixed content head
     const subheaderFixed = this.layout.getProp('subheader.fixed');
-    const headerSelfFixedDesktop = this.layout.getProp(
-      'header.self.fixed.desktop'
-    );
+    const headerSelfFixedDesktop = this.layout.getProp('header.self.fixed.desktop');
     if (subheaderFixed && headerSelfFixedDesktop) {
       document.body.classList.add('subheader-fixed');
     }
@@ -207,15 +189,9 @@ export class LayoutInitService {
       this.layout.setHTMLAttribute('aside_menu', 'data-menu-scroll', '0');
     }
 
-    const asideMenuSubmenuDropdownHoverTimout = this.layout.getProp(
-      'aside.menu.submenu.dropdown.hoverTimeout'
-    );
+    const asideMenuSubmenuDropdownHoverTimout = this.layout.getProp('aside.menu.submenu.dropdown.hoverTimeout');
     if (asideMenuSubmenuDropdownHoverTimout) {
-      this.layout.setHTMLAttribute(
-        'aside_menu',
-        'data-menu-dropdown-timeout',
-        asideMenuSubmenuDropdownHoverTimout
-      );
+      this.layout.setHTMLAttribute('aside_menu', 'data-menu-dropdown-timeout', asideMenuSubmenuDropdownHoverTimout);
     }
   }
 

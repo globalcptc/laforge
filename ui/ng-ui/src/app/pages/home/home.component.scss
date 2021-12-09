@@ -1,0 +1,109 @@
+@import '../../../dark-theme.scss';
+
+.page-controls {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.env-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  color: white;
+
+  .env-container:first-of-type .env {
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+  }
+
+  .env-container:last-of-type .env {
+    border-bottom-left-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+  }
+
+  .env-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+
+    a {
+      text-decoration: underline;
+    }
+
+    .env {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background-color: $dark-surface-08;
+
+      &:not(.env-header) .name {
+        font-size: 1.25rem;
+      }
+
+      div {
+        flex: 1 1 0;
+        text-align: center;
+      }
+
+      div.controls {
+        min-width: 24rem;
+      }
+
+      div:first-of-type {
+        text-align: left;
+      }
+
+      div:last-of-type {
+        text-align: right;
+      }
+    }
+
+    .env.env-header {
+      color: $dark-text-on-surface-lighter;
+    }
+
+    .builds {
+      width: calc(100% - 2rem);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+
+      .build {
+        width: 100%;
+        padding: 1rem 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: $dark-surface-04;
+
+        div {
+          flex: 1 1 0;
+          text-align: center;
+        }
+
+        div:first-of-type {
+          text-align: left;
+        }
+
+        div:last-of-type {
+          text-align: right;
+        }
+      }
+
+      .build.build-header {
+        color: $dark-text-on-surface-lighter;
+      }
+    }
+  }
+}
