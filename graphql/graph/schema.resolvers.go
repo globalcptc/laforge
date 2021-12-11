@@ -717,6 +717,7 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 
 	commit_info, err := utils.CloneGit(repoURL, repoFolderPath, currentUser.PrivateKeyPath, branchName)
 	if err != nil {
+		r.client.Repository.DeleteOne(entRepo).Exec(ctx)
 		return nil, err
 	}
 
