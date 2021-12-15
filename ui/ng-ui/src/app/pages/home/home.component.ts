@@ -22,6 +22,7 @@ export class HomeComponent implements OnInit {
   environmentsCols: string[] = ['name', 'competition_id', 'build_count', 'revision', 'pull-actions', 'actions'];
   environments: Observable<LaForgeGetEnvironmentsQuery['environments']>;
   gitIsLoading: BehaviorSubject<boolean>;
+  showIconsOnly = false;
 
   constructor(
     private cdRef: ChangeDetectorRef,

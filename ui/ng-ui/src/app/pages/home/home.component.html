@@ -1,4 +1,5 @@
 <div class="page-controls">
+  <mat-slide-toggle [(ngModel)]="showIconsOnly" color="primary">Show Icons Only</mat-slide-toggle>
   <button class="btn btn-success"><i class="fab fa-git-alt"></i>Clone Env from Git</button>
 </div>
 <div class="env-list">
@@ -15,14 +16,107 @@
   </div>
   <div class="env-container">
     <div class="env">
-      <div class="name"><b>us-east-01</b></div>
-      <div class="latest-commit"><a href="#">735fbc2</a></div>
+      <div class="name"><b>us-east-02</b></div>
+      <div class="commit-hash"><a href="#">735fbc2</a></div>
       <div class="owner">emperorcow</div>
       <div class="team-count">1 Team</div>
       <div class="network-count">5 Networks</div>
       <div class="host-count">48 Hosts</div>
       <div class="controls">
-        <div class="btn-group">
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-warning">
+            <ng-container *ngIf="showIconsOnly"><i class="fa fa-project-diagram"></i></ng-container>
+            <ng-container *ngIf="!showIconsOnly">Manage</ng-container>
+          </button>
+          <button class="btn btn-success">
+            <ng-container *ngIf="showIconsOnly"><i class="fa fa-hammer"></i></ng-container>
+            <ng-container *ngIf="!showIconsOnly">Build</ng-container>
+          </button>
+          <button class="btn btn-info">
+            <ng-container *ngIf="showIconsOnly"><i class="fa fa-sync-alt"></i></ng-container>
+            <ng-container *ngIf="!showIconsOnly">Pull</ng-container>
+          </button>
+          <button class="btn btn-danger">
+            <ng-container *ngIf="showIconsOnly"><i class="fa fa-bomb"></i></ng-container>
+            <ng-container *ngIf="!showIconsOnly">Destroy</ng-container>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="builds expanded">
+      <div class="build build-header">
+        <div class="commit-hash">Referenced Git Commit</div>
+        <div class="owner">Author</div>
+        <div class="time">Start/End</div>
+        <div class="status">Status</div>
+        <!-- <div class="logs">Logs</div> -->
+        <div class="type">Commit Type</div>
+        <div class="type">Controls</div>
+      </div>
+      <div class="build">
+        <div class="commit-hash"><a href="#">735fbc2</a></div>
+        <div class="owner">BradHacker</div>
+        <div class="time">Started 4 mins ago</div>
+        <div class="status"><span class="badge bg-warning">In Progress</span></div>
+        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
+        <div class="type"><span class="badge bg-info">REBUILD</span></div>
+        <div class="controls">
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-danger">
+              <ng-container *ngIf="showIconsOnly"><i class="fa fa-times"></i></ng-container>
+              <ng-container *ngIf="!showIconsOnly">Cancel</ng-container>
+            </button>
+            <a class="btn btn-info">
+              <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
+              <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="build">
+        <div class="commit-hash"><a href="#">e4be782</a></div>
+        <div class="owner">emperorcow</div>
+        <div class="time">Took 12mins (00:00 AM)</div>
+        <div class="status"><span class="badge bg-danger">Failed</span></div>
+        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
+        <div class="type"><span class="badge bg-info">REBUILD</span></div>
+        <div class="controls">
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-info">
+              <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
+              <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="build">
+        <div class="commit-hash"><a href="#">0f68ac4</a></div>
+        <div class="owner">BradHacker</div>
+        <div class="time">Took 32mins (00:00 AM)</div>
+        <div class="status"><span class="badge bg-success">Complete</span></div>
+        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
+        <div class="type"><span class="badge bg-dark">ROOT</span></div>
+        <div class="controls">
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-info">
+              <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
+              <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="env-container">
+    <div class="env">
+      <div class="name"><b>us-east-02</b></div>
+      <div class="commit-hash"><a href="#">735fbc2</a></div>
+      <div class="owner">emperorcow</div>
+      <div class="team-count">1 Team</div>
+      <div class="network-count">5 Networks</div>
+      <div class="host-count">48 Hosts</div>
+      <div class="controls">
+        <div class="btn-group btn-group-sm">
           <button class="btn btn-warning">Manage</button>
           <button class="btn btn-success">Build</button>
           <button class="btn btn-info">Pull</button>
@@ -36,32 +130,49 @@
         <div class="owner">Author</div>
         <div class="time">Start/End</div>
         <div class="status">Status</div>
-        <div class="logs">Logs</div>
+        <!-- <div class="logs">Logs</div> -->
         <div class="type">Commit Type</div>
+        <div class="type">Controls</div>
       </div>
       <div class="build">
         <div class="commit-hash"><a href="#">735fbc2</a></div>
         <div class="owner">BradHacker</div>
         <div class="time">Started 4 mins ago</div>
         <div class="status"><span class="badge bg-warning">In Progress</span></div>
-        <div class="logs"><a href="#">View Logs</a></div>
+        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
         <div class="type"><span class="badge bg-info">REBUILD</span></div>
+        <div class="controls">
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-danger">Cancel</button>
+            <a class="btn btn-info">View Logs</a>
+          </div>
+        </div>
       </div>
       <div class="build">
         <div class="commit-hash"><a href="#">e4be782</a></div>
         <div class="owner">emperorcow</div>
-        <div class="time">Took 12mins</div>
+        <div class="time">Took 12mins (00:00 AM)</div>
         <div class="status"><span class="badge bg-danger">Failed</span></div>
-        <div class="logs"><a href="#">View Logs</a></div>
+        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
         <div class="type"><span class="badge bg-info">REBUILD</span></div>
+        <div class="controls">
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-info">View Logs</a>
+          </div>
+        </div>
       </div>
       <div class="build">
         <div class="commit-hash"><a href="#">0f68ac4</a></div>
         <div class="owner">BradHacker</div>
-        <div class="time">Took 32mins</div>
+        <div class="time">Took 32mins (00:00 AM)</div>
         <div class="status"><span class="badge bg-success">Complete</span></div>
-        <div class="logs"><a href="#">View Logs</a></div>
+        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
         <div class="type"><span class="badge bg-dark">ROOT</span></div>
+        <div class="controls">
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-info">View Logs</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
