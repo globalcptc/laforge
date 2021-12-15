@@ -118,6 +118,14 @@ $dark-text-on-error: #000;
     color: $dark-text-on-surface !important;
   }
 
+  .mat-slide-toggle-label {
+    color: $dark-text-on-surface !important;
+
+    .mat-slide-toggle-bar {
+      background-color: $dark-surface-24;
+    }
+  }
+
   div.splash-screen#splash-screen {
     background-color: $dark-background !important;
   }
