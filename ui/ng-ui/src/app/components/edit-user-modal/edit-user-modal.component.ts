@@ -1,6 +1,8 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { FormControl, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatSelectChange } from '@angular/material/select';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { LaForgeAuthUser, LaForgeRoleLevel, LaForgeProviderType } from '@graphql';
 import { ApiService } from '@services/api/api.service';
 import { BehaviorSubject } from 'rxjs';
@@ -28,11 +30,11 @@ export class EditUserModalComponent implements OnInit {
   constructor(
     public dialogRef: MatDialogRef<EditUserModalComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { user?: LaForgeAuthUser },
-    private api: ApiService
+    private api: ApiService,
+    private snackbar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
-    console.log(this.data.user);
     this.username.setValue(this.data.user?.username ?? '');
     this.firstName.setValue(this.data.user?.first_name ?? '');
     this.lastName.setValue(this.data.user?.last_name ?? '');
@@ -44,6 +46,22 @@ export class EditUserModalComponent implements OnInit {
     this.provider.setValue(this.data.user?.provider ?? 'LOCAL');
 
     this.errorMessage = new BehaviorSubject<string>('');
+  }
+
+  onProviderChange({ value }: MatSelectChange) {
+    if (value === LaForgeProviderType.Local) {
+      this.email.enable();
+      this.password.enable();
+      this.email.setValidators(Validators.required);
+      this.password.setValidators(Validators.required);
+    } else {
+      this.email.setValue('');
+      this.password.setValue('');
+      this.email.disable();
+      this.password.disable();
+      this.email.clearValidators();
+      this.password.clearValidators();
+    }
   }
 
   getUsernameErrorMessage(): string {
@@ -97,6 +115,9 @@ export class EditUserModalComponent implements OnInit {
 
   submit() {
     if (this.data.user) {
+      this.snackbar.open('Updating user info...', null, {
+        panelClass: ['bg-info', 'text-white']
+      });
       this.api
         .modifyUser(this.data.user.id, {
           firstName: this.firstName.value,
@@ -111,10 +132,17 @@ export class EditUserModalComponent implements OnInit {
         .then(
           () => {
             this.dialogRef.close();
+            this.snackbar.open('Updated user successfully.', null, {
+              duration: 1000,
+              panelClass: ['bg-success', 'text-white']
+            });
           },
           (err) => this.errorMessage.next(err)
         );
     } else {
+      this.snackbar.open('Creating user...', null, {
+        panelClass: ['bg-info', 'text-white']
+      });
       this.api
         .createUser({
           username: this.username.value,
@@ -125,6 +153,10 @@ export class EditUserModalComponent implements OnInit {
         .then(
           () => {
             this.dialogRef.close();
+            this.snackbar.open('Created user successfully.', null, {
+              duration: 1000,
+              panelClass: ['bg-success', 'text-white']
+            });
           },
           (err) => this.errorMessage.next(err)
         );
