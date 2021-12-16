@@ -1,11 +1,14 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { FormControl, Validators } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+
 import { LaForgeGetEnvironmentsQuery } from '@graphql';
 import { ApiService } from '@services/api/api.service';
 import { EnvironmentService } from '@services/environment/environment.service';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 import { SubheaderService } from 'src/app/_metronic/partials/layout/subheader/_services/subheader.service';
+
+import { ImportRepoModalComponent } from '@components/import-repo-modal/import-repo-modal.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -14,14 +17,8 @@ import { SubheaderService } from 'src/app/_metronic/partials/layout/subheader/_s
 })
 export class HomeComponent implements OnInit {
   getEnvironmentsLoading: Observable<boolean>;
-  // Validate the gitUrl input is a github ssh url
-  gitUrl = new FormControl('', [Validators.required, Validators.pattern('(.*?)@(.*?):(?:(.*?)/)?(.*?/.*?)')]);
-  repoName = new FormControl('', Validators.required);
-  branchName = new FormControl('', Validators.required);
-  envFilePath = new FormControl('', Validators.required);
   environmentsCols: string[] = ['name', 'competition_id', 'build_count', 'revision', 'pull-actions', 'actions'];
   environments: Observable<LaForgeGetEnvironmentsQuery['environments']>;
-  gitIsLoading: BehaviorSubject<boolean>;
   showIconsOnly = false;
 
   constructor(
@@ -29,7 +26,8 @@ export class HomeComponent implements OnInit {
     private subheader: SubheaderService,
     public envService: EnvironmentService,
     private api: ApiService,
-    private snackbar: MatSnackBar
+    private snackbar: MatSnackBar,
+    private dialog: MatDialog
   ) {
     this.subheader.setTitle('Home');
     this.subheader.setDescription('Overview of all environments and builds');
@@ -37,7 +35,6 @@ export class HomeComponent implements OnInit {
 
     this.getEnvironmentsLoading = this.envService.envIsLoading.asObservable();
     this.environments = this.envService.getEnvironments().asObservable();
-    this.gitIsLoading = new BehaviorSubject(false);
   }
 
   ngOnInit(): void {
@@ -46,35 +43,15 @@ export class HomeComponent implements OnInit {
     // });
   }
 
-  getGitErrorMessage(): string {
-    if (this.gitUrl.hasError('required')) {
-      return 'This field is required';
-    }
-    if (this.gitUrl.hasError('pattern')) {
-      return 'Git URL must be a SSH URL';
-    }
-    return '';
-  }
-
-  getRepoNameErrorMessage(): string {
-    if (this.repoName.hasError('required')) {
-      return 'This field is required';
-    }
-    return '';
-  }
-
-  getBranchNameErrorMessage(): string {
-    if (this.branchName.hasError('required')) {
-      return 'This field is required';
-    }
-    return '';
-  }
-
-  getEnvFilePathErrorMessage(): string {
-    if (this.envFilePath.hasError('required')) {
-      return 'This field is required';
-    }
-    return '';
+  openGitDialog() {
+    this.dialog
+      .open(ImportRepoModalComponent, {
+        width: '50%',
+        height: '75%',
+        autoFocus: true
+      })
+      .afterClosed()
+      .subscribe(() => console.log('TODO: Refresh env list after import')); // TODO: Refresh env list after import
   }
 
   createBuild(envId: string) {
@@ -101,38 +78,6 @@ export class HomeComponent implements OnInit {
         });
       }
     );
-  }
-
-  cloneEnvironmentFromGit() {
-    if (this.gitUrl.errors) return;
-    if (this.repoName.errors) return;
-    if (this.branchName.errors) return;
-    if (this.envFilePath.errors) return;
-    this.gitIsLoading.next(true);
-    this.api
-      .createEnvFromGit({
-        repoURL: this.gitUrl.value,
-        repoName: this.repoName.value,
-        branchName: this.branchName.value,
-        envFilePath: this.envFilePath.value
-      })
-      .then(
-        (env) => {
-          if (env.length > 0) {
-            this.snackbar.open('Environment successfully loaded. Refreshing page...', null, {
-              panelClass: ['bg-success', 'text-white']
-            });
-            window.location.reload();
-          }
-        },
-        (err) => {
-          console.error(err);
-          this.snackbar.open('Error while cloning repo from git. See console/logs for details.', 'Okay', {
-            panelClass: ['bg-danger', 'text-white']
-          });
-        }
-      )
-      .finally(() => this.gitIsLoading.next(false));
   }
 
   updateEnvironmentFromGit(envId: string) {

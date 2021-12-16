@@ -1,6 +1,6 @@
 <div class="page-controls">
   <mat-slide-toggle [(ngModel)]="showIconsOnly" color="primary">Show Icons Only</mat-slide-toggle>
-  <button class="btn btn-success">
+  <button class="btn btn-success" (click)="openGitDialog()" [ngClass]="{ 'btn-icon': showIconsOnly }">
     <ng-container *ngIf="showIconsOnly"><i class="fab fa-git-alt"></i></ng-container>
     <ng-container *ngIf="!showIconsOnly"><i class="fab fa-git-alt"></i>Clone Env from Git</ng-container>
   </button>
@@ -27,19 +27,19 @@
       <div class="host-count">48 Hosts</div>
       <div class="controls">
         <div class="btn-group btn-group-sm">
-          <button class="btn btn-warning">
+          <button class="btn btn-warning" [ngClass]="{ 'btn-icon': showIconsOnly }">
             <ng-container *ngIf="showIconsOnly"><i class="fa fa-project-diagram"></i></ng-container>
             <ng-container *ngIf="!showIconsOnly">Manage</ng-container>
           </button>
-          <button class="btn btn-success">
+          <button class="btn btn-success" [ngClass]="{ 'btn-icon': showIconsOnly }">
             <ng-container *ngIf="showIconsOnly"><i class="fa fa-hammer"></i></ng-container>
             <ng-container *ngIf="!showIconsOnly">Build</ng-container>
           </button>
-          <button class="btn btn-info">
+          <button class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }">
             <ng-container *ngIf="showIconsOnly"><i class="fa fa-sync-alt"></i></ng-container>
             <ng-container *ngIf="!showIconsOnly">Pull</ng-container>
           </button>
-          <button class="btn btn-danger">
+          <button class="btn btn-danger" [ngClass]="{ 'btn-icon': showIconsOnly }">
             <ng-container *ngIf="showIconsOnly"><i class="fa fa-bomb"></i></ng-container>
             <ng-container *ngIf="!showIconsOnly">Destroy</ng-container>
           </button>
@@ -65,11 +65,11 @@
         <div class="type"><span class="badge bg-info">REBUILD</span></div>
         <div class="controls">
           <div class="btn-group btn-group-sm">
-            <button class="btn btn-danger">
+            <button class="btn btn-danger" [ngClass]="{ 'btn-icon': showIconsOnly }">
               <ng-container *ngIf="showIconsOnly"><i class="fa fa-times"></i></ng-container>
               <ng-container *ngIf="!showIconsOnly">Cancel</ng-container>
             </button>
-            <a class="btn btn-info">
+            <a class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }">
               <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
               <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
             </a>
@@ -85,7 +85,7 @@
         <div class="type"><span class="badge bg-info">REBUILD</span></div>
         <div class="controls">
           <div class="btn-group btn-group-sm">
-            <a class="btn btn-info">
+            <a class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }">
               <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
               <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
             </a>
@@ -101,7 +101,7 @@
         <div class="type"><span class="badge bg-dark">ROOT</span></div>
         <div class="controls">
           <div class="btn-group btn-group-sm">
-            <a class="btn btn-info">
+            <a class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }">
               <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
               <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
             </a>

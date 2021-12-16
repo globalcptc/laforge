@@ -264,7 +264,6 @@ export class ApiService {
 
   public async createEnvFromGit(createEnvFromGitInput: {
     repoURL: string;
-    repoName: string;
     branchName: string;
     envFilePath: string;
   }): Promise<LaForgeCreateEnvironmentFromGitMutation['createEnviromentFromRepo']> {

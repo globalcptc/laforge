@@ -337,6 +337,7 @@ export type LaForgeMutation = {
   rebuild: Scalars['Boolean'];
   approveCommit: Scalars['Boolean'];
   cancelCommit: Scalars['Boolean'];
+  createAgentTasks: Array<Maybe<LaForgeAgentTask>>;
   createEnviromentFromRepo: Array<Maybe<LaForgeEnvironment>>;
   updateEnviromentViaPull: Array<Maybe<LaForgeEnvironment>>;
   modifySelfPassword: Scalars['Boolean'];
@@ -385,10 +386,17 @@ export type LaForgeMutationCancelCommitArgs = {
   commitUUID: Scalars['String'];
 };
 
+export type LaForgeMutationCreateAgentTasksArgs = {
+  hostHCLID: Scalars['String'];
+  command: LaForgeAgentCommand;
+  buildUUID: Scalars['String'];
+  args: Array<Scalars['String']>;
+  teams: Array<Scalars['Int']>;
+};
+
 export type LaForgeMutationCreateEnviromentFromRepoArgs = {
   repoURL: Scalars['String'];
   branchName?: Scalars['String'];
-  repoName?: Scalars['String'];
   envFilePath: Scalars['String'];
 };
 
@@ -572,7 +580,9 @@ export type LaForgeQuery = {
   provisionedNetwork?: Maybe<LaForgeProvisionedNetwork>;
   provisionedStep?: Maybe<LaForgeProvisioningStep>;
   plan?: Maybe<LaForgePlan>;
+  getBuilds?: Maybe<Array<Maybe<LaForgeBuild>>>;
   build?: Maybe<LaForgeBuild>;
+  getBuildCommits?: Maybe<Array<Maybe<LaForgeBuildCommit>>>;
   status?: Maybe<LaForgeStatus>;
   agentStatus?: Maybe<LaForgeAgentStatus>;
   getServerTasks?: Maybe<Array<Maybe<LaForgeServerTask>>>;
@@ -582,6 +592,8 @@ export type LaForgeQuery = {
   getAgentTasks?: Maybe<Array<Maybe<LaForgeAgentTask>>>;
   getAllAgentStatus?: Maybe<LaForgeAgentStatusBatch>;
   getAllPlanStatus?: Maybe<LaForgeStatusBatch>;
+  viewServerTaskLogs: Scalars['String'];
+  viewAgentTask: LaForgeAgentTask;
 };
 
 export type LaForgeQueryEnvironmentArgs = {
@@ -608,6 +620,10 @@ export type LaForgeQueryBuildArgs = {
   buildUUID: Scalars['String'];
 };
 
+export type LaForgeQueryGetBuildCommitsArgs = {
+  envUUID: Scalars['String'];
+};
+
 export type LaForgeQueryStatusArgs = {
   statusUUID: Scalars['String'];
 };
@@ -630,6 +646,14 @@ export type LaForgeQueryGetAllPlanStatusArgs = {
   buildUUID: Scalars['String'];
   count: Scalars['Int'];
   offset: Scalars['Int'];
+};
+
+export type LaForgeQueryViewServerTaskLogsArgs = {
+  taskID: Scalars['String'];
+};
+
+export type LaForgeQueryViewAgentTaskArgs = {
+  taskID: Scalars['String'];
 };
 
 export type LaForgeRepository = {
@@ -1231,7 +1255,6 @@ export type LaForgeModifyCurrentUserMutation = { __typename?: 'Mutation' } & {
 
 export type LaForgeCreateEnvironmentFromGitMutationVariables = Exact<{
   repoURL: Scalars['String'];
-  repoName: Scalars['String'];
   branchName: Scalars['String'];
   envFilePath: Scalars['String'];
 }>;
@@ -2230,8 +2253,8 @@ export class LaForgeModifyCurrentUserGQL extends Apollo.Mutation<
   }
 }
 export const CreateEnvironmentFromGitDocument = gql`
-  mutation CreateEnvironmentFromGit($repoURL: String!, $repoName: String!, $branchName: String!, $envFilePath: String!) {
-    createEnviromentFromRepo(repoURL: $repoURL, repoName: $repoName, branchName: $branchName, envFilePath: $envFilePath) {
+  mutation CreateEnvironmentFromGit($repoURL: String!, $branchName: String!, $envFilePath: String!) {
+    createEnviromentFromRepo(repoURL: $repoURL, branchName: $branchName, envFilePath: $envFilePath) {
       id
     }
   }
