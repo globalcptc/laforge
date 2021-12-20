@@ -101,6 +101,7 @@ export type LaForgeBuild = {
   buildToPlan: Array<Maybe<LaForgePlan>>;
   BuildToLatestBuildCommit?: Maybe<LaForgeBuildCommit>;
   BuildToBuildCommits: Array<Maybe<LaForgeBuildCommit>>;
+  BuildToRepoCommit: LaForgeRepoCommit;
 };
 
 export type LaForgeBuildCommit = {
@@ -109,6 +110,7 @@ export type LaForgeBuildCommit = {
   type: LaForgeBuildCommitType;
   revision: Scalars['Int'];
   state: LaForgeBuildCommitState;
+  createdAt: Scalars['Time'];
   BuildCommitToBuild: LaForgeBuild;
   BuildCommitToPlanDiffs: Array<Maybe<LaForgePlanDiff>>;
 };
@@ -656,13 +658,27 @@ export type LaForgeQueryViewAgentTaskArgs = {
   taskID: Scalars['String'];
 };
 
+export type LaForgeRepoCommit = {
+  __typename?: 'RepoCommit';
+  id: Scalars['ID'];
+  revision: Scalars['Int'];
+  hash: Scalars['String'];
+  author: Scalars['String'];
+  committer: Scalars['String'];
+  pgp_signature: Scalars['String'];
+  message: Scalars['String'];
+  tree_hash: Scalars['String'];
+  parent_hashes: Array<Maybe<Scalars['String']>>;
+  RepoCommitToRepository: LaForgeRepository;
+};
+
 export type LaForgeRepository = {
   __typename?: 'Repository';
   id: Scalars['ID'];
   repo_url: Scalars['String'];
   branch_name: Scalars['String'];
   environment_filepath: Scalars['String'];
-  commit_info: Scalars['String'];
+  RepositoryToRepoCommit: Array<Maybe<LaForgeRepoCommit>>;
 };
 
 export enum LaForgeRoleLevel {
@@ -971,6 +987,26 @@ export type LaForgeGetBuildCommitsQuery = { __typename?: 'Query' } & {
   >;
 };
 
+export type LaForgeListBuildCommitsQueryVariables = Exact<{
+  envUUID: Scalars['String'];
+}>;
+
+export type LaForgeListBuildCommitsQuery = { __typename?: 'Query' } & {
+  getBuildCommits?: Maybe<
+    Array<
+      Maybe<
+        { __typename?: 'BuildCommit' } & Pick<LaForgeBuildCommit, 'id' | 'revision' | 'state' | 'type'> & {
+            BuildCommitToBuild: { __typename?: 'Build' } & Pick<LaForgeBuild, 'id'> & {
+                BuildToRepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'author'> & {
+                    RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
+                  };
+              };
+          }
+      >
+    >
+  >;
+};
+
 export type LaForgeApproveBuildCommitMutationVariables = Exact<{
   buildCommitId: Scalars['String'];
 }>;
@@ -996,9 +1032,7 @@ export type LaForgeGetEnvironmentQuery = { __typename?: 'Query' } & {
         tags?: Maybe<Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>>;
         config?: Maybe<Array<Maybe<{ __typename?: 'configMap' } & Pick<LaForgeConfigMap, 'key' | 'value'>>>>;
         EnvironmentToUser: Array<Maybe<{ __typename?: 'User' } & Pick<LaForgeUser, 'id' | 'name' | 'uuid' | 'email'>>>;
-        EnvironmentToRepository: Array<
-          Maybe<{ __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url' | 'branch_name' | 'commit_info'>>
-        >;
+        EnvironmentToRepository: Array<Maybe<{ __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url' | 'branch_name'>>>;
         EnvironmentToBuild: Array<
           Maybe<
             { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
@@ -1130,6 +1164,30 @@ export type LaForgeGetEnvironmentsQuery = { __typename?: 'Query' } & {
       Maybe<
         { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name' | 'competition_id' | 'revision'> & {
             EnvironmentToBuild: Array<Maybe<{ __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'>>>;
+          }
+      >
+    >
+  >;
+};
+
+export type LaForgeListEnvironmentsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type LaForgeListEnvironmentsQuery = { __typename?: 'Query' } & {
+  environments?: Maybe<
+    Array<
+      Maybe<
+        { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name' | 'team_count'> & {
+            EnvironmentToRepository: Array<
+              Maybe<
+                { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'> & {
+                    RepositoryToRepoCommit: Array<
+                      Maybe<{ __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'revision' | 'author' | 'hash'>>
+                    >;
+                  }
+              >
+            >;
+            EnvironmentToNetwork: Array<Maybe<{ __typename?: 'Network' } & Pick<LaForgeNetwork, 'id'>>>;
+            EnvironmentToHost: Array<Maybe<{ __typename?: 'Host' } & Pick<LaForgeHost, 'id'>>>;
           }
       >
     >
@@ -1851,6 +1909,39 @@ export class LaForgeGetBuildCommitsGQL extends Apollo.Query<LaForgeGetBuildCommi
     super(apollo);
   }
 }
+export const ListBuildCommitsDocument = gql`
+  query ListBuildCommits($envUUID: String!) {
+    getBuildCommits(envUUID: $envUUID) {
+      id
+      revision
+      BuildCommitToBuild {
+        id
+        BuildToRepoCommit {
+          id
+          hash
+          author
+          RepoCommitToRepository {
+            id
+            repo_url
+          }
+        }
+      }
+      state
+      type
+    }
+  }
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeListBuildCommitsGQL extends Apollo.Query<LaForgeListBuildCommitsQuery, LaForgeListBuildCommitsQueryVariables> {
+  document = ListBuildCommitsDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
 export const ApproveBuildCommitDocument = gql`
   mutation ApproveBuildCommit($buildCommitId: String!) {
     approveCommit(commitUUID: $buildCommitId)
@@ -1919,7 +2010,6 @@ export const GetEnvironmentDocument = gql`
         id
         repo_url
         branch_name
-        commit_info
       }
       EnvironmentToBuild {
         id
@@ -2102,6 +2192,42 @@ export const GetEnvironmentsDocument = gql`
 })
 export class LaForgeGetEnvironmentsGQL extends Apollo.Query<LaForgeGetEnvironmentsQuery, LaForgeGetEnvironmentsQueryVariables> {
   document = GetEnvironmentsDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
+export const ListEnvironmentsDocument = gql`
+  query ListEnvironments {
+    environments {
+      id
+      name
+      EnvironmentToRepository {
+        id
+        repo_url
+        RepositoryToRepoCommit {
+          id
+          revision
+          author
+          hash
+        }
+      }
+      team_count
+      EnvironmentToNetwork {
+        id
+      }
+      EnvironmentToHost {
+        id
+      }
+    }
+  }
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeListEnvironmentsGQL extends Apollo.Query<LaForgeListEnvironmentsQuery, LaForgeListEnvironmentsQueryVariables> {
+  document = ListEnvironmentsDocument;
 
   constructor(apollo: Apollo.Apollo) {
     super(apollo);

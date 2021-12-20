@@ -68,10 +68,34 @@
       div:last-of-type {
         text-align: right;
       }
+
+      .expand-controls {
+        min-width: 2rem;
+        text-align: center;
+        cursor: pointer;
+
+        i {
+          transition: all ease-out 0.15s;
+        }
+      }
+
+      .expand-controls:hover {
+        i.fa-chevron-down {
+          transform: rotate(180deg);
+        }
+
+        i.fa-chevron-up {
+          transform: rotate(-180deg);
+        }
+      }
     }
 
     .env.env-header {
       color: $dark-text-on-surface-lighter;
+    }
+
+    .env.env-loading {
+      justify-content: center;
     }
 
     .builds {
@@ -82,6 +106,8 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
+      transition: all ease-out 0.3s;
+      overflow: hidden;
 
       .build {
         width: 100%;

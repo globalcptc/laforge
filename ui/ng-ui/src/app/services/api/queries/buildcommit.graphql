@@ -1,3 +1,24 @@
+query ListBuildCommits($envUUID: String!) {
+  getBuildCommits(envUUID: $envUUID) {
+    id
+    revision
+    BuildCommitToBuild {
+      id
+      BuildToRepoCommit {
+        id
+        hash
+        author
+        RepoCommitToRepository {
+          id
+          repo_url
+        }
+      }
+    }
+    state
+    type
+  }
+}
+
 mutation ApproveBuildCommit($buildCommitId: String!) {
   approveCommit(commitUUID: $buildCommitId)
 }

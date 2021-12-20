@@ -1,6 +1,7 @@
 import { APP_BASE_HREF } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { NgModule, APP_INITIALIZER } from '@angular/core';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { environment } from '@env';
@@ -64,7 +65,8 @@ export function getHighlightLanguages() {
     AppRoutingModule,
     InlineSVGModule.forRoot(),
     NgbModule,
-    GraphQLModule
+    GraphQLModule,
+    MatSnackBarModule
   ],
   exports: [],
   providers: [

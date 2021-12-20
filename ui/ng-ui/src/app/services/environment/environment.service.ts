@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   LaForgeAgentStatusFieldsFragment,
   LaForgeAgentTaskFieldsFragment,
@@ -57,6 +58,7 @@ export class EnvironmentService {
 
   constructor(
     private api: ApiService,
+    private snackbar: MatSnackBar,
     private getEnvironmentInfoGQL: LaForgeGetEnvironmentGQL,
     private getBuildTreeGQL: LaForgeGetBuildTreeGQL,
     private subscribeUpdatedStatus: LaForgeSubscribeUpdatedStatusGQL,
@@ -131,13 +133,25 @@ export class EnvironmentService {
   }
 
   public initEnvironments() {
-    this.api.pullEnvironments().then((envs) => {
-      this.environments.next(envs);
-      if (localStorage.getItem('selected_env') && localStorage.getItem('selected_build')) {
-        console.log(`currently selected build: ${localStorage.getItem('selected_build')}`);
-        this.setCurrentEnv(localStorage.getItem('selected_env'), localStorage.getItem('selected_build'));
-      }
-    });
+    this.envIsLoading.next(true);
+    this.api
+      .pullEnvironments()
+      .then(
+        (envs) => {
+          this.environments.next(envs);
+          if (localStorage.getItem('selected_env') && localStorage.getItem('selected_build')) {
+            console.log(`currently selected build: ${localStorage.getItem('selected_build')}`);
+            this.setCurrentEnv(localStorage.getItem('selected_env'), localStorage.getItem('selected_build'));
+          }
+        },
+        (err) => {
+          console.error(err);
+          this.snackbar.open('Error loading environments. See debug console for more info.', 'Okay', {
+            panelClass: ['bg-danger', 'text-white']
+          });
+        }
+      )
+      .finally(() => this.envIsLoading.next(false));
   }
 
   public initPlanStatuses(): Promise<boolean> {
