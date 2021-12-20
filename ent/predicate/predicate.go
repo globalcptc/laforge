@@ -87,6 +87,9 @@ type ProvisionedNetwork func(*sql.Selector)
 // ProvisioningStep is the predicate function for provisioningstep builders.
 type ProvisioningStep func(*sql.Selector)
 
+// RepoCommit is the predicate function for repocommit builders.
+type RepoCommit func(*sql.Selector)
+
 // Repository is the predicate function for repository builders.
 type Repository func(*sql.Selector)
 

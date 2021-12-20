@@ -44,6 +44,7 @@ func (Build) Edges() []ent.Edge {
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
+		edge.To("BuildToRepoCommit", RepoCommit.Type).Unique(),
 		edge.From("BuildToProvisionedNetwork", ProvisionedNetwork.Type).
 			Ref("ProvisionedNetworkToBuild"),
 		edge.From("BuildToTeam", Team.Type).

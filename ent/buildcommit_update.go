@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -52,6 +53,20 @@ func (bcu *BuildCommitUpdate) AddRevision(i int) *BuildCommitUpdate {
 // SetState sets the "state" field.
 func (bcu *BuildCommitUpdate) SetState(b buildcommit.State) *BuildCommitUpdate {
 	bcu.mutation.SetState(b)
+	return bcu
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (bcu *BuildCommitUpdate) SetCreatedAt(t time.Time) *BuildCommitUpdate {
+	bcu.mutation.SetCreatedAt(t)
+	return bcu
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (bcu *BuildCommitUpdate) SetNillableCreatedAt(t *time.Time) *BuildCommitUpdate {
+	if t != nil {
+		bcu.SetCreatedAt(*t)
+	}
 	return bcu
 }
 
@@ -237,6 +252,13 @@ func (bcu *BuildCommitUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: buildcommit.FieldState,
 		})
 	}
+	if value, ok := bcu.mutation.CreatedAt(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: buildcommit.FieldCreatedAt,
+		})
+	}
 	if bcu.mutation.BuildCommitToBuildCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -367,6 +389,20 @@ func (bcuo *BuildCommitUpdateOne) AddRevision(i int) *BuildCommitUpdateOne {
 // SetState sets the "state" field.
 func (bcuo *BuildCommitUpdateOne) SetState(b buildcommit.State) *BuildCommitUpdateOne {
 	bcuo.mutation.SetState(b)
+	return bcuo
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (bcuo *BuildCommitUpdateOne) SetCreatedAt(t time.Time) *BuildCommitUpdateOne {
+	bcuo.mutation.SetCreatedAt(t)
+	return bcuo
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (bcuo *BuildCommitUpdateOne) SetNillableCreatedAt(t *time.Time) *BuildCommitUpdateOne {
+	if t != nil {
+		bcuo.SetCreatedAt(*t)
+	}
 	return bcuo
 }
 
@@ -574,6 +610,13 @@ func (bcuo *BuildCommitUpdateOne) sqlSave(ctx context.Context) (_node *BuildComm
 			Type:   field.TypeEnum,
 			Value:  value,
 			Column: buildcommit.FieldState,
+		})
+	}
+	if value, ok := bcuo.mutation.CreatedAt(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: buildcommit.FieldCreatedAt,
 		})
 	}
 	if bcuo.mutation.BuildCommitToBuildCleared() {

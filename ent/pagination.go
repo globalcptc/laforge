@@ -41,6 +41,7 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
@@ -6393,6 +6394,233 @@ func (ps *ProvisioningStep) ToEdge(order *ProvisioningStepOrder) *ProvisioningSt
 	return &ProvisioningStepEdge{
 		Node:   ps,
 		Cursor: order.Field.toCursor(ps),
+	}
+}
+
+// RepoCommitEdge is the edge representation of RepoCommit.
+type RepoCommitEdge struct {
+	Node   *RepoCommit `json:"node"`
+	Cursor Cursor      `json:"cursor"`
+}
+
+// RepoCommitConnection is the connection containing edges to RepoCommit.
+type RepoCommitConnection struct {
+	Edges      []*RepoCommitEdge `json:"edges"`
+	PageInfo   PageInfo          `json:"pageInfo"`
+	TotalCount int               `json:"totalCount"`
+}
+
+// RepoCommitPaginateOption enables pagination customization.
+type RepoCommitPaginateOption func(*repoCommitPager) error
+
+// WithRepoCommitOrder configures pagination ordering.
+func WithRepoCommitOrder(order *RepoCommitOrder) RepoCommitPaginateOption {
+	if order == nil {
+		order = DefaultRepoCommitOrder
+	}
+	o := *order
+	return func(pager *repoCommitPager) error {
+		if err := o.Direction.Validate(); err != nil {
+			return err
+		}
+		if o.Field == nil {
+			o.Field = DefaultRepoCommitOrder.Field
+		}
+		pager.order = &o
+		return nil
+	}
+}
+
+// WithRepoCommitFilter configures pagination filter.
+func WithRepoCommitFilter(filter func(*RepoCommitQuery) (*RepoCommitQuery, error)) RepoCommitPaginateOption {
+	return func(pager *repoCommitPager) error {
+		if filter == nil {
+			return errors.New("RepoCommitQuery filter cannot be nil")
+		}
+		pager.filter = filter
+		return nil
+	}
+}
+
+type repoCommitPager struct {
+	order  *RepoCommitOrder
+	filter func(*RepoCommitQuery) (*RepoCommitQuery, error)
+}
+
+func newRepoCommitPager(opts []RepoCommitPaginateOption) (*repoCommitPager, error) {
+	pager := &repoCommitPager{}
+	for _, opt := range opts {
+		if err := opt(pager); err != nil {
+			return nil, err
+		}
+	}
+	if pager.order == nil {
+		pager.order = DefaultRepoCommitOrder
+	}
+	return pager, nil
+}
+
+func (p *repoCommitPager) applyFilter(query *RepoCommitQuery) (*RepoCommitQuery, error) {
+	if p.filter != nil {
+		return p.filter(query)
+	}
+	return query, nil
+}
+
+func (p *repoCommitPager) toCursor(rc *RepoCommit) Cursor {
+	return p.order.Field.toCursor(rc)
+}
+
+func (p *repoCommitPager) applyCursors(query *RepoCommitQuery, after, before *Cursor) *RepoCommitQuery {
+	for _, predicate := range cursorsToPredicates(
+		p.order.Direction, after, before,
+		p.order.Field.field, DefaultRepoCommitOrder.Field.field,
+	) {
+		query = query.Where(predicate)
+	}
+	return query
+}
+
+func (p *repoCommitPager) applyOrder(query *RepoCommitQuery, reverse bool) *RepoCommitQuery {
+	direction := p.order.Direction
+	if reverse {
+		direction = direction.reverse()
+	}
+	query = query.Order(direction.orderFunc(p.order.Field.field))
+	if p.order.Field != DefaultRepoCommitOrder.Field {
+		query = query.Order(direction.orderFunc(DefaultRepoCommitOrder.Field.field))
+	}
+	return query
+}
+
+// Paginate executes the query and returns a relay based cursor connection to RepoCommit.
+func (rc *RepoCommitQuery) Paginate(
+	ctx context.Context, after *Cursor, first *int,
+	before *Cursor, last *int, opts ...RepoCommitPaginateOption,
+) (*RepoCommitConnection, error) {
+	if err := validateFirstLast(first, last); err != nil {
+		return nil, err
+	}
+	pager, err := newRepoCommitPager(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if rc, err = pager.applyFilter(rc); err != nil {
+		return nil, err
+	}
+
+	conn := &RepoCommitConnection{Edges: []*RepoCommitEdge{}}
+	if !hasCollectedField(ctx, edgesField) || first != nil && *first == 0 || last != nil && *last == 0 {
+		if hasCollectedField(ctx, totalCountField) ||
+			hasCollectedField(ctx, pageInfoField) {
+			count, err := rc.Count(ctx)
+			if err != nil {
+				return nil, err
+			}
+			conn.TotalCount = count
+			conn.PageInfo.HasNextPage = first != nil && count > 0
+			conn.PageInfo.HasPreviousPage = last != nil && count > 0
+		}
+		return conn, nil
+	}
+
+	if (after != nil || first != nil || before != nil || last != nil) && hasCollectedField(ctx, totalCountField) {
+		count, err := rc.Clone().Count(ctx)
+		if err != nil {
+			return nil, err
+		}
+		conn.TotalCount = count
+	}
+
+	rc = pager.applyCursors(rc, after, before)
+	rc = pager.applyOrder(rc, last != nil)
+	var limit int
+	if first != nil {
+		limit = *first + 1
+	} else if last != nil {
+		limit = *last + 1
+	}
+	if limit > 0 {
+		rc = rc.Limit(limit)
+	}
+
+	if field := getCollectedField(ctx, edgesField, nodeField); field != nil {
+		rc = rc.collectField(graphql.GetOperationContext(ctx), *field)
+	}
+
+	nodes, err := rc.All(ctx)
+	if err != nil || len(nodes) == 0 {
+		return conn, err
+	}
+
+	if len(nodes) == limit {
+		conn.PageInfo.HasNextPage = first != nil
+		conn.PageInfo.HasPreviousPage = last != nil
+		nodes = nodes[:len(nodes)-1]
+	}
+
+	var nodeAt func(int) *RepoCommit
+	if last != nil {
+		n := len(nodes) - 1
+		nodeAt = func(i int) *RepoCommit {
+			return nodes[n-i]
+		}
+	} else {
+		nodeAt = func(i int) *RepoCommit {
+			return nodes[i]
+		}
+	}
+
+	conn.Edges = make([]*RepoCommitEdge, len(nodes))
+	for i := range nodes {
+		node := nodeAt(i)
+		conn.Edges[i] = &RepoCommitEdge{
+			Node:   node,
+			Cursor: pager.toCursor(node),
+		}
+	}
+
+	conn.PageInfo.StartCursor = &conn.Edges[0].Cursor
+	conn.PageInfo.EndCursor = &conn.Edges[len(conn.Edges)-1].Cursor
+	if conn.TotalCount == 0 {
+		conn.TotalCount = len(nodes)
+	}
+
+	return conn, nil
+}
+
+// RepoCommitOrderField defines the ordering field of RepoCommit.
+type RepoCommitOrderField struct {
+	field    string
+	toCursor func(*RepoCommit) Cursor
+}
+
+// RepoCommitOrder defines the ordering of RepoCommit.
+type RepoCommitOrder struct {
+	Direction OrderDirection        `json:"direction"`
+	Field     *RepoCommitOrderField `json:"field"`
+}
+
+// DefaultRepoCommitOrder is the default ordering of RepoCommit.
+var DefaultRepoCommitOrder = &RepoCommitOrder{
+	Direction: OrderDirectionAsc,
+	Field: &RepoCommitOrderField{
+		field: repocommit.FieldID,
+		toCursor: func(rc *RepoCommit) Cursor {
+			return Cursor{ID: rc.ID}
+		},
+	},
+}
+
+// ToEdge converts RepoCommit into RepoCommitEdge.
+func (rc *RepoCommit) ToEdge(order *RepoCommitOrder) *RepoCommitEdge {
+	if order == nil {
+		order = DefaultRepoCommitOrder
+	}
+	return &RepoCommitEdge{
+		Node:   rc,
+		Cursor: order.Field.toCursor(rc),
 	}
 }
 

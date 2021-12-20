@@ -391,6 +391,34 @@ func HasBuildToLatestBuildCommitWith(preds ...predicate.BuildCommit) predicate.B
 	})
 }
 
+// HasBuildToRepoCommit applies the HasEdge predicate on the "BuildToRepoCommit" edge.
+func HasBuildToRepoCommit() predicate.Build {
+	return predicate.Build(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(BuildToRepoCommitTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, BuildToRepoCommitTable, BuildToRepoCommitColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBuildToRepoCommitWith applies the HasEdge predicate on the "BuildToRepoCommit" edge with a given conditions (other predicates).
+func HasBuildToRepoCommitWith(preds ...predicate.RepoCommit) predicate.Build {
+	return predicate.Build(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(BuildToRepoCommitInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, BuildToRepoCommitTable, BuildToRepoCommitColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasBuildToProvisionedNetwork applies the HasEdge predicate on the "BuildToProvisionedNetwork" edge.
 func HasBuildToProvisionedNetwork() predicate.Build {
 	return predicate.Build(func(s *sql.Selector) {

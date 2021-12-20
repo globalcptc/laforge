@@ -16,6 +16,7 @@ import (
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/google/uuid"
@@ -118,6 +119,25 @@ func (bc *BuildCreate) SetNillableBuildToLatestBuildCommitID(id *uuid.UUID) *Bui
 // SetBuildToLatestBuildCommit sets the "BuildToLatestBuildCommit" edge to the BuildCommit entity.
 func (bc *BuildCreate) SetBuildToLatestBuildCommit(b *BuildCommit) *BuildCreate {
 	return bc.SetBuildToLatestBuildCommitID(b.ID)
+}
+
+// SetBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by ID.
+func (bc *BuildCreate) SetBuildToRepoCommitID(id uuid.UUID) *BuildCreate {
+	bc.mutation.SetBuildToRepoCommitID(id)
+	return bc
+}
+
+// SetNillableBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by ID if the given value is not nil.
+func (bc *BuildCreate) SetNillableBuildToRepoCommitID(id *uuid.UUID) *BuildCreate {
+	if id != nil {
+		bc = bc.SetBuildToRepoCommitID(*id)
+	}
+	return bc
+}
+
+// SetBuildToRepoCommit sets the "BuildToRepoCommit" edge to the RepoCommit entity.
+func (bc *BuildCreate) SetBuildToRepoCommit(r *RepoCommit) *BuildCreate {
+	return bc.SetBuildToRepoCommitID(r.ID)
 }
 
 // AddBuildToProvisionedNetworkIDs adds the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity by IDs.
@@ -426,6 +446,26 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.build_build_to_latest_build_commit = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := bc.mutation.BuildToRepoCommitIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   build.BuildToRepoCommitTable,
+			Columns: []string{build.BuildToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.build_build_to_repo_commit = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := bc.mutation.BuildToProvisionedNetworkIDs(); len(nodes) > 0 {

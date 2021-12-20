@@ -120,13 +120,6 @@ func FolderPath(v string) predicate.Repository {
 	})
 }
 
-// CommitInfo applies equality check predicate on the "commit_info" field. It's identical to CommitInfoEQ.
-func CommitInfo(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldCommitInfo), v))
-	})
-}
-
 // RepoURLEQ applies the EQ predicate on the "repo_url" field.
 func RepoURLEQ(v string) predicate.Repository {
 	return predicate.Repository(func(s *sql.Selector) {
@@ -571,117 +564,6 @@ func FolderPathContainsFold(v string) predicate.Repository {
 	})
 }
 
-// CommitInfoEQ applies the EQ predicate on the "commit_info" field.
-func CommitInfoEQ(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldCommitInfo), v))
-	})
-}
-
-// CommitInfoNEQ applies the NEQ predicate on the "commit_info" field.
-func CommitInfoNEQ(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldCommitInfo), v))
-	})
-}
-
-// CommitInfoIn applies the In predicate on the "commit_info" field.
-func CommitInfoIn(vs ...string) predicate.Repository {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Repository(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.In(s.C(FieldCommitInfo), v...))
-	})
-}
-
-// CommitInfoNotIn applies the NotIn predicate on the "commit_info" field.
-func CommitInfoNotIn(vs ...string) predicate.Repository {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Repository(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.NotIn(s.C(FieldCommitInfo), v...))
-	})
-}
-
-// CommitInfoGT applies the GT predicate on the "commit_info" field.
-func CommitInfoGT(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldCommitInfo), v))
-	})
-}
-
-// CommitInfoGTE applies the GTE predicate on the "commit_info" field.
-func CommitInfoGTE(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldCommitInfo), v))
-	})
-}
-
-// CommitInfoLT applies the LT predicate on the "commit_info" field.
-func CommitInfoLT(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldCommitInfo), v))
-	})
-}
-
-// CommitInfoLTE applies the LTE predicate on the "commit_info" field.
-func CommitInfoLTE(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldCommitInfo), v))
-	})
-}
-
-// CommitInfoContains applies the Contains predicate on the "commit_info" field.
-func CommitInfoContains(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldCommitInfo), v))
-	})
-}
-
-// CommitInfoHasPrefix applies the HasPrefix predicate on the "commit_info" field.
-func CommitInfoHasPrefix(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldCommitInfo), v))
-	})
-}
-
-// CommitInfoHasSuffix applies the HasSuffix predicate on the "commit_info" field.
-func CommitInfoHasSuffix(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldCommitInfo), v))
-	})
-}
-
-// CommitInfoEqualFold applies the EqualFold predicate on the "commit_info" field.
-func CommitInfoEqualFold(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldCommitInfo), v))
-	})
-}
-
-// CommitInfoContainsFold applies the ContainsFold predicate on the "commit_info" field.
-func CommitInfoContainsFold(v string) predicate.Repository {
-	return predicate.Repository(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldCommitInfo), v))
-	})
-}
-
 // HasRepositoryToEnvironment applies the HasEdge predicate on the "RepositoryToEnvironment" edge.
 func HasRepositoryToEnvironment() predicate.Repository {
 	return predicate.Repository(func(s *sql.Selector) {
@@ -701,6 +583,34 @@ func HasRepositoryToEnvironmentWith(preds ...predicate.Environment) predicate.Re
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(RepositoryToEnvironmentInverseTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, RepositoryToEnvironmentTable, RepositoryToEnvironmentPrimaryKey...),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasRepositoryToRepoCommit applies the HasEdge predicate on the "RepositoryToRepoCommit" edge.
+func HasRepositoryToRepoCommit() predicate.Repository {
+	return predicate.Repository(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(RepositoryToRepoCommitTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, RepositoryToRepoCommitTable, RepositoryToRepoCommitColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRepositoryToRepoCommitWith applies the HasEdge predicate on the "RepositoryToRepoCommit" edge with a given conditions (other predicates).
+func HasRepositoryToRepoCommitWith(preds ...predicate.RepoCommit) predicate.Repository {
+	return predicate.Repository(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(RepositoryToRepoCommitInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, RepositoryToRepoCommitTable, RepositoryToRepoCommitColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

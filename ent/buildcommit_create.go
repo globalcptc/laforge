@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -37,6 +38,20 @@ func (bcc *BuildCommitCreate) SetRevision(i int) *BuildCommitCreate {
 // SetState sets the "state" field.
 func (bcc *BuildCommitCreate) SetState(b buildcommit.State) *BuildCommitCreate {
 	bcc.mutation.SetState(b)
+	return bcc
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (bcc *BuildCommitCreate) SetCreatedAt(t time.Time) *BuildCommitCreate {
+	bcc.mutation.SetCreatedAt(t)
+	return bcc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (bcc *BuildCommitCreate) SetNillableCreatedAt(t *time.Time) *BuildCommitCreate {
+	if t != nil {
+		bcc.SetCreatedAt(*t)
+	}
 	return bcc
 }
 
@@ -143,6 +158,10 @@ func (bcc *BuildCommitCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (bcc *BuildCommitCreate) defaults() {
+	if _, ok := bcc.mutation.CreatedAt(); !ok {
+		v := buildcommit.DefaultCreatedAt()
+		bcc.mutation.SetCreatedAt(v)
+	}
 	if _, ok := bcc.mutation.ID(); !ok {
 		v := buildcommit.DefaultID()
 		bcc.mutation.SetID(v)
@@ -169,6 +188,9 @@ func (bcc *BuildCommitCreate) check() error {
 		if err := buildcommit.StateValidator(v); err != nil {
 			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "state": %w`, err)}
 		}
+	}
+	if _, ok := bcc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "created_at"`)}
 	}
 	if _, ok := bcc.mutation.BuildCommitToBuildID(); !ok {
 		return &ValidationError{Name: "BuildCommitToBuild", err: errors.New("ent: missing required edge \"BuildCommitToBuild\"")}
@@ -228,6 +250,14 @@ func (bcc *BuildCommitCreate) createSpec() (*BuildCommit, *sqlgraph.CreateSpec) 
 			Column: buildcommit.FieldState,
 		})
 		_node.State = value
+	}
+	if value, ok := bcc.mutation.CreatedAt(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: buildcommit.FieldCreatedAt,
+		})
+		_node.CreatedAt = value
 	}
 	if nodes := bcc.mutation.BuildCommitToBuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

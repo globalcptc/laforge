@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/predicate"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/google/uuid"
 )
@@ -29,6 +30,7 @@ type RepositoryQuery struct {
 	predicates []predicate.Repository
 	// eager-loading edges.
 	withRepositoryToEnvironment *EnvironmentQuery
+	withRepositoryToRepoCommit  *RepoCommitQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -80,6 +82,28 @@ func (rq *RepositoryQuery) QueryRepositoryToEnvironment() *EnvironmentQuery {
 			sqlgraph.From(repository.Table, repository.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, repository.RepositoryToEnvironmentTable, repository.RepositoryToEnvironmentPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryRepositoryToRepoCommit chains the current query on the "RepositoryToRepoCommit" edge.
+func (rq *RepositoryQuery) QueryRepositoryToRepoCommit() *RepoCommitQuery {
+	query := &RepoCommitQuery{config: rq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := rq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := rq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(repository.Table, repository.FieldID, selector),
+			sqlgraph.To(repocommit.Table, repocommit.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, repository.RepositoryToRepoCommitTable, repository.RepositoryToRepoCommitColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
 		return fromU, nil
@@ -269,6 +293,7 @@ func (rq *RepositoryQuery) Clone() *RepositoryQuery {
 		order:                       append([]OrderFunc{}, rq.order...),
 		predicates:                  append([]predicate.Repository{}, rq.predicates...),
 		withRepositoryToEnvironment: rq.withRepositoryToEnvironment.Clone(),
+		withRepositoryToRepoCommit:  rq.withRepositoryToRepoCommit.Clone(),
 		// clone intermediate query.
 		sql:  rq.sql.Clone(),
 		path: rq.path,
@@ -283,6 +308,17 @@ func (rq *RepositoryQuery) WithRepositoryToEnvironment(opts ...func(*Environment
 		opt(query)
 	}
 	rq.withRepositoryToEnvironment = query
+	return rq
+}
+
+// WithRepositoryToRepoCommit tells the query-builder to eager-load the nodes that are connected to
+// the "RepositoryToRepoCommit" edge. The optional arguments are used to configure the query builder of the edge.
+func (rq *RepositoryQuery) WithRepositoryToRepoCommit(opts ...func(*RepoCommitQuery)) *RepositoryQuery {
+	query := &RepoCommitQuery{config: rq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	rq.withRepositoryToRepoCommit = query
 	return rq
 }
 
@@ -351,8 +387,9 @@ func (rq *RepositoryQuery) sqlAll(ctx context.Context) ([]*Repository, error) {
 	var (
 		nodes       = []*Repository{}
 		_spec       = rq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			rq.withRepositoryToEnvironment != nil,
+			rq.withRepositoryToRepoCommit != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -437,6 +474,35 @@ func (rq *RepositoryQuery) sqlAll(ctx context.Context) ([]*Repository, error) {
 			for i := range nodes {
 				nodes[i].Edges.RepositoryToEnvironment = append(nodes[i].Edges.RepositoryToEnvironment, n)
 			}
+		}
+	}
+
+	if query := rq.withRepositoryToRepoCommit; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*Repository)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.RepositoryToRepoCommit = []*RepoCommit{}
+		}
+		query.withFKs = true
+		query.Where(predicate.RepoCommit(func(s *sql.Selector) {
+			s.Where(sql.InValues(repository.RepositoryToRepoCommitColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.repository_repository_to_repo_commit
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "repository_repository_to_repo_commit" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "repository_repository_to_repo_commit" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.RepositoryToRepoCommit = append(node.Edges.RepositoryToRepoCommit, n)
 		}
 	}
 

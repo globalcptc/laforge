@@ -333,6 +333,18 @@ func (ps *ProvisioningStepQuery) collectField(ctx *graphql.OperationContext, fie
 }
 
 // CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (rc *RepoCommitQuery) CollectFields(ctx context.Context, satisfies ...string) *RepoCommitQuery {
+	if fc := graphql.GetFieldContext(ctx); fc != nil {
+		rc = rc.collectField(graphql.GetOperationContext(ctx), fc.Field, satisfies...)
+	}
+	return rc
+}
+
+func (rc *RepoCommitQuery) collectField(ctx *graphql.OperationContext, field graphql.CollectedField, satisfies ...string) *RepoCommitQuery {
+	return rc
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
 func (r *RepositoryQuery) CollectFields(ctx context.Context, satisfies ...string) *RepositoryQuery {
 	if fc := graphql.GetFieldContext(ctx); fc != nil {
 		r = r.collectField(graphql.GetOperationContext(ctx), fc.Field, satisfies...)

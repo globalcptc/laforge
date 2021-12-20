@@ -36,6 +36,7 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
@@ -501,7 +502,7 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 		ID:     b.ID,
 		Type:   "Build",
 		Fields: make([]*Field, 3),
-		Edges:  make([]*Edge, 9),
+		Edges:  make([]*Edge, 10),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(b.Revision); err != nil {
@@ -569,52 +570,62 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[4] = &Edge{
-		Type: "ProvisionedNetwork",
-		Name: "BuildToProvisionedNetwork",
+		Type: "RepoCommit",
+		Name: "BuildToRepoCommit",
 	}
-	err = b.QueryBuildToProvisionedNetwork().
-		Select(provisionednetwork.FieldID).
+	err = b.QueryBuildToRepoCommit().
+		Select(repocommit.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[5] = &Edge{
-		Type: "Team",
-		Name: "BuildToTeam",
+		Type: "ProvisionedNetwork",
+		Name: "BuildToProvisionedNetwork",
 	}
-	err = b.QueryBuildToTeam().
-		Select(team.FieldID).
+	err = b.QueryBuildToProvisionedNetwork().
+		Select(provisionednetwork.FieldID).
 		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[6] = &Edge{
-		Type: "Plan",
-		Name: "BuildToPlan",
+		Type: "Team",
+		Name: "BuildToTeam",
 	}
-	err = b.QueryBuildToPlan().
-		Select(plan.FieldID).
+	err = b.QueryBuildToTeam().
+		Select(team.FieldID).
 		Scan(ctx, &node.Edges[6].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[7] = &Edge{
-		Type: "BuildCommit",
-		Name: "BuildToBuildCommits",
+		Type: "Plan",
+		Name: "BuildToPlan",
 	}
-	err = b.QueryBuildToBuildCommits().
-		Select(buildcommit.FieldID).
+	err = b.QueryBuildToPlan().
+		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[7].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[8] = &Edge{
+		Type: "BuildCommit",
+		Name: "BuildToBuildCommits",
+	}
+	err = b.QueryBuildToBuildCommits().
+		Select(buildcommit.FieldID).
+		Scan(ctx, &node.Edges[8].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[9] = &Edge{
 		Type: "AdhocPlan",
 		Name: "BuildToAdhocPlans",
 	}
 	err = b.QueryBuildToAdhocPlans().
 		Select(adhocplan.FieldID).
-		Scan(ctx, &node.Edges[8].IDs)
+		Scan(ctx, &node.Edges[9].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -625,7 +636,7 @@ func (bc *BuildCommit) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     bc.ID,
 		Type:   "BuildCommit",
-		Fields: make([]*Field, 3),
+		Fields: make([]*Field, 4),
 		Edges:  make([]*Edge, 2),
 	}
 	var buf []byte
@@ -651,6 +662,14 @@ func (bc *BuildCommit) Node(ctx context.Context) (node *Node, err error) {
 	node.Fields[2] = &Field{
 		Type:  "buildcommit.State",
 		Name:  "state",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(bc.CreatedAt); err != nil {
+		return nil, err
+	}
+	node.Fields[3] = &Field{
+		Type:  "time.Time",
+		Name:  "created_at",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{
@@ -2705,12 +2724,97 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	return node, nil
 }
 
+func (rc *RepoCommit) Node(ctx context.Context) (node *Node, err error) {
+	node = &Node{
+		ID:     rc.ID,
+		Type:   "RepoCommit",
+		Fields: make([]*Field, 8),
+		Edges:  make([]*Edge, 1),
+	}
+	var buf []byte
+	if buf, err = json.Marshal(rc.Revision); err != nil {
+		return nil, err
+	}
+	node.Fields[0] = &Field{
+		Type:  "int",
+		Name:  "revision",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(rc.Hash); err != nil {
+		return nil, err
+	}
+	node.Fields[1] = &Field{
+		Type:  "string",
+		Name:  "hash",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(rc.Author); err != nil {
+		return nil, err
+	}
+	node.Fields[2] = &Field{
+		Type:  "object.Signature",
+		Name:  "author",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(rc.Committer); err != nil {
+		return nil, err
+	}
+	node.Fields[3] = &Field{
+		Type:  "object.Signature",
+		Name:  "committer",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(rc.PgpSignature); err != nil {
+		return nil, err
+	}
+	node.Fields[4] = &Field{
+		Type:  "string",
+		Name:  "pgp_signature",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(rc.Message); err != nil {
+		return nil, err
+	}
+	node.Fields[5] = &Field{
+		Type:  "string",
+		Name:  "message",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(rc.TreeHash); err != nil {
+		return nil, err
+	}
+	node.Fields[6] = &Field{
+		Type:  "string",
+		Name:  "tree_hash",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(rc.ParentHashes); err != nil {
+		return nil, err
+	}
+	node.Fields[7] = &Field{
+		Type:  "[]string",
+		Name:  "parent_hashes",
+		Value: string(buf),
+	}
+	node.Edges[0] = &Edge{
+		Type: "Repository",
+		Name: "RepoCommitToRepository",
+	}
+	err = rc.QueryRepoCommitToRepository().
+		Select(repository.FieldID).
+		Scan(ctx, &node.Edges[0].IDs)
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
 func (r *Repository) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     r.ID,
 		Type:   "Repository",
-		Fields: make([]*Field, 5),
-		Edges:  make([]*Edge, 1),
+		Fields: make([]*Field, 4),
+		Edges:  make([]*Edge, 2),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(r.RepoURL); err != nil {
@@ -2745,14 +2849,6 @@ func (r *Repository) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "folder_path",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(r.CommitInfo); err != nil {
-		return nil, err
-	}
-	node.Fields[4] = &Field{
-		Type:  "string",
-		Name:  "commit_info",
-		Value: string(buf),
-	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
 		Name: "RepositoryToEnvironment",
@@ -2760,6 +2856,16 @@ func (r *Repository) Node(ctx context.Context) (node *Node, err error) {
 	err = r.QueryRepositoryToEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[1] = &Edge{
+		Type: "RepoCommit",
+		Name: "RepositoryToRepoCommit",
+	}
+	err = r.QueryRepositoryToRepoCommit().
+		Select(repocommit.FieldID).
+		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -3679,6 +3785,15 @@ func (c *Client) noder(ctx context.Context, table string, id uuid.UUID) (Noder, 
 			return nil, err
 		}
 		return n, nil
+	case repocommit.Table:
+		n, err := c.RepoCommit.Query().
+			Where(repocommit.ID(id)).
+			CollectFields(ctx, "RepoCommit").
+			Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
 	case repository.Table:
 		n, err := c.Repository.Query().
 			Where(repository.ID(id)).
@@ -4166,6 +4281,19 @@ func (c *Client) noders(ctx context.Context, table string, ids []uuid.UUID) ([]N
 		nodes, err := c.ProvisioningStep.Query().
 			Where(provisioningstep.IDIn(ids...)).
 			CollectFields(ctx, "ProvisioningStep").
+			All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case repocommit.Table:
+		nodes, err := c.RepoCommit.Query().
+			Where(repocommit.IDIn(ids...)).
+			CollectFields(ctx, "RepoCommit").
 			All(ctx)
 		if err != nil {
 			return nil, err

@@ -30,6 +30,7 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
@@ -129,9 +130,19 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 		}
 		return nil, err
 	}
+	entRepoCommit, err := entEnvironment.QueryEnvironmentToRepository().QueryRepositoryToRepoCommit().Order(ent.Desc(repocommit.FieldRevision)).First(ctx)
+	if err != nil {
+		logger.Log.Errorf("Failed to Query Repository from Environment %v. Err: %v", entEnvironment.HclID, err)
+		_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
+		if err != nil {
+			return nil, fmt.Errorf("error failing server task: %v", err)
+		}
+		return nil, err
+	}
 	entBuild, err := client.Build.Create().
 		SetRevision(len(entEnvironment.Edges.EnvironmentToBuild)).
 		SetEnvironmentRevision(entEnvironment.Revision).
+		SetBuildToRepoCommit(entRepoCommit).
 		SetBuildToEnvironment(entEnvironment).
 		SetBuildToStatus(entStatus).
 		SetBuildToCompetition(entCompetition).

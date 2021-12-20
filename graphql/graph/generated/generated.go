@@ -62,6 +62,7 @@ type ResolverRoot interface {
 	ProvisionedNetwork() ProvisionedNetworkResolver
 	ProvisioningStep() ProvisioningStepResolver
 	Query() QueryResolver
+	RepoCommit() RepoCommitResolver
 	Repository() RepositoryResolver
 	Script() ScriptResolver
 	ServerTask() ServerTaskResolver
@@ -129,6 +130,7 @@ type ComplexityRoot struct {
 		BuildToLatestBuildCommit  func(childComplexity int) int
 		BuildToPlan               func(childComplexity int) int
 		BuildToProvisionedNetwork func(childComplexity int) int
+		BuildToRepoCommit         func(childComplexity int) int
 		BuildToStatus             func(childComplexity int) int
 		BuildToTeam               func(childComplexity int) int
 		CompletedPlan             func(childComplexity int) int
@@ -140,6 +142,7 @@ type ComplexityRoot struct {
 	BuildCommit struct {
 		BuildCommitToBuild     func(childComplexity int) int
 		BuildCommitToPlanDiffs func(childComplexity int) int
+		CreatedAt              func(childComplexity int) int
 		ID                     func(childComplexity int) int
 		Revision               func(childComplexity int) int
 		State                  func(childComplexity int) int
@@ -320,7 +323,7 @@ type ComplexityRoot struct {
 		CancelCommit             func(childComplexity int, commitUUID string) int
 		CreateAgentTasks         func(childComplexity int, hostHclid string, command model.AgentCommand, buildUUID string, args []string, teams []int) int
 		CreateBuild              func(childComplexity int, envUUID string, renderFiles bool) int
-		CreateEnviromentFromRepo func(childComplexity int, repoURL string, branchName string, repoName string, envFilePath string) int
+		CreateEnviromentFromRepo func(childComplexity int, repoURL string, branchName string, envFilePath string) int
 		CreateTask               func(childComplexity int, proHostUUID string, command model.AgentCommand, args string) int
 		CreateUser               func(childComplexity int, username string, password string, role model.RoleLevel, provider model.ProviderType) int
 		DeleteBuild              func(childComplexity int, buildUUID string) int
@@ -417,6 +420,8 @@ type ComplexityRoot struct {
 		GetAgentTasks       func(childComplexity int, proStepUUID string) int
 		GetAllAgentStatus   func(childComplexity int, buildUUID string, count int, offset int) int
 		GetAllPlanStatus    func(childComplexity int, buildUUID string, count int, offset int) int
+		GetBuildCommits     func(childComplexity int, envUUID string) int
+		GetBuilds           func(childComplexity int) int
 		GetCurrentUserTasks func(childComplexity int) int
 		GetServerTasks      func(childComplexity int) int
 		GetUserList         func(childComplexity int) int
@@ -429,12 +434,25 @@ type ComplexityRoot struct {
 		ViewServerTaskLogs  func(childComplexity int, taskID string) int
 	}
 
+	RepoCommit struct {
+		Author                 func(childComplexity int) int
+		Committer              func(childComplexity int) int
+		Hash                   func(childComplexity int) int
+		ID                     func(childComplexity int) int
+		Message                func(childComplexity int) int
+		ParentHashes           func(childComplexity int) int
+		PgpSignature           func(childComplexity int) int
+		RepoCommitToRepository func(childComplexity int) int
+		Revision               func(childComplexity int) int
+		TreeHash               func(childComplexity int) int
+	}
+
 	Repository struct {
-		BranchName          func(childComplexity int) int
-		CommitInfo          func(childComplexity int) int
-		EnvironmentFilepath func(childComplexity int) int
-		ID                  func(childComplexity int) int
-		RepoURL             func(childComplexity int) int
+		BranchName             func(childComplexity int) int
+		EnvironmentFilepath    func(childComplexity int) int
+		ID                     func(childComplexity int) int
+		RepoURL                func(childComplexity int) int
+		RepositoryToRepoCommit func(childComplexity int) int
 	}
 
 	Script struct {
@@ -625,7 +643,7 @@ type MutationResolver interface {
 	ApproveCommit(ctx context.Context, commitUUID string) (bool, error)
 	CancelCommit(ctx context.Context, commitUUID string) (bool, error)
 	CreateAgentTasks(ctx context.Context, hostHclid string, command model.AgentCommand, buildUUID string, args []string, teams []int) ([]*ent.AgentTask, error)
-	CreateEnviromentFromRepo(ctx context.Context, repoURL string, branchName string, repoName string, envFilePath string) ([]*ent.Environment, error)
+	CreateEnviromentFromRepo(ctx context.Context, repoURL string, branchName string, envFilePath string) ([]*ent.Environment, error)
 	UpdateEnviromentViaPull(ctx context.Context, envUUID string) ([]*ent.Environment, error)
 	ModifySelfPassword(ctx context.Context, currentPassword string, newPassword string) (bool, error)
 	ModifySelfUserInfo(ctx context.Context, firstName *string, lastName *string, email *string, phone *string, company *string, occupation *string) (*ent.AuthUser, error)
@@ -668,7 +686,9 @@ type QueryResolver interface {
 	ProvisionedNetwork(ctx context.Context, proNetUUID string) (*ent.ProvisionedNetwork, error)
 	ProvisionedStep(ctx context.Context, proStepUUID string) (*ent.ProvisioningStep, error)
 	Plan(ctx context.Context, planUUID string) (*ent.Plan, error)
+	GetBuilds(ctx context.Context) ([]*ent.Build, error)
 	Build(ctx context.Context, buildUUID string) (*ent.Build, error)
+	GetBuildCommits(ctx context.Context, envUUID string) ([]*ent.BuildCommit, error)
 	Status(ctx context.Context, statusUUID string) (*ent.Status, error)
 	AgentStatus(ctx context.Context, clientID string) (*ent.AgentStatus, error)
 	GetServerTasks(ctx context.Context) ([]*ent.ServerTask, error)
@@ -680,6 +700,12 @@ type QueryResolver interface {
 	GetAllPlanStatus(ctx context.Context, buildUUID string, count int, offset int) (*model.StatusBatch, error)
 	ViewServerTaskLogs(ctx context.Context, taskID string) (string, error)
 	ViewAgentTask(ctx context.Context, taskID string) (*ent.AgentTask, error)
+}
+type RepoCommitResolver interface {
+	ID(ctx context.Context, obj *ent.RepoCommit) (string, error)
+
+	Author(ctx context.Context, obj *ent.RepoCommit) (string, error)
+	Committer(ctx context.Context, obj *ent.RepoCommit) (string, error)
 }
 type RepositoryResolver interface {
 	ID(ctx context.Context, obj *ent.Repository) (string, error)
@@ -1014,6 +1040,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Build.BuildToProvisionedNetwork(childComplexity), true
 
+	case "Build.BuildToRepoCommit":
+		if e.complexity.Build.BuildToRepoCommit == nil {
+			break
+		}
+
+		return e.complexity.Build.BuildToRepoCommit(childComplexity), true
+
 	case "Build.buildToStatus":
 		if e.complexity.Build.BuildToStatus == nil {
 			break
@@ -1069,6 +1102,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.BuildCommit.BuildCommitToPlanDiffs(childComplexity), true
+
+	case "BuildCommit.createdAt":
+		if e.complexity.BuildCommit.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.BuildCommit.CreatedAt(childComplexity), true
 
 	case "BuildCommit.id":
 		if e.complexity.BuildCommit.ID == nil {
@@ -2066,7 +2106,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateEnviromentFromRepo(childComplexity, args["repoURL"].(string), args["branchName"].(string), args["repoName"].(string), args["envFilePath"].(string)), true
+		return e.complexity.Mutation.CreateEnviromentFromRepo(childComplexity, args["repoURL"].(string), args["branchName"].(string), args["envFilePath"].(string)), true
 
 	case "Mutation.createTask":
 		if e.complexity.Mutation.CreateTask == nil {
@@ -2683,6 +2723,25 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.GetAllPlanStatus(childComplexity, args["buildUUID"].(string), args["count"].(int), args["offset"].(int)), true
 
+	case "Query.getBuildCommits":
+		if e.complexity.Query.GetBuildCommits == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getBuildCommits_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetBuildCommits(childComplexity, args["envUUID"].(string)), true
+
+	case "Query.getBuilds":
+		if e.complexity.Query.GetBuilds == nil {
+			break
+		}
+
+		return e.complexity.Query.GetBuilds(childComplexity), true
+
 	case "Query.getCurrentUserTasks":
 		if e.complexity.Query.GetCurrentUserTasks == nil {
 			break
@@ -2788,19 +2847,82 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.ViewServerTaskLogs(childComplexity, args["taskID"].(string)), true
 
+	case "RepoCommit.author":
+		if e.complexity.RepoCommit.Author == nil {
+			break
+		}
+
+		return e.complexity.RepoCommit.Author(childComplexity), true
+
+	case "RepoCommit.committer":
+		if e.complexity.RepoCommit.Committer == nil {
+			break
+		}
+
+		return e.complexity.RepoCommit.Committer(childComplexity), true
+
+	case "RepoCommit.hash":
+		if e.complexity.RepoCommit.Hash == nil {
+			break
+		}
+
+		return e.complexity.RepoCommit.Hash(childComplexity), true
+
+	case "RepoCommit.id":
+		if e.complexity.RepoCommit.ID == nil {
+			break
+		}
+
+		return e.complexity.RepoCommit.ID(childComplexity), true
+
+	case "RepoCommit.message":
+		if e.complexity.RepoCommit.Message == nil {
+			break
+		}
+
+		return e.complexity.RepoCommit.Message(childComplexity), true
+
+	case "RepoCommit.parent_hashes":
+		if e.complexity.RepoCommit.ParentHashes == nil {
+			break
+		}
+
+		return e.complexity.RepoCommit.ParentHashes(childComplexity), true
+
+	case "RepoCommit.pgp_signature":
+		if e.complexity.RepoCommit.PgpSignature == nil {
+			break
+		}
+
+		return e.complexity.RepoCommit.PgpSignature(childComplexity), true
+
+	case "RepoCommit.RepoCommitToRepository":
+		if e.complexity.RepoCommit.RepoCommitToRepository == nil {
+			break
+		}
+
+		return e.complexity.RepoCommit.RepoCommitToRepository(childComplexity), true
+
+	case "RepoCommit.revision":
+		if e.complexity.RepoCommit.Revision == nil {
+			break
+		}
+
+		return e.complexity.RepoCommit.Revision(childComplexity), true
+
+	case "RepoCommit.tree_hash":
+		if e.complexity.RepoCommit.TreeHash == nil {
+			break
+		}
+
+		return e.complexity.RepoCommit.TreeHash(childComplexity), true
+
 	case "Repository.branch_name":
 		if e.complexity.Repository.BranchName == nil {
 			break
 		}
 
 		return e.complexity.Repository.BranchName(childComplexity), true
-
-	case "Repository.commit_info":
-		if e.complexity.Repository.CommitInfo == nil {
-			break
-		}
-
-		return e.complexity.Repository.CommitInfo(childComplexity), true
 
 	case "Repository.environment_filepath":
 		if e.complexity.Repository.EnvironmentFilepath == nil {
@@ -2822,6 +2944,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Repository.RepoURL(childComplexity), true
+
+	case "Repository.RepositoryToRepoCommit":
+		if e.complexity.Repository.RepositoryToRepoCommit == nil {
+			break
+		}
+
+		return e.complexity.Repository.RepositoryToRepoCommit(childComplexity), true
 
 	case "Script.absPath":
 		if e.complexity.Script.AbsPath == nil {
@@ -3496,6 +3625,7 @@ type Build {
   buildToPlan: [Plan]!
   BuildToLatestBuildCommit: BuildCommit
   BuildToBuildCommits: [BuildCommit]!
+  BuildToRepoCommit: RepoCommit!
 }
 
 type BuildCommit {
@@ -3503,6 +3633,7 @@ type BuildCommit {
   type: BuildCommitType!
   revision: Int!
   state: BuildCommitState!
+  createdAt: Time!
   BuildCommitToBuild: Build!
   BuildCommitToPlanDiffs: [PlanDiff]!
 }
@@ -3744,12 +3875,25 @@ type ProvisioningStep {
   ProvisioningStepToPlan: Plan
 }
 
+type RepoCommit {
+  id: ID!
+  revision: Int!
+  hash: String!
+  author: String!
+  committer: String!
+  pgp_signature: String!
+  message: String!
+  tree_hash: String!
+  parent_hashes: [String]!
+  RepoCommitToRepository: Repository!
+}
+
 type Repository {
   id: ID!
   repo_url: String!
   branch_name: String!
   environment_filepath: String!
-  commit_info: String!
+  RepositoryToRepoCommit: [RepoCommit]!
 }
 
 type Script {
@@ -3856,7 +4000,10 @@ type Query {
   provisionedStep(proStepUUID: String!): ProvisioningStep
     @hasRole(roles: [ADMIN, USER])
   plan(planUUID: String!): Plan @hasRole(roles: [ADMIN, USER])
+  getBuilds: [Build] @hasRole(roles: [ADMIN, USER])
   build(buildUUID: String!): Build @hasRole(roles: [ADMIN, USER])
+  getBuildCommits(envUUID: String!): [BuildCommit]
+    @hasRole(roles: [ADMIN, USER])
   status(statusUUID: String!): Status @hasRole(roles: [ADMIN, USER])
   agentStatus(clientId: String!): AgentStatus @hasRole(roles: [ADMIN, USER])
   getServerTasks: [ServerTask] @hasRole(roles: [ADMIN])
@@ -3906,7 +4053,6 @@ type Mutation {
   createEnviromentFromRepo(
     repoURL: String!
     branchName: String! = "master"
-    repoName: String! = "REMOVE"
     envFilePath: String!
   ): [Environment]! @hasRole(roles: [ADMIN, USER])
 
@@ -4106,23 +4252,14 @@ func (ec *executionContext) field_Mutation_createEnviromentFromRepo_args(ctx con
 	}
 	args["branchName"] = arg1
 	var arg2 string
-	if tmp, ok := rawArgs["repoName"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("repoName"))
+	if tmp, ok := rawArgs["envFilePath"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("envFilePath"))
 		arg2, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["repoName"] = arg2
-	var arg3 string
-	if tmp, ok := rawArgs["envFilePath"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("envFilePath"))
-		arg3, err = ec.unmarshalNString2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["envFilePath"] = arg3
+	args["envFilePath"] = arg2
 	return args, nil
 }
 
@@ -4633,6 +4770,21 @@ func (ec *executionContext) field_Query_getAllPlanStatus_args(ctx context.Contex
 		}
 	}
 	args["offset"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getBuildCommits_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["envUUID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("envUUID"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["envUUID"] = arg0
 	return args, nil
 }
 
@@ -6368,6 +6520,41 @@ func (ec *executionContext) _Build_BuildToBuildCommits(ctx context.Context, fiel
 	return ec.marshalNBuildCommit2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐBuildCommit(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Build_BuildToRepoCommit(ctx context.Context, field graphql.CollectedField, obj *ent.Build) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Build",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BuildToRepoCommit(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ent.RepoCommit)
+	fc.Result = res
+	return ec.marshalNRepoCommit2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepoCommit(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _BuildCommit_id(ctx context.Context, field graphql.CollectedField, obj *ent.BuildCommit) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -6506,6 +6693,41 @@ func (ec *executionContext) _BuildCommit_state(ctx context.Context, field graphq
 	res := resTmp.(model.BuildCommitState)
 	fc.Result = res
 	return ec.marshalNBuildCommitState2githubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐBuildCommitState(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _BuildCommit_createdAt(ctx context.Context, field graphql.CollectedField, obj *ent.BuildCommit) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "BuildCommit",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _BuildCommit_BuildCommitToBuild(ctx context.Context, field graphql.CollectedField, obj *ent.BuildCommit) (ret graphql.Marshaler) {
@@ -11781,7 +12003,7 @@ func (ec *executionContext) _Mutation_createEnviromentFromRepo(ctx context.Conte
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().CreateEnviromentFromRepo(rctx, args["repoURL"].(string), args["branchName"].(string), args["repoName"].(string), args["envFilePath"].(string))
+			return ec.resolvers.Mutation().CreateEnviromentFromRepo(rctx, args["repoURL"].(string), args["branchName"].(string), args["envFilePath"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			roles, err := ec.unmarshalNRoleLevel2ᚕgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐRoleLevelᚄ(ctx, []interface{}{"ADMIN", "USER"})
@@ -14477,6 +14699,62 @@ func (ec *executionContext) _Query_plan(ctx context.Context, field graphql.Colle
 	return ec.marshalOPlan2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐPlan(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Query_getBuilds(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetBuilds(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalNRoleLevel2ᚕgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐRoleLevelᚄ(ctx, []interface{}{"ADMIN", "USER"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*ent.Build); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/gen0cide/laforge/ent.Build`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*ent.Build)
+	fc.Result = res
+	return ec.marshalOBuild2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐBuild(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_build(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -14538,6 +14816,69 @@ func (ec *executionContext) _Query_build(ctx context.Context, field graphql.Coll
 	res := resTmp.(*ent.Build)
 	fc.Result = res
 	return ec.marshalOBuild2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐBuild(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_getBuildCommits(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_getBuildCommits_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetBuildCommits(rctx, args["envUUID"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalNRoleLevel2ᚕgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐRoleLevelᚄ(ctx, []interface{}{"ADMIN", "USER"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*ent.BuildCommit); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/gen0cide/laforge/ent.BuildCommit`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*ent.BuildCommit)
+	fc.Result = res
+	return ec.marshalOBuildCommit2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐBuildCommit(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_status(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -15282,6 +15623,356 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _RepoCommit_id(ctx context.Context, field graphql.CollectedField, obj *ent.RepoCommit) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RepoCommit",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.RepoCommit().ID(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _RepoCommit_revision(ctx context.Context, field graphql.CollectedField, obj *ent.RepoCommit) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RepoCommit",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Revision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _RepoCommit_hash(ctx context.Context, field graphql.CollectedField, obj *ent.RepoCommit) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RepoCommit",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Hash, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _RepoCommit_author(ctx context.Context, field graphql.CollectedField, obj *ent.RepoCommit) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RepoCommit",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.RepoCommit().Author(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _RepoCommit_committer(ctx context.Context, field graphql.CollectedField, obj *ent.RepoCommit) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RepoCommit",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.RepoCommit().Committer(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _RepoCommit_pgp_signature(ctx context.Context, field graphql.CollectedField, obj *ent.RepoCommit) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RepoCommit",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PgpSignature, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _RepoCommit_message(ctx context.Context, field graphql.CollectedField, obj *ent.RepoCommit) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RepoCommit",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Message, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _RepoCommit_tree_hash(ctx context.Context, field graphql.CollectedField, obj *ent.RepoCommit) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RepoCommit",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TreeHash, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _RepoCommit_parent_hashes(ctx context.Context, field graphql.CollectedField, obj *ent.RepoCommit) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RepoCommit",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ParentHashes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _RepoCommit_RepoCommitToRepository(ctx context.Context, field graphql.CollectedField, obj *ent.RepoCommit) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RepoCommit",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RepoCommitToRepository(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ent.Repository)
+	fc.Result = res
+	return ec.marshalNRepository2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepository(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Repository_id(ctx context.Context, field graphql.CollectedField, obj *ent.Repository) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -15422,7 +16113,7 @@ func (ec *executionContext) _Repository_environment_filepath(ctx context.Context
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Repository_commit_info(ctx context.Context, field graphql.CollectedField, obj *ent.Repository) (ret graphql.Marshaler) {
+func (ec *executionContext) _Repository_RepositoryToRepoCommit(ctx context.Context, field graphql.CollectedField, obj *ent.Repository) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -15433,14 +16124,14 @@ func (ec *executionContext) _Repository_commit_info(ctx context.Context, field g
 		Object:     "Repository",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   false,
+		IsMethod:   true,
 		IsResolver: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.CommitInfo, nil
+		return obj.RepositoryToRepoCommit(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -15452,9 +16143,9 @@ func (ec *executionContext) _Repository_commit_info(ctx context.Context, field g
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.([]*ent.RepoCommit)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNRepoCommit2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepoCommit(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Script_id(ctx context.Context, field graphql.CollectedField, obj *ent.Script) (ret graphql.Marshaler) {
@@ -19246,6 +19937,20 @@ func (ec *executionContext) _Build(ctx context.Context, sel ast.SelectionSet, ob
 				}
 				return res
 			})
+		case "BuildToRepoCommit":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Build_BuildToRepoCommit(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -19315,6 +20020,11 @@ func (ec *executionContext) _BuildCommit(ctx context.Context, sel ast.SelectionS
 				}
 				return res
 			})
+		case "createdAt":
+			out.Values[i] = ec._BuildCommit_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		case "BuildCommitToBuild":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -21756,6 +22466,17 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				res = ec._Query_plan(ctx, field)
 				return res
 			})
+		case "getBuilds":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getBuilds(ctx, field)
+				return res
+			})
 		case "build":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -21765,6 +22486,17 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_build(ctx, field)
+				return res
+			})
+		case "getBuildCommits":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getBuildCommits(ctx, field)
 				return res
 			})
 		case "status":
@@ -21909,6 +22641,114 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 	return out
 }
 
+var repoCommitImplementors = []string{"RepoCommit"}
+
+func (ec *executionContext) _RepoCommit(ctx context.Context, sel ast.SelectionSet, obj *ent.RepoCommit) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, repoCommitImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RepoCommit")
+		case "id":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RepoCommit_id(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "revision":
+			out.Values[i] = ec._RepoCommit_revision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "hash":
+			out.Values[i] = ec._RepoCommit_hash(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "author":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RepoCommit_author(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "committer":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RepoCommit_committer(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "pgp_signature":
+			out.Values[i] = ec._RepoCommit_pgp_signature(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "message":
+			out.Values[i] = ec._RepoCommit_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "tree_hash":
+			out.Values[i] = ec._RepoCommit_tree_hash(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "parent_hashes":
+			out.Values[i] = ec._RepoCommit_parent_hashes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "RepoCommitToRepository":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RepoCommit_RepoCommitToRepository(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var repositoryImplementors = []string{"Repository"}
 
 func (ec *executionContext) _Repository(ctx context.Context, sel ast.SelectionSet, obj *ent.Repository) graphql.Marshaler {
@@ -21958,11 +22798,20 @@ func (ec *executionContext) _Repository(ctx context.Context, sel ast.SelectionSe
 				}
 				return res
 			})
-		case "commit_info":
-			out.Values[i] = ec._Repository_commit_info(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
+		case "RepositoryToRepoCommit":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Repository_RepositoryToRepoCommit(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -24026,6 +24875,53 @@ func (ec *executionContext) marshalNProvisioningStepType2githubᚗcomᚋgen0cide
 	return v
 }
 
+func (ec *executionContext) marshalNRepoCommit2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepoCommit(ctx context.Context, sel ast.SelectionSet, v []*ent.RepoCommit) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalORepoCommit2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepoCommit(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalNRepoCommit2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepoCommit(ctx context.Context, sel ast.SelectionSet, v *ent.RepoCommit) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._RepoCommit(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNRepository2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepository(ctx context.Context, sel ast.SelectionSet, v []*ent.Repository) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -24061,6 +24957,16 @@ func (ec *executionContext) marshalNRepository2ᚕᚖgithubᚗcomᚋgen0cideᚋl
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) marshalNRepository2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepository(ctx context.Context, sel ast.SelectionSet, v *ent.Repository) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Repository(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNRoleLevel2githubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐRoleLevel(ctx context.Context, v interface{}) (model.RoleLevel, error) {
@@ -24403,6 +25309,21 @@ func (ec *executionContext) marshalNTeam2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋ
 		return graphql.Null
 	}
 	return ec._Team(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {
+	res, err := graphql.UnmarshalTime(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
+	res := graphql.MarshalTime(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐUser(ctx context.Context, sel ast.SelectionSet, v []*ent.User) graphql.Marshaler {
@@ -24877,11 +25798,91 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return graphql.MarshalBoolean(*v)
 }
 
+func (ec *executionContext) marshalOBuild2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐBuild(ctx context.Context, sel ast.SelectionSet, v []*ent.Build) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOBuild2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐBuild(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
 func (ec *executionContext) marshalOBuild2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐBuild(ctx context.Context, sel ast.SelectionSet, v *ent.Build) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Build(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOBuildCommit2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐBuildCommit(ctx context.Context, sel ast.SelectionSet, v []*ent.BuildCommit) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOBuildCommit2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐBuildCommit(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
 }
 
 func (ec *executionContext) marshalOBuildCommit2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐBuildCommit(ctx context.Context, sel ast.SelectionSet, v *ent.BuildCommit) graphql.Marshaler {
@@ -25073,6 +26074,13 @@ func (ec *executionContext) marshalOProvisioningStep2ᚖgithubᚗcomᚋgen0cide�
 		return graphql.Null
 	}
 	return ec._ProvisioningStep(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalORepoCommit2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepoCommit(ctx context.Context, sel ast.SelectionSet, v *ent.RepoCommit) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._RepoCommit(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalORepository2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepository(ctx context.Context, sel ast.SelectionSet, v *ent.Repository) graphql.Marshaler {

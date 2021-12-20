@@ -177,6 +177,7 @@ type Build {
   buildToPlan: [Plan]!
   BuildToLatestBuildCommit: BuildCommit
   BuildToBuildCommits: [BuildCommit]!
+  BuildToRepoCommit: RepoCommit!
 }
 
 type BuildCommit {
@@ -184,6 +185,7 @@ type BuildCommit {
   type: BuildCommitType!
   revision: Int!
   state: BuildCommitState!
+  createdAt: Time!
   BuildCommitToBuild: Build!
   BuildCommitToPlanDiffs: [PlanDiff]!
 }
@@ -425,12 +427,25 @@ type ProvisioningStep {
   ProvisioningStepToPlan: Plan
 }
 
+type RepoCommit {
+  id: ID!
+  revision: Int!
+  hash: String!
+  author: String!
+  committer: String!
+  pgp_signature: String!
+  message: String!
+  tree_hash: String!
+  parent_hashes: [String]!
+  RepoCommitToRepository: Repository!
+}
+
 type Repository {
   id: ID!
   repo_url: String!
   branch_name: String!
   environment_filepath: String!
-  commit_info: String!
+  RepositoryToRepoCommit: [RepoCommit]!
 }
 
 type Script {
@@ -537,7 +552,10 @@ type Query {
   provisionedStep(proStepUUID: String!): ProvisioningStep
     @hasRole(roles: [ADMIN, USER])
   plan(planUUID: String!): Plan @hasRole(roles: [ADMIN, USER])
+  getBuilds: [Build] @hasRole(roles: [ADMIN, USER])
   build(buildUUID: String!): Build @hasRole(roles: [ADMIN, USER])
+  getBuildCommits(envUUID: String!): [BuildCommit]
+    @hasRole(roles: [ADMIN, USER])
   status(statusUUID: String!): Status @hasRole(roles: [ADMIN, USER])
   agentStatus(clientId: String!): AgentStatus @hasRole(roles: [ADMIN, USER])
   getServerTasks: [ServerTask] @hasRole(roles: [ADMIN])
@@ -587,7 +605,6 @@ type Mutation {
   createEnviromentFromRepo(
     repoURL: String!
     branchName: String! = "master"
-    repoName: String! = "REMOVE"
     envFilePath: String!
   ): [Environment]! @hasRole(roles: [ADMIN, USER])
 
