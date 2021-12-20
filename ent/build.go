@@ -11,6 +11,7 @@ import (
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/competition"
 	"github.com/gen0cide/laforge/ent/environment"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/google/uuid"
 )
@@ -39,6 +40,8 @@ type Build struct {
 	HCLBuildToCompetition *Competition `json:"BuildToCompetition,omitempty"`
 	// BuildToLatestBuildCommit holds the value of the BuildToLatestBuildCommit edge.
 	HCLBuildToLatestBuildCommit *BuildCommit `json:"BuildToLatestBuildCommit,omitempty"`
+	// BuildToRepoCommit holds the value of the BuildToRepoCommit edge.
+	HCLBuildToRepoCommit *RepoCommit `json:"BuildToRepoCommit,omitempty"`
 	// BuildToProvisionedNetwork holds the value of the BuildToProvisionedNetwork edge.
 	HCLBuildToProvisionedNetwork []*ProvisionedNetwork `json:"BuildToProvisionedNetwork,omitempty"`
 	// BuildToTeam holds the value of the BuildToTeam edge.
@@ -53,6 +56,7 @@ type Build struct {
 	build_build_to_environment         *uuid.UUID
 	build_build_to_competition         *uuid.UUID
 	build_build_to_latest_build_commit *uuid.UUID
+	build_build_to_repo_commit         *uuid.UUID
 }
 
 // BuildEdges holds the relations/edges for other nodes in the graph.
@@ -65,6 +69,8 @@ type BuildEdges struct {
 	BuildToCompetition *Competition `json:"BuildToCompetition,omitempty"`
 	// BuildToLatestBuildCommit holds the value of the BuildToLatestBuildCommit edge.
 	BuildToLatestBuildCommit *BuildCommit `json:"BuildToLatestBuildCommit,omitempty"`
+	// BuildToRepoCommit holds the value of the BuildToRepoCommit edge.
+	BuildToRepoCommit *RepoCommit `json:"BuildToRepoCommit,omitempty"`
 	// BuildToProvisionedNetwork holds the value of the BuildToProvisionedNetwork edge.
 	BuildToProvisionedNetwork []*ProvisionedNetwork `json:"BuildToProvisionedNetwork,omitempty"`
 	// BuildToTeam holds the value of the BuildToTeam edge.
@@ -77,7 +83,7 @@ type BuildEdges struct {
 	BuildToAdhocPlans []*AdhocPlan `json:"BuildToAdhocPlans,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [9]bool
+	loadedTypes [10]bool
 }
 
 // BuildToStatusOrErr returns the BuildToStatus value or an error if the edge
@@ -136,10 +142,24 @@ func (e BuildEdges) BuildToLatestBuildCommitOrErr() (*BuildCommit, error) {
 	return nil, &NotLoadedError{edge: "BuildToLatestBuildCommit"}
 }
 
+// BuildToRepoCommitOrErr returns the BuildToRepoCommit value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e BuildEdges) BuildToRepoCommitOrErr() (*RepoCommit, error) {
+	if e.loadedTypes[4] {
+		if e.BuildToRepoCommit == nil {
+			// The edge BuildToRepoCommit was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: repocommit.Label}
+		}
+		return e.BuildToRepoCommit, nil
+	}
+	return nil, &NotLoadedError{edge: "BuildToRepoCommit"}
+}
+
 // BuildToProvisionedNetworkOrErr returns the BuildToProvisionedNetwork value or an error if the edge
 // was not loaded in eager-loading.
 func (e BuildEdges) BuildToProvisionedNetworkOrErr() ([]*ProvisionedNetwork, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[5] {
 		return e.BuildToProvisionedNetwork, nil
 	}
 	return nil, &NotLoadedError{edge: "BuildToProvisionedNetwork"}
@@ -148,7 +168,7 @@ func (e BuildEdges) BuildToProvisionedNetworkOrErr() ([]*ProvisionedNetwork, err
 // BuildToTeamOrErr returns the BuildToTeam value or an error if the edge
 // was not loaded in eager-loading.
 func (e BuildEdges) BuildToTeamOrErr() ([]*Team, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[6] {
 		return e.BuildToTeam, nil
 	}
 	return nil, &NotLoadedError{edge: "BuildToTeam"}
@@ -157,7 +177,7 @@ func (e BuildEdges) BuildToTeamOrErr() ([]*Team, error) {
 // BuildToPlanOrErr returns the BuildToPlan value or an error if the edge
 // was not loaded in eager-loading.
 func (e BuildEdges) BuildToPlanOrErr() ([]*Plan, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[7] {
 		return e.BuildToPlan, nil
 	}
 	return nil, &NotLoadedError{edge: "BuildToPlan"}
@@ -166,7 +186,7 @@ func (e BuildEdges) BuildToPlanOrErr() ([]*Plan, error) {
 // BuildToBuildCommitsOrErr returns the BuildToBuildCommits value or an error if the edge
 // was not loaded in eager-loading.
 func (e BuildEdges) BuildToBuildCommitsOrErr() ([]*BuildCommit, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[8] {
 		return e.BuildToBuildCommits, nil
 	}
 	return nil, &NotLoadedError{edge: "BuildToBuildCommits"}
@@ -175,7 +195,7 @@ func (e BuildEdges) BuildToBuildCommitsOrErr() ([]*BuildCommit, error) {
 // BuildToAdhocPlansOrErr returns the BuildToAdhocPlans value or an error if the edge
 // was not loaded in eager-loading.
 func (e BuildEdges) BuildToAdhocPlansOrErr() ([]*AdhocPlan, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[9] {
 		return e.BuildToAdhocPlans, nil
 	}
 	return nil, &NotLoadedError{edge: "BuildToAdhocPlans"}
@@ -197,6 +217,8 @@ func (*Build) scanValues(columns []string) ([]interface{}, error) {
 		case build.ForeignKeys[1]: // build_build_to_competition
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case build.ForeignKeys[2]: // build_build_to_latest_build_commit
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case build.ForeignKeys[3]: // build_build_to_repo_commit
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Build", columns[i])
@@ -258,6 +280,13 @@ func (b *Build) assignValues(columns []string, values []interface{}) error {
 				b.build_build_to_latest_build_commit = new(uuid.UUID)
 				*b.build_build_to_latest_build_commit = *value.S.(*uuid.UUID)
 			}
+		case build.ForeignKeys[3]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field build_build_to_repo_commit", values[i])
+			} else if value.Valid {
+				b.build_build_to_repo_commit = new(uuid.UUID)
+				*b.build_build_to_repo_commit = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
@@ -281,6 +310,11 @@ func (b *Build) QueryBuildToCompetition() *CompetitionQuery {
 // QueryBuildToLatestBuildCommit queries the "BuildToLatestBuildCommit" edge of the Build entity.
 func (b *Build) QueryBuildToLatestBuildCommit() *BuildCommitQuery {
 	return (&BuildClient{config: b.config}).QueryBuildToLatestBuildCommit(b)
+}
+
+// QueryBuildToRepoCommit queries the "BuildToRepoCommit" edge of the Build entity.
+func (b *Build) QueryBuildToRepoCommit() *RepoCommitQuery {
+	return (&BuildClient{config: b.config}).QueryBuildToRepoCommit(b)
 }
 
 // QueryBuildToProvisionedNetwork queries the "BuildToProvisionedNetwork" edge of the Build entity.

@@ -25,6 +25,8 @@ const (
 	EdgeBuildToCompetition = "BuildToCompetition"
 	// EdgeBuildToLatestBuildCommit holds the string denoting the buildtolatestbuildcommit edge name in mutations.
 	EdgeBuildToLatestBuildCommit = "BuildToLatestBuildCommit"
+	// EdgeBuildToRepoCommit holds the string denoting the buildtorepocommit edge name in mutations.
+	EdgeBuildToRepoCommit = "BuildToRepoCommit"
 	// EdgeBuildToProvisionedNetwork holds the string denoting the buildtoprovisionednetwork edge name in mutations.
 	EdgeBuildToProvisionedNetwork = "BuildToProvisionedNetwork"
 	// EdgeBuildToTeam holds the string denoting the buildtoteam edge name in mutations.
@@ -65,6 +67,13 @@ const (
 	BuildToLatestBuildCommitInverseTable = "build_commits"
 	// BuildToLatestBuildCommitColumn is the table column denoting the BuildToLatestBuildCommit relation/edge.
 	BuildToLatestBuildCommitColumn = "build_build_to_latest_build_commit"
+	// BuildToRepoCommitTable is the table that holds the BuildToRepoCommit relation/edge.
+	BuildToRepoCommitTable = "builds"
+	// BuildToRepoCommitInverseTable is the table name for the RepoCommit entity.
+	// It exists in this package in order to avoid circular dependency with the "repocommit" package.
+	BuildToRepoCommitInverseTable = "repo_commits"
+	// BuildToRepoCommitColumn is the table column denoting the BuildToRepoCommit relation/edge.
+	BuildToRepoCommitColumn = "build_build_to_repo_commit"
 	// BuildToProvisionedNetworkTable is the table that holds the BuildToProvisionedNetwork relation/edge.
 	BuildToProvisionedNetworkTable = "provisioned_networks"
 	// BuildToProvisionedNetworkInverseTable is the table name for the ProvisionedNetwork entity.
@@ -116,6 +125,7 @@ var ForeignKeys = []string{
 	"build_build_to_environment",
 	"build_build_to_competition",
 	"build_build_to_latest_build_commit",
+	"build_build_to_repo_commit",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

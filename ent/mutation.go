@@ -36,6 +36,7 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
@@ -44,6 +45,7 @@ import (
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/gen0cide/laforge/ent/token"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/uuid"
 
 	"entgo.io/ent"
@@ -85,6 +87,7 @@ const (
 	TypeProvisionedHost    = "ProvisionedHost"
 	TypeProvisionedNetwork = "ProvisionedNetwork"
 	TypeProvisioningStep   = "ProvisioningStep"
+	TypeRepoCommit         = "RepoCommit"
 	TypeRepository         = "Repository"
 	TypeScript             = "Script"
 	TypeServerTask         = "ServerTask"
@@ -4053,6 +4056,8 @@ type BuildMutation struct {
 	cleared_BuildToCompetition        bool
 	_BuildToLatestBuildCommit         *uuid.UUID
 	cleared_BuildToLatestBuildCommit  bool
+	_BuildToRepoCommit                *uuid.UUID
+	cleared_BuildToRepoCommit         bool
 	_BuildToProvisionedNetwork        map[uuid.UUID]struct{}
 	removed_BuildToProvisionedNetwork map[uuid.UUID]struct{}
 	cleared_BuildToProvisionedNetwork bool
@@ -4460,6 +4465,45 @@ func (m *BuildMutation) BuildToLatestBuildCommitIDs() (ids []uuid.UUID) {
 func (m *BuildMutation) ResetBuildToLatestBuildCommit() {
 	m._BuildToLatestBuildCommit = nil
 	m.cleared_BuildToLatestBuildCommit = false
+}
+
+// SetBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by id.
+func (m *BuildMutation) SetBuildToRepoCommitID(id uuid.UUID) {
+	m._BuildToRepoCommit = &id
+}
+
+// ClearBuildToRepoCommit clears the "BuildToRepoCommit" edge to the RepoCommit entity.
+func (m *BuildMutation) ClearBuildToRepoCommit() {
+	m.cleared_BuildToRepoCommit = true
+}
+
+// BuildToRepoCommitCleared reports if the "BuildToRepoCommit" edge to the RepoCommit entity was cleared.
+func (m *BuildMutation) BuildToRepoCommitCleared() bool {
+	return m.cleared_BuildToRepoCommit
+}
+
+// BuildToRepoCommitID returns the "BuildToRepoCommit" edge ID in the mutation.
+func (m *BuildMutation) BuildToRepoCommitID() (id uuid.UUID, exists bool) {
+	if m._BuildToRepoCommit != nil {
+		return *m._BuildToRepoCommit, true
+	}
+	return
+}
+
+// BuildToRepoCommitIDs returns the "BuildToRepoCommit" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// BuildToRepoCommitID instead. It exists only for internal usage by the builders.
+func (m *BuildMutation) BuildToRepoCommitIDs() (ids []uuid.UUID) {
+	if id := m._BuildToRepoCommit; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetBuildToRepoCommit resets all changes to the "BuildToRepoCommit" edge.
+func (m *BuildMutation) ResetBuildToRepoCommit() {
+	m._BuildToRepoCommit = nil
+	m.cleared_BuildToRepoCommit = false
 }
 
 // AddBuildToProvisionedNetworkIDs adds the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity by ids.
@@ -4911,7 +4955,7 @@ func (m *BuildMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BuildMutation) AddedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 10)
 	if m._BuildToStatus != nil {
 		edges = append(edges, build.EdgeBuildToStatus)
 	}
@@ -4923,6 +4967,9 @@ func (m *BuildMutation) AddedEdges() []string {
 	}
 	if m._BuildToLatestBuildCommit != nil {
 		edges = append(edges, build.EdgeBuildToLatestBuildCommit)
+	}
+	if m._BuildToRepoCommit != nil {
+		edges = append(edges, build.EdgeBuildToRepoCommit)
 	}
 	if m._BuildToProvisionedNetwork != nil {
 		edges = append(edges, build.EdgeBuildToProvisionedNetwork)
@@ -4962,6 +5009,10 @@ func (m *BuildMutation) AddedIDs(name string) []ent.Value {
 		if id := m._BuildToLatestBuildCommit; id != nil {
 			return []ent.Value{*id}
 		}
+	case build.EdgeBuildToRepoCommit:
+		if id := m._BuildToRepoCommit; id != nil {
+			return []ent.Value{*id}
+		}
 	case build.EdgeBuildToProvisionedNetwork:
 		ids := make([]ent.Value, 0, len(m._BuildToProvisionedNetwork))
 		for id := range m._BuildToProvisionedNetwork {
@@ -4998,7 +5049,7 @@ func (m *BuildMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BuildMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 10)
 	if m.removed_BuildToProvisionedNetwork != nil {
 		edges = append(edges, build.EdgeBuildToProvisionedNetwork)
 	}
@@ -5057,7 +5108,7 @@ func (m *BuildMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BuildMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 10)
 	if m.cleared_BuildToStatus {
 		edges = append(edges, build.EdgeBuildToStatus)
 	}
@@ -5069,6 +5120,9 @@ func (m *BuildMutation) ClearedEdges() []string {
 	}
 	if m.cleared_BuildToLatestBuildCommit {
 		edges = append(edges, build.EdgeBuildToLatestBuildCommit)
+	}
+	if m.cleared_BuildToRepoCommit {
+		edges = append(edges, build.EdgeBuildToRepoCommit)
 	}
 	if m.cleared_BuildToProvisionedNetwork {
 		edges = append(edges, build.EdgeBuildToProvisionedNetwork)
@@ -5100,6 +5154,8 @@ func (m *BuildMutation) EdgeCleared(name string) bool {
 		return m.cleared_BuildToCompetition
 	case build.EdgeBuildToLatestBuildCommit:
 		return m.cleared_BuildToLatestBuildCommit
+	case build.EdgeBuildToRepoCommit:
+		return m.cleared_BuildToRepoCommit
 	case build.EdgeBuildToProvisionedNetwork:
 		return m.cleared_BuildToProvisionedNetwork
 	case build.EdgeBuildToTeam:
@@ -5130,6 +5186,9 @@ func (m *BuildMutation) ClearEdge(name string) error {
 	case build.EdgeBuildToLatestBuildCommit:
 		m.ClearBuildToLatestBuildCommit()
 		return nil
+	case build.EdgeBuildToRepoCommit:
+		m.ClearBuildToRepoCommit()
+		return nil
 	}
 	return fmt.Errorf("unknown Build unique edge %s", name)
 }
@@ -5149,6 +5208,9 @@ func (m *BuildMutation) ResetEdge(name string) error {
 		return nil
 	case build.EdgeBuildToLatestBuildCommit:
 		m.ResetBuildToLatestBuildCommit()
+		return nil
+	case build.EdgeBuildToRepoCommit:
+		m.ResetBuildToRepoCommit()
 		return nil
 	case build.EdgeBuildToProvisionedNetwork:
 		m.ResetBuildToProvisionedNetwork()
@@ -5179,6 +5241,7 @@ type BuildCommitMutation struct {
 	revision                       *int
 	addrevision                    *int
 	state                          *buildcommit.State
+	created_at                     *time.Time
 	clearedFields                  map[string]struct{}
 	_BuildCommitToBuild            *uuid.UUID
 	cleared_BuildCommitToBuild     bool
@@ -5403,6 +5466,42 @@ func (m *BuildCommitMutation) ResetState() {
 	m.state = nil
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (m *BuildCommitMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *BuildCommitMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the BuildCommit entity.
+// If the BuildCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BuildCommitMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *BuildCommitMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
 // SetBuildCommitToBuildID sets the "BuildCommitToBuild" edge to the Build entity by id.
 func (m *BuildCommitMutation) SetBuildCommitToBuildID(id uuid.UUID) {
 	m._BuildCommitToBuild = &id
@@ -5515,7 +5614,7 @@ func (m *BuildCommitMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BuildCommitMutation) Fields() []string {
-	fields := make([]string, 0, 3)
+	fields := make([]string, 0, 4)
 	if m._type != nil {
 		fields = append(fields, buildcommit.FieldType)
 	}
@@ -5524,6 +5623,9 @@ func (m *BuildCommitMutation) Fields() []string {
 	}
 	if m.state != nil {
 		fields = append(fields, buildcommit.FieldState)
+	}
+	if m.created_at != nil {
+		fields = append(fields, buildcommit.FieldCreatedAt)
 	}
 	return fields
 }
@@ -5539,6 +5641,8 @@ func (m *BuildCommitMutation) Field(name string) (ent.Value, bool) {
 		return m.Revision()
 	case buildcommit.FieldState:
 		return m.State()
+	case buildcommit.FieldCreatedAt:
+		return m.CreatedAt()
 	}
 	return nil, false
 }
@@ -5554,6 +5658,8 @@ func (m *BuildCommitMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldRevision(ctx)
 	case buildcommit.FieldState:
 		return m.OldState(ctx)
+	case buildcommit.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown BuildCommit field %s", name)
 }
@@ -5583,6 +5689,13 @@ func (m *BuildCommitMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetState(v)
+		return nil
+	case buildcommit.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
 		return nil
 	}
 	return fmt.Errorf("unknown BuildCommit field %s", name)
@@ -5656,6 +5769,9 @@ func (m *BuildCommitMutation) ResetField(name string) error {
 		return nil
 	case buildcommit.FieldState:
 		m.ResetState()
+		return nil
+	case buildcommit.FieldCreatedAt:
+		m.ResetCreatedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown BuildCommit field %s", name)
@@ -23782,6 +23898,787 @@ func (m *ProvisioningStepMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown ProvisioningStep edge %s", name)
 }
 
+// RepoCommitMutation represents an operation that mutates the RepoCommit nodes in the graph.
+type RepoCommitMutation struct {
+	config
+	op                             Op
+	typ                            string
+	id                             *uuid.UUID
+	revision                       *int
+	addrevision                    *int
+	hash                           *string
+	author                         *object.Signature
+	committer                      *object.Signature
+	pgp_signature                  *string
+	message                        *string
+	tree_hash                      *string
+	parent_hashes                  *[]string
+	clearedFields                  map[string]struct{}
+	_RepoCommitToRepository        *uuid.UUID
+	cleared_RepoCommitToRepository bool
+	done                           bool
+	oldValue                       func(context.Context) (*RepoCommit, error)
+	predicates                     []predicate.RepoCommit
+}
+
+var _ ent.Mutation = (*RepoCommitMutation)(nil)
+
+// repocommitOption allows management of the mutation configuration using functional options.
+type repocommitOption func(*RepoCommitMutation)
+
+// newRepoCommitMutation creates new mutation for the RepoCommit entity.
+func newRepoCommitMutation(c config, op Op, opts ...repocommitOption) *RepoCommitMutation {
+	m := &RepoCommitMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeRepoCommit,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withRepoCommitID sets the ID field of the mutation.
+func withRepoCommitID(id uuid.UUID) repocommitOption {
+	return func(m *RepoCommitMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *RepoCommit
+		)
+		m.oldValue = func(ctx context.Context) (*RepoCommit, error) {
+			once.Do(func() {
+				if m.done {
+					err = fmt.Errorf("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().RepoCommit.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withRepoCommit sets the old RepoCommit of the mutation.
+func withRepoCommit(node *RepoCommit) repocommitOption {
+	return func(m *RepoCommitMutation) {
+		m.oldValue = func(context.Context) (*RepoCommit, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m RepoCommitMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m RepoCommitMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of RepoCommit entities.
+func (m *RepoCommitMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *RepoCommitMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// SetRevision sets the "revision" field.
+func (m *RepoCommitMutation) SetRevision(i int) {
+	m.revision = &i
+	m.addrevision = nil
+}
+
+// Revision returns the value of the "revision" field in the mutation.
+func (m *RepoCommitMutation) Revision() (r int, exists bool) {
+	v := m.revision
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRevision returns the old "revision" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldRevision(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldRevision is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldRevision requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRevision: %w", err)
+	}
+	return oldValue.Revision, nil
+}
+
+// AddRevision adds i to the "revision" field.
+func (m *RepoCommitMutation) AddRevision(i int) {
+	if m.addrevision != nil {
+		*m.addrevision += i
+	} else {
+		m.addrevision = &i
+	}
+}
+
+// AddedRevision returns the value that was added to the "revision" field in this mutation.
+func (m *RepoCommitMutation) AddedRevision() (r int, exists bool) {
+	v := m.addrevision
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRevision resets all changes to the "revision" field.
+func (m *RepoCommitMutation) ResetRevision() {
+	m.revision = nil
+	m.addrevision = nil
+}
+
+// SetHash sets the "hash" field.
+func (m *RepoCommitMutation) SetHash(s string) {
+	m.hash = &s
+}
+
+// Hash returns the value of the "hash" field in the mutation.
+func (m *RepoCommitMutation) Hash() (r string, exists bool) {
+	v := m.hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHash returns the old "hash" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHash: %w", err)
+	}
+	return oldValue.Hash, nil
+}
+
+// ResetHash resets all changes to the "hash" field.
+func (m *RepoCommitMutation) ResetHash() {
+	m.hash = nil
+}
+
+// SetAuthor sets the "author" field.
+func (m *RepoCommitMutation) SetAuthor(o object.Signature) {
+	m.author = &o
+}
+
+// Author returns the value of the "author" field in the mutation.
+func (m *RepoCommitMutation) Author() (r object.Signature, exists bool) {
+	v := m.author
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthor returns the old "author" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldAuthor(ctx context.Context) (v object.Signature, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldAuthor is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldAuthor requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthor: %w", err)
+	}
+	return oldValue.Author, nil
+}
+
+// ResetAuthor resets all changes to the "author" field.
+func (m *RepoCommitMutation) ResetAuthor() {
+	m.author = nil
+}
+
+// SetCommitter sets the "committer" field.
+func (m *RepoCommitMutation) SetCommitter(o object.Signature) {
+	m.committer = &o
+}
+
+// Committer returns the value of the "committer" field in the mutation.
+func (m *RepoCommitMutation) Committer() (r object.Signature, exists bool) {
+	v := m.committer
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCommitter returns the old "committer" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldCommitter(ctx context.Context) (v object.Signature, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldCommitter is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldCommitter requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCommitter: %w", err)
+	}
+	return oldValue.Committer, nil
+}
+
+// ResetCommitter resets all changes to the "committer" field.
+func (m *RepoCommitMutation) ResetCommitter() {
+	m.committer = nil
+}
+
+// SetPgpSignature sets the "pgp_signature" field.
+func (m *RepoCommitMutation) SetPgpSignature(s string) {
+	m.pgp_signature = &s
+}
+
+// PgpSignature returns the value of the "pgp_signature" field in the mutation.
+func (m *RepoCommitMutation) PgpSignature() (r string, exists bool) {
+	v := m.pgp_signature
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPgpSignature returns the old "pgp_signature" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldPgpSignature(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldPgpSignature is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldPgpSignature requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPgpSignature: %w", err)
+	}
+	return oldValue.PgpSignature, nil
+}
+
+// ResetPgpSignature resets all changes to the "pgp_signature" field.
+func (m *RepoCommitMutation) ResetPgpSignature() {
+	m.pgp_signature = nil
+}
+
+// SetMessage sets the "message" field.
+func (m *RepoCommitMutation) SetMessage(s string) {
+	m.message = &s
+}
+
+// Message returns the value of the "message" field in the mutation.
+func (m *RepoCommitMutation) Message() (r string, exists bool) {
+	v := m.message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMessage returns the old "message" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldMessage(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMessage: %w", err)
+	}
+	return oldValue.Message, nil
+}
+
+// ResetMessage resets all changes to the "message" field.
+func (m *RepoCommitMutation) ResetMessage() {
+	m.message = nil
+}
+
+// SetTreeHash sets the "tree_hash" field.
+func (m *RepoCommitMutation) SetTreeHash(s string) {
+	m.tree_hash = &s
+}
+
+// TreeHash returns the value of the "tree_hash" field in the mutation.
+func (m *RepoCommitMutation) TreeHash() (r string, exists bool) {
+	v := m.tree_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTreeHash returns the old "tree_hash" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldTreeHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldTreeHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldTreeHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTreeHash: %w", err)
+	}
+	return oldValue.TreeHash, nil
+}
+
+// ResetTreeHash resets all changes to the "tree_hash" field.
+func (m *RepoCommitMutation) ResetTreeHash() {
+	m.tree_hash = nil
+}
+
+// SetParentHashes sets the "parent_hashes" field.
+func (m *RepoCommitMutation) SetParentHashes(s []string) {
+	m.parent_hashes = &s
+}
+
+// ParentHashes returns the value of the "parent_hashes" field in the mutation.
+func (m *RepoCommitMutation) ParentHashes() (r []string, exists bool) {
+	v := m.parent_hashes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParentHashes returns the old "parent_hashes" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldParentHashes(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldParentHashes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldParentHashes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParentHashes: %w", err)
+	}
+	return oldValue.ParentHashes, nil
+}
+
+// ResetParentHashes resets all changes to the "parent_hashes" field.
+func (m *RepoCommitMutation) ResetParentHashes() {
+	m.parent_hashes = nil
+}
+
+// SetRepoCommitToRepositoryID sets the "RepoCommitToRepository" edge to the Repository entity by id.
+func (m *RepoCommitMutation) SetRepoCommitToRepositoryID(id uuid.UUID) {
+	m._RepoCommitToRepository = &id
+}
+
+// ClearRepoCommitToRepository clears the "RepoCommitToRepository" edge to the Repository entity.
+func (m *RepoCommitMutation) ClearRepoCommitToRepository() {
+	m.cleared_RepoCommitToRepository = true
+}
+
+// RepoCommitToRepositoryCleared reports if the "RepoCommitToRepository" edge to the Repository entity was cleared.
+func (m *RepoCommitMutation) RepoCommitToRepositoryCleared() bool {
+	return m.cleared_RepoCommitToRepository
+}
+
+// RepoCommitToRepositoryID returns the "RepoCommitToRepository" edge ID in the mutation.
+func (m *RepoCommitMutation) RepoCommitToRepositoryID() (id uuid.UUID, exists bool) {
+	if m._RepoCommitToRepository != nil {
+		return *m._RepoCommitToRepository, true
+	}
+	return
+}
+
+// RepoCommitToRepositoryIDs returns the "RepoCommitToRepository" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// RepoCommitToRepositoryID instead. It exists only for internal usage by the builders.
+func (m *RepoCommitMutation) RepoCommitToRepositoryIDs() (ids []uuid.UUID) {
+	if id := m._RepoCommitToRepository; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetRepoCommitToRepository resets all changes to the "RepoCommitToRepository" edge.
+func (m *RepoCommitMutation) ResetRepoCommitToRepository() {
+	m._RepoCommitToRepository = nil
+	m.cleared_RepoCommitToRepository = false
+}
+
+// Where appends a list predicates to the RepoCommitMutation builder.
+func (m *RepoCommitMutation) Where(ps ...predicate.RepoCommit) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// Op returns the operation name.
+func (m *RepoCommitMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (RepoCommit).
+func (m *RepoCommitMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *RepoCommitMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.revision != nil {
+		fields = append(fields, repocommit.FieldRevision)
+	}
+	if m.hash != nil {
+		fields = append(fields, repocommit.FieldHash)
+	}
+	if m.author != nil {
+		fields = append(fields, repocommit.FieldAuthor)
+	}
+	if m.committer != nil {
+		fields = append(fields, repocommit.FieldCommitter)
+	}
+	if m.pgp_signature != nil {
+		fields = append(fields, repocommit.FieldPgpSignature)
+	}
+	if m.message != nil {
+		fields = append(fields, repocommit.FieldMessage)
+	}
+	if m.tree_hash != nil {
+		fields = append(fields, repocommit.FieldTreeHash)
+	}
+	if m.parent_hashes != nil {
+		fields = append(fields, repocommit.FieldParentHashes)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *RepoCommitMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case repocommit.FieldRevision:
+		return m.Revision()
+	case repocommit.FieldHash:
+		return m.Hash()
+	case repocommit.FieldAuthor:
+		return m.Author()
+	case repocommit.FieldCommitter:
+		return m.Committer()
+	case repocommit.FieldPgpSignature:
+		return m.PgpSignature()
+	case repocommit.FieldMessage:
+		return m.Message()
+	case repocommit.FieldTreeHash:
+		return m.TreeHash()
+	case repocommit.FieldParentHashes:
+		return m.ParentHashes()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *RepoCommitMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case repocommit.FieldRevision:
+		return m.OldRevision(ctx)
+	case repocommit.FieldHash:
+		return m.OldHash(ctx)
+	case repocommit.FieldAuthor:
+		return m.OldAuthor(ctx)
+	case repocommit.FieldCommitter:
+		return m.OldCommitter(ctx)
+	case repocommit.FieldPgpSignature:
+		return m.OldPgpSignature(ctx)
+	case repocommit.FieldMessage:
+		return m.OldMessage(ctx)
+	case repocommit.FieldTreeHash:
+		return m.OldTreeHash(ctx)
+	case repocommit.FieldParentHashes:
+		return m.OldParentHashes(ctx)
+	}
+	return nil, fmt.Errorf("unknown RepoCommit field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *RepoCommitMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case repocommit.FieldRevision:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRevision(v)
+		return nil
+	case repocommit.FieldHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHash(v)
+		return nil
+	case repocommit.FieldAuthor:
+		v, ok := value.(object.Signature)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthor(v)
+		return nil
+	case repocommit.FieldCommitter:
+		v, ok := value.(object.Signature)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCommitter(v)
+		return nil
+	case repocommit.FieldPgpSignature:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPgpSignature(v)
+		return nil
+	case repocommit.FieldMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMessage(v)
+		return nil
+	case repocommit.FieldTreeHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTreeHash(v)
+		return nil
+	case repocommit.FieldParentHashes:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParentHashes(v)
+		return nil
+	}
+	return fmt.Errorf("unknown RepoCommit field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *RepoCommitMutation) AddedFields() []string {
+	var fields []string
+	if m.addrevision != nil {
+		fields = append(fields, repocommit.FieldRevision)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *RepoCommitMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case repocommit.FieldRevision:
+		return m.AddedRevision()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *RepoCommitMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case repocommit.FieldRevision:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRevision(v)
+		return nil
+	}
+	return fmt.Errorf("unknown RepoCommit numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *RepoCommitMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *RepoCommitMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *RepoCommitMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown RepoCommit nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *RepoCommitMutation) ResetField(name string) error {
+	switch name {
+	case repocommit.FieldRevision:
+		m.ResetRevision()
+		return nil
+	case repocommit.FieldHash:
+		m.ResetHash()
+		return nil
+	case repocommit.FieldAuthor:
+		m.ResetAuthor()
+		return nil
+	case repocommit.FieldCommitter:
+		m.ResetCommitter()
+		return nil
+	case repocommit.FieldPgpSignature:
+		m.ResetPgpSignature()
+		return nil
+	case repocommit.FieldMessage:
+		m.ResetMessage()
+		return nil
+	case repocommit.FieldTreeHash:
+		m.ResetTreeHash()
+		return nil
+	case repocommit.FieldParentHashes:
+		m.ResetParentHashes()
+		return nil
+	}
+	return fmt.Errorf("unknown RepoCommit field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *RepoCommitMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m._RepoCommitToRepository != nil {
+		edges = append(edges, repocommit.EdgeRepoCommitToRepository)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *RepoCommitMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case repocommit.EdgeRepoCommitToRepository:
+		if id := m._RepoCommitToRepository; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *RepoCommitMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *RepoCommitMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *RepoCommitMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleared_RepoCommitToRepository {
+		edges = append(edges, repocommit.EdgeRepoCommitToRepository)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *RepoCommitMutation) EdgeCleared(name string) bool {
+	switch name {
+	case repocommit.EdgeRepoCommitToRepository:
+		return m.cleared_RepoCommitToRepository
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *RepoCommitMutation) ClearEdge(name string) error {
+	switch name {
+	case repocommit.EdgeRepoCommitToRepository:
+		m.ClearRepoCommitToRepository()
+		return nil
+	}
+	return fmt.Errorf("unknown RepoCommit unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *RepoCommitMutation) ResetEdge(name string) error {
+	switch name {
+	case repocommit.EdgeRepoCommitToRepository:
+		m.ResetRepoCommitToRepository()
+		return nil
+	}
+	return fmt.Errorf("unknown RepoCommit edge %s", name)
+}
+
 // RepositoryMutation represents an operation that mutates the Repository nodes in the graph.
 type RepositoryMutation struct {
 	config
@@ -23792,11 +24689,13 @@ type RepositoryMutation struct {
 	branch_name                     *string
 	enviroment_filepath             *string
 	folder_path                     *string
-	commit_info                     *string
 	clearedFields                   map[string]struct{}
 	_RepositoryToEnvironment        map[uuid.UUID]struct{}
 	removed_RepositoryToEnvironment map[uuid.UUID]struct{}
 	cleared_RepositoryToEnvironment bool
+	_RepositoryToRepoCommit         map[uuid.UUID]struct{}
+	removed_RepositoryToRepoCommit  map[uuid.UUID]struct{}
+	cleared_RepositoryToRepoCommit  bool
 	done                            bool
 	oldValue                        func(context.Context) (*Repository, error)
 	predicates                      []predicate.Repository
@@ -24031,42 +24930,6 @@ func (m *RepositoryMutation) ResetFolderPath() {
 	m.folder_path = nil
 }
 
-// SetCommitInfo sets the "commit_info" field.
-func (m *RepositoryMutation) SetCommitInfo(s string) {
-	m.commit_info = &s
-}
-
-// CommitInfo returns the value of the "commit_info" field in the mutation.
-func (m *RepositoryMutation) CommitInfo() (r string, exists bool) {
-	v := m.commit_info
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCommitInfo returns the old "commit_info" field's value of the Repository entity.
-// If the Repository object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RepositoryMutation) OldCommitInfo(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldCommitInfo is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldCommitInfo requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCommitInfo: %w", err)
-	}
-	return oldValue.CommitInfo, nil
-}
-
-// ResetCommitInfo resets all changes to the "commit_info" field.
-func (m *RepositoryMutation) ResetCommitInfo() {
-	m.commit_info = nil
-}
-
 // AddRepositoryToEnvironmentIDs adds the "RepositoryToEnvironment" edge to the Environment entity by ids.
 func (m *RepositoryMutation) AddRepositoryToEnvironmentIDs(ids ...uuid.UUID) {
 	if m._RepositoryToEnvironment == nil {
@@ -24121,6 +24984,60 @@ func (m *RepositoryMutation) ResetRepositoryToEnvironment() {
 	m.removed_RepositoryToEnvironment = nil
 }
 
+// AddRepositoryToRepoCommitIDs adds the "RepositoryToRepoCommit" edge to the RepoCommit entity by ids.
+func (m *RepositoryMutation) AddRepositoryToRepoCommitIDs(ids ...uuid.UUID) {
+	if m._RepositoryToRepoCommit == nil {
+		m._RepositoryToRepoCommit = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._RepositoryToRepoCommit[ids[i]] = struct{}{}
+	}
+}
+
+// ClearRepositoryToRepoCommit clears the "RepositoryToRepoCommit" edge to the RepoCommit entity.
+func (m *RepositoryMutation) ClearRepositoryToRepoCommit() {
+	m.cleared_RepositoryToRepoCommit = true
+}
+
+// RepositoryToRepoCommitCleared reports if the "RepositoryToRepoCommit" edge to the RepoCommit entity was cleared.
+func (m *RepositoryMutation) RepositoryToRepoCommitCleared() bool {
+	return m.cleared_RepositoryToRepoCommit
+}
+
+// RemoveRepositoryToRepoCommitIDs removes the "RepositoryToRepoCommit" edge to the RepoCommit entity by IDs.
+func (m *RepositoryMutation) RemoveRepositoryToRepoCommitIDs(ids ...uuid.UUID) {
+	if m.removed_RepositoryToRepoCommit == nil {
+		m.removed_RepositoryToRepoCommit = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._RepositoryToRepoCommit, ids[i])
+		m.removed_RepositoryToRepoCommit[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedRepositoryToRepoCommit returns the removed IDs of the "RepositoryToRepoCommit" edge to the RepoCommit entity.
+func (m *RepositoryMutation) RemovedRepositoryToRepoCommitIDs() (ids []uuid.UUID) {
+	for id := range m.removed_RepositoryToRepoCommit {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// RepositoryToRepoCommitIDs returns the "RepositoryToRepoCommit" edge IDs in the mutation.
+func (m *RepositoryMutation) RepositoryToRepoCommitIDs() (ids []uuid.UUID) {
+	for id := range m._RepositoryToRepoCommit {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetRepositoryToRepoCommit resets all changes to the "RepositoryToRepoCommit" edge.
+func (m *RepositoryMutation) ResetRepositoryToRepoCommit() {
+	m._RepositoryToRepoCommit = nil
+	m.cleared_RepositoryToRepoCommit = false
+	m.removed_RepositoryToRepoCommit = nil
+}
+
 // Where appends a list predicates to the RepositoryMutation builder.
 func (m *RepositoryMutation) Where(ps ...predicate.Repository) {
 	m.predicates = append(m.predicates, ps...)
@@ -24140,7 +25057,7 @@ func (m *RepositoryMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RepositoryMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 4)
 	if m.repo_url != nil {
 		fields = append(fields, repository.FieldRepoURL)
 	}
@@ -24152,9 +25069,6 @@ func (m *RepositoryMutation) Fields() []string {
 	}
 	if m.folder_path != nil {
 		fields = append(fields, repository.FieldFolderPath)
-	}
-	if m.commit_info != nil {
-		fields = append(fields, repository.FieldCommitInfo)
 	}
 	return fields
 }
@@ -24172,8 +25086,6 @@ func (m *RepositoryMutation) Field(name string) (ent.Value, bool) {
 		return m.EnviromentFilepath()
 	case repository.FieldFolderPath:
 		return m.FolderPath()
-	case repository.FieldCommitInfo:
-		return m.CommitInfo()
 	}
 	return nil, false
 }
@@ -24191,8 +25103,6 @@ func (m *RepositoryMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldEnviromentFilepath(ctx)
 	case repository.FieldFolderPath:
 		return m.OldFolderPath(ctx)
-	case repository.FieldCommitInfo:
-		return m.OldCommitInfo(ctx)
 	}
 	return nil, fmt.Errorf("unknown Repository field %s", name)
 }
@@ -24229,13 +25139,6 @@ func (m *RepositoryMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetFolderPath(v)
-		return nil
-	case repository.FieldCommitInfo:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCommitInfo(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Repository field %s", name)
@@ -24298,18 +25201,18 @@ func (m *RepositoryMutation) ResetField(name string) error {
 	case repository.FieldFolderPath:
 		m.ResetFolderPath()
 		return nil
-	case repository.FieldCommitInfo:
-		m.ResetCommitInfo()
-		return nil
 	}
 	return fmt.Errorf("unknown Repository field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RepositoryMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m._RepositoryToEnvironment != nil {
 		edges = append(edges, repository.EdgeRepositoryToEnvironment)
+	}
+	if m._RepositoryToRepoCommit != nil {
+		edges = append(edges, repository.EdgeRepositoryToRepoCommit)
 	}
 	return edges
 }
@@ -24324,15 +25227,24 @@ func (m *RepositoryMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case repository.EdgeRepositoryToRepoCommit:
+		ids := make([]ent.Value, 0, len(m._RepositoryToRepoCommit))
+		for id := range m._RepositoryToRepoCommit {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RepositoryMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.removed_RepositoryToEnvironment != nil {
 		edges = append(edges, repository.EdgeRepositoryToEnvironment)
+	}
+	if m.removed_RepositoryToRepoCommit != nil {
+		edges = append(edges, repository.EdgeRepositoryToRepoCommit)
 	}
 	return edges
 }
@@ -24347,15 +25259,24 @@ func (m *RepositoryMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case repository.EdgeRepositoryToRepoCommit:
+		ids := make([]ent.Value, 0, len(m.removed_RepositoryToRepoCommit))
+		for id := range m.removed_RepositoryToRepoCommit {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RepositoryMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.cleared_RepositoryToEnvironment {
 		edges = append(edges, repository.EdgeRepositoryToEnvironment)
+	}
+	if m.cleared_RepositoryToRepoCommit {
+		edges = append(edges, repository.EdgeRepositoryToRepoCommit)
 	}
 	return edges
 }
@@ -24366,6 +25287,8 @@ func (m *RepositoryMutation) EdgeCleared(name string) bool {
 	switch name {
 	case repository.EdgeRepositoryToEnvironment:
 		return m.cleared_RepositoryToEnvironment
+	case repository.EdgeRepositoryToRepoCommit:
+		return m.cleared_RepositoryToRepoCommit
 	}
 	return false
 }
@@ -24384,6 +25307,9 @@ func (m *RepositoryMutation) ResetEdge(name string) error {
 	switch name {
 	case repository.EdgeRepositoryToEnvironment:
 		m.ResetRepositoryToEnvironment()
+		return nil
+	case repository.EdgeRepositoryToRepoCommit:
+		m.ResetRepositoryToRepoCommit()
 		return nil
 	}
 	return fmt.Errorf("unknown Repository edge %s", name)

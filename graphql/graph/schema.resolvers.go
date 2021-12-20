@@ -685,7 +685,7 @@ func (r *mutationResolver) CreateAgentTasks(ctx context.Context, hostHclid strin
 	return agentTasksReturn, nil
 }
 
-func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL string, branchName string, repoName string, envFilePath string) ([]*ent.Environment, error) {
+func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL string, branchName string, envFilePath string) ([]*ent.Environment, error) {
 	currentUser, err := auth.ForContext(ctx)
 	if err != nil {
 		return nil, err
@@ -697,7 +697,7 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 			repository.EnviromentFilepath(envFilePath),
 			repository.RepoURL(repoURL),
 		),
-	).First(ctx)
+	).WithRepositoryToRepoCommit().First(ctx)
 
 	if foundRepo != nil {
 		return r.UpdateEnviromentViaPull(ctx, foundRepo.ID.String())
@@ -721,6 +721,31 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 		return nil, err
 	}
 
+	p_hashes := make([]string, len(commit_info.ParentHashes))
+	for i := 0; i < len(commit_info.ParentHashes); i++ {
+		p_hashes = append(p_hashes, commit_info.ParentHashes[i].String())
+	}
+
+	entRepoCommit, err := r.client.RepoCommit.Create().
+		SetRevision(0).
+		SetHash(commit_info.Hash.String()).
+		SetAuthor(commit_info.Author).
+		SetCommitter(commit_info.Committer).
+		SetPgpSignature(commit_info.PGPSignature).
+		SetMessage(commit_info.Message).
+		SetTreeHash(commit_info.TreeHash.String()).
+		SetParentHashes(p_hashes).
+		Save(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("couldn't create entRepoCommit: %v", err)
+	}
+
+	err = entRepo.Update().AddRepositoryToRepoCommit(entRepoCommit).Exec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't add RepoCommit to Repository: %v", err)
+	}
+
 	envPath := path.Join(repoFolderPath, envFilePath)
 
 	loadedEnviroments, err := r.LoadEnvironment(ctx, envPath)
@@ -730,7 +755,6 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 
 	_, err = entRepo.Update().
 		SetFolderPath(repoFolderPath).
-		SetCommitInfo(commit_info).
 		AddRepositoryToEnvironment(loadedEnviroments...).
 		Save(ctx)
 	if err != nil {
@@ -756,7 +780,7 @@ func (r *mutationResolver) UpdateEnviromentViaPull(ctx context.Context, envUUID 
 		return nil, err
 	}
 
-	entRepo, err := entEnvironment.QueryEnvironmentToRepository().Only(ctx)
+	entRepo, err := entEnvironment.QueryEnvironmentToRepository().WithRepositoryToRepoCommit().Only(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -766,9 +790,29 @@ func (r *mutationResolver) UpdateEnviromentViaPull(ctx context.Context, envUUID 
 		return nil, err
 	}
 
-	entRepo, err = entRepo.Update().SetCommitInfo(commit_info).Save(ctx)
+	p_hashes := make([]string, len(commit_info.ParentHashes))
+	for i := 0; i < len(commit_info.ParentHashes); i++ {
+		p_hashes = append(p_hashes, commit_info.ParentHashes[i].String())
+	}
+
+	entRepoCommit, err := r.client.RepoCommit.Create().
+		SetRevision(len(entRepo.Edges.RepositoryToRepoCommit)).
+		SetHash(commit_info.Hash.String()).
+		SetAuthor(commit_info.Author).
+		SetCommitter(commit_info.Committer).
+		SetPgpSignature(commit_info.PGPSignature).
+		SetMessage(commit_info.Message).
+		SetTreeHash(commit_info.TreeHash.String()).
+		SetParentHashes(p_hashes).
+		Save(ctx)
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("couldn't create entRepoCommit: %v", err)
+	}
+
+	err = entRepo.Update().AddRepositoryToRepoCommit(entRepoCommit).Exec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't add RepoCommit to Repository: %v", err)
 	}
 
 	envPath := path.Join(entRepo.FolderPath, entRepo.EnviromentFilepath)
@@ -1072,7 +1116,7 @@ func (r *provisioningStepResolver) Type(ctx context.Context, obj *ent.Provisioni
 }
 
 func (r *queryResolver) Environments(ctx context.Context) ([]*ent.Environment, error) {
-	e, err := r.client.Environment.Query().All(ctx)
+	e, err := r.client.Environment.Query().Order(ent.Asc(environment.FieldID)).All(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed querying Environment: %v", err)
@@ -1161,6 +1205,16 @@ func (r *queryResolver) Plan(ctx context.Context, planUUID string) (*ent.Plan, e
 	return plan, nil
 }
 
+func (r *queryResolver) GetBuilds(ctx context.Context) ([]*ent.Build, error) {
+	builds, err := r.client.Environment.Query().Order(ent.Asc(environment.FieldID)).QueryEnvironmentToBuild().All(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed querying Builds: %v", err)
+	}
+
+	return builds, nil
+}
+
 func (r *queryResolver) Build(ctx context.Context, buildUUID string) (*ent.Build, error) {
 	uuid, err := uuid.Parse(buildUUID)
 
@@ -1175,6 +1229,22 @@ func (r *queryResolver) Build(ctx context.Context, buildUUID string) (*ent.Build
 	}
 
 	return build, nil
+}
+
+func (r *queryResolver) GetBuildCommits(ctx context.Context, envUUID string) ([]*ent.BuildCommit, error) {
+	uuid, err := uuid.Parse(envUUID)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed casting envUUID to UUID: %v", err)
+	}
+
+	buildCommits, err := r.client.Environment.Query().Where(environment.IDEQ(uuid)).QueryEnvironmentToBuild().QueryBuildToBuildCommits().All(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed querying BuildCommits from Environment: %v", err)
+	}
+
+	return buildCommits, nil
 }
 
 func (r *queryResolver) Status(ctx context.Context, statusUUID string) (*ent.Status, error) {
@@ -1330,6 +1400,18 @@ func (r *queryResolver) ViewAgentTask(ctx context.Context, taskID string) (*ent.
 	}
 
 	return r.client.AgentTask.Get(ctx, uuid)
+}
+
+func (r *repoCommitResolver) ID(ctx context.Context, obj *ent.RepoCommit) (string, error) {
+	return obj.ID.String(), nil
+}
+
+func (r *repoCommitResolver) Author(ctx context.Context, obj *ent.RepoCommit) (string, error) {
+	return obj.Author.String(), nil
+}
+
+func (r *repoCommitResolver) Committer(ctx context.Context, obj *ent.RepoCommit) (string, error) {
+	return obj.Committer.String(), nil
 }
 
 func (r *repositoryResolver) ID(ctx context.Context, obj *ent.Repository) (string, error) {
@@ -1677,6 +1759,9 @@ func (r *Resolver) ProvisioningStep() generated.ProvisioningStepResolver {
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+// RepoCommit returns generated.RepoCommitResolver implementation.
+func (r *Resolver) RepoCommit() generated.RepoCommitResolver { return &repoCommitResolver{r} }
+
 // Repository returns generated.RepositoryResolver implementation.
 func (r *Resolver) Repository() generated.RepositoryResolver { return &repositoryResolver{r} }
 
@@ -1721,6 +1806,7 @@ type provisionedHostResolver struct{ *Resolver }
 type provisionedNetworkResolver struct{ *Resolver }
 type provisioningStepResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type repoCommitResolver struct{ *Resolver }
 type repositoryResolver struct{ *Resolver }
 type scriptResolver struct{ *Resolver }
 type serverTaskResolver struct{ *Resolver }

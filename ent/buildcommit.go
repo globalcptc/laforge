@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/build"
@@ -23,6 +24,8 @@ type BuildCommit struct {
 	Revision int `json:"revision,omitempty"`
 	// State holds the value of the "state" field.
 	State buildcommit.State `json:"state,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the BuildCommitQuery when eager-loading is set.
 	Edges BuildCommitEdges `json:"edges"`
@@ -79,6 +82,8 @@ func (*BuildCommit) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullInt64)
 		case buildcommit.FieldType, buildcommit.FieldState:
 			values[i] = new(sql.NullString)
+		case buildcommit.FieldCreatedAt:
+			values[i] = new(sql.NullTime)
 		case buildcommit.FieldID:
 			values[i] = new(uuid.UUID)
 		case buildcommit.ForeignKeys[0]: // build_commit_build_commit_to_build
@@ -121,6 +126,12 @@ func (bc *BuildCommit) assignValues(columns []string, values []interface{}) erro
 				return fmt.Errorf("unexpected type %T for field state", values[i])
 			} else if value.Valid {
 				bc.State = buildcommit.State(value.String)
+			}
+		case buildcommit.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				bc.CreatedAt = value.Time
 			}
 		case buildcommit.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -173,6 +184,8 @@ func (bc *BuildCommit) String() string {
 	builder.WriteString(fmt.Sprintf("%v", bc.Revision))
 	builder.WriteString(", state=")
 	builder.WriteString(fmt.Sprintf("%v", bc.State))
+	builder.WriteString(", created_at=")
+	builder.WriteString(bc.CreatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

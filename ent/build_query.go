@@ -20,6 +20,7 @@ import (
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/google/uuid"
@@ -39,6 +40,7 @@ type BuildQuery struct {
 	withBuildToEnvironment        *EnvironmentQuery
 	withBuildToCompetition        *CompetitionQuery
 	withBuildToLatestBuildCommit  *BuildCommitQuery
+	withBuildToRepoCommit         *RepoCommitQuery
 	withBuildToProvisionedNetwork *ProvisionedNetworkQuery
 	withBuildToTeam               *TeamQuery
 	withBuildToPlan               *PlanQuery
@@ -162,6 +164,28 @@ func (bq *BuildQuery) QueryBuildToLatestBuildCommit() *BuildCommitQuery {
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, build.BuildToLatestBuildCommitTable, build.BuildToLatestBuildCommitColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBuildToRepoCommit chains the current query on the "BuildToRepoCommit" edge.
+func (bq *BuildQuery) QueryBuildToRepoCommit() *RepoCommitQuery {
+	query := &RepoCommitQuery{config: bq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := bq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := bq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(build.Table, build.FieldID, selector),
+			sqlgraph.To(repocommit.Table, repocommit.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, build.BuildToRepoCommitTable, build.BuildToRepoCommitColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -464,6 +488,7 @@ func (bq *BuildQuery) Clone() *BuildQuery {
 		withBuildToEnvironment:        bq.withBuildToEnvironment.Clone(),
 		withBuildToCompetition:        bq.withBuildToCompetition.Clone(),
 		withBuildToLatestBuildCommit:  bq.withBuildToLatestBuildCommit.Clone(),
+		withBuildToRepoCommit:         bq.withBuildToRepoCommit.Clone(),
 		withBuildToProvisionedNetwork: bq.withBuildToProvisionedNetwork.Clone(),
 		withBuildToTeam:               bq.withBuildToTeam.Clone(),
 		withBuildToPlan:               bq.withBuildToPlan.Clone(),
@@ -516,6 +541,17 @@ func (bq *BuildQuery) WithBuildToLatestBuildCommit(opts ...func(*BuildCommitQuer
 		opt(query)
 	}
 	bq.withBuildToLatestBuildCommit = query
+	return bq
+}
+
+// WithBuildToRepoCommit tells the query-builder to eager-load the nodes that are connected to
+// the "BuildToRepoCommit" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithBuildToRepoCommit(opts ...func(*RepoCommitQuery)) *BuildQuery {
+	query := &RepoCommitQuery{config: bq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	bq.withBuildToRepoCommit = query
 	return bq
 }
 
@@ -640,11 +676,12 @@ func (bq *BuildQuery) sqlAll(ctx context.Context) ([]*Build, error) {
 		nodes       = []*Build{}
 		withFKs     = bq.withFKs
 		_spec       = bq.querySpec()
-		loadedTypes = [9]bool{
+		loadedTypes = [10]bool{
 			bq.withBuildToStatus != nil,
 			bq.withBuildToEnvironment != nil,
 			bq.withBuildToCompetition != nil,
 			bq.withBuildToLatestBuildCommit != nil,
+			bq.withBuildToRepoCommit != nil,
 			bq.withBuildToProvisionedNetwork != nil,
 			bq.withBuildToTeam != nil,
 			bq.withBuildToPlan != nil,
@@ -652,7 +689,7 @@ func (bq *BuildQuery) sqlAll(ctx context.Context) ([]*Build, error) {
 			bq.withBuildToAdhocPlans != nil,
 		}
 	)
-	if bq.withBuildToEnvironment != nil || bq.withBuildToCompetition != nil || bq.withBuildToLatestBuildCommit != nil {
+	if bq.withBuildToEnvironment != nil || bq.withBuildToCompetition != nil || bq.withBuildToLatestBuildCommit != nil || bq.withBuildToRepoCommit != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -789,6 +826,35 @@ func (bq *BuildQuery) sqlAll(ctx context.Context) ([]*Build, error) {
 			}
 			for i := range nodes {
 				nodes[i].Edges.BuildToLatestBuildCommit = n
+			}
+		}
+	}
+
+	if query := bq.withBuildToRepoCommit; query != nil {
+		ids := make([]uuid.UUID, 0, len(nodes))
+		nodeids := make(map[uuid.UUID][]*Build)
+		for i := range nodes {
+			if nodes[i].build_build_to_repo_commit == nil {
+				continue
+			}
+			fk := *nodes[i].build_build_to_repo_commit
+			if _, ok := nodeids[fk]; !ok {
+				ids = append(ids, fk)
+			}
+			nodeids[fk] = append(nodeids[fk], nodes[i])
+		}
+		query.Where(repocommit.IDIn(ids...))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			nodes, ok := nodeids[n.ID]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "build_build_to_repo_commit" returned %v`, n.ID)
+			}
+			for i := range nodes {
+				nodes[i].Edges.BuildToRepoCommit = n
 			}
 		}
 	}

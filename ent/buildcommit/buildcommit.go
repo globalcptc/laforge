@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -21,6 +22,8 @@ const (
 	FieldRevision = "revision"
 	// FieldState holds the string denoting the state field in the database.
 	FieldState = "state"
+	// FieldCreatedAt holds the string denoting the created_at field in the database.
+	FieldCreatedAt = "created_at"
 	// EdgeBuildCommitToBuild holds the string denoting the buildcommittobuild edge name in mutations.
 	EdgeBuildCommitToBuild = "BuildCommitToBuild"
 	// EdgeBuildCommitToPlanDiffs holds the string denoting the buildcommittoplandiffs edge name in mutations.
@@ -49,6 +52,7 @@ var Columns = []string{
 	FieldType,
 	FieldRevision,
 	FieldState,
+	FieldCreatedAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "build_commits"
@@ -73,6 +77,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
+	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )

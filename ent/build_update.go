@@ -18,6 +18,7 @@ import (
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/google/uuid"
@@ -136,6 +137,25 @@ func (bu *BuildUpdate) SetBuildToLatestBuildCommit(b *BuildCommit) *BuildUpdate 
 	return bu.SetBuildToLatestBuildCommitID(b.ID)
 }
 
+// SetBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by ID.
+func (bu *BuildUpdate) SetBuildToRepoCommitID(id uuid.UUID) *BuildUpdate {
+	bu.mutation.SetBuildToRepoCommitID(id)
+	return bu
+}
+
+// SetNillableBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by ID if the given value is not nil.
+func (bu *BuildUpdate) SetNillableBuildToRepoCommitID(id *uuid.UUID) *BuildUpdate {
+	if id != nil {
+		bu = bu.SetBuildToRepoCommitID(*id)
+	}
+	return bu
+}
+
+// SetBuildToRepoCommit sets the "BuildToRepoCommit" edge to the RepoCommit entity.
+func (bu *BuildUpdate) SetBuildToRepoCommit(r *RepoCommit) *BuildUpdate {
+	return bu.SetBuildToRepoCommitID(r.ID)
+}
+
 // AddBuildToProvisionedNetworkIDs adds the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity by IDs.
 func (bu *BuildUpdate) AddBuildToProvisionedNetworkIDs(ids ...uuid.UUID) *BuildUpdate {
 	bu.mutation.AddBuildToProvisionedNetworkIDs(ids...)
@@ -237,6 +257,12 @@ func (bu *BuildUpdate) ClearBuildToCompetition() *BuildUpdate {
 // ClearBuildToLatestBuildCommit clears the "BuildToLatestBuildCommit" edge to the BuildCommit entity.
 func (bu *BuildUpdate) ClearBuildToLatestBuildCommit() *BuildUpdate {
 	bu.mutation.ClearBuildToLatestBuildCommit()
+	return bu
+}
+
+// ClearBuildToRepoCommit clears the "BuildToRepoCommit" edge to the RepoCommit entity.
+func (bu *BuildUpdate) ClearBuildToRepoCommit() *BuildUpdate {
+	bu.mutation.ClearBuildToRepoCommit()
 	return bu
 }
 
@@ -601,6 +627,41 @@ func (bu *BuildUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: buildcommit.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if bu.mutation.BuildToRepoCommitCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   build.BuildToRepoCommitTable,
+			Columns: []string{build.BuildToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bu.mutation.BuildToRepoCommitIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   build.BuildToRepoCommitTable,
+			Columns: []string{build.BuildToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
 				},
 			},
 		}
@@ -998,6 +1059,25 @@ func (buo *BuildUpdateOne) SetBuildToLatestBuildCommit(b *BuildCommit) *BuildUpd
 	return buo.SetBuildToLatestBuildCommitID(b.ID)
 }
 
+// SetBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by ID.
+func (buo *BuildUpdateOne) SetBuildToRepoCommitID(id uuid.UUID) *BuildUpdateOne {
+	buo.mutation.SetBuildToRepoCommitID(id)
+	return buo
+}
+
+// SetNillableBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by ID if the given value is not nil.
+func (buo *BuildUpdateOne) SetNillableBuildToRepoCommitID(id *uuid.UUID) *BuildUpdateOne {
+	if id != nil {
+		buo = buo.SetBuildToRepoCommitID(*id)
+	}
+	return buo
+}
+
+// SetBuildToRepoCommit sets the "BuildToRepoCommit" edge to the RepoCommit entity.
+func (buo *BuildUpdateOne) SetBuildToRepoCommit(r *RepoCommit) *BuildUpdateOne {
+	return buo.SetBuildToRepoCommitID(r.ID)
+}
+
 // AddBuildToProvisionedNetworkIDs adds the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity by IDs.
 func (buo *BuildUpdateOne) AddBuildToProvisionedNetworkIDs(ids ...uuid.UUID) *BuildUpdateOne {
 	buo.mutation.AddBuildToProvisionedNetworkIDs(ids...)
@@ -1099,6 +1179,12 @@ func (buo *BuildUpdateOne) ClearBuildToCompetition() *BuildUpdateOne {
 // ClearBuildToLatestBuildCommit clears the "BuildToLatestBuildCommit" edge to the BuildCommit entity.
 func (buo *BuildUpdateOne) ClearBuildToLatestBuildCommit() *BuildUpdateOne {
 	buo.mutation.ClearBuildToLatestBuildCommit()
+	return buo
+}
+
+// ClearBuildToRepoCommit clears the "BuildToRepoCommit" edge to the RepoCommit entity.
+func (buo *BuildUpdateOne) ClearBuildToRepoCommit() *BuildUpdateOne {
+	buo.mutation.ClearBuildToRepoCommit()
 	return buo
 }
 
@@ -1487,6 +1573,41 @@ func (buo *BuildUpdateOne) sqlSave(ctx context.Context) (_node *Build, err error
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: buildcommit.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if buo.mutation.BuildToRepoCommitCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   build.BuildToRepoCommitTable,
+			Columns: []string{build.BuildToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := buo.mutation.BuildToRepoCommitIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   build.BuildToRepoCommitTable,
+			Columns: []string{build.BuildToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
 				},
 			},
 		}

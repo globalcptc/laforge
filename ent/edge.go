@@ -140,6 +140,14 @@ func (b *Build) BuildToLatestBuildCommit(ctx context.Context) (*BuildCommit, err
 	return result, MaskNotFound(err)
 }
 
+func (b *Build) BuildToRepoCommit(ctx context.Context) (*RepoCommit, error) {
+	result, err := b.Edges.BuildToRepoCommitOrErr()
+	if IsNotLoaded(err) {
+		result, err = b.QueryBuildToRepoCommit().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (b *Build) BuildToProvisionedNetwork(ctx context.Context) ([]*ProvisionedNetwork, error) {
 	result, err := b.Edges.BuildToProvisionedNetworkOrErr()
 	if IsNotLoaded(err) {
@@ -924,10 +932,26 @@ func (ps *ProvisioningStep) ProvisioningStepToGinFileMiddleware(ctx context.Cont
 	return result, MaskNotFound(err)
 }
 
+func (rc *RepoCommit) RepoCommitToRepository(ctx context.Context) (*Repository, error) {
+	result, err := rc.Edges.RepoCommitToRepositoryOrErr()
+	if IsNotLoaded(err) {
+		result, err = rc.QueryRepoCommitToRepository().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (r *Repository) RepositoryToEnvironment(ctx context.Context) ([]*Environment, error) {
 	result, err := r.Edges.RepositoryToEnvironmentOrErr()
 	if IsNotLoaded(err) {
 		result, err = r.QueryRepositoryToEnvironment().All(ctx)
+	}
+	return result, err
+}
+
+func (r *Repository) RepositoryToRepoCommit(ctx context.Context) ([]*RepoCommit, error) {
+	result, err := r.Edges.RepositoryToRepoCommitOrErr()
+	if IsNotLoaded(err) {
+		result, err = r.QueryRepositoryToRepoCommit().All(ctx)
 	}
 	return result, err
 }
