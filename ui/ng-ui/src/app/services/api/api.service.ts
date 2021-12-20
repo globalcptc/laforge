@@ -29,7 +29,11 @@ import {
   LaForgeUpdateUserGQL,
   LaForgeUpdateUserMutation,
   LaForgeUpdateEnviromentViaPullGQL,
-  LaForgeUpdateEnviromentViaPullMutation
+  LaForgeUpdateEnviromentViaPullMutation,
+  LaForgeListEnvironmentsQuery,
+  LaForgeListEnvironmentsGQL,
+  LaForgeListBuildCommitsGQL,
+  LaForgeListBuildCommitsQuery
 } from '@graphql';
 
 @Injectable({
@@ -52,7 +56,9 @@ export class ApiService {
     private getUserListGQL: LaForgeGetUserListGQL,
     private updateUserGQL: LaForgeUpdateUserGQL,
     private createUserGQL: LaForgeCreateUserGQL,
-    private updateEnviromentViaPullGQL: LaForgeUpdateEnviromentViaPullGQL
+    private updateEnviromentViaPullGQL: LaForgeUpdateEnviromentViaPullGQL,
+    private listEnvironmentsGQL: LaForgeListEnvironmentsGQL,
+    private listBuildCommitsGQL: LaForgeListBuildCommitsGQL
   ) {}
 
   /**
@@ -105,6 +111,46 @@ export class ApiService {
             return reject(errors);
           }
           resolve(data.getAllAgentStatus);
+        });
+    });
+  }
+
+  /**
+   * Lists basic info about environments from the API once, without exposing a subscription or observable
+   */
+  public async listEnvironments(): Promise<LaForgeListEnvironmentsQuery['environments']> {
+    return new Promise((resolve, reject) => {
+      this.listEnvironmentsGQL
+        .fetch()
+        .toPromise()
+        .then(({ data, error, errors }) => {
+          if (error) {
+            return reject(error);
+          } else if (errors) {
+            return reject(errors);
+          }
+          resolve(data.environments);
+        });
+    });
+  }
+
+  /**
+   * Lists basic info about environments from the API once, without exposing a subscription or observable
+   */
+  public async listBuildCommits(envUUID: string): Promise<LaForgeListBuildCommitsQuery['getBuildCommits']> {
+    return new Promise((resolve, reject) => {
+      this.listBuildCommitsGQL
+        .fetch({
+          envUUID
+        })
+        .toPromise()
+        .then(({ data, error, errors }) => {
+          if (error) {
+            return reject(error);
+          } else if (errors) {
+            return reject(errors);
+          }
+          resolve(data.getBuildCommits);
         });
     });
   }

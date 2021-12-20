@@ -10,13 +10,105 @@
     <div class="env env-header">
       <div class="name">Name</div>
       <div class="latest-commit">Latest Commit</div>
-      <div class="owner">Owner</div>
+      <div class="owner">Last Committer</div>
       <div class="team-count">Team Count</div>
       <div class="network-count">Network Count</div>
       <div class="host-count">Host Count</div>
       <div class="controls">Controls</div>
+      <span class="expand-controls"></span>
     </div>
   </div>
+  <div class="env-container" *ngIf="!(environments | async)">
+    <div class="env env-loading">
+      <i class="fa fa-spinner-third fa-spin"></i>
+    </div>
+  </div>
+  <ng-container *ngIf="environments | async as _environments">
+    <div *ngFor="let environment of _environments" class="env-container">
+      <div class="env">
+        <div class="name">
+          <b>{{ environment.name }}</b>
+        </div>
+        <div class="commit-hash">
+          <a [href]="getLatestCommitLink(environment)" target="_blank" rel="noreferrer">{{ getLatestCommitHash(environment) }}</a>
+        </div>
+        <div class="owner">{{ getLastCommitter(environment) }}</div>
+        <div class="team-count">{{ environment.team_count }} Team<span *ngIf="environment.team_count > 1">s</span></div>
+        <div class="network-count">
+          {{ environment.EnvironmentToNetwork.length }} Network<span *ngIf="environment.EnvironmentToNetwork.length > 1">s</span>
+        </div>
+        <div class="host-count">
+          {{ environment.EnvironmentToHost.length }} Host<span *ngIf="environment.EnvironmentToNetwork.length > 1">s</span>
+        </div>
+        <div class="controls">
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-warning" [ngClass]="{ 'btn-icon': showIconsOnly }">
+              <ng-container *ngIf="showIconsOnly"><i class="fa fa-project-diagram"></i></ng-container>
+              <ng-container *ngIf="!showIconsOnly">Manage</ng-container>
+            </button>
+            <button class="btn btn-success" [ngClass]="{ 'btn-icon': showIconsOnly }" (click)="createBuild(environment)">
+              <ng-container *ngIf="showIconsOnly"><i class="fa fa-hammer"></i></ng-container>
+              <ng-container *ngIf="!showIconsOnly">Build</ng-container>
+            </button>
+            <button class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }" (click)="updateEnvironmentFromGit(environment)">
+              <ng-container *ngIf="showIconsOnly"><i class="fa fa-sync-alt"></i></ng-container>
+              <ng-container *ngIf="!showIconsOnly">Pull</ng-container>
+            </button>
+            <button class="btn btn-danger" [ngClass]="{ 'btn-icon': showIconsOnly }">
+              <ng-container *ngIf="showIconsOnly"><i class="fa fa-bomb"></i></ng-container>
+              <ng-container *ngIf="!showIconsOnly">Destroy</ng-container>
+            </button>
+          </div>
+        </div>
+        <span class="expand-controls" (click)="toggleExpandEnvironment(environment)">
+          <i class="fa" [ngClass]="environmentIsExpanded(environment) ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+        </span>
+      </div>
+      <div
+        [id]="'builds-' + environment.id"
+        class="builds"
+        [ngClass]="environmentIsExpanded(environment) ? 'expanded' : 'collapsed'"
+        style="max-height: 0px"
+        *ngIf="buildCommits | async as _buildCommits"
+      >
+        <div class="build build-header">
+          <div class="commit-hash">Referenced Git Commit</div>
+          <div class="owner">Author</div>
+          <div class="time">Start/End</div>
+          <div class="status">Status</div>
+          <!-- <div class="logs">Logs</div> -->
+          <div class="type">Commit Type</div>
+          <div class="type">Controls</div>
+        </div>
+        <div *ngFor="let buildCommit of _buildCommits[environment.id]" class="build">
+          <div class="commit-hash">
+            <a [href]="getBuildCommitLink(buildCommit)">{{ getBuildCommitHash(buildCommit) }}</a>
+          </div>
+          <div class="owner">{{ getBuildCommitCommitter(buildCommit) }}</div>
+          <div class="time">Started 4 mins ago</div>
+          <div class="status">
+            <span class="badge" [ngClass]="'bg-' + getBuildCommitStateColor(buildCommit.state)">{{ buildCommit.state }}</span>
+          </div>
+          <!-- <div class="logs"><a href="#">View Logs</a></div> -->
+          <div class="type"
+            ><span class="badge" [ngClass]="'bg-' + getBuildCommitTypeColor(buildCommit.state)">{{ buildCommit.type }}</span></div
+          >
+          <div class="controls">
+            <div class="btn-group btn-group-sm">
+              <button *ngIf="buildCommitIsCancellable(buildCommit)" class="btn btn-danger" [ngClass]="{ 'btn-icon': showIconsOnly }">
+                <ng-container *ngIf="showIconsOnly"><i class="fa fa-times"></i></ng-container>
+                <ng-container *ngIf="!showIconsOnly">Cancel</ng-container>
+              </button>
+              <a class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }">
+                <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
+                <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
   <div class="env-container">
     <div class="env">
       <div class="name"><b>us-east-02</b></div>
@@ -45,6 +137,9 @@
           </button>
         </div>
       </div>
+      <span class="expand-controls">
+        <i class="fa fa-chevron-down"></i>
+      </span>
     </div>
     <div class="builds expanded">
       <div class="build build-header">
@@ -105,75 +200,6 @@
               <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
               <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
             </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="env-container">
-    <div class="env">
-      <div class="name"><b>us-east-02</b></div>
-      <div class="commit-hash"><a href="#">735fbc2</a></div>
-      <div class="owner">emperorcow</div>
-      <div class="team-count">1 Team</div>
-      <div class="network-count">5 Networks</div>
-      <div class="host-count">48 Hosts</div>
-      <div class="controls">
-        <div class="btn-group btn-group-sm">
-          <button class="btn btn-warning">Manage</button>
-          <button class="btn btn-success">Build</button>
-          <button class="btn btn-info">Pull</button>
-          <button class="btn btn-danger">Destroy</button>
-        </div>
-      </div>
-    </div>
-    <div class="builds expanded">
-      <div class="build build-header">
-        <div class="commit-hash">Referenced Git Commit</div>
-        <div class="owner">Author</div>
-        <div class="time">Start/End</div>
-        <div class="status">Status</div>
-        <!-- <div class="logs">Logs</div> -->
-        <div class="type">Commit Type</div>
-        <div class="type">Controls</div>
-      </div>
-      <div class="build">
-        <div class="commit-hash"><a href="#">735fbc2</a></div>
-        <div class="owner">BradHacker</div>
-        <div class="time">Started 4 mins ago</div>
-        <div class="status"><span class="badge bg-warning">In Progress</span></div>
-        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
-        <div class="type"><span class="badge bg-info">REBUILD</span></div>
-        <div class="controls">
-          <div class="btn-group btn-group-sm">
-            <button class="btn btn-danger">Cancel</button>
-            <a class="btn btn-info">View Logs</a>
-          </div>
-        </div>
-      </div>
-      <div class="build">
-        <div class="commit-hash"><a href="#">e4be782</a></div>
-        <div class="owner">emperorcow</div>
-        <div class="time">Took 12mins (00:00 AM)</div>
-        <div class="status"><span class="badge bg-danger">Failed</span></div>
-        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
-        <div class="type"><span class="badge bg-info">REBUILD</span></div>
-        <div class="controls">
-          <div class="btn-group btn-group-sm">
-            <a class="btn btn-info">View Logs</a>
-          </div>
-        </div>
-      </div>
-      <div class="build">
-        <div class="commit-hash"><a href="#">0f68ac4</a></div>
-        <div class="owner">BradHacker</div>
-        <div class="time">Took 32mins (00:00 AM)</div>
-        <div class="status"><span class="badge bg-success">Complete</span></div>
-        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
-        <div class="type"><span class="badge bg-dark">ROOT</span></div>
-        <div class="controls">
-          <div class="btn-group btn-group-sm">
-            <a class="btn btn-info">View Logs</a>
           </div>
         </div>
       </div>

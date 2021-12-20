@@ -111,7 +111,6 @@ export class DashboardComponent implements OnInit {
     this.api
       .createEnvFromGit({
         repoURL: this.gitUrl.value,
-        repoName: this.repoName.value,
         branchName: this.branchName.value,
         envFilePath: this.envFilePath.value
       })

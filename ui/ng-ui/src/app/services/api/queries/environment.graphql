@@ -27,7 +27,6 @@ query GetEnvironment($envId: String!) {
       id
       repo_url
       branch_name
-      commit_info
     }
     EnvironmentToBuild {
       id
@@ -184,9 +183,34 @@ query GetEnvironments {
     name
     competition_id
     revision
+
     EnvironmentToBuild {
       id
       revision
+    }
+  }
+}
+
+query ListEnvironments {
+  environments {
+    id
+    name
+    EnvironmentToRepository {
+      id
+      repo_url
+      RepositoryToRepoCommit {
+        id
+        revision
+        author
+        hash
+      }
+    }
+    team_count
+    EnvironmentToNetwork {
+      id
+    }
+    EnvironmentToHost {
+      id
     }
   }
 }
