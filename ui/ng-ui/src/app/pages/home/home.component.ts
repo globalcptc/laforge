@@ -173,8 +173,8 @@ export class HomeComponent implements OnInit {
   }
 
   buildCommitIsManagable(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): boolean {
-    if (buildCommit.state === LaForgeBuildCommitState.Cancelled) return false;
-    if (buildCommit.state === LaForgeBuildCommitState.Planning) return false;
+    // if (buildCommit.state === LaForgeBuildCommitState.Cancelled) return false;
+    // if (buildCommit.state === LaForgeBuildCommitState.Planning) return false;
     return true;
   }
 

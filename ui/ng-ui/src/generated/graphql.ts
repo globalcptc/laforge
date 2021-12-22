@@ -856,8 +856,11 @@ export type LaForgeGetBuildTreeQueryVariables = Exact<{
 export type LaForgeGetBuildTreeQuery = { __typename?: 'Query' } & {
   build?: Maybe<
     { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
-        BuildToLatestBuildCommit?: Maybe<{ __typename?: 'BuildCommit' } & Pick<LaForgeBuildCommit, 'id'>>;
-        buildToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
+        buildToEnvironment: { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name'>;
+        BuildToRepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'committer'> & {
+            RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
+          };
+        buildToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
         buildToTeam: Array<
           Maybe<
             { __typename?: 'Team' } & Pick<LaForgeTeam, 'id' | 'team_number'> & {
@@ -991,9 +994,7 @@ export type LaForgeGetBuildStatusesQuery = { __typename?: 'Query' } & {
     { __typename?: 'Build' } & Pick<LaForgeBuild, 'id'> & {
         buildToPlan: Array<
           Maybe<
-            { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
-                PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
-              }
+            { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & { PlanToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment }
           >
         >;
       }
@@ -1766,11 +1767,21 @@ export const GetBuildTreeDocument = gql`
     build(buildUUID: $buildId) {
       id
       revision
-      BuildToLatestBuildCommit {
+      buildToEnvironment {
         id
+        name
+      }
+      BuildToRepoCommit {
+        id
+        hash
+        committer
+        RepoCommitToRepository {
+          id
+          repo_url
+        }
       }
       buildToStatus {
-        ...StatusFields
+        id
       }
       buildToTeam {
         id
@@ -1941,7 +1952,6 @@ export const GetBuildTreeDocument = gql`
       }
     }
   }
-  ${StatusFieldsFragmentDoc}
 `;
 
 @Injectable({
@@ -1983,12 +1993,12 @@ export const GetBuildStatusesDocument = gql`
       buildToPlan {
         id
         PlanToStatus {
-          id
-          state
+          ...StatusFields
         }
       }
     }
   }
+  ${StatusFieldsFragmentDoc}
 `;
 
 @Injectable({

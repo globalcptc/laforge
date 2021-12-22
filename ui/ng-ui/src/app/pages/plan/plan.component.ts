@@ -91,7 +91,7 @@ export class PlanComponent implements OnInit, OnDestroy {
   approveCommit(): void {
     this.approveBuildCommit
       .mutate({
-        buildCommitId: this.envService.getBuildTree().getValue().BuildToLatestBuildCommit.id
+        buildCommitId: this.buildCommitId
       })
       .toPromise()
       .then(
@@ -122,7 +122,7 @@ export class PlanComponent implements OnInit, OnDestroy {
   cancelCommit(): void {
     this.cancelBuildCommit
       .mutate({
-        buildCommitId: this.envService.getBuildTree().getValue().BuildToLatestBuildCommit.id
+        buildCommitId: this.buildCommitId
       })
       .toPromise()
       .then(

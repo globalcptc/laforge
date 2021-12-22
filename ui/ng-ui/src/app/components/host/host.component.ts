@@ -30,6 +30,7 @@ export class HostComponent implements OnInit, OnDestroy {
   // eslint-disable-next-line max-len
   provisionedHost: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
   @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
   @Input() style: 'compact' | 'collapsed' | 'expanded';
   @Input() selectable: boolean;
   @Input() parentSelected: boolean;
@@ -110,6 +111,10 @@ export class HostComponent implements OnInit, OnDestroy {
     return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.provisionedHost.ProvisionedHostToPlan.id)[0] ?? undefined;
   }
 
+  getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
+    return this.buildStatusMap?.filter((s) => s.id === this.provisionedHost.ProvisionedHostToPlan.PlanToStatus.id)[0] ?? undefined;
+  }
+
   getStatusIcon(): string {
     if (this.mode === 'plan') {
       const planDiff = this.getPlanDiff();
@@ -125,9 +130,9 @@ export class HostComponent implements OnInit, OnDestroy {
           return 'fas fa-computer-classic';
       }
     }
-    // TODO: do build/manage stuffs
-    return 'fa fa-spinner fa-spin';
-    const status = this.planStatus ?? this.provisionedHostStatus;
+    const status = this.getStatus();
+    if (!status) return 'fa fa-spinner fa-spin';
+
     if (status?.state) {
       switch (status.state) {
         case LaForgeProvisionStatus.Todelete:
@@ -178,9 +183,9 @@ export class HostComponent implements OnInit, OnDestroy {
           return 'dark';
       }
     }
-    // TODO: do build/manage stuffs
-    return 'dark';
-    const status = this.planStatus ?? this.provisionedHostStatus;
+    const status = this.getStatus();
+    if (!status) return 'dark';
+
     if (status?.state) {
       switch (status.state) {
         case LaForgeProvisionStatus.Todelete:

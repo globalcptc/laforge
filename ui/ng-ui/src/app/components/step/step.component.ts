@@ -5,7 +5,8 @@ import {
   LaForgeProvisioningStepType,
   LaForgeSubscribeUpdatedStatusSubscription,
   LaForgeProvisionStatus,
-  LaForgePlanFieldsFragment
+  LaForgePlanFieldsFragment,
+  LaForgeGetBuildCommitQuery
 } from '@graphql';
 import { Subscription } from 'rxjs';
 import { ApiService } from 'src/app/services/api/api.service';
@@ -24,6 +25,8 @@ export class StepComponent implements OnInit, OnDestroy {
   @Input()
   // eslint-disable-next-line max-len
   provisioningStep: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0]['ProvisionedHostToProvisioningStep'][0];
+  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
   @Input() showDetail: boolean;
   @Input() style: 'compact' | 'expanded';
   @Input() mode: 'plan' | 'build' | 'manage';
@@ -100,6 +103,16 @@ export class StepComponent implements OnInit, OnDestroy {
     this.latestDiff = [...stepPlan.PlanToPlanDiffs].sort((a, b) => b.revision - a.revision)[0];
   }
 
+  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
+    return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.provisioningStep.ProvisioningStepToPlan.id)[0] ?? undefined;
+  }
+
+  getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
+    return (
+      this.buildStatusMap?.filter((s) => s.id === this.provisioningStep.ProvisioningStepToPlan?.PlanToStatus.id ?? null)[0] ?? undefined
+    );
+  }
+
   getStatusIcon(): string {
     switch (this.provisioningStep.type) {
       case LaForgeProvisioningStepType.Script:
@@ -121,20 +134,20 @@ export class StepComponent implements OnInit, OnDestroy {
 
   getStatusColor(): string {
     if (this.mode === 'plan') {
-      // if (!this.latestDiff) return 'dark';
-      // switch (this.latestDiff.new_state) {
-      //   case LaForgeProvisionStatus.Torebuild:
-      //     return 'warning';
-      //   default:
-      //     return 'dark';
-      // }
-      return 'black';
+      const planDiff = this.getPlanDiff();
+      if (!planDiff) return 'dark';
+      switch (planDiff.new_state) {
+        case LaForgeProvisionStatus.Torebuild:
+          return 'warning';
+        case LaForgeProvisionStatus.Planning:
+          return 'primary';
+        default:
+          return 'dark';
+      }
     }
-    // const status = this.provisionedStep.ProvisioningStepToPlan?.PlanToStatus ?? this.provisionedStep.ProvisioningStepToStatus;
-    const status = this.planStatus ?? this.provisioningStepStatus;
-    if (!status?.state) {
-      return 'black';
-    }
+    const status = this.getStatus();
+    if (!status) return 'black';
+
     switch (status.state) {
       case LaForgeProvisionStatus.Complete:
         return 'success';

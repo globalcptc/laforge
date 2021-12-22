@@ -24,6 +24,7 @@ export class NetworkComponent implements OnInit, OnDestroy {
   @Input()
   provisionedNetwork: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0];
   @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
   @Input() style: 'compact' | 'collapsed' | 'expanded';
   @Input() selectable: boolean;
   @Input() parentSelected: boolean;
@@ -99,6 +100,10 @@ export class NetworkComponent implements OnInit, OnDestroy {
     return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.provisionedNetwork.ProvisionedNetworkToPlan.id)[0] ?? undefined;
   }
 
+  getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
+    return this.buildStatusMap?.filter((s) => s.id === this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id)[0] ?? undefined;
+  }
+
   getStatusIcon(): string {
     if (this.mode === 'plan') {
       const planDiff = this.getPlanDiff();
@@ -114,10 +119,10 @@ export class NetworkComponent implements OnInit, OnDestroy {
           return 'fal fa-network-wired';
       }
     }
-    // TODO: rewrite build/manage stuff
-    return 'fas fa-minus-circle';
+    const status = this.getStatus();
+    if (!status) return 'fas fa-minus-circle';
 
-    switch (this.planStatus.state) {
+    switch (status.state) {
       case LaForgeProvisionStatus.Planning:
         return 'fas fa-ruler-triangle';
       case LaForgeProvisionStatus.Todelete:
@@ -148,9 +153,10 @@ export class NetworkComponent implements OnInit, OnDestroy {
           return 'dark';
       }
     }
-    // TODO: add build/manage stuffs
-    return 'dark';
-    switch (this.planStatus.state) {
+    const status = this.getStatus();
+    if (!status) return 'dark';
+
+    switch (status.state) {
       case LaForgeProvisionStatus.Complete:
         if (this.allChildrenResponding()) {
           return 'success';

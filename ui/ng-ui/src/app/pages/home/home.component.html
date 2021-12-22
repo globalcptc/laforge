@@ -2,7 +2,10 @@
   <mat-slide-toggle [(ngModel)]="showIconsOnly" color="primary">Show Icons Only</mat-slide-toggle>
   <button class="btn btn-success" (click)="openGitDialog()" [ngClass]="{ 'btn-icon': showIconsOnly }">
     <ng-container *ngIf="showIconsOnly"><i class="fab fa-git-alt"></i></ng-container>
-    <ng-container *ngIf="!showIconsOnly"><i class="fab fa-git-alt"></i>Clone Env from Git</ng-container>
+    <ng-container *ngIf="!showIconsOnly">
+      <i class="fab fa-git-alt"></i>
+      Clone Env from Git
+    </ng-container>
   </button>
 </div>
 <div class="env-list">
@@ -33,12 +36,17 @@
           <a [href]="getLatestCommitLink(environment)" target="_blank" rel="noreferrer">{{ getLatestCommitHash(environment) }}</a>
         </div>
         <div class="owner">{{ getLastCommitter(environment) }}</div>
-        <div class="team-count">{{ environment.team_count }} Team<span *ngIf="environment.team_count > 1">s</span></div>
+        <div class="team-count">
+          {{ environment.team_count }} Team
+          <span *ngIf="environment.team_count > 1">s</span>
+        </div>
         <div class="network-count">
-          {{ environment.EnvironmentToNetwork.length }} Network<span *ngIf="environment.EnvironmentToNetwork.length > 1">s</span>
+          {{ environment.EnvironmentToNetwork.length }} Network
+          <span *ngIf="environment.EnvironmentToNetwork.length > 1">s</span>
         </div>
         <div class="host-count">
-          {{ environment.EnvironmentToHost.length }} Host<span *ngIf="environment.EnvironmentToNetwork.length > 1">s</span>
+          {{ environment.EnvironmentToHost.length }} Host
+          <span *ngIf="environment.EnvironmentToNetwork.length > 1">s</span>
         </div>
         <div class="controls">
           <div class="btn-group btn-group-sm">
@@ -90,9 +98,9 @@
             <span class="badge" [ngClass]="'bg-' + getBuildCommitStateColor(buildCommit.state)">{{ buildCommit.state }}</span>
           </div>
           <!-- <div class="logs"><a href="#">View Logs</a></div> -->
-          <div class="type"
-            ><span class="badge" [ngClass]="'bg-' + getBuildCommitTypeColor(buildCommit.state)">{{ buildCommit.type }}</span></div
-          >
+          <div class="type">
+            <span class="badge" [ngClass]="'bg-' + getBuildCommitTypeColor(buildCommit.state)">{{ buildCommit.type }}</span>
+          </div>
           <div class="controls">
             <div class="btn-group btn-group-sm">
               <button
@@ -105,7 +113,7 @@
                 <ng-container *ngIf="!showIconsOnly">Cancel</ng-container>
               </button>
               <a
-                *ngIf="buildCommitIsCancellable(buildCommit)"
+                *ngIf="buildCommitIsPlanable(buildCommit)"
                 class="btn btn-primary"
                 [ngClass]="{ 'btn-icon': showIconsOnly }"
                 [href]="'/plan/' + buildCommit.id"
@@ -117,7 +125,7 @@
                 *ngIf="buildCommitIsManagable(buildCommit)"
                 class="btn btn-info"
                 [ngClass]="{ 'btn-icon': showIconsOnly }"
-                [href]="'/build/' + buildCommit.id"
+                [href]="'/build/' + buildCommit.BuildCommitToBuild.id"
               >
                 <ng-container *ngIf="showIconsOnly"><i class="fa fa-eye"></i></ng-container>
                 <ng-container *ngIf="!showIconsOnly">View Progress</ng-container>

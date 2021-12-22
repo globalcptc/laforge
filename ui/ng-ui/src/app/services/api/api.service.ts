@@ -37,7 +37,9 @@ import {
   LaForgeUpdateEnvironmentViaPullGQL,
   LaForgeUpdateEnvironmentViaPullMutation,
   LaForgeGetBuildCommitQuery,
-  LaForgeGetBuildCommitGQL
+  LaForgeGetBuildCommitGQL,
+  LaForgeGetBuildStatusesGQL,
+  LaForgeGetBuildStatusesQuery
 } from '@graphql';
 
 @Injectable({
@@ -65,7 +67,8 @@ export class ApiService {
     private listBuildCommitsGQL: LaForgeListBuildCommitsGQL,
     private cancelBuildCommitGQL: LaForgeCancelBuildCommitGQL,
     private approveBuildCommitGQL: LaForgeApproveBuildCommitGQL,
-    private getBuildCommitGQL: LaForgeGetBuildCommitGQL
+    private getBuildCommitGQL: LaForgeGetBuildCommitGQL,
+    private getBuildStatuses: LaForgeGetBuildStatusesGQL
   ) {}
 
   /**
@@ -162,6 +165,27 @@ export class ApiService {
     });
   }
 
+  /**
+   * Lists all statuses under an build from the API once, without exposing a subscription or observable
+   */
+  public async listBuildStatuses(buildUUID: string): Promise<LaForgeGetBuildStatusesQuery['build']['buildToPlan'][0]['PlanToStatus'][]> {
+    return new Promise((resolve, reject) => {
+      this.getBuildStatuses
+        .fetch({
+          buildUUID
+        })
+        .toPromise()
+        .then(({ data, error, errors }) => {
+          if (error) {
+            return reject(error);
+          } else if (errors) {
+            return reject(errors);
+          }
+          resolve(data.build.buildToPlan.map((p) => p.PlanToStatus));
+        }, reject);
+    });
+  }
+
   public async getBuildCommit(buildCommitUUID: string): Promise<LaForgeGetBuildCommitQuery['getBuildCommit']> {
     return new Promise((resolve, reject) => {
       this.getBuildCommitGQL
@@ -250,11 +274,11 @@ export class ApiService {
     });
   }
 
-  public async pullBuildTree(buildId: string): Promise<LaForgeGetBuildTreeQuery['build']> {
+  public async getBuildTree(buildId: string): Promise<LaForgeGetBuildTreeQuery['build']> {
     return new Promise((resolve, reject) => {
       this.getBuildTreeGQL
         .fetch({
-          buildId: buildId as string
+          buildId: buildId
         })
         .toPromise()
         .then(({ data, error, errors }) => {

@@ -21,6 +21,7 @@ export class TeamComponent implements OnInit, OnDestroy {
   @Input() team: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0];
   // @Input() planStatuses: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
   @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
   @Input() style: 'compact' | 'collapsed' | 'expanded';
   @Input() selectable: boolean;
   @Input() mode: 'plan' | 'build' | 'manage';
@@ -98,6 +99,10 @@ export class TeamComponent implements OnInit, OnDestroy {
     return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.team.TeamToPlan.id)[0] ?? undefined;
   }
 
+  getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
+    return this.buildStatusMap?.filter((s) => s.id === this.team.TeamToPlan.PlanToStatus.id)[0] ?? undefined;
+  }
+
   getStatusIcon(): string {
     if (this.mode === 'plan') {
       const planDiff = this.getPlanDiff();
@@ -113,11 +118,10 @@ export class TeamComponent implements OnInit, OnDestroy {
           return 'fal fa-users';
       }
     }
-    // TODO: Add in build stuff
-    // if (!this.planStatus) return 'fas fa-minus-circle';
-    return 'fas fa-minus-circle';
+    const status = this.getStatus();
+    if (!status) return 'fas fa-minus-circle';
 
-    switch (this.planStatus.state) {
+    switch (status.state) {
       case LaForgeProvisionStatus.Planning:
         return 'fas fa-ruler-triangle';
       case LaForgeProvisionStatus.Todelete:
@@ -148,10 +152,10 @@ export class TeamComponent implements OnInit, OnDestroy {
           return 'dark';
       }
     }
-    // TODO: Add in build stuff
-    // if (!this.planStatus) return 'dark';
-    return 'dark';
-    switch (this.planStatus.state) {
+    const status = this.getStatus();
+    if (!status) return 'dark';
+
+    switch (status.state) {
       case LaForgeProvisionStatus.Complete:
         if (this.allChildrenResponding()) {
           return 'success';
@@ -174,19 +178,6 @@ export class TeamComponent implements OnInit, OnDestroy {
         return 'dark';
     }
   }
-
-  // getStatusColor(): string {
-  //   switch (this.getStatus()) {
-  //     case ProvisionStatus.COMPLETE:
-  //       return 'success';
-  //     case ProvisionStatus.INPROGRESS:
-  //       return 'warning';
-  //     case ProvisionStatus.FAILED:
-  //       return 'danger';
-  //     default:
-  //       return 'dark';
-  //   }
-  // }
 
   onSelect(): void {
     if (this.mode === 'plan') return;

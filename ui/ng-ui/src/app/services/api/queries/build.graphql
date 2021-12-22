@@ -2,11 +2,21 @@ query GetBuildTree($buildId: String!) {
   build(buildUUID: $buildId) {
     id
     revision
-    BuildToLatestBuildCommit {
+    buildToEnvironment {
       id
+      name
+    }
+    BuildToRepoCommit {
+      id
+      hash
+      committer
+      RepoCommitToRepository {
+        id
+        repo_url
+      }
     }
     buildToStatus {
-      ...StatusFields
+      id
     }
     buildToTeam {
       id
@@ -193,8 +203,7 @@ query GetBuildStatuses($buildUUID: String!) {
     buildToPlan {
       id
       PlanToStatus {
-        id
-        state
+        ...StatusFields
       }
     }
   }
