@@ -15,6 +15,7 @@ import (
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/plandiff"
 	"github.com/gen0cide/laforge/ent/predicate"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/google/uuid"
 )
 
@@ -81,6 +82,21 @@ func (bcu *BuildCommitUpdate) SetBuildCommitToBuild(b *Build) *BuildCommitUpdate
 	return bcu.SetBuildCommitToBuildID(b.ID)
 }
 
+// AddBuildCommitToServerTaskIDs adds the "BuildCommitToServerTask" edge to the ServerTask entity by IDs.
+func (bcu *BuildCommitUpdate) AddBuildCommitToServerTaskIDs(ids ...uuid.UUID) *BuildCommitUpdate {
+	bcu.mutation.AddBuildCommitToServerTaskIDs(ids...)
+	return bcu
+}
+
+// AddBuildCommitToServerTask adds the "BuildCommitToServerTask" edges to the ServerTask entity.
+func (bcu *BuildCommitUpdate) AddBuildCommitToServerTask(s ...*ServerTask) *BuildCommitUpdate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return bcu.AddBuildCommitToServerTaskIDs(ids...)
+}
+
 // AddBuildCommitToPlanDiffIDs adds the "BuildCommitToPlanDiffs" edge to the PlanDiff entity by IDs.
 func (bcu *BuildCommitUpdate) AddBuildCommitToPlanDiffIDs(ids ...uuid.UUID) *BuildCommitUpdate {
 	bcu.mutation.AddBuildCommitToPlanDiffIDs(ids...)
@@ -105,6 +121,27 @@ func (bcu *BuildCommitUpdate) Mutation() *BuildCommitMutation {
 func (bcu *BuildCommitUpdate) ClearBuildCommitToBuild() *BuildCommitUpdate {
 	bcu.mutation.ClearBuildCommitToBuild()
 	return bcu
+}
+
+// ClearBuildCommitToServerTask clears all "BuildCommitToServerTask" edges to the ServerTask entity.
+func (bcu *BuildCommitUpdate) ClearBuildCommitToServerTask() *BuildCommitUpdate {
+	bcu.mutation.ClearBuildCommitToServerTask()
+	return bcu
+}
+
+// RemoveBuildCommitToServerTaskIDs removes the "BuildCommitToServerTask" edge to ServerTask entities by IDs.
+func (bcu *BuildCommitUpdate) RemoveBuildCommitToServerTaskIDs(ids ...uuid.UUID) *BuildCommitUpdate {
+	bcu.mutation.RemoveBuildCommitToServerTaskIDs(ids...)
+	return bcu
+}
+
+// RemoveBuildCommitToServerTask removes "BuildCommitToServerTask" edges to ServerTask entities.
+func (bcu *BuildCommitUpdate) RemoveBuildCommitToServerTask(s ...*ServerTask) *BuildCommitUpdate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return bcu.RemoveBuildCommitToServerTaskIDs(ids...)
 }
 
 // ClearBuildCommitToPlanDiffs clears all "BuildCommitToPlanDiffs" edges to the PlanDiff entity.
@@ -294,6 +331,60 @@ func (bcu *BuildCommitUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if bcu.mutation.BuildCommitToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   buildcommit.BuildCommitToServerTaskTable,
+			Columns: []string{buildcommit.BuildCommitToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bcu.mutation.RemovedBuildCommitToServerTaskIDs(); len(nodes) > 0 && !bcu.mutation.BuildCommitToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   buildcommit.BuildCommitToServerTaskTable,
+			Columns: []string{buildcommit.BuildCommitToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bcu.mutation.BuildCommitToServerTaskIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   buildcommit.BuildCommitToServerTaskTable,
+			Columns: []string{buildcommit.BuildCommitToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if bcu.mutation.BuildCommitToPlanDiffsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -417,6 +508,21 @@ func (bcuo *BuildCommitUpdateOne) SetBuildCommitToBuild(b *Build) *BuildCommitUp
 	return bcuo.SetBuildCommitToBuildID(b.ID)
 }
 
+// AddBuildCommitToServerTaskIDs adds the "BuildCommitToServerTask" edge to the ServerTask entity by IDs.
+func (bcuo *BuildCommitUpdateOne) AddBuildCommitToServerTaskIDs(ids ...uuid.UUID) *BuildCommitUpdateOne {
+	bcuo.mutation.AddBuildCommitToServerTaskIDs(ids...)
+	return bcuo
+}
+
+// AddBuildCommitToServerTask adds the "BuildCommitToServerTask" edges to the ServerTask entity.
+func (bcuo *BuildCommitUpdateOne) AddBuildCommitToServerTask(s ...*ServerTask) *BuildCommitUpdateOne {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return bcuo.AddBuildCommitToServerTaskIDs(ids...)
+}
+
 // AddBuildCommitToPlanDiffIDs adds the "BuildCommitToPlanDiffs" edge to the PlanDiff entity by IDs.
 func (bcuo *BuildCommitUpdateOne) AddBuildCommitToPlanDiffIDs(ids ...uuid.UUID) *BuildCommitUpdateOne {
 	bcuo.mutation.AddBuildCommitToPlanDiffIDs(ids...)
@@ -441,6 +547,27 @@ func (bcuo *BuildCommitUpdateOne) Mutation() *BuildCommitMutation {
 func (bcuo *BuildCommitUpdateOne) ClearBuildCommitToBuild() *BuildCommitUpdateOne {
 	bcuo.mutation.ClearBuildCommitToBuild()
 	return bcuo
+}
+
+// ClearBuildCommitToServerTask clears all "BuildCommitToServerTask" edges to the ServerTask entity.
+func (bcuo *BuildCommitUpdateOne) ClearBuildCommitToServerTask() *BuildCommitUpdateOne {
+	bcuo.mutation.ClearBuildCommitToServerTask()
+	return bcuo
+}
+
+// RemoveBuildCommitToServerTaskIDs removes the "BuildCommitToServerTask" edge to ServerTask entities by IDs.
+func (bcuo *BuildCommitUpdateOne) RemoveBuildCommitToServerTaskIDs(ids ...uuid.UUID) *BuildCommitUpdateOne {
+	bcuo.mutation.RemoveBuildCommitToServerTaskIDs(ids...)
+	return bcuo
+}
+
+// RemoveBuildCommitToServerTask removes "BuildCommitToServerTask" edges to ServerTask entities.
+func (bcuo *BuildCommitUpdateOne) RemoveBuildCommitToServerTask(s ...*ServerTask) *BuildCommitUpdateOne {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return bcuo.RemoveBuildCommitToServerTaskIDs(ids...)
 }
 
 // ClearBuildCommitToPlanDiffs clears all "BuildCommitToPlanDiffs" edges to the PlanDiff entity.
@@ -646,6 +773,60 @@ func (bcuo *BuildCommitUpdateOne) sqlSave(ctx context.Context) (_node *BuildComm
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: build.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if bcuo.mutation.BuildCommitToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   buildcommit.BuildCommitToServerTaskTable,
+			Columns: []string{buildcommit.BuildCommitToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bcuo.mutation.RemovedBuildCommitToServerTaskIDs(); len(nodes) > 0 && !bcuo.mutation.BuildCommitToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   buildcommit.BuildCommitToServerTaskTable,
+			Columns: []string{buildcommit.BuildCommitToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bcuo.mutation.BuildCommitToServerTaskIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   buildcommit.BuildCommitToServerTaskTable,
+			Columns: []string{buildcommit.BuildCommitToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
 				},
 			},
 		}

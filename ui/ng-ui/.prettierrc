@@ -4,5 +4,6 @@
   "endOfLine": "auto",
   "printWidth": 140,
   "jsxBracketSameLine": true,
-  "htmlWhitespaceSensitivity": "strict"
+  "bracketSameLine": true,
+  "htmlWhitespaceSensitivity": "ignore"
 }

@@ -1287,6 +1287,22 @@ func (c *BuildCommitClient) QueryBuildCommitToBuild(bc *BuildCommit) *BuildQuery
 	return query
 }
 
+// QueryBuildCommitToServerTask queries the BuildCommitToServerTask edge of a BuildCommit.
+func (c *BuildCommitClient) QueryBuildCommitToServerTask(bc *BuildCommit) *ServerTaskQuery {
+	query := &ServerTaskQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := bc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(buildcommit.Table, buildcommit.FieldID, id),
+			sqlgraph.To(servertask.Table, servertask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, buildcommit.BuildCommitToServerTaskTable, buildcommit.BuildCommitToServerTaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(bc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryBuildCommitToPlanDiffs queries the BuildCommitToPlanDiffs edge of a BuildCommit.
 func (c *BuildCommitClient) QueryBuildCommitToPlanDiffs(bc *BuildCommit) *PlanDiffQuery {
 	query := &PlanDiffQuery{config: c.config}
@@ -5162,6 +5178,22 @@ func (c *ServerTaskClient) QueryServerTaskToBuild(st *ServerTask) *BuildQuery {
 			sqlgraph.From(servertask.Table, servertask.FieldID, id),
 			sqlgraph.To(build.Table, build.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToBuildTable, servertask.ServerTaskToBuildColumn),
+		)
+		fromV = sqlgraph.Neighbors(st.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryServerTaskToBuildCommit queries the ServerTaskToBuildCommit edge of a ServerTask.
+func (c *ServerTaskClient) QueryServerTaskToBuildCommit(st *ServerTask) *BuildCommitQuery {
+	query := &BuildCommitQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := st.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(servertask.Table, servertask.FieldID, id),
+			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToBuildCommitTable, servertask.ServerTaskToBuildCommitColumn),
 		)
 		fromV = sqlgraph.Neighbors(st.driver.Dialect(), step)
 		return fromV, nil

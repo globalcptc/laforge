@@ -113,6 +113,7 @@ export type LaForgeBuildCommit = {
   createdAt: Scalars['Time'];
   BuildCommitToBuild: LaForgeBuild;
   BuildCommitToPlanDiffs: Array<Maybe<LaForgePlanDiff>>;
+  BuildCommitToServerTask: Array<Maybe<LaForgeServerTask>>;
 };
 
 export enum LaForgeBuildCommitState {
@@ -585,6 +586,7 @@ export type LaForgeQuery = {
   getBuilds?: Maybe<Array<Maybe<LaForgeBuild>>>;
   build?: Maybe<LaForgeBuild>;
   getBuildCommits?: Maybe<Array<Maybe<LaForgeBuildCommit>>>;
+  getBuildCommit?: Maybe<LaForgeBuildCommit>;
   status?: Maybe<LaForgeStatus>;
   agentStatus?: Maybe<LaForgeAgentStatus>;
   getServerTasks?: Maybe<Array<Maybe<LaForgeServerTask>>>;
@@ -624,6 +626,10 @@ export type LaForgeQueryBuildArgs = {
 
 export type LaForgeQueryGetBuildCommitsArgs = {
   envUUID: Scalars['String'];
+};
+
+export type LaForgeQueryGetBuildCommitArgs = {
+  buildCommitUUID: Scalars['String'];
 };
 
 export type LaForgeQueryStatusArgs = {
@@ -720,6 +726,7 @@ export type LaForgeServerTask = {
   ServerTaskToStatus: LaForgeStatus;
   ServerTaskToEnvironment?: Maybe<LaForgeEnvironment>;
   ServerTaskToBuild?: Maybe<LaForgeBuild>;
+  ServerTaskToBuildCommit?: Maybe<LaForgeBuildCommit>;
 };
 
 export enum LaForgeServerTaskType {
@@ -975,6 +982,24 @@ export type LaForgeGetBuildPlansQuery = { __typename?: 'Query' } & {
   >;
 };
 
+export type LaForgeGetBuildStatusesQueryVariables = Exact<{
+  buildUUID: Scalars['String'];
+}>;
+
+export type LaForgeGetBuildStatusesQuery = { __typename?: 'Query' } & {
+  build?: Maybe<
+    { __typename?: 'Build' } & Pick<LaForgeBuild, 'id'> & {
+        buildToPlan: Array<
+          Maybe<
+            { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
+                PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+              }
+          >
+        >;
+      }
+  >;
+};
+
 export type LaForgeGetBuildCommitsQueryVariables = Exact<{
   buildId: Scalars['String'];
 }>;
@@ -1007,17 +1032,69 @@ export type LaForgeListBuildCommitsQuery = { __typename?: 'Query' } & {
   >;
 };
 
-export type LaForgeApproveBuildCommitMutationVariables = Exact<{
-  buildCommitId: Scalars['String'];
+export type LaForgeGetBuildCommitQueryVariables = Exact<{
+  buildCommitUUID: Scalars['String'];
 }>;
 
-export type LaForgeApproveBuildCommitMutation = { __typename?: 'Mutation' } & Pick<LaForgeMutation, 'approveCommit'>;
-
-export type LaForgeCancelBuildCommitMutationVariables = Exact<{
-  buildCommitId: Scalars['String'];
-}>;
-
-export type LaForgeCancelBuildCommitMutation = { __typename?: 'Mutation' } & Pick<LaForgeMutation, 'cancelCommit'>;
+export type LaForgeGetBuildCommitQuery = { __typename?: 'Query' } & {
+  getBuildCommit?: Maybe<
+    { __typename?: 'BuildCommit' } & Pick<LaForgeBuildCommit, 'id' | 'revision' | 'state' | 'type'> & {
+        BuildCommitToBuild: { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
+            BuildToRepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'author'> & {
+                RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
+              };
+            buildToEnvironment: { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name'>;
+            buildToTeam: Array<
+              Maybe<
+                { __typename?: 'Team' } & Pick<LaForgeTeam, 'id' | 'team_number'> & {
+                    TeamToPlan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
+                        PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+                      };
+                    TeamToProvisionedNetwork: Array<
+                      Maybe<
+                        { __typename?: 'ProvisionedNetwork' } & Pick<LaForgeProvisionedNetwork, 'id' | 'name' | 'cidr'> & {
+                            ProvisionedNetworkToPlan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
+                                PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+                              };
+                            ProvisionedNetworkToNetwork: { __typename?: 'Network' } & Pick<LaForgeNetwork, 'id' | 'vdi_visible'>;
+                            ProvisionedNetworkToProvisionedHost: Array<
+                              Maybe<
+                                { __typename?: 'ProvisionedHost' } & Pick<LaForgeProvisionedHost, 'id' | 'subnet_ip'> & {
+                                    ProvisionedHostToPlan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
+                                        PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+                                      };
+                                    ProvisionedHostToHost: { __typename?: 'Host' } & Pick<LaForgeHost, 'id' | 'hostname'>;
+                                    ProvisionedHostToProvisioningStep: Array<
+                                      Maybe<
+                                        { __typename?: 'ProvisioningStep' } & Pick<LaForgeProvisioningStep, 'id' | 'step_number'> & {
+                                            ProvisioningStepToPlan?: Maybe<
+                                              { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
+                                                  PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+                                                }
+                                            >;
+                                          }
+                                      >
+                                    >;
+                                  }
+                              >
+                            >;
+                          }
+                      >
+                    >;
+                  }
+              >
+            >;
+          };
+        BuildCommitToPlanDiffs: Array<
+          Maybe<
+            { __typename?: 'PlanDiff' } & Pick<LaForgePlanDiff, 'id' | 'new_state'> & {
+                PlanDiffToPlan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'>;
+              }
+          >
+        >;
+      }
+  >;
+};
 
 export type LaForgeGetEnvironmentQueryVariables = Exact<{
   envId: Scalars['String'];
@@ -1321,13 +1398,25 @@ export type LaForgeCreateEnvironmentFromGitMutation = { __typename?: 'Mutation' 
   createEnviromentFromRepo: Array<Maybe<{ __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id'>>>;
 };
 
-export type LaForgeUpdateEnviromentViaPullMutationVariables = Exact<{
+export type LaForgeUpdateEnvironmentViaPullMutationVariables = Exact<{
   envId: Scalars['String'];
 }>;
 
-export type LaForgeUpdateEnviromentViaPullMutation = { __typename?: 'Mutation' } & {
+export type LaForgeUpdateEnvironmentViaPullMutation = { __typename?: 'Mutation' } & {
   updateEnviromentViaPull: Array<Maybe<{ __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id'>>>;
 };
+
+export type LaForgeApproveBuildCommitMutationVariables = Exact<{
+  buildCommitId: Scalars['String'];
+}>;
+
+export type LaForgeApproveBuildCommitMutation = { __typename?: 'Mutation' } & Pick<LaForgeMutation, 'approveCommit'>;
+
+export type LaForgeCancelBuildCommitMutationVariables = Exact<{
+  buildCommitId: Scalars['String'];
+}>;
+
+export type LaForgeCancelBuildCommitMutation = { __typename?: 'Mutation' } & Pick<LaForgeMutation, 'cancelCommit'>;
 
 export type LaForgeGetStatusQueryVariables = Exact<{
   statusId: Scalars['String'];
@@ -1887,6 +1976,31 @@ export class LaForgeGetBuildPlansGQL extends Apollo.Query<LaForgeGetBuildPlansQu
     super(apollo);
   }
 }
+export const GetBuildStatusesDocument = gql`
+  query GetBuildStatuses($buildUUID: String!) {
+    build(buildUUID: $buildUUID) {
+      id
+      buildToPlan {
+        id
+        PlanToStatus {
+          id
+          state
+        }
+      }
+    }
+  }
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeGetBuildStatusesGQL extends Apollo.Query<LaForgeGetBuildStatusesQuery, LaForgeGetBuildStatusesQueryVariables> {
+  document = GetBuildStatusesDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
 export const GetBuildCommitsDocument = gql`
   query GetBuildCommits($buildId: String!) {
     build(buildUUID: $buildId) {
@@ -1942,39 +2056,99 @@ export class LaForgeListBuildCommitsGQL extends Apollo.Query<LaForgeListBuildCom
     super(apollo);
   }
 }
-export const ApproveBuildCommitDocument = gql`
-  mutation ApproveBuildCommit($buildCommitId: String!) {
-    approveCommit(commitUUID: $buildCommitId)
+export const GetBuildCommitDocument = gql`
+  query GetBuildCommit($buildCommitUUID: String!) {
+    getBuildCommit(buildCommitUUID: $buildCommitUUID) {
+      id
+      revision
+      state
+      type
+      BuildCommitToBuild {
+        id
+        revision
+        BuildToRepoCommit {
+          id
+          hash
+          author
+          RepoCommitToRepository {
+            id
+            repo_url
+          }
+        }
+        buildToEnvironment {
+          id
+          name
+        }
+        buildToTeam {
+          id
+          TeamToPlan {
+            id
+            PlanToStatus {
+              id
+              state
+            }
+          }
+          team_number
+          TeamToProvisionedNetwork {
+            id
+            ProvisionedNetworkToPlan {
+              id
+              PlanToStatus {
+                id
+                state
+              }
+            }
+            name
+            cidr
+            ProvisionedNetworkToNetwork {
+              id
+              vdi_visible
+            }
+            ProvisionedNetworkToProvisionedHost {
+              id
+              ProvisionedHostToPlan {
+                id
+                PlanToStatus {
+                  id
+                  state
+                }
+              }
+              subnet_ip
+              ProvisionedHostToHost {
+                id
+                hostname
+              }
+              ProvisionedHostToProvisioningStep {
+                id
+                step_number
+                ProvisioningStepToPlan {
+                  id
+                  PlanToStatus {
+                    id
+                    state
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      BuildCommitToPlanDiffs {
+        id
+        new_state
+        PlanDiffToPlan {
+          id
+        }
+      }
+    }
   }
 `;
 
 @Injectable({
   providedIn: 'root'
 })
-export class LaForgeApproveBuildCommitGQL extends Apollo.Mutation<
-  LaForgeApproveBuildCommitMutation,
-  LaForgeApproveBuildCommitMutationVariables
-> {
-  document = ApproveBuildCommitDocument;
-
-  constructor(apollo: Apollo.Apollo) {
-    super(apollo);
-  }
-}
-export const CancelBuildCommitDocument = gql`
-  mutation CancelBuildCommit($buildCommitId: String!) {
-    cancelCommit(commitUUID: $buildCommitId)
-  }
-`;
-
-@Injectable({
-  providedIn: 'root'
-})
-export class LaForgeCancelBuildCommitGQL extends Apollo.Mutation<
-  LaForgeCancelBuildCommitMutation,
-  LaForgeCancelBuildCommitMutationVariables
-> {
-  document = CancelBuildCommitDocument;
+export class LaForgeGetBuildCommitGQL extends Apollo.Query<LaForgeGetBuildCommitQuery, LaForgeGetBuildCommitQueryVariables> {
+  document = GetBuildCommitDocument;
 
   constructor(apollo: Apollo.Apollo) {
     super(apollo);
@@ -2399,8 +2573,8 @@ export class LaForgeCreateEnvironmentFromGitGQL extends Apollo.Mutation<
     super(apollo);
   }
 }
-export const UpdateEnviromentViaPullDocument = gql`
-  mutation UpdateEnviromentViaPull($envId: String!) {
+export const UpdateEnvironmentViaPullDocument = gql`
+  mutation UpdateEnvironmentViaPull($envId: String!) {
     updateEnviromentViaPull(envUUID: $envId) {
       id
     }
@@ -2410,11 +2584,49 @@ export const UpdateEnviromentViaPullDocument = gql`
 @Injectable({
   providedIn: 'root'
 })
-export class LaForgeUpdateEnviromentViaPullGQL extends Apollo.Mutation<
-  LaForgeUpdateEnviromentViaPullMutation,
-  LaForgeUpdateEnviromentViaPullMutationVariables
+export class LaForgeUpdateEnvironmentViaPullGQL extends Apollo.Mutation<
+  LaForgeUpdateEnvironmentViaPullMutation,
+  LaForgeUpdateEnvironmentViaPullMutationVariables
 > {
-  document = UpdateEnviromentViaPullDocument;
+  document = UpdateEnvironmentViaPullDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
+export const ApproveBuildCommitDocument = gql`
+  mutation ApproveBuildCommit($buildCommitId: String!) {
+    approveCommit(commitUUID: $buildCommitId)
+  }
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeApproveBuildCommitGQL extends Apollo.Mutation<
+  LaForgeApproveBuildCommitMutation,
+  LaForgeApproveBuildCommitMutationVariables
+> {
+  document = ApproveBuildCommitDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
+export const CancelBuildCommitDocument = gql`
+  mutation CancelBuildCommit($buildCommitId: String!) {
+    cancelCommit(commitUUID: $buildCommitId)
+  }
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeCancelBuildCommitGQL extends Apollo.Mutation<
+  LaForgeCancelBuildCommitMutation,
+  LaForgeCancelBuildCommitMutationVariables
+> {
+  document = CancelBuildCommitDocument;
 
   constructor(apollo: Apollo.Apollo) {
     super(apollo);

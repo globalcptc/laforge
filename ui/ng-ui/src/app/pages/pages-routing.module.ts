@@ -28,7 +28,7 @@ const routes: Routes = [
         loadChildren: () => import('./dashboard/dashboard.module').then((m) => m.DashboardModule)
       },
       {
-        path: 'build',
+        path: 'build/:id',
         loadChildren: () => import('./build/build.module').then((m) => m.BuildModule)
       },
       {
@@ -40,7 +40,7 @@ const routes: Routes = [
       //   loadChildren: () => import('./monitor/monitor.module').then((m) => m.MonitorModule)
       // },
       {
-        path: 'plan',
+        path: 'plan/:id',
         loadChildren: () => import('./plan/plan.module').then((m) => m.PlanModule)
       },
       {

@@ -1247,6 +1247,20 @@ func (r *queryResolver) GetBuildCommits(ctx context.Context, envUUID string) ([]
 	return buildCommits, nil
 }
 
+func (r *queryResolver) GetBuildCommit(ctx context.Context, buildCommitUUID string) (*ent.BuildCommit, error) {
+	uuid, err := uuid.Parse(buildCommitUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed casing buildCommitUUID to UUID: %v", err)
+	}
+
+	buildCommit, err := r.client.BuildCommit.Query().Where(buildcommit.IDEQ(uuid)).Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying BuildCommit with ID %s: %v", buildCommitUUID, err)
+	}
+
+	return buildCommit, nil
+}
+
 func (r *queryResolver) Status(ctx context.Context, statusUUID string) (*ent.Status, error) {
 	uuid, err := uuid.Parse(statusUUID)
 

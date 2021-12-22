@@ -5234,23 +5234,26 @@ func (m *BuildMutation) ResetEdge(name string) error {
 // BuildCommitMutation represents an operation that mutates the BuildCommit nodes in the graph.
 type BuildCommitMutation struct {
 	config
-	op                             Op
-	typ                            string
-	id                             *uuid.UUID
-	_type                          *buildcommit.Type
-	revision                       *int
-	addrevision                    *int
-	state                          *buildcommit.State
-	created_at                     *time.Time
-	clearedFields                  map[string]struct{}
-	_BuildCommitToBuild            *uuid.UUID
-	cleared_BuildCommitToBuild     bool
-	_BuildCommitToPlanDiffs        map[uuid.UUID]struct{}
-	removed_BuildCommitToPlanDiffs map[uuid.UUID]struct{}
-	cleared_BuildCommitToPlanDiffs bool
-	done                           bool
-	oldValue                       func(context.Context) (*BuildCommit, error)
-	predicates                     []predicate.BuildCommit
+	op                              Op
+	typ                             string
+	id                              *uuid.UUID
+	_type                           *buildcommit.Type
+	revision                        *int
+	addrevision                     *int
+	state                           *buildcommit.State
+	created_at                      *time.Time
+	clearedFields                   map[string]struct{}
+	_BuildCommitToBuild             *uuid.UUID
+	cleared_BuildCommitToBuild      bool
+	_BuildCommitToServerTask        map[uuid.UUID]struct{}
+	removed_BuildCommitToServerTask map[uuid.UUID]struct{}
+	cleared_BuildCommitToServerTask bool
+	_BuildCommitToPlanDiffs         map[uuid.UUID]struct{}
+	removed_BuildCommitToPlanDiffs  map[uuid.UUID]struct{}
+	cleared_BuildCommitToPlanDiffs  bool
+	done                            bool
+	oldValue                        func(context.Context) (*BuildCommit, error)
+	predicates                      []predicate.BuildCommit
 }
 
 var _ ent.Mutation = (*BuildCommitMutation)(nil)
@@ -5541,6 +5544,60 @@ func (m *BuildCommitMutation) ResetBuildCommitToBuild() {
 	m.cleared_BuildCommitToBuild = false
 }
 
+// AddBuildCommitToServerTaskIDs adds the "BuildCommitToServerTask" edge to the ServerTask entity by ids.
+func (m *BuildCommitMutation) AddBuildCommitToServerTaskIDs(ids ...uuid.UUID) {
+	if m._BuildCommitToServerTask == nil {
+		m._BuildCommitToServerTask = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._BuildCommitToServerTask[ids[i]] = struct{}{}
+	}
+}
+
+// ClearBuildCommitToServerTask clears the "BuildCommitToServerTask" edge to the ServerTask entity.
+func (m *BuildCommitMutation) ClearBuildCommitToServerTask() {
+	m.cleared_BuildCommitToServerTask = true
+}
+
+// BuildCommitToServerTaskCleared reports if the "BuildCommitToServerTask" edge to the ServerTask entity was cleared.
+func (m *BuildCommitMutation) BuildCommitToServerTaskCleared() bool {
+	return m.cleared_BuildCommitToServerTask
+}
+
+// RemoveBuildCommitToServerTaskIDs removes the "BuildCommitToServerTask" edge to the ServerTask entity by IDs.
+func (m *BuildCommitMutation) RemoveBuildCommitToServerTaskIDs(ids ...uuid.UUID) {
+	if m.removed_BuildCommitToServerTask == nil {
+		m.removed_BuildCommitToServerTask = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._BuildCommitToServerTask, ids[i])
+		m.removed_BuildCommitToServerTask[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedBuildCommitToServerTask returns the removed IDs of the "BuildCommitToServerTask" edge to the ServerTask entity.
+func (m *BuildCommitMutation) RemovedBuildCommitToServerTaskIDs() (ids []uuid.UUID) {
+	for id := range m.removed_BuildCommitToServerTask {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// BuildCommitToServerTaskIDs returns the "BuildCommitToServerTask" edge IDs in the mutation.
+func (m *BuildCommitMutation) BuildCommitToServerTaskIDs() (ids []uuid.UUID) {
+	for id := range m._BuildCommitToServerTask {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetBuildCommitToServerTask resets all changes to the "BuildCommitToServerTask" edge.
+func (m *BuildCommitMutation) ResetBuildCommitToServerTask() {
+	m._BuildCommitToServerTask = nil
+	m.cleared_BuildCommitToServerTask = false
+	m.removed_BuildCommitToServerTask = nil
+}
+
 // AddBuildCommitToPlanDiffIDs adds the "BuildCommitToPlanDiffs" edge to the PlanDiff entity by ids.
 func (m *BuildCommitMutation) AddBuildCommitToPlanDiffIDs(ids ...uuid.UUID) {
 	if m._BuildCommitToPlanDiffs == nil {
@@ -5779,9 +5836,12 @@ func (m *BuildCommitMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BuildCommitMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m._BuildCommitToBuild != nil {
 		edges = append(edges, buildcommit.EdgeBuildCommitToBuild)
+	}
+	if m._BuildCommitToServerTask != nil {
+		edges = append(edges, buildcommit.EdgeBuildCommitToServerTask)
 	}
 	if m._BuildCommitToPlanDiffs != nil {
 		edges = append(edges, buildcommit.EdgeBuildCommitToPlanDiffs)
@@ -5797,6 +5857,12 @@ func (m *BuildCommitMutation) AddedIDs(name string) []ent.Value {
 		if id := m._BuildCommitToBuild; id != nil {
 			return []ent.Value{*id}
 		}
+	case buildcommit.EdgeBuildCommitToServerTask:
+		ids := make([]ent.Value, 0, len(m._BuildCommitToServerTask))
+		for id := range m._BuildCommitToServerTask {
+			ids = append(ids, id)
+		}
+		return ids
 	case buildcommit.EdgeBuildCommitToPlanDiffs:
 		ids := make([]ent.Value, 0, len(m._BuildCommitToPlanDiffs))
 		for id := range m._BuildCommitToPlanDiffs {
@@ -5809,7 +5875,10 @@ func (m *BuildCommitMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BuildCommitMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
+	if m.removed_BuildCommitToServerTask != nil {
+		edges = append(edges, buildcommit.EdgeBuildCommitToServerTask)
+	}
 	if m.removed_BuildCommitToPlanDiffs != nil {
 		edges = append(edges, buildcommit.EdgeBuildCommitToPlanDiffs)
 	}
@@ -5820,6 +5889,12 @@ func (m *BuildCommitMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *BuildCommitMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case buildcommit.EdgeBuildCommitToServerTask:
+		ids := make([]ent.Value, 0, len(m.removed_BuildCommitToServerTask))
+		for id := range m.removed_BuildCommitToServerTask {
+			ids = append(ids, id)
+		}
+		return ids
 	case buildcommit.EdgeBuildCommitToPlanDiffs:
 		ids := make([]ent.Value, 0, len(m.removed_BuildCommitToPlanDiffs))
 		for id := range m.removed_BuildCommitToPlanDiffs {
@@ -5832,9 +5907,12 @@ func (m *BuildCommitMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BuildCommitMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.cleared_BuildCommitToBuild {
 		edges = append(edges, buildcommit.EdgeBuildCommitToBuild)
+	}
+	if m.cleared_BuildCommitToServerTask {
+		edges = append(edges, buildcommit.EdgeBuildCommitToServerTask)
 	}
 	if m.cleared_BuildCommitToPlanDiffs {
 		edges = append(edges, buildcommit.EdgeBuildCommitToPlanDiffs)
@@ -5848,6 +5926,8 @@ func (m *BuildCommitMutation) EdgeCleared(name string) bool {
 	switch name {
 	case buildcommit.EdgeBuildCommitToBuild:
 		return m.cleared_BuildCommitToBuild
+	case buildcommit.EdgeBuildCommitToServerTask:
+		return m.cleared_BuildCommitToServerTask
 	case buildcommit.EdgeBuildCommitToPlanDiffs:
 		return m.cleared_BuildCommitToPlanDiffs
 	}
@@ -5871,6 +5951,9 @@ func (m *BuildCommitMutation) ResetEdge(name string) error {
 	switch name {
 	case buildcommit.EdgeBuildCommitToBuild:
 		m.ResetBuildCommitToBuild()
+		return nil
+	case buildcommit.EdgeBuildCommitToServerTask:
+		m.ResetBuildCommitToServerTask()
 		return nil
 	case buildcommit.EdgeBuildCommitToPlanDiffs:
 		m.ResetBuildCommitToPlanDiffs()
@@ -26639,6 +26722,8 @@ type ServerTaskMutation struct {
 	cleared_ServerTaskToEnvironment       bool
 	_ServerTaskToBuild                    *uuid.UUID
 	cleared_ServerTaskToBuild             bool
+	_ServerTaskToBuildCommit              *uuid.UUID
+	cleared_ServerTaskToBuildCommit       bool
 	_ServerTaskToGinFileMiddleware        map[uuid.UUID]struct{}
 	removed_ServerTaskToGinFileMiddleware map[uuid.UUID]struct{}
 	cleared_ServerTaskToGinFileMiddleware bool
@@ -27120,6 +27205,45 @@ func (m *ServerTaskMutation) ResetServerTaskToBuild() {
 	m.cleared_ServerTaskToBuild = false
 }
 
+// SetServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by id.
+func (m *ServerTaskMutation) SetServerTaskToBuildCommitID(id uuid.UUID) {
+	m._ServerTaskToBuildCommit = &id
+}
+
+// ClearServerTaskToBuildCommit clears the "ServerTaskToBuildCommit" edge to the BuildCommit entity.
+func (m *ServerTaskMutation) ClearServerTaskToBuildCommit() {
+	m.cleared_ServerTaskToBuildCommit = true
+}
+
+// ServerTaskToBuildCommitCleared reports if the "ServerTaskToBuildCommit" edge to the BuildCommit entity was cleared.
+func (m *ServerTaskMutation) ServerTaskToBuildCommitCleared() bool {
+	return m.cleared_ServerTaskToBuildCommit
+}
+
+// ServerTaskToBuildCommitID returns the "ServerTaskToBuildCommit" edge ID in the mutation.
+func (m *ServerTaskMutation) ServerTaskToBuildCommitID() (id uuid.UUID, exists bool) {
+	if m._ServerTaskToBuildCommit != nil {
+		return *m._ServerTaskToBuildCommit, true
+	}
+	return
+}
+
+// ServerTaskToBuildCommitIDs returns the "ServerTaskToBuildCommit" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ServerTaskToBuildCommitID instead. It exists only for internal usage by the builders.
+func (m *ServerTaskMutation) ServerTaskToBuildCommitIDs() (ids []uuid.UUID) {
+	if id := m._ServerTaskToBuildCommit; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetServerTaskToBuildCommit resets all changes to the "ServerTaskToBuildCommit" edge.
+func (m *ServerTaskMutation) ResetServerTaskToBuildCommit() {
+	m._ServerTaskToBuildCommit = nil
+	m.cleared_ServerTaskToBuildCommit = false
+}
+
 // AddServerTaskToGinFileMiddlewareIDs adds the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity by ids.
 func (m *ServerTaskMutation) AddServerTaskToGinFileMiddlewareIDs(ids ...uuid.UUID) {
 	if m._ServerTaskToGinFileMiddleware == nil {
@@ -27387,7 +27511,7 @@ func (m *ServerTaskMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ServerTaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m._ServerTaskToAuthUser != nil {
 		edges = append(edges, servertask.EdgeServerTaskToAuthUser)
 	}
@@ -27399,6 +27523,9 @@ func (m *ServerTaskMutation) AddedEdges() []string {
 	}
 	if m._ServerTaskToBuild != nil {
 		edges = append(edges, servertask.EdgeServerTaskToBuild)
+	}
+	if m._ServerTaskToBuildCommit != nil {
+		edges = append(edges, servertask.EdgeServerTaskToBuildCommit)
 	}
 	if m._ServerTaskToGinFileMiddleware != nil {
 		edges = append(edges, servertask.EdgeServerTaskToGinFileMiddleware)
@@ -27426,6 +27553,10 @@ func (m *ServerTaskMutation) AddedIDs(name string) []ent.Value {
 		if id := m._ServerTaskToBuild; id != nil {
 			return []ent.Value{*id}
 		}
+	case servertask.EdgeServerTaskToBuildCommit:
+		if id := m._ServerTaskToBuildCommit; id != nil {
+			return []ent.Value{*id}
+		}
 	case servertask.EdgeServerTaskToGinFileMiddleware:
 		ids := make([]ent.Value, 0, len(m._ServerTaskToGinFileMiddleware))
 		for id := range m._ServerTaskToGinFileMiddleware {
@@ -27438,7 +27569,7 @@ func (m *ServerTaskMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ServerTaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.removed_ServerTaskToGinFileMiddleware != nil {
 		edges = append(edges, servertask.EdgeServerTaskToGinFileMiddleware)
 	}
@@ -27461,7 +27592,7 @@ func (m *ServerTaskMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ServerTaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.cleared_ServerTaskToAuthUser {
 		edges = append(edges, servertask.EdgeServerTaskToAuthUser)
 	}
@@ -27473,6 +27604,9 @@ func (m *ServerTaskMutation) ClearedEdges() []string {
 	}
 	if m.cleared_ServerTaskToBuild {
 		edges = append(edges, servertask.EdgeServerTaskToBuild)
+	}
+	if m.cleared_ServerTaskToBuildCommit {
+		edges = append(edges, servertask.EdgeServerTaskToBuildCommit)
 	}
 	if m.cleared_ServerTaskToGinFileMiddleware {
 		edges = append(edges, servertask.EdgeServerTaskToGinFileMiddleware)
@@ -27492,6 +27626,8 @@ func (m *ServerTaskMutation) EdgeCleared(name string) bool {
 		return m.cleared_ServerTaskToEnvironment
 	case servertask.EdgeServerTaskToBuild:
 		return m.cleared_ServerTaskToBuild
+	case servertask.EdgeServerTaskToBuildCommit:
+		return m.cleared_ServerTaskToBuildCommit
 	case servertask.EdgeServerTaskToGinFileMiddleware:
 		return m.cleared_ServerTaskToGinFileMiddleware
 	}
@@ -27514,6 +27650,9 @@ func (m *ServerTaskMutation) ClearEdge(name string) error {
 	case servertask.EdgeServerTaskToBuild:
 		m.ClearServerTaskToBuild()
 		return nil
+	case servertask.EdgeServerTaskToBuildCommit:
+		m.ClearServerTaskToBuildCommit()
+		return nil
 	}
 	return fmt.Errorf("unknown ServerTask unique edge %s", name)
 }
@@ -27533,6 +27672,9 @@ func (m *ServerTaskMutation) ResetEdge(name string) error {
 		return nil
 	case servertask.EdgeServerTaskToBuild:
 		m.ResetServerTaskToBuild()
+		return nil
+	case servertask.EdgeServerTaskToBuildCommit:
+		m.ResetServerTaskToBuildCommit()
 		return nil
 	case servertask.EdgeServerTaskToGinFileMiddleware:
 		m.ResetServerTaskToGinFileMiddleware()

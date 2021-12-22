@@ -188,6 +188,7 @@ type BuildCommit {
   createdAt: Time!
   BuildCommitToBuild: Build!
   BuildCommitToPlanDiffs: [PlanDiff]!
+  BuildCommitToServerTask: [ServerTask]!
 }
 
 type Command {
@@ -479,6 +480,7 @@ type ServerTask {
   ServerTaskToStatus: Status!
   ServerTaskToEnvironment: Environment
   ServerTaskToBuild: Build
+  ServerTaskToBuildCommit: BuildCommit
 }
 
 type Status {
@@ -556,9 +558,11 @@ type Query {
   build(buildUUID: String!): Build @hasRole(roles: [ADMIN, USER])
   getBuildCommits(envUUID: String!): [BuildCommit]
     @hasRole(roles: [ADMIN, USER])
+  getBuildCommit(buildCommitUUID: String!): BuildCommit
+    @hasRole(roles: [ADMIN, USER])
   status(statusUUID: String!): Status @hasRole(roles: [ADMIN, USER])
   agentStatus(clientId: String!): AgentStatus @hasRole(roles: [ADMIN, USER])
-  getServerTasks: [ServerTask] @hasRole(roles: [ADMIN])
+  getServerTasks: [ServerTask] @hasRole(roles: [ADMIN, USER])
   currentUser: AuthUser @hasRole(roles: [ADMIN, USER])
   getUserList: [AuthUser] @hasRole(roles: [ADMIN])
   getCurrentUserTasks: [ServerTask] @hasRole(roles: [ADMIN, USER])

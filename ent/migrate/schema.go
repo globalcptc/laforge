@@ -931,6 +931,7 @@ var (
 		{Name: "server_task_server_task_to_auth_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "server_task_server_task_to_environment", Type: field.TypeUUID, Nullable: true},
 		{Name: "server_task_server_task_to_build", Type: field.TypeUUID, Nullable: true},
+		{Name: "server_task_server_task_to_build_commit", Type: field.TypeUUID, Nullable: true},
 	}
 	// ServerTasksTable holds the schema information for the "server_tasks" table.
 	ServerTasksTable = &schema.Table{
@@ -954,6 +955,12 @@ var (
 				Symbol:     "server_tasks_builds_ServerTaskToBuild",
 				Columns:    []*schema.Column{ServerTasksColumns[8]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "server_tasks_build_commits_ServerTaskToBuildCommit",
+				Columns:    []*schema.Column{ServerTasksColumns[9]},
+				RefColumns: []*schema.Column{BuildCommitsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -1463,6 +1470,7 @@ func init() {
 	ServerTasksTable.ForeignKeys[0].RefTable = AuthUsersTable
 	ServerTasksTable.ForeignKeys[1].RefTable = EnvironmentsTable
 	ServerTasksTable.ForeignKeys[2].RefTable = BuildsTable
+	ServerTasksTable.ForeignKeys[3].RefTable = BuildCommitsTable
 	StatusTable.ForeignKeys[0].RefTable = AdhocPlansTable
 	StatusTable.ForeignKeys[1].RefTable = BuildsTable
 	StatusTable.ForeignKeys[2].RefTable = PlansTable

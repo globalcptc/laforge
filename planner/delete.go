@@ -33,6 +33,11 @@ func DeleteBuild(client *ent.Client, rdb *redis.Client, logger *logging.Logger, 
 		spawnedDelete <- false
 		return false, err
 	}
+	err = entDeleteCommit.Update().AddBuildCommitToServerTask(serverTask).Exec(deleteContext)
+	if err != nil {
+		spawnedDelete <- false
+		return false, err
+	}
 	rdb.Publish(deleteContext, "updatedBuildCommit", entDeleteCommit.ID.String())
 	err = entBuild.Update().SetBuildToLatestBuildCommit(entDeleteCommit).Exec(deleteContext)
 	if err != nil {

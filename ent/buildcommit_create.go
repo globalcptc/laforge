@@ -13,6 +13,7 @@ import (
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/plandiff"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/google/uuid"
 )
 
@@ -70,6 +71,21 @@ func (bcc *BuildCommitCreate) SetBuildCommitToBuildID(id uuid.UUID) *BuildCommit
 // SetBuildCommitToBuild sets the "BuildCommitToBuild" edge to the Build entity.
 func (bcc *BuildCommitCreate) SetBuildCommitToBuild(b *Build) *BuildCommitCreate {
 	return bcc.SetBuildCommitToBuildID(b.ID)
+}
+
+// AddBuildCommitToServerTaskIDs adds the "BuildCommitToServerTask" edge to the ServerTask entity by IDs.
+func (bcc *BuildCommitCreate) AddBuildCommitToServerTaskIDs(ids ...uuid.UUID) *BuildCommitCreate {
+	bcc.mutation.AddBuildCommitToServerTaskIDs(ids...)
+	return bcc
+}
+
+// AddBuildCommitToServerTask adds the "BuildCommitToServerTask" edges to the ServerTask entity.
+func (bcc *BuildCommitCreate) AddBuildCommitToServerTask(s ...*ServerTask) *BuildCommitCreate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return bcc.AddBuildCommitToServerTaskIDs(ids...)
 }
 
 // AddBuildCommitToPlanDiffIDs adds the "BuildCommitToPlanDiffs" edge to the PlanDiff entity by IDs.
@@ -277,6 +293,25 @@ func (bcc *BuildCommitCreate) createSpec() (*BuildCommit, *sqlgraph.CreateSpec) 
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.build_commit_build_commit_to_build = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := bcc.mutation.BuildCommitToServerTaskIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   buildcommit.BuildCommitToServerTaskTable,
+			Columns: []string{buildcommit.BuildCommitToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := bcc.mutation.BuildCommitToPlanDiffsIDs(); len(nodes) > 0 {

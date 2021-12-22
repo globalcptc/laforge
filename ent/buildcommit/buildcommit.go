@@ -26,6 +26,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// EdgeBuildCommitToBuild holds the string denoting the buildcommittobuild edge name in mutations.
 	EdgeBuildCommitToBuild = "BuildCommitToBuild"
+	// EdgeBuildCommitToServerTask holds the string denoting the buildcommittoservertask edge name in mutations.
+	EdgeBuildCommitToServerTask = "BuildCommitToServerTask"
 	// EdgeBuildCommitToPlanDiffs holds the string denoting the buildcommittoplandiffs edge name in mutations.
 	EdgeBuildCommitToPlanDiffs = "BuildCommitToPlanDiffs"
 	// Table holds the table name of the buildcommit in the database.
@@ -37,6 +39,13 @@ const (
 	BuildCommitToBuildInverseTable = "builds"
 	// BuildCommitToBuildColumn is the table column denoting the BuildCommitToBuild relation/edge.
 	BuildCommitToBuildColumn = "build_commit_build_commit_to_build"
+	// BuildCommitToServerTaskTable is the table that holds the BuildCommitToServerTask relation/edge.
+	BuildCommitToServerTaskTable = "server_tasks"
+	// BuildCommitToServerTaskInverseTable is the table name for the ServerTask entity.
+	// It exists in this package in order to avoid circular dependency with the "servertask" package.
+	BuildCommitToServerTaskInverseTable = "server_tasks"
+	// BuildCommitToServerTaskColumn is the table column denoting the BuildCommitToServerTask relation/edge.
+	BuildCommitToServerTaskColumn = "server_task_server_task_to_build_commit"
 	// BuildCommitToPlanDiffsTable is the table that holds the BuildCommitToPlanDiffs relation/edge.
 	BuildCommitToPlanDiffsTable = "plan_diffs"
 	// BuildCommitToPlanDiffsInverseTable is the table name for the PlanDiff entity.

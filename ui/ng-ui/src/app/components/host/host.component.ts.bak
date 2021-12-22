@@ -1,7 +1,7 @@
 import { Component, Input, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import {
-  LaForgeGetBuildCommitQuery,
+  LaForgeGetBuildTreeQuery,
   LaForgePlanFieldsFragment,
   LaForgeProvisionedHost,
   LaForgeProvisionStatus,
@@ -23,13 +23,9 @@ import { HostModalComponent } from '../host-modal/host-modal.component';
 })
 export class HostComponent implements OnInit, OnDestroy {
   // @Input() status: Status;
-  // @Input()
-  // eslint-disable-next-line max-len
-  // provisionedHost: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
   @Input()
   // eslint-disable-next-line max-len
-  provisionedHost: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
-  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  provisionedHost: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
   @Input() style: 'compact' | 'collapsed' | 'expanded';
   @Input() selectable: boolean;
   @Input() parentSelected: boolean;
@@ -59,9 +55,38 @@ export class HostComponent implements OnInit, OnDestroy {
     if (!this.hasAgent) this.hasAgent = false;
   }
 
-  ngOnInit() {}
+  ngOnInit() {
+    const sub1 = this.envService.statusUpdate.asObservable().subscribe(() => {
+      this.checkPlanStatus();
+      this.checkProvisionedHostStatus();
+      this.cdRef.detectChanges();
+    });
+    this.unsubscribe.push(sub1);
+    const sub2 = this.envService.agentStatusUpdate.asObservable().subscribe(() => {
+      this.checkAgentStatus();
+      this.cdRef.detectChanges();
+    });
+    this.unsubscribe.push(sub2);
+    if (this.mode === 'plan') {
+      this.shouldHideLoading = true;
+      const sub2 = this.envService.planUpdate.asObservable().subscribe(() => {
+        this.checkLatestPlanDiff();
+        this.checkShouldHide();
+        this.cdRef.detectChanges();
+      });
+      this.unsubscribe.push(sub2);
+      const sub4 = this.envService.buildCommitUpdate.asObservable().subscribe(() => {
+        this.checkLatestPlanDiff();
+        this.checkShouldHide();
+        this.cdRef.detectChanges();
+      });
+      this.unsubscribe.push(sub4);
+    }
+  }
 
-  ngOnDestroy() {}
+  ngOnDestroy() {
+    this.unsubscribe.forEach((s) => s.unsubscribe());
+  }
 
   viewDetails(): void {
     this.dialog.open(HostModalComponent, {
@@ -81,7 +106,7 @@ export class HostComponent implements OnInit, OnDestroy {
   }
 
   checkProvisionedHostStatus(): void {
-    //this.provisionedHostStatus = this.envService.getStatus(this.provisionedHost.ProvisionedHostToStatus.id) || this.provisionedHostStatus;
+    this.provisionedHostStatus = this.envService.getStatus(this.provisionedHost.ProvisionedHostToStatus.id) || this.provisionedHostStatus;
   }
 
   checkAgentStatus(): void {
@@ -106,15 +131,10 @@ export class HostComponent implements OnInit, OnDestroy {
     this.latestDiff = [...phostPlan.PlanToPlanDiffs].sort((a, b) => b.revision - a.revision)[0];
   }
 
-  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
-    return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.provisionedHost.ProvisionedHostToPlan.id)[0] ?? undefined;
-  }
-
   getStatusIcon(): string {
     if (this.mode === 'plan') {
-      const planDiff = this.getPlanDiff();
-      if (!planDiff) return 'fas fa-spinner fa-spin';
-      switch (planDiff.new_state) {
+      if (!this.latestDiff) return 'fas fa-spinner fa-spin';
+      switch (this.latestDiff.new_state) {
         case LaForgeProvisionStatus.Torebuild:
           return 'fas fa-sync-alt';
         case LaForgeProvisionStatus.Todelete:
@@ -125,8 +145,6 @@ export class HostComponent implements OnInit, OnDestroy {
           return 'fas fa-computer-classic';
       }
     }
-    // TODO: do build/manage stuffs
-    return 'fa fa-spinner fa-spin';
     const status = this.planStatus ?? this.provisionedHostStatus;
     if (status?.state) {
       switch (status.state) {
@@ -165,9 +183,8 @@ export class HostComponent implements OnInit, OnDestroy {
 
   getStatusColor(): string {
     if (this.mode === 'plan') {
-      const planDiff = this.getPlanDiff();
-      if (!planDiff) return 'dark';
-      switch (planDiff.new_state) {
+      if (!this.latestDiff) return 'dark';
+      switch (this.latestDiff.new_state) {
         case LaForgeProvisionStatus.Torebuild:
           return 'warning';
         case LaForgeProvisionStatus.Todelete:
@@ -178,8 +195,6 @@ export class HostComponent implements OnInit, OnDestroy {
           return 'dark';
       }
     }
-    // TODO: do build/manage stuffs
-    return 'dark';
     const status = this.planStatus ?? this.provisionedHostStatus;
     if (status?.state) {
       switch (status.state) {
@@ -234,7 +249,6 @@ export class HostComponent implements OnInit, OnDestroy {
   }
 
   childrenCompleted(): boolean {
-    if (this.mode === 'plan') return true;
     let numCompleted = 0;
     let numAwaiting = 0;
     let totalSteps = 0;

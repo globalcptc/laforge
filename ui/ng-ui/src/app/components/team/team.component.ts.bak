@@ -3,10 +3,11 @@ import {
   LaForgeProvisionStatus,
   LaForgeSubscribeUpdatedStatusSubscription,
   LaForgeTeam,
-  LaForgePlanFieldsFragment,
-  LaForgeGetBuildCommitQuery
+  LaForgeGetBuildTreeQuery,
+  LaForgePlanFieldsFragment
 } from '@graphql';
 import { EnvironmentService } from '@services/environment/environment.service';
+import { Subscription } from 'rxjs';
 
 import { RebuildService } from '../../services/rebuild/rebuild.service';
 
@@ -16,11 +17,9 @@ import { RebuildService } from '../../services/rebuild/rebuild.service';
   styleUrls: ['./team.component.scss']
 })
 export class TeamComponent implements OnInit, OnDestroy {
+  private unsubscribe: Subscription[] = [];
   @Input() title: string;
-  // @Input() team: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0];
-  @Input() team: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0];
-  // @Input() planStatuses: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
-  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  @Input() team: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0];
   @Input() style: 'compact' | 'collapsed' | 'expanded';
   @Input() selectable: boolean;
   @Input() mode: 'plan' | 'build' | 'manage';
@@ -37,20 +36,43 @@ export class TeamComponent implements OnInit, OnDestroy {
     if (!this.selectable) this.selectable = false;
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    const sub1 = this.envService.statusUpdate.asObservable().subscribe(() => {
+      this.checkPlanStatus();
+      this.cdRef.detectChanges();
+    });
+    this.unsubscribe.push(sub1);
+    if (this.mode === 'plan') {
+      this.shouldHideLoading = true;
+      const sub2 = this.envService.planUpdate.asObservable().subscribe(() => {
+        this.checkLatestPlanDiff();
+        this.checkShouldHide();
+        this.cdRef.detectChanges();
+      });
+      this.unsubscribe.push(sub2);
+      const sub4 = this.envService.buildCommitUpdate.asObservable().subscribe(() => {
+        this.checkLatestPlanDiff();
+        this.checkShouldHide();
+        this.cdRef.detectChanges();
+      });
+      this.unsubscribe.push(sub4);
+    }
+  }
 
-  ngOnDestroy() {}
+  ngOnDestroy() {
+    this.unsubscribe.forEach((s) => s.unsubscribe());
+  }
 
-  // checkPlanStatus(): void {
-  // this.planStatus = this.envService.getStatus(this.team.TeamToPlan.PlanToStatus.id) || this.planStatus;
-  // }
+  checkPlanStatus(): void {
+    this.planStatus = this.envService.getStatus(this.team.TeamToPlan.PlanToStatus.id) || this.planStatus;
+  }
 
-  // checkLatestPlanDiff(): void {
-  //   if (this.latestDiff) return;
-  //   const teamPlan = this.envService.getPlan(this.team.TeamToPlan.id);
-  //   if (!teamPlan) return;
-  //   this.latestDiff = [...teamPlan.PlanToPlanDiffs].sort((a, b) => b.revision - a.revision)[0];
-  // }
+  checkLatestPlanDiff(): void {
+    if (this.latestDiff) return;
+    const teamPlan = this.envService.getPlan(this.team.TeamToPlan.id);
+    if (!teamPlan) return;
+    this.latestDiff = [...teamPlan.PlanToPlanDiffs].sort((a, b) => b.revision - a.revision)[0];
+  }
 
   // getStatus(): ProvisionStatus {
   //   // let status: ProvisionStatus = ProvisionStatus.ProvStatusUndefined;
@@ -68,41 +90,34 @@ export class TeamComponent implements OnInit, OnDestroy {
   // }
 
   allChildrenResponding(): boolean {
-    if (this.mode === 'plan') return true;
-    // TODO: Add in build stuff
-    // let numWithAgentData = 0;
-    // let numWithCompletedSteps = 0;
-    // let totalHosts = 0;
-    // for (const pnet of this.team.TeamToProvisionedNetwork) {
-    //   for (const host of pnet.ProvisionedNetworkToProvisionedHost) {
-    //     totalHosts++;
-    //     if (host.ProvisionedHostToAgentStatus?.clientId) numWithAgentData++;
-    //     let totalSteps = 0;
-    //     let totalCompletedSteps = 0;
-    //     for (const step of host.ProvisionedHostToProvisioningStep) {
-    //       if (step.step_number === 0) continue;
-    //       totalSteps++;
-    //       if (
-    //         step.ProvisioningStepToStatus.id &&
-    //         this.envService.getStatus(step.ProvisioningStepToPlan.PlanToStatus.id)?.state === LaForgeProvisionStatus.Complete
-    //       )
-    //         totalCompletedSteps++;
-    //     }
-    //     if (totalSteps === totalCompletedSteps) numWithCompletedSteps++;
-    //   }
-    // }
-    // return numWithAgentData === totalHosts && numWithCompletedSteps === totalHosts;
-  }
-
-  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
-    return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.team.TeamToPlan.id)[0] ?? undefined;
+    let numWithAgentData = 0;
+    let numWithCompletedSteps = 0;
+    let totalHosts = 0;
+    for (const pnet of this.team.TeamToProvisionedNetwork) {
+      for (const host of pnet.ProvisionedNetworkToProvisionedHost) {
+        totalHosts++;
+        if (host.ProvisionedHostToAgentStatus?.clientId) numWithAgentData++;
+        let totalSteps = 0;
+        let totalCompletedSteps = 0;
+        for (const step of host.ProvisionedHostToProvisioningStep) {
+          if (step.step_number === 0) continue;
+          totalSteps++;
+          if (
+            step.ProvisioningStepToStatus.id &&
+            this.envService.getStatus(step.ProvisioningStepToPlan.PlanToStatus.id)?.state === LaForgeProvisionStatus.Complete
+          )
+            totalCompletedSteps++;
+        }
+        if (totalSteps === totalCompletedSteps) numWithCompletedSteps++;
+      }
+    }
+    return numWithAgentData === totalHosts && numWithCompletedSteps === totalHosts;
   }
 
   getStatusIcon(): string {
     if (this.mode === 'plan') {
-      const planDiff = this.getPlanDiff();
-      if (!planDiff) return 'fas fa-spinner fa-spin';
-      switch (planDiff.new_state) {
+      if (!this.latestDiff) return 'fas fa-spinner fa-spin';
+      switch (this.latestDiff.new_state) {
         case LaForgeProvisionStatus.Torebuild:
           return 'fas fa-sync-alt';
         case LaForgeProvisionStatus.Todelete:
@@ -113,9 +128,7 @@ export class TeamComponent implements OnInit, OnDestroy {
           return 'fal fa-users';
       }
     }
-    // TODO: Add in build stuff
-    // if (!this.planStatus) return 'fas fa-minus-circle';
-    return 'fas fa-minus-circle';
+    if (!this.planStatus) return 'fas fa-minus-circle';
 
     switch (this.planStatus.state) {
       case LaForgeProvisionStatus.Planning:
@@ -135,9 +148,8 @@ export class TeamComponent implements OnInit, OnDestroy {
 
   getStatusColor(): string {
     if (this.mode === 'plan') {
-      const planDiff = this.getPlanDiff();
-      if (!planDiff) return 'dark';
-      switch (planDiff.new_state) {
+      if (!this.latestDiff) return 'dark';
+      switch (this.latestDiff.new_state) {
         case LaForgeProvisionStatus.Torebuild:
           return 'warning';
         case LaForgeProvisionStatus.Todelete:
@@ -148,9 +160,7 @@ export class TeamComponent implements OnInit, OnDestroy {
           return 'dark';
       }
     }
-    // TODO: Add in build stuff
-    // if (!this.planStatus) return 'dark';
-    return 'dark';
+    if (!this.planStatus) return 'dark';
     switch (this.planStatus.state) {
       case LaForgeProvisionStatus.Complete:
         if (this.allChildrenResponding()) {
@@ -189,7 +199,6 @@ export class TeamComponent implements OnInit, OnDestroy {
   // }
 
   onSelect(): void {
-    if (this.mode === 'plan') return;
     let success = false;
     if (!this.isSelected()) {
       success = this.rebuild.addTeam(this.team as LaForgeTeam);

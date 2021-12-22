@@ -26,14 +26,12 @@
         </ng-container>
       </div>
       <div class="network-header" (click)="style !== 'collapsed' && viewDetails()">
-        <span class="network-title"
-          ><b>{{ provisionedNetwork.name }}</b></span
-        >
-        <span class="network-details"
-          ><em
-            >{{ provisionedNetwork.cidr }} | VDI: {{ provisionedNetwork.ProvisionedNetworkToNetwork.vdi_visible ? 'true' : 'false' }}</em
-          ></span
-        >
+        <span class="network-title">
+          <b>{{ provisionedNetwork.name }}</b>
+        </span>
+        <span class="network-details">
+          <em>{{ provisionedNetwork.cidr }} | VDI: {{ provisionedNetwork.ProvisionedNetworkToNetwork.vdi_visible ? 'true' : 'false' }}</em>
+        </span>
       </div>
       <div class="toggle-collapse" *ngIf="shouldCollapse()">
         <i class="fas cursor-pointer" [ngClass]="'fa-' + (expandOverride ? 'chevron-up' : 'chevron-down')" (click)="toggleCollapse()"></i>
@@ -43,6 +41,7 @@
       <app-host
         *ngFor="let provHost of provisionedNetwork.ProvisionedNetworkToProvisionedHost | sortBy: 'asc':'ProvisionedHostToHost.hostname'"
         [provisionedHost]="provHost"
+        [planDiffs]="planDiffs"
         [style]="style"
         [selectable]="selectable"
         [parentSelected]="isSelected() || parentSelected"

@@ -33,6 +33,7 @@ func (BuildCommit) Edges() []ent.Edge {
 		edge.To("BuildCommitToBuild", Build.Type).
 			Unique().
 			Required(),
+		edge.From("BuildCommitToServerTask", ServerTask.Type).Ref("ServerTaskToBuildCommit"),
 		edge.From("BuildCommitToPlanDiffs", PlanDiff.Type).
 			Ref("PlanDiffToBuildCommit").
 			Annotations(entsql.Annotation{

@@ -42,20 +42,20 @@
         </div>
         <div class="controls">
           <div class="btn-group btn-group-sm">
-            <button class="btn btn-warning" [ngClass]="{ 'btn-icon': showIconsOnly }">
-              <ng-container *ngIf="showIconsOnly"><i class="fa fa-project-diagram"></i></ng-container>
+            <button class="btn btn-warning" [ngClass]="{ 'btn-icon-only': showIconsOnly }">
+              <i class="fa fa-project-diagram" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
               <ng-container *ngIf="!showIconsOnly">Manage</ng-container>
             </button>
             <button class="btn btn-success" [ngClass]="{ 'btn-icon': showIconsOnly }" (click)="createBuild(environment)">
-              <ng-container *ngIf="showIconsOnly"><i class="fa fa-hammer"></i></ng-container>
+              <i class="fa fa-hammer" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
               <ng-container *ngIf="!showIconsOnly">Build</ng-container>
             </button>
             <button class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }" (click)="updateEnvironmentFromGit(environment)">
-              <ng-container *ngIf="showIconsOnly"><i class="fa fa-sync-alt"></i></ng-container>
+              <i class="fa fa-sync-alt" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
               <ng-container *ngIf="!showIconsOnly">Pull</ng-container>
             </button>
             <button class="btn btn-danger" [ngClass]="{ 'btn-icon': showIconsOnly }">
-              <ng-container *ngIf="showIconsOnly"><i class="fa fa-bomb"></i></ng-container>
+              <i class="fa fa-bomb" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
               <ng-container *ngIf="!showIconsOnly">Destroy</ng-container>
             </button>
           </div>
@@ -95,11 +95,34 @@
           >
           <div class="controls">
             <div class="btn-group btn-group-sm">
-              <button *ngIf="buildCommitIsCancellable(buildCommit)" class="btn btn-danger" [ngClass]="{ 'btn-icon': showIconsOnly }">
+              <button
+                *ngIf="buildCommitIsCancellable(buildCommit)"
+                class="btn btn-danger"
+                [ngClass]="{ 'btn-icon': showIconsOnly }"
+                (click)="cancelBuildCommit(buildCommit)"
+              >
                 <ng-container *ngIf="showIconsOnly"><i class="fa fa-times"></i></ng-container>
                 <ng-container *ngIf="!showIconsOnly">Cancel</ng-container>
               </button>
-              <a class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }">
+              <a
+                *ngIf="buildCommitIsCancellable(buildCommit)"
+                class="btn btn-primary"
+                [ngClass]="{ 'btn-icon': showIconsOnly }"
+                [href]="'/plan/' + buildCommit.id"
+              >
+                <ng-container *ngIf="showIconsOnly"><i class="fa fa-ruler-triangle"></i></ng-container>
+                <ng-container *ngIf="!showIconsOnly">Plan</ng-container>
+              </a>
+              <a
+                *ngIf="buildCommitIsManagable(buildCommit)"
+                class="btn btn-info"
+                [ngClass]="{ 'btn-icon': showIconsOnly }"
+                [href]="'/build/' + buildCommit.id"
+              >
+                <ng-container *ngIf="showIconsOnly"><i class="fa fa-eye"></i></ng-container>
+                <ng-container *ngIf="!showIconsOnly">View Progress</ng-container>
+              </a>
+              <a class="btn btn-dark disabled" [ngClass]="{ 'btn-icon': showIconsOnly }">
                 <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
                 <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
               </a>
@@ -109,100 +132,4 @@
       </div>
     </div>
   </ng-container>
-  <div class="env-container">
-    <div class="env">
-      <div class="name"><b>us-east-02</b></div>
-      <div class="commit-hash"><a href="#">735fbc2</a></div>
-      <div class="owner">emperorcow</div>
-      <div class="team-count">1 Team</div>
-      <div class="network-count">5 Networks</div>
-      <div class="host-count">48 Hosts</div>
-      <div class="controls">
-        <div class="btn-group btn-group-sm">
-          <button class="btn btn-warning" [ngClass]="{ 'btn-icon': showIconsOnly }">
-            <ng-container *ngIf="showIconsOnly"><i class="fa fa-project-diagram"></i></ng-container>
-            <ng-container *ngIf="!showIconsOnly">Manage</ng-container>
-          </button>
-          <button class="btn btn-success" [ngClass]="{ 'btn-icon': showIconsOnly }">
-            <ng-container *ngIf="showIconsOnly"><i class="fa fa-hammer"></i></ng-container>
-            <ng-container *ngIf="!showIconsOnly">Build</ng-container>
-          </button>
-          <button class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }">
-            <ng-container *ngIf="showIconsOnly"><i class="fa fa-sync-alt"></i></ng-container>
-            <ng-container *ngIf="!showIconsOnly">Pull</ng-container>
-          </button>
-          <button class="btn btn-danger" [ngClass]="{ 'btn-icon': showIconsOnly }">
-            <ng-container *ngIf="showIconsOnly"><i class="fa fa-bomb"></i></ng-container>
-            <ng-container *ngIf="!showIconsOnly">Destroy</ng-container>
-          </button>
-        </div>
-      </div>
-      <span class="expand-controls">
-        <i class="fa fa-chevron-down"></i>
-      </span>
-    </div>
-    <div class="builds expanded">
-      <div class="build build-header">
-        <div class="commit-hash">Referenced Git Commit</div>
-        <div class="owner">Author</div>
-        <div class="time">Start/End</div>
-        <div class="status">Status</div>
-        <!-- <div class="logs">Logs</div> -->
-        <div class="type">Commit Type</div>
-        <div class="type">Controls</div>
-      </div>
-      <div class="build">
-        <div class="commit-hash"><a href="#">735fbc2</a></div>
-        <div class="owner">BradHacker</div>
-        <div class="time">Started 4 mins ago</div>
-        <div class="status"><span class="badge bg-warning">In Progress</span></div>
-        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
-        <div class="type"><span class="badge bg-info">REBUILD</span></div>
-        <div class="controls">
-          <div class="btn-group btn-group-sm">
-            <button class="btn btn-danger" [ngClass]="{ 'btn-icon': showIconsOnly }">
-              <ng-container *ngIf="showIconsOnly"><i class="fa fa-times"></i></ng-container>
-              <ng-container *ngIf="!showIconsOnly">Cancel</ng-container>
-            </button>
-            <a class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }">
-              <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
-              <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
-            </a>
-          </div>
-        </div>
-      </div>
-      <div class="build">
-        <div class="commit-hash"><a href="#">e4be782</a></div>
-        <div class="owner">emperorcow</div>
-        <div class="time">Took 12mins (00:00 AM)</div>
-        <div class="status"><span class="badge bg-danger">Failed</span></div>
-        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
-        <div class="type"><span class="badge bg-info">REBUILD</span></div>
-        <div class="controls">
-          <div class="btn-group btn-group-sm">
-            <a class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }">
-              <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
-              <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
-            </a>
-          </div>
-        </div>
-      </div>
-      <div class="build">
-        <div class="commit-hash"><a href="#">0f68ac4</a></div>
-        <div class="owner">BradHacker</div>
-        <div class="time">Took 32mins (00:00 AM)</div>
-        <div class="status"><span class="badge bg-success">Complete</span></div>
-        <!-- <div class="logs"><a href="#">View Logs</a></div> -->
-        <div class="type"><span class="badge bg-dark">ROOT</span></div>
-        <div class="controls">
-          <div class="btn-group btn-group-sm">
-            <a class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }">
-              <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
-              <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>

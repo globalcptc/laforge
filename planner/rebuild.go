@@ -41,6 +41,7 @@ func Rebuild(client *ent.Client, rdb *redis.Client, logger *logging.Logger, curr
 		SetType(buildcommit.TypeREBUILD).
 		SetState(buildcommit.StatePLANNING).
 		SetBuildCommitToBuild(entBuild).
+		AddBuildCommitToServerTask(serverTask).
 		Save(ctx)
 	if err != nil {
 		spawnedRebuildSuccessfully <- false

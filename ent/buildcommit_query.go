@@ -16,6 +16,7 @@ import (
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/plandiff"
 	"github.com/gen0cide/laforge/ent/predicate"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/google/uuid"
 )
 
@@ -29,9 +30,10 @@ type BuildCommitQuery struct {
 	fields     []string
 	predicates []predicate.BuildCommit
 	// eager-loading edges.
-	withBuildCommitToBuild     *BuildQuery
-	withBuildCommitToPlanDiffs *PlanDiffQuery
-	withFKs                    bool
+	withBuildCommitToBuild      *BuildQuery
+	withBuildCommitToServerTask *ServerTaskQuery
+	withBuildCommitToPlanDiffs  *PlanDiffQuery
+	withFKs                     bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -83,6 +85,28 @@ func (bcq *BuildCommitQuery) QueryBuildCommitToBuild() *BuildQuery {
 			sqlgraph.From(buildcommit.Table, buildcommit.FieldID, selector),
 			sqlgraph.To(build.Table, build.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, buildcommit.BuildCommitToBuildTable, buildcommit.BuildCommitToBuildColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(bcq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBuildCommitToServerTask chains the current query on the "BuildCommitToServerTask" edge.
+func (bcq *BuildCommitQuery) QueryBuildCommitToServerTask() *ServerTaskQuery {
+	query := &ServerTaskQuery{config: bcq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := bcq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := bcq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(buildcommit.Table, buildcommit.FieldID, selector),
+			sqlgraph.To(servertask.Table, servertask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, buildcommit.BuildCommitToServerTaskTable, buildcommit.BuildCommitToServerTaskColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bcq.driver.Dialect(), step)
 		return fromU, nil
@@ -288,13 +312,14 @@ func (bcq *BuildCommitQuery) Clone() *BuildCommitQuery {
 		return nil
 	}
 	return &BuildCommitQuery{
-		config:                     bcq.config,
-		limit:                      bcq.limit,
-		offset:                     bcq.offset,
-		order:                      append([]OrderFunc{}, bcq.order...),
-		predicates:                 append([]predicate.BuildCommit{}, bcq.predicates...),
-		withBuildCommitToBuild:     bcq.withBuildCommitToBuild.Clone(),
-		withBuildCommitToPlanDiffs: bcq.withBuildCommitToPlanDiffs.Clone(),
+		config:                      bcq.config,
+		limit:                       bcq.limit,
+		offset:                      bcq.offset,
+		order:                       append([]OrderFunc{}, bcq.order...),
+		predicates:                  append([]predicate.BuildCommit{}, bcq.predicates...),
+		withBuildCommitToBuild:      bcq.withBuildCommitToBuild.Clone(),
+		withBuildCommitToServerTask: bcq.withBuildCommitToServerTask.Clone(),
+		withBuildCommitToPlanDiffs:  bcq.withBuildCommitToPlanDiffs.Clone(),
 		// clone intermediate query.
 		sql:  bcq.sql.Clone(),
 		path: bcq.path,
@@ -309,6 +334,17 @@ func (bcq *BuildCommitQuery) WithBuildCommitToBuild(opts ...func(*BuildQuery)) *
 		opt(query)
 	}
 	bcq.withBuildCommitToBuild = query
+	return bcq
+}
+
+// WithBuildCommitToServerTask tells the query-builder to eager-load the nodes that are connected to
+// the "BuildCommitToServerTask" edge. The optional arguments are used to configure the query builder of the edge.
+func (bcq *BuildCommitQuery) WithBuildCommitToServerTask(opts ...func(*ServerTaskQuery)) *BuildCommitQuery {
+	query := &ServerTaskQuery{config: bcq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	bcq.withBuildCommitToServerTask = query
 	return bcq
 }
 
@@ -389,8 +425,9 @@ func (bcq *BuildCommitQuery) sqlAll(ctx context.Context) ([]*BuildCommit, error)
 		nodes       = []*BuildCommit{}
 		withFKs     = bcq.withFKs
 		_spec       = bcq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			bcq.withBuildCommitToBuild != nil,
+			bcq.withBuildCommitToServerTask != nil,
 			bcq.withBuildCommitToPlanDiffs != nil,
 		}
 	)
@@ -446,6 +483,35 @@ func (bcq *BuildCommitQuery) sqlAll(ctx context.Context) ([]*BuildCommit, error)
 			for i := range nodes {
 				nodes[i].Edges.BuildCommitToBuild = n
 			}
+		}
+	}
+
+	if query := bcq.withBuildCommitToServerTask; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*BuildCommit)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.BuildCommitToServerTask = []*ServerTask{}
+		}
+		query.withFKs = true
+		query.Where(predicate.ServerTask(func(s *sql.Selector) {
+			s.Where(sql.InValues(buildcommit.BuildCommitToServerTaskColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.server_task_server_task_to_build_commit
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "server_task_server_task_to_build_commit" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_build_commit" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.BuildCommitToServerTask = append(node.Edges.BuildCommitToServerTask, n)
 		}
 	}
 

@@ -19,10 +19,88 @@ query ListBuildCommits($envUUID: String!) {
   }
 }
 
-mutation ApproveBuildCommit($buildCommitId: String!) {
-  approveCommit(commitUUID: $buildCommitId)
-}
-
-mutation CancelBuildCommit($buildCommitId: String!) {
-  cancelCommit(commitUUID: $buildCommitId)
+query GetBuildCommit($buildCommitUUID: String!) {
+  getBuildCommit(buildCommitUUID: $buildCommitUUID) {
+    id
+    revision
+    state
+    type
+    BuildCommitToBuild {
+      id
+      revision
+      BuildToRepoCommit {
+        id
+        hash
+        author
+        RepoCommitToRepository {
+          id
+          repo_url
+        }
+      }
+      buildToEnvironment {
+        id
+        name
+      }
+      buildToTeam {
+        id
+        TeamToPlan {
+          id
+          PlanToStatus {
+            id
+            state
+          }
+        }
+        team_number
+        TeamToProvisionedNetwork {
+          id
+          ProvisionedNetworkToPlan {
+            id
+            PlanToStatus {
+              id
+              state
+            }
+          }
+          name
+          cidr
+          ProvisionedNetworkToNetwork {
+            id
+            vdi_visible
+          }
+          ProvisionedNetworkToProvisionedHost {
+            id
+            ProvisionedHostToPlan {
+              id
+              PlanToStatus {
+                id
+                state
+              }
+            }
+            subnet_ip
+            ProvisionedHostToHost {
+              id
+              hostname
+            }
+            ProvisionedHostToProvisioningStep {
+              id
+              step_number
+              ProvisioningStepToPlan {
+                id
+                PlanToStatus {
+                  id
+                  state
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    BuildCommitToPlanDiffs {
+      id
+      new_state
+      PlanDiffToPlan {
+        id
+      }
+    }
+  }
 }

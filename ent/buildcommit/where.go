@@ -384,6 +384,34 @@ func HasBuildCommitToBuildWith(preds ...predicate.Build) predicate.BuildCommit {
 	})
 }
 
+// HasBuildCommitToServerTask applies the HasEdge predicate on the "BuildCommitToServerTask" edge.
+func HasBuildCommitToServerTask() predicate.BuildCommit {
+	return predicate.BuildCommit(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(BuildCommitToServerTaskTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, BuildCommitToServerTaskTable, BuildCommitToServerTaskColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBuildCommitToServerTaskWith applies the HasEdge predicate on the "BuildCommitToServerTask" edge with a given conditions (other predicates).
+func HasBuildCommitToServerTaskWith(preds ...predicate.ServerTask) predicate.BuildCommit {
+	return predicate.BuildCommit(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(BuildCommitToServerTaskInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, BuildCommitToServerTaskTable, BuildCommitToServerTaskColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasBuildCommitToPlanDiffs applies the HasEdge predicate on the "BuildCommitToPlanDiffs" edge.
 func HasBuildCommitToPlanDiffs() predicate.BuildCommit {
 	return predicate.BuildCommit(func(s *sql.Selector) {

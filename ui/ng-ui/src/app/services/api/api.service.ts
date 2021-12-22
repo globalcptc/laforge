@@ -28,12 +28,16 @@ import {
   LaForgeRoleLevel,
   LaForgeUpdateUserGQL,
   LaForgeUpdateUserMutation,
-  LaForgeUpdateEnviromentViaPullGQL,
-  LaForgeUpdateEnviromentViaPullMutation,
   LaForgeListEnvironmentsQuery,
   LaForgeListEnvironmentsGQL,
   LaForgeListBuildCommitsGQL,
-  LaForgeListBuildCommitsQuery
+  LaForgeListBuildCommitsQuery,
+  LaForgeCancelBuildCommitGQL,
+  LaForgeApproveBuildCommitGQL,
+  LaForgeUpdateEnvironmentViaPullGQL,
+  LaForgeUpdateEnvironmentViaPullMutation,
+  LaForgeGetBuildCommitQuery,
+  LaForgeGetBuildCommitGQL
 } from '@graphql';
 
 @Injectable({
@@ -56,9 +60,12 @@ export class ApiService {
     private getUserListGQL: LaForgeGetUserListGQL,
     private updateUserGQL: LaForgeUpdateUserGQL,
     private createUserGQL: LaForgeCreateUserGQL,
-    private updateEnviromentViaPullGQL: LaForgeUpdateEnviromentViaPullGQL,
+    private updateEnvironmentViaPullGQL: LaForgeUpdateEnvironmentViaPullGQL,
     private listEnvironmentsGQL: LaForgeListEnvironmentsGQL,
-    private listBuildCommitsGQL: LaForgeListBuildCommitsGQL
+    private listBuildCommitsGQL: LaForgeListBuildCommitsGQL,
+    private cancelBuildCommitGQL: LaForgeCancelBuildCommitGQL,
+    private approveBuildCommitGQL: LaForgeApproveBuildCommitGQL,
+    private getBuildCommitGQL: LaForgeGetBuildCommitGQL
   ) {}
 
   /**
@@ -135,7 +142,7 @@ export class ApiService {
   }
 
   /**
-   * Lists basic info about environments from the API once, without exposing a subscription or observable
+   * Lists all build commits under an environment from the API once, without exposing a subscription or observable
    */
   public async listBuildCommits(envUUID: string): Promise<LaForgeListBuildCommitsQuery['getBuildCommits']> {
     return new Promise((resolve, reject) => {
@@ -151,6 +158,56 @@ export class ApiService {
             return reject(errors);
           }
           resolve(data.getBuildCommits);
+        }, reject);
+    });
+  }
+
+  public async getBuildCommit(buildCommitUUID: string): Promise<LaForgeGetBuildCommitQuery['getBuildCommit']> {
+    return new Promise((resolve, reject) => {
+      this.getBuildCommitGQL
+        .fetch({
+          buildCommitUUID
+        })
+        .toPromise()
+        .then(({ data, error, errors }) => {
+          if (error) {
+            return reject(error);
+          } else if (errors) {
+            return reject(errors);
+          }
+          resolve(data.getBuildCommit);
+        }, reject);
+    });
+  }
+
+  public async cancelBuildCommit(buildCommitId: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      this.cancelBuildCommitGQL
+        .mutate({
+          buildCommitId
+        })
+        .toPromise()
+        .then(({ data, errors }) => {
+          if (errors) {
+            return reject(errors);
+          }
+          resolve(data.cancelCommit);
+        });
+    });
+  }
+
+  public async approveBuildCommit(buildCommitId: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      this.approveBuildCommitGQL
+        .mutate({
+          buildCommitId
+        })
+        .toPromise()
+        .then(({ data, errors }) => {
+          if (errors) {
+            return reject(errors);
+          }
+          resolve(data.approveCommit);
         });
     });
   }
@@ -265,9 +322,9 @@ export class ApiService {
     });
   }
 
-  public async updateEnvFromGit(envId: string): Promise<LaForgeUpdateEnviromentViaPullMutation['updateEnviromentViaPull']> {
+  public async updateEnvFromGit(envId: string): Promise<LaForgeUpdateEnvironmentViaPullMutation['updateEnviromentViaPull']> {
     return new Promise((resolve, reject) => {
-      this.updateEnviromentViaPullGQL
+      this.updateEnvironmentViaPullGQL
         .mutate({
           envId
         })

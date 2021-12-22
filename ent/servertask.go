@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
+	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
@@ -45,12 +46,15 @@ type ServerTask struct {
 	HCLServerTaskToEnvironment *Environment `json:"ServerTaskToEnvironment,omitempty"`
 	// ServerTaskToBuild holds the value of the ServerTaskToBuild edge.
 	HCLServerTaskToBuild *Build `json:"ServerTaskToBuild,omitempty"`
+	// ServerTaskToBuildCommit holds the value of the ServerTaskToBuildCommit edge.
+	HCLServerTaskToBuildCommit *BuildCommit `json:"ServerTaskToBuildCommit,omitempty"`
 	// ServerTaskToGinFileMiddleware holds the value of the ServerTaskToGinFileMiddleware edge.
 	HCLServerTaskToGinFileMiddleware []*GinFileMiddleware `json:"ServerTaskToGinFileMiddleware,omitempty"`
 	//
-	server_task_server_task_to_auth_user   *uuid.UUID
-	server_task_server_task_to_environment *uuid.UUID
-	server_task_server_task_to_build       *uuid.UUID
+	server_task_server_task_to_auth_user    *uuid.UUID
+	server_task_server_task_to_environment  *uuid.UUID
+	server_task_server_task_to_build        *uuid.UUID
+	server_task_server_task_to_build_commit *uuid.UUID
 }
 
 // ServerTaskEdges holds the relations/edges for other nodes in the graph.
@@ -63,11 +67,13 @@ type ServerTaskEdges struct {
 	ServerTaskToEnvironment *Environment `json:"ServerTaskToEnvironment,omitempty"`
 	// ServerTaskToBuild holds the value of the ServerTaskToBuild edge.
 	ServerTaskToBuild *Build `json:"ServerTaskToBuild,omitempty"`
+	// ServerTaskToBuildCommit holds the value of the ServerTaskToBuildCommit edge.
+	ServerTaskToBuildCommit *BuildCommit `json:"ServerTaskToBuildCommit,omitempty"`
 	// ServerTaskToGinFileMiddleware holds the value of the ServerTaskToGinFileMiddleware edge.
 	ServerTaskToGinFileMiddleware []*GinFileMiddleware `json:"ServerTaskToGinFileMiddleware,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [6]bool
 }
 
 // ServerTaskToAuthUserOrErr returns the ServerTaskToAuthUser value or an error if the edge
@@ -126,10 +132,24 @@ func (e ServerTaskEdges) ServerTaskToBuildOrErr() (*Build, error) {
 	return nil, &NotLoadedError{edge: "ServerTaskToBuild"}
 }
 
+// ServerTaskToBuildCommitOrErr returns the ServerTaskToBuildCommit value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ServerTaskEdges) ServerTaskToBuildCommitOrErr() (*BuildCommit, error) {
+	if e.loadedTypes[4] {
+		if e.ServerTaskToBuildCommit == nil {
+			// The edge ServerTaskToBuildCommit was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: buildcommit.Label}
+		}
+		return e.ServerTaskToBuildCommit, nil
+	}
+	return nil, &NotLoadedError{edge: "ServerTaskToBuildCommit"}
+}
+
 // ServerTaskToGinFileMiddlewareOrErr returns the ServerTaskToGinFileMiddleware value or an error if the edge
 // was not loaded in eager-loading.
 func (e ServerTaskEdges) ServerTaskToGinFileMiddlewareOrErr() ([]*GinFileMiddleware, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[5] {
 		return e.ServerTaskToGinFileMiddleware, nil
 	}
 	return nil, &NotLoadedError{edge: "ServerTaskToGinFileMiddleware"}
@@ -153,6 +173,8 @@ func (*ServerTask) scanValues(columns []string) ([]interface{}, error) {
 		case servertask.ForeignKeys[1]: // server_task_server_task_to_environment
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case servertask.ForeignKeys[2]: // server_task_server_task_to_build
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case servertask.ForeignKeys[3]: // server_task_server_task_to_build_commit
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type ServerTask", columns[i])
@@ -228,6 +250,13 @@ func (st *ServerTask) assignValues(columns []string, values []interface{}) error
 				st.server_task_server_task_to_build = new(uuid.UUID)
 				*st.server_task_server_task_to_build = *value.S.(*uuid.UUID)
 			}
+		case servertask.ForeignKeys[3]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field server_task_server_task_to_build_commit", values[i])
+			} else if value.Valid {
+				st.server_task_server_task_to_build_commit = new(uuid.UUID)
+				*st.server_task_server_task_to_build_commit = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
@@ -251,6 +280,11 @@ func (st *ServerTask) QueryServerTaskToEnvironment() *EnvironmentQuery {
 // QueryServerTaskToBuild queries the "ServerTaskToBuild" edge of the ServerTask entity.
 func (st *ServerTask) QueryServerTaskToBuild() *BuildQuery {
 	return (&ServerTaskClient{config: st.config}).QueryServerTaskToBuild(st)
+}
+
+// QueryServerTaskToBuildCommit queries the "ServerTaskToBuildCommit" edge of the ServerTask entity.
+func (st *ServerTask) QueryServerTaskToBuildCommit() *BuildCommitQuery {
+	return (&ServerTaskClient{config: st.config}).QueryServerTaskToBuildCommit(st)
 }
 
 // QueryServerTaskToGinFileMiddleware queries the "ServerTaskToGinFileMiddleware" edge of the ServerTask entity.

@@ -20,9 +20,9 @@ export class HomeComponent implements OnInit {
   // environmentsCols: string[] = ['name', 'competition_id', 'build_count', 'revision', 'pull-actions', 'actions'];
   // environments: Observable<LaForgeGetEnvironmentsQuery['environments']>;
   environments: Promise<LaForgeListEnvironmentsQuery['environments']>;
-  expandedEnvironments: { [key: LaForgeListEnvironmentsQuery['environments'][0]['id']]: boolean };
+  expandedEnvironments: { [key: string]: boolean };
   buildCommits: BehaviorSubject<{
-    [key: LaForgeListEnvironmentsQuery['environments'][0]['id']]: LaForgeListBuildCommitsQuery['getBuildCommits'];
+    [key: string]: LaForgeListBuildCommitsQuery['getBuildCommits'];
   }>;
   showIconsOnly = false;
 
@@ -98,7 +98,7 @@ export class HomeComponent implements OnInit {
     return this.api.listBuildCommits(environment.id).then(
       (buildCommits) => {
         const bc = this.buildCommits.value;
-        bc[environment.id] = buildCommits.sort((a, b) => a.revision - b.revision);
+        bc[environment.id] = [...buildCommits].sort((a, b) => a.revision - b.revision);
         this.buildCommits.next(bc);
       },
       (err) => {
@@ -163,6 +163,18 @@ export class HomeComponent implements OnInit {
 
   buildCommitIsCancellable(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): boolean {
     if (buildCommit.state === LaForgeBuildCommitState.Cancelled) return false;
+    if (buildCommit.state === LaForgeBuildCommitState.Inprogress) return false;
+    return true;
+  }
+
+  buildCommitIsPlanable(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): boolean {
+    if (buildCommit.state === LaForgeBuildCommitState.Planning) return true;
+    return false;
+  }
+
+  buildCommitIsManagable(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): boolean {
+    if (buildCommit.state === LaForgeBuildCommitState.Cancelled) return false;
+    if (buildCommit.state === LaForgeBuildCommitState.Planning) return false;
     return true;
   }
 
@@ -178,7 +190,7 @@ export class HomeComponent implements OnInit {
   }
 
   createBuild(environment: LaForgeListEnvironmentsQuery['environments'][0]) {
-    this.snackbar.open('Build is being created.', null, {
+    this.snackbar.open('Building environment...', null, {
       panelClass: ['bg-info', 'text-white']
     });
     this.api.createBuild(environment.id).then(
@@ -218,6 +230,35 @@ export class HomeComponent implements OnInit {
       (err) => {
         console.error(err);
         this.snackbar.open('Error while pulling repo from git. See console/logs for details.', 'Okay', {
+          panelClass: ['bg-danger', 'text-white']
+        });
+      }
+    );
+  }
+
+  cancelBuildCommit(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): void {
+    this.snackbar.open('Cancelling build...', 'Okay', {
+      panelClass: ['bg-info', 'text-white']
+    });
+    this.api.cancelBuildCommit(buildCommit.id).then(
+      (success) => {
+        if (success) {
+          this.snackbar
+            .open('Build cancelled.', null, {
+              duration: 1000,
+              panelClass: ['bg-success', 'text-white']
+            })
+            .afterDismissed()
+            .subscribe(() => window.location.reload());
+        } else {
+          this.snackbar.open('Unknown error ocurred. Check server logs.', 'Okay', {
+            panelClass: ['bg-danger', 'text-white']
+          });
+        }
+      },
+      (err) => {
+        console.error(err);
+        this.snackbar.open('Error cancelling build. See console/logs for details.', 'Okay', {
           panelClass: ['bg-danger', 'text-white']
         });
       }

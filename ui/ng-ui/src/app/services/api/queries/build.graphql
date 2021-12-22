@@ -187,6 +187,19 @@ query GetBuildPlans($buildId: String!) {
   }
 }
 
+query GetBuildStatuses($buildUUID: String!) {
+  build(buildUUID: $buildUUID) {
+    id
+    buildToPlan {
+      id
+      PlanToStatus {
+        id
+        state
+      }
+    }
+  }
+}
+
 query GetBuildCommits($buildId: String!) {
   build(buildUUID: $buildId) {
     id

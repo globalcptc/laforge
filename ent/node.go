@@ -637,7 +637,7 @@ func (bc *BuildCommit) Node(ctx context.Context) (node *Node, err error) {
 		ID:     bc.ID,
 		Type:   "BuildCommit",
 		Fields: make([]*Field, 4),
-		Edges:  make([]*Edge, 2),
+		Edges:  make([]*Edge, 3),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(bc.Type); err != nil {
@@ -683,12 +683,22 @@ func (bc *BuildCommit) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[1] = &Edge{
+		Type: "ServerTask",
+		Name: "BuildCommitToServerTask",
+	}
+	err = bc.QueryBuildCommitToServerTask().
+		Select(servertask.FieldID).
+		Scan(ctx, &node.Edges[1].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[2] = &Edge{
 		Type: "PlanDiff",
 		Name: "BuildCommitToPlanDiffs",
 	}
 	err = bc.QueryBuildCommitToPlanDiffs().
 		Select(plandiff.FieldID).
-		Scan(ctx, &node.Edges[1].IDs)
+		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -3030,7 +3040,7 @@ func (st *ServerTask) Node(ctx context.Context) (node *Node, err error) {
 		ID:     st.ID,
 		Type:   "ServerTask",
 		Fields: make([]*Field, 5),
-		Edges:  make([]*Edge, 5),
+		Edges:  make([]*Edge, 6),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(st.Type); err != nil {
@@ -3114,12 +3124,22 @@ func (st *ServerTask) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[4] = &Edge{
+		Type: "BuildCommit",
+		Name: "ServerTaskToBuildCommit",
+	}
+	err = st.QueryServerTaskToBuildCommit().
+		Select(buildcommit.FieldID).
+		Scan(ctx, &node.Edges[4].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[5] = &Edge{
 		Type: "GinFileMiddleware",
 		Name: "ServerTaskToGinFileMiddleware",
 	}
 	err = st.QueryServerTaskToGinFileMiddleware().
 		Select(ginfilemiddleware.FieldID).
-		Scan(ctx, &node.Edges[4].IDs)
+		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
 		return nil, err
 	}

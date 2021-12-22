@@ -196,6 +196,14 @@ func (bc *BuildCommit) BuildCommitToBuild(ctx context.Context) (*Build, error) {
 	return result, err
 }
 
+func (bc *BuildCommit) BuildCommitToServerTask(ctx context.Context) ([]*ServerTask, error) {
+	result, err := bc.Edges.BuildCommitToServerTaskOrErr()
+	if IsNotLoaded(err) {
+		result, err = bc.QueryBuildCommitToServerTask().All(ctx)
+	}
+	return result, err
+}
+
 func (bc *BuildCommit) BuildCommitToPlanDiffs(ctx context.Context) ([]*PlanDiff, error) {
 	result, err := bc.Edges.BuildCommitToPlanDiffsOrErr()
 	if IsNotLoaded(err) {
@@ -1008,6 +1016,14 @@ func (st *ServerTask) ServerTaskToBuild(ctx context.Context) (*Build, error) {
 	result, err := st.Edges.ServerTaskToBuildOrErr()
 	if IsNotLoaded(err) {
 		result, err = st.QueryServerTaskToBuild().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (st *ServerTask) ServerTaskToBuildCommit(ctx context.Context) (*BuildCommit, error) {
+	result, err := st.Edges.ServerTaskToBuildCommitOrErr()
+	if IsNotLoaded(err) {
+		result, err = st.QueryServerTaskToBuildCommit().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
