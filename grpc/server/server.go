@@ -9,6 +9,7 @@ import (
 
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	pb "github.com/gen0cide/laforge/grpc/proto"
 	"github.com/go-redis/redis/v8"
@@ -198,6 +199,9 @@ func (s *Server) InformTaskStatus(ctx context.Context, in *pb.TaskStatusRequest)
 		return &pb.TaskStatusReply{Status: "ERROR"}, nil
 	}
 	output := strings.ReplaceAll(in.GetOutput(), "🔥", "\n")
+	// server-side validation hook starting
+	agent_command, err := s.Client.Command.Query().Where(command.IDEQ(uuid)).First(ctx)
+
 	err = entAgentTask.Update().
 		SetState(agenttask.State(in.GetStatus())).
 		SetErrorMessage(in.GetErrorMessage()).
