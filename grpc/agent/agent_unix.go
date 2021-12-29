@@ -205,7 +205,7 @@ func FileHash(file_location string) (string, error) { // exists (boolean)
 	return fmt.Sprintf("%x", file_hash.Sum(nil)), nil
 }
 
-func main() { // driver for tests, main function not necessary later
+func main() {
 	fmt.Println("wew")
 	// fmt.Println(NetHttpContentRegex("https://vcu.edu"))
 	// fmt.Println(FileExists("/home/piero/most-coding-stuff/laforge/validations"))
