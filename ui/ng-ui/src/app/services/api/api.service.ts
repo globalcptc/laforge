@@ -39,7 +39,9 @@ import {
   LaForgeGetBuildCommitQuery,
   LaForgeGetBuildCommitGQL,
   LaForgeGetBuildStatusesGQL,
-  LaForgeGetBuildStatusesQuery
+  LaForgeGetBuildStatusesQuery,
+  LaForgeListAgentStatusesGQL,
+  LaForgeListAgentStatusesQuery
 } from '@graphql';
 
 @Injectable({
@@ -68,7 +70,8 @@ export class ApiService {
     private cancelBuildCommitGQL: LaForgeCancelBuildCommitGQL,
     private approveBuildCommitGQL: LaForgeApproveBuildCommitGQL,
     private getBuildCommitGQL: LaForgeGetBuildCommitGQL,
-    private getBuildStatuses: LaForgeGetBuildStatusesGQL
+    private getBuildStatuses: LaForgeGetBuildStatusesGQL,
+    private listAgentStatuses: LaForgeListAgentStatusesGQL
   ) {}
 
   /**
@@ -182,6 +185,27 @@ export class ApiService {
             return reject(errors);
           }
           resolve(data.build.buildToPlan.map((p) => p.PlanToStatus));
+        }, reject);
+    });
+  }
+
+  /**
+   * Lists all statuses under an build from the API once, without exposing a subscription or observable
+   */
+  public async listBuildAgentStatuses(buildUUID: string): Promise<LaForgeListAgentStatusesQuery['listAgentStatuses']> {
+    return new Promise((resolve, reject) => {
+      this.listAgentStatuses
+        .fetch({
+          buildUUID
+        })
+        .toPromise()
+        .then(({ data, error, errors }) => {
+          if (error) {
+            return reject(error);
+          } else if (errors) {
+            return reject(errors);
+          }
+          resolve(data.listAgentStatuses);
         }, reject);
     });
   }

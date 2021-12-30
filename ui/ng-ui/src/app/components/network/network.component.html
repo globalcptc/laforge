@@ -42,7 +42,6 @@
         *ngFor="let provHost of provisionedNetwork.ProvisionedNetworkToProvisionedHost | sortBy: 'asc':'ProvisionedHostToHost.hostname'"
         [provisionedHost]="provHost"
         [planDiffs]="planDiffs"
-        [buildStatusMap]="buildStatusMap"
         [style]="style"
         [selectable]="selectable"
         [parentSelected]="isSelected() || parentSelected"

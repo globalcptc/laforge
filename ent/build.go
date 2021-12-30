@@ -52,6 +52,8 @@ type Build struct {
 	HCLBuildToBuildCommits []*BuildCommit `json:"BuildToBuildCommits,omitempty"`
 	// BuildToAdhocPlans holds the value of the BuildToAdhocPlans edge.
 	HCLBuildToAdhocPlans []*AdhocPlan `json:"BuildToAdhocPlans,omitempty"`
+	// BuildToAgentStatuses holds the value of the BuildToAgentStatuses edge.
+	HCLBuildToAgentStatuses []*AgentStatus `json:"BuildToAgentStatuses,omitempty"`
 	//
 	build_build_to_environment         *uuid.UUID
 	build_build_to_competition         *uuid.UUID
@@ -81,9 +83,11 @@ type BuildEdges struct {
 	BuildToBuildCommits []*BuildCommit `json:"BuildToBuildCommits,omitempty"`
 	// BuildToAdhocPlans holds the value of the BuildToAdhocPlans edge.
 	BuildToAdhocPlans []*AdhocPlan `json:"BuildToAdhocPlans,omitempty"`
+	// BuildToAgentStatuses holds the value of the BuildToAgentStatuses edge.
+	BuildToAgentStatuses []*AgentStatus `json:"BuildToAgentStatuses,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [10]bool
+	loadedTypes [11]bool
 }
 
 // BuildToStatusOrErr returns the BuildToStatus value or an error if the edge
@@ -199,6 +203,15 @@ func (e BuildEdges) BuildToAdhocPlansOrErr() ([]*AdhocPlan, error) {
 		return e.BuildToAdhocPlans, nil
 	}
 	return nil, &NotLoadedError{edge: "BuildToAdhocPlans"}
+}
+
+// BuildToAgentStatusesOrErr returns the BuildToAgentStatuses value or an error if the edge
+// was not loaded in eager-loading.
+func (e BuildEdges) BuildToAgentStatusesOrErr() ([]*AgentStatus, error) {
+	if e.loadedTypes[10] {
+		return e.BuildToAgentStatuses, nil
+	}
+	return nil, &NotLoadedError{edge: "BuildToAgentStatuses"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -340,6 +353,11 @@ func (b *Build) QueryBuildToBuildCommits() *BuildCommitQuery {
 // QueryBuildToAdhocPlans queries the "BuildToAdhocPlans" edge of the Build entity.
 func (b *Build) QueryBuildToAdhocPlans() *AdhocPlanQuery {
 	return (&BuildClient{config: b.config}).QueryBuildToAdhocPlans(b)
+}
+
+// QueryBuildToAgentStatuses queries the "BuildToAgentStatuses" edge of the Build entity.
+func (b *Build) QueryBuildToAgentStatuses() *AgentStatusQuery {
+	return (&BuildClient{config: b.config}).QueryBuildToAgentStatuses(b)
 }
 
 // Update returns a builder for updating this Build.

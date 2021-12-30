@@ -55,5 +55,7 @@ func (Build) Edges() []ent.Edge {
 			Ref("BuildCommitToBuild"),
 		edge.From("BuildToAdhocPlans", AdhocPlan.Type).
 			Ref("AdhocPlanToBuild"),
+		edge.From("BuildToAgentStatuses", AgentStatus.Type).
+			Ref("AgentStatusToBuild"),
 	}
 }

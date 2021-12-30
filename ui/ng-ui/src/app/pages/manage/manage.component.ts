@@ -92,7 +92,7 @@ export class ManageComponent implements OnInit, OnDestroy {
         })
         .finally(() => (this.agentStatusesLoading = false));
       this.envService.startAgentStatusSubscription();
-      this.envService.startStatusSubscription();
+      // this.envService.startStatusSubscription();
     });
     this.unsubscribe.push(sub1);
     const sub2 = this.envService.statusUpdate.asObservable().subscribe(() => {
@@ -109,7 +109,7 @@ export class ManageComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.unsubscribe.forEach((sub) => sub.unsubscribe());
     this.envService.stopAgentStatusSubscription();
-    this.envService.stopStatusSubscription();
+    // this.envService.stopStatusSubscription();
   }
 
   checkBuildStatus(): void {

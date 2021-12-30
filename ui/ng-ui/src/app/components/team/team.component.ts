@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import {
   LaForgeProvisionStatus,
   LaForgeSubscribeUpdatedStatusSubscription,
@@ -7,6 +7,8 @@ import {
   LaForgeGetBuildCommitQuery
 } from '@graphql';
 import { EnvironmentService } from '@services/environment/environment.service';
+import { StatusService } from '@services/status/status.service';
+import { BehaviorSubject } from 'rxjs';
 
 import { RebuildService } from '../../services/rebuild/rebuild.service';
 
@@ -21,24 +23,28 @@ export class TeamComponent implements OnInit, OnDestroy {
   @Input() team: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0];
   // @Input() planStatuses: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
   @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
-  @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
+  // @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
+  // @Input() buildAgentStatusMap: LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus'][] | undefined;
   @Input() style: 'compact' | 'collapsed' | 'expanded';
   @Input() selectable: boolean;
   @Input() mode: 'plan' | 'build' | 'manage';
   isSelectedState = false;
-  planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
+  // planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
   expandOverride = false;
   shouldHideLoading = false;
   shouldHide = false;
   latestDiff: LaForgePlanFieldsFragment['PlanToPlanDiffs'][0];
+  planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
 
-  constructor(private rebuild: RebuildService, private envService: EnvironmentService, private cdRef: ChangeDetectorRef) {
+  constructor(private rebuild: RebuildService, private envService: EnvironmentService, private status: StatusService) {
     if (!this.mode) this.mode = 'manage';
     if (!this.style) this.style = 'compact';
     if (!this.selectable) this.selectable = false;
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.planStatus = this.status.getStatusSubject(this.team.TeamToPlan.PlanToStatus.id);
+  }
 
   ngOnDestroy() {}
 
@@ -100,7 +106,8 @@ export class TeamComponent implements OnInit, OnDestroy {
   }
 
   getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
-    return this.buildStatusMap?.filter((s) => s.id === this.team.TeamToPlan.PlanToStatus.id)[0] ?? undefined;
+    // return this.buildStatusMap?.filter((s) => s.id === this.team.TeamToPlan.PlanToStatus.id)[0] ?? undefined;
+    return this.planStatus.getValue();
   }
 
   getStatusIcon(): string {
@@ -230,18 +237,17 @@ export class TeamComponent implements OnInit, OnDestroy {
       //   // this.expandOverride = false;
       //   return true;
     }
+    const status = this.getStatus();
     return (
-      this.planStatus &&
-      (this.planStatus.state === LaForgeProvisionStatus.Deleted ||
-        (this.planStatus.state === LaForgeProvisionStatus.Complete && this.allChildrenResponding()))
+      status &&
+      (status.state === LaForgeProvisionStatus.Deleted ||
+        (status.state === LaForgeProvisionStatus.Complete && this.allChildrenResponding()))
     );
   }
 
   canOverrideExpand(): boolean {
-    return (
-      this.planStatus &&
-      (this.planStatus.state === LaForgeProvisionStatus.Complete || this.planStatus.state === LaForgeProvisionStatus.Deleted)
-    );
+    const status = this.getStatus();
+    return status && (status.state === LaForgeProvisionStatus.Complete || status.state === LaForgeProvisionStatus.Deleted);
   }
 
   toggleCollapse(): void {

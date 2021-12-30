@@ -301,6 +301,10 @@ export class EnvironmentService {
     return this.subscribeUpdatedStatus.subscribe();
   }
 
+  public getAgentStatusSubscription(): Observable<SubscriptionResult<LaForgeSubscribeUpdatedAgentStatusSubscription>> {
+    return this.subscribeUpdatedAgentStatus.subscribe();
+  }
+
   public startAgentStatusSubscription() {
     this.agentStatusSubscription = this.subscribeUpdatedAgentStatus.subscribe().subscribe(({ data: { updatedAgentStatus }, errors }) => {
       if (errors) {

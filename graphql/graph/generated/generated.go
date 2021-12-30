@@ -427,6 +427,7 @@ type ComplexityRoot struct {
 		GetCurrentUserTasks func(childComplexity int) int
 		GetServerTasks      func(childComplexity int) int
 		GetUserList         func(childComplexity int) int
+		ListAgentStatuses   func(childComplexity int, buildUUID string) int
 		Plan                func(childComplexity int, planUUID string) int
 		ProvisionedHost     func(childComplexity int, proHostUUID string) int
 		ProvisionedNetwork  func(childComplexity int, proNetUUID string) int
@@ -700,6 +701,7 @@ type QueryResolver interface {
 	GetUserList(ctx context.Context) ([]*ent.AuthUser, error)
 	GetCurrentUserTasks(ctx context.Context) ([]*ent.ServerTask, error)
 	GetAgentTasks(ctx context.Context, proStepUUID string) ([]*ent.AgentTask, error)
+	ListAgentStatuses(ctx context.Context, buildUUID string) ([]*ent.AgentStatus, error)
 	GetAllAgentStatus(ctx context.Context, buildUUID string, count int, offset int) (*model.AgentStatusBatch, error)
 	GetAllPlanStatus(ctx context.Context, buildUUID string, count int, offset int) (*model.StatusBatch, error)
 	ViewServerTaskLogs(ctx context.Context, taskID string) (string, error)
@@ -2786,6 +2788,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.GetUserList(childComplexity), true
 
+	case "Query.listAgentStatuses":
+		if e.complexity.Query.ListAgentStatuses == nil {
+			break
+		}
+
+		args, err := ec.field_Query_listAgentStatuses_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ListAgentStatuses(childComplexity, args["buildUUID"].(string)), true
+
 	case "Query.plan":
 		if e.complexity.Query.Plan == nil {
 			break
@@ -4046,6 +4060,8 @@ type Query {
   getCurrentUserTasks: [ServerTask] @hasRole(roles: [ADMIN, USER])
   getAgentTasks(proStepUUID: String!): [AgentTask]
     @hasRole(roles: [ADMIN, USER])
+  listAgentStatuses(buildUUID: String!): [AgentStatus]
+    @hasRole(roles: [ADMIN, USER])
   getAllAgentStatus(
     buildUUID: String!
     count: Int!
@@ -4834,6 +4850,21 @@ func (ec *executionContext) field_Query_getBuildCommits_args(ctx context.Context
 		}
 	}
 	args["envUUID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_listAgentStatuses_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["buildUUID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("buildUUID"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["buildUUID"] = arg0
 	return args, nil
 }
 
@@ -15441,6 +15472,69 @@ func (ec *executionContext) _Query_getAgentTasks(ctx context.Context, field grap
 	return ec.marshalOAgentTask2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐAgentTask(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Query_listAgentStatuses(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_listAgentStatuses_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().ListAgentStatuses(rctx, args["buildUUID"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalNRoleLevel2ᚕgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐRoleLevelᚄ(ctx, []interface{}{"ADMIN", "USER"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*ent.AgentStatus); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/gen0cide/laforge/ent.AgentStatus`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*ent.AgentStatus)
+	fc.Result = res
+	return ec.marshalOAgentStatus2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐAgentStatus(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_getAllAgentStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -22780,6 +22874,17 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				res = ec._Query_getAgentTasks(ctx, field)
 				return res
 			})
+		case "listAgentStatuses":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_listAgentStatuses(ctx, field)
+				return res
+			})
 		case "getAllAgentStatus":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -25906,6 +26011,46 @@ func (ec *executionContext) marshalNvarsMap2ᚕᚖgithubᚗcomᚋgen0cideᚋlafo
 				defer wg.Done()
 			}
 			ret[i] = ec.marshalOvarsMap2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐVarsMap(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalOAgentStatus2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐAgentStatus(ctx context.Context, sel ast.SelectionSet, v []*ent.AgentStatus) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOAgentStatus2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐAgentStatus(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

@@ -502,7 +502,7 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 		ID:     b.ID,
 		Type:   "Build",
 		Fields: make([]*Field, 3),
-		Edges:  make([]*Edge, 10),
+		Edges:  make([]*Edge, 11),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(b.Revision); err != nil {
@@ -626,6 +626,16 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	err = b.QueryBuildToAdhocPlans().
 		Select(adhocplan.FieldID).
 		Scan(ctx, &node.Edges[9].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[10] = &Edge{
+		Type: "AgentStatus",
+		Name: "BuildToAgentStatuses",
+	}
+	err = b.QueryBuildToAgentStatuses().
+		Select(agentstatus.FieldID).
+		Scan(ctx, &node.Edges[10].IDs)
 	if err != nil {
 		return nil, err
 	}

@@ -106,7 +106,7 @@ export class PlanComponent implements OnInit, OnDestroy {
               // duration: 3000,
               panelClass: ['bg-success', 'text-white']
             });
-            this.router.navigate(['build']);
+            this.router.navigate(['build', this.buildCommit.value.BuildCommitToBuild.id]);
           }
         },
         (err) => {
@@ -133,9 +133,10 @@ export class PlanComponent implements OnInit, OnDestroy {
               panelClass: 'bg-danger'
             });
           } else if (data.cancelCommit) {
-            this.snackBar.open('Commit cancelled', 'Okay', {
+            const ref = this.snackBar.open('Commit cancelled', 'Okay', {
               duration: 3000
             });
+            ref.afterDismissed().subscribe(() => this.router.navigate(['home']));
           }
         },
         (err) => {

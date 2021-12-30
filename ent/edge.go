@@ -188,6 +188,14 @@ func (b *Build) BuildToAdhocPlans(ctx context.Context) ([]*AdhocPlan, error) {
 	return result, err
 }
 
+func (b *Build) BuildToAgentStatuses(ctx context.Context) ([]*AgentStatus, error) {
+	result, err := b.Edges.BuildToAgentStatusesOrErr()
+	if IsNotLoaded(err) {
+		result, err = b.QueryBuildToAgentStatuses().All(ctx)
+	}
+	return result, err
+}
+
 func (bc *BuildCommit) BuildCommitToBuild(ctx context.Context) (*Build, error) {
 	result, err := bc.Edges.BuildCommitToBuildOrErr()
 	if IsNotLoaded(err) {

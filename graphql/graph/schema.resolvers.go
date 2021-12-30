@@ -1335,6 +1335,20 @@ func (r *queryResolver) GetAgentTasks(ctx context.Context, proStepUUID string) (
 	return agentTasks, err
 }
 
+func (r *queryResolver) ListAgentStatuses(ctx context.Context, buildUUID string) ([]*ent.AgentStatus, error) {
+	uuid, err := uuid.Parse(buildUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed casting buildUUID to UUID")
+	}
+
+	agentStatuses, err := r.client.Build.Query().Where(build.IDEQ(uuid)).QueryBuildToAgentStatuses().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return agentStatuses, nil
+}
+
 func (r *queryResolver) GetAllAgentStatus(ctx context.Context, buildUUID string, count int, offset int) (*model.AgentStatusBatch, error) {
 	uuid, err := uuid.Parse(buildUUID)
 	if err != nil {

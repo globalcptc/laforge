@@ -27,7 +27,6 @@
         *ngFor="let provNetwork of team.TeamToProvisionedNetwork | sortBy: 'asc':'name'"
         [provisionedNetwork]="provNetwork"
         [planDiffs]="planDiffs"
-        [buildStatusMap]="buildStatusMap"
         [style]="style"
         [selectable]="selectable"
         [parentSelected]="isSelected()"

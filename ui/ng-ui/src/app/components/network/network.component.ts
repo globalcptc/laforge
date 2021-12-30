@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import {
   LaForgeGetBuildCommitQuery,
@@ -7,7 +7,8 @@ import {
   LaForgeSubscribeUpdatedStatusSubscription
 } from '@graphql';
 import { EnvironmentService } from '@services/environment/environment.service';
-import { Subscription } from 'rxjs';
+import { StatusService } from '@services/status/status.service';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { RebuildService } from 'src/app/services/rebuild/rebuild.service';
 
 import { NetworkModalComponent } from '../network-modal/network-modal.component';
@@ -24,23 +25,25 @@ export class NetworkComponent implements OnInit, OnDestroy {
   @Input()
   provisionedNetwork: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0];
   @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
-  @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
+  // @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
+  // @Input() buildAgentStatusMap: LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus'][] | undefined;
   @Input() style: 'compact' | 'collapsed' | 'expanded';
   @Input() selectable: boolean;
   @Input() parentSelected: boolean;
   @Input() mode: 'plan' | 'build' | 'manage';
   isSelectedState = false;
-  planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
+  // planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
   expandOverride = false;
   shouldHideLoading = false;
   shouldHide = false;
   latestDiff: LaForgePlanFieldsFragment['PlanToPlanDiffs'][0];
+  planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
 
   constructor(
     public dialog: MatDialog,
     private rebuild: RebuildService,
     private envService: EnvironmentService,
-    private cdRef: ChangeDetectorRef
+    private status: StatusService
   ) {
     if (!this.mode) this.mode = 'manage';
     if (!this.style) this.style = 'compact';
@@ -48,20 +51,11 @@ export class NetworkComponent implements OnInit, OnDestroy {
     if (!this.parentSelected) this.parentSelected = false;
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.planStatus = this.status.getStatusSubject(this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id);
+  }
 
   ngOnDestroy() {}
-
-  checkPlanStatus(): void {
-    this.planStatus = this.envService.getStatus(this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id) || this.planStatus;
-  }
-
-  checkLatestPlanDiff(): void {
-    if (this.latestDiff) return;
-    const pnetPlan = this.envService.getPlan(this.provisionedNetwork.ProvisionedNetworkToPlan.id);
-    if (!pnetPlan) return;
-    this.latestDiff = [...pnetPlan.PlanToPlanDiffs].sort((a, b) => b.revision - a.revision)[0];
-  }
 
   viewDetails(): void {
     this.dialog.open(NetworkModalComponent, {
@@ -101,7 +95,8 @@ export class NetworkComponent implements OnInit, OnDestroy {
   }
 
   getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
-    return this.buildStatusMap?.filter((s) => s.id === this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id)[0] ?? undefined;
+    // return this.buildStatusMap?.filter((s) => s.id === this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id)[0] ?? undefined;
+    return this.planStatus.getValue();
   }
 
   getStatusIcon(): string {
@@ -234,18 +229,17 @@ export class NetworkComponent implements OnInit, OnDestroy {
       // this.shouldCollapseLoading = false;
       // return true;
     }
+    const status = this.getStatus();
     return (
-      this.planStatus &&
-      (this.planStatus.state === LaForgeProvisionStatus.Deleted ||
-        (this.planStatus.state === LaForgeProvisionStatus.Complete && this.allChildrenResponding()))
+      status &&
+      (status.state === LaForgeProvisionStatus.Deleted ||
+        (status.state === LaForgeProvisionStatus.Complete && this.allChildrenResponding()))
     );
   }
 
   canOverrideExpand(): boolean {
-    return (
-      this.planStatus &&
-      (this.planStatus.state === LaForgeProvisionStatus.Complete || this.planStatus.state === LaForgeProvisionStatus.Deleted)
-    );
+    const status = this.getStatus();
+    return status && (status.state === LaForgeProvisionStatus.Complete || status.state === LaForgeProvisionStatus.Deleted);
   }
 
   toggleCollapse(): void {

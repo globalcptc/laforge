@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/adhocplan"
+	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/competition"
@@ -231,6 +232,21 @@ func (bu *BuildUpdate) AddBuildToAdhocPlans(a ...*AdhocPlan) *BuildUpdate {
 	return bu.AddBuildToAdhocPlanIDs(ids...)
 }
 
+// AddBuildToAgentStatuseIDs adds the "BuildToAgentStatuses" edge to the AgentStatus entity by IDs.
+func (bu *BuildUpdate) AddBuildToAgentStatuseIDs(ids ...uuid.UUID) *BuildUpdate {
+	bu.mutation.AddBuildToAgentStatuseIDs(ids...)
+	return bu
+}
+
+// AddBuildToAgentStatuses adds the "BuildToAgentStatuses" edges to the AgentStatus entity.
+func (bu *BuildUpdate) AddBuildToAgentStatuses(a ...*AgentStatus) *BuildUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return bu.AddBuildToAgentStatuseIDs(ids...)
+}
+
 // Mutation returns the BuildMutation object of the builder.
 func (bu *BuildUpdate) Mutation() *BuildMutation {
 	return bu.mutation
@@ -369,6 +385,27 @@ func (bu *BuildUpdate) RemoveBuildToAdhocPlans(a ...*AdhocPlan) *BuildUpdate {
 		ids[i] = a[i].ID
 	}
 	return bu.RemoveBuildToAdhocPlanIDs(ids...)
+}
+
+// ClearBuildToAgentStatuses clears all "BuildToAgentStatuses" edges to the AgentStatus entity.
+func (bu *BuildUpdate) ClearBuildToAgentStatuses() *BuildUpdate {
+	bu.mutation.ClearBuildToAgentStatuses()
+	return bu
+}
+
+// RemoveBuildToAgentStatuseIDs removes the "BuildToAgentStatuses" edge to AgentStatus entities by IDs.
+func (bu *BuildUpdate) RemoveBuildToAgentStatuseIDs(ids ...uuid.UUID) *BuildUpdate {
+	bu.mutation.RemoveBuildToAgentStatuseIDs(ids...)
+	return bu
+}
+
+// RemoveBuildToAgentStatuses removes "BuildToAgentStatuses" edges to AgentStatus entities.
+func (bu *BuildUpdate) RemoveBuildToAgentStatuses(a ...*AgentStatus) *BuildUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return bu.RemoveBuildToAgentStatuseIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -940,6 +977,60 @@ func (bu *BuildUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if bu.mutation.BuildToAgentStatusesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToAgentStatusesTable,
+			Columns: []string{build.BuildToAgentStatusesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agentstatus.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bu.mutation.RemovedBuildToAgentStatusesIDs(); len(nodes) > 0 && !bu.mutation.BuildToAgentStatusesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToAgentStatusesTable,
+			Columns: []string{build.BuildToAgentStatusesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agentstatus.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bu.mutation.BuildToAgentStatusesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToAgentStatusesTable,
+			Columns: []string{build.BuildToAgentStatusesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agentstatus.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, bu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{build.Label}
@@ -1153,6 +1244,21 @@ func (buo *BuildUpdateOne) AddBuildToAdhocPlans(a ...*AdhocPlan) *BuildUpdateOne
 	return buo.AddBuildToAdhocPlanIDs(ids...)
 }
 
+// AddBuildToAgentStatuseIDs adds the "BuildToAgentStatuses" edge to the AgentStatus entity by IDs.
+func (buo *BuildUpdateOne) AddBuildToAgentStatuseIDs(ids ...uuid.UUID) *BuildUpdateOne {
+	buo.mutation.AddBuildToAgentStatuseIDs(ids...)
+	return buo
+}
+
+// AddBuildToAgentStatuses adds the "BuildToAgentStatuses" edges to the AgentStatus entity.
+func (buo *BuildUpdateOne) AddBuildToAgentStatuses(a ...*AgentStatus) *BuildUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return buo.AddBuildToAgentStatuseIDs(ids...)
+}
+
 // Mutation returns the BuildMutation object of the builder.
 func (buo *BuildUpdateOne) Mutation() *BuildMutation {
 	return buo.mutation
@@ -1291,6 +1397,27 @@ func (buo *BuildUpdateOne) RemoveBuildToAdhocPlans(a ...*AdhocPlan) *BuildUpdate
 		ids[i] = a[i].ID
 	}
 	return buo.RemoveBuildToAdhocPlanIDs(ids...)
+}
+
+// ClearBuildToAgentStatuses clears all "BuildToAgentStatuses" edges to the AgentStatus entity.
+func (buo *BuildUpdateOne) ClearBuildToAgentStatuses() *BuildUpdateOne {
+	buo.mutation.ClearBuildToAgentStatuses()
+	return buo
+}
+
+// RemoveBuildToAgentStatuseIDs removes the "BuildToAgentStatuses" edge to AgentStatus entities by IDs.
+func (buo *BuildUpdateOne) RemoveBuildToAgentStatuseIDs(ids ...uuid.UUID) *BuildUpdateOne {
+	buo.mutation.RemoveBuildToAgentStatuseIDs(ids...)
+	return buo
+}
+
+// RemoveBuildToAgentStatuses removes "BuildToAgentStatuses" edges to AgentStatus entities.
+func (buo *BuildUpdateOne) RemoveBuildToAgentStatuses(a ...*AgentStatus) *BuildUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return buo.RemoveBuildToAgentStatuseIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -1878,6 +2005,60 @@ func (buo *BuildUpdateOne) sqlSave(ctx context.Context) (_node *Build, err error
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: adhocplan.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if buo.mutation.BuildToAgentStatusesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToAgentStatusesTable,
+			Columns: []string{build.BuildToAgentStatusesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agentstatus.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := buo.mutation.RemovedBuildToAgentStatusesIDs(); len(nodes) > 0 && !buo.mutation.BuildToAgentStatusesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToAgentStatusesTable,
+			Columns: []string{build.BuildToAgentStatusesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agentstatus.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := buo.mutation.BuildToAgentStatusesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToAgentStatusesTable,
+			Columns: []string{build.BuildToAgentStatusesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agentstatus.FieldID,
 				},
 			},
 		}

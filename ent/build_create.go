@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/adhocplan"
+	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/competition"
@@ -213,6 +214,21 @@ func (bc *BuildCreate) AddBuildToAdhocPlans(a ...*AdhocPlan) *BuildCreate {
 		ids[i] = a[i].ID
 	}
 	return bc.AddBuildToAdhocPlanIDs(ids...)
+}
+
+// AddBuildToAgentStatuseIDs adds the "BuildToAgentStatuses" edge to the AgentStatus entity by IDs.
+func (bc *BuildCreate) AddBuildToAgentStatuseIDs(ids ...uuid.UUID) *BuildCreate {
+	bc.mutation.AddBuildToAgentStatuseIDs(ids...)
+	return bc
+}
+
+// AddBuildToAgentStatuses adds the "BuildToAgentStatuses" edges to the AgentStatus entity.
+func (bc *BuildCreate) AddBuildToAgentStatuses(a ...*AgentStatus) *BuildCreate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return bc.AddBuildToAgentStatuseIDs(ids...)
 }
 
 // Mutation returns the BuildMutation object of the builder.
@@ -555,6 +571,25 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: adhocplan.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := bc.mutation.BuildToAgentStatusesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToAgentStatusesTable,
+			Columns: []string{build.BuildToAgentStatusesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agentstatus.FieldID,
 				},
 			},
 		}

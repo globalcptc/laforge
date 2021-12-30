@@ -39,6 +39,7 @@ enum FindingDifficulty {
 enum ProvisionStatus {
   PLANNING
   AWAITING
+  PARENTAWAITING
   INPROGRESS
   FAILED
   COMPLETE
@@ -567,6 +568,8 @@ type Query {
   getUserList: [AuthUser] @hasRole(roles: [ADMIN])
   getCurrentUserTasks: [ServerTask] @hasRole(roles: [ADMIN, USER])
   getAgentTasks(proStepUUID: String!): [AgentTask]
+    @hasRole(roles: [ADMIN, USER])
+  listAgentStatuses(buildUUID: String!): [AgentStatus]
     @hasRole(roles: [ADMIN, USER])
   getAllAgentStatus(
     buildUUID: String!

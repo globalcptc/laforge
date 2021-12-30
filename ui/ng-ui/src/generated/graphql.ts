@@ -503,6 +503,7 @@ export enum LaForgeProviderType {
 export enum LaForgeProvisionStatus {
   Planning = 'PLANNING',
   Awaiting = 'AWAITING',
+  Parentawaiting = 'PARENTAWAITING',
   Inprogress = 'INPROGRESS',
   Failed = 'FAILED',
   Complete = 'COMPLETE',
@@ -594,6 +595,7 @@ export type LaForgeQuery = {
   getUserList?: Maybe<Array<Maybe<LaForgeAuthUser>>>;
   getCurrentUserTasks?: Maybe<Array<Maybe<LaForgeServerTask>>>;
   getAgentTasks?: Maybe<Array<Maybe<LaForgeAgentTask>>>;
+  listAgentStatuses?: Maybe<Array<Maybe<LaForgeAgentStatus>>>;
   getAllAgentStatus?: Maybe<LaForgeAgentStatusBatch>;
   getAllPlanStatus?: Maybe<LaForgeStatusBatch>;
   viewServerTaskLogs: Scalars['String'];
@@ -642,6 +644,10 @@ export type LaForgeQueryAgentStatusArgs = {
 
 export type LaForgeQueryGetAgentTasksArgs = {
   proStepUUID: Scalars['String'];
+};
+
+export type LaForgeQueryListAgentStatusesArgs = {
+  buildUUID: Scalars['String'];
 };
 
 export type LaForgeQueryGetAllAgentStatusArgs = {
@@ -843,6 +849,14 @@ export type LaForgeGetAgentTasksQuery = { __typename?: 'Query' } & {
   getAgentTasks?: Maybe<Array<Maybe<{ __typename?: 'AgentTask' } & LaForgeAgentTaskFieldsFragment>>>;
 };
 
+export type LaForgeListAgentStatusesQueryVariables = Exact<{
+  buildUUID: Scalars['String'];
+}>;
+
+export type LaForgeListAgentStatusesQuery = { __typename?: 'Query' } & {
+  listAgentStatuses?: Maybe<Array<Maybe<{ __typename?: 'AgentStatus' } & LaForgeAgentStatusFieldsFragment>>>;
+};
+
 export type LaForgeGetCurrentUserQueryVariables = Exact<{ [key: string]: never }>;
 
 export type LaForgeGetCurrentUserQuery = { __typename?: 'Query' } & {
@@ -1027,6 +1041,9 @@ export type LaForgeListBuildCommitsQuery = { __typename?: 'Query' } & {
                     RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
                   };
               };
+            BuildCommitToServerTask: Array<
+              Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id' | 'start_time' | 'end_time'>>
+            >;
           }
       >
     >
@@ -1743,6 +1760,25 @@ export class LaForgeGetAgentTasksGQL extends Apollo.Query<LaForgeGetAgentTasksQu
     super(apollo);
   }
 }
+export const ListAgentStatusesDocument = gql`
+  query ListAgentStatuses($buildUUID: String!) {
+    listAgentStatuses(buildUUID: $buildUUID) {
+      ...AgentStatusFields
+    }
+  }
+  ${AgentStatusFieldsFragmentDoc}
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeListAgentStatusesGQL extends Apollo.Query<LaForgeListAgentStatusesQuery, LaForgeListAgentStatusesQueryVariables> {
+  document = ListAgentStatusesDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
 export const GetCurrentUserDocument = gql`
   query GetCurrentUser {
     currentUser {
@@ -2049,6 +2085,11 @@ export const ListBuildCommitsDocument = gql`
             repo_url
           }
         }
+      }
+      BuildCommitToServerTask {
+        id
+        start_time
+        end_time
       }
       state
       type

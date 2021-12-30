@@ -1181,6 +1181,22 @@ func (c *BuildClient) QueryBuildToAdhocPlans(b *Build) *AdhocPlanQuery {
 	return query
 }
 
+// QueryBuildToAgentStatuses queries the BuildToAgentStatuses edge of a Build.
+func (c *BuildClient) QueryBuildToAgentStatuses(b *Build) *AgentStatusQuery {
+	query := &AgentStatusQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := b.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(build.Table, build.FieldID, id),
+			sqlgraph.To(agentstatus.Table, agentstatus.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToAgentStatusesTable, build.BuildToAgentStatusesColumn),
+		)
+		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *BuildClient) Hooks() []Hook {
 	return c.hooks.Build
