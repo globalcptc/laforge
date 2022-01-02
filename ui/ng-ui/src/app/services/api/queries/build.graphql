@@ -5,6 +5,9 @@ query GetBuildTree($buildId: String!) {
     buildToEnvironment {
       id
       name
+      team_count
+      admin_cidrs
+      exposed_vdi_ports
     }
     BuildToRepoCommit {
       id
@@ -204,6 +207,24 @@ query GetBuildStatuses($buildUUID: String!) {
       id
       PlanToStatus {
         ...StatusFields
+      }
+    }
+    buildToTeam {
+      id
+      TeamToStatus {
+        ...StatusFields
+      }
+      TeamToProvisionedNetwork {
+        id
+        ProvisionedNetworkToStatus {
+          ...StatusFields
+        }
+        ProvisionedNetworkToProvisionedHost {
+          id
+          ProvisionedHostToStatus {
+            ...StatusFields
+          }
+        }
       }
     }
   }

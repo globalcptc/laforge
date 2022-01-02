@@ -1,8 +1,10 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import {
   LaForgeGetBuildCommitQuery,
+  LaForgeGetBuildTreeQuery,
   LaForgePlanFieldsFragment,
+  LaForgeProvisionedNetwork,
   LaForgeProvisionStatus,
   LaForgeSubscribeUpdatedStatusSubscription
 } from '@graphql';
@@ -13,17 +15,23 @@ import { RebuildService } from 'src/app/services/rebuild/rebuild.service';
 
 import { NetworkModalComponent } from '../network-modal/network-modal.component';
 
+// eslint-disable-next-line max-len
+type BuildCommitProvisionedNetwork = LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0];
+// eslint-disable-next-line max-len
+type BuildTreeProvisionedNetwork = LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0];
+
 @Component({
   selector: 'app-network',
   templateUrl: './network.component.html',
-  styleUrls: ['./network.component.scss']
+  styleUrls: ['./network.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NetworkComponent implements OnInit, OnDestroy {
   private unsubscribe: Subscription[] = [];
   // @Input() provisionedNetwork: LaForgeProvisionedNetwork;
   // @Input() status: Status;
   @Input()
-  provisionedNetwork: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0];
+  provisionedNetwork: BuildCommitProvisionedNetwork | BuildTreeProvisionedNetwork;
   @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
   // @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
   // @Input() buildAgentStatusMap: LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus'][] | undefined;
@@ -38,12 +46,14 @@ export class NetworkComponent implements OnInit, OnDestroy {
   shouldHide = false;
   latestDiff: LaForgePlanFieldsFragment['PlanToPlanDiffs'][0];
   planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
+  provisionStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
 
   constructor(
     public dialog: MatDialog,
     private rebuild: RebuildService,
     private envService: EnvironmentService,
-    private status: StatusService
+    private status: StatusService,
+    private cdRef: ChangeDetectorRef
   ) {
     if (!this.mode) this.mode = 'manage';
     if (!this.style) this.style = 'compact';
@@ -53,9 +63,20 @@ export class NetworkComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.planStatus = this.status.getStatusSubject(this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id);
+    const sub1 = this.planStatus.subscribe(() => this.cdRef.markForCheck());
+    this.unsubscribe.push(sub1);
+    if (this.mode !== 'plan') {
+      this.provisionStatus = this.status.getStatusSubject(
+        (this.provisionedNetwork as BuildTreeProvisionedNetwork).ProvisionedNetworkToStatus.id
+      );
+      const sub = this.provisionStatus.subscribe(() => this.cdRef.markForCheck());
+      this.unsubscribe.push(sub);
+    }
   }
 
-  ngOnDestroy() {}
+  ngOnDestroy() {
+    this.unsubscribe.forEach((s) => s.unsubscribe());
+  }
 
   viewDetails(): void {
     this.dialog.open(NetworkModalComponent, {
@@ -178,19 +199,20 @@ export class NetworkComponent implements OnInit, OnDestroy {
   onSelect(): void {
     let success = false;
     if (!this.isSelected()) {
-      success = this.rebuild.addNetwork(this.provisionedNetwork);
+      success = this.rebuild.addNetwork(this.provisionedNetwork as LaForgeProvisionedNetwork);
     } else {
-      success = this.rebuild.removeNetwork(this.provisionedNetwork);
+      success = this.rebuild.removeNetwork(this.provisionedNetwork as LaForgeProvisionedNetwork);
     }
     if (success) this.isSelectedState = !this.isSelectedState;
   }
 
   onIndeterminateChange(isIndeterminate: boolean): void {
-    if (!isIndeterminate && this.isSelectedState) setTimeout(() => this.rebuild.addNetwork(this.provisionedNetwork), 500);
+    if (!isIndeterminate && this.isSelectedState)
+      setTimeout(() => this.rebuild.addNetwork(this.provisionedNetwork as LaForgeProvisionedNetwork), 500);
   }
 
   isSelected(): boolean {
-    return this.rebuild.hasNetwork(this.provisionedNetwork);
+    return this.rebuild.hasNetwork(this.provisionedNetwork as LaForgeProvisionedNetwork);
   }
 
   checkShouldHide() {

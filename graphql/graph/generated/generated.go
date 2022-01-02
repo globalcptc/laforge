@@ -226,6 +226,7 @@ type ComplexityRoot struct {
 		EnvironmentToNetwork      func(childComplexity int) int
 		EnvironmentToRepository   func(childComplexity int) int
 		EnvironmentToScript       func(childComplexity int) int
+		EnvironmentToServerTask   func(childComplexity int) int
 		EnvironmentToUser         func(childComplexity int) int
 		ExposedVdiPorts           func(childComplexity int) int
 		HclID                     func(childComplexity int) int
@@ -428,10 +429,12 @@ type ComplexityRoot struct {
 		GetServerTasks      func(childComplexity int) int
 		GetUserList         func(childComplexity int) int
 		ListAgentStatuses   func(childComplexity int, buildUUID string) int
+		ListBuildStatuses   func(childComplexity int, buildUUID string) int
 		Plan                func(childComplexity int, planUUID string) int
 		ProvisionedHost     func(childComplexity int, proHostUUID string) int
 		ProvisionedNetwork  func(childComplexity int, proNetUUID string) int
 		ProvisionedStep     func(childComplexity int, proStepUUID string) int
+		ServerTasks         func(childComplexity int, taskUUIDs []*string) int
 		Status              func(childComplexity int, statusUUID string) int
 		ViewAgentTask       func(childComplexity int, taskID string) int
 		ViewServerTaskLogs  func(childComplexity int, taskID string) int
@@ -641,7 +644,7 @@ type MutationResolver interface {
 	CreateBuild(ctx context.Context, envUUID string, renderFiles bool) (*ent.Build, error)
 	DeleteUser(ctx context.Context, userUUID string) (bool, error)
 	ExecutePlan(ctx context.Context, buildUUID string) (*ent.Build, error)
-	DeleteBuild(ctx context.Context, buildUUID string) (bool, error)
+	DeleteBuild(ctx context.Context, buildUUID string) (string, error)
 	CreateTask(ctx context.Context, proHostUUID string, command model.AgentCommand, args string) (bool, error)
 	Rebuild(ctx context.Context, rootPlans []*string) (bool, error)
 	ApproveCommit(ctx context.Context, commitUUID string) (bool, error)
@@ -702,10 +705,12 @@ type QueryResolver interface {
 	GetCurrentUserTasks(ctx context.Context) ([]*ent.ServerTask, error)
 	GetAgentTasks(ctx context.Context, proStepUUID string) ([]*ent.AgentTask, error)
 	ListAgentStatuses(ctx context.Context, buildUUID string) ([]*ent.AgentStatus, error)
+	ListBuildStatuses(ctx context.Context, buildUUID string) ([]*ent.Status, error)
 	GetAllAgentStatus(ctx context.Context, buildUUID string, count int, offset int) (*model.AgentStatusBatch, error)
 	GetAllPlanStatus(ctx context.Context, buildUUID string, count int, offset int) (*model.StatusBatch, error)
 	ViewServerTaskLogs(ctx context.Context, taskID string) (string, error)
 	ViewAgentTask(ctx context.Context, taskID string) (*ent.AgentTask, error)
+	ServerTasks(ctx context.Context, taskUUIDs []*string) ([]*ent.ServerTask, error)
 }
 type RepoCommitResolver interface {
 	ID(ctx context.Context, obj *ent.RepoCommit) (string, error)
@@ -1570,6 +1575,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Environment.EnvironmentToScript(childComplexity), true
+
+	case "Environment.EnvironmentToServerTask":
+		if e.complexity.Environment.EnvironmentToServerTask == nil {
+			break
+		}
+
+		return e.complexity.Environment.EnvironmentToServerTask(childComplexity), true
 
 	case "Environment.EnvironmentToUser":
 		if e.complexity.Environment.EnvironmentToUser == nil {
@@ -2800,6 +2812,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.ListAgentStatuses(childComplexity, args["buildUUID"].(string)), true
 
+	case "Query.listBuildStatuses":
+		if e.complexity.Query.ListBuildStatuses == nil {
+			break
+		}
+
+		args, err := ec.field_Query_listBuildStatuses_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ListBuildStatuses(childComplexity, args["buildUUID"].(string)), true
+
 	case "Query.plan":
 		if e.complexity.Query.Plan == nil {
 			break
@@ -2847,6 +2871,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.ProvisionedStep(childComplexity, args["proStepUUID"].(string)), true
+
+	case "Query.serverTasks":
+		if e.complexity.Query.ServerTasks == nil {
+			break
+		}
+
+		args, err := ec.field_Query_serverTasks_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ServerTasks(childComplexity, args["taskUUIDs"].([]*string)), true
 
 	case "Query.status":
 		if e.complexity.Query.Status == nil {
@@ -3531,6 +3567,7 @@ enum FindingDifficulty {
 enum ProvisionStatus {
   PLANNING
   AWAITING
+  PARENTAWAITING
   INPROGRESS
   FAILED
   COMPLETE
@@ -3540,6 +3577,7 @@ enum ProvisionStatus {
   DELETEINPROGRESS
   DELETED
   TOREBUILD
+  CANCELLED
 }
 
 enum ProvisionStatusFor {
@@ -3767,6 +3805,7 @@ type Environment {
   EnvironmentToNetwork: [Network]!
   EnvironmentToBuild: [Build]!
   EnvironmentToRepository: [Repository]!
+  EnvironmentToServerTask: [ServerTask]!
 }
 
 type FileDelete {
@@ -4062,6 +4101,7 @@ type Query {
     @hasRole(roles: [ADMIN, USER])
   listAgentStatuses(buildUUID: String!): [AgentStatus]
     @hasRole(roles: [ADMIN, USER])
+  listBuildStatuses(buildUUID: String!): [Status] @hasRole(roles: [ADMIN, USER])
   getAllAgentStatus(
     buildUUID: String!
     count: Int!
@@ -4071,6 +4111,7 @@ type Query {
     @hasRole(roles: [ADMIN, USER])
   viewServerTaskLogs(taskID: String!): String! @hasRole(roles: [ADMIN, USER])
   viewAgentTask(taskID: String!): AgentTask! @hasRole(roles: [ADMIN, USER])
+  serverTasks(taskUUIDs: [String]!): [ServerTask] @hasRole(roles: [ADMIN, USER])
 }
 
 type Mutation {
@@ -4080,7 +4121,7 @@ type Mutation {
     @hasRole(roles: [ADMIN, USER])
   deleteUser(userUUID: String!): Boolean! @hasRole(roles: [ADMIN, USER])
   executePlan(buildUUID: String!): Build @hasRole(roles: [ADMIN, USER])
-  deleteBuild(buildUUID: String!): Boolean! @hasRole(roles: [ADMIN, USER])
+  deleteBuild(buildUUID: String!): String! @hasRole(roles: [ADMIN, USER]) # returns the build commit uuid of delete commit
   createTask(
     proHostUUID: String!
     command: AgentCommand!
@@ -4868,6 +4909,21 @@ func (ec *executionContext) field_Query_listAgentStatuses_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_listBuildStatuses_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["buildUUID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("buildUUID"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["buildUUID"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_plan_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -4925,6 +4981,21 @@ func (ec *executionContext) field_Query_provisionedStep_args(ctx context.Context
 		}
 	}
 	args["proStepUUID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_serverTasks_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 []*string
+	if tmp, ok := rawArgs["taskUUIDs"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("taskUUIDs"))
+		arg0, err = ec.unmarshalNString2ᚕᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["taskUUIDs"] = arg0
 	return args, nil
 }
 
@@ -9274,6 +9345,41 @@ func (ec *executionContext) _Environment_EnvironmentToRepository(ctx context.Con
 	return ec.marshalNRepository2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepository(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Environment_EnvironmentToServerTask(ctx context.Context, field graphql.CollectedField, obj *ent.Environment) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Environment",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EnvironmentToServerTask(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ent.ServerTask)
+	fc.Result = res
+	return ec.marshalNServerTask2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐServerTask(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _FileDelete_id(ctx context.Context, field graphql.CollectedField, obj *ent.FileDelete) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -11742,10 +11848,10 @@ func (ec *executionContext) _Mutation_deleteBuild(ctx context.Context, field gra
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(bool); ok {
+		if data, ok := tmp.(string); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be bool`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be string`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -11757,9 +11863,9 @@ func (ec *executionContext) _Mutation_deleteBuild(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(bool)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createTask(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -15535,6 +15641,69 @@ func (ec *executionContext) _Query_listAgentStatuses(ctx context.Context, field 
 	return ec.marshalOAgentStatus2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐAgentStatus(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Query_listBuildStatuses(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_listBuildStatuses_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().ListBuildStatuses(rctx, args["buildUUID"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalNRoleLevel2ᚕgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐRoleLevelᚄ(ctx, []interface{}{"ADMIN", "USER"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*ent.Status); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/gen0cide/laforge/ent.Status`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*ent.Status)
+	fc.Result = res
+	return ec.marshalOStatus2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐStatus(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_getAllAgentStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -15791,6 +15960,69 @@ func (ec *executionContext) _Query_viewAgentTask(ctx context.Context, field grap
 	res := resTmp.(*ent.AgentTask)
 	fc.Result = res
 	return ec.marshalNAgentTask2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐAgentTask(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_serverTasks(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_serverTasks_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().ServerTasks(rctx, args["taskUUIDs"].([]*string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalNRoleLevel2ᚕgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐRoleLevelᚄ(ctx, []interface{}{"ADMIN", "USER"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*ent.ServerTask); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/gen0cide/laforge/ent.ServerTask`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*ent.ServerTask)
+	fc.Result = res
+	return ec.marshalOServerTask2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐServerTask(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -21115,6 +21347,20 @@ func (ec *executionContext) _Environment(ctx context.Context, sel ast.SelectionS
 				}
 				return res
 			})
+		case "EnvironmentToServerTask":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Environment_EnvironmentToServerTask(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -22885,6 +23131,17 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				res = ec._Query_listAgentStatuses(ctx, field)
 				return res
 			})
+		case "listBuildStatuses":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_listBuildStatuses(ctx, field)
+				return res
+			})
 		case "getAllAgentStatus":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -22933,6 +23190,17 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
+				return res
+			})
+		case "serverTasks":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_serverTasks(ctx, field)
 				return res
 			})
 		case "__type":
@@ -26555,6 +26823,46 @@ func (ec *executionContext) marshalOServerTask2ᚖgithubᚗcomᚋgen0cideᚋlafo
 		return graphql.Null
 	}
 	return ec._ServerTask(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOStatus2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐStatus(ctx context.Context, sel ast.SelectionSet, v []*ent.Status) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOStatus2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐStatus(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
 }
 
 func (ec *executionContext) marshalOStatus2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐStatus(ctx context.Context, sel ast.SelectionSet, v *ent.Status) graphql.Marshaler {

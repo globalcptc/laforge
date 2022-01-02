@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -46,7 +47,8 @@ func BuilderFromEnvironment(environment *ent.Environment, logger *logging.Logger
 
 // NewVSphereNSXTBuilder creates a builder instance to deploy environments to VSphere and NSX-T
 func NewVSphereNSXTBuilder(env *ent.Environment, logger *logging.Logger) (builder vspherensxt.VSphereNSXTBuilder, err error) {
-	laforgeServerUrl, exists := env.Config["laforge_server_url"]
+	// laforgeServerUrl, exists := env.Config["laforge_server_url"]
+	laforgeServerUrl, exists := os.LookupEnv("LAFORGE_SERVER_URL")
 	if !exists {
 		err = errors.New("laforge_server_url doesn't exist in the environment configuration")
 		return

@@ -1105,7 +1105,7 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 		ID:     e.ID,
 		Type:   "Environment",
 		Fields: make([]*Field, 11),
-		Edges:  make([]*Edge, 17),
+		Edges:  make([]*Edge, 18),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(e.HclID); err != nil {
@@ -1363,6 +1363,16 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	err = e.QueryEnvironmentToRepository().
 		Select(repository.FieldID).
 		Scan(ctx, &node.Edges[16].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[17] = &Edge{
+		Type: "ServerTask",
+		Name: "EnvironmentToServerTask",
+	}
+	err = e.QueryEnvironmentToServerTask().
+		Select(servertask.FieldID).
+		Scan(ctx, &node.Edges[17].IDs)
 	if err != nil {
 		return nil, err
 	}

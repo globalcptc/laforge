@@ -78,6 +78,8 @@ type Environment struct {
 	HCLEnvironmentToBuild []*Build `json:"EnvironmentToBuild,omitempty"`
 	// EnvironmentToRepository holds the value of the EnvironmentToRepository edge.
 	HCLEnvironmentToRepository []*Repository `json:"EnvironmentToRepository,omitempty"`
+	// EnvironmentToServerTask holds the value of the EnvironmentToServerTask edge.
+	HCLEnvironmentToServerTask []*ServerTask `json:"EnvironmentToServerTask,omitempty"`
 	//
 
 }
@@ -118,9 +120,11 @@ type EnvironmentEdges struct {
 	EnvironmentToBuild []*Build `json:"EnvironmentToBuild,omitempty"`
 	// EnvironmentToRepository holds the value of the EnvironmentToRepository edge.
 	EnvironmentToRepository []*Repository `json:"EnvironmentToRepository,omitempty"`
+	// EnvironmentToServerTask holds the value of the EnvironmentToServerTask edge.
+	EnvironmentToServerTask []*ServerTask `json:"EnvironmentToServerTask,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [17]bool
+	loadedTypes [18]bool
 }
 
 // EnvironmentToUserOrErr returns the EnvironmentToUser value or an error if the edge
@@ -274,6 +278,15 @@ func (e EnvironmentEdges) EnvironmentToRepositoryOrErr() ([]*Repository, error) 
 		return e.EnvironmentToRepository, nil
 	}
 	return nil, &NotLoadedError{edge: "EnvironmentToRepository"}
+}
+
+// EnvironmentToServerTaskOrErr returns the EnvironmentToServerTask value or an error if the edge
+// was not loaded in eager-loading.
+func (e EnvironmentEdges) EnvironmentToServerTaskOrErr() ([]*ServerTask, error) {
+	if e.loadedTypes[17] {
+		return e.EnvironmentToServerTask, nil
+	}
+	return nil, &NotLoadedError{edge: "EnvironmentToServerTask"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -472,6 +485,11 @@ func (e *Environment) QueryEnvironmentToBuild() *BuildQuery {
 // QueryEnvironmentToRepository queries the "EnvironmentToRepository" edge of the Environment entity.
 func (e *Environment) QueryEnvironmentToRepository() *RepositoryQuery {
 	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToRepository(e)
+}
+
+// QueryEnvironmentToServerTask queries the "EnvironmentToServerTask" edge of the Environment entity.
+func (e *Environment) QueryEnvironmentToServerTask() *ServerTaskQuery {
+	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToServerTask(e)
 }
 
 // Update returns a builder for updating this Environment.

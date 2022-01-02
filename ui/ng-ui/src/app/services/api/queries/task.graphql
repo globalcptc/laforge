@@ -23,3 +23,13 @@ query GetCurrentUserTasks {
     ...ServerTaskFields
   }
 }
+
+query GetServerTaskLogs($taskUUID: String!) {
+  viewServerTaskLogs(taskID: $taskUUID)
+}
+
+query GetServerTasks($taskUUIDs: [String]!) {
+  serverTasks(taskUUIDs: $taskUUIDs) {
+    ...ServerTaskFields
+  }
+}

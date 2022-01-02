@@ -41,7 +41,12 @@ import {
   LaForgeGetBuildStatusesGQL,
   LaForgeGetBuildStatusesQuery,
   LaForgeListAgentStatusesGQL,
-  LaForgeListAgentStatusesQuery
+  LaForgeListAgentStatusesQuery,
+  LaForgeListBuildStatusesGQL,
+  LaForgeGetServerTaskLogsQuery,
+  LaForgeGetServerTaskLogsGQL,
+  LaForgeGetServerTasksGQL,
+  LaForgeGetServerTasksQuery
 } from '@graphql';
 
 @Injectable({
@@ -71,7 +76,10 @@ export class ApiService {
     private approveBuildCommitGQL: LaForgeApproveBuildCommitGQL,
     private getBuildCommitGQL: LaForgeGetBuildCommitGQL,
     private getBuildStatuses: LaForgeGetBuildStatusesGQL,
-    private listAgentStatuses: LaForgeListAgentStatusesGQL
+    private listBuildStatusesGQL: LaForgeListBuildStatusesGQL,
+    private listAgentStatusesGQL: LaForgeListAgentStatusesGQL,
+    private getServerTaskLogsGQL: LaForgeGetServerTaskLogsGQL,
+    private getServerTasksGQL: LaForgeGetServerTasksGQL
   ) {}
 
   /**
@@ -173,7 +181,7 @@ export class ApiService {
    */
   public async listBuildStatuses(buildUUID: string): Promise<LaForgeGetBuildStatusesQuery['build']['buildToPlan'][0]['PlanToStatus'][]> {
     return new Promise((resolve, reject) => {
-      this.getBuildStatuses
+      this.listBuildStatusesGQL
         .fetch({
           buildUUID
         })
@@ -184,7 +192,7 @@ export class ApiService {
           } else if (errors) {
             return reject(errors);
           }
-          resolve(data.build.buildToPlan.map((p) => p.PlanToStatus));
+          resolve(data.listBuildStatuses);
         }, reject);
     });
   }
@@ -194,7 +202,7 @@ export class ApiService {
    */
   public async listBuildAgentStatuses(buildUUID: string): Promise<LaForgeListAgentStatusesQuery['listAgentStatuses']> {
     return new Promise((resolve, reject) => {
-      this.listAgentStatuses
+      this.listAgentStatusesGQL
         .fetch({
           buildUUID
         })
@@ -502,6 +510,52 @@ export class ApiService {
           }
           reject(new Error('unknown error occurred while creating user'));
         }, reject);
+    });
+  }
+
+  /**
+   * Pulls status objects for all plans on a build
+   * @param buildId The build ID that contains plans
+   * @returns All plan objects relating to a build
+   */
+  public getServerTaskLogs(taskUUID: string): Promise<LaForgeGetServerTaskLogsQuery['viewServerTaskLogs']> {
+    return new Promise((resolve, reject) => {
+      this.getServerTaskLogsGQL
+        .fetch({
+          taskUUID
+        })
+        .toPromise()
+        .then(({ data, error, errors }) => {
+          if (error) {
+            return reject(error);
+          } else if (errors) {
+            return reject(errors);
+          }
+          resolve(data.viewServerTaskLogs);
+        });
+    });
+  }
+
+  /**
+   * Gets all server tasks provided
+   * @param taskUUIDs List of ids of the requested server tasks
+   * @returns All requested server tasks
+   */
+  public getServerTasks(taskUUIDs: string[]): Promise<LaForgeGetServerTasksQuery['serverTasks']> {
+    return new Promise((resolve, reject) => {
+      this.getServerTasksGQL
+        .fetch({
+          taskUUIDs
+        })
+        .toPromise()
+        .then(({ data, error, errors }) => {
+          if (error) {
+            return reject(error);
+          } else if (errors) {
+            return reject(errors);
+          }
+          resolve(data.serverTasks);
+        });
     });
   }
 }

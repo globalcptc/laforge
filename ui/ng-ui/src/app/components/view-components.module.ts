@@ -26,6 +26,7 @@ import { StepComponent } from './step/step.component';
 import { TaskListComponent } from './task-list/task-list.component';
 import { TaskComponent } from './task/task.component';
 import { TeamComponent } from './team/team.component';
+import { ViewLogsModalComponent } from './view-logs-modal/view-logs-modal.component';
 
 @NgModule({
   declarations: [
@@ -40,7 +41,8 @@ import { TeamComponent } from './team/team.component';
     TaskComponent,
     StepModalComponent,
     EditUserModalComponent,
-    ImportRepoModalComponent
+    ImportRepoModalComponent,
+    ViewLogsModalComponent
   ],
   imports: [
     CommonModule,

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import {
   LaForgeGetBuildTreeQuery,
@@ -18,7 +18,8 @@ import { StepModalComponent } from '@components/step-modal/step-modal.component'
 @Component({
   selector: 'app-step',
   templateUrl: './step.component.html',
-  styleUrls: ['./step.component.scss']
+  styleUrls: ['./step.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class StepComponent implements OnInit, OnDestroy {
   private unsubscribe: Subscription[] = [];
@@ -47,8 +48,11 @@ export class StepComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    if (this.provisioningStep.ProvisioningStepToPlan?.PlanToStatus?.id)
+    if (this.provisioningStep.ProvisioningStepToPlan?.PlanToStatus?.id) {
       this.planStatus = this.status.getStatusSubject(this.provisioningStep.ProvisioningStepToPlan.PlanToStatus.id);
+      const sub = this.planStatus.subscribe(() => this.cdRef.markForCheck());
+      this.unsubscribe.push(sub);
+    }
     // const sub = this.envService.statusUpdate.asObservable().subscribe(() => {
     //   this.checkPlanStatus();
     //   this.checkprovisioningStepStatus();

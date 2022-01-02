@@ -191,7 +191,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 		}
 		return nil, err
 	}
-	for teamNumber := 0; teamNumber < entEnvironment.TeamCount; teamNumber++ {
+	for teamNumber := 1; teamNumber <= entEnvironment.TeamCount; teamNumber++ {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, teamNumber int, logger *logging.Logger, entBuild *ent.Build, client *ent.Client) {
 			_, err := createTeam(client, logger, entBuild, teamNumber, wg)
@@ -269,7 +269,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 				logger.Log.Errorf("error creating server task: %v", err)
 				return
 			}
-			serverTask, err = client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(entBuild).SetServerTaskToEnvironment(entEnvironment).Save(ctx)
+			serverTask, err = client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(entBuild).SetServerTaskToEnvironment(entEnvironment).SetServerTaskToBuildCommit(entCommit).Save(ctx)
 			if err != nil {
 				taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
 				if err != nil {

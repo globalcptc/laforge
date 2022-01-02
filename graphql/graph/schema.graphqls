@@ -49,6 +49,7 @@ enum ProvisionStatus {
   DELETEINPROGRESS
   DELETED
   TOREBUILD
+  CANCELLED
 }
 
 enum ProvisionStatusFor {
@@ -276,6 +277,7 @@ type Environment {
   EnvironmentToNetwork: [Network]!
   EnvironmentToBuild: [Build]!
   EnvironmentToRepository: [Repository]!
+  EnvironmentToServerTask: [ServerTask]!
 }
 
 type FileDelete {
@@ -571,6 +573,7 @@ type Query {
     @hasRole(roles: [ADMIN, USER])
   listAgentStatuses(buildUUID: String!): [AgentStatus]
     @hasRole(roles: [ADMIN, USER])
+  listBuildStatuses(buildUUID: String!): [Status] @hasRole(roles: [ADMIN, USER])
   getAllAgentStatus(
     buildUUID: String!
     count: Int!
@@ -580,6 +583,7 @@ type Query {
     @hasRole(roles: [ADMIN, USER])
   viewServerTaskLogs(taskID: String!): String! @hasRole(roles: [ADMIN, USER])
   viewAgentTask(taskID: String!): AgentTask! @hasRole(roles: [ADMIN, USER])
+  serverTasks(taskUUIDs: [String]!): [ServerTask] @hasRole(roles: [ADMIN, USER])
 }
 
 type Mutation {
@@ -589,7 +593,7 @@ type Mutation {
     @hasRole(roles: [ADMIN, USER])
   deleteUser(userUUID: String!): Boolean! @hasRole(roles: [ADMIN, USER])
   executePlan(buildUUID: String!): Build @hasRole(roles: [ADMIN, USER])
-  deleteBuild(buildUUID: String!): Boolean! @hasRole(roles: [ADMIN, USER])
+  deleteBuild(buildUUID: String!): String! @hasRole(roles: [ADMIN, USER]) # returns the build commit uuid of delete commit
   createTask(
     proHostUUID: String!
     command: AgentCommand!

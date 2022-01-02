@@ -1,0 +1,62 @@
+@import '../../../dark-theme.scss';
+@import '../../../assets/sass/components/variables.demo';
+
+.logs {
+  width: 100%;
+  max-height: 80vh;
+  padding: 0.5rem;
+  box-sizing: border-box;
+  overflow: scroll;
+  overflow: overlay;
+  background-color: $dark-surface-02;
+}
+
+.tasks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+
+  .task {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    box-sizing: border-box;
+    background-color: $dark-surface-02;
+
+    div {
+      flex: 1 1 0;
+      text-align: center;
+
+      button {
+        text-decoration: underline;
+        border: none;
+        outline: none;
+        background: none;
+        padding: 0;
+        color: $primary;
+      }
+    }
+
+    div:first-of-type {
+      text-align: left;
+    }
+
+    div:last-of-type {
+      text-align: right;
+    }
+  }
+
+  .task:first-of-type {
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+  }
+
+  .task:last-of-type {
+    border-bottom-left-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+  }
+}

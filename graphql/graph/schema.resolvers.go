@@ -471,46 +471,46 @@ func (r *mutationResolver) ExecutePlan(ctx context.Context, buildUUID string) (*
 	return b, nil
 }
 
-func (r *mutationResolver) DeleteBuild(ctx context.Context, buildUUID string) (bool, error) {
+func (r *mutationResolver) DeleteBuild(ctx context.Context, buildUUID string) (string, error) {
 	currentUser, err := auth.ForContext(ctx)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
 	uuid, err := uuid.Parse(buildUUID)
 
 	if err != nil {
-		return false, fmt.Errorf("failed casting UUID to UUID: %v", err)
+		return "", fmt.Errorf("failed casting UUID to UUID: %v", err)
 	}
 
 	b, err := r.client.Build.Query().Where(build.IDEQ(uuid)).Only(ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed querying Build: %v", err)
+		return "", fmt.Errorf("failed querying Build: %v", err)
 	}
 
 	entEnvironment, err := b.QueryBuildToEnvironment().Only(ctx)
 	if err != nil {
 		logrus.Errorf("failed to query environment from build: %v", err)
-		return false, err
+		return "", err
 	}
 
 	taskStatus, serverTask, err := utils.CreateServerTask(ctx, r.client, r.rdb, currentUser, servertask.TypeDELETEBUILD)
 	if err != nil {
-		return false, fmt.Errorf("error creating server task: %v", err)
+		return "", fmt.Errorf("error creating server task: %v", err)
 	}
 	serverTask, err = r.client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(b).SetServerTaskToEnvironment(entEnvironment).Save(ctx)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctx, r.client, r.rdb, taskStatus, serverTask)
 		if err != nil {
-			return false, fmt.Errorf("error failing execute build server task: %v", err)
+			return "", fmt.Errorf("error failing execute build server task: %v", err)
 		}
-		return false, fmt.Errorf("error assigning environment and build to execute build server task: %v", err)
+		return "", fmt.Errorf("error assigning environment and build to execute build server task: %v", err)
 	}
 	r.rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 	log, err := logging.CreateLoggerForServerTask(serverTask)
 	if err != nil {
-		return false, fmt.Errorf("error creating logger for build delete: %v", err)
+		return "", fmt.Errorf("error creating logger for build delete: %v", err)
 	}
 
 	spawnedDelete := make(chan bool, 1)
@@ -518,13 +518,17 @@ func (r *mutationResolver) DeleteBuild(ctx context.Context, buildUUID string) (b
 
 	deleteIsSuccess := <-spawnedDelete
 	if deleteIsSuccess {
-		return true, nil
+		entBuildCommit, err := b.QueryBuildToLatestBuildCommit().Only(ctx)
+		if err != nil {
+			return "", nil
+		}
+		return entBuildCommit.ID.String(), nil
 	}
 	taskStatus, serverTask, err = utils.FailServerTask(ctx, r.client, r.rdb, taskStatus, serverTask)
 	if err != nil {
-		return false, fmt.Errorf("error failing execute build server task: %v", err)
+		return "", fmt.Errorf("error failing execute build server task: %v", err)
 	}
-	return false, nil
+	return "", fmt.Errorf("unknown error occurred")
 }
 
 func (r *mutationResolver) CreateTask(ctx context.Context, proHostUUID string, command model.AgentCommand, args string) (bool, error) {
@@ -628,11 +632,21 @@ func (r *mutationResolver) ApproveCommit(ctx context.Context, commitUUID string)
 func (r *mutationResolver) CancelCommit(ctx context.Context, commitUUID string) (bool, error) {
 	uuid, err := uuid.Parse(commitUUID)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed casting commit uuid to uuid: %v", err)
 	}
-	err = r.client.BuildCommit.UpdateOneID(uuid).SetState(buildcommit.StateCANCELLED).Exec(ctx)
+	entBuildCommit, err := r.client.BuildCommit.UpdateOneID(uuid).SetState(buildcommit.StateCANCELLED).Save(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed setting build commit state to cancelled: %v", err)
+	}
+	if entBuildCommit.Type == buildcommit.TypeROOT {
+		entBuild, err := entBuildCommit.QueryBuildCommitToBuild().Only(ctx)
+		if err != nil {
+			return false, fmt.Errorf("failed querying build from build commit: %v", err)
+		}
+		err = r.client.Status.Update().Where(status.HasStatusToBuildWith(build.IDEQ(entBuild.ID))).SetState(status.StateCANCELLED).Exec(ctx)
+		if err != nil {
+			return false, fmt.Errorf("failed setting build status to cancelled: %v", err)
+		}
 	}
 	r.rdb.Publish(ctx, "updatedBuildCommit", commitUUID)
 	return true, nil
@@ -1349,6 +1363,47 @@ func (r *queryResolver) ListAgentStatuses(ctx context.Context, buildUUID string)
 	return agentStatuses, nil
 }
 
+func (r *queryResolver) ListBuildStatuses(ctx context.Context, buildUUID string) ([]*ent.Status, error) {
+	uuid, err := uuid.Parse(buildUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed casting buildUUID to UUID")
+	}
+
+	statuses := make([]*ent.Status, 0)
+
+	buildStatus, err := r.client.Build.Query().Where(build.IDEQ(uuid)).QueryBuildToStatus().Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying build status from build: %v", err)
+	}
+	statuses = append(statuses, buildStatus)
+
+	planStatuses, err := r.client.Status.Query().Where(status.HasStatusToPlanWith(plan.HasPlanToBuildWith(build.IDEQ(uuid)))).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying plan statuses from build: %v", err)
+	}
+	statuses = append(statuses, planStatuses...)
+
+	provisionedNetworkStatuses, err := r.client.ProvisionedNetwork.Query().Where(provisionednetwork.HasProvisionedNetworkToBuildWith(build.IDEQ(uuid))).QueryProvisionedNetworkToStatus().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying provisioned network statuses from build: %v", err)
+	}
+	statuses = append(statuses, provisionedNetworkStatuses...)
+
+	provisionedHostStatuses, err := r.client.ProvisionedHost.Query().Where(provisionedhost.HasProvisionedHostToBuildWith(build.IDEQ(uuid))).QueryProvisionedHostToStatus().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying provisioned host statuses from build: %v", err)
+	}
+	statuses = append(statuses, provisionedHostStatuses...)
+
+	provisioningStepStatuses, err := r.client.ProvisioningStep.Query().Where(provisioningstep.HasProvisioningStepToProvisionedHostWith(provisionedhost.HasProvisionedHostToBuildWith(build.IDEQ(uuid)))).QueryProvisioningStepToStatus().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying provisioning step statuses from build: %v", err)
+	}
+	statuses = append(statuses, provisioningStepStatuses...)
+
+	return statuses, nil
+}
+
 func (r *queryResolver) GetAllAgentStatus(ctx context.Context, buildUUID string, count int, offset int) (*model.AgentStatusBatch, error) {
 	uuid, err := uuid.Parse(buildUUID)
 	if err != nil {
@@ -1428,6 +1483,24 @@ func (r *queryResolver) ViewAgentTask(ctx context.Context, taskID string) (*ent.
 	}
 
 	return r.client.AgentTask.Get(ctx, uuid)
+}
+
+func (r *queryResolver) ServerTasks(ctx context.Context, taskUUIDs []*string) ([]*ent.ServerTask, error) {
+	uuids := make([]uuid.UUID, 0)
+	for _, taskUUID := range taskUUIDs {
+		uuid, err := uuid.Parse(*taskUUID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to cast one or more task UUID to UUID: %v", err)
+		}
+		uuids = append(uuids, uuid)
+	}
+
+	serverTasks, err := r.client.ServerTask.Query().Where(servertask.IDIn(uuids...)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query server tasks: %v", err)
+	}
+
+	return serverTasks, nil
 }
 
 func (r *repoCommitResolver) ID(ctx context.Context, obj *ent.RepoCommit) (string, error) {

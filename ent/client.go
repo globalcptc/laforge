@@ -2291,6 +2291,22 @@ func (c *EnvironmentClient) QueryEnvironmentToRepository(e *Environment) *Reposi
 	return query
 }
 
+// QueryEnvironmentToServerTask queries the EnvironmentToServerTask edge of a Environment.
+func (c *EnvironmentClient) QueryEnvironmentToServerTask(e *Environment) *ServerTaskQuery {
+	query := &ServerTaskQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(environment.Table, environment.FieldID, id),
+			sqlgraph.To(servertask.Table, servertask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, environment.EnvironmentToServerTaskTable, environment.EnvironmentToServerTaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *EnvironmentClient) Hooks() []Hook {
 	return c.hooks.Environment

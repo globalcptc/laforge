@@ -50,10 +50,10 @@
         </div>
         <div class="controls">
           <div class="btn-group btn-group-sm">
-            <button class="btn btn-warning" [ngClass]="{ 'btn-icon-only': showIconsOnly }">
+            <!-- <button class="btn btn-warning" [ngClass]="{ 'btn-icon-only': showIconsOnly }">
               <i class="fa fa-project-diagram" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
               <ng-container *ngIf="!showIconsOnly">Manage</ng-container>
-            </button>
+            </button> -->
             <button class="btn btn-success" [ngClass]="{ 'btn-icon': showIconsOnly }" (click)="createBuild(environment)">
               <i class="fa fa-hammer" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
               <ng-container *ngIf="!showIconsOnly">Build</ng-container>
@@ -62,10 +62,14 @@
               <i class="fa fa-sync-alt" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
               <ng-container *ngIf="!showIconsOnly">Pull</ng-container>
             </button>
-            <button class="btn btn-danger" [ngClass]="{ 'btn-icon': showIconsOnly }">
+            <button class="btn btn-dark" [ngClass]="{ 'btn-icon': showIconsOnly }" (click)="viewEnvironmentLogs(environment)">
+              <i class="fa fa-scroll" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
+              <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
+            </button>
+            <!-- <button class="btn btn-danger" [ngClass]="{ 'btn-icon': showIconsOnly }">
               <i class="fa fa-bomb" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
               <ng-container *ngIf="!showIconsOnly">Destroy</ng-container>
-            </button>
+            </button> -->
           </div>
         </div>
         <span class="expand-controls" (click)="toggleExpandEnvironment(environment)">
@@ -88,55 +92,98 @@
           <div class="type">Commit Type</div>
           <div class="type">Controls</div>
         </div>
-        <div *ngFor="let buildCommit of _buildCommits[environment.id]" class="build">
-          <div class="commit-hash">
-            <a [href]="getBuildCommitLink(buildCommit)">{{ getBuildCommitHash(buildCommit) }}</a>
-          </div>
-          <div class="owner">{{ getBuildCommitCommitter(buildCommit) }}</div>
-          <div class="time">Started 4 mins ago</div>
-          <div class="status">
-            <span class="badge" [ngClass]="'bg-' + getBuildCommitStateColor(buildCommit.state)">{{ buildCommit.state }}</span>
-          </div>
-          <!-- <div class="logs"><a href="#">View Logs</a></div> -->
-          <div class="type">
-            <span class="badge" [ngClass]="'bg-' + getBuildCommitTypeColor(buildCommit.state)">{{ buildCommit.type }}</span>
-          </div>
-          <div class="controls">
-            <div class="btn-group btn-group-sm">
-              <button
-                *ngIf="buildCommitIsCancellable(buildCommit)"
-                class="btn btn-danger"
-                [ngClass]="{ 'btn-icon': showIconsOnly }"
-                (click)="cancelBuildCommit(buildCommit)"
-              >
-                <ng-container *ngIf="showIconsOnly"><i class="fa fa-times"></i></ng-container>
-                <ng-container *ngIf="!showIconsOnly">Cancel</ng-container>
-              </button>
+        <ng-container *ngFor="let buildCommitGroup of groupBuildCommits(_buildCommits[environment.id])">
+          <div class="build build-revision">
+            <div>
+              <span class="revision">Build v{{ buildCommitGroup[0].BuildCommitToBuild.revision }}</span>
+              <span class="badge" [ngClass]="'bg-' + getBuildStateColor(buildCommitGroup[0].BuildCommitToBuild.buildToStatus.state)">
+                {{ buildCommitGroup[0].BuildCommitToBuild.buildToStatus.state }}
+              </span>
+            </div>
+            <div>
               <a
-                *ngIf="buildCommitIsPlanable(buildCommit)"
-                class="btn btn-primary"
+                *ngIf="buildIsManagable(buildCommitGroup[0].BuildCommitToBuild)"
+                class="btn btn-sm btn-primary"
                 [ngClass]="{ 'btn-icon': showIconsOnly }"
-                [href]="'/plan/' + buildCommit.id"
+                [href]="'/manage/' + buildCommitGroup[0].BuildCommitToBuild.id"
               >
-                <ng-container *ngIf="showIconsOnly"><i class="fa fa-ruler-triangle"></i></ng-container>
-                <ng-container *ngIf="!showIconsOnly">Plan</ng-container>
-              </a>
-              <a
-                *ngIf="buildCommitIsManagable(buildCommit)"
-                class="btn btn-info"
-                [ngClass]="{ 'btn-icon': showIconsOnly }"
-                [href]="'/build/' + buildCommit.BuildCommitToBuild.id"
-              >
-                <ng-container *ngIf="showIconsOnly"><i class="fa fa-eye"></i></ng-container>
-                <ng-container *ngIf="!showIconsOnly">View Progress</ng-container>
-              </a>
-              <a class="btn btn-dark disabled" [ngClass]="{ 'btn-icon': showIconsOnly }">
-                <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
-                <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
+                <ng-container *ngIf="showIconsOnly"><i class="fa fa-cogs"></i></ng-container>
+                <ng-container *ngIf="!showIconsOnly">Manage</ng-container>
               </a>
             </div>
           </div>
-        </div>
+          <div class="build" *ngFor="let buildCommit of buildCommitGroup">
+            <div class="commit-hash">
+              <a [href]="getBuildCommitLink(buildCommit)">{{ getBuildCommitHash(buildCommit) }}</a>
+            </div>
+            <div class="owner">{{ getBuildCommitCommitter(buildCommit) }}</div>
+            <div class="time">
+              <ng-container *ngIf="buildCommit.BuildCommitToServerTask.length > 0">
+                {{ buildCommit.BuildCommitToServerTask[0].start_time | dateAgo }}
+                <span *ngIf="buildCommit.BuildCommitToServerTask[0].end_time">
+                  , took
+                  {{ buildCommit.BuildCommitToServerTask[0].end_time | dateBetween: buildCommit.BuildCommitToServerTask[0].start_time }}
+                </span>
+              </ng-container>
+            </div>
+            <div class="status">
+              <span class="badge" [ngClass]="'bg-' + getBuildCommitStateColor(buildCommit.state)">{{ buildCommit.state }}</span>
+            </div>
+            <!-- <div class="logs"><a href="#">View Logs</a></div> -->
+            <div class="type">
+              <span class="badge" [ngClass]="'bg-' + getBuildCommitTypeColor(buildCommit.type)">{{ buildCommit.type }}</span>
+            </div>
+            <div class="controls">
+              <div class="btn-group btn-group-sm">
+                <button
+                  *ngIf="buildCommitIsCancellable(buildCommit)"
+                  class="btn btn-danger"
+                  [ngClass]="{ 'btn-icon': showIconsOnly }"
+                  (click)="cancelBuildCommit(buildCommit)"
+                >
+                  <ng-container *ngIf="showIconsOnly"><i class="fa fa-times"></i></ng-container>
+                  <ng-container *ngIf="!showIconsOnly">Cancel</ng-container>
+                </button>
+                <a
+                  *ngIf="buildCommitIsPlanable(buildCommit)"
+                  class="btn btn-primary"
+                  [ngClass]="{ 'btn-icon': showIconsOnly }"
+                  [href]="'/plan/' + buildCommit.id"
+                >
+                  <ng-container *ngIf="showIconsOnly"><i class="fa fa-ruler-triangle"></i></ng-container>
+                  <ng-container *ngIf="!showIconsOnly">Plan</ng-container>
+                </a>
+                <a
+                  *ngIf="buildCommitIsViewable(buildCommit)"
+                  class="btn btn-info"
+                  [ngClass]="{ 'btn-icon': showIconsOnly }"
+                  [href]="'/build/' + buildCommit.BuildCommitToBuild.id"
+                >
+                  <ng-container *ngIf="showIconsOnly"><i class="fa fa-eye"></i></ng-container>
+                  <ng-container *ngIf="!showIconsOnly">View Progress</ng-container>
+                </a>
+                <!-- <a
+                  *ngIf="buildCommitIsManagable(buildCommit)"
+                  class="btn btn-dark"
+                  [ngClass]="{ 'btn-icon': showIconsOnly }"
+                  [href]="'/manage/' + buildCommit.BuildCommitToBuild.id"
+                >
+                  <ng-container *ngIf="showIconsOnly"><i class="fa fa-cogs"></i></ng-container>
+                  <ng-container *ngIf="!showIconsOnly">Manage</ng-container>
+                </a> -->
+                <button
+                  *ngIf="canViewBuildCommitLogs(buildCommit)"
+                  class="btn btn-dark"
+                  [ngClass]="{ 'btn-icon': showIconsOnly }"
+                  (click)="viewBuildCommitLogs(buildCommit)"
+                >
+                  <ng-container *ngIf="showIconsOnly"><i class="fa fa-scroll"></i></ng-container>
+                  <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
+                </button>
+              </div>
+            </div>
+          </div>
+        </ng-container>
       </div>
     </div>
   </ng-container>

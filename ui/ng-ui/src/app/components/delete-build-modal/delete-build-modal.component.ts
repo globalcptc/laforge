@@ -1,5 +1,6 @@
 import { Component, Inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 
 import { LaForgeDeleteBuildGQL } from '../../../generated/graphql';
@@ -17,7 +18,8 @@ export class DeleteBuildModalComponent {
     public dialogRef: MatDialogRef<DeleteBuildModalComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { buildName: string; buildId: string },
     private deleteBuild: LaForgeDeleteBuildGQL,
-    private router: Router
+    private router: Router,
+    private snackbar: MatSnackBar
   ) {}
 
   buildNameChange(value: string) {
@@ -40,15 +42,26 @@ export class DeleteBuildModalComponent {
         buildId: this.data.buildId
       })
       .toPromise()
-      .then(({ data, errors }) => {
-        if (errors) {
-          return console.error(errors);
-        } else if (data.deleteBuild) {
-          this.router.navigate(['plan']);
-          return this.onClose();
+      .then(
+        ({ data, errors }) => {
+          if (errors) {
+            return console.error(errors);
+          } else if (data.deleteBuild) {
+            this.router.navigate(['plan', data.deleteBuild]);
+            return this.onClose();
+          }
+          console.error('delete build failed');
+          this.snackbar.open('Unknown error ocurred. See server logs for more info.', 'Okay.', {
+            panelClass: ['bg-danger', 'text-white']
+          });
+        },
+        (err) => {
+          console.error(err);
+          this.snackbar.open('Error while deleting build. See console for more info.', 'Okay.', {
+            panelClass: ['bg-danger', 'text-white']
+          });
         }
-        console.error('delete build failed');
-      }, console.error)
+      )
       .finally(() => (this.deleteLoading = false));
   }
 }

@@ -76,7 +76,7 @@ func graphqlHandler(client *ent.Client, rdb *redis.Client) gin.HandlerFunc {
 
 	h.AddTransport(&transport.Websocket{
 		Upgrader: websocket.Upgrader{
-			HandshakeTimeout: 0,
+			HandshakeTimeout: 30 * time.Second,
 			ReadBufferSize:   1024,
 			WriteBufferSize:  1024,
 			WriteBufferPool:  nil,
@@ -85,7 +85,7 @@ func graphqlHandler(client *ent.Client, rdb *redis.Client) gin.HandlerFunc {
 			},
 			EnableCompression: false,
 		},
-		KeepAlivePingInterval: 5 * time.Second,
+		KeepAlivePingInterval: 1 * time.Second,
 	})
 	h.AddTransport(transport.GET{})
 	h.AddTransport(transport.POST{})

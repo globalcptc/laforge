@@ -4,6 +4,7 @@ query ListBuildCommits($envUUID: String!) {
     revision
     BuildCommitToBuild {
       id
+      revision
       BuildToRepoCommit {
         id
         hash
@@ -12,6 +13,10 @@ query ListBuildCommits($envUUID: String!) {
           id
           repo_url
         }
+      }
+      buildToStatus {
+        id
+        state
       }
     }
     BuildCommitToServerTask {

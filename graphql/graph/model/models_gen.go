@@ -431,6 +431,7 @@ type ProvisionStatus string
 const (
 	ProvisionStatusPlanning         ProvisionStatus = "PLANNING"
 	ProvisionStatusAwaiting         ProvisionStatus = "AWAITING"
+	ProvisionStatusParentawaiting   ProvisionStatus = "PARENTAWAITING"
 	ProvisionStatusInprogress       ProvisionStatus = "INPROGRESS"
 	ProvisionStatusFailed           ProvisionStatus = "FAILED"
 	ProvisionStatusComplete         ProvisionStatus = "COMPLETE"
@@ -440,11 +441,13 @@ const (
 	ProvisionStatusDeleteinprogress ProvisionStatus = "DELETEINPROGRESS"
 	ProvisionStatusDeleted          ProvisionStatus = "DELETED"
 	ProvisionStatusTorebuild        ProvisionStatus = "TOREBUILD"
+	ProvisionStatusCancelled        ProvisionStatus = "CANCELLED"
 )
 
 var AllProvisionStatus = []ProvisionStatus{
 	ProvisionStatusPlanning,
 	ProvisionStatusAwaiting,
+	ProvisionStatusParentawaiting,
 	ProvisionStatusInprogress,
 	ProvisionStatusFailed,
 	ProvisionStatusComplete,
@@ -454,11 +457,12 @@ var AllProvisionStatus = []ProvisionStatus{
 	ProvisionStatusDeleteinprogress,
 	ProvisionStatusDeleted,
 	ProvisionStatusTorebuild,
+	ProvisionStatusCancelled,
 }
 
 func (e ProvisionStatus) IsValid() bool {
 	switch e {
-	case ProvisionStatusPlanning, ProvisionStatusAwaiting, ProvisionStatusInprogress, ProvisionStatusFailed, ProvisionStatusComplete, ProvisionStatusTainted, ProvisionStatusUndefined, ProvisionStatusTodelete, ProvisionStatusDeleteinprogress, ProvisionStatusDeleted, ProvisionStatusTorebuild:
+	case ProvisionStatusPlanning, ProvisionStatusAwaiting, ProvisionStatusParentawaiting, ProvisionStatusInprogress, ProvisionStatusFailed, ProvisionStatusComplete, ProvisionStatusTainted, ProvisionStatusUndefined, ProvisionStatusTodelete, ProvisionStatusDeleteinprogress, ProvisionStatusDeleted, ProvisionStatusTorebuild, ProvisionStatusCancelled:
 		return true
 	}
 	return false

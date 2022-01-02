@@ -26,6 +26,7 @@ import (
 	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
@@ -362,6 +363,21 @@ func (ec *EnvironmentCreate) AddEnvironmentToRepository(r ...*Repository) *Envir
 		ids[i] = r[i].ID
 	}
 	return ec.AddEnvironmentToRepositoryIDs(ids...)
+}
+
+// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
+func (ec *EnvironmentCreate) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddEnvironmentToServerTaskIDs(ids...)
+	return ec
+}
+
+// AddEnvironmentToServerTask adds the "EnvironmentToServerTask" edges to the ServerTask entity.
+func (ec *EnvironmentCreate) AddEnvironmentToServerTask(s ...*ServerTask) *EnvironmentCreate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return ec.AddEnvironmentToServerTaskIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -911,6 +927,25 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: repository.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ec.mutation.EnvironmentToServerTaskIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
 				},
 			},
 		}

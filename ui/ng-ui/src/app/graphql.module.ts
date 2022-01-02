@@ -15,8 +15,8 @@ export function createApollo(httpLink: HttpLink): ApolloClientOptions<any> {
     uri: environment.wsUrl,
     options: {
       reconnect: true,
-      timeout: 60000,
-      minTimeout: 100000,
+      timeout: 30000,
+      minTimeout: 30000,
       lazy: true
     }
   });

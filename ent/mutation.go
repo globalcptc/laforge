@@ -9762,6 +9762,9 @@ type EnvironmentMutation struct {
 	_EnvironmentToRepository             map[uuid.UUID]struct{}
 	removed_EnvironmentToRepository      map[uuid.UUID]struct{}
 	cleared_EnvironmentToRepository      bool
+	_EnvironmentToServerTask             map[uuid.UUID]struct{}
+	removed_EnvironmentToServerTask      map[uuid.UUID]struct{}
+	cleared_EnvironmentToServerTask      bool
 	done                                 bool
 	oldValue                             func(context.Context) (*Environment, error)
 	predicates                           []predicate.Environment
@@ -11206,6 +11209,60 @@ func (m *EnvironmentMutation) ResetEnvironmentToRepository() {
 	m.removed_EnvironmentToRepository = nil
 }
 
+// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by ids.
+func (m *EnvironmentMutation) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) {
+	if m._EnvironmentToServerTask == nil {
+		m._EnvironmentToServerTask = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._EnvironmentToServerTask[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEnvironmentToServerTask clears the "EnvironmentToServerTask" edge to the ServerTask entity.
+func (m *EnvironmentMutation) ClearEnvironmentToServerTask() {
+	m.cleared_EnvironmentToServerTask = true
+}
+
+// EnvironmentToServerTaskCleared reports if the "EnvironmentToServerTask" edge to the ServerTask entity was cleared.
+func (m *EnvironmentMutation) EnvironmentToServerTaskCleared() bool {
+	return m.cleared_EnvironmentToServerTask
+}
+
+// RemoveEnvironmentToServerTaskIDs removes the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
+func (m *EnvironmentMutation) RemoveEnvironmentToServerTaskIDs(ids ...uuid.UUID) {
+	if m.removed_EnvironmentToServerTask == nil {
+		m.removed_EnvironmentToServerTask = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._EnvironmentToServerTask, ids[i])
+		m.removed_EnvironmentToServerTask[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEnvironmentToServerTask returns the removed IDs of the "EnvironmentToServerTask" edge to the ServerTask entity.
+func (m *EnvironmentMutation) RemovedEnvironmentToServerTaskIDs() (ids []uuid.UUID) {
+	for id := range m.removed_EnvironmentToServerTask {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EnvironmentToServerTaskIDs returns the "EnvironmentToServerTask" edge IDs in the mutation.
+func (m *EnvironmentMutation) EnvironmentToServerTaskIDs() (ids []uuid.UUID) {
+	for id := range m._EnvironmentToServerTask {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEnvironmentToServerTask resets all changes to the "EnvironmentToServerTask" edge.
+func (m *EnvironmentMutation) ResetEnvironmentToServerTask() {
+	m._EnvironmentToServerTask = nil
+	m.cleared_EnvironmentToServerTask = false
+	m.removed_EnvironmentToServerTask = nil
+}
+
 // Where appends a list predicates to the EnvironmentMutation builder.
 func (m *EnvironmentMutation) Where(ps ...predicate.Environment) {
 	m.predicates = append(m.predicates, ps...)
@@ -11521,7 +11578,7 @@ func (m *EnvironmentMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EnvironmentMutation) AddedEdges() []string {
-	edges := make([]string, 0, 17)
+	edges := make([]string, 0, 18)
 	if m._EnvironmentToUser != nil {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -11572,6 +11629,9 @@ func (m *EnvironmentMutation) AddedEdges() []string {
 	}
 	if m._EnvironmentToRepository != nil {
 		edges = append(edges, environment.EdgeEnvironmentToRepository)
+	}
+	if m._EnvironmentToServerTask != nil {
+		edges = append(edges, environment.EdgeEnvironmentToServerTask)
 	}
 	return edges
 }
@@ -11682,13 +11742,19 @@ func (m *EnvironmentMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case environment.EdgeEnvironmentToServerTask:
+		ids := make([]ent.Value, 0, len(m._EnvironmentToServerTask))
+		for id := range m._EnvironmentToServerTask {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EnvironmentMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 17)
+	edges := make([]string, 0, 18)
 	if m.removed_EnvironmentToUser != nil {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -11739,6 +11805,9 @@ func (m *EnvironmentMutation) RemovedEdges() []string {
 	}
 	if m.removed_EnvironmentToRepository != nil {
 		edges = append(edges, environment.EdgeEnvironmentToRepository)
+	}
+	if m.removed_EnvironmentToServerTask != nil {
+		edges = append(edges, environment.EdgeEnvironmentToServerTask)
 	}
 	return edges
 }
@@ -11849,13 +11918,19 @@ func (m *EnvironmentMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case environment.EdgeEnvironmentToServerTask:
+		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToServerTask))
+		for id := range m.removed_EnvironmentToServerTask {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EnvironmentMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 17)
+	edges := make([]string, 0, 18)
 	if m.cleared_EnvironmentToUser {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -11907,6 +11982,9 @@ func (m *EnvironmentMutation) ClearedEdges() []string {
 	if m.cleared_EnvironmentToRepository {
 		edges = append(edges, environment.EdgeEnvironmentToRepository)
 	}
+	if m.cleared_EnvironmentToServerTask {
+		edges = append(edges, environment.EdgeEnvironmentToServerTask)
+	}
 	return edges
 }
 
@@ -11948,6 +12026,8 @@ func (m *EnvironmentMutation) EdgeCleared(name string) bool {
 		return m.cleared_EnvironmentToBuild
 	case environment.EdgeEnvironmentToRepository:
 		return m.cleared_EnvironmentToRepository
+	case environment.EdgeEnvironmentToServerTask:
+		return m.cleared_EnvironmentToServerTask
 	}
 	return false
 }
@@ -12014,6 +12094,9 @@ func (m *EnvironmentMutation) ResetEdge(name string) error {
 		return nil
 	case environment.EdgeEnvironmentToRepository:
 		m.ResetEnvironmentToRepository()
+		return nil
+	case environment.EdgeEnvironmentToServerTask:
+		m.ResetEnvironmentToServerTask()
 		return nil
 	}
 	return fmt.Errorf("unknown Environment edge %s", name)

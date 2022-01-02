@@ -428,6 +428,14 @@ func (e *Environment) EnvironmentToRepository(ctx context.Context) ([]*Repositor
 	return result, err
 }
 
+func (e *Environment) EnvironmentToServerTask(ctx context.Context) ([]*ServerTask, error) {
+	result, err := e.Edges.EnvironmentToServerTaskOrErr()
+	if IsNotLoaded(err) {
+		result, err = e.QueryEnvironmentToServerTask().All(ctx)
+	}
+	return result, err
+}
+
 func (fd *FileDelete) FileDeleteToEnvironment(ctx context.Context) (*Environment, error) {
 	result, err := fd.Edges.FileDeleteToEnvironmentOrErr()
 	if IsNotLoaded(err) {

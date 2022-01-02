@@ -154,6 +154,21 @@
       .build.build-header {
         color: $dark-text-on-surface-lighter;
       }
+
+      .build.build-revision {
+        padding: 0.5rem 2rem;
+        justify-content: center;
+        font-weight: bold;
+        background-color: $dark-surface-02;
+
+        .revision {
+          color: $dark-text-on-surface-lightest;
+        }
+
+        span {
+          margin: 0 0.5rem;
+        }
+      }
     }
   }
 }

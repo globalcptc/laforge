@@ -220,6 +220,7 @@ export type LaForgeEnvironment = {
   EnvironmentToNetwork: Array<Maybe<LaForgeNetwork>>;
   EnvironmentToBuild: Array<Maybe<LaForgeBuild>>;
   EnvironmentToRepository: Array<Maybe<LaForgeRepository>>;
+  EnvironmentToServerTask: Array<Maybe<LaForgeServerTask>>;
 };
 
 export type LaForgeFileDelete = {
@@ -335,7 +336,7 @@ export type LaForgeMutation = {
   createBuild?: Maybe<LaForgeBuild>;
   deleteUser: Scalars['Boolean'];
   executePlan?: Maybe<LaForgeBuild>;
-  deleteBuild: Scalars['Boolean'];
+  deleteBuild: Scalars['String'];
   createTask: Scalars['Boolean'];
   rebuild: Scalars['Boolean'];
   approveCommit: Scalars['Boolean'];
@@ -512,7 +513,8 @@ export enum LaForgeProvisionStatus {
   Todelete = 'TODELETE',
   Deleteinprogress = 'DELETEINPROGRESS',
   Deleted = 'DELETED',
-  Torebuild = 'TOREBUILD'
+  Torebuild = 'TOREBUILD',
+  Cancelled = 'CANCELLED'
 }
 
 export enum LaForgeProvisionStatusFor {
@@ -596,10 +598,12 @@ export type LaForgeQuery = {
   getCurrentUserTasks?: Maybe<Array<Maybe<LaForgeServerTask>>>;
   getAgentTasks?: Maybe<Array<Maybe<LaForgeAgentTask>>>;
   listAgentStatuses?: Maybe<Array<Maybe<LaForgeAgentStatus>>>;
+  listBuildStatuses?: Maybe<Array<Maybe<LaForgeStatus>>>;
   getAllAgentStatus?: Maybe<LaForgeAgentStatusBatch>;
   getAllPlanStatus?: Maybe<LaForgeStatusBatch>;
   viewServerTaskLogs: Scalars['String'];
   viewAgentTask: LaForgeAgentTask;
+  serverTasks?: Maybe<Array<Maybe<LaForgeServerTask>>>;
 };
 
 export type LaForgeQueryEnvironmentArgs = {
@@ -650,6 +654,10 @@ export type LaForgeQueryListAgentStatusesArgs = {
   buildUUID: Scalars['String'];
 };
 
+export type LaForgeQueryListBuildStatusesArgs = {
+  buildUUID: Scalars['String'];
+};
+
 export type LaForgeQueryGetAllAgentStatusArgs = {
   buildUUID: Scalars['String'];
   count: Scalars['Int'];
@@ -668,6 +676,10 @@ export type LaForgeQueryViewServerTaskLogsArgs = {
 
 export type LaForgeQueryViewAgentTaskArgs = {
   taskID: Scalars['String'];
+};
+
+export type LaForgeQueryServerTasksArgs = {
+  taskUUIDs: Array<Maybe<Scalars['String']>>;
 };
 
 export type LaForgeRepoCommit = {
@@ -870,7 +882,10 @@ export type LaForgeGetBuildTreeQueryVariables = Exact<{
 export type LaForgeGetBuildTreeQuery = { __typename?: 'Query' } & {
   build?: Maybe<
     { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
-        buildToEnvironment: { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name'>;
+        buildToEnvironment: { __typename?: 'Environment' } & Pick<
+          LaForgeEnvironment,
+          'id' | 'name' | 'team_count' | 'admin_cidrs' | 'exposed_vdi_ports'
+        >;
         BuildToRepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'committer'> & {
             RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
           };
@@ -1011,6 +1026,27 @@ export type LaForgeGetBuildStatusesQuery = { __typename?: 'Query' } & {
             { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & { PlanToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment }
           >
         >;
+        buildToTeam: Array<
+          Maybe<
+            { __typename?: 'Team' } & Pick<LaForgeTeam, 'id'> & {
+                TeamToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
+                TeamToProvisionedNetwork: Array<
+                  Maybe<
+                    { __typename?: 'ProvisionedNetwork' } & Pick<LaForgeProvisionedNetwork, 'id'> & {
+                        ProvisionedNetworkToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
+                        ProvisionedNetworkToProvisionedHost: Array<
+                          Maybe<
+                            { __typename?: 'ProvisionedHost' } & Pick<LaForgeProvisionedHost, 'id'> & {
+                                ProvisionedHostToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
+                              }
+                          >
+                        >;
+                      }
+                  >
+                >;
+              }
+          >
+        >;
       }
   >;
 };
@@ -1036,10 +1072,11 @@ export type LaForgeListBuildCommitsQuery = { __typename?: 'Query' } & {
     Array<
       Maybe<
         { __typename?: 'BuildCommit' } & Pick<LaForgeBuildCommit, 'id' | 'revision' | 'state' | 'type'> & {
-            BuildCommitToBuild: { __typename?: 'Build' } & Pick<LaForgeBuild, 'id'> & {
+            BuildCommitToBuild: { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
                 BuildToRepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'author'> & {
                     RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
                   };
+                buildToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
               };
             BuildCommitToServerTask: Array<
               Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id' | 'start_time' | 'end_time'>>
@@ -1283,6 +1320,7 @@ export type LaForgeListEnvironmentsQuery = { __typename?: 'Query' } & {
             >;
             EnvironmentToNetwork: Array<Maybe<{ __typename?: 'Network' } & Pick<LaForgeNetwork, 'id'>>>;
             EnvironmentToHost: Array<Maybe<{ __typename?: 'Host' } & Pick<LaForgeHost, 'id'>>>;
+            EnvironmentToServerTask: Array<Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id'>>>;
           }
       >
     >
@@ -1480,6 +1518,14 @@ export type LaForgeGetAllAgentStatusesQuery = { __typename?: 'Query' } & {
   >;
 };
 
+export type LaForgeListBuildStatusesQueryVariables = Exact<{
+  buildUUID: Scalars['String'];
+}>;
+
+export type LaForgeListBuildStatusesQuery = { __typename?: 'Query' } & {
+  listBuildStatuses?: Maybe<Array<Maybe<{ __typename?: 'Status' } & LaForgeStatusFieldsFragment>>>;
+};
+
 export type LaForgeSubscribeUpdatedStatusSubscriptionVariables = Exact<{ [key: string]: never }>;
 
 export type LaForgeSubscribeUpdatedStatusSubscription = { __typename?: 'Subscription' } & {
@@ -1531,6 +1577,20 @@ export type LaForgeGetCurrentUserTasksQueryVariables = Exact<{ [key: string]: ne
 
 export type LaForgeGetCurrentUserTasksQuery = { __typename?: 'Query' } & {
   getCurrentUserTasks?: Maybe<Array<Maybe<{ __typename?: 'ServerTask' } & LaForgeServerTaskFieldsFragment>>>;
+};
+
+export type LaForgeGetServerTaskLogsQueryVariables = Exact<{
+  taskUUID: Scalars['String'];
+}>;
+
+export type LaForgeGetServerTaskLogsQuery = { __typename?: 'Query' } & Pick<LaForgeQuery, 'viewServerTaskLogs'>;
+
+export type LaForgeGetServerTasksQueryVariables = Exact<{
+  taskUUIDs: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
+}>;
+
+export type LaForgeGetServerTasksQuery = { __typename?: 'Query' } & {
+  serverTasks?: Maybe<Array<Maybe<{ __typename?: 'ServerTask' } & LaForgeServerTaskFieldsFragment>>>;
 };
 
 export const AgentStatusFieldsFragmentDoc = gql`
@@ -1806,6 +1866,9 @@ export const GetBuildTreeDocument = gql`
       buildToEnvironment {
         id
         name
+        team_count
+        admin_cidrs
+        exposed_vdi_ports
       }
       BuildToRepoCommit {
         id
@@ -2032,6 +2095,24 @@ export const GetBuildStatusesDocument = gql`
           ...StatusFields
         }
       }
+      buildToTeam {
+        id
+        TeamToStatus {
+          ...StatusFields
+        }
+        TeamToProvisionedNetwork {
+          id
+          ProvisionedNetworkToStatus {
+            ...StatusFields
+          }
+          ProvisionedNetworkToProvisionedHost {
+            id
+            ProvisionedHostToStatus {
+              ...StatusFields
+            }
+          }
+        }
+      }
     }
   }
   ${StatusFieldsFragmentDoc}
@@ -2076,6 +2157,7 @@ export const ListBuildCommitsDocument = gql`
       revision
       BuildCommitToBuild {
         id
+        revision
         BuildToRepoCommit {
           id
           hash
@@ -2084,6 +2166,10 @@ export const ListBuildCommitsDocument = gql`
             id
             repo_url
           }
+        }
+        buildToStatus {
+          id
+          state
         }
       }
       BuildCommitToServerTask {
@@ -2444,6 +2530,9 @@ export const ListEnvironmentsDocument = gql`
       EnvironmentToHost {
         id
       }
+      EnvironmentToServerTask {
+        id
+      }
     }
   }
 `;
@@ -2771,6 +2860,25 @@ export class LaForgeGetAllAgentStatusesGQL extends Apollo.Query<LaForgeGetAllAge
     super(apollo);
   }
 }
+export const ListBuildStatusesDocument = gql`
+  query ListBuildStatuses($buildUUID: String!) {
+    listBuildStatuses(buildUUID: $buildUUID) {
+      ...StatusFields
+    }
+  }
+  ${StatusFieldsFragmentDoc}
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeListBuildStatusesGQL extends Apollo.Query<LaForgeListBuildStatusesQuery, LaForgeListBuildStatusesQueryVariables> {
+  document = ListBuildStatusesDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
 export const SubscribeUpdatedStatusDocument = gql`
   subscription SubscribeUpdatedStatus {
     updatedStatus {
@@ -2919,6 +3027,41 @@ export const GetCurrentUserTasksDocument = gql`
 })
 export class LaForgeGetCurrentUserTasksGQL extends Apollo.Query<LaForgeGetCurrentUserTasksQuery, LaForgeGetCurrentUserTasksQueryVariables> {
   document = GetCurrentUserTasksDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
+export const GetServerTaskLogsDocument = gql`
+  query GetServerTaskLogs($taskUUID: String!) {
+    viewServerTaskLogs(taskID: $taskUUID)
+  }
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeGetServerTaskLogsGQL extends Apollo.Query<LaForgeGetServerTaskLogsQuery, LaForgeGetServerTaskLogsQueryVariables> {
+  document = GetServerTaskLogsDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
+export const GetServerTasksDocument = gql`
+  query GetServerTasks($taskUUIDs: [String]!) {
+    serverTasks(taskUUIDs: $taskUUIDs) {
+      ...ServerTaskFields
+    }
+  }
+  ${ServerTaskFieldsFragmentDoc}
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeGetServerTasksGQL extends Apollo.Query<LaForgeGetServerTasksQuery, LaForgeGetServerTasksQueryVariables> {
+  document = GetServerTasksDocument;
 
   constructor(apollo: Apollo.Apollo) {
     super(apollo);

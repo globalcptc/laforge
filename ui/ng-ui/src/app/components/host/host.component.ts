@@ -1,7 +1,8 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import {
   LaForgeGetBuildCommitQuery,
+  LaForgeGetBuildTreeQuery,
   LaForgeProvisionedHost,
   LaForgeProvisionStatus,
   LaForgeSubscribeUpdatedAgentStatusSubscription,
@@ -14,10 +15,16 @@ import { BehaviorSubject, Subscription } from 'rxjs';
 import { RebuildService } from '../../services/rebuild/rebuild.service';
 import { HostModalComponent } from '../host-modal/host-modal.component';
 
+// eslint-disable-next-line max-len
+type BuildCommitProvisionedHost = LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
+// eslint-disable-next-line max-len
+type BuildTreeProvisionedHost = LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
+
 @Component({
   selector: 'app-host',
   templateUrl: './host.component.html',
-  styleUrls: ['./host.component.scss']
+  styleUrls: ['./host.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HostComponent implements OnInit, OnDestroy {
   // @Input() status: Status;
@@ -26,7 +33,7 @@ export class HostComponent implements OnInit, OnDestroy {
   // provisionedHost: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
   @Input()
   // eslint-disable-next-line max-len
-  provisionedHost: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
+  provisionedHost: BuildCommitProvisionedHost | BuildTreeProvisionedHost;
   @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
   // @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
   // @Input() buildAgentStatusMap: LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus'][] | undefined;
@@ -41,9 +48,10 @@ export class HostComponent implements OnInit, OnDestroy {
   shouldHideLoading = false;
   shouldHide = false;
   planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
+  provisionStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
   agentStatus: BehaviorSubject<LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus']>;
 
-  constructor(public dialog: MatDialog, private rebuild: RebuildService, private status: StatusService) {
+  constructor(public dialog: MatDialog, private rebuild: RebuildService, private status: StatusService, private cdRef: ChangeDetectorRef) {
     if (!this.mode) this.mode = 'manage';
     if (!this.style) this.style = 'compact';
     if (!this.selectable) this.selectable = false;
@@ -53,7 +61,16 @@ export class HostComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.planStatus = this.status.getStatusSubject(this.provisionedHost.ProvisionedHostToPlan.PlanToStatus.id);
+    const sub1 = this.planStatus.subscribe(() => this.cdRef.markForCheck());
+    this.unsubscribe.push(sub1);
+    if (this.mode !== 'plan') {
+      this.provisionStatus = this.status.getStatusSubject((this.provisionedHost as BuildTreeProvisionedHost).ProvisionedHostToStatus.id);
+      const sub = this.provisionStatus.subscribe(() => this.cdRef.markForCheck());
+      this.unsubscribe.push(sub);
+    }
     this.agentStatus = this.status.getAgentStatusSubject(this.provisionedHost.id);
+    const sub2 = this.agentStatus.subscribe(() => this.cdRef.markForCheck());
+    this.unsubscribe.push(sub2);
   }
 
   ngOnDestroy() {}
@@ -223,20 +240,12 @@ export class HostComponent implements OnInit, OnDestroy {
 
   childrenCompleted(): boolean {
     if (this.mode === 'plan') return true;
-    // let numCompleted = 0;
-    // let numAwaiting = 0;
-    // let totalSteps = 0;
-    // for (const step of this.provisionedHost.ProvisionedHostToProvisioningStep) {
-    //   if (step.step_number === 0) continue;
-    //   totalSteps++;
-    //   const stepStatus = this.getChildStatus(step);
-    //   if (stepStatus?.state === LaForgeProvisionStatus.Complete) numCompleted++;
-    //   if (stepStatus?.state === LaForgeProvisionStatus.Awaiting) numAwaiting++;
-    //   // if (step.ProvisioningStepToStatus.state === LaForgeProvisionStatus.Complete) numCompleted++;
-    // }
-    // // console.log(this.provisionedHost.ProvisionedHostToHost.hostname, totalSteps, numCompleted);
-    // if (numCompleted === totalSteps) return true;
-    // if (numAwaiting === totalSteps) return true;
+    if (this.mode === 'manage') return true;
+    if (
+      this.planStatus.getValue().state === LaForgeProvisionStatus.Complete &&
+      this.provisionStatus.getValue().state === LaForgeProvisionStatus.Complete
+    )
+      return true;
     else return false;
   }
 
