@@ -664,4 +664,5 @@ type Subscription {
   updatedBuild: Build! @hasRole(roles: [ADMIN, USER])
   updatedCommit: BuildCommit! @hasRole(roles: [ADMIN, USER])
   updatedAgentTask: AgentTask! @hasRole(roles: [ADMIN, USER])
+  streamServerTaskLog(taskID: String!): String! @hasRole(roles: [ADMIN, USER])
 }

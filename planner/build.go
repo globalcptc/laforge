@@ -716,23 +716,6 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 }
 
 func checkHostStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entProHost *ent.ProvisionedHost) error {
-	stepAwaiting, err := entProHost.
-		QueryProvisionedHostToProvisioningStep().
-		Where(
-			provisioningstep.
-				HasProvisioningStepToStatusWith(
-					status.StateEQ(status.StateAWAITING),
-				),
-		).Exist(ctx)
-	if err != nil {
-		logger.Log.Errorf("Error while checking if host step is in progress: %v", err)
-		return err
-	}
-	if stepAwaiting {
-		logger.Log.Debug("host %s is in progress", entProHost.ID)
-		return nil
-	}
-
 	hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
 	if hostStatus.State != status.StateINPROGRESS {
 		return nil

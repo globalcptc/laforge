@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"time"
@@ -103,4 +104,19 @@ func CompleteServerTask(ctx context.Context, client *ent.Client, rdb *redis.Clie
 	rdb.Publish(ctx, "updatedStatus", taskStatus.ID.String())
 	rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 	return
+}
+
+func ReadFileIfModified(lastMod time.Time, filename string) ([]byte, time.Time, error) {
+	fi, err := os.Stat(filename)
+	if err != nil {
+		return nil, lastMod, err
+	}
+	if !fi.ModTime().After(lastMod) {
+		return nil, lastMod, nil
+	}
+	p, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, fi.ModTime(), err
+	}
+	return p, fi.ModTime(), nil
 }

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/agentstatus"
@@ -1775,6 +1776,50 @@ func (r *subscriptionResolver) UpdatedAgentTask(ctx context.Context) (<-chan *en
 		}
 	}()
 	return newAgentTask, nil
+}
+
+func (r *subscriptionResolver) StreamServerTaskLog(ctx context.Context, taskID string) (<-chan string, error) {
+	logStream := make(chan string, 1)
+	go func(taskID string, logStream chan<- string) {
+		filePeriod := 10 * time.Second
+
+		uuid, err := uuid.Parse(taskID)
+		if err != nil {
+			return
+		}
+		entServerTask, err := r.client.ServerTask.Get(ctx, uuid)
+		if err != nil {
+			return
+		}
+
+		fileTicker := time.NewTicker(filePeriod)
+
+		fi, err := os.Stat(entServerTask.LogFilePath)
+		lastModified := fi.ModTime()
+		fileBytes, err := ioutil.ReadFile(entServerTask.LogFilePath)
+		if err != nil {
+			return
+		}
+
+		logStream <- string(fileBytes)
+
+		for {
+			select {
+			case <-fileTicker.C:
+				fileBytes, lastModified, err = utils.ReadFileIfModified(lastModified, entServerTask.LogFilePath)
+				if err != nil {
+					logStream <- string(err.Error())
+				}
+				if fileBytes != nil {
+					logStream <- string(fileBytes)
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+
+	}(taskID, logStream)
+	return logStream, nil
 }
 
 func (r *teamResolver) ID(ctx context.Context, obj *ent.Team) (string, error) {
