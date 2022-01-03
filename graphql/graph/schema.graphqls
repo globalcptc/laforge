@@ -180,6 +180,7 @@ type Build {
   BuildToLatestBuildCommit: BuildCommit
   BuildToBuildCommits: [BuildCommit]!
   BuildToRepoCommit: RepoCommit!
+  BuildToServerTasks: [ServerTask]!
 }
 
 type BuildCommit {

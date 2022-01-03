@@ -196,6 +196,14 @@ func (b *Build) BuildToAgentStatuses(ctx context.Context) ([]*AgentStatus, error
 	return result, err
 }
 
+func (b *Build) BuildToServerTasks(ctx context.Context) ([]*ServerTask, error) {
+	result, err := b.Edges.BuildToServerTasksOrErr()
+	if IsNotLoaded(err) {
+		result, err = b.QueryBuildToServerTasks().All(ctx)
+	}
+	return result, err
+}
+
 func (bc *BuildCommit) BuildCommitToBuild(ctx context.Context) (*Build, error) {
 	result, err := bc.Edges.BuildCommitToBuildOrErr()
 	if IsNotLoaded(err) {

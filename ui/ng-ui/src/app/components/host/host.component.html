@@ -3,7 +3,7 @@
   (click)="style === 'compact' && mode !== 'plan' && viewDetails()"
   [ngClass]="style"
   [class.selectable]="selectable"
-  *ngIf="shouldHideLoading || !shouldHide"
+  *ngIf="shouldHideLoading || !(shouldHide | async)"
 >
   <div class="rebuild-select" *ngIf="selectable">
     <mat-checkbox

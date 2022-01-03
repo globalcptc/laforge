@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute } from '@angular/router';
 import { LaForgeGetBuildTreeQuery } from '@graphql';
@@ -7,6 +8,8 @@ import { StatusService } from '@services/status/status.service';
 import { BehaviorSubject, Subscription } from 'rxjs';
 import { SubheaderService } from 'src/app/_metronic/partials/layout/subheader/_services/subheader.service';
 import { EnvironmentService } from 'src/app/services/environment/environment.service';
+
+import { ViewLogsModalComponent } from '@components/view-logs-modal/view-logs-modal.component';
 
 @Component({
   selector: 'app-build',
@@ -28,7 +31,8 @@ export class BuildComponent implements OnInit, OnDestroy {
     private snackbar: MatSnackBar,
     private api: ApiService,
     private route: ActivatedRoute,
-    private status: StatusService
+    private status: StatusService,
+    private dialog: MatDialog
   ) {
     this.subheader.setTitle('Build');
     this.subheader.setDescription('Monitor the progress of a given build');
@@ -65,6 +69,17 @@ export class BuildComponent implements OnInit, OnDestroy {
     this.api.getBuildTree(this.buildId).then((b) => {
       this.build.next(b);
       // this.viewTeams.next([b.buildToTeam[0]]);
+    });
+  }
+
+  viewBuildLogs() {
+    const taskUUIDs = this.build.getValue().BuildToServerTasks.map((s) => s.id);
+    this.dialog.open(ViewLogsModalComponent, {
+      width: '75%',
+      height: '90%',
+      data: {
+        taskUUIDs
+      }
     });
   }
 }

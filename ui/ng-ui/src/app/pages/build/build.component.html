@@ -5,19 +5,25 @@
 </ng-container>
 <mat-card class="laforge-card" *ngIf="build | async as _build">
   <mat-card-header>
-    <div class="env-header d-flex align-items-center justify-content-between">
-      <div class="env-info w-50">
-        <mat-card-title>
-          {{ _build.buildToEnvironment.name }}
-          <i class="fad fa-1x fa-grip-lines-vertical text-muted mx-2"></i>
-          v{{ _build.revision }}
-          <span class="ml-2">
-            (
-            <a [href]="_build.BuildToRepoCommit.hash | gitUrl: _build.BuildToRepoCommit.RepoCommitToRepository.repo_url">
-              <u>{{ _build.BuildToRepoCommit.hash | gitHash }}</u>
-            </a>
-            )
-          </span>
+    <div class="d-flex align-items-center justify-content-between">
+      <div class="env-info w-100">
+        <mat-card-title class="d-flex align-items-center justify-content-between">
+          <div>
+            {{ _build.buildToEnvironment.name }}
+            <i class="fad fa-1x fa-grip-lines-vertical text-muted mx-2"></i>
+            v{{ _build.revision }}
+            <span class="ml-2">
+              (
+              <a [href]="_build.BuildToRepoCommit.hash | gitUrl: _build.BuildToRepoCommit.RepoCommitToRepository.repo_url">
+                <u>{{ _build.BuildToRepoCommit.hash | gitHash }}</u>
+              </a>
+              )
+            </span>
+          </div>
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-primary" [href]="'/manage/' + _build.id">Manage</a>
+            <button class="btn btn-dark" (click)="viewBuildLogs()">View Logs</button>
+          </div>
         </mat-card-title>
         <mat-card-subtitle>{{ _build.buildToEnvironment.description }}</mat-card-subtitle>
       </div>

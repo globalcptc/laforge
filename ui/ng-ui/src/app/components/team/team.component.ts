@@ -32,7 +32,7 @@ export class TeamComponent implements OnInit, OnDestroy {
   // planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
   expandOverride = false;
   shouldHideLoading = false;
-  shouldHide = false;
+  shouldHide: BehaviorSubject<boolean>;
   latestDiff: LaForgePlanFieldsFragment['PlanToPlanDiffs'][0];
   planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
 
@@ -40,9 +40,14 @@ export class TeamComponent implements OnInit, OnDestroy {
     if (!this.mode) this.mode = 'manage';
     if (!this.style) this.style = 'compact';
     if (!this.selectable) this.selectable = false;
+
+    this.shouldHide = new BehaviorSubject(false);
   }
 
   ngOnInit(): void {
+    if (this.mode === 'plan') {
+      if (!this.getPlanDiff()) this.shouldHide.next(true);
+    }
     this.planStatus = this.status.getStatusSubject(this.team.TeamToPlan.PlanToStatus.id);
   }
 
@@ -203,7 +208,7 @@ export class TeamComponent implements OnInit, OnDestroy {
 
   checkShouldHide() {
     if (this.mode === 'plan') {
-      if (!this.latestDiff) return (this.shouldHide = false);
+      if (!this.latestDiff) return this.shouldHide.next(false);
       const latestCommit = this.envService.getLatestCommit();
       if (!latestCommit) return false;
       const teamPlan = this.envService.getPlan(this.team.TeamToPlan.id);
@@ -211,15 +216,15 @@ export class TeamComponent implements OnInit, OnDestroy {
         // expand if latest diff is a part of the latest commit
         if (latestCommit && latestCommit.BuildCommitToPlanDiffs.filter((diff) => diff.id === this.latestDiff.id).length > 0) {
           this.shouldHideLoading = false;
-          this.shouldHide = false;
+          this.shouldHide.next(false);
           return;
         }
       }
       this.shouldHideLoading = false;
-      this.shouldHide = true;
+      this.shouldHide.next(true);
       return;
     }
-    this.shouldHide = false;
+    this.shouldHide.next(false);
   }
 
   shouldCollapse(): boolean {

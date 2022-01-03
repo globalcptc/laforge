@@ -20,6 +20,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/repocommit"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/google/uuid"
@@ -247,6 +248,21 @@ func (bu *BuildUpdate) AddBuildToAgentStatuses(a ...*AgentStatus) *BuildUpdate {
 	return bu.AddBuildToAgentStatuseIDs(ids...)
 }
 
+// AddBuildToServerTaskIDs adds the "BuildToServerTasks" edge to the ServerTask entity by IDs.
+func (bu *BuildUpdate) AddBuildToServerTaskIDs(ids ...uuid.UUID) *BuildUpdate {
+	bu.mutation.AddBuildToServerTaskIDs(ids...)
+	return bu
+}
+
+// AddBuildToServerTasks adds the "BuildToServerTasks" edges to the ServerTask entity.
+func (bu *BuildUpdate) AddBuildToServerTasks(s ...*ServerTask) *BuildUpdate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return bu.AddBuildToServerTaskIDs(ids...)
+}
+
 // Mutation returns the BuildMutation object of the builder.
 func (bu *BuildUpdate) Mutation() *BuildMutation {
 	return bu.mutation
@@ -406,6 +422,27 @@ func (bu *BuildUpdate) RemoveBuildToAgentStatuses(a ...*AgentStatus) *BuildUpdat
 		ids[i] = a[i].ID
 	}
 	return bu.RemoveBuildToAgentStatuseIDs(ids...)
+}
+
+// ClearBuildToServerTasks clears all "BuildToServerTasks" edges to the ServerTask entity.
+func (bu *BuildUpdate) ClearBuildToServerTasks() *BuildUpdate {
+	bu.mutation.ClearBuildToServerTasks()
+	return bu
+}
+
+// RemoveBuildToServerTaskIDs removes the "BuildToServerTasks" edge to ServerTask entities by IDs.
+func (bu *BuildUpdate) RemoveBuildToServerTaskIDs(ids ...uuid.UUID) *BuildUpdate {
+	bu.mutation.RemoveBuildToServerTaskIDs(ids...)
+	return bu
+}
+
+// RemoveBuildToServerTasks removes "BuildToServerTasks" edges to ServerTask entities.
+func (bu *BuildUpdate) RemoveBuildToServerTasks(s ...*ServerTask) *BuildUpdate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return bu.RemoveBuildToServerTaskIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1031,6 +1068,60 @@ func (bu *BuildUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if bu.mutation.BuildToServerTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToServerTasksTable,
+			Columns: []string{build.BuildToServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bu.mutation.RemovedBuildToServerTasksIDs(); len(nodes) > 0 && !bu.mutation.BuildToServerTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToServerTasksTable,
+			Columns: []string{build.BuildToServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bu.mutation.BuildToServerTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToServerTasksTable,
+			Columns: []string{build.BuildToServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, bu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{build.Label}
@@ -1259,6 +1350,21 @@ func (buo *BuildUpdateOne) AddBuildToAgentStatuses(a ...*AgentStatus) *BuildUpda
 	return buo.AddBuildToAgentStatuseIDs(ids...)
 }
 
+// AddBuildToServerTaskIDs adds the "BuildToServerTasks" edge to the ServerTask entity by IDs.
+func (buo *BuildUpdateOne) AddBuildToServerTaskIDs(ids ...uuid.UUID) *BuildUpdateOne {
+	buo.mutation.AddBuildToServerTaskIDs(ids...)
+	return buo
+}
+
+// AddBuildToServerTasks adds the "BuildToServerTasks" edges to the ServerTask entity.
+func (buo *BuildUpdateOne) AddBuildToServerTasks(s ...*ServerTask) *BuildUpdateOne {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return buo.AddBuildToServerTaskIDs(ids...)
+}
+
 // Mutation returns the BuildMutation object of the builder.
 func (buo *BuildUpdateOne) Mutation() *BuildMutation {
 	return buo.mutation
@@ -1418,6 +1524,27 @@ func (buo *BuildUpdateOne) RemoveBuildToAgentStatuses(a ...*AgentStatus) *BuildU
 		ids[i] = a[i].ID
 	}
 	return buo.RemoveBuildToAgentStatuseIDs(ids...)
+}
+
+// ClearBuildToServerTasks clears all "BuildToServerTasks" edges to the ServerTask entity.
+func (buo *BuildUpdateOne) ClearBuildToServerTasks() *BuildUpdateOne {
+	buo.mutation.ClearBuildToServerTasks()
+	return buo
+}
+
+// RemoveBuildToServerTaskIDs removes the "BuildToServerTasks" edge to ServerTask entities by IDs.
+func (buo *BuildUpdateOne) RemoveBuildToServerTaskIDs(ids ...uuid.UUID) *BuildUpdateOne {
+	buo.mutation.RemoveBuildToServerTaskIDs(ids...)
+	return buo
+}
+
+// RemoveBuildToServerTasks removes "BuildToServerTasks" edges to ServerTask entities.
+func (buo *BuildUpdateOne) RemoveBuildToServerTasks(s ...*ServerTask) *BuildUpdateOne {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return buo.RemoveBuildToServerTaskIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -2059,6 +2186,60 @@ func (buo *BuildUpdateOne) sqlSave(ctx context.Context) (_node *Build, err error
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: agentstatus.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if buo.mutation.BuildToServerTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToServerTasksTable,
+			Columns: []string{build.BuildToServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := buo.mutation.RemovedBuildToServerTasksIDs(); len(nodes) > 0 && !buo.mutation.BuildToServerTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToServerTasksTable,
+			Columns: []string{build.BuildToServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := buo.mutation.BuildToServerTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToServerTasksTable,
+			Columns: []string{build.BuildToServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
 				},
 			},
 		}

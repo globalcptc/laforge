@@ -30,21 +30,21 @@
           aria-label="Rebuild the selected objects"
           title="Rebuild"
           (click)="rebuildEnv()"
-          [disabled]="!selectionMode && !canRebuildBuild()"
-          [disableRipple]="!selectionMode && !canRebuildBuild()"
+          [disabled]="!(selectionMode | async) && !canRebuildBuild()"
+          [disableRipple]="!(selectionMode | async) && !canRebuildBuild()"
         >
           <i class="fad fa-undo-alt text-inherit"></i>
         </button>
         <button
           mat-icon-button
           color="accent"
-          [attr.aria-label]="selectionMode ? 'Cancel Selection' : 'Select multiple to rebuild'"
-          [attr.title]="selectionMode ? 'Cancel Selection' : 'Select multiple to rebuild'"
+          [attr.aria-label]="(selectionMode | async) ? 'Cancel Selection' : 'Select multiple to rebuild'"
+          [attr.title]="(selectionMode | async) ? 'Cancel Selection' : 'Select multiple to rebuild'"
           (click)="toggleSelectionMode()"
-          [disabled]="!canRebuildBuild()"
-          [disableRipple]="!canRebuildBuild()"
+          [disabled]="!canSelect()"
+          [disableRipple]="!canSelect()"
         >
-          <i class="fad text-inherit" [ngClass]="selectionMode ? 'fa-times' : 'fa-check-square'"></i>
+          <i class="fad text-inherit" [ngClass]="(selectionMode | async) ? 'fa-times' : 'fa-check-square'"></i>
         </button>
       </div>
     </div>
@@ -70,6 +70,11 @@
     </mat-table>
   </mat-card-header>
   <mat-card-content>
-    <app-team *ngFor="let team of _build.buildToTeam | sortBy: 'asc':'team_number'" [team]="team" [selectable]="selectionMode"></app-team>
+    <app-team
+      *ngFor="let team of _build.buildToTeam | sortBy: 'asc':'team_number'"
+      [team]="team"
+      [selectable]="selectionMode | async"
+      [mode]="'manage'"
+    ></app-team>
   </mat-card-content>
 </mat-card>

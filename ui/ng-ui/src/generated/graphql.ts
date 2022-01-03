@@ -102,6 +102,7 @@ export type LaForgeBuild = {
   BuildToLatestBuildCommit?: Maybe<LaForgeBuildCommit>;
   BuildToBuildCommits: Array<Maybe<LaForgeBuildCommit>>;
   BuildToRepoCommit: LaForgeRepoCommit;
+  BuildToServerTasks: Array<Maybe<LaForgeServerTask>>;
 };
 
 export type LaForgeBuildCommit = {
@@ -342,6 +343,7 @@ export type LaForgeMutation = {
   approveCommit: Scalars['Boolean'];
   cancelCommit: Scalars['Boolean'];
   createAgentTasks: Array<Maybe<LaForgeAgentTask>>;
+  createBatchAgentTasks: Array<Maybe<LaForgeAgentTask>>;
   createEnviromentFromRepo: Array<Maybe<LaForgeEnvironment>>;
   updateEnviromentViaPull: Array<Maybe<LaForgeEnvironment>>;
   modifySelfPassword: Scalars['Boolean'];
@@ -396,6 +398,12 @@ export type LaForgeMutationCreateAgentTasksArgs = {
   buildUUID: Scalars['String'];
   args: Array<Scalars['String']>;
   teams: Array<Scalars['Int']>;
+};
+
+export type LaForgeMutationCreateBatchAgentTasksArgs = {
+  proHostUUIDs: Array<Scalars['String']>;
+  command: LaForgeAgentCommand;
+  args: Array<Scalars['String']>;
 };
 
 export type LaForgeMutationCreateEnviromentFromRepoArgs = {
@@ -782,6 +790,11 @@ export type LaForgeSubscription = {
   updatedBuild: LaForgeBuild;
   updatedCommit: LaForgeBuildCommit;
   updatedAgentTask: LaForgeAgentTask;
+  streamServerTaskLog: Scalars['String'];
+};
+
+export type LaForgeSubscriptionStreamServerTaskLogArgs = {
+  taskID: Scalars['String'];
 };
 
 export type LaForgeTeam = {
@@ -884,7 +897,7 @@ export type LaForgeGetBuildTreeQuery = { __typename?: 'Query' } & {
     { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
         buildToEnvironment: { __typename?: 'Environment' } & Pick<
           LaForgeEnvironment,
-          'id' | 'name' | 'team_count' | 'admin_cidrs' | 'exposed_vdi_ports'
+          'id' | 'name' | 'description' | 'team_count' | 'admin_cidrs' | 'exposed_vdi_ports'
         >;
         BuildToRepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'committer'> & {
             RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
@@ -1000,6 +1013,7 @@ export type LaForgeGetBuildTreeQuery = { __typename?: 'Query' } & {
               }
           >
         >;
+        BuildToServerTasks: Array<Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id'>>>;
       }
   >;
 };
@@ -1866,6 +1880,7 @@ export const GetBuildTreeDocument = gql`
       buildToEnvironment {
         id
         name
+        description
         team_count
         admin_cidrs
         exposed_vdi_ports
@@ -2048,6 +2063,9 @@ export const GetBuildTreeDocument = gql`
             }
           }
         }
+      }
+      BuildToServerTasks {
+        id
       }
     }
   }

@@ -587,6 +587,34 @@ func HasBuildToAgentStatusesWith(preds ...predicate.AgentStatus) predicate.Build
 	})
 }
 
+// HasBuildToServerTasks applies the HasEdge predicate on the "BuildToServerTasks" edge.
+func HasBuildToServerTasks() predicate.Build {
+	return predicate.Build(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(BuildToServerTasksTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, BuildToServerTasksTable, BuildToServerTasksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBuildToServerTasksWith applies the HasEdge predicate on the "BuildToServerTasks" edge with a given conditions (other predicates).
+func HasBuildToServerTasksWith(preds ...predicate.ServerTask) predicate.Build {
+	return predicate.Build(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(BuildToServerTasksInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, BuildToServerTasksTable, BuildToServerTasksColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Build) predicate.Build {
 	return predicate.Build(func(s *sql.Selector) {

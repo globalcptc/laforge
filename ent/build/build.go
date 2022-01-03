@@ -39,6 +39,8 @@ const (
 	EdgeBuildToAdhocPlans = "BuildToAdhocPlans"
 	// EdgeBuildToAgentStatuses holds the string denoting the buildtoagentstatuses edge name in mutations.
 	EdgeBuildToAgentStatuses = "BuildToAgentStatuses"
+	// EdgeBuildToServerTasks holds the string denoting the buildtoservertasks edge name in mutations.
+	EdgeBuildToServerTasks = "BuildToServerTasks"
 	// Table holds the table name of the build in the database.
 	Table = "builds"
 	// BuildToStatusTable is the table that holds the BuildToStatus relation/edge.
@@ -118,6 +120,13 @@ const (
 	BuildToAgentStatusesInverseTable = "agent_status"
 	// BuildToAgentStatusesColumn is the table column denoting the BuildToAgentStatuses relation/edge.
 	BuildToAgentStatusesColumn = "agent_status_agent_status_to_build"
+	// BuildToServerTasksTable is the table that holds the BuildToServerTasks relation/edge.
+	BuildToServerTasksTable = "server_tasks"
+	// BuildToServerTasksInverseTable is the table name for the ServerTask entity.
+	// It exists in this package in order to avoid circular dependency with the "servertask" package.
+	BuildToServerTasksInverseTable = "server_tasks"
+	// BuildToServerTasksColumn is the table column denoting the BuildToServerTasks relation/edge.
+	BuildToServerTasksColumn = "server_task_server_task_to_build"
 )
 
 // Columns holds all SQL columns for build fields.

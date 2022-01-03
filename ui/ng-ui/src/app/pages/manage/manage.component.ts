@@ -24,9 +24,9 @@ export class ManageComponent implements OnInit, OnDestroy {
   build: BehaviorSubject<LaForgeGetBuildTreeQuery['build']>;
   buildStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
   environmentDetailsCols: string[] = ['TeamCount', 'AdminCIDRs', 'ExposedVDIPorts'];
-  selectionMode = false;
-  buildIsLoading = false;
-  isRebuildLoading = false;
+  selectionMode: BehaviorSubject<boolean>;
+  buildIsLoading: BehaviorSubject<boolean>;
+  isRebuildLoading: BehaviorSubject<boolean>;
   rebuildErrors: (GraphQLError | Error)[] = [];
   confirmDeleteBuild = false;
 
@@ -47,6 +47,9 @@ export class ManageComponent implements OnInit, OnDestroy {
 
     this.build = new BehaviorSubject(null);
     this.buildStatus = new BehaviorSubject(null);
+    this.selectionMode = new BehaviorSubject(false);
+    this.buildIsLoading = new BehaviorSubject(false);
+    this.isRebuildLoading = new BehaviorSubject(false);
   }
 
   ngOnInit(): void {
@@ -70,30 +73,37 @@ export class ManageComponent implements OnInit, OnDestroy {
   }
 
   rebuildEnv(): void {
-    this.isRebuildLoading = true;
-    this.cdRef.detectChanges();
-    console.log('rebuilding env...');
+    this.isRebuildLoading.next(true);
+    this.snackbar.open('Generating rebuild...', null, {
+      panelClass: ['bg-info', 'text-white']
+    });
     this.rebuild
       .executeRebuild()
       .then(
         (success) => {
           if (success) {
-            this.isRebuildLoading = false;
-            this.router.navigate(['plan']);
+            this.router.navigate(['home']);
+            this.snackbar.dismiss();
           } else {
             this.rebuildErrors = [Error('Rebuild was unsuccessfull, please check server logs for failure point.')];
+            this.snackbar.open('Error generating rebuild. Please see server logs for more info.', 'Okay', {
+              panelClass: ['bg-danger', 'text-white']
+            });
           }
         },
         (errs) => {
           this.rebuildErrors = errs;
+          console.error(errs);
+          this.snackbar.open('Error generating rebuild. Please see console for more info.', 'Okay', {
+            panelClass: ['bg-danger', 'text-white']
+          });
         }
       )
-      .finally(() => this.cdRef.detectChanges());
-    console.log('done rebuilding env...');
+      .finally(() => this.isRebuildLoading.next(false));
   }
 
   toggleSelectionMode(): void {
-    this.selectionMode = !this.selectionMode;
+    this.selectionMode.next(!this.selectionMode.getValue());
   }
 
   toggleDeleteBuildModal(): void {
@@ -120,7 +130,7 @@ export class ManageComponent implements OnInit, OnDestroy {
     );
   }
 
-  canRebuildBuild(): boolean {
+  canSelect(): boolean {
     const status = this.getStatus();
     return (
       status &&
@@ -130,5 +140,9 @@ export class ManageComponent implements OnInit, OnDestroy {
       status.state !== LaForgeProvisionStatus.Deleteinprogress &&
       status.state !== LaForgeProvisionStatus.Inprogress
     );
+  }
+
+  canRebuildBuild(): boolean {
+    return this.canSelect() && this.rebuild.rootPlans.length > 0;
   }
 }

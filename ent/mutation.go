@@ -4076,6 +4076,9 @@ type BuildMutation struct {
 	_BuildToAgentStatuses             map[uuid.UUID]struct{}
 	removed_BuildToAgentStatuses      map[uuid.UUID]struct{}
 	cleared_BuildToAgentStatuses      bool
+	_BuildToServerTasks               map[uuid.UUID]struct{}
+	removed_BuildToServerTasks        map[uuid.UUID]struct{}
+	cleared_BuildToServerTasks        bool
 	done                              bool
 	oldValue                          func(context.Context) (*Build, error)
 	predicates                        []predicate.Build
@@ -4833,6 +4836,60 @@ func (m *BuildMutation) ResetBuildToAgentStatuses() {
 	m.removed_BuildToAgentStatuses = nil
 }
 
+// AddBuildToServerTaskIDs adds the "BuildToServerTasks" edge to the ServerTask entity by ids.
+func (m *BuildMutation) AddBuildToServerTaskIDs(ids ...uuid.UUID) {
+	if m._BuildToServerTasks == nil {
+		m._BuildToServerTasks = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._BuildToServerTasks[ids[i]] = struct{}{}
+	}
+}
+
+// ClearBuildToServerTasks clears the "BuildToServerTasks" edge to the ServerTask entity.
+func (m *BuildMutation) ClearBuildToServerTasks() {
+	m.cleared_BuildToServerTasks = true
+}
+
+// BuildToServerTasksCleared reports if the "BuildToServerTasks" edge to the ServerTask entity was cleared.
+func (m *BuildMutation) BuildToServerTasksCleared() bool {
+	return m.cleared_BuildToServerTasks
+}
+
+// RemoveBuildToServerTaskIDs removes the "BuildToServerTasks" edge to the ServerTask entity by IDs.
+func (m *BuildMutation) RemoveBuildToServerTaskIDs(ids ...uuid.UUID) {
+	if m.removed_BuildToServerTasks == nil {
+		m.removed_BuildToServerTasks = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._BuildToServerTasks, ids[i])
+		m.removed_BuildToServerTasks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedBuildToServerTasks returns the removed IDs of the "BuildToServerTasks" edge to the ServerTask entity.
+func (m *BuildMutation) RemovedBuildToServerTasksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_BuildToServerTasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// BuildToServerTasksIDs returns the "BuildToServerTasks" edge IDs in the mutation.
+func (m *BuildMutation) BuildToServerTasksIDs() (ids []uuid.UUID) {
+	for id := range m._BuildToServerTasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetBuildToServerTasks resets all changes to the "BuildToServerTasks" edge.
+func (m *BuildMutation) ResetBuildToServerTasks() {
+	m._BuildToServerTasks = nil
+	m.cleared_BuildToServerTasks = false
+	m.removed_BuildToServerTasks = nil
+}
+
 // Where appends a list predicates to the BuildMutation builder.
 func (m *BuildMutation) Where(ps ...predicate.Build) {
 	m.predicates = append(m.predicates, ps...)
@@ -5012,7 +5069,7 @@ func (m *BuildMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BuildMutation) AddedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m._BuildToStatus != nil {
 		edges = append(edges, build.EdgeBuildToStatus)
 	}
@@ -5045,6 +5102,9 @@ func (m *BuildMutation) AddedEdges() []string {
 	}
 	if m._BuildToAgentStatuses != nil {
 		edges = append(edges, build.EdgeBuildToAgentStatuses)
+	}
+	if m._BuildToServerTasks != nil {
+		edges = append(edges, build.EdgeBuildToServerTasks)
 	}
 	return edges
 }
@@ -5109,13 +5169,19 @@ func (m *BuildMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case build.EdgeBuildToServerTasks:
+		ids := make([]ent.Value, 0, len(m._BuildToServerTasks))
+		for id := range m._BuildToServerTasks {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BuildMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m.removed_BuildToProvisionedNetwork != nil {
 		edges = append(edges, build.EdgeBuildToProvisionedNetwork)
 	}
@@ -5133,6 +5199,9 @@ func (m *BuildMutation) RemovedEdges() []string {
 	}
 	if m.removed_BuildToAgentStatuses != nil {
 		edges = append(edges, build.EdgeBuildToAgentStatuses)
+	}
+	if m.removed_BuildToServerTasks != nil {
+		edges = append(edges, build.EdgeBuildToServerTasks)
 	}
 	return edges
 }
@@ -5177,13 +5246,19 @@ func (m *BuildMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case build.EdgeBuildToServerTasks:
+		ids := make([]ent.Value, 0, len(m.removed_BuildToServerTasks))
+		for id := range m.removed_BuildToServerTasks {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BuildMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m.cleared_BuildToStatus {
 		edges = append(edges, build.EdgeBuildToStatus)
 	}
@@ -5217,6 +5292,9 @@ func (m *BuildMutation) ClearedEdges() []string {
 	if m.cleared_BuildToAgentStatuses {
 		edges = append(edges, build.EdgeBuildToAgentStatuses)
 	}
+	if m.cleared_BuildToServerTasks {
+		edges = append(edges, build.EdgeBuildToServerTasks)
+	}
 	return edges
 }
 
@@ -5246,6 +5324,8 @@ func (m *BuildMutation) EdgeCleared(name string) bool {
 		return m.cleared_BuildToAdhocPlans
 	case build.EdgeBuildToAgentStatuses:
 		return m.cleared_BuildToAgentStatuses
+	case build.EdgeBuildToServerTasks:
+		return m.cleared_BuildToServerTasks
 	}
 	return false
 }
@@ -5309,6 +5389,9 @@ func (m *BuildMutation) ResetEdge(name string) error {
 		return nil
 	case build.EdgeBuildToAgentStatuses:
 		m.ResetBuildToAgentStatuses()
+		return nil
+	case build.EdgeBuildToServerTasks:
+		m.ResetBuildToServerTasks()
 		return nil
 	}
 	return fmt.Errorf("unknown Build edge %s", name)

@@ -5,6 +5,7 @@ query GetBuildTree($buildId: String!) {
     buildToEnvironment {
       id
       name
+      description
       team_count
       admin_cidrs
       exposed_vdi_ports
@@ -187,6 +188,9 @@ query GetBuildTree($buildId: String!) {
           }
         }
       }
+    }
+    BuildToServerTasks {
+      id
     }
   }
 }

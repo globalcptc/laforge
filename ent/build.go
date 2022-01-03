@@ -54,6 +54,8 @@ type Build struct {
 	HCLBuildToAdhocPlans []*AdhocPlan `json:"BuildToAdhocPlans,omitempty"`
 	// BuildToAgentStatuses holds the value of the BuildToAgentStatuses edge.
 	HCLBuildToAgentStatuses []*AgentStatus `json:"BuildToAgentStatuses,omitempty"`
+	// BuildToServerTasks holds the value of the BuildToServerTasks edge.
+	HCLBuildToServerTasks []*ServerTask `json:"BuildToServerTasks,omitempty"`
 	//
 	build_build_to_environment         *uuid.UUID
 	build_build_to_competition         *uuid.UUID
@@ -85,9 +87,11 @@ type BuildEdges struct {
 	BuildToAdhocPlans []*AdhocPlan `json:"BuildToAdhocPlans,omitempty"`
 	// BuildToAgentStatuses holds the value of the BuildToAgentStatuses edge.
 	BuildToAgentStatuses []*AgentStatus `json:"BuildToAgentStatuses,omitempty"`
+	// BuildToServerTasks holds the value of the BuildToServerTasks edge.
+	BuildToServerTasks []*ServerTask `json:"BuildToServerTasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [11]bool
+	loadedTypes [12]bool
 }
 
 // BuildToStatusOrErr returns the BuildToStatus value or an error if the edge
@@ -212,6 +216,15 @@ func (e BuildEdges) BuildToAgentStatusesOrErr() ([]*AgentStatus, error) {
 		return e.BuildToAgentStatuses, nil
 	}
 	return nil, &NotLoadedError{edge: "BuildToAgentStatuses"}
+}
+
+// BuildToServerTasksOrErr returns the BuildToServerTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e BuildEdges) BuildToServerTasksOrErr() ([]*ServerTask, error) {
+	if e.loadedTypes[11] {
+		return e.BuildToServerTasks, nil
+	}
+	return nil, &NotLoadedError{edge: "BuildToServerTasks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -358,6 +371,11 @@ func (b *Build) QueryBuildToAdhocPlans() *AdhocPlanQuery {
 // QueryBuildToAgentStatuses queries the "BuildToAgentStatuses" edge of the Build entity.
 func (b *Build) QueryBuildToAgentStatuses() *AgentStatusQuery {
 	return (&BuildClient{config: b.config}).QueryBuildToAgentStatuses(b)
+}
+
+// QueryBuildToServerTasks queries the "BuildToServerTasks" edge of the Build entity.
+func (b *Build) QueryBuildToServerTasks() *ServerTaskQuery {
+	return (&BuildClient{config: b.config}).QueryBuildToServerTasks(b)
 }
 
 // Update returns a builder for updating this Build.

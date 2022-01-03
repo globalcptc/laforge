@@ -22,6 +22,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/repocommit"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/google/uuid"
@@ -48,6 +49,7 @@ type BuildQuery struct {
 	withBuildToBuildCommits       *BuildCommitQuery
 	withBuildToAdhocPlans         *AdhocPlanQuery
 	withBuildToAgentStatuses      *AgentStatusQuery
+	withBuildToServerTasks        *ServerTaskQuery
 	withFKs                       bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -327,6 +329,28 @@ func (bq *BuildQuery) QueryBuildToAgentStatuses() *AgentStatusQuery {
 	return query
 }
 
+// QueryBuildToServerTasks chains the current query on the "BuildToServerTasks" edge.
+func (bq *BuildQuery) QueryBuildToServerTasks() *ServerTaskQuery {
+	query := &ServerTaskQuery{config: bq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := bq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := bq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(build.Table, build.FieldID, selector),
+			sqlgraph.To(servertask.Table, servertask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToServerTasksTable, build.BuildToServerTasksColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Build entity from the query.
 // Returns a *NotFoundError when no Build was found.
 func (bq *BuildQuery) First(ctx context.Context) (*Build, error) {
@@ -519,6 +543,7 @@ func (bq *BuildQuery) Clone() *BuildQuery {
 		withBuildToBuildCommits:       bq.withBuildToBuildCommits.Clone(),
 		withBuildToAdhocPlans:         bq.withBuildToAdhocPlans.Clone(),
 		withBuildToAgentStatuses:      bq.withBuildToAgentStatuses.Clone(),
+		withBuildToServerTasks:        bq.withBuildToServerTasks.Clone(),
 		// clone intermediate query.
 		sql:  bq.sql.Clone(),
 		path: bq.path,
@@ -646,6 +671,17 @@ func (bq *BuildQuery) WithBuildToAgentStatuses(opts ...func(*AgentStatusQuery)) 
 	return bq
 }
 
+// WithBuildToServerTasks tells the query-builder to eager-load the nodes that are connected to
+// the "BuildToServerTasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithBuildToServerTasks(opts ...func(*ServerTaskQuery)) *BuildQuery {
+	query := &ServerTaskQuery{config: bq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	bq.withBuildToServerTasks = query
+	return bq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -712,7 +748,7 @@ func (bq *BuildQuery) sqlAll(ctx context.Context) ([]*Build, error) {
 		nodes       = []*Build{}
 		withFKs     = bq.withFKs
 		_spec       = bq.querySpec()
-		loadedTypes = [11]bool{
+		loadedTypes = [12]bool{
 			bq.withBuildToStatus != nil,
 			bq.withBuildToEnvironment != nil,
 			bq.withBuildToCompetition != nil,
@@ -724,6 +760,7 @@ func (bq *BuildQuery) sqlAll(ctx context.Context) ([]*Build, error) {
 			bq.withBuildToBuildCommits != nil,
 			bq.withBuildToAdhocPlans != nil,
 			bq.withBuildToAgentStatuses != nil,
+			bq.withBuildToServerTasks != nil,
 		}
 	)
 	if bq.withBuildToEnvironment != nil || bq.withBuildToCompetition != nil || bq.withBuildToLatestBuildCommit != nil || bq.withBuildToRepoCommit != nil {
@@ -1067,6 +1104,35 @@ func (bq *BuildQuery) sqlAll(ctx context.Context) ([]*Build, error) {
 				return nil, fmt.Errorf(`unexpected foreign-key "agent_status_agent_status_to_build" returned %v for node %v`, *fk, n.ID)
 			}
 			node.Edges.BuildToAgentStatuses = append(node.Edges.BuildToAgentStatuses, n)
+		}
+	}
+
+	if query := bq.withBuildToServerTasks; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*Build)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.BuildToServerTasks = []*ServerTask{}
+		}
+		query.withFKs = true
+		query.Where(predicate.ServerTask(func(s *sql.Selector) {
+			s.Where(sql.InValues(build.BuildToServerTasksColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.server_task_server_task_to_build
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "server_task_server_task_to_build" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_build" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.BuildToServerTasks = append(node.Edges.BuildToServerTasks, n)
 		}
 	}
 

@@ -46,7 +46,7 @@ export class HostComponent implements OnInit, OnDestroy {
   isSelectedState = false;
   expandOverride = false;
   shouldHideLoading = false;
-  shouldHide = false;
+  shouldHide: BehaviorSubject<boolean>;
   planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
   provisionStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
   agentStatus: BehaviorSubject<LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus']>;
@@ -57,9 +57,14 @@ export class HostComponent implements OnInit, OnDestroy {
     if (!this.selectable) this.selectable = false;
     if (!this.parentSelected) this.parentSelected = false;
     if (!this.hasAgent) this.hasAgent = false;
+
+    this.shouldHide = new BehaviorSubject(false);
   }
 
   ngOnInit() {
+    if (this.mode === 'plan') {
+      if (!this.getPlanDiff()) this.shouldHide.next(true);
+    }
     this.planStatus = this.status.getStatusSubject(this.provisionedHost.ProvisionedHostToPlan.PlanToStatus.id);
     const sub1 = this.planStatus.subscribe(() => this.cdRef.markForCheck());
     this.unsubscribe.push(sub1);

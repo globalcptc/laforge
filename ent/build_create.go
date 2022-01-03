@@ -18,6 +18,7 @@ import (
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/repocommit"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/google/uuid"
@@ -229,6 +230,21 @@ func (bc *BuildCreate) AddBuildToAgentStatuses(a ...*AgentStatus) *BuildCreate {
 		ids[i] = a[i].ID
 	}
 	return bc.AddBuildToAgentStatuseIDs(ids...)
+}
+
+// AddBuildToServerTaskIDs adds the "BuildToServerTasks" edge to the ServerTask entity by IDs.
+func (bc *BuildCreate) AddBuildToServerTaskIDs(ids ...uuid.UUID) *BuildCreate {
+	bc.mutation.AddBuildToServerTaskIDs(ids...)
+	return bc
+}
+
+// AddBuildToServerTasks adds the "BuildToServerTasks" edges to the ServerTask entity.
+func (bc *BuildCreate) AddBuildToServerTasks(s ...*ServerTask) *BuildCreate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return bc.AddBuildToServerTaskIDs(ids...)
 }
 
 // Mutation returns the BuildMutation object of the builder.
@@ -590,6 +606,25 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: agentstatus.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := bc.mutation.BuildToServerTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToServerTasksTable,
+			Columns: []string{build.BuildToServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
 				},
 			},
 		}

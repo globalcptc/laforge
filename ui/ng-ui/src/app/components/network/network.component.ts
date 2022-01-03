@@ -43,7 +43,7 @@ export class NetworkComponent implements OnInit, OnDestroy {
   // planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
   expandOverride = false;
   shouldHideLoading = false;
-  shouldHide = false;
+  shouldHide: BehaviorSubject<boolean>;
   latestDiff: LaForgePlanFieldsFragment['PlanToPlanDiffs'][0];
   planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
   provisionStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
@@ -59,9 +59,14 @@ export class NetworkComponent implements OnInit, OnDestroy {
     if (!this.style) this.style = 'compact';
     if (!this.selectable) this.selectable = false;
     if (!this.parentSelected) this.parentSelected = false;
+
+    this.shouldHide = new BehaviorSubject(false);
   }
 
   ngOnInit(): void {
+    if (this.mode === 'plan') {
+      if (!this.getPlanDiff()) this.shouldHide.next(true);
+    }
     this.planStatus = this.status.getStatusSubject(this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id);
     const sub1 = this.planStatus.subscribe(() => this.cdRef.markForCheck());
     this.unsubscribe.push(sub1);
@@ -200,23 +205,23 @@ export class NetworkComponent implements OnInit, OnDestroy {
 
   checkShouldHide() {
     if (this.mode === 'plan') {
-      if (!this.latestDiff) return (this.shouldHide = false);
+      if (!this.latestDiff) return this.shouldHide.next(false);
       const latestCommit = this.envService.getLatestCommit();
-      if (!latestCommit) return (this.shouldHide = false);
+      if (!latestCommit) return this.shouldHide.next(false);
       const pnetPlan = this.envService.getPlan(this.provisionedNetwork.ProvisionedNetworkToPlan.id);
       if (pnetPlan?.PlanToPlanDiffs.length > 0) {
         // expand if latest diff is a part of the latest commit
         if (latestCommit && latestCommit.BuildCommitToPlanDiffs.filter((diff) => diff.id === this.latestDiff.id).length > 0) {
           this.shouldHideLoading = false;
-          this.shouldHide = false;
+          this.shouldHide.next(false);
           return;
         }
       }
       this.shouldHideLoading = false;
-      this.shouldHide = true;
+      this.shouldHide.next(true);
       return;
     }
-    this.shouldHide = false;
+    this.shouldHide.next(false);
   }
 
   shouldCollapse(): boolean {

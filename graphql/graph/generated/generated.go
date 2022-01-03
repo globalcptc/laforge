@@ -131,6 +131,7 @@ type ComplexityRoot struct {
 		BuildToPlan               func(childComplexity int) int
 		BuildToProvisionedNetwork func(childComplexity int) int
 		BuildToRepoCommit         func(childComplexity int) int
+		BuildToServerTasks        func(childComplexity int) int
 		BuildToStatus             func(childComplexity int) int
 		BuildToTeam               func(childComplexity int) int
 		CompletedPlan             func(childComplexity int) int
@@ -1061,6 +1062,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Build.BuildToRepoCommit(childComplexity), true
+
+	case "Build.BuildToServerTasks":
+		if e.complexity.Build.BuildToServerTasks == nil {
+			break
+		}
+
+		return e.complexity.Build.BuildToServerTasks(childComplexity), true
 
 	case "Build.buildToStatus":
 		if e.complexity.Build.BuildToStatus == nil {
@@ -3736,6 +3744,7 @@ type Build {
   BuildToLatestBuildCommit: BuildCommit
   BuildToBuildCommits: [BuildCommit]!
   BuildToRepoCommit: RepoCommit!
+  BuildToServerTasks: [ServerTask]!
 }
 
 type BuildCommit {
@@ -6787,6 +6796,41 @@ func (ec *executionContext) _Build_BuildToRepoCommit(ctx context.Context, field 
 	res := resTmp.(*ent.RepoCommit)
 	fc.Result = res
 	return ec.marshalNRepoCommit2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐRepoCommit(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Build_BuildToServerTasks(ctx context.Context, field graphql.CollectedField, obj *ent.Build) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Build",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BuildToServerTasks(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ent.ServerTask)
+	fc.Result = res
+	return ec.marshalNServerTask2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐServerTask(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _BuildCommit_id(ctx context.Context, field graphql.CollectedField, obj *ent.BuildCommit) (ret graphql.Marshaler) {
@@ -20676,6 +20720,20 @@ func (ec *executionContext) _Build(ctx context.Context, sel ast.SelectionSet, ob
 					}
 				}()
 				res = ec._Build_BuildToRepoCommit(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "BuildToServerTasks":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Build_BuildToServerTasks(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
