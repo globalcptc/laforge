@@ -521,9 +521,14 @@ export class ApiService {
   public getServerTaskLogs(taskUUID: string): Promise<LaForgeGetServerTaskLogsQuery['viewServerTaskLogs']> {
     return new Promise((resolve, reject) => {
       this.getServerTaskLogsGQL
-        .fetch({
-          taskUUID
-        })
+        .fetch(
+          {
+            taskUUID
+          },
+          {
+            fetchPolicy: 'network-only'
+          }
+        )
         .toPromise()
         .then(({ data, error, errors }) => {
           if (error) {

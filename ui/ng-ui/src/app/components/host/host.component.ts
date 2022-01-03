@@ -241,53 +241,22 @@ export class HostComponent implements OnInit, OnDestroy {
   childrenCompleted(): boolean {
     if (this.mode === 'plan') return true;
     if (this.mode === 'manage') return true;
-    if (
+    return (
       this.planStatus.getValue().state === LaForgeProvisionStatus.Complete &&
       this.provisionStatus.getValue().state === LaForgeProvisionStatus.Complete
-    )
-      return true;
-    else return false;
-  }
-
-  checkShouldHide() {
-    // if (this.mode === 'plan') {
-    //   const planDiff = this.getPlanDiff()
-    //   if (!planDiff) return (this.shouldHide = false);
-    //   const latestCommit = this.envService.getLatestCommit();
-    //   if (!latestCommit) return (this.shouldHide = false);
-    //   const phostPlan = this.envService.getPlan(this.provisionedHost.ProvisionedHostToPlan.id);
-    //   if (phostPlan?.PlanToPlanDiffs.length > 0) {
-    //     // expand if latest diff is a part of the latest commit
-    //     if (latestCommit && latestCommit.BuildCommitToPlanDiffs.filter((diff) => diff.id === planDiff.id).length > 0) {
-    //       this.shouldHideLoading = false;
-    //       this.shouldHide = false;
-    //       return;
-    //     }
-    //   }
-    //   this.shouldHideLoading = false;
-    //   this.shouldHide = true;
-    //   return;
-    // }
-    this.shouldHide = false;
+    );
   }
 
   shouldCollapse(): boolean {
     if (this.mode === 'plan') {
-      // const plan = this.envService.getPlan(this.provisionedHost.ProvisionedHostToPlan.id);
-      // if (plan?.PlanToPlanDiffs.length > 0) {
-      //   const latestCommitRevision = this.envService.getBuildTree().getValue()?.BuildToLatestBuildCommit.revision;
-      //   const latestDiff = [...plan.PlanToPlanDiffs].sort((a, b) => b.revision - a.revision)[0];
-      //   // collapse if latest diff isn't a part of the latest commit
-      //   if (latestCommitRevision && latestCommitRevision != latestDiff.revision) return true;
-      // return false;
-      // }
       return true;
     }
     const status = this.getStatus();
     if (status && status.state === LaForgeProvisionStatus.Deleted) return true;
+    if (status && status.state === LaForgeProvisionStatus.Todelete) return true;
+    if (status && status.state === LaForgeProvisionStatus.Deleteinprogress) return true;
     if (status && status.state === LaForgeProvisionStatus.Awaiting) return true;
     if (status && status.state === LaForgeProvisionStatus.Parentawaiting) return true;
-    // return hostChildrenCompleted(this.provisionedHost as LaForgeProvisionedHost, this.envService.getStatus);
     return this.childrenCompleted();
   }
 

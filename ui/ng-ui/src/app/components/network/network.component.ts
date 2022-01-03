@@ -88,27 +88,10 @@ export class NetworkComponent implements OnInit, OnDestroy {
 
   allChildrenResponding(): boolean {
     if (this.mode === 'plan') return true;
-    // TODO: rewrite build/manage page stuff
-    // let numWithAgentData = 0;
-    // let numWithCompletedSteps = 0;
-    // let totalHosts = 0;
-    // for (const host of this.provisionedNetwork.ProvisionedNetworkToProvisionedHost) {
-    //   totalHosts++;
-    //   if (host.ProvisionedHostToAgentStatus?.clientId) numWithAgentData++;
-    //   let totalSteps = 0;
-    //   let totalCompletedSteps = 0;
-    //   for (const step of host.ProvisionedHostToProvisioningStep) {
-    //     if (step.step_number === 0) continue;
-    //     totalSteps++;
-    //     if (
-    //       step.ProvisioningStepToStatus.id &&
-    //       this.envService.getStatus(step.ProvisioningStepToPlan.PlanToStatus.id)?.state === LaForgeProvisionStatus.Complete
-    //     )
-    //       totalCompletedSteps++;
-    //   }
-    //   if (totalSteps === totalCompletedSteps) numWithCompletedSteps++;
-    // }
-    // return numWithAgentData === totalHosts && numWithCompletedSteps === totalHosts;
+    return (
+      this.planStatus.getValue().state === LaForgeProvisionStatus.Complete &&
+      this.provisionStatus.getValue().state === LaForgeProvisionStatus.Complete
+    );
   }
 
   getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
