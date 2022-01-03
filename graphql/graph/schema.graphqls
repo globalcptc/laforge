@@ -613,6 +613,12 @@ type Mutation {
     teams: [Int!]!
   ): [AgentTask]! @hasRole(roles: [ADMIN, USER])
 
+  createBatchAgentTasks(
+    proHostUUIDs: [String!]!
+    command: AgentCommand!
+    args: [String!]!
+  ): [AgentTask]! @hasRole(roles: [ADMIN, USER])
+
   createEnviromentFromRepo(
     repoURL: String!
     branchName: String! = "master"

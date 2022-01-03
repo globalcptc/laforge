@@ -700,6 +700,41 @@ func (r *mutationResolver) CreateAgentTasks(ctx context.Context, hostHclid strin
 	return agentTasksReturn, nil
 }
 
+func (r *mutationResolver) CreateBatchAgentTasks(ctx context.Context, proHostUUIDs []string, command model.AgentCommand, args []string) ([]*ent.AgentTask, error) {
+	agentTasksReturn := []*ent.AgentTask{}
+
+	for _, proHostUUID := range proHostUUIDs {
+
+		uuid, err := uuid.Parse(proHostUUID)
+
+		if err != nil {
+			return agentTasksReturn, fmt.Errorf("failed casting UUID to UUID: %v", err)
+		}
+
+		entProvisionedHost, err := r.client.ProvisionedHost.Get(ctx, uuid)
+		if err != nil {
+			return agentTasksReturn, fmt.Errorf("failed querying provisoned host: %v", err)
+		}
+		taskCount, err := entProvisionedHost.QueryProvisionedHostToAgentTask().Count(ctx)
+		if err != nil {
+			return agentTasksReturn, fmt.Errorf("failed querying Number of Tasks: %v", err)
+		}
+		createdAgentTask, err := r.client.AgentTask.Create().
+			SetCommand(agenttask.Command(command.String())).
+			SetArgs(strings.Join(args, "💔")).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			Save(ctx)
+		if err != nil {
+			return agentTasksReturn, fmt.Errorf("failed to create agent task: %v", err)
+		}
+		agentTasksReturn = append(agentTasksReturn, createdAgentTask)
+	}
+
+	return agentTasksReturn, nil
+}
+
 func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL string, branchName string, envFilePath string) ([]*ent.Environment, error) {
 	currentUser, err := auth.ForContext(ctx)
 	if err != nil {
