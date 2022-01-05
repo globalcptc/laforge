@@ -1607,6 +1607,12 @@ export type LaForgeGetServerTasksQuery = { __typename?: 'Query' } & {
   serverTasks?: Maybe<Array<Maybe<{ __typename?: 'ServerTask' } & LaForgeServerTaskFieldsFragment>>>;
 };
 
+export type LaForgeStreamServerTaskLogSubscriptionVariables = Exact<{
+  taskUUID: Scalars['String'];
+}>;
+
+export type LaForgeStreamServerTaskLogSubscription = { __typename?: 'Subscription' } & Pick<LaForgeSubscription, 'streamServerTaskLog'>;
+
 export const AgentStatusFieldsFragmentDoc = gql`
   fragment AgentStatusFields on AgentStatus {
     clientId
@@ -3080,6 +3086,25 @@ export const GetServerTasksDocument = gql`
 })
 export class LaForgeGetServerTasksGQL extends Apollo.Query<LaForgeGetServerTasksQuery, LaForgeGetServerTasksQueryVariables> {
   document = GetServerTasksDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
+export const StreamServerTaskLogDocument = gql`
+  subscription StreamServerTaskLog($taskUUID: String!) {
+    streamServerTaskLog(taskID: $taskUUID)
+  }
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeStreamServerTaskLogGQL extends Apollo.Subscription<
+  LaForgeStreamServerTaskLogSubscription,
+  LaForgeStreamServerTaskLogSubscriptionVariables
+> {
+  document = StreamServerTaskLogDocument;
 
   constructor(apollo: Apollo.Apollo) {
     super(apollo);

@@ -33,3 +33,7 @@ query GetServerTasks($taskUUIDs: [String]!) {
     ...ServerTaskFields
   }
 }
+
+subscription StreamServerTaskLog($taskUUID: String!) {
+  streamServerTaskLog(taskID: $taskUUID)
+}
