@@ -40,6 +40,7 @@ export class ViewLogsModalComponent implements OnInit {
   }
 
   onClose(): void {
+    if (this.logSubscription) this.logSubscription.unsubscribe();
     this.dialogRef.close();
   }
 
@@ -96,6 +97,7 @@ export class ViewLogsModalComponent implements OnInit {
 
   clearLog() {
     this.logSubscription.unsubscribe();
+    this.logSubscription = null;
     // this.logText.next('');
     this.parsedLogs.next([]);
     this.showLog.next(false);
