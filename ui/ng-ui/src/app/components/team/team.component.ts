@@ -206,27 +206,6 @@ export class TeamComponent implements OnInit, OnDestroy {
     return this.rebuild.hasTeam(this.team as LaForgeTeam);
   }
 
-  checkShouldHide() {
-    if (this.mode === 'plan') {
-      if (!this.latestDiff) return this.shouldHide.next(false);
-      const latestCommit = this.envService.getLatestCommit();
-      if (!latestCommit) return false;
-      const teamPlan = this.envService.getPlan(this.team.TeamToPlan.id);
-      if (teamPlan?.PlanToPlanDiffs.length > 0) {
-        // expand if latest diff is a part of the latest commit
-        if (latestCommit && latestCommit.BuildCommitToPlanDiffs.filter((diff) => diff.id === this.latestDiff.id).length > 0) {
-          this.shouldHideLoading = false;
-          this.shouldHide.next(false);
-          return;
-        }
-      }
-      this.shouldHideLoading = false;
-      this.shouldHide.next(true);
-      return;
-    }
-    this.shouldHide.next(false);
-  }
-
   shouldCollapse(): boolean {
     if (this.mode === 'plan') {
       //   const latestCommit = this.envService.getBuildTree().getValue()?.BuildToLatestBuildCommit;

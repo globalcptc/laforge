@@ -203,27 +203,6 @@ export class NetworkComponent implements OnInit, OnDestroy {
     return this.rebuild.hasNetwork(this.provisionedNetwork as LaForgeProvisionedNetwork);
   }
 
-  checkShouldHide() {
-    if (this.mode === 'plan') {
-      if (!this.latestDiff) return this.shouldHide.next(false);
-      const latestCommit = this.envService.getLatestCommit();
-      if (!latestCommit) return this.shouldHide.next(false);
-      const pnetPlan = this.envService.getPlan(this.provisionedNetwork.ProvisionedNetworkToPlan.id);
-      if (pnetPlan?.PlanToPlanDiffs.length > 0) {
-        // expand if latest diff is a part of the latest commit
-        if (latestCommit && latestCommit.BuildCommitToPlanDiffs.filter((diff) => diff.id === this.latestDiff.id).length > 0) {
-          this.shouldHideLoading = false;
-          this.shouldHide.next(false);
-          return;
-        }
-      }
-      this.shouldHideLoading = false;
-      this.shouldHide.next(true);
-      return;
-    }
-    this.shouldHide.next(false);
-  }
-
   shouldCollapse(): boolean {
     if (this.mode === 'plan') {
       // const pnetPlan = this.envService.getPlan(this.provisionedNetwork.ProvisionedNetworkToPlan.id);
