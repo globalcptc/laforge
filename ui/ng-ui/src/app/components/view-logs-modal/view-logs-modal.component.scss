@@ -60,3 +60,13 @@
     border-bottom-right-radius: 0.25rem;
   }
 }
+
+.log-container {
+  height: calc(100% - 40px - 2rem);
+  overflow: scroll;
+  overflow: overlay;
+
+  .log-line {
+    margin-bottom: 0;
+  }
+}

@@ -4,6 +4,7 @@ import { LaForgeGetServerTasksQuery, LaForgeServerTaskType, LaForgeStreamServerT
 import { ApiService } from '@services/api/api.service';
 import { BehaviorSubject, Subscription } from 'rxjs';
 
+type ParsedLog = { text: string; level: 'debug' | 'info' | 'warning' | 'error' | '' };
 @Component({
   selector: 'app-view-logs-modal',
   templateUrl: './view-logs-modal.component.html',
@@ -14,6 +15,8 @@ export class ViewLogsModalComponent implements OnInit {
   logText: BehaviorSubject<string>;
   showLog: BehaviorSubject<boolean>;
   logSubscription: Subscription;
+  parsedLogs: BehaviorSubject<ParsedLog[]>;
+  parsedLogsLoading: BehaviorSubject<boolean>;
 
   constructor(
     public dialogRef: MatDialogRef<ViewLogsModalComponent>,
@@ -24,6 +27,8 @@ export class ViewLogsModalComponent implements OnInit {
     this.serverTasks = new BehaviorSubject([]);
     this.logText = new BehaviorSubject('');
     this.showLog = new BehaviorSubject(false);
+    this.parsedLogs = new BehaviorSubject([]);
+    this.parsedLogsLoading = new BehaviorSubject(false);
   }
 
   ngOnInit(): void {
@@ -48,13 +53,51 @@ export class ViewLogsModalComponent implements OnInit {
         if (errors) {
           return this.logText.error(errors);
         }
-        this.logText.next(streamServerTaskLog);
+        this.parsedLogsLoading.next(true);
+        // this.logText.next(streamServerTaskLog);
+        const newParsedLogs: ParsedLog[] = [];
+        let prevLine: ParsedLog = null;
+        for (const line of streamServerTaskLog.split('\n')) {
+          let level: ParsedLog['level'] = '';
+          if (line.indexOf('level=debug') >= 0) level = 'debug';
+          if (line.indexOf('level=info') >= 0) level = 'info';
+          if (line.indexOf('level=warning') >= 0) level = 'warning';
+          if (line.indexOf('level=error') >= 0) level = 'error';
+          if (!prevLine) {
+            prevLine = { text: line, level };
+            continue;
+          } else if (prevLine.level === level) {
+            prevLine = { text: prevLine.text + '\n' + line, level };
+            continue;
+          } else {
+            newParsedLogs.push({ ...prevLine });
+            prevLine = { text: line, level };
+          }
+        }
+        this.parsedLogsLoading.next(false);
+        this.parsedLogs.next(newParsedLogs);
       });
+  }
+
+  getLevelColor(log) {
+    switch (log.level) {
+      case 'debug':
+        return 'white';
+      case 'info':
+        return 'info';
+      case 'warning':
+        return 'warning';
+      case 'error':
+        return 'danger';
+      default:
+        return 'white';
+    }
   }
 
   clearLog() {
     this.logSubscription.unsubscribe();
-    this.logText.next('');
+    // this.logText.next('');
+    this.parsedLogs.next([]);
     this.showLog.next(false);
   }
 
