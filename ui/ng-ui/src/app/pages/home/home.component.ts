@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -7,13 +7,15 @@ import {
   LaForgeBuildCommitType,
   LaForgeListBuildCommitsQuery,
   LaForgeListEnvironmentsQuery,
-  LaForgeProvisionStatus
+  LaForgeProvisionStatus,
+  LaForgeSubscribeUpdatedBuildCommitGQL
 } from '@graphql';
 import { ApiService } from '@services/api/api.service';
 import { EnvironmentService } from '@services/environment/environment.service';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { SubheaderService } from 'src/app/_metronic/partials/layout/subheader/_services/subheader.service';
 
+import { DeleteBuildModalComponent } from '@components/delete-build-modal/delete-build-modal.component';
 import { ImportRepoModalComponent } from '@components/import-repo-modal/import-repo-modal.component';
 import { ViewLogsModalComponent } from '@components/view-logs-modal/view-logs-modal.component';
 
@@ -22,7 +24,8 @@ import { ViewLogsModalComponent } from '@components/view-logs-modal/view-logs-mo
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
+  private unsubscribe: Subscription[] = [];
   getEnvironmentsLoading: Observable<boolean>;
   // environmentsCols: string[] = ['name', 'competition_id', 'build_count', 'revision', 'pull-actions', 'actions'];
   // environments: Observable<LaForgeGetEnvironmentsQuery['environments']>;
@@ -39,7 +42,8 @@ export class HomeComponent implements OnInit {
     public envService: EnvironmentService,
     private api: ApiService,
     private snackbar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private updatedBuildCommitGQL: LaForgeSubscribeUpdatedBuildCommitGQL
   ) {
     this.subheader.setTitle('Home');
     this.subheader.setDescription('Overview of all environments and builds');
@@ -57,6 +61,36 @@ export class HomeComponent implements OnInit {
     //   this.cdRef.markForCheck();
     // });
     this.environments = this.api.listEnvironments();
+    const buildCommitSubscription = this.updatedBuildCommitGQL.subscribe().subscribe(({ data: { updatedCommit }, errors }) => {
+      if (errors) {
+        this.snackbar.open('Error updating build commit list. See console for more info.', null, {
+          duration: 3000,
+          panelClass: ['bg-danger', 'text-white']
+        });
+        return console.error(errors);
+      }
+      const buildCommitMap = { ...this.buildCommits.getValue() };
+      if (buildCommitMap[updatedCommit.BuildCommitToBuild.buildToEnvironment.id]) {
+        const envBuildCommits = [...buildCommitMap[updatedCommit.BuildCommitToBuild.buildToEnvironment.id]];
+        const index = envBuildCommits.findIndex((bc) => bc.id === updatedCommit.id);
+        if (index === -1) {
+          envBuildCommits.push(updatedCommit);
+          this.snackbar.open('Build commit created', null, {
+            duration: 1000,
+            panelClass: ['bg-success', 'text-white']
+          });
+        } else envBuildCommits.splice(index, 1, updatedCommit);
+        buildCommitMap[updatedCommit.BuildCommitToBuild.buildToEnvironment.id] = envBuildCommits;
+      } else {
+        buildCommitMap[updatedCommit.BuildCommitToBuild.buildToEnvironment.id] = [updatedCommit];
+      }
+      this.buildCommits.next(buildCommitMap);
+    });
+    this.unsubscribe.push(buildCommitSubscription);
+  }
+
+  ngOnDestroy(): void {
+    this.unsubscribe.forEach((s) => s.unsubscribe());
   }
 
   getLatestRepoCommit(environment: LaForgeListEnvironmentsQuery['environments'][0]) {
@@ -234,6 +268,28 @@ export class HomeComponent implements OnInit {
     return true;
   }
 
+  buildIsDestroyable(buildCommitGroup: LaForgeListBuildCommitsQuery['getBuildCommits']): boolean {
+    if (
+      buildCommitGroup.filter((bc) => bc.state === LaForgeBuildCommitState.Inprogress || bc.state === LaForgeBuildCommitState.Planning)
+        .length > 0
+    )
+      return false;
+    return true;
+  }
+
+  toggleDeleteBuildModal(
+    build: LaForgeListBuildCommitsQuery['getBuildCommits'][0]['BuildCommitToBuild'],
+    env: LaForgeListEnvironmentsQuery['environments'][0]
+  ): void {
+    this.dialog.open(DeleteBuildModalComponent, {
+      width: '50%',
+      data: {
+        buildName: `${env.name} v${build.revision}`,
+        buildId: build.id
+      }
+    });
+  }
+
   openGitDialog() {
     this.dialog
       .open(ImportRepoModalComponent, {
@@ -252,12 +308,11 @@ export class HomeComponent implements OnInit {
     this.api.createBuild(environment.id).then(
       (build) => {
         if (build.id) {
-          this.snackbar
-            .open('Build created. Please wait for files to render.', 'Okay', {
-              panelClass: ['bg-success', 'text-white']
-            })
-            .afterDismissed()
-            .subscribe(() => window.location.reload());
+          // this.snackbar.open('Build created. Please wait for files to render.', 'Okay', {
+          //   panelClass: ['bg-success', 'text-white']
+          // });
+          // .afterDismissed()
+          // .subscribe(() => window.location.reload());
         }
       },
       (err) => {
@@ -302,13 +357,12 @@ export class HomeComponent implements OnInit {
     this.api.cancelBuildCommit(buildCommit.id).then(
       (success) => {
         if (success) {
-          this.snackbar
-            .open('Build cancelled.', null, {
-              duration: 1000,
-              panelClass: ['bg-success', 'text-white']
-            })
-            .afterDismissed()
-            .subscribe(() => window.location.reload());
+          this.snackbar.open('Build cancelled.', null, {
+            duration: 1000,
+            panelClass: ['bg-success', 'text-white']
+          });
+          // .afterDismissed()
+          // .subscribe(() => window.location.reload());
         } else {
           this.snackbar.open('Unknown error ocurred. Check server logs.', 'Okay', {
             panelClass: ['bg-danger', 'text-white']

@@ -650,6 +650,19 @@ func (r *mutationResolver) CancelCommit(ctx context.Context, commitUUID string) 
 		}
 	}
 	r.rdb.Publish(ctx, "updatedBuildCommit", commitUUID)
+	entServerTasks, err := entBuildCommit.QueryBuildCommitToServerTask().WithServerTaskToStatus().All(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed querying server tasks from build commit: %v", err)
+	}
+	for _, serverTask := range entServerTasks {
+		if serverTask.Edges.ServerTaskToStatus.State == status.StateINPROGRESS {
+			err := serverTask.Edges.ServerTaskToStatus.Update().SetEndedAt(time.Now()).SetState(status.StateCANCELLED).Exec(ctx)
+			if err != nil {
+				return false, fmt.Errorf("failed to cancel server task(s) associated with build commit: %v", err)
+			}
+			r.rdb.Publish(ctx, "updatedServerTask", serverTask.ID)
+		}
+	}
 	return true, nil
 }
 

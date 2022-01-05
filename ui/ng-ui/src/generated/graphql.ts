@@ -1082,23 +1082,7 @@ export type LaForgeListBuildCommitsQueryVariables = Exact<{
 }>;
 
 export type LaForgeListBuildCommitsQuery = { __typename?: 'Query' } & {
-  getBuildCommits?: Maybe<
-    Array<
-      Maybe<
-        { __typename?: 'BuildCommit' } & Pick<LaForgeBuildCommit, 'id' | 'revision' | 'state' | 'type'> & {
-            BuildCommitToBuild: { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
-                BuildToRepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'author'> & {
-                    RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
-                  };
-                buildToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
-              };
-            BuildCommitToServerTask: Array<
-              Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id' | 'start_time' | 'end_time'>>
-            >;
-          }
-      >
-    >
-  >;
+  getBuildCommits?: Maybe<Array<Maybe<{ __typename?: 'BuildCommit' } & LaForgeBuildCommitFieldsFragment>>>;
 };
 
 export type LaForgeGetBuildCommitQueryVariables = Exact<{
@@ -1397,8 +1381,17 @@ export type LaForgePlanDiffFieldsFragment = { __typename?: 'PlanDiff' } & Pick<L
 
 export type LaForgeBuildCommitFieldsFragment = { __typename?: 'BuildCommit' } & Pick<
   LaForgeBuildCommit,
-  'id' | 'revision' | 'type' | 'state'
-> & { BuildCommitToPlanDiffs: Array<Maybe<{ __typename?: 'PlanDiff' } & LaForgePlanDiffFieldsFragment>> };
+  'id' | 'revision' | 'state' | 'type'
+> & {
+    BuildCommitToBuild: { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
+        BuildToRepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'author'> & {
+            RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
+          };
+        buildToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+        buildToEnvironment: { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id'>;
+      };
+    BuildCommitToServerTask: Array<Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id' | 'start_time' | 'end_time'>>>;
+  };
 
 export type LaForgeAuthUserFieldsFragment = { __typename?: 'AuthUser' } & Pick<
   LaForgeAuthUser,
@@ -1668,13 +1661,34 @@ export const BuildCommitFieldsFragmentDoc = gql`
   fragment BuildCommitFields on BuildCommit {
     id
     revision
-    type
-    state
-    BuildCommitToPlanDiffs {
-      ...PlanDiffFields
+    BuildCommitToBuild {
+      id
+      revision
+      BuildToRepoCommit {
+        id
+        hash
+        author
+        RepoCommitToRepository {
+          id
+          repo_url
+        }
+      }
+      buildToStatus {
+        id
+        state
+      }
+      buildToEnvironment {
+        id
+      }
     }
+    BuildCommitToServerTask {
+      id
+      start_time
+      end_time
+    }
+    state
+    type
   }
-  ${PlanDiffFieldsFragmentDoc}
 `;
 export const AuthUserFieldsFragmentDoc = gql`
   fragment AuthUserFields on AuthUser {
@@ -2177,34 +2191,10 @@ export class LaForgeGetBuildCommitsGQL extends Apollo.Query<LaForgeGetBuildCommi
 export const ListBuildCommitsDocument = gql`
   query ListBuildCommits($envUUID: String!) {
     getBuildCommits(envUUID: $envUUID) {
-      id
-      revision
-      BuildCommitToBuild {
-        id
-        revision
-        BuildToRepoCommit {
-          id
-          hash
-          author
-          RepoCommitToRepository {
-            id
-            repo_url
-          }
-        }
-        buildToStatus {
-          id
-          state
-        }
-      }
-      BuildCommitToServerTask {
-        id
-        start_time
-        end_time
-      }
-      state
-      type
+      ...BuildCommitFields
     }
   }
+  ${BuildCommitFieldsFragmentDoc}
 `;
 
 @Injectable({

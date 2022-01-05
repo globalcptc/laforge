@@ -1,31 +1,6 @@
 query ListBuildCommits($envUUID: String!) {
   getBuildCommits(envUUID: $envUUID) {
-    id
-    revision
-    BuildCommitToBuild {
-      id
-      revision
-      BuildToRepoCommit {
-        id
-        hash
-        author
-        RepoCommitToRepository {
-          id
-          repo_url
-        }
-      }
-      buildToStatus {
-        id
-        state
-      }
-    }
-    BuildCommitToServerTask {
-      id
-      start_time
-      end_time
-    }
-    state
-    type
+    ...BuildCommitFields
   }
 }
 

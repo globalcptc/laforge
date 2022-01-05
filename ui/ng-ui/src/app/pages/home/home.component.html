@@ -92,6 +92,9 @@
           <div class="type">Commit Type</div>
           <div class="type">Controls</div>
         </div>
+        <div *ngIf="!_buildCommits[environment.id]">
+          <i class="fad fa-spinner-third fa-spin"></i>
+        </div>
         <ng-container *ngFor="let buildCommitGroup of groupBuildCommits(_buildCommits[environment.id])">
           <div class="build build-revision">
             <div>
@@ -101,15 +104,25 @@
               </span>
             </div>
             <div>
-              <a
-                *ngIf="buildIsManagable(buildCommitGroup[0].BuildCommitToBuild)"
-                class="btn btn-sm btn-primary"
-                [ngClass]="{ 'btn-icon': showIconsOnly }"
-                [href]="'/manage/' + buildCommitGroup[0].BuildCommitToBuild.id"
-              >
-                <ng-container *ngIf="showIconsOnly"><i class="fa fa-cogs"></i></ng-container>
-                <ng-container *ngIf="!showIconsOnly">Manage</ng-container>
-              </a>
+              <div class="btn-group btn-group-sm" *ngIf="buildIsManagable(buildCommitGroup[0].BuildCommitToBuild)">
+                <a
+                  class="btn btn-sm btn-primary"
+                  [ngClass]="{ 'btn-icon': showIconsOnly }"
+                  [href]="'/manage/' + buildCommitGroup[0].BuildCommitToBuild.id"
+                >
+                  <ng-container *ngIf="showIconsOnly"><i class="fa fa-cogs"></i></ng-container>
+                  <ng-container *ngIf="!showIconsOnly">Manage</ng-container>
+                </a>
+                <button
+                  class="btn btn-sm btn-danger"
+                  [ngClass]="{ 'btn-icon': showIconsOnly }"
+                  (click)="toggleDeleteBuildModal(buildCommitGroup[0].BuildCommitToBuild, environment)"
+                  *ngIf="buildIsDestroyable(buildCommitGroup)"
+                >
+                  <ng-container *ngIf="showIconsOnly"><i class="fa fa-trash"></i></ng-container>
+                  <ng-container *ngIf="!showIconsOnly">Destroy</ng-container>
+                </button>
+              </div>
             </div>
           </div>
           <div class="build" *ngFor="let buildCommit of buildCommitGroup">

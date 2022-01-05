@@ -246,6 +246,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 		}
 		rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 		rdb.Publish(ctx, "updatedBuild", entBuild.ID.String())
+		rdb.Publish(ctx, "updatedBuildCommit", entCommit.ID.String())
 		// entBuild.Update().SetCompletedPlan(true).SaveX(ctx)
 
 		logger.Log.Debug("-----\nWAITING FOR COMMIT REVIEW\n-----")
