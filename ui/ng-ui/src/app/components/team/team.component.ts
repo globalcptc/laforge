@@ -77,10 +77,11 @@ export class TeamComponent implements OnInit, OnDestroy {
 
   allChildrenResponding(): boolean {
     if (this.mode === 'plan') return true;
-    return (
-      this.planStatus.getValue().state === LaForgeProvisionStatus.Complete &&
-      this.provisionStatus.getValue().state === LaForgeProvisionStatus.Complete
-    );
+    return false;
+    // return (
+    //   this.planStatus.getValue().state === LaForgeProvisionStatus.Complete &&
+    //   this.provisionStatus.getValue().state === LaForgeProvisionStatus.Complete
+    // );
   }
 
   getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
