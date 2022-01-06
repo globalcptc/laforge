@@ -13,7 +13,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  color: white;
+  color: black;
 
   .env-container:first-of-type .env {
     border-top-left-radius: 0.25rem;
@@ -42,7 +42,7 @@
       align-items: center;
       justify-content: space-between;
       padding: 1rem 2rem;
-      background-color: $dark-surface-08;
+      background-color: #ffffff;
 
       &:not(.env-header) .name {
         font-size: 1.25rem;
@@ -111,7 +111,7 @@
     }
 
     .env.env-header {
-      color: $dark-text-on-surface-lighter;
+      color: #101010;
     }
 
     .env.env-loading {
@@ -135,7 +135,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        background-color: $dark-surface-04;
+        background-color: #fafafa;
 
         div {
           flex: 1 1 0;
@@ -149,24 +149,29 @@
         div:last-of-type {
           text-align: right;
         }
+
+        div .badge {
+          color: white;
+        }
       }
 
       .build.build-header {
-        color: $dark-text-on-surface-lighter;
+        color: #101010;
       }
 
       .build.build-revision {
         padding: 0.5rem 2rem;
         justify-content: center;
         font-weight: bold;
-        background-color: $dark-surface-02;
+        background-color: #f4f4f4;
 
         .revision {
-          color: $dark-text-on-surface-lightest;
+          color: #101010;
         }
 
         span {
           margin: 0 0.5rem;
+          color: white;
         }
       }
     }

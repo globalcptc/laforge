@@ -83,7 +83,7 @@ export class ViewLogsModalComponent implements OnInit {
   getLevelColor(log) {
     switch (log.level) {
       case 'debug':
-        return 'white';
+        return 'dark';
       case 'info':
         return 'info';
       case 'warning':
@@ -91,7 +91,7 @@ export class ViewLogsModalComponent implements OnInit {
       case 'error':
         return 'danger';
       default:
-        return 'white';
+        return 'dark';
     }
   }
 

@@ -335,4 +335,49 @@ $dark-text-on-error: #000;
     background-color: transparent !important;
     color: white !important;
   }
+
+  .env-list {
+    color: white !important;
+
+    .env {
+      background-color: $dark-surface-08 !important;
+    }
+
+    .env.env-header {
+      color: $dark-text-on-surface-lighter !important;
+    }
+
+    // .env.env-header {
+    //   color: #101010 !important;
+    // }
+
+    .builds {
+      .build {
+        background-color: $dark-surface-04 !important;
+      }
+
+      .build.build-header {
+        color: $dark-text-on-surface-lighter !important;
+      }
+
+      .build.build-revision {
+        background-color: $dark-surface-02 !important;
+
+        .revision {
+          color: $dark-text-on-surface-lightest !important;
+        }
+      }
+    }
+  }
+
+  .logs {
+    background-color: $dark-surface-02 !important;
+    color: white;
+  }
+
+  .tasks {
+    .task {
+      background-color: $dark-surface-02 !important;
+    }
+  }
 }

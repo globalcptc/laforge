@@ -8,7 +8,8 @@
   box-sizing: border-box;
   overflow: scroll;
   overflow: overlay;
-  background-color: $dark-surface-02;
+  background-color: #f4f4f4;
+  color: black;
 }
 
 .tasks {
@@ -25,7 +26,7 @@
     justify-content: space-between;
     padding: 0.5rem;
     box-sizing: border-box;
-    background-color: $dark-surface-02;
+    background-color: #f4f4f4;
 
     div {
       flex: 1 1 0;
@@ -38,6 +39,10 @@
         background: none;
         padding: 0;
         color: $primary;
+      }
+
+      .badge {
+        color: white;
       }
     }
 
