@@ -100,7 +100,7 @@
             <div>
               <span class="revision">Build v{{ buildCommitGroup[0].BuildCommitToBuild.revision }}</span>
               <span class="badge" [ngClass]="'bg-' + getBuildStateColor(buildCommitGroup[0].BuildCommitToBuild.buildToStatus.state)">
-                {{ buildCommitGroup[0].BuildCommitToBuild.buildToStatus.state }}
+                {{ getBuildStateText(buildCommitGroup[0].BuildCommitToBuild.buildToStatus.state) }}
               </span>
             </div>
             <div>

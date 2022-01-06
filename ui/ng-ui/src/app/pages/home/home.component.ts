@@ -178,19 +178,24 @@ export class HomeComponent implements OnInit, OnDestroy {
     switch (state) {
       case LaForgeProvisionStatus.Complete:
         return 'success';
-      case LaForgeProvisionStatus.Cancelled:
-        return 'danger';
-      case LaForgeProvisionStatus.Failed:
-        return 'danger';
-      case LaForgeProvisionStatus.Inprogress:
-        return 'info';
-      case LaForgeProvisionStatus.Planning:
-        return 'primary';
-      case LaForgeProvisionStatus.Deleteinprogress:
-        return 'info';
+      // case LaForgeProvisionStatus.Cancelled:
+      //   return 'danger';
+      // case LaForgeProvisionStatus.Failed:
+      //   return 'danger';
+      // case LaForgeProvisionStatus.Inprogress:
+      //   return 'info';
+      // case LaForgeProvisionStatus.Planning:
+      //   return 'primary';
+      // case LaForgeProvisionStatus.Deleteinprogress:
+      //   return 'info';
       default:
         return 'dark';
     }
+  }
+
+  getBuildStateText(state: string): string {
+    if (state === LaForgeProvisionStatus.Complete) return 'ACTIVE';
+    else return 'INACTIVE';
   }
 
   getBuildCommitHash(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): string {
