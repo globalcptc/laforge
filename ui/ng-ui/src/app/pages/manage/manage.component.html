@@ -13,6 +13,9 @@
         <mat-card-subtitle>{{ _build.buildToEnvironment.description }}</mat-card-subtitle>
       </div>
       <div class="controls">
+        <button mat-icon-button color="primary" aria-label="View the build progress" title="Build Progress" (click)="viewBuildProgress()">
+          <i class="fad fa-eye text-inherit"></i>
+        </button>
         <button
           mat-icon-button
           color="warn"

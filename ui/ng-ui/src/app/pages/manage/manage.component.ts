@@ -145,4 +145,8 @@ export class ManageComponent implements OnInit, OnDestroy {
   canRebuildBuild(): boolean {
     return this.canSelect() && this.rebuild.rootPlans.length > 0;
   }
+
+  viewBuildProgress(): void {
+    this.router.navigate(['build', this.build.getValue().id]);
+  }
 }
