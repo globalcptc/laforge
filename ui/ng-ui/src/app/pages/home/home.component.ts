@@ -94,7 +94,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   getLatestRepoCommit(environment: LaForgeListEnvironmentsQuery['environments'][0]) {
-    return [...environment.EnvironmentToRepository[0].RepositoryToRepoCommit].sort((a, b) => a.revision - b.revision)[0] || undefined;
+    return [...environment.EnvironmentToRepository[0].RepositoryToRepoCommit].sort((a, b) => b.revision - a.revision)[0] || undefined;
   }
 
   getLatestCommitHash(environment: LaForgeListEnvironmentsQuery['environments'][0]): string {
