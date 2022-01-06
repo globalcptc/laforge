@@ -37,15 +37,15 @@
         </div>
         <div class="owner">{{ getLastCommitter(environment) }}</div>
         <div class="team-count">
-          {{ environment.team_count }} Team
+          <span>{{ environment.team_count }} Team</span>
           <span *ngIf="environment.team_count > 1">s</span>
         </div>
         <div class="network-count">
-          {{ environment.EnvironmentToNetwork.length }} Network
+          <span>{{ environment.EnvironmentToNetwork.length }} Network</span>
           <span *ngIf="environment.EnvironmentToNetwork.length > 1">s</span>
         </div>
         <div class="host-count">
-          {{ environment.EnvironmentToHost.length }} Host
+          <span>{{ environment.EnvironmentToHost.length }} Host</span>
           <span *ngIf="environment.EnvironmentToNetwork.length > 1">s</span>
         </div>
         <div class="controls">
