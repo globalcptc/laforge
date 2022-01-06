@@ -1,26 +1,33 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import {
   LaForgeProvisionStatus,
   LaForgeSubscribeUpdatedStatusSubscription,
   LaForgeTeam,
   LaForgePlanFieldsFragment,
-  LaForgeGetBuildCommitQuery
+  LaForgeGetBuildCommitQuery,
+  LaForgeGetBuildTreeQuery
 } from '@graphql';
 import { EnvironmentService } from '@services/environment/environment.service';
 import { StatusService } from '@services/status/status.service';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subscription } from 'rxjs';
 
 import { RebuildService } from '../../services/rebuild/rebuild.service';
 
+// eslint-disable-next-line max-len
+type BuildCommitTeam = LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0];
+// eslint-disable-next-line max-len
+type BuildTreeTeam = LaForgeGetBuildTreeQuery['build']['buildToTeam'][0];
 @Component({
   selector: 'app-team',
   templateUrl: './team.component.html',
-  styleUrls: ['./team.component.scss']
+  styleUrls: ['./team.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TeamComponent implements OnInit, OnDestroy {
+  private unsubscribe: Subscription[] = [];
   @Input() title: string;
   // @Input() team: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0];
-  @Input() team: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0];
+  @Input() team: BuildCommitTeam | BuildTreeTeam;
   // @Input() planStatuses: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
   @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
   // @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
@@ -35,8 +42,14 @@ export class TeamComponent implements OnInit, OnDestroy {
   shouldHide: BehaviorSubject<boolean>;
   latestDiff: LaForgePlanFieldsFragment['PlanToPlanDiffs'][0];
   planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
+  provisionStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
 
-  constructor(private rebuild: RebuildService, private envService: EnvironmentService, private status: StatusService) {
+  constructor(
+    private rebuild: RebuildService,
+    private envService: EnvironmentService,
+    private status: StatusService,
+    private cdRef: ChangeDetectorRef
+  ) {
     if (!this.mode) this.mode = 'manage';
     if (!this.style) this.style = 'compact';
     if (!this.selectable) this.selectable = false;
@@ -49,61 +62,25 @@ export class TeamComponent implements OnInit, OnDestroy {
       if (!this.getPlanDiff()) this.shouldHide.next(true);
     }
     this.planStatus = this.status.getStatusSubject(this.team.TeamToPlan.PlanToStatus.id);
+    const sub1 = this.planStatus.subscribe(() => this.cdRef.markForCheck());
+    this.unsubscribe.push(sub1);
+    if (this.mode !== 'plan') {
+      this.provisionStatus = this.status.getStatusSubject((this.team as BuildTreeTeam).TeamToStatus.id);
+      const sub = this.provisionStatus.subscribe(() => this.cdRef.markForCheck());
+      this.unsubscribe.push(sub);
+    }
   }
 
-  ngOnDestroy() {}
-
-  // checkPlanStatus(): void {
-  // this.planStatus = this.envService.getStatus(this.team.TeamToPlan.PlanToStatus.id) || this.planStatus;
-  // }
-
-  // checkLatestPlanDiff(): void {
-  //   if (this.latestDiff) return;
-  //   const teamPlan = this.envService.getPlan(this.team.TeamToPlan.id);
-  //   if (!teamPlan) return;
-  //   this.latestDiff = [...teamPlan.PlanToPlanDiffs].sort((a, b) => b.revision - a.revision)[0];
-  // }
-
-  // getStatus(): ProvisionStatus {
-  //   // let status: ProvisionStatus = ProvisionStatus.ProvStatusUndefined;
-  //   let numWithAgentData = 0;
-  //   let totalAgents = 0;
-  //   for (const network of this.team.TeamToProvisionedNetwork) {
-  //     for (const host of network.ProvisionedNetworkToProvisionedHost) {
-  //       totalAgents++;
-  //       if (host.ProvisionedHostToAgentStatus?.clientId) numWithAgentData++;
-  //     }
-  //   }
-  //   if (numWithAgentData === totalAgents) return ProvisionStatus.COMPLETE;
-  //   else if (numWithAgentData === 0) return ProvisionStatus.FAILED;
-  //   else return ProvisionStatus.INPROGRESS;
-  // }
+  ngOnDestroy() {
+    this.unsubscribe.forEach((s) => s.unsubscribe());
+  }
 
   allChildrenResponding(): boolean {
     if (this.mode === 'plan') return true;
-    // TODO: Add in build stuff
-    // let numWithAgentData = 0;
-    // let numWithCompletedSteps = 0;
-    // let totalHosts = 0;
-    // for (const pnet of this.team.TeamToProvisionedNetwork) {
-    //   for (const host of pnet.ProvisionedNetworkToProvisionedHost) {
-    //     totalHosts++;
-    //     if (host.ProvisionedHostToAgentStatus?.clientId) numWithAgentData++;
-    //     let totalSteps = 0;
-    //     let totalCompletedSteps = 0;
-    //     for (const step of host.ProvisionedHostToProvisioningStep) {
-    //       if (step.step_number === 0) continue;
-    //       totalSteps++;
-    //       if (
-    //         step.ProvisioningStepToStatus.id &&
-    //         this.envService.getStatus(step.ProvisioningStepToPlan.PlanToStatus.id)?.state === LaForgeProvisionStatus.Complete
-    //       )
-    //         totalCompletedSteps++;
-    //     }
-    //     if (totalSteps === totalCompletedSteps) numWithCompletedSteps++;
-    //   }
-    // }
-    // return numWithAgentData === totalHosts && numWithCompletedSteps === totalHosts;
+    return (
+      this.planStatus.getValue().state === LaForgeProvisionStatus.Complete &&
+      this.provisionStatus.getValue().state === LaForgeProvisionStatus.Complete
+    );
   }
 
   getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
