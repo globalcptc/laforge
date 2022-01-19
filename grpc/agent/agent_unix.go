@@ -1,3 +1,4 @@
+//go:build unix || linux
 // +build unix linux
 
 package main
@@ -15,6 +16,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -173,7 +175,7 @@ func GetNetBanner(portnum int64) (bool, error) { // exists (boolean)
 	return true, nil
 }
 
-func NetHttpContentRegex(full_url string) (string, error) {
+func NetHttpContentRegex(full_url string) (string, error) { // content hash (string)
 	net_resp, err := http.Get(full_url)
 	if err != nil {
 		return "", err
@@ -214,10 +216,11 @@ func FileContentRegex(file_location string) (string, error) { // page content to
 		return "", read_err
 	}
 	file_hash := md5.New()
-	if body_contents, err := io.Copy(file_hash, file_read); err != nil {
+	_, err := io.Copy(file_hash, file_read)
+	if err != nil {
 		log.Fatal(err)
 	}
-	return body_contents, nil
+	return fmt.Sprintf("%x", file_hash.Sum(nil)), nil
 }
 
 func DirectoryExists(directory string) (bool, error) { // exists (boolean)
@@ -266,7 +269,7 @@ func UserGroupMember(user_name string, group_name string) (bool, error) { // is 
 			voice:x:22:
 			cdrom:x:24:piero
 		*/
-		group_line_chunks := strings.Split(string(group_contents), ":")
+		group_line_chunks := strings.Split(groups[i], ":")
 		if group_line_chunks[0] == group_name && len(group_line_chunks) > 3 {
 			// first part of /etc/group entry matches and there are users assigned to the group
 			users_in_group := strings.Split(group_line_chunks[3], ",")
@@ -276,14 +279,14 @@ func UserGroupMember(user_name string, group_name string) (bool, error) { // is 
 				}
 			}
 		}
-		return false, nil
 	}
 	return false, nil
 }
 
 // https://stackoverflow.com/questions/56336168/golang-check-tcp-port-open
 func HostPortOpen(port int64) (bool, error) { // exists (boolean)
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", string(port)), time.Second)
+
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(int(port))), 10*time.Second)
 	if err != nil {
 		return false, err
 	}
@@ -296,7 +299,7 @@ func HostPortOpen(port int64) (bool, error) { // exists (boolean)
 }
 
 func HostProcessRunning(process_name string) (bool, error) { // running (boolean)
-	result := exec.Command("sh", "ps", "-a")
+	result := exec.Command("ps", "-a")
 	ps_output, err := result.Output()
 	if err != nil {
 		return false, err
@@ -310,9 +313,118 @@ func HostProcessRunning(process_name string) (bool, error) { // running (boolean
 	return false, nil
 }
 
+// Adapted from https://stackoverflow.com/questions/48263281/how-to-find-sshd-service-status-in-golang
+func HostServiceState(service_name string) (string, error) {
+	// returned status is one of the following:
+	// active | inactive | enabled | disabled | static | masked | alias | linked
+	// https://www.cyberciti.biz/faq/systemd-systemctl-view-status-of-a-service-on-linux/ lists all possibilities and meanings
+	cmd := exec.Command("systemctl", "check", "sshd") // ASSUMPTION: the computer uses systemd
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
+
+func LinuxAPTInstalled(package_name string) (bool, error) { // installed
+	result := exec.Command("apt", "-qq", "list", package_name)
+	ps_output, err := result.Output()
+	if err != nil {
+		return false, err
+	}
+	apt_lines := strings.Split(string(ps_output), "\n")
+	for i := 0; i < len(apt_lines); i++ {
+		if strings.HasPrefix(apt_lines[i], package_name) && (strings.HasSuffix(apt_lines[i], "[installed]") || strings.HasSuffix(apt_lines[i], "[installed,local]") || strings.HasSuffix(apt_lines[i], "[installed,automatic]")) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func NetTCPOpen(ip string, port int) (bool, error) { // exists (boolean)
+	// net.Dial or net.DialTimeout will succeed if the following succeeds:
+	/*
+	   Client -> Server: SYN
+	   Server -> Client: SYN-ACK
+	   Client -> Server: ACK
+	*/
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, strconv.Itoa(port)), 10*time.Second)
+	if err != nil && !strings.HasSuffix(err.Error(), "connection refused") {
+		return false, err
+	}
+	if conn != nil {
+		defer conn.Close() // no hanging processes
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+func NetUDPOpen(ip string, port int) (bool, error) { // exists (boolean)
+	conn, err := net.DialTimeout("udp", net.JoinHostPort(ip, strconv.Itoa(port)), 10*time.Second)
+	// we don't really know if a udp connection is alive or not, so
+	if err != nil {
+		return false, err
+	}
+	if conn != nil {
+		defer conn.Close() // no hanging processes
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+func NetICMP(ip string) (bool, error) { // responded (boolean)
+	// This WILL block the thread! However, agent tasks are on their own threads.
+	result := exec.Command("ping", "-c", "5", ip) // you can write a ping packet and send it using pure golang, however it's quite complicated and requires more importing of libraries
+	ps_output, err := result.Output()
+	if err != nil {
+		return false, err
+	}
+	fmt.Println(string(ps_output))
+	ps_lines := strings.Split(string(ps_output), "\n")
+	for i := 0; i < len(ps_lines); i++ {
+		if strings.HasPrefix(ps_lines[i], "5 packets transmitted, 5 received") { // this is pretty jank
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func FileContentString(filepath string, text string) (bool, error) { // matches
+	file_contents, read_err := ioutil.ReadFile(filepath)
+	if read_err != nil {
+		return false, read_err
+	}
+	lines := strings.Split(string(file_contents), "\n")
+	for i := 0; i < len(lines); i++ {
+		if strings.Contains(lines[i], text) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// https://stackoverflow.com/questions/45429210/how-do-i-check-a-files-permissions-in-linux-using-go
+func FilePermission(filepath string) (string, error) { // permissions (in the form of SRWXRWXRWX, where S is setuid bit)
+	info, err := os.Stat(filepath)
+	if err != nil {
+		return "", err
+	}
+	return info.Mode().String(), nil
+}
+
 func main() {
-	fmt.Println("wew")
 	// fmt.Println(NetHttpContentRegex("https://vcu.edu"))
-	// fmt.Println(FileExists("/home/piero/most-coding-stuff/laforge/validations"))
-	fmt.Println(FileHash("/home/piero/most-coding-stuff/laforge/validations/test_file.txt"))
+	// fmt.Println(FileExists("/home/piero/most-coding-stuff/laforge/test_file")) // change to dir, won't get tripped up
+	// fmt.Println(FileHash("/home/piero/most-coding-stuff/laforge/test_file.txt"))
+	// fmt.Println(UserGroupMember("piero", "wew"))
+	// fmt.Println(HostPortOpen(8080))
+	// fmt.Println(HostProcessRunning("nginx"))
+	// fmt.Println(HostServiceState("nginx"))
+	// fmt.Println(LinuxAPTInstalled("wget"))
+	// fmt.Println(NetTCPOpen("127.0.0.1", 80)) // test with nginx for ease
+	// fmt.Println(NetICMP("192.168.1.255"))
+	// fmt.Println(FileContentString("/home/piero/most-coding-stuff/laforge/test_file.txt", "hi"))
+	// fmt.Println(FilePermission("/home/piero/most-coding-stuff/laforge/test_file.txt"))
 }
