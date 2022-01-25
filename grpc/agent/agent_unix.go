@@ -4,6 +4,8 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"crypto/md5"
 	"fmt"
 	"io"
@@ -366,12 +368,23 @@ func NetUDPOpen(ip string, port int) (bool, error) { // exists (boolean)
 	if err != nil {
 		return false, err
 	}
-	if conn != nil {
-		defer conn.Close() // no hanging processes
+	recv_chan := make(chan bool)
+	go UDPOpenTest(conn, recv_chan)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	select {
+	case <-recv_chan:
 		return true, nil
-	} else {
+	case <-time.After(10 * time.Second):
+		return false, nil
+	case <-ctx.Done():
 		return false, nil
 	}
+}
+
+func UDPOpenTest(socket net.Conn, return_chan chan bool) {
+	bufio.NewReader(socket).ReadByte()
+	return_chan <- true
 }
 
 func NetICMP(ip string) (bool, error) { // responded (boolean)
@@ -427,4 +440,5 @@ func main() {
 	// fmt.Println(NetICMP("192.168.1.255"))
 	// fmt.Println(FileContentString("/home/piero/most-coding-stuff/laforge/test_file.txt", "hi"))
 	// fmt.Println(FilePermission("/home/piero/most-coding-stuff/laforge/test_file.txt"))
+	fmt.Println(NetUDPOpen("127.0.0.1", 3000))
 }
