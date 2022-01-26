@@ -5,6 +5,7 @@ package p
 // package main // uncomment for testing funcs below
 
 import (
+	"golang.org/x/sys/windows/registry"
 	"crypto/md5"
 	"fmt"
 	"io"
@@ -142,6 +143,20 @@ func GetSystemDependencies() []string {
 
 // Validation functions
 func GetNetBanner(portnum int64) (bool, error) { // exists (boolean)
+	return true, nil
+}
+
+func GetRegistry(path string) (bool, error) { // exists (boolean)
+	registry, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
+	if err != nil {
+		return false, err
+	}
+	defer registry.Close()
+
+	s, _, err := registry.GetStringValue("SystemRoot")
+	if err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
