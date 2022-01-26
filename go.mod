@@ -1,9 +1,8 @@
-module main
+module github.com/gen0cide/laforge
 
 go 1.16
 
 require (
-    github.com/gen0cide/laforge v1.1.10-0.20220126190907-2944a3756314
 	entgo.io/contrib v0.0.0-20210510070807-19d2feb90dc4
 	entgo.io/ent v0.9.1
 	github.com/99designs/gqlgen v0.13.0
