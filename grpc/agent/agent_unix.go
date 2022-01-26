@@ -4,7 +4,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"crypto/md5"
 	"fmt"
@@ -362,14 +361,14 @@ func NetTCPOpen(ip string, port int) (bool, error) { // exists (boolean)
 	}
 }
 
-func NetUDPOpen(ip string, port int) (bool, error) { // exists (boolean)
+func NetUDPOpen(ip string, port int, open_socket_payload string) (bool, error) { // exists (boolean)
 	conn, err := net.DialTimeout("udp", net.JoinHostPort(ip, strconv.Itoa(port)), 10*time.Second)
 	// we don't really know if a udp connection is alive or not, so
 	if err != nil {
 		return false, err
 	}
 	recv_chan := make(chan bool)
-	go UDPOpenTest(conn, recv_chan)
+	go UDPOpenTest(conn, recv_chan, open_socket_payload)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	select {
@@ -382,8 +381,9 @@ func NetUDPOpen(ip string, port int) (bool, error) { // exists (boolean)
 	}
 }
 
-func UDPOpenTest(socket net.Conn, return_chan chan bool) {
-	bufio.NewReader(socket).ReadByte()
+func UDPOpenTest(socket net.Conn, return_chan chan bool, optional_payload string) {
+	socket.Write([]byte(optional_payload))
+	socket.Read([]byte(""))
 	return_chan <- true
 }
 
@@ -440,5 +440,5 @@ func main() {
 	// fmt.Println(NetICMP("192.168.1.255"))
 	// fmt.Println(FileContentString("/home/piero/most-coding-stuff/laforge/test_file.txt", "hi"))
 	// fmt.Println(FilePermission("/home/piero/most-coding-stuff/laforge/test_file.txt"))
-	fmt.Println(NetUDPOpen("127.0.0.1", 3000))
+	fmt.Println(NetUDPOpen("127.0.0.1", 3000, ""))
 }
