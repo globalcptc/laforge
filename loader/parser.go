@@ -1495,3 +1495,8 @@ func validateHostDependencies(ctx context.Context, client *ent.Client, log *logg
 	}
 	return checkedHostDependencies, nil
 }
+
+func validator(ctx context.Context, client *ent.Client, log *logging.Logger, uncheckedHostDependencies []*ent.HostDependency, envHclID string) ([]*ent.HostDependency, error) {
+
+
+}
