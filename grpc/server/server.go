@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	lc "laforge/ent/schema/agenttask"
+
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/command"
@@ -199,8 +201,11 @@ func (s *Server) InformTaskStatus(ctx context.Context, in *pb.TaskStatusRequest)
 		return &pb.TaskStatusReply{Status: "ERROR"}, nil
 	}
 	output := strings.ReplaceAll(in.GetOutput(), "🔥", "\n")
-	// server-side validation hook starting
 	agent_command, err := s.Client.Command.Query().Where(command.IDEQ(uuid)).First(ctx)
+	// server-side validation hook starting
+	if entAgentTask.Command == lc.CommandValidator() {
+		// this payload is a response from an agent related to a validation
+	}
 
 	err = entAgentTask.Update().
 		SetState(agenttask.State(in.GetStatus())).

@@ -30,6 +30,21 @@ func (Validator) Fields() []ent.Field {
 	}
 }
 
+type ValidatorConfigBlock struct {
+	Name        string `json:"name" hcl:"name"`
+	Regex       string `json:"name,omitempty" hcl:"regex,optional"`
+	Ip          string `json:"name,omitempty" hcl:"ip,optional"`
+	Port        int
+	Hostname    string   `json:"name,omitempty" hcl:"hostname,optional"`
+	Nameservers []string `json:"name_servers,omitempty" hcl:"name_servers,optional"`
+	PackageName string   `json:"name,omitempty" hcl:"packagename,optional"`
+	Username    string   `json:"name,omitempty" hcl:"username,optional"`
+	Groupname   string   `json:"name,omitempty" hcl:"groupname,optional"`
+	Filepath    string   `json:"name,omitempty" hcl:"filepath,optional"`
+	ServiceName string   `json:"name,omitempty" hcl:"servicename,optional"`
+	ProcessName string   `json:"process_name,omitempty" hcl:"process_name,optional"`
+}
+
 // Edges of the AgentTask.
 func (Validator) Edges() []ent.Edge {
 	return []ent.Edge{
@@ -47,5 +62,6 @@ func (Validator) Edges() []ent.Edge {
 			Unique(),
 		edge.From("Environment", ProvisioningStep.Type).
 			Unique(),
+		edge.To("Validator", ValidatorBlockType).StructTag(`hcl:"dns,block"`).Unique(),
 	}
 }

@@ -21,6 +21,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv4"
 )
 
 func MD5Sum(content string) string {
@@ -388,20 +391,47 @@ func UDPOpenTest(socket net.Conn, return_chan chan bool, optional_payload string
 }
 
 func NetICMP(ip string) (bool, error) { // responded (boolean)
-	// This WILL block the thread! However, agent tasks are on their own threads.
-	result := exec.Command("ping", "-c", "5", ip) // you can write a ping packet and send it using pure golang, however it's quite complicated and requires more importing of libraries
-	ps_output, err := result.Output()
+	// // This WILL block the thread! However, agent tasks are on their own threads.
+	// result := exec.Command("ping", "-c", "5", ip) // you can write a ping packet and send it using pure golang, however it's quite complicated and requires more importing of libraries
+	// ps_output, err := result.Output()
+	// if err != nil {
+	// 	return false, err
+	// }
+	// fmt.Println(string(ps_output))
+	// ps_lines := strings.Split(string(ps_output), "\n")
+	// for i := 0; i < len(ps_lines); i++ {
+	// 	if strings.HasPrefix(ps_lines[i], "5 packets transmitted, 5 received") { // this is pretty jank
+	// 		return true, nil
+	// 	}
+	// }
+	// return false, nil
+	icmp_conn, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
 	if err != nil {
 		return false, err
 	}
-	fmt.Println(string(ps_output))
-	ps_lines := strings.Split(string(ps_output), "\n")
-	for i := 0; i < len(ps_lines); i++ {
-		if strings.HasPrefix(ps_lines[i], "5 packets transmitted, 5 received") { // this is pretty jank
-			return true, nil
+	defer icmp_conn.Close()
+	raw_icmp_packet := icmp.Message{
+		Type: ipv4.ICMPTypeEcho,
+		Code: 0,
+		Body: &icmp.Echo{
+			ID: os.Getpid() & 0xffff,
+			Seq: 1,
+			Data: []byte("")
 		}
 	}
-	return false, nil
+	icmp_packet, err := raw_icmp_packet.Marshal(nil)
+	if err != nil {
+		return false, err
+	}
+	echo := make([]byte, 1500)
+	err = icmp_conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	if err != nil {
+		return false, err
+	}
+	_, _, err := icmp_conn.ReadFrom(echo)
+	if err != nil {
+		return false, err
+	}
 }
 
 func FileContentString(filepath string, text string) (bool, error) { // matches

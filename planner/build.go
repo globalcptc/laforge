@@ -731,6 +731,24 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 			logger.Log.Errorf("failed Creating Agent Task for File Extract: %v", err)
 			return err
 		}
+	case provisioningstep.TypeValidate:
+		// entFileExtract, err := entStep.QueryProvisioningStepToFileExtract().Only(ctx)
+		// if err != nil {
+		// 	logger.Log.Errorf("failed querying File Extract for Provioning Step: %v", err)
+		// 	return err
+		// }
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATE).
+			SetArgs(entFileExtract.Source + "💔" + entFileExtract.Destination). // args for the validation
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for File Extract: %v", err)
+			return err
+		}
 	case provisioningstep.TypeDNSRecord:
 		break
 	default:

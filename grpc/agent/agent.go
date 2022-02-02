@@ -271,6 +271,7 @@ func RequestTask(c pb.LaforgeClient) {
 			}
 			switch validatorName {
 			case "net-banner":
+				// how to determine to run unix vs windows validation?
 				fmt.Println("hi")
 			case "win-registry-hive":
 				fmt.Println("hi")

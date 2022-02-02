@@ -49,14 +49,16 @@ type fileGlobResolver struct {
 // DefinedConfigs is the stuct to hold in all the loading for hcl
 type DefinedConfigs struct {
 	Filename            string
-	BaseDir             string                       `hcl:"base_dir,optional" json:"base_dir,omitempty"`
-	IncludePaths        []*Include                   `hcl:"include,block" json:"include_paths,omitempty"`
-	DefinedCompetitions []*ent.Competition           `hcl:"competition,block" json:"competitions,omitempty"`
-	DefinedHosts        []*ent.Host                  `hcl:"host,block" json:"hosts,omitempty"`
-	DefinedNetworks     []*ent.Network               `hcl:"network,block" json:"networks,omitempty"`
-	DefinedScripts      []*ent.Script                `hcl:"script,block" json:"scripts,omitempty"`
-	DefinedCommands     []*ent.Command               `hcl:"command,block" json:"defined_commands,omitempty"`
-	DefinedDNSRecords   []*ent.DNSRecord             `hcl:"dns_record,block" json:"defined_dns_records,omitempty"`
+	BaseDir             string             `hcl:"base_dir,optional" json:"base_dir,omitempty"`
+	IncludePaths        []*Include         `hcl:"include,block" json:"include_paths,omitempty"`
+	DefinedCompetitions []*ent.Competition `hcl:"competition,block" json:"competitions,omitempty"`
+	DefinedHosts        []*ent.Host        `hcl:"host,block" json:"hosts,omitempty"`
+	DefinedNetworks     []*ent.Network     `hcl:"network,block" json:"networks,omitempty"`
+	DefinedScripts      []*ent.Script      `hcl:"script,block" json:"scripts,omitempty"`
+	DefinedCommands     []*ent.Command     `hcl:"command,block" json:"defined_commands,omitempty"`
+	DefinedDNSRecords   []*ent.DNSRecord   `hcl:"dns_record,block" json:"defined_dns_records,omitempty"`
+	// specifically for validations
+	DefinedValidations  []*ent.ValidatorConfigBlock  `hcl:"validator,block" json:"defined_validators,omitempty"`
 	DefinedEnvironments []*ent.Environment           `hcl:"environment,block" json:"environments,omitempty"`
 	DefinedFileDownload []*ent.FileDownload          `hcl:"file_download,block" json:"file_download,omitempty"`
 	DefinedFileDelete   []*ent.FileDelete            `hcl:"file_delete,block" json:"file_delete,omitempty"`
@@ -1497,6 +1499,5 @@ func validateHostDependencies(ctx context.Context, client *ent.Client, log *logg
 }
 
 func validator(ctx context.Context, client *ent.Client, log *logging.Logger, uncheckedHostDependencies []*ent.HostDependency, envHclID string) ([]*ent.HostDependency, error) {
-
 
 }
