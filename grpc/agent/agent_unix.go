@@ -414,12 +414,12 @@ func NetICMP(ip string) (bool, error) { // responded (boolean)
 		Type: ipv4.ICMPTypeEcho,
 		Code: 0,
 		Body: &icmp.Echo{
-			ID: os.Getpid() & 0xffff,
-			Seq: 1,
-			Data: []byte("")
-		}
+			ID:   os.Getpid() & 0xffff,
+			Seq:  1,
+			Data: []byte(""),
+		},
 	}
-	icmp_packet, err := raw_icmp_packet.Marshal(nil)
+	_, err = raw_icmp_packet.Marshal(nil)
 	if err != nil {
 		return false, err
 	}
@@ -428,10 +428,14 @@ func NetICMP(ip string) (bool, error) { // responded (boolean)
 	if err != nil {
 		return false, err
 	}
-	_, _, err := icmp_conn.ReadFrom(echo)
+	pkt, _, err := icmp_conn.ReadFrom(echo)
+	if pkt != 0 {
+		return true, nil
+	}
 	if err != nil {
 		return false, err
 	}
+	return false, nil
 }
 
 func FileContentString(filepath string, text string) (bool, error) { // matches
