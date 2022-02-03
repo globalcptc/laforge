@@ -1,11 +1,12 @@
-windows
+// windows
+//go:build windows
 // +build windows
 
-package p
+package main
+
 // package main // uncomment for testing funcs below
 
 import (
-	"golang.org/x/sys/windows/registry"
 	"crypto/md5"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 	s "os"
 	"os/exec"
 	user "os/user"
+
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -146,19 +148,19 @@ func GetNetBanner(portnum int64) (bool, error) { // exists (boolean)
 	return true, nil
 }
 
-func GetRegistry(path string) (bool, error) { // exists (boolean)
-	path, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
-	if err != nil {
-		return false, err
-	}
-	defer path.Close()
+// func GetRegistry(path string) (bool, error) { // exists (boolean)
+// 	path, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
+// 	if err != nil {
+// 		return false, err
+// 	}
+// 	defer path.Close()
 
-	s, _, err := path.GetStringValue("SystemRoot")
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
+// 	s, _, err := path.GetStringValue("SystemRoot")
+// 	if err != nil {
+// 		return false, err
+// 	}
+// 	return true, nil
+// }
 
 func NetHttpContentRegex(full_url string) (string, error) { // content hash (string)
 	net_resp, err := http.Get(full_url)
@@ -231,7 +233,8 @@ func UserExists(user_name string) (bool, error) { // exists (boolean
 }
 
 func UserGroupMember(user_name string, group_name string) (bool, error) { // is in the group or not (boolean)
-	fmt.Println(user.Lookup(user_name))
+	user.Lookup(user_name)
+
 	return false, nil
 }
 
@@ -354,6 +357,10 @@ func FilePermission(filepath string) (string, error) { // permissions (in the fo
 
 func main() {
 	fmt.Println("windows")
-	fmt.Println(UserExists("piero"))
+	fmt.Println(UserGroupMember("asdf", "faafsd"))
+	// fmt.Println(NetICMP("192.168.1.1"))
+	// fmt.Println(FileContentString("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go", "5646548932"))
+	// fmt.Println(UserExists("piero"))
+	// fmt.Println(FilePermission("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go"))
 	// fmt.Println(FileExists("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go"))
 }
