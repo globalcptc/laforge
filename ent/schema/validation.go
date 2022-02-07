@@ -1,0 +1,55 @@
+package schema
+
+import (
+	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+)
+
+// Validation holds the schema definition for the Validation entity.
+type Validation struct {
+	ent.Schema
+}
+
+/*
+  validation {
+    name = "A Validator Name"
+    source = "path/to/validation/file.laforge"
+	type = "regex-content"
+	regex = "/wew/ig"
+  }
+*/
+
+// Fields of the Validation.
+func (Validation) Fields() []ent.Field {
+	return []ent.Field{
+		field.UUID("id", uuid.UUID{}).
+			Default(uuid.New),
+		field.String("hcl_id").
+			StructTag(`hcl:"id,label"`),
+		field.String("validation_type").Default(""),
+		field.String("output").Default(""),
+		field.Enum("state").Values("AWAITING", "INPROGRESS", "FAILED", "COMPLETE"),
+		field.String("error_message").Default(""),
+		field.String("regex").StructTag(`hcl:"regex,optional"`),
+		field.String("ip").StructTag(`hcl:"ip,optional"`),
+		field.Int("port").StructTag(`hcl:"port,optional"`),
+		field.String("hostname").StructTag(`hcl:"hostname,optional"`),
+		field.JSON("nameservers", []string{}).StructTag(`hcl:"nameservers,optional"`),
+		field.String("package_name").StructTag(`hcl:"package_name,optional"`),
+		field.String("username").StructTag(`hcl:"username,optional"`),
+		field.String("group_name").StructTag(`hcl:"group_name,optional"`),
+		field.String("field_path").StructTag(`hcl:"field_path,optional"`),
+		field.String("service_name").StructTag(`hcl:"service_name,optional"`),
+		field.String("process_name").StructTag(`hcl:"process_name,optional"`),
+	}
+}
+
+// Edges of the Validation.
+func (Validation) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("ValidationToAgentTask", AgentTask.Type).Ref("AgentTaskToValidation").Unique(),
+		edge.From("ValidationToScript", Script.Type).Ref("ScriptToValidation"),
+	}
+}
