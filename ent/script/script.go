@@ -45,6 +45,8 @@ const (
 	EdgeScriptToFinding = "ScriptToFinding"
 	// EdgeScriptToEnvironment holds the string denoting the scripttoenvironment edge name in mutations.
 	EdgeScriptToEnvironment = "ScriptToEnvironment"
+	// EdgeScriptToValidation holds the string denoting the scripttovalidation edge name in mutations.
+	EdgeScriptToValidation = "ScriptToValidation"
 	// Table holds the table name of the script in the database.
 	Table = "scripts"
 	// ScriptToUserTable is the table that holds the ScriptToUser relation/edge.
@@ -68,6 +70,13 @@ const (
 	ScriptToEnvironmentInverseTable = "environments"
 	// ScriptToEnvironmentColumn is the table column denoting the ScriptToEnvironment relation/edge.
 	ScriptToEnvironmentColumn = "environment_environment_to_script"
+	// ScriptToValidationTable is the table that holds the ScriptToValidation relation/edge.
+	ScriptToValidationTable = "scripts"
+	// ScriptToValidationInverseTable is the table name for the Validation entity.
+	// It exists in this package in order to avoid circular dependency with the "validation" package.
+	ScriptToValidationInverseTable = "validations"
+	// ScriptToValidationColumn is the table column denoting the ScriptToValidation relation/edge.
+	ScriptToValidationColumn = "script_script_to_validation"
 )
 
 // Columns holds all SQL columns for script fields.
@@ -93,6 +102,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"environment_environment_to_script",
+	"script_script_to_validation",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

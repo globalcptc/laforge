@@ -29,6 +29,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/hcl/v2 v2.10.0
+	github.com/hedwigz/entviz v0.0.0-20211119095041-601c47ba417e // indirect
 	github.com/iamacarpet/go-win64api v0.0.0-20210311141720-fe38760bed28
 	github.com/iancoleman/strcase v0.1.3
 	github.com/jackc/pgproto3/v2 v2.0.7 // indirect

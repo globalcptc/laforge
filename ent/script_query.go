@@ -17,6 +17,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -33,6 +34,7 @@ type ScriptQuery struct {
 	withScriptToUser        *UserQuery
 	withScriptToFinding     *FindingQuery
 	withScriptToEnvironment *EnvironmentQuery
+	withScriptToValidation  *ValidationQuery
 	withFKs                 bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -129,6 +131,28 @@ func (sq *ScriptQuery) QueryScriptToEnvironment() *EnvironmentQuery {
 			sqlgraph.From(script.Table, script.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, script.ScriptToEnvironmentTable, script.ScriptToEnvironmentColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryScriptToValidation chains the current query on the "ScriptToValidation" edge.
+func (sq *ScriptQuery) QueryScriptToValidation() *ValidationQuery {
+	query := &ValidationQuery{config: sq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := sq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := sq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(script.Table, script.FieldID, selector),
+			sqlgraph.To(validation.Table, validation.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, script.ScriptToValidationTable, script.ScriptToValidationColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -320,6 +344,7 @@ func (sq *ScriptQuery) Clone() *ScriptQuery {
 		withScriptToUser:        sq.withScriptToUser.Clone(),
 		withScriptToFinding:     sq.withScriptToFinding.Clone(),
 		withScriptToEnvironment: sq.withScriptToEnvironment.Clone(),
+		withScriptToValidation:  sq.withScriptToValidation.Clone(),
 		// clone intermediate query.
 		sql:  sq.sql.Clone(),
 		path: sq.path,
@@ -356,6 +381,17 @@ func (sq *ScriptQuery) WithScriptToEnvironment(opts ...func(*EnvironmentQuery)) 
 		opt(query)
 	}
 	sq.withScriptToEnvironment = query
+	return sq
+}
+
+// WithScriptToValidation tells the query-builder to eager-load the nodes that are connected to
+// the "ScriptToValidation" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *ScriptQuery) WithScriptToValidation(opts ...func(*ValidationQuery)) *ScriptQuery {
+	query := &ValidationQuery{config: sq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	sq.withScriptToValidation = query
 	return sq
 }
 
@@ -425,13 +461,14 @@ func (sq *ScriptQuery) sqlAll(ctx context.Context) ([]*Script, error) {
 		nodes       = []*Script{}
 		withFKs     = sq.withFKs
 		_spec       = sq.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			sq.withScriptToUser != nil,
 			sq.withScriptToFinding != nil,
 			sq.withScriptToEnvironment != nil,
+			sq.withScriptToValidation != nil,
 		}
 	)
-	if sq.withScriptToEnvironment != nil {
+	if sq.withScriptToEnvironment != nil || sq.withScriptToValidation != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -540,6 +577,35 @@ func (sq *ScriptQuery) sqlAll(ctx context.Context) ([]*Script, error) {
 			}
 			for i := range nodes {
 				nodes[i].Edges.ScriptToEnvironment = n
+			}
+		}
+	}
+
+	if query := sq.withScriptToValidation; query != nil {
+		ids := make([]uuid.UUID, 0, len(nodes))
+		nodeids := make(map[uuid.UUID][]*Script)
+		for i := range nodes {
+			if nodes[i].script_script_to_validation == nil {
+				continue
+			}
+			fk := *nodes[i].script_script_to_validation
+			if _, ok := nodeids[fk]; !ok {
+				ids = append(ids, fk)
+			}
+			nodeids[fk] = append(nodeids[fk], nodes[i])
+		}
+		query.Where(validation.IDIn(ids...))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			nodes, ok := nodeids[n.ID]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "script_script_to_validation" returned %v`, n.ID)
+			}
+			for i := range nodes {
+				nodes[i].Edges.ScriptToValidation = n
 			}
 		}
 	}

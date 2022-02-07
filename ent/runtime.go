@@ -39,6 +39,7 @@ import (
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/gen0cide/laforge/ent/token"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -332,4 +333,22 @@ func init() {
 	userDescID := userFields[0].Descriptor()
 	// user.DefaultID holds the default value on creation for the id field.
 	user.DefaultID = userDescID.Default.(func() uuid.UUID)
+	validationFields := schema.Validation{}.Fields()
+	_ = validationFields
+	// validationDescValidationType is the schema descriptor for validation_type field.
+	validationDescValidationType := validationFields[2].Descriptor()
+	// validation.DefaultValidationType holds the default value on creation for the validation_type field.
+	validation.DefaultValidationType = validationDescValidationType.Default.(string)
+	// validationDescOutput is the schema descriptor for output field.
+	validationDescOutput := validationFields[3].Descriptor()
+	// validation.DefaultOutput holds the default value on creation for the output field.
+	validation.DefaultOutput = validationDescOutput.Default.(string)
+	// validationDescErrorMessage is the schema descriptor for error_message field.
+	validationDescErrorMessage := validationFields[5].Descriptor()
+	// validation.DefaultErrorMessage holds the default value on creation for the error_message field.
+	validation.DefaultErrorMessage = validationDescErrorMessage.Default.(string)
+	// validationDescID is the schema descriptor for id field.
+	validationDescID := validationFields[0].Descriptor()
+	// validation.DefaultID holds the default value on creation for the id field.
+	validation.DefaultID = validationDescID.Default.(func() uuid.UUID)
 }

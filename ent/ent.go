@@ -43,6 +43,7 @@ import (
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/gen0cide/laforge/ent/token"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/gen0cide/laforge/ent/validation"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -98,6 +99,7 @@ func columnChecker(table string) func(string) error {
 		team.Table:               team.ValidColumn,
 		token.Table:              token.ValidColumn,
 		user.Table:               user.ValidColumn,
+		validation.Table:         validation.ValidColumn,
 	}
 	check, ok := checks[table]
 	if !ok {

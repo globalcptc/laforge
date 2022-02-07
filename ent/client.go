@@ -45,6 +45,7 @@ import (
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/gen0cide/laforge/ent/token"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/gen0cide/laforge/ent/validation"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
@@ -126,6 +127,8 @@ type Client struct {
 	Token *TokenClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// Validation is the client for interacting with the Validation builders.
+	Validation *ValidationClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -174,6 +177,7 @@ func (c *Client) init() {
 	c.Team = NewTeamClient(c.config)
 	c.Token = NewTokenClient(c.config)
 	c.User = NewUserClient(c.config)
+	c.Validation = NewValidationClient(c.config)
 }
 
 // Open opens a database/sql.DB specified by the driver name and
@@ -242,6 +246,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Team:               NewTeamClient(cfg),
 		Token:              NewTokenClient(cfg),
 		User:               NewUserClient(cfg),
+		Validation:         NewValidationClient(cfg),
 	}, nil
 }
 
@@ -295,6 +300,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Team:               NewTeamClient(cfg),
 		Token:              NewTokenClient(cfg),
 		User:               NewUserClient(cfg),
+		Validation:         NewValidationClient(cfg),
 	}, nil
 }
 
@@ -359,6 +365,7 @@ func (c *Client) Use(hooks ...Hook) {
 	c.Team.Use(hooks...)
 	c.Token.Use(hooks...)
 	c.User.Use(hooks...)
+	c.Validation.Use(hooks...)
 }
 
 // AdhocPlanClient is a client for the AdhocPlan schema.
@@ -795,6 +802,22 @@ func (c *AgentTaskClient) QueryAgentTaskToAdhocPlan(at *AgentTask) *AdhocPlanQue
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, id),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, agenttask.AgentTaskToAdhocPlanTable, agenttask.AgentTaskToAdhocPlanColumn),
+		)
+		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAgentTaskToValidation queries the AgentTaskToValidation edge of a AgentTask.
+func (c *AgentTaskClient) QueryAgentTaskToValidation(at *AgentTask) *ValidationQuery {
+	query := &ValidationQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := at.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttask.Table, agenttask.FieldID, id),
+			sqlgraph.To(validation.Table, validation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, agenttask.AgentTaskToValidationTable, agenttask.AgentTaskToValidationColumn),
 		)
 		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
 		return fromV, nil
@@ -4870,6 +4893,22 @@ func (c *ScriptClient) QueryScriptToEnvironment(s *Script) *EnvironmentQuery {
 	return query
 }
 
+// QueryScriptToValidation queries the ScriptToValidation edge of a Script.
+func (c *ScriptClient) QueryScriptToValidation(s *Script) *ValidationQuery {
+	query := &ValidationQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := s.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(script.Table, script.FieldID, id),
+			sqlgraph.To(validation.Table, validation.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, script.ScriptToValidationTable, script.ScriptToValidationColumn),
+		)
+		fromV = sqlgraph.Neighbors(s.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ScriptClient) Hooks() []Hook {
 	return c.hooks.Script
@@ -5733,4 +5772,126 @@ func (c *UserClient) QueryUserToEnvironment(u *User) *EnvironmentQuery {
 // Hooks returns the client hooks.
 func (c *UserClient) Hooks() []Hook {
 	return c.hooks.User
+}
+
+// ValidationClient is a client for the Validation schema.
+type ValidationClient struct {
+	config
+}
+
+// NewValidationClient returns a client for the Validation from the given config.
+func NewValidationClient(c config) *ValidationClient {
+	return &ValidationClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `validation.Hooks(f(g(h())))`.
+func (c *ValidationClient) Use(hooks ...Hook) {
+	c.hooks.Validation = append(c.hooks.Validation, hooks...)
+}
+
+// Create returns a create builder for Validation.
+func (c *ValidationClient) Create() *ValidationCreate {
+	mutation := newValidationMutation(c.config, OpCreate)
+	return &ValidationCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Validation entities.
+func (c *ValidationClient) CreateBulk(builders ...*ValidationCreate) *ValidationCreateBulk {
+	return &ValidationCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Validation.
+func (c *ValidationClient) Update() *ValidationUpdate {
+	mutation := newValidationMutation(c.config, OpUpdate)
+	return &ValidationUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ValidationClient) UpdateOne(v *Validation) *ValidationUpdateOne {
+	mutation := newValidationMutation(c.config, OpUpdateOne, withValidation(v))
+	return &ValidationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ValidationClient) UpdateOneID(id uuid.UUID) *ValidationUpdateOne {
+	mutation := newValidationMutation(c.config, OpUpdateOne, withValidationID(id))
+	return &ValidationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Validation.
+func (c *ValidationClient) Delete() *ValidationDelete {
+	mutation := newValidationMutation(c.config, OpDelete)
+	return &ValidationDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *ValidationClient) DeleteOne(v *Validation) *ValidationDeleteOne {
+	return c.DeleteOneID(v.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *ValidationClient) DeleteOneID(id uuid.UUID) *ValidationDeleteOne {
+	builder := c.Delete().Where(validation.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ValidationDeleteOne{builder}
+}
+
+// Query returns a query builder for Validation.
+func (c *ValidationClient) Query() *ValidationQuery {
+	return &ValidationQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Validation entity by its id.
+func (c *ValidationClient) Get(ctx context.Context, id uuid.UUID) (*Validation, error) {
+	return c.Query().Where(validation.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ValidationClient) GetX(ctx context.Context, id uuid.UUID) *Validation {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryValidationToAgentTask queries the ValidationToAgentTask edge of a Validation.
+func (c *ValidationClient) QueryValidationToAgentTask(v *Validation) *AgentTaskQuery {
+	query := &AgentTaskQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := v.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(validation.Table, validation.FieldID, id),
+			sqlgraph.To(agenttask.Table, agenttask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, validation.ValidationToAgentTaskTable, validation.ValidationToAgentTaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(v.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryValidationToScript queries the ValidationToScript edge of a Validation.
+func (c *ValidationClient) QueryValidationToScript(v *Validation) *ScriptQuery {
+	query := &ScriptQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := v.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(validation.Table, validation.FieldID, id),
+			sqlgraph.To(script.Table, script.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, validation.ValidationToScriptTable, validation.ValidationToScriptColumn),
+		)
+		fromV = sqlgraph.Neighbors(v.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ValidationClient) Hooks() []Hook {
+	return c.hooks.Validation
 }

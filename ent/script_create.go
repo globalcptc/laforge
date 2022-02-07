@@ -13,6 +13,7 @@ import (
 	"github.com/gen0cide/laforge/ent/finding"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -160,6 +161,25 @@ func (sc *ScriptCreate) SetNillableScriptToEnvironmentID(id *uuid.UUID) *ScriptC
 // SetScriptToEnvironment sets the "ScriptToEnvironment" edge to the Environment entity.
 func (sc *ScriptCreate) SetScriptToEnvironment(e *Environment) *ScriptCreate {
 	return sc.SetScriptToEnvironmentID(e.ID)
+}
+
+// SetScriptToValidationID sets the "ScriptToValidation" edge to the Validation entity by ID.
+func (sc *ScriptCreate) SetScriptToValidationID(id uuid.UUID) *ScriptCreate {
+	sc.mutation.SetScriptToValidationID(id)
+	return sc
+}
+
+// SetNillableScriptToValidationID sets the "ScriptToValidation" edge to the Validation entity by ID if the given value is not nil.
+func (sc *ScriptCreate) SetNillableScriptToValidationID(id *uuid.UUID) *ScriptCreate {
+	if id != nil {
+		sc = sc.SetScriptToValidationID(*id)
+	}
+	return sc
+}
+
+// SetScriptToValidation sets the "ScriptToValidation" edge to the Validation entity.
+func (sc *ScriptCreate) SetScriptToValidation(v *Validation) *ScriptCreate {
+	return sc.SetScriptToValidationID(v.ID)
 }
 
 // Mutation returns the ScriptMutation object of the builder.
@@ -483,6 +503,26 @@ func (sc *ScriptCreate) createSpec() (*Script, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.environment_environment_to_script = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := sc.mutation.ScriptToValidationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   script.ScriptToValidationTable,
+			Columns: []string{script.ScriptToValidationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.script_script_to_validation = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -1210,6 +1210,34 @@ func HasScriptToEnvironmentWith(preds ...predicate.Environment) predicate.Script
 	})
 }
 
+// HasScriptToValidation applies the HasEdge predicate on the "ScriptToValidation" edge.
+func HasScriptToValidation() predicate.Script {
+	return predicate.Script(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ScriptToValidationTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, ScriptToValidationTable, ScriptToValidationColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasScriptToValidationWith applies the HasEdge predicate on the "ScriptToValidation" edge with a given conditions (other predicates).
+func HasScriptToValidationWith(preds ...predicate.Validation) predicate.Script {
+	return predicate.Script(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ScriptToValidationInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, ScriptToValidationTable, ScriptToValidationColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Script) predicate.Script {
 	return predicate.Script(func(s *sql.Selector) {

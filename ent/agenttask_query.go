@@ -17,6 +17,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -33,6 +34,7 @@ type AgentTaskQuery struct {
 	withAgentTaskToProvisioningStep *ProvisioningStepQuery
 	withAgentTaskToProvisionedHost  *ProvisionedHostQuery
 	withAgentTaskToAdhocPlan        *AdhocPlanQuery
+	withAgentTaskToValidation       *ValidationQuery
 	withFKs                         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -129,6 +131,28 @@ func (atq *AgentTaskQuery) QueryAgentTaskToAdhocPlan() *AdhocPlanQuery {
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, agenttask.AgentTaskToAdhocPlanTable, agenttask.AgentTaskToAdhocPlanColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAgentTaskToValidation chains the current query on the "AgentTaskToValidation" edge.
+func (atq *AgentTaskQuery) QueryAgentTaskToValidation() *ValidationQuery {
+	query := &ValidationQuery{config: atq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := atq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := atq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
+			sqlgraph.To(validation.Table, validation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, agenttask.AgentTaskToValidationTable, agenttask.AgentTaskToValidationColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
 		return fromU, nil
@@ -320,6 +344,7 @@ func (atq *AgentTaskQuery) Clone() *AgentTaskQuery {
 		withAgentTaskToProvisioningStep: atq.withAgentTaskToProvisioningStep.Clone(),
 		withAgentTaskToProvisionedHost:  atq.withAgentTaskToProvisionedHost.Clone(),
 		withAgentTaskToAdhocPlan:        atq.withAgentTaskToAdhocPlan.Clone(),
+		withAgentTaskToValidation:       atq.withAgentTaskToValidation.Clone(),
 		// clone intermediate query.
 		sql:  atq.sql.Clone(),
 		path: atq.path,
@@ -356,6 +381,17 @@ func (atq *AgentTaskQuery) WithAgentTaskToAdhocPlan(opts ...func(*AdhocPlanQuery
 		opt(query)
 	}
 	atq.withAgentTaskToAdhocPlan = query
+	return atq
+}
+
+// WithAgentTaskToValidation tells the query-builder to eager-load the nodes that are connected to
+// the "AgentTaskToValidation" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *AgentTaskQuery) WithAgentTaskToValidation(opts ...func(*ValidationQuery)) *AgentTaskQuery {
+	query := &ValidationQuery{config: atq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	atq.withAgentTaskToValidation = query
 	return atq
 }
 
@@ -425,10 +461,11 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context) ([]*AgentTask, error) {
 		nodes       = []*AgentTask{}
 		withFKs     = atq.withFKs
 		_spec       = atq.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			atq.withAgentTaskToProvisioningStep != nil,
 			atq.withAgentTaskToProvisionedHost != nil,
 			atq.withAgentTaskToAdhocPlan != nil,
+			atq.withAgentTaskToValidation != nil,
 		}
 	)
 	if atq.withAgentTaskToProvisioningStep != nil || atq.withAgentTaskToProvisionedHost != nil {
@@ -541,6 +578,34 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context) ([]*AgentTask, error) {
 				return nil, fmt.Errorf(`unexpected foreign-key "adhoc_plan_adhoc_plan_to_agent_task" returned %v for node %v`, *fk, n.ID)
 			}
 			node.Edges.AgentTaskToAdhocPlan = append(node.Edges.AgentTaskToAdhocPlan, n)
+		}
+	}
+
+	if query := atq.withAgentTaskToValidation; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*AgentTask)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+		}
+		query.withFKs = true
+		query.Where(predicate.Validation(func(s *sql.Selector) {
+			s.Where(sql.InValues(agenttask.AgentTaskToValidationColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.agent_task_agent_task_to_validation
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "agent_task_agent_task_to_validation" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_validation" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.AgentTaskToValidation = n
 		}
 	}
 

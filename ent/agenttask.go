@@ -10,6 +10,7 @@ import (
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -41,6 +42,8 @@ type AgentTask struct {
 	HCLAgentTaskToProvisionedHost *ProvisionedHost `json:"AgentTaskToProvisionedHost,omitempty"`
 	// AgentTaskToAdhocPlan holds the value of the AgentTaskToAdhocPlan edge.
 	HCLAgentTaskToAdhocPlan []*AdhocPlan `json:"AgentTaskToAdhocPlan,omitempty"`
+	// AgentTaskToValidation holds the value of the AgentTaskToValidation edge.
+	HCLAgentTaskToValidation *Validation `json:"AgentTaskToValidation,omitempty"`
 	//
 	agent_task_agent_task_to_provisioning_step *uuid.UUID
 	agent_task_agent_task_to_provisioned_host  *uuid.UUID
@@ -54,9 +57,11 @@ type AgentTaskEdges struct {
 	AgentTaskToProvisionedHost *ProvisionedHost `json:"AgentTaskToProvisionedHost,omitempty"`
 	// AgentTaskToAdhocPlan holds the value of the AgentTaskToAdhocPlan edge.
 	AgentTaskToAdhocPlan []*AdhocPlan `json:"AgentTaskToAdhocPlan,omitempty"`
+	// AgentTaskToValidation holds the value of the AgentTaskToValidation edge.
+	AgentTaskToValidation *Validation `json:"AgentTaskToValidation,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // AgentTaskToProvisioningStepOrErr returns the AgentTaskToProvisioningStep value or an error if the edge
@@ -94,6 +99,20 @@ func (e AgentTaskEdges) AgentTaskToAdhocPlanOrErr() ([]*AdhocPlan, error) {
 		return e.AgentTaskToAdhocPlan, nil
 	}
 	return nil, &NotLoadedError{edge: "AgentTaskToAdhocPlan"}
+}
+
+// AgentTaskToValidationOrErr returns the AgentTaskToValidation value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AgentTaskEdges) AgentTaskToValidationOrErr() (*Validation, error) {
+	if e.loadedTypes[3] {
+		if e.AgentTaskToValidation == nil {
+			// The edge AgentTaskToValidation was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: validation.Label}
+		}
+		return e.AgentTaskToValidation, nil
+	}
+	return nil, &NotLoadedError{edge: "AgentTaskToValidation"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -200,6 +219,11 @@ func (at *AgentTask) QueryAgentTaskToProvisionedHost() *ProvisionedHostQuery {
 // QueryAgentTaskToAdhocPlan queries the "AgentTaskToAdhocPlan" edge of the AgentTask entity.
 func (at *AgentTask) QueryAgentTaskToAdhocPlan() *AdhocPlanQuery {
 	return (&AgentTaskClient{config: at.config}).QueryAgentTaskToAdhocPlan(at)
+}
+
+// QueryAgentTaskToValidation queries the "AgentTaskToValidation" edge of the AgentTask entity.
+func (at *AgentTask) QueryAgentTaskToValidation() *ValidationQuery {
+	return (&AgentTaskClient{config: at.config}).QueryAgentTaskToValidation(at)
 }
 
 // Update returns a builder for updating this AgentTask.

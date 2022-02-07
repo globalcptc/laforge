@@ -49,6 +49,7 @@ import (
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/gen0cide/laforge/ent/token"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 	"github.com/vmihailenco/msgpack/v5"
@@ -8209,5 +8210,232 @@ func (u *User) ToEdge(order *UserOrder) *UserEdge {
 	return &UserEdge{
 		Node:   u,
 		Cursor: order.Field.toCursor(u),
+	}
+}
+
+// ValidationEdge is the edge representation of Validation.
+type ValidationEdge struct {
+	Node   *Validation `json:"node"`
+	Cursor Cursor      `json:"cursor"`
+}
+
+// ValidationConnection is the connection containing edges to Validation.
+type ValidationConnection struct {
+	Edges      []*ValidationEdge `json:"edges"`
+	PageInfo   PageInfo          `json:"pageInfo"`
+	TotalCount int               `json:"totalCount"`
+}
+
+// ValidationPaginateOption enables pagination customization.
+type ValidationPaginateOption func(*validationPager) error
+
+// WithValidationOrder configures pagination ordering.
+func WithValidationOrder(order *ValidationOrder) ValidationPaginateOption {
+	if order == nil {
+		order = DefaultValidationOrder
+	}
+	o := *order
+	return func(pager *validationPager) error {
+		if err := o.Direction.Validate(); err != nil {
+			return err
+		}
+		if o.Field == nil {
+			o.Field = DefaultValidationOrder.Field
+		}
+		pager.order = &o
+		return nil
+	}
+}
+
+// WithValidationFilter configures pagination filter.
+func WithValidationFilter(filter func(*ValidationQuery) (*ValidationQuery, error)) ValidationPaginateOption {
+	return func(pager *validationPager) error {
+		if filter == nil {
+			return errors.New("ValidationQuery filter cannot be nil")
+		}
+		pager.filter = filter
+		return nil
+	}
+}
+
+type validationPager struct {
+	order  *ValidationOrder
+	filter func(*ValidationQuery) (*ValidationQuery, error)
+}
+
+func newValidationPager(opts []ValidationPaginateOption) (*validationPager, error) {
+	pager := &validationPager{}
+	for _, opt := range opts {
+		if err := opt(pager); err != nil {
+			return nil, err
+		}
+	}
+	if pager.order == nil {
+		pager.order = DefaultValidationOrder
+	}
+	return pager, nil
+}
+
+func (p *validationPager) applyFilter(query *ValidationQuery) (*ValidationQuery, error) {
+	if p.filter != nil {
+		return p.filter(query)
+	}
+	return query, nil
+}
+
+func (p *validationPager) toCursor(v *Validation) Cursor {
+	return p.order.Field.toCursor(v)
+}
+
+func (p *validationPager) applyCursors(query *ValidationQuery, after, before *Cursor) *ValidationQuery {
+	for _, predicate := range cursorsToPredicates(
+		p.order.Direction, after, before,
+		p.order.Field.field, DefaultValidationOrder.Field.field,
+	) {
+		query = query.Where(predicate)
+	}
+	return query
+}
+
+func (p *validationPager) applyOrder(query *ValidationQuery, reverse bool) *ValidationQuery {
+	direction := p.order.Direction
+	if reverse {
+		direction = direction.reverse()
+	}
+	query = query.Order(direction.orderFunc(p.order.Field.field))
+	if p.order.Field != DefaultValidationOrder.Field {
+		query = query.Order(direction.orderFunc(DefaultValidationOrder.Field.field))
+	}
+	return query
+}
+
+// Paginate executes the query and returns a relay based cursor connection to Validation.
+func (v *ValidationQuery) Paginate(
+	ctx context.Context, after *Cursor, first *int,
+	before *Cursor, last *int, opts ...ValidationPaginateOption,
+) (*ValidationConnection, error) {
+	if err := validateFirstLast(first, last); err != nil {
+		return nil, err
+	}
+	pager, err := newValidationPager(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if v, err = pager.applyFilter(v); err != nil {
+		return nil, err
+	}
+
+	conn := &ValidationConnection{Edges: []*ValidationEdge{}}
+	if !hasCollectedField(ctx, edgesField) || first != nil && *first == 0 || last != nil && *last == 0 {
+		if hasCollectedField(ctx, totalCountField) ||
+			hasCollectedField(ctx, pageInfoField) {
+			count, err := v.Count(ctx)
+			if err != nil {
+				return nil, err
+			}
+			conn.TotalCount = count
+			conn.PageInfo.HasNextPage = first != nil && count > 0
+			conn.PageInfo.HasPreviousPage = last != nil && count > 0
+		}
+		return conn, nil
+	}
+
+	if (after != nil || first != nil || before != nil || last != nil) && hasCollectedField(ctx, totalCountField) {
+		count, err := v.Clone().Count(ctx)
+		if err != nil {
+			return nil, err
+		}
+		conn.TotalCount = count
+	}
+
+	v = pager.applyCursors(v, after, before)
+	v = pager.applyOrder(v, last != nil)
+	var limit int
+	if first != nil {
+		limit = *first + 1
+	} else if last != nil {
+		limit = *last + 1
+	}
+	if limit > 0 {
+		v = v.Limit(limit)
+	}
+
+	if field := getCollectedField(ctx, edgesField, nodeField); field != nil {
+		v = v.collectField(graphql.GetOperationContext(ctx), *field)
+	}
+
+	nodes, err := v.All(ctx)
+	if err != nil || len(nodes) == 0 {
+		return conn, err
+	}
+
+	if len(nodes) == limit {
+		conn.PageInfo.HasNextPage = first != nil
+		conn.PageInfo.HasPreviousPage = last != nil
+		nodes = nodes[:len(nodes)-1]
+	}
+
+	var nodeAt func(int) *Validation
+	if last != nil {
+		n := len(nodes) - 1
+		nodeAt = func(i int) *Validation {
+			return nodes[n-i]
+		}
+	} else {
+		nodeAt = func(i int) *Validation {
+			return nodes[i]
+		}
+	}
+
+	conn.Edges = make([]*ValidationEdge, len(nodes))
+	for i := range nodes {
+		node := nodeAt(i)
+		conn.Edges[i] = &ValidationEdge{
+			Node:   node,
+			Cursor: pager.toCursor(node),
+		}
+	}
+
+	conn.PageInfo.StartCursor = &conn.Edges[0].Cursor
+	conn.PageInfo.EndCursor = &conn.Edges[len(conn.Edges)-1].Cursor
+	if conn.TotalCount == 0 {
+		conn.TotalCount = len(nodes)
+	}
+
+	return conn, nil
+}
+
+// ValidationOrderField defines the ordering field of Validation.
+type ValidationOrderField struct {
+	field    string
+	toCursor func(*Validation) Cursor
+}
+
+// ValidationOrder defines the ordering of Validation.
+type ValidationOrder struct {
+	Direction OrderDirection        `json:"direction"`
+	Field     *ValidationOrderField `json:"field"`
+}
+
+// DefaultValidationOrder is the default ordering of Validation.
+var DefaultValidationOrder = &ValidationOrder{
+	Direction: OrderDirectionAsc,
+	Field: &ValidationOrderField{
+		field: validation.FieldID,
+		toCursor: func(v *Validation) Cursor {
+			return Cursor{ID: v.ID}
+		},
+	},
+}
+
+// ToEdge converts Validation into ValidationEdge.
+func (v *Validation) ToEdge(order *ValidationOrder) *ValidationEdge {
+	if order == nil {
+		order = DefaultValidationOrder
+	}
+	return &ValidationEdge{
+		Node:   v,
+		Cursor: order.Field.toCursor(v),
 	}
 }

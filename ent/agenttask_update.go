@@ -15,6 +15,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -135,6 +136,25 @@ func (atu *AgentTaskUpdate) AddAgentTaskToAdhocPlan(a ...*AdhocPlan) *AgentTaskU
 	return atu.AddAgentTaskToAdhocPlanIDs(ids...)
 }
 
+// SetAgentTaskToValidationID sets the "AgentTaskToValidation" edge to the Validation entity by ID.
+func (atu *AgentTaskUpdate) SetAgentTaskToValidationID(id uuid.UUID) *AgentTaskUpdate {
+	atu.mutation.SetAgentTaskToValidationID(id)
+	return atu
+}
+
+// SetNillableAgentTaskToValidationID sets the "AgentTaskToValidation" edge to the Validation entity by ID if the given value is not nil.
+func (atu *AgentTaskUpdate) SetNillableAgentTaskToValidationID(id *uuid.UUID) *AgentTaskUpdate {
+	if id != nil {
+		atu = atu.SetAgentTaskToValidationID(*id)
+	}
+	return atu
+}
+
+// SetAgentTaskToValidation sets the "AgentTaskToValidation" edge to the Validation entity.
+func (atu *AgentTaskUpdate) SetAgentTaskToValidation(v *Validation) *AgentTaskUpdate {
+	return atu.SetAgentTaskToValidationID(v.ID)
+}
+
 // Mutation returns the AgentTaskMutation object of the builder.
 func (atu *AgentTaskUpdate) Mutation() *AgentTaskMutation {
 	return atu.mutation
@@ -171,6 +191,12 @@ func (atu *AgentTaskUpdate) RemoveAgentTaskToAdhocPlan(a ...*AdhocPlan) *AgentTa
 		ids[i] = a[i].ID
 	}
 	return atu.RemoveAgentTaskToAdhocPlanIDs(ids...)
+}
+
+// ClearAgentTaskToValidation clears the "AgentTaskToValidation" edge to the Validation entity.
+func (atu *AgentTaskUpdate) ClearAgentTaskToValidation() *AgentTaskUpdate {
+	atu.mutation.ClearAgentTaskToValidation()
+	return atu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -442,6 +468,41 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if atu.mutation.AgentTaskToValidationCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   agenttask.AgentTaskToValidationTable,
+			Columns: []string{agenttask.AgentTaskToValidationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := atu.mutation.AgentTaskToValidationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   agenttask.AgentTaskToValidationTable,
+			Columns: []string{agenttask.AgentTaskToValidationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, atu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{agenttask.Label}
@@ -565,6 +626,25 @@ func (atuo *AgentTaskUpdateOne) AddAgentTaskToAdhocPlan(a ...*AdhocPlan) *AgentT
 	return atuo.AddAgentTaskToAdhocPlanIDs(ids...)
 }
 
+// SetAgentTaskToValidationID sets the "AgentTaskToValidation" edge to the Validation entity by ID.
+func (atuo *AgentTaskUpdateOne) SetAgentTaskToValidationID(id uuid.UUID) *AgentTaskUpdateOne {
+	atuo.mutation.SetAgentTaskToValidationID(id)
+	return atuo
+}
+
+// SetNillableAgentTaskToValidationID sets the "AgentTaskToValidation" edge to the Validation entity by ID if the given value is not nil.
+func (atuo *AgentTaskUpdateOne) SetNillableAgentTaskToValidationID(id *uuid.UUID) *AgentTaskUpdateOne {
+	if id != nil {
+		atuo = atuo.SetAgentTaskToValidationID(*id)
+	}
+	return atuo
+}
+
+// SetAgentTaskToValidation sets the "AgentTaskToValidation" edge to the Validation entity.
+func (atuo *AgentTaskUpdateOne) SetAgentTaskToValidation(v *Validation) *AgentTaskUpdateOne {
+	return atuo.SetAgentTaskToValidationID(v.ID)
+}
+
 // Mutation returns the AgentTaskMutation object of the builder.
 func (atuo *AgentTaskUpdateOne) Mutation() *AgentTaskMutation {
 	return atuo.mutation
@@ -601,6 +681,12 @@ func (atuo *AgentTaskUpdateOne) RemoveAgentTaskToAdhocPlan(a ...*AdhocPlan) *Age
 		ids[i] = a[i].ID
 	}
 	return atuo.RemoveAgentTaskToAdhocPlanIDs(ids...)
+}
+
+// ClearAgentTaskToValidation clears the "AgentTaskToValidation" edge to the Validation entity.
+func (atuo *AgentTaskUpdateOne) ClearAgentTaskToValidation() *AgentTaskUpdateOne {
+	atuo.mutation.ClearAgentTaskToValidation()
+	return atuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -888,6 +974,41 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: adhocplan.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if atuo.mutation.AgentTaskToValidationCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   agenttask.AgentTaskToValidationTable,
+			Columns: []string{agenttask.AgentTaskToValidationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := atuo.mutation.AgentTaskToValidationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   agenttask.AgentTaskToValidationTable,
+			Columns: []string{agenttask.AgentTaskToValidationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
 				},
 			},
 		}

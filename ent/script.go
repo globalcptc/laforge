@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/script"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -57,8 +58,11 @@ type Script struct {
 	HCLScriptToFinding []*Finding `json:"ScriptToFinding,omitempty" hcl:"finding,block"`
 	// ScriptToEnvironment holds the value of the ScriptToEnvironment edge.
 	HCLScriptToEnvironment *Environment `json:"ScriptToEnvironment,omitempty"`
+	// ScriptToValidation holds the value of the ScriptToValidation edge.
+	HCLScriptToValidation *Validation `json:"ScriptToValidation,omitempty" hcl:"validation,block"`
 	//
 	environment_environment_to_script *uuid.UUID
+	script_script_to_validation       *uuid.UUID
 }
 
 // ScriptEdges holds the relations/edges for other nodes in the graph.
@@ -69,9 +73,11 @@ type ScriptEdges struct {
 	ScriptToFinding []*Finding `json:"ScriptToFinding,omitempty" hcl:"finding,block"`
 	// ScriptToEnvironment holds the value of the ScriptToEnvironment edge.
 	ScriptToEnvironment *Environment `json:"ScriptToEnvironment,omitempty"`
+	// ScriptToValidation holds the value of the ScriptToValidation edge.
+	ScriptToValidation *Validation `json:"ScriptToValidation,omitempty" hcl:"validation,block"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // ScriptToUserOrErr returns the ScriptToUser value or an error if the edge
@@ -106,6 +112,20 @@ func (e ScriptEdges) ScriptToEnvironmentOrErr() (*Environment, error) {
 	return nil, &NotLoadedError{edge: "ScriptToEnvironment"}
 }
 
+// ScriptToValidationOrErr returns the ScriptToValidation value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ScriptEdges) ScriptToValidationOrErr() (*Validation, error) {
+	if e.loadedTypes[3] {
+		if e.ScriptToValidation == nil {
+			// The edge ScriptToValidation was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: validation.Label}
+		}
+		return e.ScriptToValidation, nil
+	}
+	return nil, &NotLoadedError{edge: "ScriptToValidation"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Script) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
@@ -122,6 +142,8 @@ func (*Script) scanValues(columns []string) ([]interface{}, error) {
 		case script.FieldID:
 			values[i] = new(uuid.UUID)
 		case script.ForeignKeys[0]: // environment_environment_to_script
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case script.ForeignKeys[1]: // script_script_to_validation
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Script", columns[i])
@@ -241,6 +263,13 @@ func (s *Script) assignValues(columns []string, values []interface{}) error {
 				s.environment_environment_to_script = new(uuid.UUID)
 				*s.environment_environment_to_script = *value.S.(*uuid.UUID)
 			}
+		case script.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field script_script_to_validation", values[i])
+			} else if value.Valid {
+				s.script_script_to_validation = new(uuid.UUID)
+				*s.script_script_to_validation = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
@@ -259,6 +288,11 @@ func (s *Script) QueryScriptToFinding() *FindingQuery {
 // QueryScriptToEnvironment queries the "ScriptToEnvironment" edge of the Script entity.
 func (s *Script) QueryScriptToEnvironment() *EnvironmentQuery {
 	return (&ScriptClient{config: s.config}).QueryScriptToEnvironment(s)
+}
+
+// QueryScriptToValidation queries the "ScriptToValidation" edge of the Script entity.
+func (s *Script) QueryScriptToValidation() *ValidationQuery {
+	return (&ScriptClient{config: s.config}).QueryScriptToValidation(s)
 }
 
 // Update returns a builder for updating this Script.
