@@ -14,6 +14,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -177,6 +178,25 @@ func (su *ScriptUpdate) SetScriptToEnvironment(e *Environment) *ScriptUpdate {
 	return su.SetScriptToEnvironmentID(e.ID)
 }
 
+// SetScriptToValidationID sets the "ScriptToValidation" edge to the Validation entity by ID.
+func (su *ScriptUpdate) SetScriptToValidationID(id uuid.UUID) *ScriptUpdate {
+	su.mutation.SetScriptToValidationID(id)
+	return su
+}
+
+// SetNillableScriptToValidationID sets the "ScriptToValidation" edge to the Validation entity by ID if the given value is not nil.
+func (su *ScriptUpdate) SetNillableScriptToValidationID(id *uuid.UUID) *ScriptUpdate {
+	if id != nil {
+		su = su.SetScriptToValidationID(*id)
+	}
+	return su
+}
+
+// SetScriptToValidation sets the "ScriptToValidation" edge to the Validation entity.
+func (su *ScriptUpdate) SetScriptToValidation(v *Validation) *ScriptUpdate {
+	return su.SetScriptToValidationID(v.ID)
+}
+
 // Mutation returns the ScriptMutation object of the builder.
 func (su *ScriptUpdate) Mutation() *ScriptMutation {
 	return su.mutation
@@ -227,6 +247,12 @@ func (su *ScriptUpdate) RemoveScriptToFinding(f ...*Finding) *ScriptUpdate {
 // ClearScriptToEnvironment clears the "ScriptToEnvironment" edge to the Environment entity.
 func (su *ScriptUpdate) ClearScriptToEnvironment() *ScriptUpdate {
 	su.mutation.ClearScriptToEnvironment()
+	return su
+}
+
+// ClearScriptToValidation clears the "ScriptToValidation" edge to the Validation entity.
+func (su *ScriptUpdate) ClearScriptToValidation() *ScriptUpdate {
+	su.mutation.ClearScriptToValidation()
 	return su
 }
 
@@ -557,6 +583,41 @@ func (su *ScriptUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if su.mutation.ScriptToValidationCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   script.ScriptToValidationTable,
+			Columns: []string{script.ScriptToValidationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := su.mutation.ScriptToValidationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   script.ScriptToValidationTable,
+			Columns: []string{script.ScriptToValidationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, su.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{script.Label}
@@ -723,6 +784,25 @@ func (suo *ScriptUpdateOne) SetScriptToEnvironment(e *Environment) *ScriptUpdate
 	return suo.SetScriptToEnvironmentID(e.ID)
 }
 
+// SetScriptToValidationID sets the "ScriptToValidation" edge to the Validation entity by ID.
+func (suo *ScriptUpdateOne) SetScriptToValidationID(id uuid.UUID) *ScriptUpdateOne {
+	suo.mutation.SetScriptToValidationID(id)
+	return suo
+}
+
+// SetNillableScriptToValidationID sets the "ScriptToValidation" edge to the Validation entity by ID if the given value is not nil.
+func (suo *ScriptUpdateOne) SetNillableScriptToValidationID(id *uuid.UUID) *ScriptUpdateOne {
+	if id != nil {
+		suo = suo.SetScriptToValidationID(*id)
+	}
+	return suo
+}
+
+// SetScriptToValidation sets the "ScriptToValidation" edge to the Validation entity.
+func (suo *ScriptUpdateOne) SetScriptToValidation(v *Validation) *ScriptUpdateOne {
+	return suo.SetScriptToValidationID(v.ID)
+}
+
 // Mutation returns the ScriptMutation object of the builder.
 func (suo *ScriptUpdateOne) Mutation() *ScriptMutation {
 	return suo.mutation
@@ -773,6 +853,12 @@ func (suo *ScriptUpdateOne) RemoveScriptToFinding(f ...*Finding) *ScriptUpdateOn
 // ClearScriptToEnvironment clears the "ScriptToEnvironment" edge to the Environment entity.
 func (suo *ScriptUpdateOne) ClearScriptToEnvironment() *ScriptUpdateOne {
 	suo.mutation.ClearScriptToEnvironment()
+	return suo
+}
+
+// ClearScriptToValidation clears the "ScriptToValidation" edge to the Validation entity.
+func (suo *ScriptUpdateOne) ClearScriptToValidation() *ScriptUpdateOne {
+	suo.mutation.ClearScriptToValidation()
 	return suo
 }
 
@@ -1119,6 +1205,41 @@ func (suo *ScriptUpdateOne) sqlSave(ctx context.Context) (_node *Script, err err
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: environment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if suo.mutation.ScriptToValidationCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   script.ScriptToValidationTable,
+			Columns: []string{script.ScriptToValidationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := suo.mutation.ScriptToValidationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   script.ScriptToValidationTable,
+			Columns: []string{script.ScriptToValidationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
 				},
 			},
 		}

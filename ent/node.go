@@ -44,6 +44,7 @@ import (
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/gen0cide/laforge/ent/token"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
 )
@@ -293,7 +294,7 @@ func (at *AgentTask) Node(ctx context.Context) (node *Node, err error) {
 		ID:     at.ID,
 		Type:   "AgentTask",
 		Fields: make([]*Field, 6),
-		Edges:  make([]*Edge, 3),
+		Edges:  make([]*Edge, 4),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(at.Command); err != nil {
@@ -371,6 +372,16 @@ func (at *AgentTask) Node(ctx context.Context) (node *Node, err error) {
 	err = at.QueryAgentTaskToAdhocPlan().
 		Select(adhocplan.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[3] = &Edge{
+		Type: "Validation",
+		Name: "AgentTaskToValidation",
+	}
+	err = at.QueryAgentTaskToValidation().
+		Select(validation.FieldID).
+		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -2771,7 +2782,7 @@ func (s *Script) Node(ctx context.Context) (node *Node, err error) {
 		ID:     s.ID,
 		Type:   "Script",
 		Fields: make([]*Field, 14),
-		Edges:  make([]*Edge, 3),
+		Edges:  make([]*Edge, 4),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(s.HclID); err != nil {
@@ -2913,6 +2924,16 @@ func (s *Script) Node(ctx context.Context) (node *Node, err error) {
 	err = s.QueryScriptToEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[3] = &Edge{
+		Type: "Validation",
+		Name: "ScriptToValidation",
+	}
+	err = s.QueryScriptToValidation().
+		Select(validation.FieldID).
+		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -3369,6 +3390,165 @@ func (u *User) Node(ctx context.Context) (node *Node, err error) {
 	return node, nil
 }
 
+func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
+	node = &Node{
+		ID:     v.ID,
+		Type:   "Validation",
+		Fields: make([]*Field, 16),
+		Edges:  make([]*Edge, 2),
+	}
+	var buf []byte
+	if buf, err = json.Marshal(v.HclID); err != nil {
+		return nil, err
+	}
+	node.Fields[0] = &Field{
+		Type:  "string",
+		Name:  "hcl_id",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.ValidationType); err != nil {
+		return nil, err
+	}
+	node.Fields[1] = &Field{
+		Type:  "string",
+		Name:  "validation_type",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.Output); err != nil {
+		return nil, err
+	}
+	node.Fields[2] = &Field{
+		Type:  "string",
+		Name:  "output",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.State); err != nil {
+		return nil, err
+	}
+	node.Fields[3] = &Field{
+		Type:  "validation.State",
+		Name:  "state",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.ErrorMessage); err != nil {
+		return nil, err
+	}
+	node.Fields[4] = &Field{
+		Type:  "string",
+		Name:  "error_message",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.Regex); err != nil {
+		return nil, err
+	}
+	node.Fields[5] = &Field{
+		Type:  "string",
+		Name:  "regex",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.IP); err != nil {
+		return nil, err
+	}
+	node.Fields[6] = &Field{
+		Type:  "string",
+		Name:  "ip",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.Port); err != nil {
+		return nil, err
+	}
+	node.Fields[7] = &Field{
+		Type:  "int",
+		Name:  "port",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.Hostname); err != nil {
+		return nil, err
+	}
+	node.Fields[8] = &Field{
+		Type:  "string",
+		Name:  "hostname",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.Nameservers); err != nil {
+		return nil, err
+	}
+	node.Fields[9] = &Field{
+		Type:  "[]string",
+		Name:  "nameservers",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.PackageName); err != nil {
+		return nil, err
+	}
+	node.Fields[10] = &Field{
+		Type:  "string",
+		Name:  "package_name",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.Username); err != nil {
+		return nil, err
+	}
+	node.Fields[11] = &Field{
+		Type:  "string",
+		Name:  "username",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.GroupName); err != nil {
+		return nil, err
+	}
+	node.Fields[12] = &Field{
+		Type:  "string",
+		Name:  "group_name",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.FieldPath); err != nil {
+		return nil, err
+	}
+	node.Fields[13] = &Field{
+		Type:  "string",
+		Name:  "field_path",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.ServiceName); err != nil {
+		return nil, err
+	}
+	node.Fields[14] = &Field{
+		Type:  "string",
+		Name:  "service_name",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.ProcessName); err != nil {
+		return nil, err
+	}
+	node.Fields[15] = &Field{
+		Type:  "string",
+		Name:  "process_name",
+		Value: string(buf),
+	}
+	node.Edges[0] = &Edge{
+		Type: "AgentTask",
+		Name: "ValidationToAgentTask",
+	}
+	err = v.QueryValidationToAgentTask().
+		Select(agenttask.FieldID).
+		Scan(ctx, &node.Edges[0].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[1] = &Edge{
+		Type: "Script",
+		Name: "ValidationToScript",
+	}
+	err = v.QueryValidationToScript().
+		Select(script.FieldID).
+		Scan(ctx, &node.Edges[1].IDs)
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
 func (c *Client) Node(ctx context.Context, id uuid.UUID) (*Node, error) {
 	n, err := c.Noder(ctx, id)
 	if err != nil {
@@ -3746,6 +3926,15 @@ func (c *Client) noder(ctx context.Context, table string, id uuid.UUID) (Noder, 
 		n, err := c.User.Query().
 			Where(user.ID(id)).
 			CollectFields(ctx, "User").
+			Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	case validation.Table:
+		n, err := c.Validation.Query().
+			Where(validation.ID(id)).
+			CollectFields(ctx, "Validation").
 			Only(ctx)
 		if err != nil {
 			return nil, err
@@ -4270,6 +4459,19 @@ func (c *Client) noders(ctx context.Context, table string, ids []uuid.UUID) ([]N
 		nodes, err := c.User.Query().
 			Where(user.IDIn(ids...)).
 			CollectFields(ctx, "User").
+			All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case validation.Table:
+		nodes, err := c.Validation.Query().
+			Where(validation.IDIn(ids...)).
+			CollectFields(ctx, "Validation").
 			All(ctx)
 		if err != nil {
 			return nil, err

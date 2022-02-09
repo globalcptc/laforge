@@ -62,5 +62,6 @@ func (Script) Edges() []ent.Edge {
 		edge.From("ScriptToEnvironment", Environment.Type).
 			Ref("EnvironmentToScript").
 			Unique(),
+		edge.To("ScriptToValidation", Validation.Type).StructTag(`hcl:"validation,block"`).Unique(),
 	}
 }

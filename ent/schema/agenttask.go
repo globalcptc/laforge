@@ -50,5 +50,6 @@ func (AgentTask) Edges() []ent.Edge {
 			Unique(),
 		edge.From("AgentTaskToAdhocPlan", AdhocPlan.Type).
 			Ref("AdhocPlanToAgentTask"),
+		edge.To("AgentTaskToValidation", Validation.Type).Unique(),
 	}
 }

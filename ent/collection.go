@@ -427,3 +427,15 @@ func (u *UserQuery) CollectFields(ctx context.Context, satisfies ...string) *Use
 func (u *UserQuery) collectField(ctx *graphql.OperationContext, field graphql.CollectedField, satisfies ...string) *UserQuery {
 	return u
 }
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (v *ValidationQuery) CollectFields(ctx context.Context, satisfies ...string) *ValidationQuery {
+	if fc := graphql.GetFieldContext(ctx); fc != nil {
+		v = v.collectField(graphql.GetOperationContext(ctx), fc.Field, satisfies...)
+	}
+	return v
+}
+
+func (v *ValidationQuery) collectField(ctx *graphql.OperationContext, field graphql.CollectedField, satisfies ...string) *ValidationQuery {
+	return v
+}

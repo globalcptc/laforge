@@ -13,6 +13,7 @@ import (
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -124,6 +125,25 @@ func (atc *AgentTaskCreate) AddAgentTaskToAdhocPlan(a ...*AdhocPlan) *AgentTaskC
 		ids[i] = a[i].ID
 	}
 	return atc.AddAgentTaskToAdhocPlanIDs(ids...)
+}
+
+// SetAgentTaskToValidationID sets the "AgentTaskToValidation" edge to the Validation entity by ID.
+func (atc *AgentTaskCreate) SetAgentTaskToValidationID(id uuid.UUID) *AgentTaskCreate {
+	atc.mutation.SetAgentTaskToValidationID(id)
+	return atc
+}
+
+// SetNillableAgentTaskToValidationID sets the "AgentTaskToValidation" edge to the Validation entity by ID if the given value is not nil.
+func (atc *AgentTaskCreate) SetNillableAgentTaskToValidationID(id *uuid.UUID) *AgentTaskCreate {
+	if id != nil {
+		atc = atc.SetAgentTaskToValidationID(*id)
+	}
+	return atc
+}
+
+// SetAgentTaskToValidation sets the "AgentTaskToValidation" edge to the Validation entity.
+func (atc *AgentTaskCreate) SetAgentTaskToValidation(v *Validation) *AgentTaskCreate {
+	return atc.SetAgentTaskToValidationID(v.ID)
 }
 
 // Mutation returns the AgentTaskMutation object of the builder.
@@ -375,6 +395,25 @@ func (atc *AgentTaskCreate) createSpec() (*AgentTask, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: adhocplan.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := atc.mutation.AgentTaskToValidationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   agenttask.AgentTaskToValidationTable,
+			Columns: []string{agenttask.AgentTaskToValidationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
 				},
 			},
 		}

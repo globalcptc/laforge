@@ -84,7 +84,7 @@ var (
 	// AgentTasksColumns holds the columns for the "agent_tasks" table.
 	AgentTasksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "command", Type: field.TypeEnum, Enums: []string{"DEFAULT", "DELETE", "REBOOT", "EXTRACT", "DOWNLOAD", "CREATEUSER", "CREATEUSERPASS", "ADDTOGROUP", "EXECUTE", "VALIDATE", "CHANGEPERMS", "APPENDFILE"}},
+		{Name: "command", Type: field.TypeEnum, Enums: []string{"DEFAULT", "DELETE", "REBOOT", "EXTRACT", "DOWNLOAD", "CREATEUSER", "CREATEUSERPASS", "ADDTOGROUP", "EXECUTE", "VALIDATE", "CHANGEPERMS", "APPENDFILE", "VALIDATOR"}},
 		{Name: "args", Type: field.TypeString},
 		{Name: "number", Type: field.TypeInt},
 		{Name: "output", Type: field.TypeString, Default: ""},
@@ -764,7 +764,7 @@ var (
 	// ProvisioningStepsColumns holds the columns for the "provisioning_steps" table.
 	ProvisioningStepsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract"}},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract", "Validate"}},
 		{Name: "step_number", Type: field.TypeInt},
 		{Name: "gin_file_middleware_gin_file_middleware_to_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
@@ -871,6 +871,7 @@ var (
 		{Name: "abs_path", Type: field.TypeString},
 		{Name: "tags", Type: field.TypeJSON},
 		{Name: "environment_environment_to_script", Type: field.TypeUUID, Nullable: true},
+		{Name: "script_script_to_validation", Type: field.TypeUUID, Nullable: true},
 	}
 	// ScriptsTable holds the schema information for the "scripts" table.
 	ScriptsTable = &schema.Table{
@@ -883,6 +884,12 @@ var (
 				Columns:    []*schema.Column{ScriptsColumns[15]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "scripts_validations_ScriptToValidation",
+				Columns:    []*schema.Column{ScriptsColumns[16]},
+				RefColumns: []*schema.Column{ValidationsColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
 		},
 	}
@@ -1117,6 +1124,41 @@ var (
 				Symbol:     "users_scripts_ScriptToUser",
 				Columns:    []*schema.Column{UsersColumns[8]},
 				RefColumns: []*schema.Column{ScriptsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
+	// ValidationsColumns holds the columns for the "validations" table.
+	ValidationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "hcl_id", Type: field.TypeString},
+		{Name: "validation_type", Type: field.TypeString, Default: ""},
+		{Name: "output", Type: field.TypeString, Default: ""},
+		{Name: "state", Type: field.TypeEnum, Enums: []string{"AWAITING", "INPROGRESS", "FAILED", "COMPLETE"}},
+		{Name: "error_message", Type: field.TypeString, Default: ""},
+		{Name: "regex", Type: field.TypeString},
+		{Name: "ip", Type: field.TypeString},
+		{Name: "port", Type: field.TypeInt},
+		{Name: "hostname", Type: field.TypeString},
+		{Name: "nameservers", Type: field.TypeJSON},
+		{Name: "package_name", Type: field.TypeString},
+		{Name: "username", Type: field.TypeString},
+		{Name: "group_name", Type: field.TypeString},
+		{Name: "field_path", Type: field.TypeString},
+		{Name: "service_name", Type: field.TypeString},
+		{Name: "process_name", Type: field.TypeString},
+		{Name: "agent_task_agent_task_to_validation", Type: field.TypeUUID, Unique: true, Nullable: true},
+	}
+	// ValidationsTable holds the schema information for the "validations" table.
+	ValidationsTable = &schema.Table{
+		Name:       "validations",
+		Columns:    ValidationsColumns,
+		PrimaryKey: []*schema.Column{ValidationsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "validations_agent_tasks_AgentTaskToValidation",
+				Columns:    []*schema.Column{ValidationsColumns[17]},
+				RefColumns: []*schema.Column{AgentTasksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -1358,6 +1400,7 @@ var (
 		TeamsTable,
 		TokensTable,
 		UsersTable,
+		ValidationsTable,
 		AdhocPlanNextAdhocPlanTable,
 		CompetitionCompetitionToDNSTable,
 		EnvironmentEnvironmentToUserTable,
@@ -1423,6 +1466,7 @@ func init() {
 	ProvisioningStepsTable.ForeignKeys[7].RefTable = FileDownloadsTable
 	ProvisioningStepsTable.ForeignKeys[8].RefTable = FileExtractsTable
 	ScriptsTable.ForeignKeys[0].RefTable = EnvironmentsTable
+	ScriptsTable.ForeignKeys[1].RefTable = ValidationsTable
 	ServerTasksTable.ForeignKeys[0].RefTable = AuthUsersTable
 	ServerTasksTable.ForeignKeys[1].RefTable = EnvironmentsTable
 	ServerTasksTable.ForeignKeys[2].RefTable = BuildsTable
@@ -1443,6 +1487,7 @@ func init() {
 	UsersTable.ForeignKeys[1].RefTable = FindingsTable
 	UsersTable.ForeignKeys[2].RefTable = HostsTable
 	UsersTable.ForeignKeys[3].RefTable = ScriptsTable
+	ValidationsTable.ForeignKeys[0].RefTable = AgentTasksTable
 	AdhocPlanNextAdhocPlanTable.ForeignKeys[0].RefTable = AdhocPlansTable
 	AdhocPlanNextAdhocPlanTable.ForeignKeys[1].RefTable = AdhocPlansTable
 	CompetitionCompetitionToDNSTable.ForeignKeys[0].RefTable = CompetitionsTable

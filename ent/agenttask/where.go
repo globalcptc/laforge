@@ -709,6 +709,34 @@ func HasAgentTaskToAdhocPlanWith(preds ...predicate.AdhocPlan) predicate.AgentTa
 	})
 }
 
+// HasAgentTaskToValidation applies the HasEdge predicate on the "AgentTaskToValidation" edge.
+func HasAgentTaskToValidation() predicate.AgentTask {
+	return predicate.AgentTask(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(AgentTaskToValidationTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, AgentTaskToValidationTable, AgentTaskToValidationColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAgentTaskToValidationWith applies the HasEdge predicate on the "AgentTaskToValidation" edge with a given conditions (other predicates).
+func HasAgentTaskToValidationWith(preds ...predicate.Validation) predicate.AgentTask {
+	return predicate.AgentTask(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(AgentTaskToValidationInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, AgentTaskToValidationTable, AgentTaskToValidationColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.AgentTask) predicate.AgentTask {
 	return predicate.AgentTask(func(s *sql.Selector) {
