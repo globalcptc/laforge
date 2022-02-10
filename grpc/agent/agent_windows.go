@@ -148,19 +148,20 @@ func GetNetBanner(portnum int64) (bool, error) { // exists (boolean)
 	return true, nil
 }
 
-// func GetRegistry(path string) (bool, error) { // exists (boolean)
-// 	path, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	defer path.Close()
+// https://pkg.go.dev/golang.org/x/sys/windows/registry
+/*func Registry(path string) (string, error) {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer k.Close()
 
-// 	s, _, err := path.GetStringValue("SystemRoot")
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	return true, nil
-// }
+	s, _, err := k.GetStringValue("SystemRoot")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return s, nil
+}*/
 
 func NetHttpContentRegex(full_url string) (string, error) { // content hash (string)
 	net_resp, err := http.Get(full_url)
@@ -232,6 +233,7 @@ func UserExists(user_name string) (bool, error) { // exists (boolean
 	return false, nil
 }
 
+// https://go.dev/src/os/user/lookup_windows.go
 func UserGroupMember(user_name string, group_name string) (bool, error) { // is in the group or not (boolean)
 	user.Lookup(user_name)
 
@@ -255,14 +257,14 @@ func HostPortOpen(port int64) (bool, error) { // exists (boolean)
 }
 
 func HostProcessRunning(process_name string) (bool, error) { // running (boolean)
-	result := exec.Command("ps", "-a")
-	ps_output, err := result.Output()
+	result := exec.Command("tasklist")
+	tasklist_output, err := result.Output()
 	if err != nil {
 		return false, err
 	}
-	ps_lines := strings.Split(string(ps_output), "\n")
-	for i := 0; i < len(ps_lines); i++ {
-		if strings.HasSuffix(ps_lines[i], process_name) {
+	tasklist_lines := strings.Split(string(tasklist_output), "\n")
+	for i := 0; i < len(tasklist_lines); i++ {
+		if strings.Contains(tasklist_lines[i], process_name) {
 			return true, nil
 		}
 	}
@@ -354,10 +356,21 @@ func FilePermission(filepath string) (string, error) { // permissions (in the fo
 	}
 	return info.Mode().String(), nil
 }
-
+func UserDomainGroup(hostname string) (bool, error) {
+	return false, nil
+}
 func main() {
 	fmt.Println("windows")
-	fmt.Println(UserGroupMember("asdf", "faafsd"))
+
+	// fmt.Println(FileHash("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
+	// fmt.Println(FileContentRegex("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
+	// fmt.Println(DirectoryExists("C:\\Users\\Nkdileo\\Documents"))
+	// fmt.Println(UserGroupMember("asdf", "faafsd"))
+	// fmt.Println(UserGroupMember("Nkdileo", "test")) // Not working properly
+	// fmt.Println(HostProcessRunning("grewgegregegegegegegrergre"))
+	// fmt.Println(HostProcessRunning("Discord"))
+	// fmt.Println(NetUDPOpen("10.247.63.254", 8080))
+	// fmt.Println(NetTCPOpen("10.247.63.254", 22))
 	// fmt.Println(NetICMP("192.168.1.1"))
 	// fmt.Println(FileContentString("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go", "5646548932"))
 	// fmt.Println(UserExists("piero"))
