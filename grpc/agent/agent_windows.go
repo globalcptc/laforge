@@ -405,13 +405,39 @@ func UserGroupMember(user_name string, group_name string) (bool, error) { // is 
 	return false, nil
 }
 
+func NetHttpContentHash(full_url string, hashed_url string) (bool, error) { // content hash (string)
+	net_resp, err := http.Get(full_url)
+	if err != nil {
+		return false, err
+	}
+	defer net_resp.Body.Close()
+	page_html, deserialize_err := ioutil.ReadAll(net_resp.Body)
+	if deserialize_err != nil {
+		return false, deserialize_err
+	}
+
+	hashed := md5.Sum([]byte(page_html))
+	hashed_string := fmt.Sprintf("%x", hashed)
+
+	result := strings.EqualFold(hashed_string, hashed_url)
+	if result {
+		return true, nil
+	}
+
+	return false, nil
+
+	// return string(page_html[:]), nil // stringify
+}
+
+
 func main() {
 	fmt.Println("windows")
 	// HostPortOpen("1900")
+	fmt.Println(NetHttpContentHash("https://curtisf.dev/", "c76fdd9a87b2a3c653968b12973c2498"))
 	// fmt.Println(FileHash("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
 	// fmt.Println(FileContentRegex("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
 	// fmt.Println(DirectoryExists("C:\\Users\\Nkdileo\\Documents"))
-	fmt.Println(UserGroupMember("The Power", "Administrators"))
+	// fmt.Println(UserGroupMember("The Power", "Administrators"))
 	// fmt.Println(HostProcessRunning("grewgegregegegegegegrergre"))
 	// fmt.Println(HostProcessRunning("Discord"))
 	// fmt.Println(NetUDPOpen("10.247.63.254", 8080))
