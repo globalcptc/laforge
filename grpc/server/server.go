@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	lc "laforge/ent/schema/agenttask"
-
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/command"
@@ -203,8 +201,84 @@ func (s *Server) InformTaskStatus(ctx context.Context, in *pb.TaskStatusRequest)
 	output := strings.ReplaceAll(in.GetOutput(), "🔥", "\n")
 	agent_command, err := s.Client.Command.Query().Where(command.IDEQ(uuid)).First(ctx)
 	// server-side validation hook starting
-	if entAgentTask.Command == lc.CommandValidator() {
-		// this payload is a response from an agent related to a validation
+	if entAgentTask.Edges.AgentTaskToValidation != nil && entAgentTask.Edges.AgentTaskToValidation.State == "INPROGRESS" {
+		validation_edge := entAgentTask.Edges.AgentTaskToValidation
+		validation_output := strings.ReplaceAll(validation_edge.Output, "🔥", "\n")
+		switch entAgentTask.Edges.AgentTaskToValidation.ValidationType {
+		case "linux-apt-installed":
+			fallthrough
+		case "linux-yum-installed":
+			if validation_output != validation_edge.PackageName {
+				err = validation_edge.Update().
+					SetState("FAILED").
+					SetErrorMessage(validation_edge.ErrorMessage).
+					SetOutput(output).
+					Exec(ctx)
+			} // golang adds break at the end of case
+		case "net-http-content-regex":
+			fallthrough
+		case "file-content-regex":
+			if validation_output != validation_edge.Regex {
+				err = validation_edge.Update().
+					SetState("FAILED").
+					SetErrorMessage(validation_edge.ErrorMessage).
+					SetOutput(output).
+					Exec(ctx)
+			}
+		case "file-hash":
+			if validation_output != validation_edge.Hash {
+				err = validation_edge.Update().
+					SetState("FAILED").
+					SetErrorMessage(validation_edge.ErrorMessage).
+					SetOutput(output).
+					Exec(ctx)
+			}
+		case "host-service-state":
+			if validation_output != validation_edge.ServiceStatus {
+				err = validation_edge.Update().
+					SetState("FAILED").
+					SetErrorMessage(validation_edge.ErrorMessage).
+					SetOutput(output).
+					Exec(ctx)
+			}
+		case "file-content-string":
+			fallthrough // file-content-string sends the expected string to the client to avoid sending back a whole file
+		case "net-icmp":
+			fallthrough
+		case "net-tcp-open":
+			fallthrough
+		case "net-udp-open":
+			fallthrough
+		case "file-exists":
+			fallthrough
+		case "dir-exists":
+			fallthrough
+		case "user-exists":
+			fallthrough
+		case "user-group-membership":
+			fallthrough
+		case "host-port-open":
+			fallthrough
+		case "host-process-running":
+			if validation_output != "true" { // validation_output is a stringified boolean representing success
+				err = validation_edge.Update().
+					SetState("FAILED").
+					SetErrorMessage(validation_edge.ErrorMessage).
+					SetOutput(output).
+					Exec(ctx)
+			}
+		default:
+			err = validation_edge.Update().
+				SetState("COMPLETE").
+				SetErrorMessage(validation_edge.ErrorMessage).
+				SetOutput(validation_edge.Output).
+				Exec(ctx)
+		}
+
+		if err != nil {
+			logrus.Errorf("GRPC SERVER ERROR: failed Updating validation %v: %v", entAgentTask.Edges.AgentTaskToValidation.ID, err)
+			return &pb.TaskStatusReply{Status: "ERROR"}, nil // send error because validation failed
+		}
 	}
 
 	err = entAgentTask.Update().

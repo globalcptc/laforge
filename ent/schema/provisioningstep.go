@@ -26,7 +26,6 @@ func (ProvisioningStep) Fields() []ent.Field {
 				"FileDelete",
 				"FileDownload",
 				"FileExtract",
-				"Validate",
 			),
 		field.Int("step_number"),
 	}

@@ -32,6 +32,7 @@ func (Validation) Fields() []ent.Field {
 		field.String("output").Default(""),
 		field.Enum("state").Values("AWAITING", "INPROGRESS", "FAILED", "COMPLETE"),
 		field.String("error_message").Default(""),
+		field.String("hash").StructTag(`hcl:"hash,optional"`),
 		field.String("regex").StructTag(`hcl:"regex,optional"`),
 		field.String("ip").StructTag(`hcl:"ip,optional"`),
 		field.Int("port").StructTag(`hcl:"port,optional"`),
@@ -40,8 +41,10 @@ func (Validation) Fields() []ent.Field {
 		field.String("package_name").StructTag(`hcl:"package_name,optional"`),
 		field.String("username").StructTag(`hcl:"username,optional"`),
 		field.String("group_name").StructTag(`hcl:"group_name,optional"`),
-		field.String("field_path").StructTag(`hcl:"field_path,optional"`),
+		field.String("file_path").StructTag(`hcl:"file_path,optional"`),
+		field.String("search_string").StructTag(`hcl:"search_string,optional"`),
 		field.String("service_name").StructTag(`hcl:"service_name,optional"`),
+		field.String("service_status").StructTag(`hcl:"service_status,optional"`),
 		field.String("process_name").StructTag(`hcl:"process_name,optional"`),
 	}
 }
