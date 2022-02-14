@@ -355,9 +355,26 @@ func FilePermission(filepath string) (string, error) { // permissions (in the fo
 	return info.Mode().String(), nil
 }
 
+func CheckOpenPort(port string){
+	l, err := net.Listen("tcp", ":" + port)
+	if err != nil {
+		fmt.Println("Can't listen to port: %s\n", err)
+	}
+
+	err = l.Close()
+	if err != nil {
+		fmt.Println("Can't stop listening on port: %s\n", err)
+	}
+
+	fmt.Println(l)
+	// return l, err
+}
+
 func main() {
 	fmt.Println("windows")
-	fmt.Println(UserGroupMember("asdf", "faafsd"))
+	// fmt.Println(UserGroupMember("asdf", "faafsd"))
+	CheckOpenPort("1900")
+	// fmt.Println(CheckOpenPort("135"))
 	// fmt.Println(NetICMP("192.168.1.1"))
 	// fmt.Println(FileContentString("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go", "5646548932"))
 	// fmt.Println(UserExists("piero"))
