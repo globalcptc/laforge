@@ -1498,6 +1498,73 @@ func validateHostDependencies(ctx context.Context, client *ent.Client, log *logg
 	return checkedHostDependencies, nil
 }
 
-func validator(ctx context.Context, client *ent.Client, log *logging.Logger, uncheckedHostDependencies []*ent.HostDependency, envHclID string) ([]*ent.HostDependency, error) {
-
+func createValidations(ctx context.Context, client *ent.Client, log *logging.Logger, configValidations []*ent.Validation, envHclID string) ([]*ent.Validation, error) {
+	bulk := []*ent.ValidationCreate{}
+	returnedValidations := []*ent.Validation{}
+	for _, cValidation := range configValidations {
+		entValidation, err := client.Validation.
+			Query().
+			Where(
+				validation.And(
+					validation.HclIDEQ(cValidation.HclID),
+					validation.HasValidationToEnvironmentWith(environment.HclIDEQ(envHclID)),
+				),
+			).
+			Only(ctx)
+		if err != nil {
+			if err == err.(*ent.NotFoundError) {
+				createdQuery := client.Validation.Create().
+					SetHclID(cValidation.HclID).
+					SetValidationType(cValidation.ValidationType).
+					SetOutput(cValidation.Output).
+					SetState(cValidation.StateSetState).
+					SetErrorMessage(cValidation.ErrorMessage).
+					SetRegex(cValidation.Regex).
+					SetIP(cValidation.IP).
+					SetPort(cValidation.Port).
+					SetHostname(cValidation.Hostname).
+					SetNameservers(cValidation.Nameservers).
+					SetPackagename(cValidation.PackageName).
+					SetUsername(cValidation.Username).
+					SetGroupName(cValidation.GroupName.)
+					SetFieldPath(cValidation.FieldPath).
+					SetServicename(cValidation.ServiceName).
+					SetProcessName(cValidation.ProcessName).
+				bulk = append(bulk, createdQuery)
+				continue
+			}
+		}
+		entValidation, err = entValidation.Update().
+			SetHclID(cValidation.HclID).
+			SetValidationType(cValidation.ValidationType).
+			SetOutput(cValidation.Output).
+			SetState(cValidation.StateSetState).
+			SetErrorMessage(cValidation.ErrorMessage).
+			SetRegex(cValidation.Regex).
+			SetIP(cValidation.IP).
+			SetPort(cValidation.Port).
+			SetHostname(cValidation.Hostname).
+			SetNameservers(cValidation.Nameservers).
+			SetPackagename(cValidation.PackageName).
+			SetUsername(cValidation.Username).
+			SetGroupName(cValidation.GroupName.)
+			SetFieldPath(cValidation.FieldPath).
+			SetServicename(cValidation.ServiceName).
+			SetProcessName(cValidation.ProcessName).
+			Save(ctx)
+		if err != nil {
+			log.Log.Errorf("Failed to Update Validation %v. Err: %v", cValidation.HclID, err)
+			return nil, err
+		}
+		returnedValidations = append(returnedValidations, entValidation)
+	}
+	if len(bulk) > 0 {
+		dbValidations, err := client.Validation.CreateBulk(bulk...).Save(ctx)
+		if err != nil {
+			log.Log.Errorf("Failed to create bulk Validations. Err: %v", err)
+			return nil, err
+		}
+		returnedValidations = append(returnedValidations, dbValidations...)
+	}
+	return returnedValidations, nil
 }
