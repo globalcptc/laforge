@@ -148,19 +148,20 @@ func GetNetBanner(portnum int64) (bool, error) { // exists (boolean)
 	return true, nil
 }
 
-// func GetRegistry(path string) (bool, error) { // exists (boolean)
-// 	path, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	defer path.Close()
+// https://pkg.go.dev/golang.org/x/sys/windows/registry
+/*func Registry(path string) (string, error) {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer k.Close()
 
-// 	s, _, err := path.GetStringValue("SystemRoot")
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	return true, nil
-// }
+	s, _, err := k.GetStringValue("SystemRoot")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return s, nil
+}*/
 
 func NetHttpContentRegex(full_url string) (string, error) { // content hash (string)
 	net_resp, err := http.Get(full_url)
@@ -232,12 +233,6 @@ func UserExists(user_name string) (bool, error) { // exists (boolean
 	return false, nil
 }
 
-func UserGroupMember(user_name string, group_name string) (bool, error) { // is in the group or not (boolean)
-	user.Lookup(user_name)
-
-	return false, nil
-}
-
 // https://stackoverflow.com/questions/56336168/golang-check-tcp-port-open
 // https://stackoverflow.com/questions/56336168/golang-check-tcp-port-open
 func HostPortOpen(port int64) (bool, error) { // exists (boolean)
@@ -255,14 +250,14 @@ func HostPortOpen(port int64) (bool, error) { // exists (boolean)
 }
 
 func HostProcessRunning(process_name string) (bool, error) { // running (boolean)
-	result := exec.Command("ps", "-a")
-	ps_output, err := result.Output()
+	result := exec.Command("tasklist")
+	tasklist_output, err := result.Output()
 	if err != nil {
 		return false, err
 	}
-	ps_lines := strings.Split(string(ps_output), "\n")
-	for i := 0; i < len(ps_lines); i++ {
-		if strings.HasSuffix(ps_lines[i], process_name) {
+	tasklist_lines := strings.Split(string(tasklist_output), "\n")
+	for i := 0; i < len(tasklist_lines); i++ {
+		if strings.Contains(tasklist_lines[i], process_name) {
 			return true, nil
 		}
 	}
@@ -355,9 +350,98 @@ func FilePermission(filepath string) (string, error) { // permissions (in the fo
 	return info.Mode().String(), nil
 }
 
+// func HostPortOpen(port string){
+// 	l, err := net.Listen("tcp", ":" + port)
+// 	if err != nil {
+// 		fmt.Println("Can't listen to port: %s\n", err)
+// 	}
+
+// 	err = l.Close()
+// 	if err != nil {
+// 		fmt.Println("Can't stop listening on port: %s\n", err)
+// 	}
+
+// 	fmt.Println(l)
+// 	// return l, err
+// }
+
+
+// https://go.dev/src/os/user/lookup_windows.go
+// https://cs.opensource.google/go/go/+/refs/tags/go1.17.7:src/os/user/lookup.go
+func UserGroupMember(user_name string, group_name string) (bool, error) { // is in the group or not (boolean)
+	// fmt.Println(os.Hostname())
+
+	//returns Uid, Gid, Username, Name and HomeDir
+	u, err := user.Lookup(user_name)
+	if err != nil {
+		fmt.Println("This sucks: %s\n", err)
+		return false, err
+	}
+	// fmt.Println("User information: ",u)
+
+	// returns string array of Gids of specific user
+	userGroups, err := u.GroupIds()
+	if err != nil {
+		fmt.Println("This sucks more: %s\n", err)
+		return false, nil
+	}
+	// fmt.Println("UserGroups:\t",userGroups)
+
+	//returns Gid and Name
+	group, err := user.LookupGroup(group_name)
+	if err != nil {
+		fmt.Println("This sucks even more: %s\n", err)
+		return false, nil
+	}
+	// fmt.Println(group)
+
+	for i := range userGroups {
+		if group.Gid == userGroups[i] {
+			// Found a Gid that matches Gid of group_name
+			return true, nil 
+		}
+	}
+
+	return false, nil
+}
+
+func NetHttpContentHash(full_url string, hashed_url string) (bool, error) { // content hash (string)
+	net_resp, err := http.Get(full_url)
+	if err != nil {
+		return false, err
+	}
+	defer net_resp.Body.Close()
+	page_html, deserialize_err := ioutil.ReadAll(net_resp.Body)
+	if deserialize_err != nil {
+		return false, deserialize_err
+	}
+
+	hashed := md5.Sum([]byte(page_html))
+	hashed_string := fmt.Sprintf("%x", hashed)
+
+	result := strings.EqualFold(hashed_string, hashed_url)
+	if result {
+		return true, nil
+	}
+
+	return false, nil
+
+	// return string(page_html[:]), nil // stringify
+}
+
+
 func main() {
 	fmt.Println("windows")
-	fmt.Println(UserGroupMember("asdf", "faafsd"))
+	// HostPortOpen("1900")
+	fmt.Println(NetHttpContentHash("https://curtisf.dev/", "c76fdd9a87b2a3c653968b12973c2498"))
+	// fmt.Println(FileHash("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
+	// fmt.Println(FileContentRegex("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
+	// fmt.Println(DirectoryExists("C:\\Users\\Nkdileo\\Documents"))
+	// fmt.Println(UserGroupMember("The Power", "Administrators"))
+	// fmt.Println(HostProcessRunning("grewgegregegegegegegrergre"))
+	// fmt.Println(HostProcessRunning("Discord"))
+	// fmt.Println(NetUDPOpen("10.247.63.254", 8080))
+	// fmt.Println(NetTCPOpen("10.247.63.254", 22))
 	// fmt.Println(NetICMP("192.168.1.1"))
 	// fmt.Println(FileContentString("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go", "5646548932"))
 	// fmt.Println(UserExists("piero"))
