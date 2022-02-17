@@ -3,3 +3,9 @@ query GetAgentTasks($proStepId: String!) {
     ...AgentTaskFields
   }
 }
+
+query ListAgentStatuses($buildUUID: String!) {
+  listAgentStatuses(buildUUID: $buildUUID) {
+    ...AgentStatusFields
+  }
+}

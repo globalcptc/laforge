@@ -27,6 +27,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
@@ -377,6 +378,21 @@ func (eu *EnvironmentUpdate) AddEnvironmentToRepository(r ...*Repository) *Envir
 		ids[i] = r[i].ID
 	}
 	return eu.AddEnvironmentToRepositoryIDs(ids...)
+}
+
+// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
+func (eu *EnvironmentUpdate) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddEnvironmentToServerTaskIDs(ids...)
+	return eu
+}
+
+// AddEnvironmentToServerTask adds the "EnvironmentToServerTask" edges to the ServerTask entity.
+func (eu *EnvironmentUpdate) AddEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return eu.AddEnvironmentToServerTaskIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -739,6 +755,27 @@ func (eu *EnvironmentUpdate) RemoveEnvironmentToRepository(r ...*Repository) *En
 		ids[i] = r[i].ID
 	}
 	return eu.RemoveEnvironmentToRepositoryIDs(ids...)
+}
+
+// ClearEnvironmentToServerTask clears all "EnvironmentToServerTask" edges to the ServerTask entity.
+func (eu *EnvironmentUpdate) ClearEnvironmentToServerTask() *EnvironmentUpdate {
+	eu.mutation.ClearEnvironmentToServerTask()
+	return eu
+}
+
+// RemoveEnvironmentToServerTaskIDs removes the "EnvironmentToServerTask" edge to ServerTask entities by IDs.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveEnvironmentToServerTaskIDs(ids...)
+	return eu
+}
+
+// RemoveEnvironmentToServerTask removes "EnvironmentToServerTask" edges to ServerTask entities.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return eu.RemoveEnvironmentToServerTaskIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1822,6 +1859,60 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if eu.mutation.EnvironmentToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedEnvironmentToServerTaskIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.EnvironmentToServerTaskIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, eu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{environment.Label}
@@ -2174,6 +2265,21 @@ func (euo *EnvironmentUpdateOne) AddEnvironmentToRepository(r ...*Repository) *E
 		ids[i] = r[i].ID
 	}
 	return euo.AddEnvironmentToRepositoryIDs(ids...)
+}
+
+// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddEnvironmentToServerTaskIDs(ids...)
+	return euo
+}
+
+// AddEnvironmentToServerTask adds the "EnvironmentToServerTask" edges to the ServerTask entity.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return euo.AddEnvironmentToServerTaskIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -2536,6 +2642,27 @@ func (euo *EnvironmentUpdateOne) RemoveEnvironmentToRepository(r ...*Repository)
 		ids[i] = r[i].ID
 	}
 	return euo.RemoveEnvironmentToRepositoryIDs(ids...)
+}
+
+// ClearEnvironmentToServerTask clears all "EnvironmentToServerTask" edges to the ServerTask entity.
+func (euo *EnvironmentUpdateOne) ClearEnvironmentToServerTask() *EnvironmentUpdateOne {
+	euo.mutation.ClearEnvironmentToServerTask()
+	return euo
+}
+
+// RemoveEnvironmentToServerTaskIDs removes the "EnvironmentToServerTask" edge to ServerTask entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveEnvironmentToServerTaskIDs(ids...)
+	return euo
+}
+
+// RemoveEnvironmentToServerTask removes "EnvironmentToServerTask" edges to ServerTask entities.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return euo.RemoveEnvironmentToServerTaskIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -3635,6 +3762,60 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: repository.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.EnvironmentToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedEnvironmentToServerTaskIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.EnvironmentToServerTaskIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
 				},
 			},
 		}

@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
+	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
 	"github.com/gen0cide/laforge/ent/predicate"
@@ -36,6 +37,7 @@ type ServerTaskQuery struct {
 	withServerTaskToStatus            *StatusQuery
 	withServerTaskToEnvironment       *EnvironmentQuery
 	withServerTaskToBuild             *BuildQuery
+	withServerTaskToBuildCommit       *BuildCommitQuery
 	withServerTaskToGinFileMiddleware *GinFileMiddlewareQuery
 	withFKs                           bool
 	// intermediate query (i.e. traversal path).
@@ -155,6 +157,28 @@ func (stq *ServerTaskQuery) QueryServerTaskToBuild() *BuildQuery {
 			sqlgraph.From(servertask.Table, servertask.FieldID, selector),
 			sqlgraph.To(build.Table, build.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToBuildTable, servertask.ServerTaskToBuildColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(stq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryServerTaskToBuildCommit chains the current query on the "ServerTaskToBuildCommit" edge.
+func (stq *ServerTaskQuery) QueryServerTaskToBuildCommit() *BuildCommitQuery {
+	query := &BuildCommitQuery{config: stq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := stq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := stq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(servertask.Table, servertask.FieldID, selector),
+			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToBuildCommitTable, servertask.ServerTaskToBuildCommitColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(stq.driver.Dialect(), step)
 		return fromU, nil
@@ -369,6 +393,7 @@ func (stq *ServerTaskQuery) Clone() *ServerTaskQuery {
 		withServerTaskToStatus:            stq.withServerTaskToStatus.Clone(),
 		withServerTaskToEnvironment:       stq.withServerTaskToEnvironment.Clone(),
 		withServerTaskToBuild:             stq.withServerTaskToBuild.Clone(),
+		withServerTaskToBuildCommit:       stq.withServerTaskToBuildCommit.Clone(),
 		withServerTaskToGinFileMiddleware: stq.withServerTaskToGinFileMiddleware.Clone(),
 		// clone intermediate query.
 		sql:  stq.sql.Clone(),
@@ -417,6 +442,17 @@ func (stq *ServerTaskQuery) WithServerTaskToBuild(opts ...func(*BuildQuery)) *Se
 		opt(query)
 	}
 	stq.withServerTaskToBuild = query
+	return stq
+}
+
+// WithServerTaskToBuildCommit tells the query-builder to eager-load the nodes that are connected to
+// the "ServerTaskToBuildCommit" edge. The optional arguments are used to configure the query builder of the edge.
+func (stq *ServerTaskQuery) WithServerTaskToBuildCommit(opts ...func(*BuildCommitQuery)) *ServerTaskQuery {
+	query := &BuildCommitQuery{config: stq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	stq.withServerTaskToBuildCommit = query
 	return stq
 }
 
@@ -497,15 +533,16 @@ func (stq *ServerTaskQuery) sqlAll(ctx context.Context) ([]*ServerTask, error) {
 		nodes       = []*ServerTask{}
 		withFKs     = stq.withFKs
 		_spec       = stq.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [6]bool{
 			stq.withServerTaskToAuthUser != nil,
 			stq.withServerTaskToStatus != nil,
 			stq.withServerTaskToEnvironment != nil,
 			stq.withServerTaskToBuild != nil,
+			stq.withServerTaskToBuildCommit != nil,
 			stq.withServerTaskToGinFileMiddleware != nil,
 		}
 	)
-	if stq.withServerTaskToAuthUser != nil || stq.withServerTaskToEnvironment != nil || stq.withServerTaskToBuild != nil {
+	if stq.withServerTaskToAuthUser != nil || stq.withServerTaskToEnvironment != nil || stq.withServerTaskToBuild != nil || stq.withServerTaskToBuildCommit != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -642,6 +679,35 @@ func (stq *ServerTaskQuery) sqlAll(ctx context.Context) ([]*ServerTask, error) {
 			}
 			for i := range nodes {
 				nodes[i].Edges.ServerTaskToBuild = n
+			}
+		}
+	}
+
+	if query := stq.withServerTaskToBuildCommit; query != nil {
+		ids := make([]uuid.UUID, 0, len(nodes))
+		nodeids := make(map[uuid.UUID][]*ServerTask)
+		for i := range nodes {
+			if nodes[i].server_task_server_task_to_build_commit == nil {
+				continue
+			}
+			fk := *nodes[i].server_task_server_task_to_build_commit
+			if _, ok := nodeids[fk]; !ok {
+				ids = append(ids, fk)
+			}
+			nodeids[fk] = append(nodeids[fk], nodes[i])
+		}
+		query.Where(buildcommit.IDIn(ids...))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			nodes, ok := nodeids[n.ID]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_build_commit" returned %v`, n.ID)
+			}
+			for i := range nodes {
+				nodes[i].Edges.ServerTaskToBuildCommit = n
 			}
 		}
 	}

@@ -33,6 +33,8 @@ const (
 	EdgeServerTaskToEnvironment = "ServerTaskToEnvironment"
 	// EdgeServerTaskToBuild holds the string denoting the servertasktobuild edge name in mutations.
 	EdgeServerTaskToBuild = "ServerTaskToBuild"
+	// EdgeServerTaskToBuildCommit holds the string denoting the servertasktobuildcommit edge name in mutations.
+	EdgeServerTaskToBuildCommit = "ServerTaskToBuildCommit"
 	// EdgeServerTaskToGinFileMiddleware holds the string denoting the servertasktoginfilemiddleware edge name in mutations.
 	EdgeServerTaskToGinFileMiddleware = "ServerTaskToGinFileMiddleware"
 	// Table holds the table name of the servertask in the database.
@@ -65,6 +67,13 @@ const (
 	ServerTaskToBuildInverseTable = "builds"
 	// ServerTaskToBuildColumn is the table column denoting the ServerTaskToBuild relation/edge.
 	ServerTaskToBuildColumn = "server_task_server_task_to_build"
+	// ServerTaskToBuildCommitTable is the table that holds the ServerTaskToBuildCommit relation/edge.
+	ServerTaskToBuildCommitTable = "server_tasks"
+	// ServerTaskToBuildCommitInverseTable is the table name for the BuildCommit entity.
+	// It exists in this package in order to avoid circular dependency with the "buildcommit" package.
+	ServerTaskToBuildCommitInverseTable = "build_commits"
+	// ServerTaskToBuildCommitColumn is the table column denoting the ServerTaskToBuildCommit relation/edge.
+	ServerTaskToBuildCommitColumn = "server_task_server_task_to_build_commit"
 	// ServerTaskToGinFileMiddlewareTable is the table that holds the ServerTaskToGinFileMiddleware relation/edge.
 	ServerTaskToGinFileMiddlewareTable = "gin_file_middlewares"
 	// ServerTaskToGinFileMiddlewareInverseTable is the table name for the GinFileMiddleware entity.
@@ -90,6 +99,7 @@ var ForeignKeys = []string{
 	"server_task_server_task_to_auth_user",
 	"server_task_server_task_to_environment",
 	"server_task_server_task_to_build",
+	"server_task_server_task_to_build_commit",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

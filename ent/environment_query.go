@@ -30,6 +30,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
@@ -61,6 +62,7 @@ type EnvironmentQuery struct {
 	withEnvironmentToHostDependency  *HostDependencyQuery
 	withEnvironmentToBuild           *BuildQuery
 	withEnvironmentToRepository      *RepositoryQuery
+	withEnvironmentToServerTask      *ServerTaskQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -471,6 +473,28 @@ func (eq *EnvironmentQuery) QueryEnvironmentToRepository() *RepositoryQuery {
 	return query
 }
 
+// QueryEnvironmentToServerTask chains the current query on the "EnvironmentToServerTask" edge.
+func (eq *EnvironmentQuery) QueryEnvironmentToServerTask() *ServerTaskQuery {
+	query := &ServerTaskQuery{config: eq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := eq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := eq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(environment.Table, environment.FieldID, selector),
+			sqlgraph.To(servertask.Table, servertask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, environment.EnvironmentToServerTaskTable, environment.EnvironmentToServerTaskColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Environment entity from the query.
 // Returns a *NotFoundError when no Environment was found.
 func (eq *EnvironmentQuery) First(ctx context.Context) (*Environment, error) {
@@ -669,6 +693,7 @@ func (eq *EnvironmentQuery) Clone() *EnvironmentQuery {
 		withEnvironmentToHostDependency:  eq.withEnvironmentToHostDependency.Clone(),
 		withEnvironmentToBuild:           eq.withEnvironmentToBuild.Clone(),
 		withEnvironmentToRepository:      eq.withEnvironmentToRepository.Clone(),
+		withEnvironmentToServerTask:      eq.withEnvironmentToServerTask.Clone(),
 		// clone intermediate query.
 		sql:  eq.sql.Clone(),
 		path: eq.path,
@@ -862,6 +887,17 @@ func (eq *EnvironmentQuery) WithEnvironmentToRepository(opts ...func(*Repository
 	return eq
 }
 
+// WithEnvironmentToServerTask tells the query-builder to eager-load the nodes that are connected to
+// the "EnvironmentToServerTask" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithEnvironmentToServerTask(opts ...func(*ServerTaskQuery)) *EnvironmentQuery {
+	query := &ServerTaskQuery{config: eq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	eq.withEnvironmentToServerTask = query
+	return eq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -927,7 +963,7 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context) ([]*Environment, error) 
 	var (
 		nodes       = []*Environment{}
 		_spec       = eq.querySpec()
-		loadedTypes = [17]bool{
+		loadedTypes = [18]bool{
 			eq.withEnvironmentToUser != nil,
 			eq.withEnvironmentToHost != nil,
 			eq.withEnvironmentToCompetition != nil,
@@ -945,6 +981,7 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context) ([]*Environment, error) 
 			eq.withEnvironmentToHostDependency != nil,
 			eq.withEnvironmentToBuild != nil,
 			eq.withEnvironmentToRepository != nil,
+			eq.withEnvironmentToServerTask != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -1601,6 +1638,35 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context) ([]*Environment, error) 
 			for i := range nodes {
 				nodes[i].Edges.EnvironmentToRepository = append(nodes[i].Edges.EnvironmentToRepository, n)
 			}
+		}
+	}
+
+	if query := eq.withEnvironmentToServerTask; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*Environment)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.EnvironmentToServerTask = []*ServerTask{}
+		}
+		query.withFKs = true
+		query.Where(predicate.ServerTask(func(s *sql.Selector) {
+			s.Where(sql.InValues(environment.EnvironmentToServerTaskColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.server_task_server_task_to_environment
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "server_task_server_task_to_environment" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_environment" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.EnvironmentToServerTask = append(node.Edges.EnvironmentToServerTask, n)
 		}
 	}
 

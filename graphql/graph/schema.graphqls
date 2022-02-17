@@ -39,6 +39,7 @@ enum FindingDifficulty {
 enum ProvisionStatus {
   PLANNING
   AWAITING
+  PARENTAWAITING
   INPROGRESS
   FAILED
   COMPLETE
@@ -48,6 +49,7 @@ enum ProvisionStatus {
   DELETEINPROGRESS
   DELETED
   TOREBUILD
+  CANCELLED
 }
 
 enum ProvisionStatusFor {
@@ -177,6 +179,8 @@ type Build {
   buildToPlan: [Plan]!
   BuildToLatestBuildCommit: BuildCommit
   BuildToBuildCommits: [BuildCommit]!
+  BuildToRepoCommit: RepoCommit!
+  BuildToServerTasks: [ServerTask]!
 }
 
 type BuildCommit {
@@ -184,8 +188,10 @@ type BuildCommit {
   type: BuildCommitType!
   revision: Int!
   state: BuildCommitState!
+  createdAt: Time!
   BuildCommitToBuild: Build!
   BuildCommitToPlanDiffs: [PlanDiff]!
+  BuildCommitToServerTask: [ServerTask]!
 }
 
 type Command {
@@ -272,6 +278,7 @@ type Environment {
   EnvironmentToNetwork: [Network]!
   EnvironmentToBuild: [Build]!
   EnvironmentToRepository: [Repository]!
+  EnvironmentToServerTask: [ServerTask]!
 }
 
 type FileDelete {
@@ -425,12 +432,25 @@ type ProvisioningStep {
   ProvisioningStepToPlan: Plan
 }
 
+type RepoCommit {
+  id: ID!
+  revision: Int!
+  hash: String!
+  author: String!
+  committer: String!
+  pgp_signature: String!
+  message: String!
+  tree_hash: String!
+  parent_hashes: [String]!
+  RepoCommitToRepository: Repository!
+}
+
 type Repository {
   id: ID!
   repo_url: String!
   branch_name: String!
   environment_filepath: String!
-  commit_info: String!
+  RepositoryToRepoCommit: [RepoCommit]!
 }
 
 type Script {
@@ -464,6 +484,7 @@ type ServerTask {
   ServerTaskToStatus: Status!
   ServerTaskToEnvironment: Environment
   ServerTaskToBuild: Build
+  ServerTaskToBuildCommit: BuildCommit
 }
 
 type Status {
@@ -537,15 +558,23 @@ type Query {
   provisionedStep(proStepUUID: String!): ProvisioningStep
     @hasRole(roles: [ADMIN, USER])
   plan(planUUID: String!): Plan @hasRole(roles: [ADMIN, USER])
+  getBuilds: [Build] @hasRole(roles: [ADMIN, USER])
   build(buildUUID: String!): Build @hasRole(roles: [ADMIN, USER])
+  getBuildCommits(envUUID: String!): [BuildCommit]
+    @hasRole(roles: [ADMIN, USER])
+  getBuildCommit(buildCommitUUID: String!): BuildCommit
+    @hasRole(roles: [ADMIN, USER])
   status(statusUUID: String!): Status @hasRole(roles: [ADMIN, USER])
   agentStatus(clientId: String!): AgentStatus @hasRole(roles: [ADMIN, USER])
-  getServerTasks: [ServerTask] @hasRole(roles: [ADMIN])
+  getServerTasks: [ServerTask] @hasRole(roles: [ADMIN, USER])
   currentUser: AuthUser @hasRole(roles: [ADMIN, USER])
   getUserList: [AuthUser] @hasRole(roles: [ADMIN])
   getCurrentUserTasks: [ServerTask] @hasRole(roles: [ADMIN, USER])
   getAgentTasks(proStepUUID: String!): [AgentTask]
     @hasRole(roles: [ADMIN, USER])
+  listAgentStatuses(buildUUID: String!): [AgentStatus]
+    @hasRole(roles: [ADMIN, USER])
+  listBuildStatuses(buildUUID: String!): [Status] @hasRole(roles: [ADMIN, USER])
   getAllAgentStatus(
     buildUUID: String!
     count: Int!
@@ -555,6 +584,7 @@ type Query {
     @hasRole(roles: [ADMIN, USER])
   viewServerTaskLogs(taskID: String!): String! @hasRole(roles: [ADMIN, USER])
   viewAgentTask(taskID: String!): AgentTask! @hasRole(roles: [ADMIN, USER])
+  serverTasks(taskUUIDs: [String]!): [ServerTask] @hasRole(roles: [ADMIN, USER])
 }
 
 type Mutation {
@@ -564,7 +594,7 @@ type Mutation {
     @hasRole(roles: [ADMIN, USER])
   deleteUser(userUUID: String!): Boolean! @hasRole(roles: [ADMIN, USER])
   executePlan(buildUUID: String!): Build @hasRole(roles: [ADMIN, USER])
-  deleteBuild(buildUUID: String!): Boolean! @hasRole(roles: [ADMIN, USER])
+  deleteBuild(buildUUID: String!): String! @hasRole(roles: [ADMIN, USER]) # returns the build commit uuid of delete commit
   createTask(
     proHostUUID: String!
     command: AgentCommand!
@@ -584,10 +614,15 @@ type Mutation {
     teams: [Int!]!
   ): [AgentTask]! @hasRole(roles: [ADMIN, USER])
 
+  createBatchAgentTasks(
+    proHostUUIDs: [String!]!
+    command: AgentCommand!
+    args: [String!]!
+  ): [AgentTask]! @hasRole(roles: [ADMIN, USER])
+
   createEnviromentFromRepo(
     repoURL: String!
     branchName: String! = "master"
-    repoName: String! = "REMOVE"
     envFilePath: String!
   ): [Environment]! @hasRole(roles: [ADMIN, USER])
 
@@ -636,4 +671,5 @@ type Subscription {
   updatedBuild: Build! @hasRole(roles: [ADMIN, USER])
   updatedCommit: BuildCommit! @hasRole(roles: [ADMIN, USER])
   updatedAgentTask: AgentTask! @hasRole(roles: [ADMIN, USER])
+  streamServerTaskLog(taskID: String!): String! @hasRole(roles: [ADMIN, USER])
 }

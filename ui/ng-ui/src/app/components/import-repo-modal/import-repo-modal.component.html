@@ -1,0 +1,42 @@
+<div class="w-100 h-100 d-flex flex-column align-items-center justify-content-between">
+  <div class="w-100">
+    <h2>Import Environment from Git</h2>
+    <!-- begin::Error Messages -->
+    <p class="text-error" *ngIf="errorMessage | async">
+      {{ errorMessage | async }}
+    </p>
+    <!-- end::Error Messages -->
+    <hr />
+    <!-- begin::User Form -->
+    <div class="overflow-scroll w-100">
+      <mat-form-field appearance="fill" class="repo-url w-100 mb-5">
+        <mat-label>Enter Repo URL</mat-label>
+        <input matInput placeholder="git@example.com:ExampleOrg/example-repo" [formControl]="gitUrl" />
+        <mat-error *ngIf="gitUrl.invalid">{{ getGitUrlErrorMessage() }}</mat-error>
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="branch-name w-100 mb-5">
+        <mat-label>Enter Branch Name</mat-label>
+        <input matInput placeholder="example-branch" [formControl]="branchName" />
+        <mat-error *ngIf="branchName.invalid">{{ getBranchNameErrorMessage() }}</mat-error>
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="repo-url w-100 mb-5">
+        <mat-label>Enter Env File Path</mat-label>
+        <input matInput placeholder="envs/example/env.laforge" [formControl]="envFilePath" />
+        <mat-error *ngIf="envFilePath.invalid">{{ getEnvFilePathErrorMessage() }}</mat-error>
+      </mat-form-field>
+    </div>
+    <!-- end::User Form -->
+  </div>
+  <div class="w-100">
+    <hr />
+    <div class="w-100 d-flex align-items-center justify-content-end">
+      <button mat-flat-button (click)="cancel()" color="link" class="ml-auto mr-3"> Cancel </button>
+      <button mat-flat-button (click)="submit()" color="primary" [disabled]="gitIsLoading | async">
+        <ng-container *ngIf="gitIsLoading | async">
+          <i class="fad fa-spinner-third fa-spin text-white"></i>
+        </ng-container>
+        <ng-container *ngIf="!(gitIsLoading | async)"> Import </ng-container>
+      </button>
+    </div>
+  </div>
+</div>

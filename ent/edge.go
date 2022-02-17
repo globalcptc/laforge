@@ -140,6 +140,14 @@ func (b *Build) BuildToLatestBuildCommit(ctx context.Context) (*BuildCommit, err
 	return result, MaskNotFound(err)
 }
 
+func (b *Build) BuildToRepoCommit(ctx context.Context) (*RepoCommit, error) {
+	result, err := b.Edges.BuildToRepoCommitOrErr()
+	if IsNotLoaded(err) {
+		result, err = b.QueryBuildToRepoCommit().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (b *Build) BuildToProvisionedNetwork(ctx context.Context) ([]*ProvisionedNetwork, error) {
 	result, err := b.Edges.BuildToProvisionedNetworkOrErr()
 	if IsNotLoaded(err) {
@@ -180,10 +188,34 @@ func (b *Build) BuildToAdhocPlans(ctx context.Context) ([]*AdhocPlan, error) {
 	return result, err
 }
 
+func (b *Build) BuildToAgentStatuses(ctx context.Context) ([]*AgentStatus, error) {
+	result, err := b.Edges.BuildToAgentStatusesOrErr()
+	if IsNotLoaded(err) {
+		result, err = b.QueryBuildToAgentStatuses().All(ctx)
+	}
+	return result, err
+}
+
+func (b *Build) BuildToServerTasks(ctx context.Context) ([]*ServerTask, error) {
+	result, err := b.Edges.BuildToServerTasksOrErr()
+	if IsNotLoaded(err) {
+		result, err = b.QueryBuildToServerTasks().All(ctx)
+	}
+	return result, err
+}
+
 func (bc *BuildCommit) BuildCommitToBuild(ctx context.Context) (*Build, error) {
 	result, err := bc.Edges.BuildCommitToBuildOrErr()
 	if IsNotLoaded(err) {
 		result, err = bc.QueryBuildCommitToBuild().Only(ctx)
+	}
+	return result, err
+}
+
+func (bc *BuildCommit) BuildCommitToServerTask(ctx context.Context) ([]*ServerTask, error) {
+	result, err := bc.Edges.BuildCommitToServerTaskOrErr()
+	if IsNotLoaded(err) {
+		result, err = bc.QueryBuildCommitToServerTask().All(ctx)
 	}
 	return result, err
 }
@@ -400,6 +432,14 @@ func (e *Environment) EnvironmentToRepository(ctx context.Context) ([]*Repositor
 	result, err := e.Edges.EnvironmentToRepositoryOrErr()
 	if IsNotLoaded(err) {
 		result, err = e.QueryEnvironmentToRepository().All(ctx)
+	}
+	return result, err
+}
+
+func (e *Environment) EnvironmentToServerTask(ctx context.Context) ([]*ServerTask, error) {
+	result, err := e.Edges.EnvironmentToServerTaskOrErr()
+	if IsNotLoaded(err) {
+		result, err = e.QueryEnvironmentToServerTask().All(ctx)
 	}
 	return result, err
 }
@@ -924,10 +964,26 @@ func (ps *ProvisioningStep) ProvisioningStepToGinFileMiddleware(ctx context.Cont
 	return result, MaskNotFound(err)
 }
 
+func (rc *RepoCommit) RepoCommitToRepository(ctx context.Context) (*Repository, error) {
+	result, err := rc.Edges.RepoCommitToRepositoryOrErr()
+	if IsNotLoaded(err) {
+		result, err = rc.QueryRepoCommitToRepository().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (r *Repository) RepositoryToEnvironment(ctx context.Context) ([]*Environment, error) {
 	result, err := r.Edges.RepositoryToEnvironmentOrErr()
 	if IsNotLoaded(err) {
 		result, err = r.QueryRepositoryToEnvironment().All(ctx)
+	}
+	return result, err
+}
+
+func (r *Repository) RepositoryToRepoCommit(ctx context.Context) ([]*RepoCommit, error) {
+	result, err := r.Edges.RepositoryToRepoCommitOrErr()
+	if IsNotLoaded(err) {
+		result, err = r.QueryRepositoryToRepoCommit().All(ctx)
 	}
 	return result, err
 }
@@ -984,6 +1040,14 @@ func (st *ServerTask) ServerTaskToBuild(ctx context.Context) (*Build, error) {
 	result, err := st.Edges.ServerTaskToBuildOrErr()
 	if IsNotLoaded(err) {
 		result, err = st.QueryServerTaskToBuild().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (st *ServerTask) ServerTaskToBuildCommit(ctx context.Context) (*BuildCommit, error) {
+	result, err := st.Edges.ServerTaskToBuildCommitOrErr()
+	if IsNotLoaded(err) {
+		result, err = st.QueryServerTaskToBuildCommit().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

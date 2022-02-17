@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/agentstatus"
@@ -471,46 +472,46 @@ func (r *mutationResolver) ExecutePlan(ctx context.Context, buildUUID string) (*
 	return b, nil
 }
 
-func (r *mutationResolver) DeleteBuild(ctx context.Context, buildUUID string) (bool, error) {
+func (r *mutationResolver) DeleteBuild(ctx context.Context, buildUUID string) (string, error) {
 	currentUser, err := auth.ForContext(ctx)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
 	uuid, err := uuid.Parse(buildUUID)
 
 	if err != nil {
-		return false, fmt.Errorf("failed casting UUID to UUID: %v", err)
+		return "", fmt.Errorf("failed casting UUID to UUID: %v", err)
 	}
 
 	b, err := r.client.Build.Query().Where(build.IDEQ(uuid)).Only(ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed querying Build: %v", err)
+		return "", fmt.Errorf("failed querying Build: %v", err)
 	}
 
 	entEnvironment, err := b.QueryBuildToEnvironment().Only(ctx)
 	if err != nil {
 		logrus.Errorf("failed to query environment from build: %v", err)
-		return false, err
+		return "", err
 	}
 
 	taskStatus, serverTask, err := utils.CreateServerTask(ctx, r.client, r.rdb, currentUser, servertask.TypeDELETEBUILD)
 	if err != nil {
-		return false, fmt.Errorf("error creating server task: %v", err)
+		return "", fmt.Errorf("error creating server task: %v", err)
 	}
 	serverTask, err = r.client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(b).SetServerTaskToEnvironment(entEnvironment).Save(ctx)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctx, r.client, r.rdb, taskStatus, serverTask)
 		if err != nil {
-			return false, fmt.Errorf("error failing execute build server task: %v", err)
+			return "", fmt.Errorf("error failing execute build server task: %v", err)
 		}
-		return false, fmt.Errorf("error assigning environment and build to execute build server task: %v", err)
+		return "", fmt.Errorf("error assigning environment and build to execute build server task: %v", err)
 	}
 	r.rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 	log, err := logging.CreateLoggerForServerTask(serverTask)
 	if err != nil {
-		return false, fmt.Errorf("error creating logger for build delete: %v", err)
+		return "", fmt.Errorf("error creating logger for build delete: %v", err)
 	}
 
 	spawnedDelete := make(chan bool, 1)
@@ -518,13 +519,17 @@ func (r *mutationResolver) DeleteBuild(ctx context.Context, buildUUID string) (b
 
 	deleteIsSuccess := <-spawnedDelete
 	if deleteIsSuccess {
-		return true, nil
+		entBuildCommit, err := b.QueryBuildToLatestBuildCommit().Only(ctx)
+		if err != nil {
+			return "", nil
+		}
+		return entBuildCommit.ID.String(), nil
 	}
 	taskStatus, serverTask, err = utils.FailServerTask(ctx, r.client, r.rdb, taskStatus, serverTask)
 	if err != nil {
-		return false, fmt.Errorf("error failing execute build server task: %v", err)
+		return "", fmt.Errorf("error failing execute build server task: %v", err)
 	}
-	return false, nil
+	return "", fmt.Errorf("unknown error occurred")
 }
 
 func (r *mutationResolver) CreateTask(ctx context.Context, proHostUUID string, command model.AgentCommand, args string) (bool, error) {
@@ -628,13 +633,36 @@ func (r *mutationResolver) ApproveCommit(ctx context.Context, commitUUID string)
 func (r *mutationResolver) CancelCommit(ctx context.Context, commitUUID string) (bool, error) {
 	uuid, err := uuid.Parse(commitUUID)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed casting commit uuid to uuid: %v", err)
 	}
-	err = r.client.BuildCommit.UpdateOneID(uuid).SetState(buildcommit.StateCANCELLED).Exec(ctx)
+	entBuildCommit, err := r.client.BuildCommit.UpdateOneID(uuid).SetState(buildcommit.StateCANCELLED).Save(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed setting build commit state to cancelled: %v", err)
+	}
+	if entBuildCommit.Type == buildcommit.TypeROOT {
+		entBuild, err := entBuildCommit.QueryBuildCommitToBuild().Only(ctx)
+		if err != nil {
+			return false, fmt.Errorf("failed querying build from build commit: %v", err)
+		}
+		err = r.client.Status.Update().Where(status.HasStatusToBuildWith(build.IDEQ(entBuild.ID))).SetState(status.StateCANCELLED).Exec(ctx)
+		if err != nil {
+			return false, fmt.Errorf("failed setting build status to cancelled: %v", err)
+		}
 	}
 	r.rdb.Publish(ctx, "updatedBuildCommit", commitUUID)
+	entServerTasks, err := entBuildCommit.QueryBuildCommitToServerTask().WithServerTaskToStatus().All(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed querying server tasks from build commit: %v", err)
+	}
+	for _, serverTask := range entServerTasks {
+		if serverTask.Edges.ServerTaskToStatus.State == status.StateINPROGRESS {
+			err := serverTask.Edges.ServerTaskToStatus.Update().SetEndedAt(time.Now()).SetState(status.StateCANCELLED).Exec(ctx)
+			if err != nil {
+				return false, fmt.Errorf("failed to cancel server task(s) associated with build commit: %v", err)
+			}
+			r.rdb.Publish(ctx, "updatedServerTask", serverTask.ID)
+		}
+	}
 	return true, nil
 }
 
@@ -685,7 +713,42 @@ func (r *mutationResolver) CreateAgentTasks(ctx context.Context, hostHclid strin
 	return agentTasksReturn, nil
 }
 
-func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL string, branchName string, repoName string, envFilePath string) ([]*ent.Environment, error) {
+func (r *mutationResolver) CreateBatchAgentTasks(ctx context.Context, proHostUUIDs []string, command model.AgentCommand, args []string) ([]*ent.AgentTask, error) {
+	agentTasksReturn := []*ent.AgentTask{}
+
+	for _, proHostUUID := range proHostUUIDs {
+
+		uuid, err := uuid.Parse(proHostUUID)
+
+		if err != nil {
+			return agentTasksReturn, fmt.Errorf("failed casting UUID to UUID: %v", err)
+		}
+
+		entProvisionedHost, err := r.client.ProvisionedHost.Get(ctx, uuid)
+		if err != nil {
+			return agentTasksReturn, fmt.Errorf("failed querying provisoned host: %v", err)
+		}
+		taskCount, err := entProvisionedHost.QueryProvisionedHostToAgentTask().Count(ctx)
+		if err != nil {
+			return agentTasksReturn, fmt.Errorf("failed querying Number of Tasks: %v", err)
+		}
+		createdAgentTask, err := r.client.AgentTask.Create().
+			SetCommand(agenttask.Command(command.String())).
+			SetArgs(strings.Join(args, "💔")).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			Save(ctx)
+		if err != nil {
+			return agentTasksReturn, fmt.Errorf("failed to create agent task: %v", err)
+		}
+		agentTasksReturn = append(agentTasksReturn, createdAgentTask)
+	}
+
+	return agentTasksReturn, nil
+}
+
+func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL string, branchName string, envFilePath string) ([]*ent.Environment, error) {
 	currentUser, err := auth.ForContext(ctx)
 	if err != nil {
 		return nil, err
@@ -697,7 +760,7 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 			repository.EnviromentFilepath(envFilePath),
 			repository.RepoURL(repoURL),
 		),
-	).First(ctx)
+	).WithRepositoryToRepoCommit().First(ctx)
 
 	if foundRepo != nil {
 		return r.UpdateEnviromentViaPull(ctx, foundRepo.ID.String())
@@ -717,7 +780,33 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 
 	commit_info, err := utils.CloneGit(repoURL, repoFolderPath, currentUser.PrivateKeyPath, branchName)
 	if err != nil {
+		r.client.Repository.DeleteOne(entRepo).Exec(ctx)
 		return nil, err
+	}
+
+	p_hashes := make([]string, len(commit_info.ParentHashes))
+	for i := 0; i < len(commit_info.ParentHashes); i++ {
+		p_hashes = append(p_hashes, commit_info.ParentHashes[i].String())
+	}
+
+	entRepoCommit, err := r.client.RepoCommit.Create().
+		SetRevision(0).
+		SetHash(commit_info.Hash.String()).
+		SetAuthor(commit_info.Author).
+		SetCommitter(commit_info.Committer).
+		SetPgpSignature(commit_info.PGPSignature).
+		SetMessage(commit_info.Message).
+		SetTreeHash(commit_info.TreeHash.String()).
+		SetParentHashes(p_hashes).
+		Save(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("couldn't create entRepoCommit: %v", err)
+	}
+
+	err = entRepo.Update().AddRepositoryToRepoCommit(entRepoCommit).Exec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't add RepoCommit to Repository: %v", err)
 	}
 
 	envPath := path.Join(repoFolderPath, envFilePath)
@@ -729,7 +818,6 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 
 	_, err = entRepo.Update().
 		SetFolderPath(repoFolderPath).
-		SetCommitInfo(commit_info).
 		AddRepositoryToEnvironment(loadedEnviroments...).
 		Save(ctx)
 	if err != nil {
@@ -755,7 +843,7 @@ func (r *mutationResolver) UpdateEnviromentViaPull(ctx context.Context, envUUID 
 		return nil, err
 	}
 
-	entRepo, err := entEnvironment.QueryEnvironmentToRepository().Only(ctx)
+	entRepo, err := entEnvironment.QueryEnvironmentToRepository().WithRepositoryToRepoCommit().Only(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -765,9 +853,29 @@ func (r *mutationResolver) UpdateEnviromentViaPull(ctx context.Context, envUUID 
 		return nil, err
 	}
 
-	entRepo, err = entRepo.Update().SetCommitInfo(commit_info).Save(ctx)
+	p_hashes := make([]string, len(commit_info.ParentHashes))
+	for i := 0; i < len(commit_info.ParentHashes); i++ {
+		p_hashes = append(p_hashes, commit_info.ParentHashes[i].String())
+	}
+
+	entRepoCommit, err := r.client.RepoCommit.Create().
+		SetRevision(len(entRepo.Edges.RepositoryToRepoCommit)).
+		SetHash(commit_info.Hash.String()).
+		SetAuthor(commit_info.Author).
+		SetCommitter(commit_info.Committer).
+		SetPgpSignature(commit_info.PGPSignature).
+		SetMessage(commit_info.Message).
+		SetTreeHash(commit_info.TreeHash.String()).
+		SetParentHashes(p_hashes).
+		Save(ctx)
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("couldn't create entRepoCommit: %v", err)
+	}
+
+	err = entRepo.Update().AddRepositoryToRepoCommit(entRepoCommit).Exec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't add RepoCommit to Repository: %v", err)
 	}
 
 	envPath := path.Join(entRepo.FolderPath, entRepo.EnviromentFilepath)
@@ -1071,7 +1179,7 @@ func (r *provisioningStepResolver) Type(ctx context.Context, obj *ent.Provisioni
 }
 
 func (r *queryResolver) Environments(ctx context.Context) ([]*ent.Environment, error) {
-	e, err := r.client.Environment.Query().All(ctx)
+	e, err := r.client.Environment.Query().Order(ent.Asc(environment.FieldID)).All(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed querying Environment: %v", err)
@@ -1160,6 +1268,16 @@ func (r *queryResolver) Plan(ctx context.Context, planUUID string) (*ent.Plan, e
 	return plan, nil
 }
 
+func (r *queryResolver) GetBuilds(ctx context.Context) ([]*ent.Build, error) {
+	builds, err := r.client.Environment.Query().Order(ent.Asc(environment.FieldID)).QueryEnvironmentToBuild().All(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed querying Builds: %v", err)
+	}
+
+	return builds, nil
+}
+
 func (r *queryResolver) Build(ctx context.Context, buildUUID string) (*ent.Build, error) {
 	uuid, err := uuid.Parse(buildUUID)
 
@@ -1174,6 +1292,36 @@ func (r *queryResolver) Build(ctx context.Context, buildUUID string) (*ent.Build
 	}
 
 	return build, nil
+}
+
+func (r *queryResolver) GetBuildCommits(ctx context.Context, envUUID string) ([]*ent.BuildCommit, error) {
+	uuid, err := uuid.Parse(envUUID)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed casting envUUID to UUID: %v", err)
+	}
+
+	buildCommits, err := r.client.Environment.Query().Where(environment.IDEQ(uuid)).QueryEnvironmentToBuild().QueryBuildToBuildCommits().All(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed querying BuildCommits from Environment: %v", err)
+	}
+
+	return buildCommits, nil
+}
+
+func (r *queryResolver) GetBuildCommit(ctx context.Context, buildCommitUUID string) (*ent.BuildCommit, error) {
+	uuid, err := uuid.Parse(buildCommitUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed casing buildCommitUUID to UUID: %v", err)
+	}
+
+	buildCommit, err := r.client.BuildCommit.Query().Where(buildcommit.IDEQ(uuid)).Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying BuildCommit with ID %s: %v", buildCommitUUID, err)
+	}
+
+	return buildCommit, nil
 }
 
 func (r *queryResolver) Status(ctx context.Context, statusUUID string) (*ent.Status, error) {
@@ -1248,6 +1396,61 @@ func (r *queryResolver) GetAgentTasks(ctx context.Context, proStepUUID string) (
 	}
 
 	return agentTasks, err
+}
+
+func (r *queryResolver) ListAgentStatuses(ctx context.Context, buildUUID string) ([]*ent.AgentStatus, error) {
+	uuid, err := uuid.Parse(buildUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed casting buildUUID to UUID")
+	}
+
+	agentStatuses, err := r.client.Build.Query().Where(build.IDEQ(uuid)).QueryBuildToAgentStatuses().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return agentStatuses, nil
+}
+
+func (r *queryResolver) ListBuildStatuses(ctx context.Context, buildUUID string) ([]*ent.Status, error) {
+	uuid, err := uuid.Parse(buildUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed casting buildUUID to UUID")
+	}
+
+	statuses := make([]*ent.Status, 0)
+
+	buildStatus, err := r.client.Build.Query().Where(build.IDEQ(uuid)).QueryBuildToStatus().Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying build status from build: %v", err)
+	}
+	statuses = append(statuses, buildStatus)
+
+	planStatuses, err := r.client.Status.Query().Where(status.HasStatusToPlanWith(plan.HasPlanToBuildWith(build.IDEQ(uuid)))).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying plan statuses from build: %v", err)
+	}
+	statuses = append(statuses, planStatuses...)
+
+	provisionedNetworkStatuses, err := r.client.ProvisionedNetwork.Query().Where(provisionednetwork.HasProvisionedNetworkToBuildWith(build.IDEQ(uuid))).QueryProvisionedNetworkToStatus().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying provisioned network statuses from build: %v", err)
+	}
+	statuses = append(statuses, provisionedNetworkStatuses...)
+
+	provisionedHostStatuses, err := r.client.ProvisionedHost.Query().Where(provisionedhost.HasProvisionedHostToBuildWith(build.IDEQ(uuid))).QueryProvisionedHostToStatus().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying provisioned host statuses from build: %v", err)
+	}
+	statuses = append(statuses, provisionedHostStatuses...)
+
+	provisioningStepStatuses, err := r.client.ProvisioningStep.Query().Where(provisioningstep.HasProvisioningStepToProvisionedHostWith(provisionedhost.HasProvisionedHostToBuildWith(build.IDEQ(uuid)))).QueryProvisioningStepToStatus().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying provisioning step statuses from build: %v", err)
+	}
+	statuses = append(statuses, provisioningStepStatuses...)
+
+	return statuses, nil
 }
 
 func (r *queryResolver) GetAllAgentStatus(ctx context.Context, buildUUID string, count int, offset int) (*model.AgentStatusBatch, error) {
@@ -1329,6 +1532,36 @@ func (r *queryResolver) ViewAgentTask(ctx context.Context, taskID string) (*ent.
 	}
 
 	return r.client.AgentTask.Get(ctx, uuid)
+}
+
+func (r *queryResolver) ServerTasks(ctx context.Context, taskUUIDs []*string) ([]*ent.ServerTask, error) {
+	uuids := make([]uuid.UUID, 0)
+	for _, taskUUID := range taskUUIDs {
+		uuid, err := uuid.Parse(*taskUUID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to cast one or more task UUID to UUID: %v", err)
+		}
+		uuids = append(uuids, uuid)
+	}
+
+	serverTasks, err := r.client.ServerTask.Query().Where(servertask.IDIn(uuids...)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query server tasks: %v", err)
+	}
+
+	return serverTasks, nil
+}
+
+func (r *repoCommitResolver) ID(ctx context.Context, obj *ent.RepoCommit) (string, error) {
+	return obj.ID.String(), nil
+}
+
+func (r *repoCommitResolver) Author(ctx context.Context, obj *ent.RepoCommit) (string, error) {
+	return obj.Author.String(), nil
+}
+
+func (r *repoCommitResolver) Committer(ctx context.Context, obj *ent.RepoCommit) (string, error) {
+	return obj.Committer.String(), nil
 }
 
 func (r *repositoryResolver) ID(ctx context.Context, obj *ent.Repository) (string, error) {
@@ -1593,6 +1826,50 @@ func (r *subscriptionResolver) UpdatedAgentTask(ctx context.Context) (<-chan *en
 	return newAgentTask, nil
 }
 
+func (r *subscriptionResolver) StreamServerTaskLog(ctx context.Context, taskID string) (<-chan string, error) {
+	logStream := make(chan string, 1)
+	go func(taskID string, logStream chan<- string) {
+		filePeriod := 10 * time.Second
+
+		uuid, err := uuid.Parse(taskID)
+		if err != nil {
+			return
+		}
+		entServerTask, err := r.client.ServerTask.Get(ctx, uuid)
+		if err != nil {
+			return
+		}
+
+		fileTicker := time.NewTicker(filePeriod)
+
+		fi, err := os.Stat(entServerTask.LogFilePath)
+		lastModified := fi.ModTime()
+		fileBytes, err := ioutil.ReadFile(entServerTask.LogFilePath)
+		if err != nil {
+			return
+		}
+
+		logStream <- string(fileBytes)
+
+		for {
+			select {
+			case <-fileTicker.C:
+				fileBytes, lastModified, err = utils.ReadFileIfModified(lastModified, entServerTask.LogFilePath)
+				if err != nil {
+					logStream <- string(err.Error())
+				}
+				if fileBytes != nil {
+					logStream <- string(fileBytes)
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+
+	}(taskID, logStream)
+	return logStream, nil
+}
+
 func (r *teamResolver) ID(ctx context.Context, obj *ent.Team) (string, error) {
 	return obj.ID.String(), nil
 }
@@ -1676,6 +1953,9 @@ func (r *Resolver) ProvisioningStep() generated.ProvisioningStepResolver {
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+// RepoCommit returns generated.RepoCommitResolver implementation.
+func (r *Resolver) RepoCommit() generated.RepoCommitResolver { return &repoCommitResolver{r} }
+
 // Repository returns generated.RepositoryResolver implementation.
 func (r *Resolver) Repository() generated.RepositoryResolver { return &repositoryResolver{r} }
 
@@ -1720,6 +2000,7 @@ type provisionedHostResolver struct{ *Resolver }
 type provisionedNetworkResolver struct{ *Resolver }
 type provisioningStepResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type repoCommitResolver struct{ *Resolver }
 type repositoryResolver struct{ *Resolver }
 type scriptResolver struct{ *Resolver }
 type serverTaskResolver struct{ *Resolver }

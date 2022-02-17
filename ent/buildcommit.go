@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/build"
@@ -23,6 +24,8 @@ type BuildCommit struct {
 	Revision int `json:"revision,omitempty"`
 	// State holds the value of the "state" field.
 	State buildcommit.State `json:"state,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the BuildCommitQuery when eager-loading is set.
 	Edges BuildCommitEdges `json:"edges"`
@@ -30,6 +33,8 @@ type BuildCommit struct {
 	// Edges put into the main struct to be loaded via hcl
 	// BuildCommitToBuild holds the value of the BuildCommitToBuild edge.
 	HCLBuildCommitToBuild *Build `json:"BuildCommitToBuild,omitempty"`
+	// BuildCommitToServerTask holds the value of the BuildCommitToServerTask edge.
+	HCLBuildCommitToServerTask []*ServerTask `json:"BuildCommitToServerTask,omitempty"`
 	// BuildCommitToPlanDiffs holds the value of the BuildCommitToPlanDiffs edge.
 	HCLBuildCommitToPlanDiffs []*PlanDiff `json:"BuildCommitToPlanDiffs,omitempty"`
 	//
@@ -40,11 +45,13 @@ type BuildCommit struct {
 type BuildCommitEdges struct {
 	// BuildCommitToBuild holds the value of the BuildCommitToBuild edge.
 	BuildCommitToBuild *Build `json:"BuildCommitToBuild,omitempty"`
+	// BuildCommitToServerTask holds the value of the BuildCommitToServerTask edge.
+	BuildCommitToServerTask []*ServerTask `json:"BuildCommitToServerTask,omitempty"`
 	// BuildCommitToPlanDiffs holds the value of the BuildCommitToPlanDiffs edge.
 	BuildCommitToPlanDiffs []*PlanDiff `json:"BuildCommitToPlanDiffs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // BuildCommitToBuildOrErr returns the BuildCommitToBuild value or an error if the edge
@@ -61,10 +68,19 @@ func (e BuildCommitEdges) BuildCommitToBuildOrErr() (*Build, error) {
 	return nil, &NotLoadedError{edge: "BuildCommitToBuild"}
 }
 
+// BuildCommitToServerTaskOrErr returns the BuildCommitToServerTask value or an error if the edge
+// was not loaded in eager-loading.
+func (e BuildCommitEdges) BuildCommitToServerTaskOrErr() ([]*ServerTask, error) {
+	if e.loadedTypes[1] {
+		return e.BuildCommitToServerTask, nil
+	}
+	return nil, &NotLoadedError{edge: "BuildCommitToServerTask"}
+}
+
 // BuildCommitToPlanDiffsOrErr returns the BuildCommitToPlanDiffs value or an error if the edge
 // was not loaded in eager-loading.
 func (e BuildCommitEdges) BuildCommitToPlanDiffsOrErr() ([]*PlanDiff, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[2] {
 		return e.BuildCommitToPlanDiffs, nil
 	}
 	return nil, &NotLoadedError{edge: "BuildCommitToPlanDiffs"}
@@ -79,6 +95,8 @@ func (*BuildCommit) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullInt64)
 		case buildcommit.FieldType, buildcommit.FieldState:
 			values[i] = new(sql.NullString)
+		case buildcommit.FieldCreatedAt:
+			values[i] = new(sql.NullTime)
 		case buildcommit.FieldID:
 			values[i] = new(uuid.UUID)
 		case buildcommit.ForeignKeys[0]: // build_commit_build_commit_to_build
@@ -122,6 +140,12 @@ func (bc *BuildCommit) assignValues(columns []string, values []interface{}) erro
 			} else if value.Valid {
 				bc.State = buildcommit.State(value.String)
 			}
+		case buildcommit.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				bc.CreatedAt = value.Time
+			}
 		case buildcommit.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field build_commit_build_commit_to_build", values[i])
@@ -137,6 +161,11 @@ func (bc *BuildCommit) assignValues(columns []string, values []interface{}) erro
 // QueryBuildCommitToBuild queries the "BuildCommitToBuild" edge of the BuildCommit entity.
 func (bc *BuildCommit) QueryBuildCommitToBuild() *BuildQuery {
 	return (&BuildCommitClient{config: bc.config}).QueryBuildCommitToBuild(bc)
+}
+
+// QueryBuildCommitToServerTask queries the "BuildCommitToServerTask" edge of the BuildCommit entity.
+func (bc *BuildCommit) QueryBuildCommitToServerTask() *ServerTaskQuery {
+	return (&BuildCommitClient{config: bc.config}).QueryBuildCommitToServerTask(bc)
 }
 
 // QueryBuildCommitToPlanDiffs queries the "BuildCommitToPlanDiffs" edge of the BuildCommit entity.
@@ -173,6 +202,8 @@ func (bc *BuildCommit) String() string {
 	builder.WriteString(fmt.Sprintf("%v", bc.Revision))
 	builder.WriteString(", state=")
 	builder.WriteString(fmt.Sprintf("%v", bc.State))
+	builder.WriteString(", created_at=")
+	builder.WriteString(bc.CreatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

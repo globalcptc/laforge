@@ -25,6 +25,8 @@ const (
 	EdgeBuildToCompetition = "BuildToCompetition"
 	// EdgeBuildToLatestBuildCommit holds the string denoting the buildtolatestbuildcommit edge name in mutations.
 	EdgeBuildToLatestBuildCommit = "BuildToLatestBuildCommit"
+	// EdgeBuildToRepoCommit holds the string denoting the buildtorepocommit edge name in mutations.
+	EdgeBuildToRepoCommit = "BuildToRepoCommit"
 	// EdgeBuildToProvisionedNetwork holds the string denoting the buildtoprovisionednetwork edge name in mutations.
 	EdgeBuildToProvisionedNetwork = "BuildToProvisionedNetwork"
 	// EdgeBuildToTeam holds the string denoting the buildtoteam edge name in mutations.
@@ -35,6 +37,10 @@ const (
 	EdgeBuildToBuildCommits = "BuildToBuildCommits"
 	// EdgeBuildToAdhocPlans holds the string denoting the buildtoadhocplans edge name in mutations.
 	EdgeBuildToAdhocPlans = "BuildToAdhocPlans"
+	// EdgeBuildToAgentStatuses holds the string denoting the buildtoagentstatuses edge name in mutations.
+	EdgeBuildToAgentStatuses = "BuildToAgentStatuses"
+	// EdgeBuildToServerTasks holds the string denoting the buildtoservertasks edge name in mutations.
+	EdgeBuildToServerTasks = "BuildToServerTasks"
 	// Table holds the table name of the build in the database.
 	Table = "builds"
 	// BuildToStatusTable is the table that holds the BuildToStatus relation/edge.
@@ -65,6 +71,13 @@ const (
 	BuildToLatestBuildCommitInverseTable = "build_commits"
 	// BuildToLatestBuildCommitColumn is the table column denoting the BuildToLatestBuildCommit relation/edge.
 	BuildToLatestBuildCommitColumn = "build_build_to_latest_build_commit"
+	// BuildToRepoCommitTable is the table that holds the BuildToRepoCommit relation/edge.
+	BuildToRepoCommitTable = "builds"
+	// BuildToRepoCommitInverseTable is the table name for the RepoCommit entity.
+	// It exists in this package in order to avoid circular dependency with the "repocommit" package.
+	BuildToRepoCommitInverseTable = "repo_commits"
+	// BuildToRepoCommitColumn is the table column denoting the BuildToRepoCommit relation/edge.
+	BuildToRepoCommitColumn = "build_build_to_repo_commit"
 	// BuildToProvisionedNetworkTable is the table that holds the BuildToProvisionedNetwork relation/edge.
 	BuildToProvisionedNetworkTable = "provisioned_networks"
 	// BuildToProvisionedNetworkInverseTable is the table name for the ProvisionedNetwork entity.
@@ -100,6 +113,20 @@ const (
 	BuildToAdhocPlansInverseTable = "adhoc_plans"
 	// BuildToAdhocPlansColumn is the table column denoting the BuildToAdhocPlans relation/edge.
 	BuildToAdhocPlansColumn = "adhoc_plan_adhoc_plan_to_build"
+	// BuildToAgentStatusesTable is the table that holds the BuildToAgentStatuses relation/edge.
+	BuildToAgentStatusesTable = "agent_status"
+	// BuildToAgentStatusesInverseTable is the table name for the AgentStatus entity.
+	// It exists in this package in order to avoid circular dependency with the "agentstatus" package.
+	BuildToAgentStatusesInverseTable = "agent_status"
+	// BuildToAgentStatusesColumn is the table column denoting the BuildToAgentStatuses relation/edge.
+	BuildToAgentStatusesColumn = "agent_status_agent_status_to_build"
+	// BuildToServerTasksTable is the table that holds the BuildToServerTasks relation/edge.
+	BuildToServerTasksTable = "server_tasks"
+	// BuildToServerTasksInverseTable is the table name for the ServerTask entity.
+	// It exists in this package in order to avoid circular dependency with the "servertask" package.
+	BuildToServerTasksInverseTable = "server_tasks"
+	// BuildToServerTasksColumn is the table column denoting the BuildToServerTasks relation/edge.
+	BuildToServerTasksColumn = "server_task_server_task_to_build"
 )
 
 // Columns holds all SQL columns for build fields.
@@ -116,6 +143,7 @@ var ForeignKeys = []string{
 	"build_build_to_environment",
 	"build_build_to_competition",
 	"build_build_to_latest_build_commit",
+	"build_build_to_repo_commit",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

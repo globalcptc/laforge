@@ -10,12 +10,15 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/adhocplan"
+	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/competition"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
+	"github.com/gen0cide/laforge/ent/repocommit"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/google/uuid"
@@ -120,6 +123,25 @@ func (bc *BuildCreate) SetBuildToLatestBuildCommit(b *BuildCommit) *BuildCreate 
 	return bc.SetBuildToLatestBuildCommitID(b.ID)
 }
 
+// SetBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by ID.
+func (bc *BuildCreate) SetBuildToRepoCommitID(id uuid.UUID) *BuildCreate {
+	bc.mutation.SetBuildToRepoCommitID(id)
+	return bc
+}
+
+// SetNillableBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by ID if the given value is not nil.
+func (bc *BuildCreate) SetNillableBuildToRepoCommitID(id *uuid.UUID) *BuildCreate {
+	if id != nil {
+		bc = bc.SetBuildToRepoCommitID(*id)
+	}
+	return bc
+}
+
+// SetBuildToRepoCommit sets the "BuildToRepoCommit" edge to the RepoCommit entity.
+func (bc *BuildCreate) SetBuildToRepoCommit(r *RepoCommit) *BuildCreate {
+	return bc.SetBuildToRepoCommitID(r.ID)
+}
+
 // AddBuildToProvisionedNetworkIDs adds the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity by IDs.
 func (bc *BuildCreate) AddBuildToProvisionedNetworkIDs(ids ...uuid.UUID) *BuildCreate {
 	bc.mutation.AddBuildToProvisionedNetworkIDs(ids...)
@@ -193,6 +215,36 @@ func (bc *BuildCreate) AddBuildToAdhocPlans(a ...*AdhocPlan) *BuildCreate {
 		ids[i] = a[i].ID
 	}
 	return bc.AddBuildToAdhocPlanIDs(ids...)
+}
+
+// AddBuildToAgentStatuseIDs adds the "BuildToAgentStatuses" edge to the AgentStatus entity by IDs.
+func (bc *BuildCreate) AddBuildToAgentStatuseIDs(ids ...uuid.UUID) *BuildCreate {
+	bc.mutation.AddBuildToAgentStatuseIDs(ids...)
+	return bc
+}
+
+// AddBuildToAgentStatuses adds the "BuildToAgentStatuses" edges to the AgentStatus entity.
+func (bc *BuildCreate) AddBuildToAgentStatuses(a ...*AgentStatus) *BuildCreate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return bc.AddBuildToAgentStatuseIDs(ids...)
+}
+
+// AddBuildToServerTaskIDs adds the "BuildToServerTasks" edge to the ServerTask entity by IDs.
+func (bc *BuildCreate) AddBuildToServerTaskIDs(ids ...uuid.UUID) *BuildCreate {
+	bc.mutation.AddBuildToServerTaskIDs(ids...)
+	return bc
+}
+
+// AddBuildToServerTasks adds the "BuildToServerTasks" edges to the ServerTask entity.
+func (bc *BuildCreate) AddBuildToServerTasks(s ...*ServerTask) *BuildCreate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return bc.AddBuildToServerTaskIDs(ids...)
 }
 
 // Mutation returns the BuildMutation object of the builder.
@@ -428,6 +480,26 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		_node.build_build_to_latest_build_commit = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
+	if nodes := bc.mutation.BuildToRepoCommitIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   build.BuildToRepoCommitTable,
+			Columns: []string{build.BuildToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.build_build_to_repo_commit = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	if nodes := bc.mutation.BuildToProvisionedNetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -515,6 +587,44 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: adhocplan.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := bc.mutation.BuildToAgentStatusesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToAgentStatusesTable,
+			Columns: []string{build.BuildToAgentStatusesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agentstatus.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := bc.mutation.BuildToServerTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   build.BuildToServerTasksTable,
+			Columns: []string{build.BuildToServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
 				},
 			},
 		}

@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { LaForgeAuthUser, LaForgeGetUserListQuery } from '@graphql';
@@ -77,7 +77,6 @@ export class AdminComponent implements OnInit {
   }
 
   editUser(user: LaForgeAuthUser) {
-    MatDialogConfig;
     this.dialog
       .open(EditUserModalComponent, {
         data: {

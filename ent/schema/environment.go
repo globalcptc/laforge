@@ -122,5 +122,7 @@ func (Environment) Edges() []ent.Edge {
 			Ref("BuildToEnvironment"),
 		edge.From("EnvironmentToRepository", Repository.Type).
 			Ref("RepositoryToEnvironment"),
+		edge.From("EnvironmentToServerTask", ServerTask.Type).
+			Ref("ServerTaskToEnvironment"),
 	}
 }

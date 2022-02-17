@@ -67,6 +67,8 @@ const (
 	EdgeEnvironmentToBuild = "EnvironmentToBuild"
 	// EdgeEnvironmentToRepository holds the string denoting the environmenttorepository edge name in mutations.
 	EdgeEnvironmentToRepository = "EnvironmentToRepository"
+	// EdgeEnvironmentToServerTask holds the string denoting the environmenttoservertask edge name in mutations.
+	EdgeEnvironmentToServerTask = "EnvironmentToServerTask"
 	// Table holds the table name of the environment in the database.
 	Table = "environments"
 	// EnvironmentToUserTable is the table that holds the EnvironmentToUser relation/edge. The primary key declared below.
@@ -180,6 +182,13 @@ const (
 	// EnvironmentToRepositoryInverseTable is the table name for the Repository entity.
 	// It exists in this package in order to avoid circular dependency with the "repository" package.
 	EnvironmentToRepositoryInverseTable = "repositories"
+	// EnvironmentToServerTaskTable is the table that holds the EnvironmentToServerTask relation/edge.
+	EnvironmentToServerTaskTable = "server_tasks"
+	// EnvironmentToServerTaskInverseTable is the table name for the ServerTask entity.
+	// It exists in this package in order to avoid circular dependency with the "servertask" package.
+	EnvironmentToServerTaskInverseTable = "server_tasks"
+	// EnvironmentToServerTaskColumn is the table column denoting the EnvironmentToServerTask relation/edge.
+	EnvironmentToServerTaskColumn = "server_task_server_task_to_environment"
 )
 
 // Columns holds all SQL columns for environment fields.
