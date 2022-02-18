@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
 
 	"github.com/gen0cide/laforge/ent"
 )
@@ -118,7 +122,25 @@ func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Bu
 	if err != nil {
 		return "", err
 	}
-	jsonString := string(jsonByteArray)
-	return jsonString, nil
+
+	binaryPath := path.Join("builds", entEnvrioment.Name, fmt.Sprint(entBuild.Revision))
+	os.MkdirAll(binaryPath, 0755)
+	binaryName := path.Join(binaryPath, "export.json")
+	binaryName, err = filepath.Abs(binaryName)
+	if err != nil {
+		return "", err
+	}
+
+	err = ioutil.WriteFile(binaryName, jsonByteArray, os.ModePerm)
+	if err != nil {
+		return "", err
+	}
+	entTmpUrl, err := CreateTempURL(ctx, client, binaryName)
+	if err != nil {
+		return "nil", err
+	}
+
+	exportUrl := fmt.Sprintf("%s/api/download/%s", laforgeServerUrl, entTmpUrl.URLID)
+	return exportUrl, nil
 
 }
