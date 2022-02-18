@@ -1,15 +1,12 @@
-package main
+package utils
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"os"
 
 	"github.com/gen0cide/laforge/ent"
-	"github.com/sirupsen/logrus"
 )
 
 type buildConf struct {
@@ -38,37 +35,6 @@ type hostConf struct {
 	OverridePassword string   `json:"override_password"`
 	DiskSize         int      `json:"disk_size"`
 	AgentURL         string   `json:"agent_url"`
-}
-
-func main() {
-	logrus.SetLevel(logrus.DebugLevel)
-	pgHost, ok := os.LookupEnv("PG_URI")
-	client := &ent.Client{}
-
-	if !ok {
-		client = ent.PGOpen("postgresql://laforger:laforge@127.0.0.1/laforge")
-	} else {
-		client = ent.PGOpen(pgHost)
-	}
-
-	ctx := context.Background()
-	defer ctx.Done()
-	defer client.Close()
-
-	// Run the auto migration tool.
-	if err := client.Schema.Create(ctx); err != nil {
-		log.Fatalf("failed creating schema resources: %v", err)
-	}
-
-	entBuild, err := client.Build.Query().First(ctx)
-	if err != nil {
-		log.Fatalf("failed to get a Build: %v", err)
-	}
-	buildJson, err := GenerateBuildConf(ctx, client, entBuild)
-	if err != nil {
-		log.Fatalf("failed to generate build conf: %v", err)
-	}
-	fmt.Printf("%+v", buildJson)
 }
 
 func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Build) (string, error) {
