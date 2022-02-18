@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gen0cide/laforge/builder/generic"
 	"github.com/gen0cide/laforge/builder/vspherensxt"
 	"github.com/gen0cide/laforge/builder/vspherensxt/nsxt"
 	"github.com/gen0cide/laforge/builder/vspherensxt/vsphere"
@@ -40,9 +41,25 @@ func BuilderFromEnvironment(environment *ent.Environment, logger *logging.Logger
 			return
 		}
 		return
+	case "generic":
+		genericBuilder, err = NewGenericBuilder(environment, logger)
+		if err != nil {
+			logrus.Errorf("Failed to make generic builder. Err: %v", err)
+			return
+		}
+		return
 	}
+
 	err = fmt.Errorf("error: builder not found")
 	logrus.Error(err)
+	return
+}
+
+// NewGenericBuilder creates a builder instance to deploy environments to NoWhere
+func NewGenericBuilder(environment *ent.Environment, logger *logging.Logger) (builder generic.GenericBuilder, err error) {
+	builder = generic.GenericBuilder{
+		Logger: logger,
+	}
 	return
 }
 
