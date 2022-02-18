@@ -25,8 +25,10 @@ type Builder interface {
 	Version() string
 	DeployHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error)
 	DeployNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error)
+	DeployTeam(ctx context.Context, entTeam *ent.Team) (err error)
 	TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error)
 	TeardownNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error)
+	TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error)
 }
 
 func BuilderFromEnvironment(environment *ent.Environment, logger *logging.Logger) (genericBuilder Builder, err error) {
