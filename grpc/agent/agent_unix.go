@@ -287,21 +287,6 @@ func UserGroupMember(user_name string, group_name string) (bool, error) { // is 
 	return false, nil
 }
 
-// https://stackoverflow.com/questions/56336168/golang-check-tcp-port-open
-func HostPortOpen(port int64) (bool, error) { // exists (boolean)
-
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(int(port))), 10*time.Second)
-	if err != nil {
-		return false, err
-	}
-	if conn != nil {
-		defer conn.Close() // no hanging processes
-		return true, nil
-	} else {
-		return false, nil
-	}
-}
-
 func HostProcessRunning(process_name string) (bool, error) { // running (boolean)
 	result := exec.Command("ps", "-a")
 	ps_output, err := result.Output()
@@ -339,6 +324,21 @@ func LinuxAPTInstalled(package_name string) (bool, error) { // installed
 	apt_lines := strings.Split(string(ps_output), "\n")
 	for i := 0; i < len(apt_lines); i++ {
 		if strings.HasPrefix(apt_lines[i], package_name) && (strings.HasSuffix(apt_lines[i], "[installed]") || strings.HasSuffix(apt_lines[i], "[installed,local]") || strings.HasSuffix(apt_lines[i], "[installed,automatic]")) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func LinuxYumInstalled(package_name string) (bool, error) { // installed
+	result := exec.Command("yum", "list", "--installed")
+	ps_output, err := result.Output()
+	if err != nil {
+		return false, err
+	}
+	apt_lines := strings.Split(string(ps_output), "\n")
+	for i := 0; i < len(apt_lines); i++ {
+		if strings.HasPrefix(apt_lines[i], package_name) {
 			return true, nil
 		}
 	}
@@ -461,12 +461,45 @@ func FilePermission(filepath string) (string, error) { // permissions (in the fo
 	return info.Mode().String(), nil
 }
 
+func HostPortOpen(port int) (bool, error) {
+	result := exec.Command("netstat", "-na")
+	ps_output, err := result.Output()
+	if err != nil {
+		return false, err
+	}
+	ps_lines := strings.Split(string(ps_output), "\n")
+	for i := 0; i < len(ps_lines); i++ {
+		fmt.Println("ps line", ps_lines[i])
+		if strings.Contains(ps_lines[i], " localhost:"+strconv.Itoa(port)+" ") || strings.Contains(ps_lines[i], " 0.0.0.0:"+strconv.Itoa(port)+" ") || strings.Contains(ps_lines[i], " 127.0.0.1:"+strconv.Itoa(port)+" ") {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func HostFirewallPort(port int) (bool, error) {
+	result := exec.Command("iptables", "-L", "-n")
+	ps_output, err := result.Output()
+	if err != nil {
+		return false, err
+	}
+	ps_lines := strings.Split(string(ps_output), "\n")
+	for i := 0; i < len(ps_lines); i++ {
+		fmt.Println("ps line", ps_lines[i])
+		if strings.Contains(ps_lines[i], "dpt:"+strconv.Itoa(port)) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func main() {
-	// fmt.Println(NetHttpContentRegex("https://vcu.edu"))
+	// fmt.Println(NetHttpContentRegex("https://curtisf.dev"))
 	// fmt.Println(FileExists("/home/piero/most-coding-stuff/laforge/test_file")) // change to dir, won't get tripped up
 	// fmt.Println(FileHash("/home/piero/most-coding-stuff/laforge/test_file.txt"))
 	// fmt.Println(UserGroupMember("piero", "wew"))
 	// fmt.Println(HostPortOpen(8080))
+	fmt.Println(HostFirewallPort(9876))
 	// fmt.Println(HostProcessRunning("nginx"))
 	// fmt.Println(HostServiceState("nginx"))
 	// fmt.Println(LinuxAPTInstalled("wget"))
@@ -474,5 +507,5 @@ func main() {
 	// fmt.Println(NetICMP("192.168.1.255"))
 	// fmt.Println(FileContentString("/home/piero/most-coding-stuff/laforge/test_file.txt", "hi"))
 	// fmt.Println(FilePermission("/home/piero/most-coding-stuff/laforge/test_file.txt"))
-	fmt.Println(NetUDPOpen("127.0.0.1", 3000, ""))
+	// fmt.Println(NetUDPOpen("127.0.0.1", 3000, ""))
 }

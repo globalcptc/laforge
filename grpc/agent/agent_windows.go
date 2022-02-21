@@ -233,20 +233,20 @@ func UserExists(user_name string) (bool, error) { // exists (boolean
 	return false, nil
 }
 
-// https://stackoverflow.com/questions/56336168/golang-check-tcp-port-open
-// https://stackoverflow.com/questions/56336168/golang-check-tcp-port-open
-func HostPortOpen(port int64) (bool, error) { // exists (boolean)
-
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(int(port))), 10*time.Second)
+func HostPortOpen(port int) (bool, error) {
+	result := exec.Command("netstat", "-na")
+	ps_output, err := result.Output()
 	if err != nil {
 		return false, err
 	}
-	if conn != nil {
-		defer conn.Close() // no hanging processes
-		return true, nil
-	} else {
-		return false, nil
+	ps_lines := strings.Split(string(ps_output), "\n")
+	for i := 0; i < len(ps_lines); i++ {
+		fmt.Println("ps line", ps_lines[i])
+		if strings.Contains(ps_lines[i], " localhost:"+strconv.Itoa(port)+" ") || strings.Contains(ps_lines[i], " 0.0.0.0:"+strconv.Itoa(port)+" ") || strings.Contains(ps_lines[i], " 127.0.0.1:"+strconv.Itoa(port)+" ") {
+			return true, nil
+		}
 	}
+	return false, nil
 }
 
 func HostProcessRunning(process_name string) (bool, error) { // running (boolean)
@@ -365,7 +365,6 @@ func FilePermission(filepath string) (string, error) { // permissions (in the fo
 // 	// return l, err
 // }
 
-
 // https://go.dev/src/os/user/lookup_windows.go
 // https://cs.opensource.google/go/go/+/refs/tags/go1.17.7:src/os/user/lookup.go
 func UserGroupMember(user_name string, group_name string) (bool, error) { // is in the group or not (boolean)
@@ -398,7 +397,7 @@ func UserGroupMember(user_name string, group_name string) (bool, error) { // is 
 	for i := range userGroups {
 		if group.Gid == userGroups[i] {
 			// Found a Gid that matches Gid of group_name
-			return true, nil 
+			return true, nil
 		}
 	}
 
@@ -429,11 +428,26 @@ func NetHttpContentHash(full_url string, hashed_url string) (bool, error) { // c
 	// return string(page_html[:]), nil // stringify
 }
 
+func HostFirewallPort(port int) (bool, error) {
+	result := exec.Command("netsh", "firewall", "show", "state")
+	ps_output, err := result.Output()
+	if err != nil {
+		return false, err
+	}
+	ps_lines := strings.Split(string(ps_output), "\n")
+	for i := 0; i < len(ps_lines); i++ {
+		fmt.Println("ps line", ps_lines[i])
+		if strings.Contains(ps_lines[i], strconv.Itoa(port)+" ") {
+			return true, nil
+		}
+	}
+	return false, nil
+}
 
 func main() {
 	fmt.Println("windows")
-	// HostPortOpen("1900")
-	fmt.Println(NetHttpContentHash("https://curtisf.dev/", "c76fdd9a87b2a3c653968b12973c2498"))
+	fmt.Println(HostPortOpen(8080))
+	// fmt.Println(NetHttpContentHash("https://curtisf.dev/", "c76fdd9a87b2a3c653968b12973c2498"))
 	// fmt.Println(FileHash("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
 	// fmt.Println(FileContentRegex("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
 	// fmt.Println(DirectoryExists("C:\\Users\\Nkdileo\\Documents"))
