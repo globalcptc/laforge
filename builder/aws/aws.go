@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/gen0cide/laforge/ent"
@@ -22,6 +23,7 @@ const (
 type AWSBuilder struct {
 	AWS_Access_Key_Id     string
 	AWS_Secret_Access_Key string
+	AWS_Session_Token     string
 	Region                string
 }
 
@@ -60,7 +62,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		return err
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(builder.Region))
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
@@ -76,6 +78,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	if err != nil {
 		return
 	}
+	entNetwork, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToNetwork().Only(ctx)
 
 	// Describe the host with info from above and get ready to deploy
 	client := ec2.NewFromConfig(cfg)
@@ -105,6 +108,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		ami = ""
 	}
 	vmName := builder.generateVmName(competition, team, host, build)
+
 	//Determine the Team so I can determine the VPC to deploy to
 	var vpc []string //TODO: Find out how to get the VPC ID
 
@@ -115,11 +119,8 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		MaxCount:         &numInstances,
 		SecurityGroupIds: vpc,
 		ClientToken:      &vmName,
-		//PrivateIpAddress: ,
-		//SecurityGroups: ,
-		//SecurityGroupIds: ,
-		//SubnetId: ,
-		//NetworkInterfaces: ,
+		PrivateIpAddress: &provisionedHost.SubnetIP,
+		SubnetId:         entNetwork.VpcId,
 		//KeyName: ,
 	}
 
@@ -128,8 +129,14 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	if err != nil {
 		return err
 	}
-
+	// Get InstanceId and store it in ENT to access later
 	id := *result.Instances[0].InstanceId
+	newVars := host.Vars
+	newVars["InstanceId"] = id
+	err = host.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return err
+	}
 	fmt.Println("Created tagged instance with ID " + id)
 
 	return
@@ -144,7 +151,7 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(builder.Region))
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
@@ -160,6 +167,13 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	if err != nil {
 		return err
 	}
+	id := *results.Vpc.VpcId
+	newVars := entNetwork.Vars
+	newVars["VpcId"] = id
+	err = entNetwork.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return err
+	}
 	fmt.Println(results)
 	return
 }
@@ -170,28 +184,15 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 	if err != nil {
 		return err
 	}
-	build, err := provisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
-	if err != nil {
-		return
-	}
-	competition, err := build.QueryBuildToCompetition().Only(ctx)
-	if err != nil {
-		return
-	}
-	team, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
-	if err != nil {
-		return
-	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(builder.Region))
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
 	client := ec2.NewFromConfig(cfg)
 
-	vmName := builder.generateVmName(competition, team, host, build)
 	var instances []string
-	instances[0] = vmName
+	instances[0] = host.InstanceId
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: instances,
 	}
@@ -203,6 +204,25 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 	return
 }
 
-func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
+func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
+	// Get information about Network from ENT
+	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+	}
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
+	if err != nil {
+		return err
+	}
+	client := ec2.NewFromConfig(cfg)
+	input := &ec2.DeleteVpcInput{
+		VpcId: entNetwork.VpcId,
+	}
+	results, err := client.DeleteVpc(ctx, input)
+	if err != nil {
+		return err
+	}
+	fmt.Println(results)
 	return
 }
