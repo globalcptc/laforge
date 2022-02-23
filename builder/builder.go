@@ -39,6 +39,8 @@ func BuilderFromEnvironment(environment *ent.Environment, logger *logging.Logger
 		}
 		return
 	}
+	case "openstack":
+		genericBuilder, err = 
 	err = fmt.Errorf("error: builder not found")
 	logrus.Error(err)
 	return
@@ -214,4 +216,9 @@ func NewVSphereNSXTBuilder(env *ent.Environment, logger *logging.Logger) (builde
 		TeardownWorkerPool:        teardownWorkerPool,
 	}
 	return
+}
+
+func NewOpenstackBuilder(env *ent.Environment, logger *logging.Logger) (builder vspherensxt.VSphereNSXTBuilder, err error) {
+// volumes first
+// if deleteing volumes set them to error
 }

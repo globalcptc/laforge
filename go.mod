@@ -7,7 +7,6 @@ require (
 	entgo.io/ent v0.9.1
 	github.com/99designs/gqlgen v0.13.0
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
-	github.com/UnnoTed/fileb0x v1.1.4 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/bradfitz/iter v0.0.0-20191230175014-e8f45d346db8
 	github.com/briandowns/formatifier v0.0.0-20150226010542-6d068a6ce63a
@@ -26,11 +25,11 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/uuid v1.3.0
+	github.com/gophercloud/gophercloud v0.24.0
 	github.com/gorilla/sessions v1.2.1
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/hcl/v2 v2.10.0
-	github.com/hedwigz/entviz v0.0.0-20211018071308-cbfafe399286 // indirect
 	github.com/iamacarpet/go-win64api v0.0.0-20210311141720-fe38760bed28
 	github.com/iancoleman/strcase v0.1.3
 	github.com/jackc/pgproto3/v2 v2.0.7 // indirect
@@ -56,10 +55,9 @@ require (
 	github.com/vmware/govmomi v0.25.0
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/zclconf/go-cty v1.8.3
-	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
-	golang.org/x/net v0.0.0-20210510120150-4163338589ed
+	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
+	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210511113859-b0526f3d8744 // indirect
 	google.golang.org/genproto v0.0.0-20210510173355-fb37daa5cd7a // indirect
 	google.golang.org/grpc v1.37.1
 	google.golang.org/protobuf v1.26.0
