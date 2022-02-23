@@ -20,15 +20,19 @@ const routes: Routes = [
     component: LayoutComponent,
     children: [
       {
+        path: 'home',
+        loadChildren: () => import('./home/home.module').then((m) => m.HomeModule)
+      },
+      {
         path: 'dashboard',
         loadChildren: () => import('./dashboard/dashboard.module').then((m) => m.DashboardModule)
       },
       {
-        path: 'build',
+        path: 'build/:id',
         loadChildren: () => import('./build/build.module').then((m) => m.BuildModule)
       },
       {
-        path: 'manage',
+        path: 'manage/:id',
         loadChildren: () => import('./manage/manage.module').then((m) => m.ManageModule)
       },
       // {
@@ -36,7 +40,7 @@ const routes: Routes = [
       //   loadChildren: () => import('./monitor/monitor.module').then((m) => m.MonitorModule)
       // },
       {
-        path: 'plan',
+        path: 'plan/:id',
         loadChildren: () => import('./plan/plan.module').then((m) => m.PlanModule)
       },
       {
@@ -61,7 +65,7 @@ const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: 'dashboard',
+        redirectTo: 'home',
         pathMatch: 'full'
       },
       {

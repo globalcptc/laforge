@@ -6,12 +6,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/plandiff"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/google/uuid"
 )
 
@@ -40,6 +42,20 @@ func (bcc *BuildCommitCreate) SetState(b buildcommit.State) *BuildCommitCreate {
 	return bcc
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (bcc *BuildCommitCreate) SetCreatedAt(t time.Time) *BuildCommitCreate {
+	bcc.mutation.SetCreatedAt(t)
+	return bcc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (bcc *BuildCommitCreate) SetNillableCreatedAt(t *time.Time) *BuildCommitCreate {
+	if t != nil {
+		bcc.SetCreatedAt(*t)
+	}
+	return bcc
+}
+
 // SetID sets the "id" field.
 func (bcc *BuildCommitCreate) SetID(u uuid.UUID) *BuildCommitCreate {
 	bcc.mutation.SetID(u)
@@ -55,6 +71,21 @@ func (bcc *BuildCommitCreate) SetBuildCommitToBuildID(id uuid.UUID) *BuildCommit
 // SetBuildCommitToBuild sets the "BuildCommitToBuild" edge to the Build entity.
 func (bcc *BuildCommitCreate) SetBuildCommitToBuild(b *Build) *BuildCommitCreate {
 	return bcc.SetBuildCommitToBuildID(b.ID)
+}
+
+// AddBuildCommitToServerTaskIDs adds the "BuildCommitToServerTask" edge to the ServerTask entity by IDs.
+func (bcc *BuildCommitCreate) AddBuildCommitToServerTaskIDs(ids ...uuid.UUID) *BuildCommitCreate {
+	bcc.mutation.AddBuildCommitToServerTaskIDs(ids...)
+	return bcc
+}
+
+// AddBuildCommitToServerTask adds the "BuildCommitToServerTask" edges to the ServerTask entity.
+func (bcc *BuildCommitCreate) AddBuildCommitToServerTask(s ...*ServerTask) *BuildCommitCreate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return bcc.AddBuildCommitToServerTaskIDs(ids...)
 }
 
 // AddBuildCommitToPlanDiffIDs adds the "BuildCommitToPlanDiffs" edge to the PlanDiff entity by IDs.
@@ -143,6 +174,10 @@ func (bcc *BuildCommitCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (bcc *BuildCommitCreate) defaults() {
+	if _, ok := bcc.mutation.CreatedAt(); !ok {
+		v := buildcommit.DefaultCreatedAt()
+		bcc.mutation.SetCreatedAt(v)
+	}
 	if _, ok := bcc.mutation.ID(); !ok {
 		v := buildcommit.DefaultID()
 		bcc.mutation.SetID(v)
@@ -169,6 +204,9 @@ func (bcc *BuildCommitCreate) check() error {
 		if err := buildcommit.StateValidator(v); err != nil {
 			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "state": %w`, err)}
 		}
+	}
+	if _, ok := bcc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "created_at"`)}
 	}
 	if _, ok := bcc.mutation.BuildCommitToBuildID(); !ok {
 		return &ValidationError{Name: "BuildCommitToBuild", err: errors.New("ent: missing required edge \"BuildCommitToBuild\"")}
@@ -229,6 +267,14 @@ func (bcc *BuildCommitCreate) createSpec() (*BuildCommit, *sqlgraph.CreateSpec) 
 		})
 		_node.State = value
 	}
+	if value, ok := bcc.mutation.CreatedAt(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: buildcommit.FieldCreatedAt,
+		})
+		_node.CreatedAt = value
+	}
 	if nodes := bcc.mutation.BuildCommitToBuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -247,6 +293,25 @@ func (bcc *BuildCommitCreate) createSpec() (*BuildCommit, *sqlgraph.CreateSpec) 
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.build_commit_build_commit_to_build = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := bcc.mutation.BuildCommitToServerTaskIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   buildcommit.BuildCommitToServerTaskTable,
+			Columns: []string{buildcommit.BuildCommitToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := bcc.mutation.BuildCommitToPlanDiffsIDs(); len(nodes) > 0 {

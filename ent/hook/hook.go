@@ -360,6 +360,19 @@ func (f ProvisioningStepFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.V
 	return f(ctx, mv)
 }
 
+// The RepoCommitFunc type is an adapter to allow the use of ordinary
+// function as RepoCommit mutator.
+type RepoCommitFunc func(context.Context, *ent.RepoCommitMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RepoCommitFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.RepoCommitMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RepoCommitMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The RepositoryFunc type is an adapter to allow the use of ordinary
 // function as Repository mutator.
 type RepositoryFunc func(context.Context, *ent.RepositoryMutation) (ent.Value, error)

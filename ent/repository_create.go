@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/environment"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/google/uuid"
 )
@@ -61,20 +62,6 @@ func (rc *RepositoryCreate) SetNillableFolderPath(s *string) *RepositoryCreate {
 	return rc
 }
 
-// SetCommitInfo sets the "commit_info" field.
-func (rc *RepositoryCreate) SetCommitInfo(s string) *RepositoryCreate {
-	rc.mutation.SetCommitInfo(s)
-	return rc
-}
-
-// SetNillableCommitInfo sets the "commit_info" field if the given value is not nil.
-func (rc *RepositoryCreate) SetNillableCommitInfo(s *string) *RepositoryCreate {
-	if s != nil {
-		rc.SetCommitInfo(*s)
-	}
-	return rc
-}
-
 // SetID sets the "id" field.
 func (rc *RepositoryCreate) SetID(u uuid.UUID) *RepositoryCreate {
 	rc.mutation.SetID(u)
@@ -94,6 +81,21 @@ func (rc *RepositoryCreate) AddRepositoryToEnvironment(e ...*Environment) *Repos
 		ids[i] = e[i].ID
 	}
 	return rc.AddRepositoryToEnvironmentIDs(ids...)
+}
+
+// AddRepositoryToRepoCommitIDs adds the "RepositoryToRepoCommit" edge to the RepoCommit entity by IDs.
+func (rc *RepositoryCreate) AddRepositoryToRepoCommitIDs(ids ...uuid.UUID) *RepositoryCreate {
+	rc.mutation.AddRepositoryToRepoCommitIDs(ids...)
+	return rc
+}
+
+// AddRepositoryToRepoCommit adds the "RepositoryToRepoCommit" edges to the RepoCommit entity.
+func (rc *RepositoryCreate) AddRepositoryToRepoCommit(r ...*RepoCommit) *RepositoryCreate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return rc.AddRepositoryToRepoCommitIDs(ids...)
 }
 
 // Mutation returns the RepositoryMutation object of the builder.
@@ -175,10 +177,6 @@ func (rc *RepositoryCreate) defaults() {
 		v := repository.DefaultFolderPath
 		rc.mutation.SetFolderPath(v)
 	}
-	if _, ok := rc.mutation.CommitInfo(); !ok {
-		v := repository.DefaultCommitInfo
-		rc.mutation.SetCommitInfo(v)
-	}
 	if _, ok := rc.mutation.ID(); !ok {
 		v := repository.DefaultID()
 		rc.mutation.SetID(v)
@@ -198,9 +196,6 @@ func (rc *RepositoryCreate) check() error {
 	}
 	if _, ok := rc.mutation.FolderPath(); !ok {
 		return &ValidationError{Name: "folder_path", err: errors.New(`ent: missing required field "folder_path"`)}
-	}
-	if _, ok := rc.mutation.CommitInfo(); !ok {
-		return &ValidationError{Name: "commit_info", err: errors.New(`ent: missing required field "commit_info"`)}
 	}
 	return nil
 }
@@ -266,14 +261,6 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 		})
 		_node.FolderPath = value
 	}
-	if value, ok := rc.mutation.CommitInfo(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: repository.FieldCommitInfo,
-		})
-		_node.CommitInfo = value
-	}
 	if nodes := rc.mutation.RepositoryToEnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
@@ -285,6 +272,25 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: environment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := rc.mutation.RepositoryToRepoCommitIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.RepositoryToRepoCommitTable,
+			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
 				},
 			},
 		}

@@ -1,0 +1,46 @@
+<div class="w-100 d-flex align-items-center" [ngClass]="(showLog | async) ? 'justify-content-between' : 'justify-content-end'">
+  <button mat-icon-button color="basic" aria-label="Close" (click)="clearLog()" *ngIf="showLog | async">
+    <!-- <mat-icon>undo</mat-icon> -->
+    <i class="fa fa-chevron-left"></i>
+  </button>
+  <i class="fad fa-2x fa-spinner-third fa-spin" *ngIf="(showLog | async) && (parsedLogsLoading | async)"></i>
+  <button mat-icon-button color="basic" aria-label="Close" (click)="onClose()">
+    <!-- <mat-icon>undo</mat-icon> -->
+    <i class="fa fa-times"></i>
+  </button>
+</div>
+<hr />
+<div *ngIf="showLog | async" class="log-container">
+  <!-- <pre *ngIf="showLog | async" class="logs d-inline-block text-white"> -->
+  <!-- {{ logText | async }} -->
+  <ng-container *ngIf="parsedLogs | async as _parsedLogs">
+    <pre *ngFor="let log of _parsedLogs" class="log-line" [ngClass]="'text-' + getLevelColor(log)">{{ log.text }}</pre>
+  </ng-container>
+  <!-- </pre> -->
+</div>
+<ng-container *ngIf="!(showLog | async)">
+  <div class="tasks" *ngIf="serverTasks | async as _serverTasks">
+    <div class="task">
+      <div class="type">Type</div>
+      <div class="start-time">Started</div>
+      <div class="end-time">Ended</div>
+      <div class="view-logs"></div>
+    </div>
+    <div class="task" *ngFor="let task of _serverTasks">
+      <div class="type">
+        <span class="badge" [ngClass]="'bg-' + getServerTaskColor(task)">
+          {{ task.type }}
+        </span>
+      </div>
+      <div class="start-time">
+        {{ task.start_time | amDateFormat: 'MMM Do YYYY, hh:mm:ss A' }}
+      </div>
+      <div class="end-time">
+        {{ task.end_time | amDateFormat: 'MMM Do YYYY, hh:mm:ss A' }}
+      </div>
+      <div class="view-logs">
+        <button (click)="viewLog(task)">View Logs</button>
+      </div>
+    </div>
+  </div>
+</ng-container>

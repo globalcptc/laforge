@@ -1,86 +1,86 @@
-import { Component, Input, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import {
+  LaForgeGetBuildCommitQuery,
+  LaForgeGetBuildTreeQuery,
   LaForgePlanFieldsFragment,
   LaForgeProvisionedNetwork,
   LaForgeProvisionStatus,
   LaForgeSubscribeUpdatedStatusSubscription
 } from '@graphql';
 import { EnvironmentService } from '@services/environment/environment.service';
-import { Subscription } from 'rxjs';
-import { Status } from 'src/app/models/common.model';
+import { StatusService } from '@services/status/status.service';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { RebuildService } from 'src/app/services/rebuild/rebuild.service';
 
 import { NetworkModalComponent } from '../network-modal/network-modal.component';
 
+// eslint-disable-next-line max-len
+type BuildCommitProvisionedNetwork = LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0];
+// eslint-disable-next-line max-len
+type BuildTreeProvisionedNetwork = LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0];
+
 @Component({
   selector: 'app-network',
   templateUrl: './network.component.html',
-  styleUrls: ['./network.component.scss']
+  styleUrls: ['./network.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NetworkComponent implements OnInit, OnDestroy {
   private unsubscribe: Subscription[] = [];
-  @Input() provisionedNetwork: LaForgeProvisionedNetwork;
-  @Input() status: Status;
+  // @Input() provisionedNetwork: LaForgeProvisionedNetwork;
+  // @Input() status: Status;
+  @Input()
+  provisionedNetwork: BuildCommitProvisionedNetwork | BuildTreeProvisionedNetwork;
+  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  // @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
+  // @Input() buildAgentStatusMap: LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus'][] | undefined;
   @Input() style: 'compact' | 'collapsed' | 'expanded';
   @Input() selectable: boolean;
   @Input() parentSelected: boolean;
   @Input() mode: 'plan' | 'build' | 'manage';
   isSelectedState = false;
-  planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
+  // planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
   expandOverride = false;
   shouldHideLoading = false;
-  shouldHide = false;
+  shouldHide: BehaviorSubject<boolean>;
   latestDiff: LaForgePlanFieldsFragment['PlanToPlanDiffs'][0];
+  planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
+  provisionStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
 
   constructor(
     public dialog: MatDialog,
     private rebuild: RebuildService,
     private envService: EnvironmentService,
+    private status: StatusService,
     private cdRef: ChangeDetectorRef
   ) {
     if (!this.mode) this.mode = 'manage';
     if (!this.style) this.style = 'compact';
     if (!this.selectable) this.selectable = false;
     if (!this.parentSelected) this.parentSelected = false;
+
+    this.shouldHide = new BehaviorSubject(false);
   }
 
   ngOnInit(): void {
-    const sub1 = this.envService.statusUpdate.asObservable().subscribe(() => {
-      this.checkPlanStatus();
-      this.cdRef.detectChanges();
-    });
-    this.unsubscribe.push(sub1);
     if (this.mode === 'plan') {
-      this.shouldHideLoading = true;
-      const sub2 = this.envService.planUpdate.asObservable().subscribe(() => {
-        this.checkLatestPlanDiff();
-        this.checkShouldHide();
-        this.cdRef.detectChanges();
-      });
-      this.unsubscribe.push(sub2);
-      const sub4 = this.envService.buildCommitUpdate.asObservable().subscribe(() => {
-        this.checkLatestPlanDiff();
-        this.checkShouldHide();
-        this.cdRef.detectChanges();
-      });
-      this.unsubscribe.push(sub4);
+      if (!this.getPlanDiff()) this.shouldHide.next(true);
+    }
+    this.planStatus = this.status.getStatusSubject(this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id);
+    const sub1 = this.planStatus.subscribe(() => this.cdRef.markForCheck());
+    this.unsubscribe.push(sub1);
+    if (this.mode !== 'plan') {
+      this.provisionStatus = this.status.getStatusSubject(
+        (this.provisionedNetwork as BuildTreeProvisionedNetwork).ProvisionedNetworkToStatus.id
+      );
+      const sub = this.provisionStatus.subscribe(() => this.cdRef.markForCheck());
+      this.unsubscribe.push(sub);
     }
   }
 
   ngOnDestroy() {
     this.unsubscribe.forEach((s) => s.unsubscribe());
-  }
-
-  checkPlanStatus(): void {
-    this.planStatus = this.envService.getStatus(this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id) || this.planStatus;
-  }
-
-  checkLatestPlanDiff(): void {
-    if (this.latestDiff) return;
-    const pnetPlan = this.envService.getPlan(this.provisionedNetwork.ProvisionedNetworkToPlan.id);
-    if (!pnetPlan) return;
-    this.latestDiff = [...pnetPlan.PlanToPlanDiffs].sort((a, b) => b.revision - a.revision)[0];
   }
 
   viewDetails(): void {
@@ -92,32 +92,27 @@ export class NetworkComponent implements OnInit, OnDestroy {
   }
 
   allChildrenResponding(): boolean {
-    let numWithAgentData = 0;
-    let numWithCompletedSteps = 0;
-    let totalHosts = 0;
-    for (const host of this.provisionedNetwork.ProvisionedNetworkToProvisionedHost) {
-      totalHosts++;
-      if (host.ProvisionedHostToAgentStatus?.clientId) numWithAgentData++;
-      let totalSteps = 0;
-      let totalCompletedSteps = 0;
-      for (const step of host.ProvisionedHostToProvisioningStep) {
-        if (step.step_number === 0) continue;
-        totalSteps++;
-        if (
-          step.ProvisioningStepToStatus.id &&
-          this.envService.getStatus(step.ProvisioningStepToPlan.PlanToStatus.id)?.state === LaForgeProvisionStatus.Complete
-        )
-          totalCompletedSteps++;
-      }
-      if (totalSteps === totalCompletedSteps) numWithCompletedSteps++;
-    }
-    return numWithAgentData === totalHosts && numWithCompletedSteps === totalHosts;
+    if (this.mode === 'plan') return true;
+    return (
+      this.planStatus.getValue().state === LaForgeProvisionStatus.Complete &&
+      this.provisionStatus.getValue().state === LaForgeProvisionStatus.Complete
+    );
+  }
+
+  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
+    return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.provisionedNetwork.ProvisionedNetworkToPlan.id)[0] ?? undefined;
+  }
+
+  getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
+    // return this.buildStatusMap?.filter((s) => s.id === this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id)[0] ?? undefined;
+    return this.planStatus.getValue();
   }
 
   getStatusIcon(): string {
     if (this.mode === 'plan') {
-      if (!this.latestDiff) return 'fas fa-spinner fa-spin';
-      switch (this.latestDiff.new_state) {
+      const planDiff = this.getPlanDiff();
+      if (!planDiff) return 'fas fa-spinner fa-spin';
+      switch (planDiff.new_state) {
         case LaForgeProvisionStatus.Torebuild:
           return 'fas fa-sync-alt';
         case LaForgeProvisionStatus.Todelete:
@@ -128,9 +123,10 @@ export class NetworkComponent implements OnInit, OnDestroy {
           return 'fal fa-network-wired';
       }
     }
-    if (!this.planStatus) return 'fas fa-minus-circle';
+    const status = this.getStatus();
+    if (!status) return 'fas fa-minus-circle';
 
-    switch (this.planStatus.state) {
+    switch (status.state) {
       case LaForgeProvisionStatus.Planning:
         return 'fas fa-ruler-triangle';
       case LaForgeProvisionStatus.Todelete:
@@ -148,8 +144,9 @@ export class NetworkComponent implements OnInit, OnDestroy {
 
   getStatusColor(): string {
     if (this.mode === 'plan') {
-      if (!this.latestDiff) return 'dark';
-      switch (this.latestDiff.new_state) {
+      const planDiff = this.getPlanDiff();
+      if (!planDiff) return 'dark';
+      switch (planDiff.new_state) {
         case LaForgeProvisionStatus.Torebuild:
           return 'warning';
         case LaForgeProvisionStatus.Todelete:
@@ -160,8 +157,10 @@ export class NetworkComponent implements OnInit, OnDestroy {
           return 'dark';
       }
     }
-    if (!this.planStatus) return 'dark';
-    switch (this.planStatus.state) {
+    const status = this.getStatus();
+    if (!status) return 'dark';
+
+    switch (status.state) {
       case LaForgeProvisionStatus.Complete:
         if (this.allChildrenResponding()) {
           return 'success';
@@ -188,40 +187,20 @@ export class NetworkComponent implements OnInit, OnDestroy {
   onSelect(): void {
     let success = false;
     if (!this.isSelected()) {
-      success = this.rebuild.addNetwork(this.provisionedNetwork);
+      success = this.rebuild.addNetwork(this.provisionedNetwork as LaForgeProvisionedNetwork);
     } else {
-      success = this.rebuild.removeNetwork(this.provisionedNetwork);
+      success = this.rebuild.removeNetwork(this.provisionedNetwork as LaForgeProvisionedNetwork);
     }
     if (success) this.isSelectedState = !this.isSelectedState;
   }
 
   onIndeterminateChange(isIndeterminate: boolean): void {
-    if (!isIndeterminate && this.isSelectedState) setTimeout(() => this.rebuild.addNetwork(this.provisionedNetwork), 500);
+    if (!isIndeterminate && this.isSelectedState)
+      setTimeout(() => this.rebuild.addNetwork(this.provisionedNetwork as LaForgeProvisionedNetwork), 500);
   }
 
   isSelected(): boolean {
-    return this.rebuild.hasNetwork(this.provisionedNetwork);
-  }
-
-  checkShouldHide() {
-    if (this.mode === 'plan') {
-      if (!this.latestDiff) return (this.shouldHide = false);
-      const latestCommit = this.envService.getLatestCommit();
-      if (!latestCommit) return (this.shouldHide = false);
-      const pnetPlan = this.envService.getPlan(this.provisionedNetwork.ProvisionedNetworkToPlan.id);
-      if (pnetPlan?.PlanToPlanDiffs.length > 0) {
-        // expand if latest diff is a part of the latest commit
-        if (latestCommit && latestCommit.BuildCommitToPlanDiffs.filter((diff) => diff.id === this.latestDiff.id).length > 0) {
-          this.shouldHideLoading = false;
-          this.shouldHide = false;
-          return;
-        }
-      }
-      this.shouldHideLoading = false;
-      this.shouldHide = true;
-      return;
-    }
-    this.shouldHide = false;
+    return this.rebuild.hasNetwork(this.provisionedNetwork as LaForgeProvisionedNetwork);
   }
 
   shouldCollapse(): boolean {
@@ -239,18 +218,17 @@ export class NetworkComponent implements OnInit, OnDestroy {
       // this.shouldCollapseLoading = false;
       // return true;
     }
+    const status = this.getStatus();
     return (
-      this.planStatus &&
-      (this.planStatus.state === LaForgeProvisionStatus.Deleted ||
-        (this.planStatus.state === LaForgeProvisionStatus.Complete && this.allChildrenResponding()))
+      status &&
+      (status.state === LaForgeProvisionStatus.Deleted ||
+        (status.state === LaForgeProvisionStatus.Complete && this.allChildrenResponding()))
     );
   }
 
   canOverrideExpand(): boolean {
-    return (
-      this.planStatus &&
-      (this.planStatus.state === LaForgeProvisionStatus.Complete || this.planStatus.state === LaForgeProvisionStatus.Deleted)
-    );
+    const status = this.getStatus();
+    return status && (status.state === LaForgeProvisionStatus.Complete || status.state === LaForgeProvisionStatus.Deleted);
   }
 
   toggleCollapse(): void {

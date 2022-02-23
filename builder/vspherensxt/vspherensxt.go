@@ -12,6 +12,8 @@ import (
 	"github.com/gen0cide/laforge/builder/vspherensxt/nsxt"
 	"github.com/gen0cide/laforge/builder/vspherensxt/vsphere"
 	"github.com/gen0cide/laforge/ent"
+	"github.com/gen0cide/laforge/ent/network"
+	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/types"
@@ -348,6 +350,24 @@ func (builder VSphereNSXTBuilder) DeployNetwork(ctx context.Context, provisioned
 	return
 }
 
+func (builder VSphereNSXTBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
+	entProNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(
+		provisionednetwork.HasProvisionedNetworkToNetworkWith(
+			network.NameEQ("vdi"),
+		),
+	).First(ctx)
+
+	if err != nil {
+		return fmt.Errorf("failed to query vdi provisioned network from entTeam: %v", err)
+
+	}
+	err = builder.DeployNetwork(ctx, entProNetwork)
+	if err != nil {
+		return fmt.Errorf("failed to pre-create Tier-1 network: %v", err)
+	}
+	return
+}
+
 func (builder VSphereNSXTBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
 	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	if err != nil {
@@ -491,5 +511,9 @@ func (builder VSphereNSXTBuilder) TeardownNetwork(ctx context.Context, provision
 	if nsxtError != nil && nsxtError.ErrorCode != nsxt.NSXTERROR_Tier1_Has_Children {
 		return fmt.Errorf("nsx-t error %s (%d): %s", nsxtError.HttpStatus, nsxtError.ErrorCode, nsxtError.Message)
 	}
+	return
+}
+
+func (builder VSphereNSXTBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	return
 }

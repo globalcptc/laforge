@@ -11,9 +11,6 @@ export const environment = {
   graphqlUrl: 'http://localhost:8080/api/query',
   wsUrl: 'ws://localhost:8080/api/query',
   isMockApi: false,
-  mockEnvTree: null,
-  mockEnvList: null,
-  mockAgentStatuses: null,
   authBaseUrl: 'http://localhost:8080/auth'
 };
 

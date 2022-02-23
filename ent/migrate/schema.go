@@ -143,6 +143,7 @@ var (
 		{Name: "build_build_to_environment", Type: field.TypeUUID, Nullable: true},
 		{Name: "build_build_to_competition", Type: field.TypeUUID, Nullable: true},
 		{Name: "build_build_to_latest_build_commit", Type: field.TypeUUID, Nullable: true},
+		{Name: "build_build_to_repo_commit", Type: field.TypeUUID, Nullable: true},
 	}
 	// BuildsTable holds the schema information for the "builds" table.
 	BuildsTable = &schema.Table{
@@ -168,6 +169,12 @@ var (
 				RefColumns: []*schema.Column{BuildCommitsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
+			{
+				Symbol:     "builds_repo_commits_BuildToRepoCommit",
+				Columns:    []*schema.Column{BuildsColumns[7]},
+				RefColumns: []*schema.Column{RepoCommitsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
 		},
 	}
 	// BuildCommitsColumns holds the columns for the "build_commits" table.
@@ -176,6 +183,7 @@ var (
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"ROOT", "REBUILD", "DELETE"}},
 		{Name: "revision", Type: field.TypeInt},
 		{Name: "state", Type: field.TypeEnum, Enums: []string{"PLANNING", "INPROGRESS", "APPLIED", "CANCELLED", "APPROVED"}},
+		{Name: "created_at", Type: field.TypeTime},
 		{Name: "build_commit_build_commit_to_build", Type: field.TypeUUID, Nullable: true},
 	}
 	// BuildCommitsTable holds the schema information for the "build_commits" table.
@@ -186,7 +194,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "build_commits_builds_BuildCommitToBuild",
-				Columns:    []*schema.Column{BuildCommitsColumns[4]},
+				Columns:    []*schema.Column{BuildCommitsColumns[5]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -838,6 +846,33 @@ var (
 			},
 		},
 	}
+	// RepoCommitsColumns holds the columns for the "repo_commits" table.
+	RepoCommitsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "revision", Type: field.TypeInt},
+		{Name: "hash", Type: field.TypeString},
+		{Name: "author", Type: field.TypeJSON},
+		{Name: "committer", Type: field.TypeJSON},
+		{Name: "pgp_signature", Type: field.TypeString},
+		{Name: "message", Type: field.TypeString},
+		{Name: "tree_hash", Type: field.TypeString},
+		{Name: "parent_hashes", Type: field.TypeJSON},
+		{Name: "repository_repository_to_repo_commit", Type: field.TypeUUID, Nullable: true},
+	}
+	// RepoCommitsTable holds the schema information for the "repo_commits" table.
+	RepoCommitsTable = &schema.Table{
+		Name:       "repo_commits",
+		Columns:    RepoCommitsColumns,
+		PrimaryKey: []*schema.Column{RepoCommitsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "repo_commits_repositories_RepositoryToRepoCommit",
+				Columns:    []*schema.Column{RepoCommitsColumns[9]},
+				RefColumns: []*schema.Column{RepositoriesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// RepositoriesColumns holds the columns for the "repositories" table.
 	RepositoriesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -845,7 +880,6 @@ var (
 		{Name: "branch_name", Type: field.TypeString, Default: "master"},
 		{Name: "enviroment_filepath", Type: field.TypeString},
 		{Name: "folder_path", Type: field.TypeString, Default: "N/A"},
-		{Name: "commit_info", Type: field.TypeString, Default: "N/A"},
 	}
 	// RepositoriesTable holds the schema information for the "repositories" table.
 	RepositoriesTable = &schema.Table{
@@ -897,6 +931,7 @@ var (
 		{Name: "server_task_server_task_to_auth_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "server_task_server_task_to_environment", Type: field.TypeUUID, Nullable: true},
 		{Name: "server_task_server_task_to_build", Type: field.TypeUUID, Nullable: true},
+		{Name: "server_task_server_task_to_build_commit", Type: field.TypeUUID, Nullable: true},
 	}
 	// ServerTasksTable holds the schema information for the "server_tasks" table.
 	ServerTasksTable = &schema.Table{
@@ -922,12 +957,18 @@ var (
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
+			{
+				Symbol:     "server_tasks_build_commits_ServerTaskToBuildCommit",
+				Columns:    []*schema.Column{ServerTasksColumns[9]},
+				RefColumns: []*schema.Column{BuildCommitsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
 		},
 	}
 	// StatusColumns holds the columns for the "status" table.
 	StatusColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "state", Type: field.TypeEnum, Enums: []string{"PLANNING", "AWAITING", "PARENTAWAITING", "INPROGRESS", "FAILED", "COMPLETE", "TAINTED", "TODELETE", "DELETEINPROGRESS", "DELETED", "TOREBUILD"}},
+		{Name: "state", Type: field.TypeEnum, Enums: []string{"PLANNING", "AWAITING", "PARENTAWAITING", "INPROGRESS", "FAILED", "COMPLETE", "TAINTED", "TODELETE", "DELETEINPROGRESS", "DELETED", "TOREBUILD", "CANCELLED"}},
 		{Name: "status_for", Type: field.TypeEnum, Enums: []string{"Build", "Team", "Plan", "ProvisionedNetwork", "ProvisionedHost", "ProvisioningStep", "ServerTask"}},
 		{Name: "started_at", Type: field.TypeTime, Nullable: true},
 		{Name: "ended_at", Type: field.TypeTime, Nullable: true},
@@ -1350,6 +1391,7 @@ var (
 		ProvisionedHostsTable,
 		ProvisionedNetworksTable,
 		ProvisioningStepsTable,
+		RepoCommitsTable,
 		RepositoriesTable,
 		ScriptsTable,
 		ServerTasksTable,
@@ -1380,6 +1422,7 @@ func init() {
 	BuildsTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	BuildsTable.ForeignKeys[1].RefTable = CompetitionsTable
 	BuildsTable.ForeignKeys[2].RefTable = BuildCommitsTable
+	BuildsTable.ForeignKeys[3].RefTable = RepoCommitsTable
 	BuildCommitsTable.ForeignKeys[0].RefTable = BuildsTable
 	CommandsTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	CompetitionsTable.ForeignKeys[0].RefTable = EnvironmentsTable
@@ -1422,10 +1465,12 @@ func init() {
 	ProvisioningStepsTable.ForeignKeys[6].RefTable = FileDeletesTable
 	ProvisioningStepsTable.ForeignKeys[7].RefTable = FileDownloadsTable
 	ProvisioningStepsTable.ForeignKeys[8].RefTable = FileExtractsTable
+	RepoCommitsTable.ForeignKeys[0].RefTable = RepositoriesTable
 	ScriptsTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	ServerTasksTable.ForeignKeys[0].RefTable = AuthUsersTable
 	ServerTasksTable.ForeignKeys[1].RefTable = EnvironmentsTable
 	ServerTasksTable.ForeignKeys[2].RefTable = BuildsTable
+	ServerTasksTable.ForeignKeys[3].RefTable = BuildCommitsTable
 	StatusTable.ForeignKeys[0].RefTable = AdhocPlansTable
 	StatusTable.ForeignKeys[1].RefTable = BuildsTable
 	StatusTable.ForeignKeys[2].RefTable = PlansTable

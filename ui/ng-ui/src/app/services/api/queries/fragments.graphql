@@ -49,11 +49,33 @@ fragment PlanDiffFields on PlanDiff {
 fragment BuildCommitFields on BuildCommit {
   id
   revision
-  type
-  state
-  BuildCommitToPlanDiffs {
-    ...PlanDiffFields
+  BuildCommitToBuild {
+    id
+    revision
+    BuildToRepoCommit {
+      id
+      hash
+      author
+      RepoCommitToRepository {
+        id
+        repo_url
+      }
+    }
+    buildToStatus {
+      id
+      state
+    }
+    buildToEnvironment {
+      id
+    }
   }
+  BuildCommitToServerTask {
+    id
+    start_time
+    end_time
+  }
+  state
+  type
 }
 
 fragment AuthUserFields on AuthUser {

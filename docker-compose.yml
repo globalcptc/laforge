@@ -1,0 +1,72 @@
+version: "3.4"
+
+services:
+
+  ui:
+    build:
+      context: ./ui/ng-ui
+      dockerfile: ./Dockerfile
+    ports:
+      - 80:80
+    restart: unless-stopped
+    networks:
+      - laforge-backend-tier
+    depends_on:
+      - backend
+    volumes:
+      - /app/node_modules/
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    ports:
+      - 8080:8080
+      - 50051:50051
+    networks:
+      - laforge-backend-tier
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - ./server/builds/:/app/builds
+      - ./server/logs/:/app/logs
+      - ./server/users/:/app/users
+      - ./server/repos/:/app/repos
+
+  db:
+    image: library/postgres:14.2-alpine
+    ports:
+      - 5432:5432
+    restart: unless-stopped
+    networks:
+      - laforge-backend-tier
+    volumes:
+      - laforge-db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=laforger
+      - POSTGRES_PASSWORD=laforge
+      - POSTGRES_DB=laforge
+
+  redis:
+    image: library/redis:5.0-alpine
+    ports:
+      - 6379:6379
+    restart: unless-stopped
+    networks:
+      - laforge-backend-tier
+    volumes:
+      - laforge-redis:/data
+
+volumes:
+  laforge-db:
+    driver: local
+  laforge-redis:
+    driver: local
+
+networks:
+  laforge-backend-tier:
+    driver: bridge

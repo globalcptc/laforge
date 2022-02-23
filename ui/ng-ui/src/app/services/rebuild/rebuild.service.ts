@@ -1,9 +1,13 @@
 import { Injectable } from '@angular/core';
-import { LaForgeProvisionedHost, LaForgeProvisionedNetwork, LaForgeTeam } from '@graphql';
+import { LaForgeGetBuildCommitQuery, LaForgeProvisionedHost, LaForgeProvisionedNetwork, LaForgeTeam } from '@graphql';
 import { RebuildPlansData, RebuildPlansMutation, RebuildPlansVars } from '@services/api/queries/rebuild';
 import { Apollo } from 'apollo-angular';
 import { GraphQLError } from 'graphql';
 import { ID } from 'src/app/models/common.model';
+
+type ProvisionedNetwork =
+  | LaForgeProvisionedNetwork
+  | LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0];
 
 @Injectable({
   providedIn: 'root'
@@ -92,7 +96,7 @@ export class RebuildService {
    * @param network network to rebuild
    * @returns successfully added to list to rebuild
    */
-  addNetwork = (network: LaForgeProvisionedNetwork): boolean => {
+  addNetwork = (network: ProvisionedNetwork): boolean => {
     const planId = network.ProvisionedNetworkToPlan?.id ?? null;
     if (planId === null) return false;
     this.addPlan(planId);
@@ -104,7 +108,7 @@ export class RebuildService {
    * @param network network to remove from rebuild list
    * @returns successfully removed from the list to rebuild
    */
-  removeNetwork = (network: LaForgeProvisionedNetwork): boolean => {
+  removeNetwork = (network: ProvisionedNetwork): boolean => {
     const planId = network.ProvisionedNetworkToPlan?.id ?? null;
     if (planId === null) return false;
     this.removePlan(planId);
@@ -116,7 +120,7 @@ export class RebuildService {
    * @param network network to check
    * @returns if network is in rebuild list
    */
-  hasNetwork = (network: LaForgeProvisionedNetwork): boolean => {
+  hasNetwork = (network: ProvisionedNetwork): boolean => {
     const planId = network.ProvisionedNetworkToPlan?.id ?? null;
     if (planId === null) return false;
     return this.rootPlans.indexOf(planId) >= 0;

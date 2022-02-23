@@ -21,7 +21,6 @@ func (Repository) Fields() []ent.Field {
 		field.String("branch_name").Default("master"),
 		field.String("enviroment_filepath"),
 		field.String("folder_path").Default("N/A"),
-		field.String("commit_info").Default("N/A"),
 	}
 }
 
@@ -29,5 +28,6 @@ func (Repository) Fields() []ent.Field {
 func (Repository) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("RepositoryToEnvironment", Environment.Type),
+		edge.To("RepositoryToRepoCommit", RepoCommit.Type),
 	}
 }

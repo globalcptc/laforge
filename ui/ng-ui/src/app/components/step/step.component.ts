@@ -1,13 +1,15 @@
-import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import {
   LaForgeGetBuildTreeQuery,
   LaForgeProvisioningStepType,
   LaForgeSubscribeUpdatedStatusSubscription,
   LaForgeProvisionStatus,
-  LaForgePlanFieldsFragment
+  LaForgePlanFieldsFragment,
+  LaForgeGetBuildCommitQuery
 } from '@graphql';
-import { Subscription } from 'rxjs';
+import { StatusService } from '@services/status/status.service';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { ApiService } from 'src/app/services/api/api.service';
 import { EnvironmentService } from 'src/app/services/environment/environment.service';
 
@@ -16,7 +18,8 @@ import { StepModalComponent } from '@components/step-modal/step-modal.component'
 @Component({
   selector: 'app-step',
   templateUrl: './step.component.html',
-  styleUrls: ['./step.component.scss']
+  styleUrls: ['./step.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class StepComponent implements OnInit, OnDestroy {
   private unsubscribe: Subscription[] = [];
@@ -24,28 +27,37 @@ export class StepComponent implements OnInit, OnDestroy {
   @Input()
   // eslint-disable-next-line max-len
   provisioningStep: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0]['ProvisionedHostToProvisioningStep'][0];
+  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  // @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
   @Input() showDetail: boolean;
   @Input() style: 'compact' | 'expanded';
   @Input() mode: 'plan' | 'build' | 'manage';
-  planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
+  // planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
   provisioningStepStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
   latestDiff: LaForgePlanFieldsFragment['PlanToPlanDiffs'][0];
+  planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
 
   constructor(
     private api: ApiService,
     private cdRef: ChangeDetectorRef,
     private envService: EnvironmentService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private status: StatusService
   ) {
     if (!this.mode) this.mode = 'manage';
   }
 
   ngOnInit() {
-    const sub = this.envService.statusUpdate.asObservable().subscribe(() => {
-      this.checkPlanStatus();
-      this.checkprovisioningStepStatus();
-    });
-    this.unsubscribe.push(sub);
+    if (this.provisioningStep.ProvisioningStepToPlan?.PlanToStatus?.id) {
+      this.planStatus = this.status.getStatusSubject(this.provisioningStep.ProvisioningStepToPlan.PlanToStatus.id);
+      const sub = this.planStatus.subscribe(() => this.cdRef.markForCheck());
+      this.unsubscribe.push(sub);
+    }
+    // const sub = this.envService.statusUpdate.asObservable().subscribe(() => {
+    //   this.checkPlanStatus();
+    //   this.checkprovisioningStepStatus();
+    // });
+    // this.unsubscribe.push(sub);
     // if (this.mode === 'plan') {
     //   const sub2 = this.envService.planUpdate.asObservable().subscribe(() => {
     //     this.checkLatestPlanDiff();
@@ -60,10 +72,12 @@ export class StepComponent implements OnInit, OnDestroy {
   }
 
   viewDetails(): void {
+    const status = this.getStatus();
     if (
-      this.planStatus.state === LaForgeProvisionStatus.Awaiting ||
-      this.planStatus.state === LaForgeProvisionStatus.Deleted ||
-      this.planStatus.state === LaForgeProvisionStatus.Planning
+      status &&
+      (status.state === LaForgeProvisionStatus.Awaiting ||
+        status.state === LaForgeProvisionStatus.Deleted ||
+        status.state === LaForgeProvisionStatus.Planning)
     )
       return;
     this.dialog.open(StepModalComponent, {
@@ -76,28 +90,15 @@ export class StepComponent implements OnInit, OnDestroy {
     });
   }
 
-  checkPlanStatus(): void {
-    if (!this.provisioningStep.ProvisioningStepToPlan) return;
-    const updatedStatus = this.envService.getStatus(this.provisioningStep.ProvisioningStepToPlan.PlanToStatus.id);
-    if (updatedStatus) {
-      this.planStatus = updatedStatus;
-      this.cdRef.markForCheck();
-    }
+  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
+    return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.provisioningStep.ProvisioningStepToPlan.id)[0] ?? undefined;
   }
 
-  checkprovisioningStepStatus(): void {
-    const updatedStatus = this.envService.getStatus(this.provisioningStep.ProvisioningStepToStatus.id);
-    if (updatedStatus) {
-      this.provisioningStepStatus = updatedStatus;
-      this.cdRef.markForCheck();
-    }
-  }
-
-  checkLatestPlanDiff(): void {
-    if (!this.provisioningStep.ProvisioningStepToPlan) return;
-    const stepPlan = this.envService.getPlan(this.provisioningStep.ProvisioningStepToPlan.id);
-    if (!stepPlan) return;
-    this.latestDiff = [...stepPlan.PlanToPlanDiffs].sort((a, b) => b.revision - a.revision)[0];
+  getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
+    // return (
+    //   this.buildStatusMap?.filter((s) => s.id === this.provisioningStep.ProvisioningStepToPlan?.PlanToStatus.id ?? null)[0] ?? undefined
+    // );
+    return this.planStatus?.getValue() ?? undefined;
   }
 
   getStatusIcon(): string {
@@ -121,20 +122,20 @@ export class StepComponent implements OnInit, OnDestroy {
 
   getStatusColor(): string {
     if (this.mode === 'plan') {
-      // if (!this.latestDiff) return 'dark';
-      // switch (this.latestDiff.new_state) {
-      //   case LaForgeProvisionStatus.Torebuild:
-      //     return 'warning';
-      //   default:
-      //     return 'dark';
-      // }
-      return 'black';
+      const planDiff = this.getPlanDiff();
+      if (!planDiff) return 'dark';
+      switch (planDiff.new_state) {
+        case LaForgeProvisionStatus.Torebuild:
+          return 'warning';
+        case LaForgeProvisionStatus.Planning:
+          return 'primary';
+        default:
+          return 'dark';
+      }
     }
-    // const status = this.provisionedStep.ProvisioningStepToPlan?.PlanToStatus ?? this.provisionedStep.ProvisioningStepToStatus;
-    const status = this.planStatus ?? this.provisioningStepStatus;
-    if (!status?.state) {
-      return 'black';
-    }
+    const status = this.getStatus();
+    if (!status) return 'black';
+
     switch (status.state) {
       case LaForgeProvisionStatus.Complete:
         return 'success';

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
+	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
 	"github.com/gen0cide/laforge/ent/servertask"
@@ -144,6 +145,25 @@ func (stc *ServerTaskCreate) SetNillableServerTaskToBuildID(id *uuid.UUID) *Serv
 // SetServerTaskToBuild sets the "ServerTaskToBuild" edge to the Build entity.
 func (stc *ServerTaskCreate) SetServerTaskToBuild(b *Build) *ServerTaskCreate {
 	return stc.SetServerTaskToBuildID(b.ID)
+}
+
+// SetServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by ID.
+func (stc *ServerTaskCreate) SetServerTaskToBuildCommitID(id uuid.UUID) *ServerTaskCreate {
+	stc.mutation.SetServerTaskToBuildCommitID(id)
+	return stc
+}
+
+// SetNillableServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by ID if the given value is not nil.
+func (stc *ServerTaskCreate) SetNillableServerTaskToBuildCommitID(id *uuid.UUID) *ServerTaskCreate {
+	if id != nil {
+		stc = stc.SetServerTaskToBuildCommitID(*id)
+	}
+	return stc
+}
+
+// SetServerTaskToBuildCommit sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity.
+func (stc *ServerTaskCreate) SetServerTaskToBuildCommit(b *BuildCommit) *ServerTaskCreate {
+	return stc.SetServerTaskToBuildCommitID(b.ID)
 }
 
 // AddServerTaskToGinFileMiddlewareIDs adds the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity by IDs.
@@ -403,6 +423,26 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.server_task_server_task_to_build = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := stc.mutation.ServerTaskToBuildCommitIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   servertask.ServerTaskToBuildCommitTable,
+			Columns: []string{servertask.ServerTaskToBuildCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: buildcommit.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.server_task_server_task_to_build_commit = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := stc.mutation.ServerTaskToGinFileMiddlewareIDs(); len(nodes) > 0 {

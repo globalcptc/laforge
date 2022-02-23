@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/predicate"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/google/uuid"
 )
@@ -68,20 +69,6 @@ func (ru *RepositoryUpdate) SetNillableFolderPath(s *string) *RepositoryUpdate {
 	return ru
 }
 
-// SetCommitInfo sets the "commit_info" field.
-func (ru *RepositoryUpdate) SetCommitInfo(s string) *RepositoryUpdate {
-	ru.mutation.SetCommitInfo(s)
-	return ru
-}
-
-// SetNillableCommitInfo sets the "commit_info" field if the given value is not nil.
-func (ru *RepositoryUpdate) SetNillableCommitInfo(s *string) *RepositoryUpdate {
-	if s != nil {
-		ru.SetCommitInfo(*s)
-	}
-	return ru
-}
-
 // AddRepositoryToEnvironmentIDs adds the "RepositoryToEnvironment" edge to the Environment entity by IDs.
 func (ru *RepositoryUpdate) AddRepositoryToEnvironmentIDs(ids ...uuid.UUID) *RepositoryUpdate {
 	ru.mutation.AddRepositoryToEnvironmentIDs(ids...)
@@ -95,6 +82,21 @@ func (ru *RepositoryUpdate) AddRepositoryToEnvironment(e ...*Environment) *Repos
 		ids[i] = e[i].ID
 	}
 	return ru.AddRepositoryToEnvironmentIDs(ids...)
+}
+
+// AddRepositoryToRepoCommitIDs adds the "RepositoryToRepoCommit" edge to the RepoCommit entity by IDs.
+func (ru *RepositoryUpdate) AddRepositoryToRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdate {
+	ru.mutation.AddRepositoryToRepoCommitIDs(ids...)
+	return ru
+}
+
+// AddRepositoryToRepoCommit adds the "RepositoryToRepoCommit" edges to the RepoCommit entity.
+func (ru *RepositoryUpdate) AddRepositoryToRepoCommit(r ...*RepoCommit) *RepositoryUpdate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return ru.AddRepositoryToRepoCommitIDs(ids...)
 }
 
 // Mutation returns the RepositoryMutation object of the builder.
@@ -121,6 +123,27 @@ func (ru *RepositoryUpdate) RemoveRepositoryToEnvironment(e ...*Environment) *Re
 		ids[i] = e[i].ID
 	}
 	return ru.RemoveRepositoryToEnvironmentIDs(ids...)
+}
+
+// ClearRepositoryToRepoCommit clears all "RepositoryToRepoCommit" edges to the RepoCommit entity.
+func (ru *RepositoryUpdate) ClearRepositoryToRepoCommit() *RepositoryUpdate {
+	ru.mutation.ClearRepositoryToRepoCommit()
+	return ru
+}
+
+// RemoveRepositoryToRepoCommitIDs removes the "RepositoryToRepoCommit" edge to RepoCommit entities by IDs.
+func (ru *RepositoryUpdate) RemoveRepositoryToRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdate {
+	ru.mutation.RemoveRepositoryToRepoCommitIDs(ids...)
+	return ru
+}
+
+// RemoveRepositoryToRepoCommit removes "RepositoryToRepoCommit" edges to RepoCommit entities.
+func (ru *RepositoryUpdate) RemoveRepositoryToRepoCommit(r ...*RepoCommit) *RepositoryUpdate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return ru.RemoveRepositoryToRepoCommitIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -223,13 +246,6 @@ func (ru *RepositoryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: repository.FieldFolderPath,
 		})
 	}
-	if value, ok := ru.mutation.CommitInfo(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: repository.FieldCommitInfo,
-		})
-	}
 	if ru.mutation.RepositoryToEnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
@@ -276,6 +292,60 @@ func (ru *RepositoryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: environment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ru.mutation.RepositoryToRepoCommitCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.RepositoryToRepoCommitTable,
+			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ru.mutation.RemovedRepositoryToRepoCommitIDs(); len(nodes) > 0 && !ru.mutation.RepositoryToRepoCommitCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.RepositoryToRepoCommitTable,
+			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ru.mutation.RepositoryToRepoCommitIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.RepositoryToRepoCommitTable,
+			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
 				},
 			},
 		}
@@ -343,20 +413,6 @@ func (ruo *RepositoryUpdateOne) SetNillableFolderPath(s *string) *RepositoryUpda
 	return ruo
 }
 
-// SetCommitInfo sets the "commit_info" field.
-func (ruo *RepositoryUpdateOne) SetCommitInfo(s string) *RepositoryUpdateOne {
-	ruo.mutation.SetCommitInfo(s)
-	return ruo
-}
-
-// SetNillableCommitInfo sets the "commit_info" field if the given value is not nil.
-func (ruo *RepositoryUpdateOne) SetNillableCommitInfo(s *string) *RepositoryUpdateOne {
-	if s != nil {
-		ruo.SetCommitInfo(*s)
-	}
-	return ruo
-}
-
 // AddRepositoryToEnvironmentIDs adds the "RepositoryToEnvironment" edge to the Environment entity by IDs.
 func (ruo *RepositoryUpdateOne) AddRepositoryToEnvironmentIDs(ids ...uuid.UUID) *RepositoryUpdateOne {
 	ruo.mutation.AddRepositoryToEnvironmentIDs(ids...)
@@ -370,6 +426,21 @@ func (ruo *RepositoryUpdateOne) AddRepositoryToEnvironment(e ...*Environment) *R
 		ids[i] = e[i].ID
 	}
 	return ruo.AddRepositoryToEnvironmentIDs(ids...)
+}
+
+// AddRepositoryToRepoCommitIDs adds the "RepositoryToRepoCommit" edge to the RepoCommit entity by IDs.
+func (ruo *RepositoryUpdateOne) AddRepositoryToRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdateOne {
+	ruo.mutation.AddRepositoryToRepoCommitIDs(ids...)
+	return ruo
+}
+
+// AddRepositoryToRepoCommit adds the "RepositoryToRepoCommit" edges to the RepoCommit entity.
+func (ruo *RepositoryUpdateOne) AddRepositoryToRepoCommit(r ...*RepoCommit) *RepositoryUpdateOne {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return ruo.AddRepositoryToRepoCommitIDs(ids...)
 }
 
 // Mutation returns the RepositoryMutation object of the builder.
@@ -396,6 +467,27 @@ func (ruo *RepositoryUpdateOne) RemoveRepositoryToEnvironment(e ...*Environment)
 		ids[i] = e[i].ID
 	}
 	return ruo.RemoveRepositoryToEnvironmentIDs(ids...)
+}
+
+// ClearRepositoryToRepoCommit clears all "RepositoryToRepoCommit" edges to the RepoCommit entity.
+func (ruo *RepositoryUpdateOne) ClearRepositoryToRepoCommit() *RepositoryUpdateOne {
+	ruo.mutation.ClearRepositoryToRepoCommit()
+	return ruo
+}
+
+// RemoveRepositoryToRepoCommitIDs removes the "RepositoryToRepoCommit" edge to RepoCommit entities by IDs.
+func (ruo *RepositoryUpdateOne) RemoveRepositoryToRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdateOne {
+	ruo.mutation.RemoveRepositoryToRepoCommitIDs(ids...)
+	return ruo
+}
+
+// RemoveRepositoryToRepoCommit removes "RepositoryToRepoCommit" edges to RepoCommit entities.
+func (ruo *RepositoryUpdateOne) RemoveRepositoryToRepoCommit(r ...*RepoCommit) *RepositoryUpdateOne {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return ruo.RemoveRepositoryToRepoCommitIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -522,13 +614,6 @@ func (ruo *RepositoryUpdateOne) sqlSave(ctx context.Context) (_node *Repository,
 			Column: repository.FieldFolderPath,
 		})
 	}
-	if value, ok := ruo.mutation.CommitInfo(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: repository.FieldCommitInfo,
-		})
-	}
 	if ruo.mutation.RepositoryToEnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
@@ -575,6 +660,60 @@ func (ruo *RepositoryUpdateOne) sqlSave(ctx context.Context) (_node *Repository,
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: environment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ruo.mutation.RepositoryToRepoCommitCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.RepositoryToRepoCommitTable,
+			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ruo.mutation.RemovedRepositoryToRepoCommitIDs(); len(nodes) > 0 && !ruo.mutation.RepositoryToRepoCommitCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.RepositoryToRepoCommitTable,
+			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ruo.mutation.RepositoryToRepoCommitIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.RepositoryToRepoCommitTable,
+			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repocommit.FieldID,
 				},
 			},
 		}

@@ -43,6 +43,7 @@ func (ServerTask) Edges() []ent.Edge {
 			}),
 		edge.To("ServerTaskToEnvironment", Environment.Type).Unique(),
 		edge.To("ServerTaskToBuild", Build.Type).Unique(),
+		edge.To("ServerTaskToBuildCommit", BuildCommit.Type).Unique(),
 		edge.To("ServerTaskToGinFileMiddleware", GinFileMiddleware.Type),
 	}
 }

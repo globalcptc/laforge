@@ -19,6 +19,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/authuser"
+	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
@@ -76,7 +77,7 @@ func graphqlHandler(client *ent.Client, rdb *redis.Client) gin.HandlerFunc {
 
 	h.AddTransport(&transport.Websocket{
 		Upgrader: websocket.Upgrader{
-			HandshakeTimeout: 0,
+			HandshakeTimeout: 30 * time.Second,
 			ReadBufferSize:   1024,
 			WriteBufferSize:  1024,
 			WriteBufferPool:  nil,
@@ -85,7 +86,7 @@ func graphqlHandler(client *ent.Client, rdb *redis.Client) gin.HandlerFunc {
 			},
 			EnableCompression: false,
 		},
-		KeepAlivePingInterval: 5 * time.Second,
+		KeepAlivePingInterval: 1 * time.Second,
 	})
 	h.AddTransport(transport.GET{})
 	h.AddTransport(transport.POST{})
@@ -276,6 +277,16 @@ func main() {
 					"taskId": task.ID,
 				}).Errorf("error while setting FAILED status on server task: %v", err)
 				continue
+			}
+			entBuildCommit, _ := task.QueryServerTaskToBuildCommit().Only(ctx)
+			if entBuildCommit != nil && entBuildCommit.State == buildcommit.StateINPROGRESS {
+				err := entBuildCommit.Update().SetState(buildcommit.StateCANCELLED).Exec(ctx)
+				if err != nil {
+					logrus.WithFields(logrus.Fields{
+						"buildCommitId": entBuildCommit.ID,
+					}).Errorf("error while setting CANCELLED state on build commit: %v", err)
+					continue
+				}
 			}
 		}
 		if len(interruptedServerTasks) == 0 {

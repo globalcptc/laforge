@@ -12,8 +12,8 @@ import (
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/buildcommit"
-	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/plan"
+	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/status"
@@ -381,32 +381,25 @@ func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.B
 	case plan.TypeStartTeam:
 		entTeam, err := entPlan.QueryPlanToTeam().Only(ctx)
 		if err != nil {
-			logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
+			logger.Log.Errorf("Failed to Query Ent Tean. Err: %v", err)
 			return
 		}
-		// TODO: REMOVE ME
-		entProNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(
-			provisionednetwork.HasProvisionedNetworkToNetworkWith(
-				network.NameEQ("vdi"),
-			),
-		).First(ctx)
-
-		if err != nil {
-			logger.Log.Errorf("failed to query provisioned network from entTeam: %v", err)
-			return
+		if parentNodeFailed {
+			teamStatus, err := entTeam.TeamToStatus(ctx)
+			if err != nil {
+				logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
+				return
+			}
+			_, err = teamStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+			if err != nil {
+				logger.Log.Errorf("error while trying to set ent.ProvisioningStep.Status.State to status.StateFAILED: %v", err)
+				return
+			}
+			rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+			planErr = fmt.Errorf("parent node for Team has failed")
+		} else {
+			planErr = buildTeam(client, logger, builder, ctx, entTeam)
 		}
-		err = (*builder).DeployNetwork(ctx, entProNetwork)
-		if err != nil {
-			logger.Log.Error("failed to pre-create Tier-1 network (%s). continuing anyways: %v", err)
-		}
-		// TODO: END REMOVE ME
-		entStatus, err := entTeam.TeamToStatus(ctx)
-		if err != nil {
-			logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
-			return
-		}
-		entStatus.Update().SetState(status.StateCOMPLETE).Save(ctx)
-		rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
 	case plan.TypeStartBuild:
 		entBuild, err := entPlan.QueryPlanToBuild().Only(ctx)
 		if err != nil {
@@ -476,6 +469,12 @@ func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 		logger.Log.Errorf("Error while getting Provisioned Host status: %v", err)
 		return err
 	}
+	entProNetwork, err := entProHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+
 	_, saveErr := hostStatus.Update().SetState(status.StateINPROGRESS).Save(ctx)
 	if saveErr != nil {
 		logger.Log.Errorf("Error while setting Provisioned Host status to INPROGRESS: %v", saveErr)
@@ -491,14 +490,15 @@ func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 			return saveErr
 		}
 		rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
+		checkNetworkStatus(client, logger, ctx, entProNetwork)
 		return err
 	}
 	logger.Log.Infof("deployed %s successfully", entProHost.SubnetIP)
-	_, saveErr = hostStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Save(ctx)
-	if saveErr != nil {
-		logger.Log.Errorf("Error while setting Provisioned Host status to COMPLETE: %v", saveErr)
-		return saveErr
-	}
+	// _, saveErr = hostStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Save(ctx)
+	// if saveErr != nil {
+	// 	logger.Log.Errorf("Error while setting Provisioned Host status to COMPLETE: %v", saveErr)
+	// 	return saveErr
+	// }
 	rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
 	return nil
 }
@@ -508,6 +508,11 @@ func buildNetwork(client *ent.Client, logger *logging.Logger, builder *builder.B
 	networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
+		return err
+	}
+	entTeam, err := entProNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while getting team: %v", err)
 		return err
 	}
 	_, saveErr := networkStatus.Update().SetState(status.StateINPROGRESS).Save(ctx)
@@ -525,18 +530,271 @@ func buildNetwork(client *ent.Client, logger *logging.Logger, builder *builder.B
 			return saveErr
 		}
 		rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+		checkTeamStatus(client, logger, ctx, entTeam)
 		return err
 	}
 	logger.Log.Infof("deployed %s successfully", entProNetwork.Name)
 	// Allow networks to set up
 	time.Sleep(1 * time.Minute)
 
-	_, saveErr = networkStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Save(ctx)
+	// _, saveErr = networkStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Save(ctx)
+	// if saveErr != nil {
+	// 	logger.Log.Errorf("Error while setting Provisioned Network status to COMPLETE: %v", saveErr)
+	// 	return saveErr
+	// }
+	// rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+	return nil
+}
+
+func buildTeam(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entTeam *ent.Team) error {
+	logger.Log.Infof("deploying Team: %d", entTeam.TeamNumber)
+
+	teamStatus, err := entTeam.TeamToStatus(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while getting Team status: %v", err)
+		return err
+	}
+	_, saveErr := teamStatus.Update().SetState(status.StateINPROGRESS).Save(ctx)
 	if saveErr != nil {
-		logger.Log.Errorf("Error while setting Provisioned Network status to COMPLETE: %v", saveErr)
+		logger.Log.Errorf("Error while setting Team status to INPROGRESS: %v", saveErr)
 		return saveErr
 	}
-	rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+	rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+	err = (*builder).DeployTeam(ctx, entTeam)
+	if err != nil {
+		logger.Log.Errorf("Error while deploying network: %v", err)
+		_, saveErr := teamStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Network status to FAILED: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+		checkTeamStatus(client, logger, ctx, entTeam)
+		return err
+	}
+	logger.Log.Infof("deployed %d successfully", entTeam.TeamNumber)
+	return nil
+}
+
+func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entTeam *ent.Team) error {
+	stepAwaitingInProgress, err := entTeam.
+		QueryTeamToProvisionedNetwork().
+		Where(
+			provisionednetwork.
+				HasProvisionedNetworkToStatusWith(
+					status.Or(
+						status.StateEQ(status.StateAWAITING),
+						status.StateEQ(status.StateINPROGRESS),
+					),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is in progress: %v", err)
+		return err
+	}
+	if stepAwaitingInProgress {
+		logger.Log.Debug("team %s is in progress", entTeam.ID)
+		return nil
+	}
+
+	teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+	if teamStatus.State != status.StateINPROGRESS {
+		return nil
+	}
+
+	hostFailed, err := entTeam.
+		QueryTeamToProvisionedNetwork().
+		Where(
+			provisionednetwork.
+				HasProvisionedNetworkToStatusWith(
+					status.Or(
+						status.StateEQ(status.StateFAILED),
+						status.StateEQ(status.StateTAINTED),
+					),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if hostFailed {
+		_, saveErr := teamStatus.Update().SetCompleted(false).SetFailed(true).SetState(status.StateTAINTED).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Network status to Tainted: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+		logger.Log.Debug("host %s is failed", teamStatus.ID)
+		return nil
+	}
+
+	stepNotCompleted, err := entTeam.
+		QueryTeamToProvisionedNetwork().
+		Where(
+			provisionednetwork.
+				HasProvisionedNetworkToStatusWith(
+					status.StateNEQ(status.StateCOMPLETE),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if !stepNotCompleted {
+		_, saveErr := teamStatus.Update().SetCompleted(true).SetFailed(false).SetState(status.StateCOMPLETE).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Network status to Completed: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+		logger.Log.Debug("host %s is failed", teamStatus.ID)
+		return nil
+	}
+	return nil
+}
+
+func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entProNetwork *ent.ProvisionedNetwork) error {
+	stepAwaitingInProgress, err := entProNetwork.
+		QueryProvisionedNetworkToProvisionedHost().
+		Where(
+			provisionedhost.
+				HasProvisionedHostToStatusWith(
+					status.Or(
+						status.StateEQ(status.StateAWAITING),
+						status.StateEQ(status.StateINPROGRESS),
+					),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is in progress: %v", err)
+		return err
+	}
+	if stepAwaitingInProgress {
+		logger.Log.Debug("network %s is in progress", entProNetwork.ID)
+		return nil
+	}
+
+	networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
+	if networkStatus.State != status.StateINPROGRESS {
+		return nil
+	}
+	entTeam, err := entProNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while getting team: %v", err)
+		return err
+	}
+
+	hostFailed, err := entProNetwork.
+		QueryProvisionedNetworkToProvisionedHost().
+		Where(
+			provisionedhost.
+				HasProvisionedHostToStatusWith(
+					status.Or(
+						status.StateEQ(status.StateFAILED),
+						status.StateEQ(status.StateTAINTED),
+					),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if hostFailed {
+		_, saveErr := networkStatus.Update().SetCompleted(false).SetFailed(true).SetState(status.StateTAINTED).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Network status to Tainted: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+		logger.Log.Debug("host %s is failed", networkStatus.ID)
+		checkTeamStatus(client, logger, ctx, entTeam)
+		return nil
+	}
+
+	stepNotCompleted, err := entProNetwork.
+		QueryProvisionedNetworkToProvisionedHost().
+		Where(
+			provisionedhost.
+				HasProvisionedHostToStatusWith(
+					status.StateNEQ(status.StateCOMPLETE),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if !stepNotCompleted {
+		_, saveErr := networkStatus.Update().SetCompleted(true).SetFailed(false).SetState(status.StateCOMPLETE).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Network status to Completed: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+		logger.Log.Debug("host %s is Completed", networkStatus.ID)
+		checkTeamStatus(client, logger, ctx, entTeam)
+		return nil
+	}
+	return nil
+}
+
+func checkHostStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entProHost *ent.ProvisionedHost) error {
+	hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
+	if hostStatus.State != status.StateINPROGRESS {
+		return nil
+	}
+	entProNetwork, err := entProHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+
+	stepFailed, err := entProHost.
+		QueryProvisionedHostToProvisioningStep().
+		Where(
+			provisioningstep.
+				HasProvisioningStepToStatusWith(
+					status.StateEQ(status.StateFAILED),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if stepFailed {
+		_, saveErr := hostStatus.Update().SetCompleted(false).SetFailed(true).SetState(status.StateTAINTED).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Host status to Tainted: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
+		logger.Log.Debug("host %s is failed", entProHost.ID)
+		checkNetworkStatus(client, logger, ctx, entProNetwork)
+		return nil
+	}
+
+	stepNotCompleted, err := entProHost.
+		QueryProvisionedHostToProvisioningStep().
+		Where(
+			provisioningstep.
+				HasProvisioningStepToStatusWith(
+					status.StateNEQ(status.StateCOMPLETE),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if !stepNotCompleted {
+		_, saveErr := hostStatus.Update().SetCompleted(true).SetFailed(false).SetState(status.StateCOMPLETE).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Host status to Completed: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
+		logger.Log.Debug("host %s is completed", entProHost.ID)
+		checkNetworkStatus(client, logger, ctx, entProNetwork)
+		return nil
+	}
 	return nil
 }
 
@@ -755,6 +1013,7 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 				logger.Log.Errorf("error while trying to set ent.ProvisioningStep.Status.State to status.StateFAILED: %v", err)
 				return err
 			}
+			checkHostStatus(client, logger, ctx, entProvisionedHost)
 			rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
 			return fmt.Errorf("one or more agent tasks failed")
 		}
@@ -777,10 +1036,12 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 		time.Sleep(time.Second)
 	}
 	_, err = stepStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Save(ctx)
+
 	if err != nil {
 		logger.Log.Errorf("error while trying to set ent.ProvisioningStep.Status.State to status.StateCOMPLETED: %v", err)
 		return err
 	}
+	checkHostStatus(client, logger, ctx, entProvisionedHost)
 	rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
 
 	return nil
