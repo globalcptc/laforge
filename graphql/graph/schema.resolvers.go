@@ -560,6 +560,22 @@ func (r *mutationResolver) CreateTask(ctx context.Context, proHostUUID string, c
 	return true, nil
 }
 
+func (r *mutationResolver) DumpBuild(ctx context.Context, buildUUID string) (string, error) {
+	uuid, err := uuid.Parse(buildUUID)
+
+	if err != nil {
+		return "", fmt.Errorf("failed casting UUID to UUID: %v", err)
+	}
+
+	entBuild, err := r.client.Build.Query().Where(build.IDEQ(uuid)).Only(ctx)
+
+	if err != nil {
+		return "", fmt.Errorf("failed querying Build: %v", err)
+	}
+
+	return utils.GenerateBuildConf(ctx, r.client, entBuild)
+}
+
 func (r *mutationResolver) Rebuild(ctx context.Context, rootPlans []*string) (bool, error) {
 	currentUser, err := auth.ForContext(ctx)
 	if err != nil {

@@ -600,6 +600,7 @@ type Mutation {
     command: AgentCommand!
     args: String!
   ): Boolean! @hasRole(roles: [ADMIN, USER])
+  dumpBuild(buildUUID: String!): String! @hasRole(roles: [ADMIN, USER])
   rebuild(rootPlans: [String]!): Boolean! @hasRole(roles: [ADMIN, USER])
   approveCommit(commitUUID: String!): Boolean! @hasRole(roles: [ADMIN, USER])
   cancelCommit(commitUUID: String!): Boolean! @hasRole(roles: [ADMIN, USER])
