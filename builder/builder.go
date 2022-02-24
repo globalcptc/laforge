@@ -31,16 +31,22 @@ type Builder interface {
 
 func BuilderFromEnvironment(environment *ent.Environment, logger *logging.Logger) (genericBuilder Builder, err error) {
 	switch environment.Builder {
-	case "vsphere-nsxt":
-		genericBuilder, err = NewVSphereNSXTBuilder(environment, logger)
-		if err != nil {
-			logrus.Errorf("Failed to make vSphere NSX-T builder. Err: %v", err)
+		case "vsphere-nsxt":
+			genericBuilder, err = NewVSphereNSXTBuilder(environment, logger)
+			if err != nil {
+				logrus.Errorf("Failed to make vSphere NSX-T builder. Err: %v", err)
+				return
+			}
 			return
-		}
-		return
+		case "openstack":
+			genericBuilder, err = NewOpenstackBuilder(environment, logger)
+			if err != nil {
+				logrus.Errorf("Failed to make openstack builder. Err: %v", err)
+				return
+			}
+			return
 	}
-	case "openstack":
-		genericBuilder, err = 
+
 	err = fmt.Errorf("error: builder not found")
 	logrus.Error(err)
 	return
@@ -219,6 +225,7 @@ func NewVSphereNSXTBuilder(env *ent.Environment, logger *logging.Logger) (builde
 }
 
 func NewOpenstackBuilder(env *ent.Environment, logger *logging.Logger) (builder vspherensxt.VSphereNSXTBuilder, err error) {
-// volumes first
-// if deleteing volumes set them to error
+	// volumes first
+	// if deleteing volumes set them to error
+	return
 }
