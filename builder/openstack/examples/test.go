@@ -32,7 +32,7 @@ func main() {
 		log.Fatalf("failed creating schema resources: %v", err)
 	}
 
-	env, err := client.Environment.Query().Where(environment.NameEQ("fred")).Only(ctx)
+	env, err := client.Environment.Query().Where(environment.NameEQ("tenchi")).Only(ctx)
 	if err != nil {
 		log.Fatalf("error querying env: %v", err)
 	}
@@ -40,9 +40,9 @@ func main() {
 	defaultLogger := logging.CreateNewLogger("./output.lfglog")
 
 	fmt.Println("Creating vSphere/NSX-T builder...")
-	vsphereNsxt, err := builder.NewVSphereNSXTBuilder(env, &defaultLogger)
+	openstackBuilder, err := builder.NewOpenstackBuilder(env, &defaultLogger)
 	if err != nil {
-		log.Fatalf("error while creating vCenter/NSX-T builder: %v", err)
+		log.Fatalf("error while creating Openstack builder: %v", err)
 	}
 
 	build, err := env.QueryEnvironmentToBuild().Only(ctx)
@@ -63,7 +63,7 @@ func main() {
 		for _, pnet := range pnets {
 			fmt.Printf("\t%s | %s\n", pnet.Name, pnet.Cidr)
 
-			err = vsphereNsxt.DeployNetwork(ctx, pnet)
+			err = openstackBuilder.DeployNetwork(ctx, pnet)
 			if err != nil {
 				fmt.Printf("\tERROR: %v\n", err)
 				continue
