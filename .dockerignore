@@ -1,0 +1,15 @@
+.*
+**/*.pyc
+*.sqlite
+
+node_modules
+dist
+
+*/builds/
+*/logs/
+*/users/
+*/repos/
+
+session.cache
+*.env
+*.lfglog

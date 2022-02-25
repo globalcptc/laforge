@@ -12,7 +12,6 @@ import (
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/buildcommit"
-	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
@@ -382,32 +381,25 @@ func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.B
 	case plan.TypeStartTeam:
 		entTeam, err := entPlan.QueryPlanToTeam().Only(ctx)
 		if err != nil {
-			logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
+			logger.Log.Errorf("Failed to Query Ent Tean. Err: %v", err)
 			return
 		}
-		// TODO: REMOVE ME
-		entProNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(
-			provisionednetwork.HasProvisionedNetworkToNetworkWith(
-				network.NameEQ("vdi"),
-			),
-		).First(ctx)
-
-		if err != nil {
-			logger.Log.Errorf("failed to query provisioned network from entTeam: %v", err)
-			return
+		if parentNodeFailed {
+			teamStatus, err := entTeam.TeamToStatus(ctx)
+			if err != nil {
+				logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
+				return
+			}
+			_, err = teamStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+			if err != nil {
+				logger.Log.Errorf("error while trying to set ent.ProvisioningStep.Status.State to status.StateFAILED: %v", err)
+				return
+			}
+			rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+			planErr = fmt.Errorf("parent node for Team has failed")
+		} else {
+			planErr = buildTeam(client, logger, builder, ctx, entTeam)
 		}
-		err = (*builder).DeployNetwork(ctx, entProNetwork)
-		if err != nil {
-			logger.Log.Error("failed to pre-create Tier-1 network (%s). continuing anyways: %v", err)
-		}
-		// TODO: END REMOVE ME
-		entStatus, err := entTeam.TeamToStatus(ctx)
-		if err != nil {
-			logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
-			return
-		}
-		entStatus.Update().SetState(status.StateINPROGRESS).Save(ctx)
-		rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
 	case plan.TypeStartBuild:
 		entBuild, err := entPlan.QueryPlanToBuild().Only(ctx)
 		if err != nil {
@@ -551,6 +543,36 @@ func buildNetwork(client *ent.Client, logger *logging.Logger, builder *builder.B
 	// 	return saveErr
 	// }
 	// rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+	return nil
+}
+
+func buildTeam(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entTeam *ent.Team) error {
+	logger.Log.Infof("deploying Team: %d", entTeam.TeamNumber)
+
+	teamStatus, err := entTeam.TeamToStatus(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while getting Team status: %v", err)
+		return err
+	}
+	_, saveErr := teamStatus.Update().SetState(status.StateINPROGRESS).Save(ctx)
+	if saveErr != nil {
+		logger.Log.Errorf("Error while setting Team status to INPROGRESS: %v", saveErr)
+		return saveErr
+	}
+	rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+	err = (*builder).DeployTeam(ctx, entTeam)
+	if err != nil {
+		logger.Log.Errorf("Error while deploying network: %v", err)
+		_, saveErr := teamStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Network status to FAILED: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+		checkTeamStatus(client, logger, ctx, entTeam)
+		return err
+	}
+	logger.Log.Infof("deployed %d successfully", entTeam.TeamNumber)
 	return nil
 }
 

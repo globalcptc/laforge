@@ -29,6 +29,10 @@ func CloneGit(repoURL, repoPath, privateKey, branchName string) (*object.Commit,
 	if err != nil {
 		err := fmt.Errorf("generate publickeys failed: %s", err.Error())
 		return nil, err
+	} else {
+		publicKeys.HostKeyCallbackHelper = gssh.HostKeyCallbackHelper{
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		}
 	}
 
 	branch := fmt.Sprintf("refs/heads/%s", branchName)
