@@ -38,6 +38,8 @@ type openstackBuilder struct {
 	TenantID 			string
 	Logger				*logging.Logger
 	MaxWorkers			int
+	DeployWorkerPool	*semaphore.Weighted
+	TeardownWorkerPool	*semaphore.Weighted
 }
 
 func (builder openstackBuilder) generateBuildID(build *ent.Build) string {
@@ -52,11 +54,20 @@ func (builder openstackBuilder) generateVmName(competition *ent.Competition, tea
 	return (competition.HcID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + host.Hostname + "-" + builder.generateBuildID(build))
 }
 
-func (builder openstackBuilder) DeployHOST(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
+func (builder openstackBuilder) generateRouterName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
+	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + builder.generateBuildID(build))
+}
+
+func (builder openstackBuilder) generateNetworkName(competition *ent.Competition, team *ent.Team, network *ent.Network, build *ent.Build) string {
+	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + network.Name + "-" + builder.generateBuildID(build))
+}
+
+func (builder openstackBuilder) DeployHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
 	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	if err != nil {
 		return err
 	}
+
 
 	//add configuration here
 	authOpts, err := openstack.AuthOptionsFromEnv()
@@ -84,19 +95,32 @@ func (builder openstackBuilder) DeployHOST(ctx context.Context, provisionedHost 
 		return err
 	}
 
+	network, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToNetwork().Only(ctx)
+	if err != nil {
+		return err
+	}
+
 	team, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
 		return err
 	}
 
 	// generate vm name from ent
-	name := builder.generateVmName(competition, team, host, build)
+	vmName := builder.generateVmName(competition, team, host, build)
+	networkName := builder.generateNetworkName(competition, team, network, build)
+	
+	err = builder.DeployWorkerPool.Acquire(ctx, int64(1))
+	if err != nil {
+		return
+	}
+	defer builder.DeployWorkerPool.Release(int64(1))
 
 	//build server
 	server, err := servers.Create(client, servers.CreateOpts{
-		Name: name,
+		Name: vmName,
 		FlavorName: "flavor_name",
 		ImageName: "image_name",
+		Networks: networkName,
 	}).Extract()
 	if err != nil {
 		fmt.Println("Unable to create server: %s", err)
@@ -116,7 +140,23 @@ func (builder openstackBuilder) DeployHOST(ctx context.Context, provisionedHost 
 }
 
 func (builder openstackBuilder) DeployNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
-	entNetwork, err := provisionedNetwork.QuertProvisionedNetworkToNetwork().Only(ctx)
+	entBuild, err := provisionedNetwork.QueryProvisionedNetworkToBuild().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+	}
+	entEnvironment, err := provisionedNetwork.QueryProvisionedNetworktoBuild().QueryBuildToEnvironment().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+	}
+	entCompetition, err := provisionedNetwork.QueryEnvironmentToCompetition().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
+	}
+	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+	}
+	entTeam, err := provisionedNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
@@ -137,6 +177,8 @@ func (builder openstackBuilder) DeployNetwork(ctx context.Context, provisionedNe
 		return err
 	}
 
+	tier1Name := builder.generateRouterName(entCompetition[0], entTeam, entBuild)
+
 	opts := networks.CreateOpts{Name: entNetwork, AdminStateUp: networks.Up}
 
 	// Execute the operation and get back a networks.Network struct
@@ -154,12 +196,40 @@ func (builder openstackBuilder) DeployNetwork(ctx context.Context, provisionedNe
 	return
 }
 
-func (build openstackBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
+func (builder openstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
+	entProNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(
+			provisionednetwork.HasProvisionedNetworkToNetworkWith(
+				network.NameEQ("vdi"),
+			),
+	).First(ctx)
+
+	if err != nil {
+		return fmt.Errorf("failed to query vdi provisioned network from entTeam: %v", err)
+	}
+	err = builder.DeployNetwork(ctx, entProNetwork)
+	if err != nil {
+		return fmt.Errorf("failed to pre-create Tier-1 network: %v", err)
+	}
+	return
+}
+
+func (builder openstackBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
 	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	if err != nil {
 		return err
 	}
-
+	entBuild, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToBuild().Only(ctx)
+	if err != nil {
+		return err
+	}
+	entCompetition, err := entBuild.QueryBuildToCompetition().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query competition from build \"%s\": %v", entBuild.ID, err)
+	}
+	entTeam, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedHost.ID, err)
+	}
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
 		return err
@@ -175,6 +245,14 @@ func (build openstackBuilder) TeardownHost(ctx context.Context, provisionedHost 
 		return err
 	}
 
+	vmName := builder.generateVmName(entCompetition, entTeam, host, entBuild)
+
+	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
+	if err != nil {
+		return
+	}
+	defer builder.TeardownWorkerPool.Release(int64(1))
+
 	var instances []string
 	instances[0] = host.InstanceId
 	result, err := servers.Delete(client, instances[0])
@@ -186,8 +264,24 @@ func (build openstackBuilder) TeardownHost(ctx context.Context, provisionedHost 
 	return
 }
 
-func (build openstackBuilder) TeardownNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
+func (builder openstackBuilder) TeardownNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
+	entBuild, err := provisionedNetwork.QueryProvisionedNetworkToBuild().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+	}
+	entEnvironment, err := provisionedNetwork.QueryProvisionedNetworkToBuild().QueryBuildToEnvironment().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+	}
+	entCompetition, err := entEnvironment.EnvironmentToCompetition(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
+	}
 	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+	}
+	entTeam, err := provisionedNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
@@ -207,11 +301,23 @@ func (build openstackBuilder) TeardownNetwork(ctx context.Context, provisionedNe
 		return err
 	}
 
+	networkName := builder.generateNetworkName(entCompetition[0], entTeam, entNetwork, entBuild)
+
+	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
+	if err != nil {
+		return
+	}
+	defer builder.TeardownWorkerPool.Release(int64(1))
+
 	result, err := networks.Delete(client, "id")
 	if err != nil {
 		return err
 	}
 	fmt.Println(result)
 
+	return
+}
+
+func (builder openstackBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	return
 }

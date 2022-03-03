@@ -46,15 +46,15 @@ func BuilderFromEnvironment(environment *ent.Environment, logger *logging.Logger
 			if err != nil {
 				logrus.Errorf("Failed to make openstack builder. Err: %v", err)
 				return
-      }
-      return
-	  case "generic":
-		  genericBuilder, err = NewGenericBuilder(environment, logger)
-      if err != nil {
-        logrus.Errorf("Failed to make generic builder. Err: %v", err)
-        return
-		  }
-		  return
+			}
+			return
+		case "generic":
+			genericBuilder, err = NewGenericBuilder(environment, logger)
+			if err != nil {
+				logrus.Errorf("Failed to make generic builder. Err: %v", err)
+				return
+				}
+			return
 	}
 
 	err = fmt.Errorf("error: builder not found")
