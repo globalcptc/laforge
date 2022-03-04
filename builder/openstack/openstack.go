@@ -257,7 +257,7 @@ func (builder openstackBuilder) TeardownHost(ctx context.Context, provisionedHos
 	instances[0] = host.InstanceId
 	result, err := servers.Delete(client, instances[0])
 	if err != nil {
-		return err
+		return err    
 	}
 	fmt.Println(result)
 
