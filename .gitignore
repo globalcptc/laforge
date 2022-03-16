@@ -25,3 +25,7 @@ repos/
 session.cache
 *.env
 *.lfglog
+
+# LaForge Server Configs
+conf.prod.json
+conf.dev.json
