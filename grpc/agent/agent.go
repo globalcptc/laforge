@@ -103,6 +103,11 @@ func DownloadFile(path string, url string) error {
 	return SystemDownloadFile(path, url)
 }
 
+// ExecuteAnsible will execute an Ansible Playbook
+func ExecuteAnsible(playbookPath, connectionMethod, inventoryList string) (string, error) {
+	return SystemExecuteAnsible(playbookPath, connectionMethod, inventoryList)
+}
+
 // ChangePermissions will download a url to a local file.
 func ChangePermissions(path string, perms int) error {
 	var err error
@@ -192,6 +197,14 @@ func RequestTask(c pb.LaforgeClient) {
 		logger.Errorf("Error: %v", err)
 	} else {
 		switch r.GetCommand() {
+		case pb.TaskReply_ANSIBLE:
+			taskArgs := strings.Split(r.GetArgs(), "💔")
+			playbookPath := taskArgs[0]
+			connectionMethod := taskArgs[1]
+			inventoryList := taskArgs[2]
+			taskoutput, taskerr := ExecuteAnsible(playbookPath, connectionMethod, inventoryList)
+			taskoutput = strings.ReplaceAll(taskoutput, "\n", "🔥")
+			RequestTaskStatusRequest(taskoutput, taskerr, r.Id, c)
 		case pb.TaskReply_EXECUTE:
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			command := taskArgs[0]

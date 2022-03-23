@@ -8,12 +8,13 @@ require (
 	github.com/99designs/gqlgen v0.13.0
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/apenella/go-ansible v1.1.5
 	github.com/bradfitz/iter v0.0.0-20191230175014-e8f45d346db8
 	github.com/briandowns/formatifier v0.0.0-20150226010542-6d068a6ce63a
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dsnet/compress v0.0.1 // indirect
-	github.com/fatih/color v1.10.0
+	github.com/fatih/color v1.12.0
 	github.com/frankban/quicktest v1.13.0 // indirect
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.7.1

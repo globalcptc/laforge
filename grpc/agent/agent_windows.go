@@ -91,6 +91,11 @@ func SystemDownloadFile(path, url string) error {
 	return err
 }
 
+// SystemExecuteAnsible Runs Ansible Playbook
+func SystemExecuteAnsible(playbookPath, connectionMethod, inventoryList string) (string, error) {
+	return "", fmt.Errorf("Not Implemented for Windows")
+}
+
 // SystemExecuteCommand Runs the Command that is inputted and either returns the error or output
 func SystemExecuteCommand(command string, args ...string) (string, error) {
 	var err error

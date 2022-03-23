@@ -81,6 +81,12 @@ github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 h1:kFOfPq6dUM1hTo
 github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239/go.mod h1:2FmKhYUyUczH0OGQWaF5ceTx0UBShxjsH6f8oGKYe2c=
 github.com/apache/thrift v0.12.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=
 github.com/apache/thrift v0.13.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=
+github.com/apenella/go-ansible v1.1.5 h1:kiAS3I9rgq1D6nBxuE4db/bhBNZO9Qy5bIsCHacOdJU=
+github.com/apenella/go-ansible v1.1.5/go.mod h1:RfpzSuv8Cbb2HvcdjPhzXtxUGlsE3cD+kTb+IeKXYfo=
+github.com/apenella/go-common-utils/data v0.0.0-20210528133155-34ba915e28c8 h1:bjcIpzMcDycgqE1C8rktB04QEOJD3+qKLE5vnBeJlZo=
+github.com/apenella/go-common-utils/data v0.0.0-20210528133155-34ba915e28c8/go.mod h1:pOb2o2/kk9IwfdAZ36n58dYAc5k8nzBJkwacgLDwpoM=
+github.com/apenella/go-common-utils/error v0.0.0-20210528133155-34ba915e28c8 h1:2u17yc+aQJwDHRqnmnJd3arxcGcatJ/0eCFJtq45suc=
+github.com/apenella/go-common-utils/error v0.0.0-20210528133155-34ba915e28c8/go.mod h1:Hj3S/BcSHKfv9VDMcrY7lsm9hGnb7cd70alSkl/Sv+4=
 github.com/apparentlymart/go-dump v0.0.0-20180507223929-23540a00eaa3/go.mod h1:oL81AME2rN47vu18xqj1S1jPIPuN7afo62yKTNn3XMM=
 github.com/apparentlymart/go-textseg v1.0.0 h1:rRmlIsPEEhUTIKQb7T++Nz/A5Q6C9IuX2wFoYVvnCs0=
 github.com/apparentlymart/go-textseg v1.0.0/go.mod h1:z96Txxhf3xSFMPmb5X/1W05FF/Nj9VFpLOpjS5yuumk=
@@ -169,6 +175,7 @@ github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.10.0 h1:s36xzo75JdqLaaWoiEHk767eHiwo0598uUxyfiPkDsg=
 github.com/fatih/color v1.10.0/go.mod h1:ELkj/draVOlAH/xkhN6mQ50Qd0MPOk5AAr3maGEBuJM=
+github.com/fatih/color v1.12.0/go.mod h1:ELkj/draVOlAH/xkhN6mQ50Qd0MPOk5AAr3maGEBuJM=
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
 github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8/go.mod h1:ZhphrRTfi2rbfLwlschooIH4+wKKDR4Pdxhh+TRoA20=
