@@ -1,9 +1,9 @@
 package planner
 
 import (
-	"os"
-
+	"github.com/gen0cide/laforge/server/utils"
 	"github.com/go-redis/redis/v8"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -11,28 +11,31 @@ var (
 )
 
 func init() {
-	redisHost, okRS := os.LookupEnv("REDIS_SERVER")
-	redisPass, okRP := os.LookupEnv("REDIS_PASSWORD")
+	laforgeConfig, err := utils.LoadServerConfig()
+	if err != nil {
+		logrus.Errorf("failed to load LaForge config: %s", err)
+		return
+	}
 
-	if okRS {
-		if okRP {
+	if laforgeConfig.Graphql.RedisServerUri != "" {
+		if laforgeConfig.Graphql.RedisPassword != "" {
 			rdb = redis.NewClient(&redis.Options{
-				Addr:     redisHost,
-				Password: redisPass,
+				Addr:     laforgeConfig.Graphql.RedisServerUri,
+				Password: laforgeConfig.Graphql.RedisPassword,
 				DB:       0, // use default DB
 			})
 		} else {
 			rdb = redis.NewClient(&redis.Options{
-				Addr:     redisHost,
+				Addr:     laforgeConfig.Graphql.RedisServerUri,
 				Password: "", // no password set
 				DB:       0,  // use default DB
 			})
 		}
 	} else {
-		if okRP {
+		if laforgeConfig.Graphql.RedisPassword != "" {
 			rdb = redis.NewClient(&redis.Options{
 				Addr:     "localhost:6379",
-				Password: redisPass,
+				Password: laforgeConfig.Graphql.RedisPassword,
 				DB:       0, // use default DB
 			})
 		} else {

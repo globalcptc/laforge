@@ -358,7 +358,7 @@ func (r *mutationResolver) LoadEnvironment(ctx context.Context, envFilePath stri
 	if err != nil {
 		return nil, fmt.Errorf("error creating server task: %v", err)
 	}
-	log, err := logging.CreateLoggerForServerTask(serverTask)
+	log, err := logging.CreateLoggerForServerTask(r.laforgeConfig, serverTask)
 	if err != nil {
 		return nil, err
 	}
@@ -407,7 +407,7 @@ func (r *mutationResolver) CreateBuild(ctx context.Context, envUUID string, rend
 		planner.RenderFilesTaskStatus = nil
 	}
 
-	return planner.CreateBuild(ctx, r.client, r.rdb, currentUser, entEnvironment)
+	return planner.CreateBuild(ctx, r.client, r.rdb, r.laforgeConfig, currentUser, entEnvironment)
 }
 
 func (r *mutationResolver) DeleteUser(ctx context.Context, userUUID string) (bool, error) {
@@ -462,12 +462,12 @@ func (r *mutationResolver) ExecutePlan(ctx context.Context, buildUUID string) (*
 	}
 	r.rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 
-	logger, err := logging.CreateLoggerForServerTask(serverTask)
+	logger, err := logging.CreateLoggerForServerTask(r.laforgeConfig, serverTask)
 	if err != nil {
 		return nil, err
 	}
 
-	go planner.StartBuild(r.client, logger, currentUser, serverTask, taskStatus, b)
+	go planner.StartBuild(r.client, r.laforgeConfig, logger, currentUser, serverTask, taskStatus, b)
 
 	return b, nil
 }
@@ -509,7 +509,7 @@ func (r *mutationResolver) DeleteBuild(ctx context.Context, buildUUID string) (s
 		return "", fmt.Errorf("error assigning environment and build to execute build server task: %v", err)
 	}
 	r.rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
-	log, err := logging.CreateLoggerForServerTask(serverTask)
+	log, err := logging.CreateLoggerForServerTask(r.laforgeConfig, serverTask)
 	if err != nil {
 		return "", fmt.Errorf("error creating logger for build delete: %v", err)
 	}
@@ -618,13 +618,13 @@ func (r *mutationResolver) Rebuild(ctx context.Context, rootPlans []*string) (bo
 	}
 	r.rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 
-	logger, err := logging.CreateLoggerForServerTask(serverTask)
+	logger, err := logging.CreateLoggerForServerTask(r.laforgeConfig, serverTask)
 	if err != nil {
 		return false, err
 	}
 
 	spawnedRebuild := make(chan bool, 1)
-	go planner.Rebuild(r.client, r.rdb, logger, currentUser, serverTask, taskStatus, entPlans, spawnedRebuild)
+	go planner.Rebuild(r.client, r.rdb, r.laforgeConfig, logger, currentUser, serverTask, taskStatus, entPlans, spawnedRebuild)
 
 	rebuildStartedSuccess := <-spawnedRebuild
 	if rebuildStartedSuccess {
