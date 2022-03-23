@@ -4794,6 +4794,22 @@ func (c *ProvisioningStepClient) QueryProvisioningStepToFileExtract(ps *Provisio
 	return query
 }
 
+// QueryProvisioningStepToAnsible queries the ProvisioningStepToAnsible edge of a ProvisioningStep.
+func (c *ProvisioningStepClient) QueryProvisioningStepToAnsible(ps *ProvisioningStep) *AnsibleQuery {
+	query := &AnsibleQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := ps.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, id),
+			sqlgraph.To(ansible.Table, ansible.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToAnsibleTable, provisioningstep.ProvisioningStepToAnsibleColumn),
+		)
+		fromV = sqlgraph.Neighbors(ps.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryProvisioningStepToPlan queries the ProvisioningStepToPlan edge of a ProvisioningStep.
 func (c *ProvisioningStepClient) QueryProvisioningStepToPlan(ps *ProvisioningStep) *PlanQuery {
 	query := &PlanQuery{config: c.config}

@@ -2712,7 +2712,7 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 		ID:     ps.ID,
 		Type:   "ProvisioningStep",
 		Fields: make([]*Field, 2),
-		Edges:  make([]*Edge, 11),
+		Edges:  make([]*Edge, 12),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(ps.Type); err != nil {
@@ -2812,32 +2812,42 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[8] = &Edge{
-		Type: "Plan",
-		Name: "ProvisioningStepToPlan",
+		Type: "Ansible",
+		Name: "ProvisioningStepToAnsible",
 	}
-	err = ps.QueryProvisioningStepToPlan().
-		Select(plan.FieldID).
+	err = ps.QueryProvisioningStepToAnsible().
+		Select(ansible.FieldID).
 		Scan(ctx, &node.Edges[8].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[9] = &Edge{
-		Type: "AgentTask",
-		Name: "ProvisioningStepToAgentTask",
+		Type: "Plan",
+		Name: "ProvisioningStepToPlan",
 	}
-	err = ps.QueryProvisioningStepToAgentTask().
-		Select(agenttask.FieldID).
+	err = ps.QueryProvisioningStepToPlan().
+		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[9].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[10] = &Edge{
+		Type: "AgentTask",
+		Name: "ProvisioningStepToAgentTask",
+	}
+	err = ps.QueryProvisioningStepToAgentTask().
+		Select(agenttask.FieldID).
+		Scan(ctx, &node.Edges[10].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[11] = &Edge{
 		Type: "GinFileMiddleware",
 		Name: "ProvisioningStepToGinFileMiddleware",
 	}
 	err = ps.QueryProvisioningStepToGinFileMiddleware().
 		Select(ginfilemiddleware.FieldID).
-		Scan(ctx, &node.Edges[10].IDs)
+		Scan(ctx, &node.Edges[11].IDs)
 	if err != nil {
 		return nil, err
 	}

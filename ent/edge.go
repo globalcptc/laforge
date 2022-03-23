@@ -956,6 +956,14 @@ func (ps *ProvisioningStep) ProvisioningStepToFileExtract(ctx context.Context) (
 	return result, MaskNotFound(err)
 }
 
+func (ps *ProvisioningStep) ProvisioningStepToAnsible(ctx context.Context) (*Ansible, error) {
+	result, err := ps.Edges.ProvisioningStepToAnsibleOrErr()
+	if IsNotLoaded(err) {
+		result, err = ps.QueryProvisioningStepToAnsible().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (ps *ProvisioningStep) ProvisioningStepToPlan(ctx context.Context) (*Plan, error) {
 	result, err := ps.Edges.ProvisioningStepToPlanOrErr()
 	if IsNotLoaded(err) {

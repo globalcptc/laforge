@@ -797,7 +797,7 @@ var (
 	// ProvisioningStepsColumns holds the columns for the "provisioning_steps" table.
 	ProvisioningStepsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract"}},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract", "Ansible"}},
 		{Name: "step_number", Type: field.TypeInt},
 		{Name: "gin_file_middleware_gin_file_middleware_to_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
@@ -808,6 +808,7 @@ var (
 		{Name: "provisioning_step_provisioning_step_to_file_delete", Type: field.TypeUUID, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_file_download", Type: field.TypeUUID, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_file_extract", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioning_step_provisioning_step_to_ansible", Type: field.TypeUUID, Nullable: true},
 	}
 	// ProvisioningStepsTable holds the schema information for the "provisioning_steps" table.
 	ProvisioningStepsTable = &schema.Table{
@@ -867,6 +868,12 @@ var (
 				Symbol:     "provisioning_steps_file_extracts_ProvisioningStepToFileExtract",
 				Columns:    []*schema.Column{ProvisioningStepsColumns[11]},
 				RefColumns: []*schema.Column{FileExtractsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provisioning_steps_ansibles_ProvisioningStepToAnsible",
+				Columns:    []*schema.Column{ProvisioningStepsColumns[12]},
+				RefColumns: []*schema.Column{AnsiblesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -1492,6 +1499,7 @@ func init() {
 	ProvisioningStepsTable.ForeignKeys[6].RefTable = FileDeletesTable
 	ProvisioningStepsTable.ForeignKeys[7].RefTable = FileDownloadsTable
 	ProvisioningStepsTable.ForeignKeys[8].RefTable = FileExtractsTable
+	ProvisioningStepsTable.ForeignKeys[9].RefTable = AnsiblesTable
 	RepoCommitsTable.ForeignKeys[0].RefTable = RepositoriesTable
 	ScriptsTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	ServerTasksTable.ForeignKeys[0].RefTable = AuthUsersTable

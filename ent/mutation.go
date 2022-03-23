@@ -23907,6 +23907,8 @@ type ProvisioningStepMutation struct {
 	cleared_ProvisioningStepToFileDownload      bool
 	_ProvisioningStepToFileExtract              *uuid.UUID
 	cleared_ProvisioningStepToFileExtract       bool
+	_ProvisioningStepToAnsible                  *uuid.UUID
+	cleared_ProvisioningStepToAnsible           bool
 	_ProvisioningStepToPlan                     *uuid.UUID
 	cleared_ProvisioningStepToPlan              bool
 	_ProvisioningStepToAgentTask                map[uuid.UUID]struct{}
@@ -24408,6 +24410,45 @@ func (m *ProvisioningStepMutation) ResetProvisioningStepToFileExtract() {
 	m.cleared_ProvisioningStepToFileExtract = false
 }
 
+// SetProvisioningStepToAnsibleID sets the "ProvisioningStepToAnsible" edge to the Ansible entity by id.
+func (m *ProvisioningStepMutation) SetProvisioningStepToAnsibleID(id uuid.UUID) {
+	m._ProvisioningStepToAnsible = &id
+}
+
+// ClearProvisioningStepToAnsible clears the "ProvisioningStepToAnsible" edge to the Ansible entity.
+func (m *ProvisioningStepMutation) ClearProvisioningStepToAnsible() {
+	m.cleared_ProvisioningStepToAnsible = true
+}
+
+// ProvisioningStepToAnsibleCleared reports if the "ProvisioningStepToAnsible" edge to the Ansible entity was cleared.
+func (m *ProvisioningStepMutation) ProvisioningStepToAnsibleCleared() bool {
+	return m.cleared_ProvisioningStepToAnsible
+}
+
+// ProvisioningStepToAnsibleID returns the "ProvisioningStepToAnsible" edge ID in the mutation.
+func (m *ProvisioningStepMutation) ProvisioningStepToAnsibleID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningStepToAnsible != nil {
+		return *m._ProvisioningStepToAnsible, true
+	}
+	return
+}
+
+// ProvisioningStepToAnsibleIDs returns the "ProvisioningStepToAnsible" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProvisioningStepToAnsibleID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningStepMutation) ProvisioningStepToAnsibleIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningStepToAnsible; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProvisioningStepToAnsible resets all changes to the "ProvisioningStepToAnsible" edge.
+func (m *ProvisioningStepMutation) ResetProvisioningStepToAnsible() {
+	m._ProvisioningStepToAnsible = nil
+	m.cleared_ProvisioningStepToAnsible = false
+}
+
 // SetProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by id.
 func (m *ProvisioningStepMutation) SetProvisioningStepToPlanID(id uuid.UUID) {
 	m._ProvisioningStepToPlan = &id
@@ -24690,7 +24731,7 @@ func (m *ProvisioningStepMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProvisioningStepMutation) AddedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m._ProvisioningStepToStatus != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToStatus)
 	}
@@ -24714,6 +24755,9 @@ func (m *ProvisioningStepMutation) AddedEdges() []string {
 	}
 	if m._ProvisioningStepToFileExtract != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToFileExtract)
+	}
+	if m._ProvisioningStepToAnsible != nil {
+		edges = append(edges, provisioningstep.EdgeProvisioningStepToAnsible)
 	}
 	if m._ProvisioningStepToPlan != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToPlan)
@@ -24763,6 +24807,10 @@ func (m *ProvisioningStepMutation) AddedIDs(name string) []ent.Value {
 		if id := m._ProvisioningStepToFileExtract; id != nil {
 			return []ent.Value{*id}
 		}
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		if id := m._ProvisioningStepToAnsible; id != nil {
+			return []ent.Value{*id}
+		}
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		if id := m._ProvisioningStepToPlan; id != nil {
 			return []ent.Value{*id}
@@ -24783,7 +24831,7 @@ func (m *ProvisioningStepMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProvisioningStepMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m.removed_ProvisioningStepToAgentTask != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToAgentTask)
 	}
@@ -24806,7 +24854,7 @@ func (m *ProvisioningStepMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProvisioningStepMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m.cleared_ProvisioningStepToStatus {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToStatus)
 	}
@@ -24830,6 +24878,9 @@ func (m *ProvisioningStepMutation) ClearedEdges() []string {
 	}
 	if m.cleared_ProvisioningStepToFileExtract {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToFileExtract)
+	}
+	if m.cleared_ProvisioningStepToAnsible {
+		edges = append(edges, provisioningstep.EdgeProvisioningStepToAnsible)
 	}
 	if m.cleared_ProvisioningStepToPlan {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToPlan)
@@ -24863,6 +24914,8 @@ func (m *ProvisioningStepMutation) EdgeCleared(name string) bool {
 		return m.cleared_ProvisioningStepToFileDownload
 	case provisioningstep.EdgeProvisioningStepToFileExtract:
 		return m.cleared_ProvisioningStepToFileExtract
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		return m.cleared_ProvisioningStepToAnsible
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		return m.cleared_ProvisioningStepToPlan
 	case provisioningstep.EdgeProvisioningStepToAgentTask:
@@ -24901,6 +24954,9 @@ func (m *ProvisioningStepMutation) ClearEdge(name string) error {
 	case provisioningstep.EdgeProvisioningStepToFileExtract:
 		m.ClearProvisioningStepToFileExtract()
 		return nil
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		m.ClearProvisioningStepToAnsible()
+		return nil
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		m.ClearProvisioningStepToPlan()
 		return nil
@@ -24938,6 +24994,9 @@ func (m *ProvisioningStepMutation) ResetEdge(name string) error {
 		return nil
 	case provisioningstep.EdgeProvisioningStepToFileExtract:
 		m.ResetProvisioningStepToFileExtract()
+		return nil
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		m.ResetProvisioningStepToAnsible()
 		return nil
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		m.ResetProvisioningStepToPlan()
