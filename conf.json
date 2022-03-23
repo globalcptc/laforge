@@ -13,7 +13,7 @@
   },
   "ui": {
     "https_enabled": false,
-    "allowed_origins": ["http://localhost"]
+    "allowed_origins": ["http://localhost", "http://localhost:4200"]
   },
   "agent": {
     "grpc_server_uri": "localhost:50051",

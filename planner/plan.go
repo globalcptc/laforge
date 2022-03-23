@@ -87,12 +87,12 @@ func createPlanningStatus(ctx context.Context, client *ent.Client, logger *loggi
 	return entStatus, nil
 }
 
-func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, currentUser *ent.AuthUser, entEnvironment *ent.Environment) (*ent.Build, error) {
+func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerConfig, currentUser *ent.AuthUser, entEnvironment *ent.Environment) (*ent.Build, error) {
 	taskStatus, serverTask, err := utils.CreateServerTask(ctx, client, rdb, currentUser, servertask.TypeCREATEBUILD)
 	if err != nil {
 		return nil, fmt.Errorf("error creating server task: %v", err)
 	}
-	logger, err := logging.CreateLoggerForServerTask(serverTask)
+	logger, err := logging.CreateLoggerForServerTask(laforgeConfig, serverTask)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 	for teamNumber := 1; teamNumber <= entEnvironment.TeamCount; teamNumber++ {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, teamNumber int, logger *logging.Logger, entBuild *ent.Build, client *ent.Client) {
-			_, err := createTeam(client, logger, entBuild, teamNumber, wg)
+			_, err := createTeam(client, laforgeConfig, logger, entBuild, teamNumber, wg)
 			if err != nil {
 				logrus.Errorf("error creating team: %v", err)
 				logger.Log.Errorf("error creating team: %v", err)
@@ -282,12 +282,12 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 			}
 			rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 
-			executeLogger, err := logging.CreateLoggerForServerTask(serverTask)
+			executeLogger, err := logging.CreateLoggerForServerTask(laforgeConfig, serverTask)
 			if err != nil {
 				logger.Log.Errorf("error creating logger for execute build: %v", err)
 				return
 			}
-			go StartBuild(client, executeLogger, currentUser, serverTask, taskStatus, entBuild)
+			go StartBuild(client, laforgeConfig, executeLogger, currentUser, serverTask, taskStatus, entBuild)
 		} else {
 			logger.Log.Debug("-----\nCOMMIT CANCELLED/TIMED OUT\n-----")
 			logger.Log.Errorf("root commit has been cancelled or 20 minute timeout has been reached")
@@ -299,7 +299,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 	return entBuild, nil
 }
 
-func createTeam(client *ent.Client, logger *logging.Logger, entBuild *ent.Build, teamNumber int, wg *sync.WaitGroup) (*ent.Team, error) {
+func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, entBuild *ent.Build, teamNumber int, wg *sync.WaitGroup) (*ent.Team, error) {
 	logger.Log.WithFields(logrus.Fields{
 		"teamNumber": teamNumber,
 	}).Debug("creating team")
@@ -352,7 +352,7 @@ func createTeam(client *ent.Client, logger *logging.Logger, entBuild *ent.Build,
 	}
 	createProvisonedNetworks := []*ent.ProvisionedNetwork{}
 	for _, buildNetwork := range buildNetworks {
-		pNetwork, _ := createProvisionedNetworks(ctx, client, logger, entBuild, entTeam, buildNetwork)
+		pNetwork, _ := createProvisionedNetworks(ctx, client, laforgeConfig, logger, entBuild, entTeam, buildNetwork)
 		createProvisonedNetworks = append(createProvisonedNetworks, pNetwork)
 	}
 	for _, pNetwork := range createProvisonedNetworks {
@@ -371,7 +371,7 @@ func createTeam(client *ent.Client, logger *logging.Logger, entBuild *ent.Build,
 			return nil, err
 		}
 		for _, entHost := range entHosts {
-			_, err = createProvisionedHosts(ctx, client, logger, pNetwork, entHost, networkPlan)
+			_, err = createProvisionedHosts(ctx, client, laforgeConfig, logger, pNetwork, entHost, networkPlan)
 			if err != nil {
 				logrus.Errorf("Failed to create provisioned hosts")
 				logger.Log.Errorf("Failed to create provisioned hosts")
@@ -382,7 +382,7 @@ func createTeam(client *ent.Client, logger *logging.Logger, entBuild *ent.Build,
 	return entTeam, nil
 }
 
-func createProvisionedNetworks(ctx context.Context, client *ent.Client, logger *logging.Logger, entBuild *ent.Build, entTeam *ent.Team, entNetwork *ent.Network) (*ent.ProvisionedNetwork, error) {
+func createProvisionedNetworks(ctx context.Context, client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, entBuild *ent.Build, entTeam *ent.Team, entNetwork *ent.Network) (*ent.ProvisionedNetwork, error) {
 	logger.Log.WithFields(logrus.Fields{
 		"team":            entTeam.ID,
 		"team.teamNumber": entTeam.TeamNumber,
@@ -432,7 +432,7 @@ func createProvisionedNetworks(ctx context.Context, client *ent.Client, logger *
 	return entProvisionedNetwork, nil
 }
 
-func createProvisionedHosts(ctx context.Context, client *ent.Client, logger *logging.Logger, pNetwork *ent.ProvisionedNetwork, entHost *ent.Host, prevPlan *ent.Plan) (*ent.ProvisionedHost, error) {
+func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, pNetwork *ent.ProvisionedNetwork, entHost *ent.Host, prevPlan *ent.Plan) (*ent.ProvisionedHost, error) {
 	logger.Log.WithFields(logrus.Fields{
 		"pNetwork":      pNetwork.ID,
 		"pNetwork.Name": pNetwork.Name,
@@ -517,7 +517,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, logger *log
 					logger.Log.Errorf("error while retrieving plan from provisioned network: %v", err)
 					return nil, err
 				}
-				entDependsOnHost, err = createProvisionedHosts(ctx, client, logger, dependOnPnetwork, entHostDependency.Edges.HostDependencyToDependOnHost, dependOnPnetworkPlan)
+				entDependsOnHost, err = createProvisionedHosts(ctx, client, laforgeConfig, logger, dependOnPnetwork, entHostDependency.Edges.HostDependencyToDependOnHost, dependOnPnetworkPlan)
 				if err != nil {
 					logger.Log.Errorf("error creating depends on host: %v", err)
 					return nil, err
@@ -587,10 +587,6 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, logger *log
 		return nil, err
 	}
 
-	serverAddress, ok := os.LookupEnv("GRPC_SERVER")
-	if !ok {
-		serverAddress = "localhost:50051"
-	}
 	isWindowsHost := false
 	if strings.Contains(entHost.OS, "w2k") {
 		isWindowsHost = true
@@ -608,7 +604,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, logger *log
 		return nil, err
 	}
 	if RenderFiles {
-		err = grpc.BuildAgent(logger, fmt.Sprint(entProvisionedHost.ID), serverAddress, binaryName, isWindowsHost)
+		err = grpc.BuildAgent(logger, fmt.Sprint(entProvisionedHost.ID), laforgeConfig.Agent.GrpcServerUri, binaryName, isWindowsHost)
 		if err != nil {
 			return nil, err
 		}

@@ -10,18 +10,24 @@ import (
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/logging"
+	"github.com/gen0cide/laforge/server/utils"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
 
-	pgHost, ok := os.LookupEnv("PG_URI")
-	client := &ent.Client{}
-
-	if !ok {
-		client = ent.PGOpen("postgresql://laforger:laforge@127.0.0.1/laforge")
-	} else {
-		client = ent.PGOpen(pgHost)
+	laforgeConfig, err := utils.LoadServerConfig()
+	if err != nil {
+		logrus.Errorf("failed to load LaForge config: %v", err)
+		return
 	}
+
+	if laforgeConfig.Database.PostgresUri == "" {
+		logrus.Errorf("Database.PostgresUri not set in LaForge config")
+		os.Exit(1)
+	}
+
+	client := ent.PGOpen(laforgeConfig.Database.PostgresUri)
 
 	ctx := context.Background()
 	defer ctx.Done()
