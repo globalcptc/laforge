@@ -92,6 +92,14 @@ func (at *AgentTask) AgentTaskToAdhocPlan(ctx context.Context) ([]*AdhocPlan, er
 	return result, err
 }
 
+func (a *Ansible) AnsibleFromEnvironment(ctx context.Context) (*Environment, error) {
+	result, err := a.Edges.AnsibleFromEnvironmentOrErr()
+	if IsNotLoaded(err) {
+		result, err = a.QueryAnsibleFromEnvironment().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (au *AuthUser) AuthUserToToken(ctx context.Context) ([]*Token, error) {
 	result, err := au.Edges.AuthUserToTokenOrErr()
 	if IsNotLoaded(err) {
@@ -416,6 +424,14 @@ func (e *Environment) EnvironmentToHostDependency(ctx context.Context) ([]*HostD
 	result, err := e.Edges.EnvironmentToHostDependencyOrErr()
 	if IsNotLoaded(err) {
 		result, err = e.QueryEnvironmentToHostDependency().All(ctx)
+	}
+	return result, err
+}
+
+func (e *Environment) EnvironmentToAnsible(ctx context.Context) ([]*Ansible, error) {
+	result, err := e.Edges.EnvironmentToAnsibleOrErr()
+	if IsNotLoaded(err) {
+		result, err = e.QueryEnvironmentToAnsible().All(ctx)
 	}
 	return result, err
 }

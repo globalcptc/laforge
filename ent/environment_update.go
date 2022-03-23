@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/competition"
@@ -348,6 +349,21 @@ func (eu *EnvironmentUpdate) AddEnvironmentToHostDependency(h ...*HostDependency
 		ids[i] = h[i].ID
 	}
 	return eu.AddEnvironmentToHostDependencyIDs(ids...)
+}
+
+// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
+func (eu *EnvironmentUpdate) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddEnvironmentToAnsibleIDs(ids...)
+	return eu
+}
+
+// AddEnvironmentToAnsible adds the "EnvironmentToAnsible" edges to the Ansible entity.
+func (eu *EnvironmentUpdate) AddEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return eu.AddEnvironmentToAnsibleIDs(ids...)
 }
 
 // AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
@@ -713,6 +729,27 @@ func (eu *EnvironmentUpdate) RemoveEnvironmentToHostDependency(h ...*HostDepende
 		ids[i] = h[i].ID
 	}
 	return eu.RemoveEnvironmentToHostDependencyIDs(ids...)
+}
+
+// ClearEnvironmentToAnsible clears all "EnvironmentToAnsible" edges to the Ansible entity.
+func (eu *EnvironmentUpdate) ClearEnvironmentToAnsible() *EnvironmentUpdate {
+	eu.mutation.ClearEnvironmentToAnsible()
+	return eu
+}
+
+// RemoveEnvironmentToAnsibleIDs removes the "EnvironmentToAnsible" edge to Ansible entities by IDs.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveEnvironmentToAnsibleIDs(ids...)
+	return eu
+}
+
+// RemoveEnvironmentToAnsible removes "EnvironmentToAnsible" edges to Ansible entities.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return eu.RemoveEnvironmentToAnsibleIDs(ids...)
 }
 
 // ClearEnvironmentToBuild clears all "EnvironmentToBuild" edges to the Build entity.
@@ -1751,6 +1788,60 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if eu.mutation.EnvironmentToAnsibleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedEnvironmentToAnsibleIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToAnsibleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.EnvironmentToAnsibleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if eu.mutation.EnvironmentToBuildCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -2237,6 +2328,21 @@ func (euo *EnvironmentUpdateOne) AddEnvironmentToHostDependency(h ...*HostDepend
 	return euo.AddEnvironmentToHostDependencyIDs(ids...)
 }
 
+// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddEnvironmentToAnsibleIDs(ids...)
+	return euo
+}
+
+// AddEnvironmentToAnsible adds the "EnvironmentToAnsible" edges to the Ansible entity.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return euo.AddEnvironmentToAnsibleIDs(ids...)
+}
+
 // AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
 func (euo *EnvironmentUpdateOne) AddEnvironmentToBuildIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
 	euo.mutation.AddEnvironmentToBuildIDs(ids...)
@@ -2600,6 +2706,27 @@ func (euo *EnvironmentUpdateOne) RemoveEnvironmentToHostDependency(h ...*HostDep
 		ids[i] = h[i].ID
 	}
 	return euo.RemoveEnvironmentToHostDependencyIDs(ids...)
+}
+
+// ClearEnvironmentToAnsible clears all "EnvironmentToAnsible" edges to the Ansible entity.
+func (euo *EnvironmentUpdateOne) ClearEnvironmentToAnsible() *EnvironmentUpdateOne {
+	euo.mutation.ClearEnvironmentToAnsible()
+	return euo
+}
+
+// RemoveEnvironmentToAnsibleIDs removes the "EnvironmentToAnsible" edge to Ansible entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveEnvironmentToAnsibleIDs(ids...)
+	return euo
+}
+
+// RemoveEnvironmentToAnsible removes "EnvironmentToAnsible" edges to Ansible entities.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return euo.RemoveEnvironmentToAnsibleIDs(ids...)
 }
 
 // ClearEnvironmentToBuild clears all "EnvironmentToBuild" edges to the Build entity.
@@ -3654,6 +3781,60 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: hostdependency.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.EnvironmentToAnsibleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedEnvironmentToAnsibleIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToAnsibleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.EnvironmentToAnsibleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
 				},
 			},
 		}

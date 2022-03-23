@@ -113,6 +113,31 @@ var (
 			},
 		},
 	}
+	// AnsiblesColumns holds the columns for the "ansibles" table.
+	AnsiblesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "hcl_id", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString},
+		{Name: "source", Type: field.TypeString},
+		{Name: "method", Type: field.TypeEnum, Enums: []string{"local"}},
+		{Name: "inventory", Type: field.TypeString},
+		{Name: "tags", Type: field.TypeJSON},
+		{Name: "environment_environment_to_ansible", Type: field.TypeUUID, Nullable: true},
+	}
+	// AnsiblesTable holds the schema information for the "ansibles" table.
+	AnsiblesTable = &schema.Table{
+		Name:       "ansibles",
+		Columns:    AnsiblesColumns,
+		PrimaryKey: []*schema.Column{AnsiblesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "ansibles_environments_EnvironmentToAnsible",
+				Columns:    []*schema.Column{AnsiblesColumns[7]},
+				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// AuthUsersColumns holds the columns for the "auth_users" table.
 	AuthUsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1367,6 +1392,7 @@ var (
 		AdhocPlansTable,
 		AgentStatusTable,
 		AgentTasksTable,
+		AnsiblesTable,
 		AuthUsersTable,
 		BuildsTable,
 		BuildCommitsTable,
@@ -1419,6 +1445,7 @@ func init() {
 	AgentStatusTable.ForeignKeys[2].RefTable = BuildsTable
 	AgentTasksTable.ForeignKeys[0].RefTable = ProvisioningStepsTable
 	AgentTasksTable.ForeignKeys[1].RefTable = ProvisionedHostsTable
+	AnsiblesTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	BuildsTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	BuildsTable.ForeignKeys[1].RefTable = CompetitionsTable
 	BuildsTable.ForeignKeys[2].RefTable = BuildCommitsTable

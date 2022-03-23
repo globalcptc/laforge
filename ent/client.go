@@ -13,6 +13,7 @@ import (
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -63,6 +64,8 @@ type Client struct {
 	AgentStatus *AgentStatusClient
 	// AgentTask is the client for interacting with the AgentTask builders.
 	AgentTask *AgentTaskClient
+	// Ansible is the client for interacting with the Ansible builders.
+	Ansible *AnsibleClient
 	// AuthUser is the client for interacting with the AuthUser builders.
 	AuthUser *AuthUserClient
 	// Build is the client for interacting with the Build builders.
@@ -145,6 +148,7 @@ func (c *Client) init() {
 	c.AdhocPlan = NewAdhocPlanClient(c.config)
 	c.AgentStatus = NewAgentStatusClient(c.config)
 	c.AgentTask = NewAgentTaskClient(c.config)
+	c.Ansible = NewAnsibleClient(c.config)
 	c.AuthUser = NewAuthUserClient(c.config)
 	c.Build = NewBuildClient(c.config)
 	c.BuildCommit = NewBuildCommitClient(c.config)
@@ -214,6 +218,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		AdhocPlan:          NewAdhocPlanClient(cfg),
 		AgentStatus:        NewAgentStatusClient(cfg),
 		AgentTask:          NewAgentTaskClient(cfg),
+		Ansible:            NewAnsibleClient(cfg),
 		AuthUser:           NewAuthUserClient(cfg),
 		Build:              NewBuildClient(cfg),
 		BuildCommit:        NewBuildCommitClient(cfg),
@@ -268,6 +273,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		AdhocPlan:          NewAdhocPlanClient(cfg),
 		AgentStatus:        NewAgentStatusClient(cfg),
 		AgentTask:          NewAgentTaskClient(cfg),
+		Ansible:            NewAnsibleClient(cfg),
 		AuthUser:           NewAuthUserClient(cfg),
 		Build:              NewBuildClient(cfg),
 		BuildCommit:        NewBuildCommitClient(cfg),
@@ -333,6 +339,7 @@ func (c *Client) Use(hooks ...Hook) {
 	c.AdhocPlan.Use(hooks...)
 	c.AgentStatus.Use(hooks...)
 	c.AgentTask.Use(hooks...)
+	c.Ansible.Use(hooks...)
 	c.AuthUser.Use(hooks...)
 	c.Build.Use(hooks...)
 	c.BuildCommit.Use(hooks...)
@@ -812,6 +819,112 @@ func (c *AgentTaskClient) QueryAgentTaskToAdhocPlan(at *AgentTask) *AdhocPlanQue
 // Hooks returns the client hooks.
 func (c *AgentTaskClient) Hooks() []Hook {
 	return c.hooks.AgentTask
+}
+
+// AnsibleClient is a client for the Ansible schema.
+type AnsibleClient struct {
+	config
+}
+
+// NewAnsibleClient returns a client for the Ansible from the given config.
+func NewAnsibleClient(c config) *AnsibleClient {
+	return &AnsibleClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `ansible.Hooks(f(g(h())))`.
+func (c *AnsibleClient) Use(hooks ...Hook) {
+	c.hooks.Ansible = append(c.hooks.Ansible, hooks...)
+}
+
+// Create returns a create builder for Ansible.
+func (c *AnsibleClient) Create() *AnsibleCreate {
+	mutation := newAnsibleMutation(c.config, OpCreate)
+	return &AnsibleCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Ansible entities.
+func (c *AnsibleClient) CreateBulk(builders ...*AnsibleCreate) *AnsibleCreateBulk {
+	return &AnsibleCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Ansible.
+func (c *AnsibleClient) Update() *AnsibleUpdate {
+	mutation := newAnsibleMutation(c.config, OpUpdate)
+	return &AnsibleUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AnsibleClient) UpdateOne(a *Ansible) *AnsibleUpdateOne {
+	mutation := newAnsibleMutation(c.config, OpUpdateOne, withAnsible(a))
+	return &AnsibleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AnsibleClient) UpdateOneID(id uuid.UUID) *AnsibleUpdateOne {
+	mutation := newAnsibleMutation(c.config, OpUpdateOne, withAnsibleID(id))
+	return &AnsibleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Ansible.
+func (c *AnsibleClient) Delete() *AnsibleDelete {
+	mutation := newAnsibleMutation(c.config, OpDelete)
+	return &AnsibleDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *AnsibleClient) DeleteOne(a *Ansible) *AnsibleDeleteOne {
+	return c.DeleteOneID(a.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *AnsibleClient) DeleteOneID(id uuid.UUID) *AnsibleDeleteOne {
+	builder := c.Delete().Where(ansible.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AnsibleDeleteOne{builder}
+}
+
+// Query returns a query builder for Ansible.
+func (c *AnsibleClient) Query() *AnsibleQuery {
+	return &AnsibleQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Ansible entity by its id.
+func (c *AnsibleClient) Get(ctx context.Context, id uuid.UUID) (*Ansible, error) {
+	return c.Query().Where(ansible.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AnsibleClient) GetX(ctx context.Context, id uuid.UUID) *Ansible {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAnsibleFromEnvironment queries the AnsibleFromEnvironment edge of a Ansible.
+func (c *AnsibleClient) QueryAnsibleFromEnvironment(a *Ansible) *EnvironmentQuery {
+	query := &EnvironmentQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(ansible.Table, ansible.FieldID, id),
+			sqlgraph.To(environment.Table, environment.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ansible.AnsibleFromEnvironmentTable, ansible.AnsibleFromEnvironmentColumn),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AnsibleClient) Hooks() []Hook {
+	return c.hooks.Ansible
 }
 
 // AuthUserClient is a client for the AuthUser schema.
@@ -2268,6 +2381,22 @@ func (c *EnvironmentClient) QueryEnvironmentToHostDependency(e *Environment) *Ho
 			sqlgraph.From(environment.Table, environment.FieldID, id),
 			sqlgraph.To(hostdependency.Table, hostdependency.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToHostDependencyTable, environment.EnvironmentToHostDependencyColumn),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEnvironmentToAnsible queries the EnvironmentToAnsible edge of a Environment.
+func (c *EnvironmentClient) QueryEnvironmentToAnsible(e *Environment) *AnsibleQuery {
+	query := &AnsibleQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(environment.Table, environment.FieldID, id),
+			sqlgraph.To(ansible.Table, ansible.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToAnsibleTable, environment.EnvironmentToAnsibleColumn),
 		)
 		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
 		return fromV, nil

@@ -12,6 +12,7 @@ import (
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -372,6 +373,75 @@ func (at *AgentTask) Node(ctx context.Context) (node *Node, err error) {
 	err = at.QueryAgentTaskToAdhocPlan().
 		Select(adhocplan.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
+	node = &Node{
+		ID:     a.ID,
+		Type:   "Ansible",
+		Fields: make([]*Field, 6),
+		Edges:  make([]*Edge, 1),
+	}
+	var buf []byte
+	if buf, err = json.Marshal(a.HclID); err != nil {
+		return nil, err
+	}
+	node.Fields[0] = &Field{
+		Type:  "string",
+		Name:  "hcl_id",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(a.Description); err != nil {
+		return nil, err
+	}
+	node.Fields[1] = &Field{
+		Type:  "string",
+		Name:  "description",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(a.Source); err != nil {
+		return nil, err
+	}
+	node.Fields[2] = &Field{
+		Type:  "string",
+		Name:  "source",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(a.Method); err != nil {
+		return nil, err
+	}
+	node.Fields[3] = &Field{
+		Type:  "ansible.Method",
+		Name:  "method",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(a.Inventory); err != nil {
+		return nil, err
+	}
+	node.Fields[4] = &Field{
+		Type:  "string",
+		Name:  "inventory",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(a.Tags); err != nil {
+		return nil, err
+	}
+	node.Fields[5] = &Field{
+		Type:  "map[string]string",
+		Name:  "tags",
+		Value: string(buf),
+	}
+	node.Edges[0] = &Edge{
+		Type: "Environment",
+		Name: "AnsibleFromEnvironment",
+	}
+	err = a.QueryAnsibleFromEnvironment().
+		Select(environment.FieldID).
+		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -1115,7 +1185,7 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 		ID:     e.ID,
 		Type:   "Environment",
 		Fields: make([]*Field, 11),
-		Edges:  make([]*Edge, 18),
+		Edges:  make([]*Edge, 19),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(e.HclID); err != nil {
@@ -1357,32 +1427,42 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[15] = &Edge{
-		Type: "Build",
-		Name: "EnvironmentToBuild",
+		Type: "Ansible",
+		Name: "EnvironmentToAnsible",
 	}
-	err = e.QueryEnvironmentToBuild().
-		Select(build.FieldID).
+	err = e.QueryEnvironmentToAnsible().
+		Select(ansible.FieldID).
 		Scan(ctx, &node.Edges[15].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[16] = &Edge{
-		Type: "Repository",
-		Name: "EnvironmentToRepository",
+		Type: "Build",
+		Name: "EnvironmentToBuild",
 	}
-	err = e.QueryEnvironmentToRepository().
-		Select(repository.FieldID).
+	err = e.QueryEnvironmentToBuild().
+		Select(build.FieldID).
 		Scan(ctx, &node.Edges[16].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[17] = &Edge{
+		Type: "Repository",
+		Name: "EnvironmentToRepository",
+	}
+	err = e.QueryEnvironmentToRepository().
+		Select(repository.FieldID).
+		Scan(ctx, &node.Edges[17].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[18] = &Edge{
 		Type: "ServerTask",
 		Name: "EnvironmentToServerTask",
 	}
 	err = e.QueryEnvironmentToServerTask().
 		Select(servertask.FieldID).
-		Scan(ctx, &node.Edges[17].IDs)
+		Scan(ctx, &node.Edges[18].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -3619,6 +3699,15 @@ func (c *Client) noder(ctx context.Context, table string, id uuid.UUID) (Noder, 
 			return nil, err
 		}
 		return n, nil
+	case ansible.Table:
+		n, err := c.Ansible.Query().
+			Where(ansible.ID(id)).
+			CollectFields(ctx, "Ansible").
+			Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
 	case authuser.Table:
 		n, err := c.AuthUser.Query().
 			Where(authuser.ID(id)).
@@ -4019,6 +4108,19 @@ func (c *Client) noders(ctx context.Context, table string, ids []uuid.UUID) ([]N
 		nodes, err := c.AgentTask.Query().
 			Where(agenttask.IDIn(ids...)).
 			CollectFields(ctx, "AgentTask").
+			All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case ansible.Table:
+		nodes, err := c.Ansible.Query().
+			Where(ansible.IDIn(ids...)).
+			CollectFields(ctx, "Ansible").
 			All(ctx)
 		if err != nil {
 			return nil, err

@@ -74,6 +74,8 @@ type Environment struct {
 	HCLEnvironmentToNetwork []*Network `json:"EnvironmentToNetwork,omitempty"`
 	// EnvironmentToHostDependency holds the value of the EnvironmentToHostDependency edge.
 	HCLEnvironmentToHostDependency []*HostDependency `json:"EnvironmentToHostDependency,omitempty"`
+	// EnvironmentToAnsible holds the value of the EnvironmentToAnsible edge.
+	HCLEnvironmentToAnsible []*Ansible `json:"EnvironmentToAnsible,omitempty"`
 	// EnvironmentToBuild holds the value of the EnvironmentToBuild edge.
 	HCLEnvironmentToBuild []*Build `json:"EnvironmentToBuild,omitempty"`
 	// EnvironmentToRepository holds the value of the EnvironmentToRepository edge.
@@ -116,6 +118,8 @@ type EnvironmentEdges struct {
 	EnvironmentToNetwork []*Network `json:"EnvironmentToNetwork,omitempty"`
 	// EnvironmentToHostDependency holds the value of the EnvironmentToHostDependency edge.
 	EnvironmentToHostDependency []*HostDependency `json:"EnvironmentToHostDependency,omitempty"`
+	// EnvironmentToAnsible holds the value of the EnvironmentToAnsible edge.
+	EnvironmentToAnsible []*Ansible `json:"EnvironmentToAnsible,omitempty"`
 	// EnvironmentToBuild holds the value of the EnvironmentToBuild edge.
 	EnvironmentToBuild []*Build `json:"EnvironmentToBuild,omitempty"`
 	// EnvironmentToRepository holds the value of the EnvironmentToRepository edge.
@@ -124,7 +128,7 @@ type EnvironmentEdges struct {
 	EnvironmentToServerTask []*ServerTask `json:"EnvironmentToServerTask,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [18]bool
+	loadedTypes [19]bool
 }
 
 // EnvironmentToUserOrErr returns the EnvironmentToUser value or an error if the edge
@@ -262,10 +266,19 @@ func (e EnvironmentEdges) EnvironmentToHostDependencyOrErr() ([]*HostDependency,
 	return nil, &NotLoadedError{edge: "EnvironmentToHostDependency"}
 }
 
+// EnvironmentToAnsibleOrErr returns the EnvironmentToAnsible value or an error if the edge
+// was not loaded in eager-loading.
+func (e EnvironmentEdges) EnvironmentToAnsibleOrErr() ([]*Ansible, error) {
+	if e.loadedTypes[15] {
+		return e.EnvironmentToAnsible, nil
+	}
+	return nil, &NotLoadedError{edge: "EnvironmentToAnsible"}
+}
+
 // EnvironmentToBuildOrErr returns the EnvironmentToBuild value or an error if the edge
 // was not loaded in eager-loading.
 func (e EnvironmentEdges) EnvironmentToBuildOrErr() ([]*Build, error) {
-	if e.loadedTypes[15] {
+	if e.loadedTypes[16] {
 		return e.EnvironmentToBuild, nil
 	}
 	return nil, &NotLoadedError{edge: "EnvironmentToBuild"}
@@ -274,7 +287,7 @@ func (e EnvironmentEdges) EnvironmentToBuildOrErr() ([]*Build, error) {
 // EnvironmentToRepositoryOrErr returns the EnvironmentToRepository value or an error if the edge
 // was not loaded in eager-loading.
 func (e EnvironmentEdges) EnvironmentToRepositoryOrErr() ([]*Repository, error) {
-	if e.loadedTypes[16] {
+	if e.loadedTypes[17] {
 		return e.EnvironmentToRepository, nil
 	}
 	return nil, &NotLoadedError{edge: "EnvironmentToRepository"}
@@ -283,7 +296,7 @@ func (e EnvironmentEdges) EnvironmentToRepositoryOrErr() ([]*Repository, error) 
 // EnvironmentToServerTaskOrErr returns the EnvironmentToServerTask value or an error if the edge
 // was not loaded in eager-loading.
 func (e EnvironmentEdges) EnvironmentToServerTaskOrErr() ([]*ServerTask, error) {
-	if e.loadedTypes[17] {
+	if e.loadedTypes[18] {
 		return e.EnvironmentToServerTask, nil
 	}
 	return nil, &NotLoadedError{edge: "EnvironmentToServerTask"}
@@ -475,6 +488,11 @@ func (e *Environment) QueryEnvironmentToNetwork() *NetworkQuery {
 // QueryEnvironmentToHostDependency queries the "EnvironmentToHostDependency" edge of the Environment entity.
 func (e *Environment) QueryEnvironmentToHostDependency() *HostDependencyQuery {
 	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToHostDependency(e)
+}
+
+// QueryEnvironmentToAnsible queries the "EnvironmentToAnsible" edge of the Environment entity.
+func (e *Environment) QueryEnvironmentToAnsible() *AnsibleQuery {
+	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToAnsible(e)
 }
 
 // QueryEnvironmentToBuild queries the "EnvironmentToBuild" edge of the Environment entity.
