@@ -109,8 +109,8 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	var ami string //TODO: Talk with Fred
 
 	vmName := builder.generateVmName(competition, team, host, build)
-	vpcID := entProNetwork.Vars["VpcId"]
-	secGroupID := entProNetwork.Vars["SecGroupId"]
+	vpcID := entProNetwork.HCLProvisionedNetworkToNetwork.Vars["VpcId"]
+	secGroupID := entProNetwork.HCLProvisionedNetworkToNetwork.Vars["SecGroupId"]
 
 	input := &ec2.RunInstancesInput{
 		ImageId:          aws.String(ami),
@@ -131,9 +131,9 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	}
 	// Get InstanceId and store it in ENT to access later
 	id := *result.Instances[0].InstanceId
-	newVars := provisionedHost.Vars
+	newVars := provisionedHost.HCLProvisionedHostToHost.Vars
 	newVars["InstanceId"] = id
-	err = provisionedHost.Update().SetVars(newVars).Exec(ctx)
+	err = host.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -185,6 +185,7 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 }
 
 func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
+	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
 	if err != nil {
 		return err
@@ -192,7 +193,7 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 	client := ec2.NewFromConfig(cfg)
 
 	var instances []string
-	instances[0] = provisionedHost.Vars["InstanceId"]
+	instances[0] = host.Vars["InstanceId"]
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: instances,
 	}
@@ -205,12 +206,12 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 }
 
 func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
-
+	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
-	secGroupID := provisionedNetwork.Vars["SecGroupId"]
+	secGroupID := entNetwork.Vars["SecGroupId"]
 	client := ec2.NewFromConfig(cfg)
 	input := &ec2.DeleteSecurityGroupInput{
 		GroupId: &secGroupID,
@@ -258,11 +259,12 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 }
 func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	provisionedNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Only(ctx)
+	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
-	vpcID := provisionedNetwork.Vars["VpcId"]
+	vpcID := entNetwork.Vars["VpcId"]
 	client := ec2.NewFromConfig(cfg)
 	input := &ec2.DeleteVpcInput{
 		VpcId: &vpcID,
