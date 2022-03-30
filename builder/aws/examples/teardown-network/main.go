@@ -26,6 +26,7 @@ func TeardownTeam() {
 		VpcId: &vpcID,
 	}
 	result, err := client.DeleteVpc(ctx, input)
+	_ = result
 	if err != nil {
 		println(err.Error())
 		os.Exit(1)
@@ -48,6 +49,7 @@ func main() {
 		GroupId: &secGroupID,
 	}
 	results, err := client.DeleteSecurityGroup(ctx, input)
+	_ = results
 	if err != nil {
 		println(err.Error())
 		os.Exit(1)
