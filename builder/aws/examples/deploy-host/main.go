@@ -5,24 +5,18 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 const (
-	AWS_Access_Key_Id     = "SECRET"
-	AWS_Secret_Access_Key = "SECRET"
-	AWS_Session_Token     = "SECRET"
-	Region                = "us-east1"
-	Security_Group_Id     = "Security_Group_Id"
-	vmName                = "VMNAME"
-	VpcId                 = "VPC_ID"
-	AMI                   = "AMI"
-	ipAddress             = "IP"
-	secGroupID            = "SEC_GROUP_ID"
-	vpcID                 = "VPC_ID"
-	InstanceSize          = "nano"
+	Region       = "us-east1"
+	vmName       = "VMNAME"
+	AMI          = "AMI"
+	ipAddress    = "IP"
+	secGroupID   = "SEC_GROUP_ID"
+	vpcID        = "VPC_ID"
+	InstanceSize = "nano"
 )
 
 type EC2CreateInstanceAPI interface {
@@ -33,7 +27,9 @@ type EC2CreateInstanceAPI interface {
 
 func main() {
 	ctx := context.Background()
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(AWS_Access_Key_Id, AWS_Secret_Access_Key, AWS_Session_Token)), config.WithRegion(Region))
+	// https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(Region))
 	var numInstances int32 = 1
 	var instanceType types.InstanceType
 	var vmName string = vmName

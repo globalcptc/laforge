@@ -2,25 +2,46 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 )
 
-const (
-	AWS_Access_Key_Id     = "SECRET"
-	AWS_Secret_Access_Key = "SECRET"
-	AWS_Session_Token     = "SECRET"
-	Region                = "us-east1"
-	Security_Group_Id     = "Security_Group_Id"
-)
+var Region = "us-east-1"
+var Security_Group_Id = ""
+var vpcID = ""
+
+func TeardownTeam() {
+	ctx := context.Background()
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(Region))
+	if err != nil {
+		println(err.Error())
+		os.Exit(1)
+	}
+	vpcID := vpcID
+	client := ec2.NewFromConfig(cfg)
+	input := &ec2.DeleteVpcInput{
+		VpcId: &vpcID,
+	}
+	results, err := client.DeleteVpc(ctx, input)
+	if err != nil {
+		println(err.Error())
+		os.Exit(1)
+	}
+	fmt.Println(results)
+	return
+}
 
 func main() {
 	ctx := context.Background()
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(AWS_Access_Key_Id, AWS_Secret_Access_Key, AWS_Session_Token)), config.WithRegion(Region))
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(Region))
 	if err != nil {
-		return
+		println(err.Error())
+		os.Exit(1)
 	}
 	secGroupID := Security_Group_Id
 	client := ec2.NewFromConfig(cfg)
@@ -29,7 +50,9 @@ func main() {
 	}
 	results, err := client.DeleteSecurityGroup(ctx, input)
 	if err != nil {
-		return
+		println(err.Error())
+		os.Exit(1)
 	}
+	TeardownTeam()
 	println(results)
 }
