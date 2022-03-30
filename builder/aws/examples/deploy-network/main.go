@@ -62,7 +62,7 @@ func main() {
 		println(err.Error())
 		return
 	}
-	println(results.GroupId)
+	println("Security Group ID: " + *results.GroupId)
 	println("VPC ID: " + vpcID)
 	return
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -26,12 +25,12 @@ func TeardownTeam() {
 	input := &ec2.DeleteVpcInput{
 		VpcId: &vpcID,
 	}
-	results, err := client.DeleteVpc(ctx, input)
+	result, err := client.DeleteVpc(ctx, input)
 	if err != nil {
 		println(err.Error())
 		os.Exit(1)
 	}
-	fmt.Println(results)
+	println("VPC " + vpcID + " deleted successfully.")
 	return
 }
 
@@ -54,5 +53,5 @@ func main() {
 		os.Exit(1)
 	}
 	TeardownTeam()
-	println(results)
+	print("Security Group " + secGroupID + " deleted successfully.")
 }
