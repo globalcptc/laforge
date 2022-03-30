@@ -33,6 +33,16 @@ func deployTeam() string {
 		os.Exit(1)
 	}
 	id := *results.Vpc.VpcId
+	subnetInput := &ec2.CreateSubnetInput{
+		VpcId:     &id,
+		CidrBlock: &cidr,
+	}
+	result, err := client.CreateSubnet(ctx, subnetInput)
+	if err != nil {
+		println(err.Error())
+		os.Exit(1)
+	}
+	println("Subnet ID: " + *result.Subnet.SubnetId)
 	return id
 }
 

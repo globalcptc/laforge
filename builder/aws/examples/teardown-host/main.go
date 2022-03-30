@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	Region      = "us-east1"
-	Instance_ID = "INSTANCE_ID"
+	Region      = "us-east-1"
+	Instance_ID = "i-06ee0742824c4b92e"
 )
 
 func main() {
@@ -17,18 +17,20 @@ func main() {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion(Region))
 	if err != nil {
+		println(err.Error())
 		return
 	}
 	client := ec2.NewFromConfig(cfg)
 
 	var instances []string
-	instances[0] = Instance_ID
+	instances = append(instances, Instance_ID)
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: instances,
 	}
 	results, err := client.TerminateInstances(ctx, input)
 	if err != nil {
+		println(err.Error())
 		return
 	}
-	println(results)
+	println("Terminated Instance " + *results.TerminatingInstances[0].InstanceId)
 }

@@ -10,14 +10,17 @@ import (
 )
 
 const (
-	Region       = "us-east1"
-	vmName       = "VMNAME"
-	AMI          = "AMI"
-	ipAddress    = "IP"
-	secGroupID   = "SEC_GROUP_ID"
-	vpcID        = "VPC_ID"
+	Region       = "us-east-1"
+	AMI          = "ami-04505e74c0741db8d"
 	InstanceSize = "nano"
 )
+
+var numInstances int32 = 1
+var instanceType types.InstanceType
+var vmName string = "Test Ubuntu VM"
+var ipAddress string = "10.0.0.6"
+var secGroupID = "sg-0823517c8484680f9"
+var subnetId string = "subnet-02c200476ee4d77f9"
 
 type EC2CreateInstanceAPI interface {
 	RunInstances(ctx context.Context,
@@ -30,12 +33,10 @@ func main() {
 	// https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion(Region))
-	var numInstances int32 = 1
-	var instanceType types.InstanceType
-	var vmName string = vmName
-	var ipAddress string = ipAddress
-	var vpcID string = vpcID
-
+	if err != nil {
+		println(err.Error())
+		return
+	}
 	switch InstanceSize {
 	case "nano":
 		instanceType = types.InstanceTypeT2Nano
@@ -59,19 +60,19 @@ func main() {
 		SecurityGroupIds: []string{secGroupID},
 		ClientToken:      &vmName,
 		PrivateIpAddress: &ipAddress,
-		SubnetId:         &vpcID,
+		SubnetId:         &subnetId,
 	}
 	client := ec2.NewFromConfig(cfg)
 
 	result, err := client.RunInstances(ctx, input)
 	if err != nil {
+		println(err.Error())
 		return
 	}
 	//id := *result.Instances[0].InstanceId
 	if err != nil {
+		println(err.Error())
 		return
 	}
-	println(result)
-
-	return
+	println("Instance ID: " + *result.Instances[0].InstanceId)
 }
