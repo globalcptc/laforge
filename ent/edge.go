@@ -92,6 +92,14 @@ func (at *AgentTask) AgentTaskToAdhocPlan(ctx context.Context) ([]*AdhocPlan, er
 	return result, err
 }
 
+func (a *Ansible) AnsibleToUser(ctx context.Context) ([]*User, error) {
+	result, err := a.Edges.AnsibleToUserOrErr()
+	if IsNotLoaded(err) {
+		result, err = a.QueryAnsibleToUser().All(ctx)
+	}
+	return result, err
+}
+
 func (a *Ansible) AnsibleFromEnvironment(ctx context.Context) (*Environment, error) {
 	result, err := a.Edges.AnsibleFromEnvironmentOrErr()
 	if IsNotLoaded(err) {

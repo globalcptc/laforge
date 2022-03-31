@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/environment"
+	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
 
@@ -39,6 +40,12 @@ func (ac *AnsibleCreate) SetSource(s string) *AnsibleCreate {
 	return ac
 }
 
+// SetPlaybookName sets the "playbook_name" field.
+func (ac *AnsibleCreate) SetPlaybookName(s string) *AnsibleCreate {
+	ac.mutation.SetPlaybookName(s)
+	return ac
+}
+
 // SetMethod sets the "method" field.
 func (ac *AnsibleCreate) SetMethod(a ansible.Method) *AnsibleCreate {
 	ac.mutation.SetMethod(a)
@@ -61,6 +68,21 @@ func (ac *AnsibleCreate) SetTags(m map[string]string) *AnsibleCreate {
 func (ac *AnsibleCreate) SetID(u uuid.UUID) *AnsibleCreate {
 	ac.mutation.SetID(u)
 	return ac
+}
+
+// AddAnsibleToUserIDs adds the "AnsibleToUser" edge to the User entity by IDs.
+func (ac *AnsibleCreate) AddAnsibleToUserIDs(ids ...uuid.UUID) *AnsibleCreate {
+	ac.mutation.AddAnsibleToUserIDs(ids...)
+	return ac
+}
+
+// AddAnsibleToUser adds the "AnsibleToUser" edges to the User entity.
+func (ac *AnsibleCreate) AddAnsibleToUser(u ...*User) *AnsibleCreate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return ac.AddAnsibleToUserIDs(ids...)
 }
 
 // SetAnsibleFromEnvironmentID sets the "AnsibleFromEnvironment" edge to the Environment entity by ID.
@@ -170,6 +192,9 @@ func (ac *AnsibleCreate) check() error {
 	if _, ok := ac.mutation.Source(); !ok {
 		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "source"`)}
 	}
+	if _, ok := ac.mutation.PlaybookName(); !ok {
+		return &ValidationError{Name: "playbook_name", err: errors.New(`ent: missing required field "playbook_name"`)}
+	}
 	if _, ok := ac.mutation.Method(); !ok {
 		return &ValidationError{Name: "method", err: errors.New(`ent: missing required field "method"`)}
 	}
@@ -240,6 +265,14 @@ func (ac *AnsibleCreate) createSpec() (*Ansible, *sqlgraph.CreateSpec) {
 		})
 		_node.Source = value
 	}
+	if value, ok := ac.mutation.PlaybookName(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: ansible.FieldPlaybookName,
+		})
+		_node.PlaybookName = value
+	}
 	if value, ok := ac.mutation.Method(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
@@ -263,6 +296,25 @@ func (ac *AnsibleCreate) createSpec() (*Ansible, *sqlgraph.CreateSpec) {
 			Column: ansible.FieldTags,
 		})
 		_node.Tags = value
+	}
+	if nodes := ac.mutation.AnsibleToUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   ansible.AnsibleToUserTable,
+			Columns: []string{ansible.AnsibleToUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := ac.mutation.AnsibleFromEnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

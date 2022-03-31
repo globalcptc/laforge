@@ -21,16 +21,27 @@ const (
 	FieldDescription = "description"
 	// FieldSource holds the string denoting the source field in the database.
 	FieldSource = "source"
+	// FieldPlaybookName holds the string denoting the playbook_name field in the database.
+	FieldPlaybookName = "playbook_name"
 	// FieldMethod holds the string denoting the method field in the database.
 	FieldMethod = "method"
 	// FieldInventory holds the string denoting the inventory field in the database.
 	FieldInventory = "inventory"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
+	// EdgeAnsibleToUser holds the string denoting the ansibletouser edge name in mutations.
+	EdgeAnsibleToUser = "AnsibleToUser"
 	// EdgeAnsibleFromEnvironment holds the string denoting the ansiblefromenvironment edge name in mutations.
 	EdgeAnsibleFromEnvironment = "AnsibleFromEnvironment"
 	// Table holds the table name of the ansible in the database.
 	Table = "ansibles"
+	// AnsibleToUserTable is the table that holds the AnsibleToUser relation/edge.
+	AnsibleToUserTable = "users"
+	// AnsibleToUserInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	AnsibleToUserInverseTable = "users"
+	// AnsibleToUserColumn is the table column denoting the AnsibleToUser relation/edge.
+	AnsibleToUserColumn = "ansible_ansible_to_user"
 	// AnsibleFromEnvironmentTable is the table that holds the AnsibleFromEnvironment relation/edge.
 	AnsibleFromEnvironmentTable = "ansibles"
 	// AnsibleFromEnvironmentInverseTable is the table name for the Environment entity.
@@ -46,6 +57,7 @@ var Columns = []string{
 	FieldHclID,
 	FieldDescription,
 	FieldSource,
+	FieldPlaybookName,
 	FieldMethod,
 	FieldInventory,
 	FieldTags,

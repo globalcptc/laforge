@@ -24,6 +24,8 @@ type Ansible struct {
 	Description string `json:"description,omitempty" hcl:"description,optional"`
 	// Source holds the value of the "source" field.
 	Source string `json:"source,omitempty" hcl:"source,attr"`
+	// PlaybookName holds the value of the "playbook_name" field.
+	PlaybookName string `json:"playbook_name,omitempty" hcl:"playbook_name,attr"`
 	// Method holds the value of the "method" field.
 	Method ansible.Method `json:"method,omitempty" hcl:"method,optional"`
 	// Inventory holds the value of the "inventory" field.
@@ -35,6 +37,8 @@ type Ansible struct {
 	Edges AnsibleEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
+	// AnsibleToUser holds the value of the AnsibleToUser edge.
+	HCLAnsibleToUser []*User `json:"AnsibleToUser,omitempty" hcl:"maintainer,block"`
 	// AnsibleFromEnvironment holds the value of the AnsibleFromEnvironment edge.
 	HCLAnsibleFromEnvironment *Environment `json:"AnsibleFromEnvironment,omitempty"`
 	//
@@ -43,17 +47,28 @@ type Ansible struct {
 
 // AnsibleEdges holds the relations/edges for other nodes in the graph.
 type AnsibleEdges struct {
+	// AnsibleToUser holds the value of the AnsibleToUser edge.
+	AnsibleToUser []*User `json:"AnsibleToUser,omitempty" hcl:"maintainer,block"`
 	// AnsibleFromEnvironment holds the value of the AnsibleFromEnvironment edge.
 	AnsibleFromEnvironment *Environment `json:"AnsibleFromEnvironment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
+}
+
+// AnsibleToUserOrErr returns the AnsibleToUser value or an error if the edge
+// was not loaded in eager-loading.
+func (e AnsibleEdges) AnsibleToUserOrErr() ([]*User, error) {
+	if e.loadedTypes[0] {
+		return e.AnsibleToUser, nil
+	}
+	return nil, &NotLoadedError{edge: "AnsibleToUser"}
 }
 
 // AnsibleFromEnvironmentOrErr returns the AnsibleFromEnvironment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e AnsibleEdges) AnsibleFromEnvironmentOrErr() (*Environment, error) {
-	if e.loadedTypes[0] {
+	if e.loadedTypes[1] {
 		if e.AnsibleFromEnvironment == nil {
 			// The edge AnsibleFromEnvironment was loaded in eager-loading,
 			// but was not found.
@@ -71,7 +86,7 @@ func (*Ansible) scanValues(columns []string) ([]interface{}, error) {
 		switch columns[i] {
 		case ansible.FieldTags:
 			values[i] = new([]byte)
-		case ansible.FieldHclID, ansible.FieldDescription, ansible.FieldSource, ansible.FieldMethod, ansible.FieldInventory:
+		case ansible.FieldHclID, ansible.FieldDescription, ansible.FieldSource, ansible.FieldPlaybookName, ansible.FieldMethod, ansible.FieldInventory:
 			values[i] = new(sql.NullString)
 		case ansible.FieldID:
 			values[i] = new(uuid.UUID)
@@ -116,6 +131,12 @@ func (a *Ansible) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				a.Source = value.String
 			}
+		case ansible.FieldPlaybookName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field playbook_name", values[i])
+			} else if value.Valid {
+				a.PlaybookName = value.String
+			}
 		case ansible.FieldMethod:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field method", values[i])
@@ -146,6 +167,11 @@ func (a *Ansible) assignValues(columns []string, values []interface{}) error {
 		}
 	}
 	return nil
+}
+
+// QueryAnsibleToUser queries the "AnsibleToUser" edge of the Ansible entity.
+func (a *Ansible) QueryAnsibleToUser() *UserQuery {
+	return (&AnsibleClient{config: a.config}).QueryAnsibleToUser(a)
 }
 
 // QueryAnsibleFromEnvironment queries the "AnsibleFromEnvironment" edge of the Ansible entity.
@@ -182,6 +208,8 @@ func (a *Ansible) String() string {
 	builder.WriteString(a.Description)
 	builder.WriteString(", source=")
 	builder.WriteString(a.Source)
+	builder.WriteString(", playbook_name=")
+	builder.WriteString(a.PlaybookName)
 	builder.WriteString(", method=")
 	builder.WriteString(fmt.Sprintf("%v", a.Method))
 	builder.WriteString(", inventory=")

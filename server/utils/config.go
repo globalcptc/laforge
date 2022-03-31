@@ -15,6 +15,7 @@ type ServerConfig struct {
 	Graphql   GraphqlConfig            `json:"graphql"`
 	Debug     bool                     `json:"debug"`
 	LogFolder string                   `json:"log_folder"`
+	GinMode   string                   `json:"gin_mode"`
 }
 
 type BuilderConfig struct {

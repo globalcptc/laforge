@@ -23,6 +23,8 @@ func (Ansible) Fields() []ent.Field {
 			StructTag(`hcl:"description,optional"`),
 		field.String("source").
 			StructTag(`hcl:"source,attr"`),
+		field.String("playbook_name").
+			StructTag(`hcl:"playbook_name,attr"`),
 		field.Enum("method").Values(
 			"local",
 		).StructTag(`hcl:"method,optional"`),
@@ -36,6 +38,8 @@ func (Ansible) Fields() []ent.Field {
 // Edges of the Ansible.
 func (Ansible) Edges() []ent.Edge {
 	return []ent.Edge{
+		edge.To("AnsibleToUser", User.Type).
+			StructTag(`hcl:"maintainer,block"`),
 		edge.From("AnsibleFromEnvironment", Environment.Type).
 			Ref("EnvironmentToAnsible").
 			Unique(),

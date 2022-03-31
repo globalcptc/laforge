@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"math"
@@ -14,6 +15,7 @@ import (
 	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/predicate"
+	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
 
@@ -27,6 +29,7 @@ type AnsibleQuery struct {
 	fields     []string
 	predicates []predicate.Ansible
 	// eager-loading edges.
+	withAnsibleToUser          *UserQuery
 	withAnsibleFromEnvironment *EnvironmentQuery
 	withFKs                    bool
 	// intermediate query (i.e. traversal path).
@@ -63,6 +66,28 @@ func (aq *AnsibleQuery) Unique(unique bool) *AnsibleQuery {
 func (aq *AnsibleQuery) Order(o ...OrderFunc) *AnsibleQuery {
 	aq.order = append(aq.order, o...)
 	return aq
+}
+
+// QueryAnsibleToUser chains the current query on the "AnsibleToUser" edge.
+func (aq *AnsibleQuery) QueryAnsibleToUser() *UserQuery {
+	query := &UserQuery{config: aq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := aq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := aq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(ansible.Table, ansible.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ansible.AnsibleToUserTable, ansible.AnsibleToUserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // QueryAnsibleFromEnvironment chains the current query on the "AnsibleFromEnvironment" edge.
@@ -268,11 +293,23 @@ func (aq *AnsibleQuery) Clone() *AnsibleQuery {
 		offset:                     aq.offset,
 		order:                      append([]OrderFunc{}, aq.order...),
 		predicates:                 append([]predicate.Ansible{}, aq.predicates...),
+		withAnsibleToUser:          aq.withAnsibleToUser.Clone(),
 		withAnsibleFromEnvironment: aq.withAnsibleFromEnvironment.Clone(),
 		// clone intermediate query.
 		sql:  aq.sql.Clone(),
 		path: aq.path,
 	}
+}
+
+// WithAnsibleToUser tells the query-builder to eager-load the nodes that are connected to
+// the "AnsibleToUser" edge. The optional arguments are used to configure the query builder of the edge.
+func (aq *AnsibleQuery) WithAnsibleToUser(opts ...func(*UserQuery)) *AnsibleQuery {
+	query := &UserQuery{config: aq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	aq.withAnsibleToUser = query
+	return aq
 }
 
 // WithAnsibleFromEnvironment tells the query-builder to eager-load the nodes that are connected to
@@ -352,7 +389,8 @@ func (aq *AnsibleQuery) sqlAll(ctx context.Context) ([]*Ansible, error) {
 		nodes       = []*Ansible{}
 		withFKs     = aq.withFKs
 		_spec       = aq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
+			aq.withAnsibleToUser != nil,
 			aq.withAnsibleFromEnvironment != nil,
 		}
 	)
@@ -380,6 +418,35 @@ func (aq *AnsibleQuery) sqlAll(ctx context.Context) ([]*Ansible, error) {
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
+	}
+
+	if query := aq.withAnsibleToUser; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*Ansible)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.AnsibleToUser = []*User{}
+		}
+		query.withFKs = true
+		query.Where(predicate.User(func(s *sql.Selector) {
+			s.Where(sql.InValues(ansible.AnsibleToUserColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.ansible_ansible_to_user
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "ansible_ansible_to_user" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "ansible_ansible_to_user" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.AnsibleToUser = append(node.Edges.AnsibleToUser, n)
+		}
 	}
 
 	if query := aq.withAnsibleFromEnvironment; query != nil {

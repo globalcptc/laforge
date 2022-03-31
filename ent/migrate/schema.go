@@ -119,6 +119,7 @@ var (
 		{Name: "hcl_id", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString},
 		{Name: "source", Type: field.TypeString},
+		{Name: "playbook_name", Type: field.TypeString},
 		{Name: "method", Type: field.TypeEnum, Enums: []string{"local"}},
 		{Name: "inventory", Type: field.TypeString},
 		{Name: "tags", Type: field.TypeJSON},
@@ -132,7 +133,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "ansibles_environments_EnvironmentToAnsible",
-				Columns:    []*schema.Column{AnsiblesColumns[7]},
+				Columns:    []*schema.Column{AnsiblesColumns[8]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1157,6 +1158,7 @@ var (
 		{Name: "uuid", Type: field.TypeString},
 		{Name: "email", Type: field.TypeString},
 		{Name: "hcl_id", Type: field.TypeString},
+		{Name: "ansible_ansible_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "command_command_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "finding_finding_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "host_host_to_user", Type: field.TypeUUID, Nullable: true},
@@ -1169,26 +1171,32 @@ var (
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "users_commands_CommandToUser",
+				Symbol:     "users_ansibles_AnsibleToUser",
 				Columns:    []*schema.Column{UsersColumns[5]},
+				RefColumns: []*schema.Column{AnsiblesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "users_commands_CommandToUser",
+				Columns:    []*schema.Column{UsersColumns[6]},
 				RefColumns: []*schema.Column{CommandsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "users_findings_FindingToUser",
-				Columns:    []*schema.Column{UsersColumns[6]},
+				Columns:    []*schema.Column{UsersColumns[7]},
 				RefColumns: []*schema.Column{FindingsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "users_hosts_HostToUser",
-				Columns:    []*schema.Column{UsersColumns[7]},
+				Columns:    []*schema.Column{UsersColumns[8]},
 				RefColumns: []*schema.Column{HostsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "users_scripts_ScriptToUser",
-				Columns:    []*schema.Column{UsersColumns[8]},
+				Columns:    []*schema.Column{UsersColumns[9]},
 				RefColumns: []*schema.Column{ScriptsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -1519,10 +1527,11 @@ func init() {
 	TeamsTable.ForeignKeys[0].RefTable = PlansTable
 	TeamsTable.ForeignKeys[1].RefTable = BuildsTable
 	TokensTable.ForeignKeys[0].RefTable = AuthUsersTable
-	UsersTable.ForeignKeys[0].RefTable = CommandsTable
-	UsersTable.ForeignKeys[1].RefTable = FindingsTable
-	UsersTable.ForeignKeys[2].RefTable = HostsTable
-	UsersTable.ForeignKeys[3].RefTable = ScriptsTable
+	UsersTable.ForeignKeys[0].RefTable = AnsiblesTable
+	UsersTable.ForeignKeys[1].RefTable = CommandsTable
+	UsersTable.ForeignKeys[2].RefTable = FindingsTable
+	UsersTable.ForeignKeys[3].RefTable = HostsTable
+	UsersTable.ForeignKeys[4].RefTable = ScriptsTable
 	AdhocPlanNextAdhocPlanTable.ForeignKeys[0].RefTable = AdhocPlansTable
 	AdhocPlanNextAdhocPlanTable.ForeignKeys[1].RefTable = AdhocPlansTable
 	CompetitionCompetitionToDNSTable.ForeignKeys[0].RefTable = CompetitionsTable

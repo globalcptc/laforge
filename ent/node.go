@@ -383,8 +383,8 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     a.ID,
 		Type:   "Ansible",
-		Fields: make([]*Field, 6),
-		Edges:  make([]*Edge, 1),
+		Fields: make([]*Field, 7),
+		Edges:  make([]*Edge, 2),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(a.HclID); err != nil {
@@ -411,10 +411,18 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "source",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(a.Method); err != nil {
+	if buf, err = json.Marshal(a.PlaybookName); err != nil {
 		return nil, err
 	}
 	node.Fields[3] = &Field{
+		Type:  "string",
+		Name:  "playbook_name",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(a.Method); err != nil {
+		return nil, err
+	}
+	node.Fields[4] = &Field{
 		Type:  "ansible.Method",
 		Name:  "method",
 		Value: string(buf),
@@ -422,7 +430,7 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(a.Inventory); err != nil {
 		return nil, err
 	}
-	node.Fields[4] = &Field{
+	node.Fields[5] = &Field{
 		Type:  "string",
 		Name:  "inventory",
 		Value: string(buf),
@@ -430,18 +438,28 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(a.Tags); err != nil {
 		return nil, err
 	}
-	node.Fields[5] = &Field{
+	node.Fields[6] = &Field{
 		Type:  "map[string]string",
 		Name:  "tags",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{
+		Type: "User",
+		Name: "AnsibleToUser",
+	}
+	err = a.QueryAnsibleToUser().
+		Select(user.FieldID).
+		Scan(ctx, &node.Edges[0].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[1] = &Edge{
 		Type: "Environment",
 		Name: "AnsibleFromEnvironment",
 	}
 	err = a.QueryAnsibleFromEnvironment().
 		Select(environment.FieldID).
-		Scan(ctx, &node.Edges[0].IDs)
+		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
 		return nil, err
 	}

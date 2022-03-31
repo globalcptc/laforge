@@ -906,6 +906,22 @@ func (c *AnsibleClient) GetX(ctx context.Context, id uuid.UUID) *Ansible {
 	return obj
 }
 
+// QueryAnsibleToUser queries the AnsibleToUser edge of a Ansible.
+func (c *AnsibleClient) QueryAnsibleToUser(a *Ansible) *UserQuery {
+	query := &UserQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(ansible.Table, ansible.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ansible.AnsibleToUserTable, ansible.AnsibleToUserColumn),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryAnsibleFromEnvironment queries the AnsibleFromEnvironment edge of a Ansible.
 func (c *AnsibleClient) QueryAnsibleFromEnvironment(a *Ansible) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}

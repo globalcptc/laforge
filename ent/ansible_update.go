@@ -12,6 +12,7 @@ import (
 	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/predicate"
+	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
 
@@ -46,6 +47,12 @@ func (au *AnsibleUpdate) SetSource(s string) *AnsibleUpdate {
 	return au
 }
 
+// SetPlaybookName sets the "playbook_name" field.
+func (au *AnsibleUpdate) SetPlaybookName(s string) *AnsibleUpdate {
+	au.mutation.SetPlaybookName(s)
+	return au
+}
+
 // SetMethod sets the "method" field.
 func (au *AnsibleUpdate) SetMethod(a ansible.Method) *AnsibleUpdate {
 	au.mutation.SetMethod(a)
@@ -62,6 +69,21 @@ func (au *AnsibleUpdate) SetInventory(s string) *AnsibleUpdate {
 func (au *AnsibleUpdate) SetTags(m map[string]string) *AnsibleUpdate {
 	au.mutation.SetTags(m)
 	return au
+}
+
+// AddAnsibleToUserIDs adds the "AnsibleToUser" edge to the User entity by IDs.
+func (au *AnsibleUpdate) AddAnsibleToUserIDs(ids ...uuid.UUID) *AnsibleUpdate {
+	au.mutation.AddAnsibleToUserIDs(ids...)
+	return au
+}
+
+// AddAnsibleToUser adds the "AnsibleToUser" edges to the User entity.
+func (au *AnsibleUpdate) AddAnsibleToUser(u ...*User) *AnsibleUpdate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return au.AddAnsibleToUserIDs(ids...)
 }
 
 // SetAnsibleFromEnvironmentID sets the "AnsibleFromEnvironment" edge to the Environment entity by ID.
@@ -86,6 +108,27 @@ func (au *AnsibleUpdate) SetAnsibleFromEnvironment(e *Environment) *AnsibleUpdat
 // Mutation returns the AnsibleMutation object of the builder.
 func (au *AnsibleUpdate) Mutation() *AnsibleMutation {
 	return au.mutation
+}
+
+// ClearAnsibleToUser clears all "AnsibleToUser" edges to the User entity.
+func (au *AnsibleUpdate) ClearAnsibleToUser() *AnsibleUpdate {
+	au.mutation.ClearAnsibleToUser()
+	return au
+}
+
+// RemoveAnsibleToUserIDs removes the "AnsibleToUser" edge to User entities by IDs.
+func (au *AnsibleUpdate) RemoveAnsibleToUserIDs(ids ...uuid.UUID) *AnsibleUpdate {
+	au.mutation.RemoveAnsibleToUserIDs(ids...)
+	return au
+}
+
+// RemoveAnsibleToUser removes "AnsibleToUser" edges to User entities.
+func (au *AnsibleUpdate) RemoveAnsibleToUser(u ...*User) *AnsibleUpdate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return au.RemoveAnsibleToUserIDs(ids...)
 }
 
 // ClearAnsibleFromEnvironment clears the "AnsibleFromEnvironment" edge to the Environment entity.
@@ -203,6 +246,13 @@ func (au *AnsibleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: ansible.FieldSource,
 		})
 	}
+	if value, ok := au.mutation.PlaybookName(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: ansible.FieldPlaybookName,
+		})
+	}
 	if value, ok := au.mutation.Method(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
@@ -223,6 +273,60 @@ func (au *AnsibleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Value:  value,
 			Column: ansible.FieldTags,
 		})
+	}
+	if au.mutation.AnsibleToUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   ansible.AnsibleToUserTable,
+			Columns: []string{ansible.AnsibleToUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := au.mutation.RemovedAnsibleToUserIDs(); len(nodes) > 0 && !au.mutation.AnsibleToUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   ansible.AnsibleToUserTable,
+			Columns: []string{ansible.AnsibleToUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := au.mutation.AnsibleToUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   ansible.AnsibleToUserTable,
+			Columns: []string{ansible.AnsibleToUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if au.mutation.AnsibleFromEnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -296,6 +400,12 @@ func (auo *AnsibleUpdateOne) SetSource(s string) *AnsibleUpdateOne {
 	return auo
 }
 
+// SetPlaybookName sets the "playbook_name" field.
+func (auo *AnsibleUpdateOne) SetPlaybookName(s string) *AnsibleUpdateOne {
+	auo.mutation.SetPlaybookName(s)
+	return auo
+}
+
 // SetMethod sets the "method" field.
 func (auo *AnsibleUpdateOne) SetMethod(a ansible.Method) *AnsibleUpdateOne {
 	auo.mutation.SetMethod(a)
@@ -312,6 +422,21 @@ func (auo *AnsibleUpdateOne) SetInventory(s string) *AnsibleUpdateOne {
 func (auo *AnsibleUpdateOne) SetTags(m map[string]string) *AnsibleUpdateOne {
 	auo.mutation.SetTags(m)
 	return auo
+}
+
+// AddAnsibleToUserIDs adds the "AnsibleToUser" edge to the User entity by IDs.
+func (auo *AnsibleUpdateOne) AddAnsibleToUserIDs(ids ...uuid.UUID) *AnsibleUpdateOne {
+	auo.mutation.AddAnsibleToUserIDs(ids...)
+	return auo
+}
+
+// AddAnsibleToUser adds the "AnsibleToUser" edges to the User entity.
+func (auo *AnsibleUpdateOne) AddAnsibleToUser(u ...*User) *AnsibleUpdateOne {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return auo.AddAnsibleToUserIDs(ids...)
 }
 
 // SetAnsibleFromEnvironmentID sets the "AnsibleFromEnvironment" edge to the Environment entity by ID.
@@ -336,6 +461,27 @@ func (auo *AnsibleUpdateOne) SetAnsibleFromEnvironment(e *Environment) *AnsibleU
 // Mutation returns the AnsibleMutation object of the builder.
 func (auo *AnsibleUpdateOne) Mutation() *AnsibleMutation {
 	return auo.mutation
+}
+
+// ClearAnsibleToUser clears all "AnsibleToUser" edges to the User entity.
+func (auo *AnsibleUpdateOne) ClearAnsibleToUser() *AnsibleUpdateOne {
+	auo.mutation.ClearAnsibleToUser()
+	return auo
+}
+
+// RemoveAnsibleToUserIDs removes the "AnsibleToUser" edge to User entities by IDs.
+func (auo *AnsibleUpdateOne) RemoveAnsibleToUserIDs(ids ...uuid.UUID) *AnsibleUpdateOne {
+	auo.mutation.RemoveAnsibleToUserIDs(ids...)
+	return auo
+}
+
+// RemoveAnsibleToUser removes "AnsibleToUser" edges to User entities.
+func (auo *AnsibleUpdateOne) RemoveAnsibleToUser(u ...*User) *AnsibleUpdateOne {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return auo.RemoveAnsibleToUserIDs(ids...)
 }
 
 // ClearAnsibleFromEnvironment clears the "AnsibleFromEnvironment" edge to the Environment entity.
@@ -477,6 +623,13 @@ func (auo *AnsibleUpdateOne) sqlSave(ctx context.Context) (_node *Ansible, err e
 			Column: ansible.FieldSource,
 		})
 	}
+	if value, ok := auo.mutation.PlaybookName(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: ansible.FieldPlaybookName,
+		})
+	}
 	if value, ok := auo.mutation.Method(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
@@ -497,6 +650,60 @@ func (auo *AnsibleUpdateOne) sqlSave(ctx context.Context) (_node *Ansible, err e
 			Value:  value,
 			Column: ansible.FieldTags,
 		})
+	}
+	if auo.mutation.AnsibleToUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   ansible.AnsibleToUserTable,
+			Columns: []string{ansible.AnsibleToUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := auo.mutation.RemovedAnsibleToUserIDs(); len(nodes) > 0 && !auo.mutation.AnsibleToUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   ansible.AnsibleToUserTable,
+			Columns: []string{ansible.AnsibleToUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := auo.mutation.AnsibleToUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   ansible.AnsibleToUserTable,
+			Columns: []string{ansible.AnsibleToUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if auo.mutation.AnsibleFromEnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{

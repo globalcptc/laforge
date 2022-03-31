@@ -113,6 +113,13 @@ func Source(v string) predicate.Ansible {
 	})
 }
 
+// PlaybookName applies equality check predicate on the "playbook_name" field. It's identical to PlaybookNameEQ.
+func PlaybookName(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldPlaybookName), v))
+	})
+}
+
 // Inventory applies equality check predicate on the "inventory" field. It's identical to InventoryEQ.
 func Inventory(v string) predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
@@ -453,6 +460,117 @@ func SourceContainsFold(v string) predicate.Ansible {
 	})
 }
 
+// PlaybookNameEQ applies the EQ predicate on the "playbook_name" field.
+func PlaybookNameEQ(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldPlaybookName), v))
+	})
+}
+
+// PlaybookNameNEQ applies the NEQ predicate on the "playbook_name" field.
+func PlaybookNameNEQ(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldPlaybookName), v))
+	})
+}
+
+// PlaybookNameIn applies the In predicate on the "playbook_name" field.
+func PlaybookNameIn(vs ...string) predicate.Ansible {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Ansible(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldPlaybookName), v...))
+	})
+}
+
+// PlaybookNameNotIn applies the NotIn predicate on the "playbook_name" field.
+func PlaybookNameNotIn(vs ...string) predicate.Ansible {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Ansible(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldPlaybookName), v...))
+	})
+}
+
+// PlaybookNameGT applies the GT predicate on the "playbook_name" field.
+func PlaybookNameGT(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldPlaybookName), v))
+	})
+}
+
+// PlaybookNameGTE applies the GTE predicate on the "playbook_name" field.
+func PlaybookNameGTE(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldPlaybookName), v))
+	})
+}
+
+// PlaybookNameLT applies the LT predicate on the "playbook_name" field.
+func PlaybookNameLT(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldPlaybookName), v))
+	})
+}
+
+// PlaybookNameLTE applies the LTE predicate on the "playbook_name" field.
+func PlaybookNameLTE(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldPlaybookName), v))
+	})
+}
+
+// PlaybookNameContains applies the Contains predicate on the "playbook_name" field.
+func PlaybookNameContains(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldPlaybookName), v))
+	})
+}
+
+// PlaybookNameHasPrefix applies the HasPrefix predicate on the "playbook_name" field.
+func PlaybookNameHasPrefix(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldPlaybookName), v))
+	})
+}
+
+// PlaybookNameHasSuffix applies the HasSuffix predicate on the "playbook_name" field.
+func PlaybookNameHasSuffix(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldPlaybookName), v))
+	})
+}
+
+// PlaybookNameEqualFold applies the EqualFold predicate on the "playbook_name" field.
+func PlaybookNameEqualFold(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldPlaybookName), v))
+	})
+}
+
+// PlaybookNameContainsFold applies the ContainsFold predicate on the "playbook_name" field.
+func PlaybookNameContainsFold(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldPlaybookName), v))
+	})
+}
+
 // MethodEQ applies the EQ predicate on the "method" field.
 func MethodEQ(v Method) predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
@@ -609,6 +727,34 @@ func InventoryEqualFold(v string) predicate.Ansible {
 func InventoryContainsFold(v string) predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldInventory), v))
+	})
+}
+
+// HasAnsibleToUser applies the HasEdge predicate on the "AnsibleToUser" edge.
+func HasAnsibleToUser() predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(AnsibleToUserTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AnsibleToUserTable, AnsibleToUserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAnsibleToUserWith applies the HasEdge predicate on the "AnsibleToUser" edge with a given conditions (other predicates).
+func HasAnsibleToUserWith(preds ...predicate.User) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(AnsibleToUserInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AnsibleToUserTable, AnsibleToUserColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 
