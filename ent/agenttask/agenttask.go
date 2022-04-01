@@ -117,6 +117,7 @@ const (
 	CommandVALIDATE       Command = "VALIDATE"
 	CommandCHANGEPERMS    Command = "CHANGEPERMS"
 	CommandAPPENDFILE     Command = "APPENDFILE"
+	CommandANSIBLE        Command = "ANSIBLE"
 )
 
 func (c Command) String() string {
@@ -126,7 +127,7 @@ func (c Command) String() string {
 // CommandValidator is a validator for the "command" field enum values. It is called by the builders before save.
 func CommandValidator(c Command) error {
 	switch c {
-	case CommandDEFAULT, CommandDELETE, CommandREBOOT, CommandEXTRACT, CommandDOWNLOAD, CommandCREATEUSER, CommandCREATEUSERPASS, CommandADDTOGROUP, CommandEXECUTE, CommandVALIDATE, CommandCHANGEPERMS, CommandAPPENDFILE:
+	case CommandDEFAULT, CommandDELETE, CommandREBOOT, CommandEXTRACT, CommandDOWNLOAD, CommandCREATEUSER, CommandCREATEUSERPASS, CommandADDTOGROUP, CommandEXECUTE, CommandVALIDATE, CommandCHANGEPERMS, CommandAPPENDFILE, CommandANSIBLE:
 		return nil
 	default:
 		return fmt.Errorf("agenttask: invalid enum value for command field: %q", c)

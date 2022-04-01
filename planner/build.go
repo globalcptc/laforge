@@ -985,6 +985,77 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 		}
 	case provisioningstep.TypeDNSRecord:
 		break
+	case provisioningstep.TypeAnsible:
+		entAnsible, err := entStep.QueryProvisioningStepToAnsible().Only(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed querying Ansible for Provioning Step: %v", err)
+			return err
+		}
+		entGinMiddleware, err := entStep.QueryProvisioningStepToGinFileMiddleware().Only(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed querying Gin File Middleware for Script: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandDOWNLOAD).
+			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandEXTRACT).
+			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + "/tmp").
+			SetNumber(taskCount + 1).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandANSIBLE).
+			SetArgs("/tmp/" + entAnsible.Name + "/" + entAnsible.PlaybookName + "💔" + string(entAnsible.Method) + "💔" + entAnsible.Inventory).
+			SetNumber(taskCount + 2).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Execute: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandDELETE).
+			SetArgs("/tmp/" + entAnsible.Name).
+			SetNumber(taskCount + 3).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandDELETE).
+			SetArgs("/tmp/" + entAnsible.Name + ".zip").
+			SetNumber(taskCount + 4).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
+			return err
+		}
 	default:
 		break
 	}

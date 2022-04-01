@@ -1290,7 +1290,6 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 		logger.Log.Errorf("Failed to render vars file for ansible %v. Err: %v", currentAnsible.HclID, err)
 		return "", err
 	}
-	fmt.Println(string(data))
 	varFileName := path.Join(ansibleFolder, "laforge_vars.yml")
 	err = ioutil.WriteFile(varFileName, data, 0755)
 	if err != nil {
