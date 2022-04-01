@@ -329,12 +329,12 @@ func (aq *AnsibleQuery) WithAnsibleFromEnvironment(opts ...func(*EnvironmentQuer
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		Name string `json:"name,omitempty" hcl:"name,attr"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Ansible.Query().
-//		GroupBy(ansible.FieldHclID).
+//		GroupBy(ansible.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 //
@@ -356,11 +356,11 @@ func (aq *AnsibleQuery) GroupBy(field string, fields ...string) *AnsibleGroupBy 
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		Name string `json:"name,omitempty" hcl:"name,attr"`
 //	}
 //
 //	client.Ansible.Query().
-//		Select(ansible.FieldHclID).
+//		Select(ansible.FieldName).
 //		Scan(ctx, &v)
 //
 func (aq *AnsibleQuery) Select(fields ...string) *AnsibleSelect {

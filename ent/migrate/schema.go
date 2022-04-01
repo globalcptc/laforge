@@ -116,12 +116,14 @@ var (
 	// AnsiblesColumns holds the columns for the "ansibles" table.
 	AnsiblesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
 		{Name: "hcl_id", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString},
 		{Name: "source", Type: field.TypeString},
 		{Name: "playbook_name", Type: field.TypeString},
 		{Name: "method", Type: field.TypeEnum, Enums: []string{"local"}},
 		{Name: "inventory", Type: field.TypeString},
+		{Name: "abs_path", Type: field.TypeString},
 		{Name: "tags", Type: field.TypeJSON},
 		{Name: "environment_environment_to_ansible", Type: field.TypeUUID, Nullable: true},
 	}
@@ -133,7 +135,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "ansibles_environments_EnvironmentToAnsible",
-				Columns:    []*schema.Column{AnsiblesColumns[8]},
+				Columns:    []*schema.Column{AnsiblesColumns[10]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

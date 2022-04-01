@@ -22,6 +22,12 @@ type AnsibleCreate struct {
 	hooks    []Hook
 }
 
+// SetName sets the "name" field.
+func (ac *AnsibleCreate) SetName(s string) *AnsibleCreate {
+	ac.mutation.SetName(s)
+	return ac
+}
+
 // SetHclID sets the "hcl_id" field.
 func (ac *AnsibleCreate) SetHclID(s string) *AnsibleCreate {
 	ac.mutation.SetHclID(s)
@@ -55,6 +61,12 @@ func (ac *AnsibleCreate) SetMethod(a ansible.Method) *AnsibleCreate {
 // SetInventory sets the "inventory" field.
 func (ac *AnsibleCreate) SetInventory(s string) *AnsibleCreate {
 	ac.mutation.SetInventory(s)
+	return ac
+}
+
+// SetAbsPath sets the "abs_path" field.
+func (ac *AnsibleCreate) SetAbsPath(s string) *AnsibleCreate {
+	ac.mutation.SetAbsPath(s)
 	return ac
 }
 
@@ -183,6 +195,9 @@ func (ac *AnsibleCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (ac *AnsibleCreate) check() error {
+	if _, ok := ac.mutation.Name(); !ok {
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
+	}
 	if _, ok := ac.mutation.HclID(); !ok {
 		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
 	}
@@ -205,6 +220,9 @@ func (ac *AnsibleCreate) check() error {
 	}
 	if _, ok := ac.mutation.Inventory(); !ok {
 		return &ValidationError{Name: "inventory", err: errors.New(`ent: missing required field "inventory"`)}
+	}
+	if _, ok := ac.mutation.AbsPath(); !ok {
+		return &ValidationError{Name: "abs_path", err: errors.New(`ent: missing required field "abs_path"`)}
 	}
 	if _, ok := ac.mutation.Tags(); !ok {
 		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
@@ -240,6 +258,14 @@ func (ac *AnsibleCreate) createSpec() (*Ansible, *sqlgraph.CreateSpec) {
 	if id, ok := ac.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = id
+	}
+	if value, ok := ac.mutation.Name(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: ansible.FieldName,
+		})
+		_node.Name = value
 	}
 	if value, ok := ac.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -288,6 +314,14 @@ func (ac *AnsibleCreate) createSpec() (*Ansible, *sqlgraph.CreateSpec) {
 			Column: ansible.FieldInventory,
 		})
 		_node.Inventory = value
+	}
+	if value, ok := ac.mutation.AbsPath(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: ansible.FieldAbsPath,
+		})
+		_node.AbsPath = value
 	}
 	if value, ok := ac.mutation.Tags(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

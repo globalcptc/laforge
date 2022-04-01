@@ -92,6 +92,13 @@ func IDLTE(id uuid.UUID) predicate.Ansible {
 	})
 }
 
+// Name applies equality check predicate on the "name" field. It's identical to NameEQ.
+func Name(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldName), v))
+	})
+}
+
 // HclID applies equality check predicate on the "hcl_id" field. It's identical to HclIDEQ.
 func HclID(v string) predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
@@ -124,6 +131,124 @@ func PlaybookName(v string) predicate.Ansible {
 func Inventory(v string) predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldInventory), v))
+	})
+}
+
+// AbsPath applies equality check predicate on the "abs_path" field. It's identical to AbsPathEQ.
+func AbsPath(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldAbsPath), v))
+	})
+}
+
+// NameEQ applies the EQ predicate on the "name" field.
+func NameEQ(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldName), v))
+	})
+}
+
+// NameNEQ applies the NEQ predicate on the "name" field.
+func NameNEQ(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldName), v))
+	})
+}
+
+// NameIn applies the In predicate on the "name" field.
+func NameIn(vs ...string) predicate.Ansible {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Ansible(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldName), v...))
+	})
+}
+
+// NameNotIn applies the NotIn predicate on the "name" field.
+func NameNotIn(vs ...string) predicate.Ansible {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Ansible(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldName), v...))
+	})
+}
+
+// NameGT applies the GT predicate on the "name" field.
+func NameGT(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldName), v))
+	})
+}
+
+// NameGTE applies the GTE predicate on the "name" field.
+func NameGTE(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldName), v))
+	})
+}
+
+// NameLT applies the LT predicate on the "name" field.
+func NameLT(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldName), v))
+	})
+}
+
+// NameLTE applies the LTE predicate on the "name" field.
+func NameLTE(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldName), v))
+	})
+}
+
+// NameContains applies the Contains predicate on the "name" field.
+func NameContains(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldName), v))
+	})
+}
+
+// NameHasPrefix applies the HasPrefix predicate on the "name" field.
+func NameHasPrefix(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldName), v))
+	})
+}
+
+// NameHasSuffix applies the HasSuffix predicate on the "name" field.
+func NameHasSuffix(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldName), v))
+	})
+}
+
+// NameEqualFold applies the EqualFold predicate on the "name" field.
+func NameEqualFold(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldName), v))
+	})
+}
+
+// NameContainsFold applies the ContainsFold predicate on the "name" field.
+func NameContainsFold(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldName), v))
 	})
 }
 
@@ -727,6 +852,117 @@ func InventoryEqualFold(v string) predicate.Ansible {
 func InventoryContainsFold(v string) predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldInventory), v))
+	})
+}
+
+// AbsPathEQ applies the EQ predicate on the "abs_path" field.
+func AbsPathEQ(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldAbsPath), v))
+	})
+}
+
+// AbsPathNEQ applies the NEQ predicate on the "abs_path" field.
+func AbsPathNEQ(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldAbsPath), v))
+	})
+}
+
+// AbsPathIn applies the In predicate on the "abs_path" field.
+func AbsPathIn(vs ...string) predicate.Ansible {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Ansible(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldAbsPath), v...))
+	})
+}
+
+// AbsPathNotIn applies the NotIn predicate on the "abs_path" field.
+func AbsPathNotIn(vs ...string) predicate.Ansible {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Ansible(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldAbsPath), v...))
+	})
+}
+
+// AbsPathGT applies the GT predicate on the "abs_path" field.
+func AbsPathGT(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldAbsPath), v))
+	})
+}
+
+// AbsPathGTE applies the GTE predicate on the "abs_path" field.
+func AbsPathGTE(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldAbsPath), v))
+	})
+}
+
+// AbsPathLT applies the LT predicate on the "abs_path" field.
+func AbsPathLT(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldAbsPath), v))
+	})
+}
+
+// AbsPathLTE applies the LTE predicate on the "abs_path" field.
+func AbsPathLTE(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldAbsPath), v))
+	})
+}
+
+// AbsPathContains applies the Contains predicate on the "abs_path" field.
+func AbsPathContains(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldAbsPath), v))
+	})
+}
+
+// AbsPathHasPrefix applies the HasPrefix predicate on the "abs_path" field.
+func AbsPathHasPrefix(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldAbsPath), v))
+	})
+}
+
+// AbsPathHasSuffix applies the HasSuffix predicate on the "abs_path" field.
+func AbsPathHasSuffix(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldAbsPath), v))
+	})
+}
+
+// AbsPathEqualFold applies the EqualFold predicate on the "abs_path" field.
+func AbsPathEqualFold(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldAbsPath), v))
+	})
+}
+
+// AbsPathContainsFold applies the ContainsFold predicate on the "abs_path" field.
+func AbsPathContainsFold(v string) predicate.Ansible {
+	return predicate.Ansible(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldAbsPath), v))
 	})
 }
 

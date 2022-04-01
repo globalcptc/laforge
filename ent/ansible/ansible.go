@@ -15,6 +15,8 @@ const (
 	Label = "ansible"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldName holds the string denoting the name field in the database.
+	FieldName = "name"
 	// FieldHclID holds the string denoting the hcl_id field in the database.
 	FieldHclID = "hcl_id"
 	// FieldDescription holds the string denoting the description field in the database.
@@ -27,6 +29,8 @@ const (
 	FieldMethod = "method"
 	// FieldInventory holds the string denoting the inventory field in the database.
 	FieldInventory = "inventory"
+	// FieldAbsPath holds the string denoting the abs_path field in the database.
+	FieldAbsPath = "abs_path"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
 	// EdgeAnsibleToUser holds the string denoting the ansibletouser edge name in mutations.
@@ -54,12 +58,14 @@ const (
 // Columns holds all SQL columns for ansible fields.
 var Columns = []string{
 	FieldID,
+	FieldName,
 	FieldHclID,
 	FieldDescription,
 	FieldSource,
 	FieldPlaybookName,
 	FieldMethod,
 	FieldInventory,
+	FieldAbsPath,
 	FieldTags,
 }
 

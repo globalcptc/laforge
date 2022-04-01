@@ -352,6 +352,9 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 			}
 		}
 		for _, x := range element.DefinedAnsible {
+			dir := path.Dir(element.Filename)
+			absPath := path.Join(dir, x.Source)
+			x.AbsPath = absPath
 			_, found := combinedConfigs.Ansible[x.HclID]
 			if !found {
 				combinedConfigs.Ansible[x.HclID] = x
@@ -861,18 +864,21 @@ func createAnsible(ctx context.Context, client *ent.Client, log *logging.Logger,
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
 				createdQuery := client.Ansible.Create().
+					SetName(cAnsible.Name).
 					SetHclID(cAnsible.HclID).
 					SetDescription(cAnsible.Description).
 					SetSource(cAnsible.Source).
 					SetPlaybookName(cAnsible.PlaybookName).
 					SetMethod(cAnsible.Method).
 					SetInventory(cAnsible.Inventory).
-					SetTags(cAnsible.Tags)
+					SetTags(cAnsible.Tags).
+					SetAbsPath(cAnsible.AbsPath)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
 		}
 		entAnsible, err = entAnsible.Update().
+			SetName(cAnsible.Name).
 			SetHclID(cAnsible.HclID).
 			SetDescription(cAnsible.Description).
 			SetSource(cAnsible.Source).
@@ -880,6 +886,7 @@ func createAnsible(ctx context.Context, client *ent.Client, log *logging.Logger,
 			SetMethod(cAnsible.Method).
 			SetInventory(cAnsible.Inventory).
 			SetTags(cAnsible.Tags).
+			SetAbsPath(cAnsible.AbsPath).
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update Ansible %v. Err: %v", cAnsible.HclID, err)

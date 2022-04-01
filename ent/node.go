@@ -383,14 +383,22 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     a.ID,
 		Type:   "Ansible",
-		Fields: make([]*Field, 7),
+		Fields: make([]*Field, 9),
 		Edges:  make([]*Edge, 2),
 	}
 	var buf []byte
-	if buf, err = json.Marshal(a.HclID); err != nil {
+	if buf, err = json.Marshal(a.Name); err != nil {
 		return nil, err
 	}
 	node.Fields[0] = &Field{
+		Type:  "string",
+		Name:  "name",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(a.HclID); err != nil {
+		return nil, err
+	}
+	node.Fields[1] = &Field{
 		Type:  "string",
 		Name:  "hcl_id",
 		Value: string(buf),
@@ -398,7 +406,7 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(a.Description); err != nil {
 		return nil, err
 	}
-	node.Fields[1] = &Field{
+	node.Fields[2] = &Field{
 		Type:  "string",
 		Name:  "description",
 		Value: string(buf),
@@ -406,7 +414,7 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(a.Source); err != nil {
 		return nil, err
 	}
-	node.Fields[2] = &Field{
+	node.Fields[3] = &Field{
 		Type:  "string",
 		Name:  "source",
 		Value: string(buf),
@@ -414,7 +422,7 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(a.PlaybookName); err != nil {
 		return nil, err
 	}
-	node.Fields[3] = &Field{
+	node.Fields[4] = &Field{
 		Type:  "string",
 		Name:  "playbook_name",
 		Value: string(buf),
@@ -422,7 +430,7 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(a.Method); err != nil {
 		return nil, err
 	}
-	node.Fields[4] = &Field{
+	node.Fields[5] = &Field{
 		Type:  "ansible.Method",
 		Name:  "method",
 		Value: string(buf),
@@ -430,15 +438,23 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(a.Inventory); err != nil {
 		return nil, err
 	}
-	node.Fields[5] = &Field{
+	node.Fields[6] = &Field{
 		Type:  "string",
 		Name:  "inventory",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(a.AbsPath); err != nil {
+		return nil, err
+	}
+	node.Fields[7] = &Field{
+		Type:  "string",
+		Name:  "abs_path",
 		Value: string(buf),
 	}
 	if buf, err = json.Marshal(a.Tags); err != nil {
 		return nil, err
 	}
-	node.Fields[6] = &Field{
+	node.Fields[8] = &Field{
 		Type:  "map[string]string",
 		Name:  "tags",
 		Value: string(buf),

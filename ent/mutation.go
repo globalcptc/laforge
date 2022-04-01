@@ -3030,12 +3030,14 @@ type AnsibleMutation struct {
 	op                             Op
 	typ                            string
 	id                             *uuid.UUID
+	name                           *string
 	hcl_id                         *string
 	description                    *string
 	source                         *string
 	playbook_name                  *string
 	method                         *ansible.Method
 	inventory                      *string
+	abs_path                       *string
 	tags                           *map[string]string
 	clearedFields                  map[string]struct{}
 	_AnsibleToUser                 map[uuid.UUID]struct{}
@@ -3131,6 +3133,42 @@ func (m *AnsibleMutation) ID() (id uuid.UUID, exists bool) {
 		return
 	}
 	return *m.id, true
+}
+
+// SetName sets the "name" field.
+func (m *AnsibleMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *AnsibleMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *AnsibleMutation) ResetName() {
+	m.name = nil
 }
 
 // SetHclID sets the "hcl_id" field.
@@ -3349,6 +3387,42 @@ func (m *AnsibleMutation) ResetInventory() {
 	m.inventory = nil
 }
 
+// SetAbsPath sets the "abs_path" field.
+func (m *AnsibleMutation) SetAbsPath(s string) {
+	m.abs_path = &s
+}
+
+// AbsPath returns the value of the "abs_path" field in the mutation.
+func (m *AnsibleMutation) AbsPath() (r string, exists bool) {
+	v := m.abs_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAbsPath returns the old "abs_path" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldAbsPath(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldAbsPath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldAbsPath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAbsPath: %w", err)
+	}
+	return oldValue.AbsPath, nil
+}
+
+// ResetAbsPath resets all changes to the "abs_path" field.
+func (m *AnsibleMutation) ResetAbsPath() {
+	m.abs_path = nil
+}
+
 // SetTags sets the "tags" field.
 func (m *AnsibleMutation) SetTags(value map[string]string) {
 	m.tags = &value
@@ -3497,7 +3571,10 @@ func (m *AnsibleMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AnsibleMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 9)
+	if m.name != nil {
+		fields = append(fields, ansible.FieldName)
+	}
 	if m.hcl_id != nil {
 		fields = append(fields, ansible.FieldHclID)
 	}
@@ -3516,6 +3593,9 @@ func (m *AnsibleMutation) Fields() []string {
 	if m.inventory != nil {
 		fields = append(fields, ansible.FieldInventory)
 	}
+	if m.abs_path != nil {
+		fields = append(fields, ansible.FieldAbsPath)
+	}
 	if m.tags != nil {
 		fields = append(fields, ansible.FieldTags)
 	}
@@ -3527,6 +3607,8 @@ func (m *AnsibleMutation) Fields() []string {
 // schema.
 func (m *AnsibleMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case ansible.FieldName:
+		return m.Name()
 	case ansible.FieldHclID:
 		return m.HclID()
 	case ansible.FieldDescription:
@@ -3539,6 +3621,8 @@ func (m *AnsibleMutation) Field(name string) (ent.Value, bool) {
 		return m.Method()
 	case ansible.FieldInventory:
 		return m.Inventory()
+	case ansible.FieldAbsPath:
+		return m.AbsPath()
 	case ansible.FieldTags:
 		return m.Tags()
 	}
@@ -3550,6 +3634,8 @@ func (m *AnsibleMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *AnsibleMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case ansible.FieldName:
+		return m.OldName(ctx)
 	case ansible.FieldHclID:
 		return m.OldHclID(ctx)
 	case ansible.FieldDescription:
@@ -3562,6 +3648,8 @@ func (m *AnsibleMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldMethod(ctx)
 	case ansible.FieldInventory:
 		return m.OldInventory(ctx)
+	case ansible.FieldAbsPath:
+		return m.OldAbsPath(ctx)
 	case ansible.FieldTags:
 		return m.OldTags(ctx)
 	}
@@ -3573,6 +3661,13 @@ func (m *AnsibleMutation) OldField(ctx context.Context, name string) (ent.Value,
 // type.
 func (m *AnsibleMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case ansible.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
 	case ansible.FieldHclID:
 		v, ok := value.(string)
 		if !ok {
@@ -3614,6 +3709,13 @@ func (m *AnsibleMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetInventory(v)
+		return nil
+	case ansible.FieldAbsPath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAbsPath(v)
 		return nil
 	case ansible.FieldTags:
 		v, ok := value.(map[string]string)
@@ -3671,6 +3773,9 @@ func (m *AnsibleMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *AnsibleMutation) ResetField(name string) error {
 	switch name {
+	case ansible.FieldName:
+		m.ResetName()
+		return nil
 	case ansible.FieldHclID:
 		m.ResetHclID()
 		return nil
@@ -3688,6 +3793,9 @@ func (m *AnsibleMutation) ResetField(name string) error {
 		return nil
 	case ansible.FieldInventory:
 		m.ResetInventory()
+		return nil
+	case ansible.FieldAbsPath:
+		m.ResetAbsPath()
 		return nil
 	case ansible.FieldTags:
 		m.ResetTags()

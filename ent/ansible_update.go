@@ -29,6 +29,12 @@ func (au *AnsibleUpdate) Where(ps ...predicate.Ansible) *AnsibleUpdate {
 	return au
 }
 
+// SetName sets the "name" field.
+func (au *AnsibleUpdate) SetName(s string) *AnsibleUpdate {
+	au.mutation.SetName(s)
+	return au
+}
+
 // SetHclID sets the "hcl_id" field.
 func (au *AnsibleUpdate) SetHclID(s string) *AnsibleUpdate {
 	au.mutation.SetHclID(s)
@@ -62,6 +68,12 @@ func (au *AnsibleUpdate) SetMethod(a ansible.Method) *AnsibleUpdate {
 // SetInventory sets the "inventory" field.
 func (au *AnsibleUpdate) SetInventory(s string) *AnsibleUpdate {
 	au.mutation.SetInventory(s)
+	return au
+}
+
+// SetAbsPath sets the "abs_path" field.
+func (au *AnsibleUpdate) SetAbsPath(s string) *AnsibleUpdate {
+	au.mutation.SetAbsPath(s)
 	return au
 }
 
@@ -225,6 +237,13 @@ func (au *AnsibleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if value, ok := au.mutation.Name(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: ansible.FieldName,
+		})
+	}
 	if value, ok := au.mutation.HclID(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
@@ -265,6 +284,13 @@ func (au *AnsibleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Type:   field.TypeString,
 			Value:  value,
 			Column: ansible.FieldInventory,
+		})
+	}
+	if value, ok := au.mutation.AbsPath(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: ansible.FieldAbsPath,
 		})
 	}
 	if value, ok := au.mutation.Tags(); ok {
@@ -382,6 +408,12 @@ type AnsibleUpdateOne struct {
 	mutation *AnsibleMutation
 }
 
+// SetName sets the "name" field.
+func (auo *AnsibleUpdateOne) SetName(s string) *AnsibleUpdateOne {
+	auo.mutation.SetName(s)
+	return auo
+}
+
 // SetHclID sets the "hcl_id" field.
 func (auo *AnsibleUpdateOne) SetHclID(s string) *AnsibleUpdateOne {
 	auo.mutation.SetHclID(s)
@@ -415,6 +447,12 @@ func (auo *AnsibleUpdateOne) SetMethod(a ansible.Method) *AnsibleUpdateOne {
 // SetInventory sets the "inventory" field.
 func (auo *AnsibleUpdateOne) SetInventory(s string) *AnsibleUpdateOne {
 	auo.mutation.SetInventory(s)
+	return auo
+}
+
+// SetAbsPath sets the "abs_path" field.
+func (auo *AnsibleUpdateOne) SetAbsPath(s string) *AnsibleUpdateOne {
+	auo.mutation.SetAbsPath(s)
 	return auo
 }
 
@@ -602,6 +640,13 @@ func (auo *AnsibleUpdateOne) sqlSave(ctx context.Context) (_node *Ansible, err e
 			}
 		}
 	}
+	if value, ok := auo.mutation.Name(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: ansible.FieldName,
+		})
+	}
 	if value, ok := auo.mutation.HclID(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
@@ -642,6 +687,13 @@ func (auo *AnsibleUpdateOne) sqlSave(ctx context.Context) (_node *Ansible, err e
 			Type:   field.TypeString,
 			Value:  value,
 			Column: ansible.FieldInventory,
+		})
+	}
+	if value, ok := auo.mutation.AbsPath(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: ansible.FieldAbsPath,
 		})
 	}
 	if value, ok := auo.mutation.Tags(); ok {

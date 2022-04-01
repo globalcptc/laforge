@@ -13,9 +13,9 @@ require (
 	github.com/briandowns/formatifier v0.0.0-20150226010542-6d068a6ce63a
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/fatih/color v1.13.0
 	github.com/frankban/quicktest v1.13.0 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.7.1
 	github.com/go-git/go-git/v5 v5.4.2
@@ -44,6 +44,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.8
 	github.com/mattn/go-zglob v0.0.3
 	github.com/mholt/archiver v3.1.1+incompatible
+	github.com/mholt/archiver/v3 v3.5.1 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/pierrec/lz4 v2.6.0+incompatible // indirect
@@ -64,4 +65,5 @@ require (
 	google.golang.org/grpc v1.37.1
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/guregu/null.v4 v4.0.0
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

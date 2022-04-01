@@ -17,6 +17,8 @@ func (Ansible) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).
 			Default(uuid.New),
+		field.String("name").
+			StructTag(`hcl:"name,attr"`),
 		field.String("hcl_id").
 			StructTag(`hcl:"id,label"`),
 		field.String("description").
@@ -30,6 +32,8 @@ func (Ansible) Fields() []ent.Field {
 		).StructTag(`hcl:"method,optional"`),
 		field.String("inventory").
 			StructTag(`hcl:"inventory,optional"`),
+		field.String("abs_path").
+			StructTag(`hcl:"abs_path,optional"`),
 		field.JSON("tags", map[string]string{}).
 			StructTag(`hcl:"tags,optional"`),
 	}

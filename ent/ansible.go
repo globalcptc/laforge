@@ -18,6 +18,8 @@ type Ansible struct {
 	config ` json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
+	// Name holds the value of the "name" field.
+	Name string `json:"name,omitempty" hcl:"name,attr"`
 	// HclID holds the value of the "hcl_id" field.
 	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// Description holds the value of the "description" field.
@@ -30,6 +32,8 @@ type Ansible struct {
 	Method ansible.Method `json:"method,omitempty" hcl:"method,optional"`
 	// Inventory holds the value of the "inventory" field.
 	Inventory string `json:"inventory,omitempty" hcl:"inventory,optional"`
+	// AbsPath holds the value of the "abs_path" field.
+	AbsPath string `json:"abs_path,omitempty" hcl:"abs_path,optional"`
 	// Tags holds the value of the "tags" field.
 	Tags map[string]string `json:"tags,omitempty" hcl:"tags,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -86,7 +90,7 @@ func (*Ansible) scanValues(columns []string) ([]interface{}, error) {
 		switch columns[i] {
 		case ansible.FieldTags:
 			values[i] = new([]byte)
-		case ansible.FieldHclID, ansible.FieldDescription, ansible.FieldSource, ansible.FieldPlaybookName, ansible.FieldMethod, ansible.FieldInventory:
+		case ansible.FieldName, ansible.FieldHclID, ansible.FieldDescription, ansible.FieldSource, ansible.FieldPlaybookName, ansible.FieldMethod, ansible.FieldInventory, ansible.FieldAbsPath:
 			values[i] = new(sql.NullString)
 		case ansible.FieldID:
 			values[i] = new(uuid.UUID)
@@ -112,6 +116,12 @@ func (a *Ansible) assignValues(columns []string, values []interface{}) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				a.ID = *value
+			}
+		case ansible.FieldName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field name", values[i])
+			} else if value.Valid {
+				a.Name = value.String
 			}
 		case ansible.FieldHclID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -148,6 +158,12 @@ func (a *Ansible) assignValues(columns []string, values []interface{}) error {
 				return fmt.Errorf("unexpected type %T for field inventory", values[i])
 			} else if value.Valid {
 				a.Inventory = value.String
+			}
+		case ansible.FieldAbsPath:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field abs_path", values[i])
+			} else if value.Valid {
+				a.AbsPath = value.String
 			}
 		case ansible.FieldTags:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -202,6 +218,8 @@ func (a *Ansible) String() string {
 	var builder strings.Builder
 	builder.WriteString("Ansible(")
 	builder.WriteString(fmt.Sprintf("id=%v", a.ID))
+	builder.WriteString(", name=")
+	builder.WriteString(a.Name)
 	builder.WriteString(", hcl_id=")
 	builder.WriteString(a.HclID)
 	builder.WriteString(", description=")
@@ -214,6 +232,8 @@ func (a *Ansible) String() string {
 	builder.WriteString(fmt.Sprintf("%v", a.Method))
 	builder.WriteString(", inventory=")
 	builder.WriteString(a.Inventory)
+	builder.WriteString(", abs_path=")
+	builder.WriteString(a.AbsPath)
 	builder.WriteString(", tags=")
 	builder.WriteString(fmt.Sprintf("%v", a.Tags))
 	builder.WriteByte(')')

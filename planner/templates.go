@@ -16,21 +16,22 @@ import (
 )
 
 type TempleteContext struct {
-	Build              *ent.Build
-	Competition        *ent.Competition
-	Environment        *ent.Environment
-	Host               *ent.Host
-	DNS                *ent.DNS
-	DNSRecords         []*ent.DNSRecord
-	IncludedNetworks   []*ent.IncludedNetwork
-	Network            *ent.Network
-	Script             *ent.Script
-	Team               *ent.Team
-	Identities         []*ent.Identity
-	ProvisionedNetwork *ent.ProvisionedNetwork
-	ProvisionedHost    *ent.ProvisionedHost
-	ProvisioningStep   *ent.ProvisioningStep
-	AgentSlug          string
+	Build              *ent.Build              `yaml:"build,omitempty"`
+	Competition        *ent.Competition        `yaml:"competition,omitempty"`
+	Environment        *ent.Environment        `yaml:"environment,omitempty"`
+	Host               *ent.Host               `yaml:"host,omitempty"`
+	DNS                *ent.DNS                `yaml:"dns,omitempty"`
+	DNSRecords         []*ent.DNSRecord        `yaml:"dns_records,omitempty"`
+	IncludedNetworks   []*ent.IncludedNetwork  `yaml:"included_networks,omitempty"`
+	Network            *ent.Network            `yaml:"network,omitempty"`
+	Script             *ent.Script             `yaml:"script,omitempty"`
+	Team               *ent.Team               `yaml:"team,omitempty"`
+	Identities         []*ent.Identity         `yaml:"identities,omitempty"`
+	ProvisionedNetwork *ent.ProvisionedNetwork `yaml:"provisioned_network,omitempty"`
+	ProvisionedHost    *ent.ProvisionedHost    `yaml:"provisioned_host,omitempty"`
+	ProvisioningStep   *ent.ProvisioningStep   `yaml:"provisioning_step,omitempty"`
+	AgentSlug          string                  `yaml:"agent_slug,omitempty"`
+	Ansible            *ent.Ansible            `yaml:"ansible,omitempty"`
 }
 
 // TemplateFuncLib is a standard template library of functions
