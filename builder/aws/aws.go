@@ -225,7 +225,10 @@ func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwor
 
 func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	provisionedNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Only(ctx)
-	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from team \"%d\": %v", entTeam.TeamNumber, err)
+	}
+	entNetworks, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().All(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
@@ -236,11 +239,10 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	if err != nil {
 		return err
 	}
-
 	// Describe the network with info from above and get ready to deploy
 	client := ec2.NewFromConfig(cfg)
 	input := &ec2.CreateVpcInput{
-		CidrBlock: &entNetwork.Cidr,
+		CidrBlock: &entTeam.Cidr,
 	}
 
 	// Deploy Network
@@ -249,30 +251,30 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return err
 	}
 	id := *results.Vpc.VpcId
-
-	subnetInput := &ec2.CreateSubnetInput{
-		VpcId:     &id,
-		CidrBlock: &entNetwork.Cidr,
-	}
-	result, err := client.CreateSubnet(ctx, subnetInput)
-	if err != nil {
-		return err
-	}
-	subnetID := *result.Subnet.SubnetId
-
-	newVars := entNetwork.Vars
+	newVars := entTeam.Vars
 	newVars["VpcId"] = id
-	newVars["SubnetID"] = subnetID
-	err = entNetwork.Update().SetVars(newVars).Exec(ctx)
-	if err != nil {
-		return err
+	err = entTeam.Update().SetVars(newVars).Exec(ctx)
+	for i := range entNetworks {
+		subnetInput := &ec2.CreateSubnetInput{
+			VpcId:     &id,
+			CidrBlock: &entNetworks[i].Cidr,
+		}
+		result, err := client.CreateSubnet(ctx, subnetInput)
+		if err != nil {
+			return err
+		}
+		subnetID := *result.Subnet.SubnetId
+		newVars["SubnetID"] = subnetID
+		err = entNetworks[i].Update().SetVars(newVars).Exec(ctx)
+		if err != nil {
+			return err
+		}
 	}
-	fmt.Println(results)
 	return
 }
 func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	provisionedNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Only(ctx)
-	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	entNetworks, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().All(ctx)
 
 	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
@@ -280,17 +282,22 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 	if err != nil {
 		return err
 	}
-	vpcID := entNetwork.Vars["VpcId"]
-	subnetID := entNetwork.Vars["SubnetID"]
+	vpcID := entTeam.Vars["VpcId"]
 	client := ec2.NewFromConfig(cfg)
-	subnetInput := &ec2.DeleteSubnetInput{
-		SubnetId: &subnetID,
+	for i := range entNetworks {
+		subnetID := entNetworks[i].Vars["SubnetID"]
+
+		subnetInput := &ec2.DeleteSubnetInput{
+			SubnetId: &subnetID,
+		}
+		subnetResults, err := client.DeleteSubnet(ctx, subnetInput)
+		_ = subnetResults
+		if err != nil {
+			println(err.Error())
+			return err
+		}
 	}
-	subnetResults, err := client.DeleteSubnet(ctx, subnetInput)
-	if err != nil {
-		println(err.Error())
-		return err
-	}
+
 	input := &ec2.DeleteVpcInput{
 		VpcId: &vpcID,
 	}
@@ -299,6 +306,5 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 		return err
 	}
 	_ = results
-	_ = subnetResults
 	return
 }
