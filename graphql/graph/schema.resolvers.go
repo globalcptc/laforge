@@ -817,11 +817,14 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 		Save(ctx)
 
 	if err != nil {
+		r.client.Repository.DeleteOne(entRepo).Exec(ctx)
 		return nil, fmt.Errorf("couldn't create entRepoCommit: %v", err)
 	}
 
 	err = entRepo.Update().AddRepositoryToRepoCommit(entRepoCommit).Exec(ctx)
 	if err != nil {
+		r.client.Repository.DeleteOne(entRepo).Exec(ctx)
+		r.client.RepoCommit.DeleteOne(entRepoCommit).Exec(ctx)
 		return nil, fmt.Errorf("couldn't add RepoCommit to Repository: %v", err)
 	}
 
@@ -829,6 +832,8 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 
 	loadedEnviroments, err := r.LoadEnvironment(ctx, envPath)
 	if err != nil {
+		r.client.Repository.DeleteOne(entRepo).Exec(ctx)
+		r.client.RepoCommit.DeleteOne(entRepoCommit).Exec(ctx)
 		return nil, err
 	}
 
@@ -983,8 +988,8 @@ func (r *mutationResolver) CreateUser(ctx context.Context, username string, pass
 	if err != nil {
 		return nil, err
 	}
-	sshPrivateFile := fmt.Sprintf("%s/id_rsa", sshFolderPath)
-	err = utils.MakeSSHKeyPair(sshPrivateFile)
+	sshPrivateFile := fmt.Sprintf("%s/id_ed25519", sshFolderPath)
+	err = utils.MakeED25519KeyPair(sshPrivateFile)
 	if err != nil {
 		return nil, err
 	}

@@ -447,6 +447,34 @@ func HasProvisioningStepToFileExtractWith(preds ...predicate.FileExtract) predic
 	})
 }
 
+// HasProvisioningStepToAnsible applies the HasEdge predicate on the "ProvisioningStepToAnsible" edge.
+func HasProvisioningStepToAnsible() predicate.ProvisioningStep {
+	return predicate.ProvisioningStep(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ProvisioningStepToAnsibleTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, ProvisioningStepToAnsibleTable, ProvisioningStepToAnsibleColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProvisioningStepToAnsibleWith applies the HasEdge predicate on the "ProvisioningStepToAnsible" edge with a given conditions (other predicates).
+func HasProvisioningStepToAnsibleWith(preds ...predicate.Ansible) predicate.ProvisioningStep {
+	return predicate.ProvisioningStep(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ProvisioningStepToAnsibleInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, ProvisioningStepToAnsibleTable, ProvisioningStepToAnsibleColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasProvisioningStepToPlan applies the HasEdge predicate on the "ProvisioningStepToPlan" edge.
 func HasProvisioningStepToPlan() predicate.ProvisioningStep {
 	return predicate.ProvisioningStep(func(s *sql.Selector) {

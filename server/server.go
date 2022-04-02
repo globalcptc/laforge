@@ -126,8 +126,8 @@ func createDefaultAdminUser(client *ent.Client, ctx context.Context, laforgeConf
 		if err != nil {
 			return err
 		}
-		sshPrivateFile := fmt.Sprintf("%s/id_rsa", sshFolderPath)
-		err = utils.MakeSSHKeyPair(sshPrivateFile)
+		sshPrivateFile := fmt.Sprintf("%s/id_ed25519", sshFolderPath)
+		err = utils.MakeED25519KeyPair(sshPrivateFile)
 		if err != nil {
 			return err
 		}
@@ -193,8 +193,8 @@ func main() {
 	}
 
 	// Start logging all Logrus output to files
-	ginMode := os.Getenv("GIN_MODE")
-	if ginMode == "release" {
+	if laforgeConfig.GinMode == "release" {
+		gin.SetMode(gin.ReleaseMode)
 		_, err := os.Stat("logs")
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -309,10 +309,10 @@ func main() {
 			Password: laforgeConfig.Graphql.RedisPassword,
 			DB:       0, // use default DB
 		})
-	} else if laforgeConfig.Graphql.RedisPassword != "" {
+	} else if laforgeConfig.Graphql.RedisServerUri != "" {
 		rdb = redis.NewClient(&redis.Options{
-			Addr:     "localhost:6379",
-			Password: laforgeConfig.Graphql.RedisPassword,
+			Addr:     laforgeConfig.Graphql.RedisServerUri,
+			Password: "",
 			DB:       0, // use default DB
 		})
 	}

@@ -1268,6 +1268,34 @@ func HasEnvironmentToHostDependencyWith(preds ...predicate.HostDependency) predi
 	})
 }
 
+// HasEnvironmentToAnsible applies the HasEdge predicate on the "EnvironmentToAnsible" edge.
+func HasEnvironmentToAnsible() predicate.Environment {
+	return predicate.Environment(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(EnvironmentToAnsibleTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, EnvironmentToAnsibleTable, EnvironmentToAnsibleColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEnvironmentToAnsibleWith applies the HasEdge predicate on the "EnvironmentToAnsible" edge with a given conditions (other predicates).
+func HasEnvironmentToAnsibleWith(preds ...predicate.Ansible) predicate.Environment {
+	return predicate.Environment(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(EnvironmentToAnsibleInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, EnvironmentToAnsibleTable, EnvironmentToAnsibleColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasEnvironmentToBuild applies the HasEdge predicate on the "EnvironmentToBuild" edge.
 func HasEnvironmentToBuild() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {

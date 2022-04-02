@@ -17,6 +17,7 @@ import (
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -946,6 +947,233 @@ func (at *AgentTask) ToEdge(order *AgentTaskOrder) *AgentTaskEdge {
 	return &AgentTaskEdge{
 		Node:   at,
 		Cursor: order.Field.toCursor(at),
+	}
+}
+
+// AnsibleEdge is the edge representation of Ansible.
+type AnsibleEdge struct {
+	Node   *Ansible `json:"node"`
+	Cursor Cursor   `json:"cursor"`
+}
+
+// AnsibleConnection is the connection containing edges to Ansible.
+type AnsibleConnection struct {
+	Edges      []*AnsibleEdge `json:"edges"`
+	PageInfo   PageInfo       `json:"pageInfo"`
+	TotalCount int            `json:"totalCount"`
+}
+
+// AnsiblePaginateOption enables pagination customization.
+type AnsiblePaginateOption func(*ansiblePager) error
+
+// WithAnsibleOrder configures pagination ordering.
+func WithAnsibleOrder(order *AnsibleOrder) AnsiblePaginateOption {
+	if order == nil {
+		order = DefaultAnsibleOrder
+	}
+	o := *order
+	return func(pager *ansiblePager) error {
+		if err := o.Direction.Validate(); err != nil {
+			return err
+		}
+		if o.Field == nil {
+			o.Field = DefaultAnsibleOrder.Field
+		}
+		pager.order = &o
+		return nil
+	}
+}
+
+// WithAnsibleFilter configures pagination filter.
+func WithAnsibleFilter(filter func(*AnsibleQuery) (*AnsibleQuery, error)) AnsiblePaginateOption {
+	return func(pager *ansiblePager) error {
+		if filter == nil {
+			return errors.New("AnsibleQuery filter cannot be nil")
+		}
+		pager.filter = filter
+		return nil
+	}
+}
+
+type ansiblePager struct {
+	order  *AnsibleOrder
+	filter func(*AnsibleQuery) (*AnsibleQuery, error)
+}
+
+func newAnsiblePager(opts []AnsiblePaginateOption) (*ansiblePager, error) {
+	pager := &ansiblePager{}
+	for _, opt := range opts {
+		if err := opt(pager); err != nil {
+			return nil, err
+		}
+	}
+	if pager.order == nil {
+		pager.order = DefaultAnsibleOrder
+	}
+	return pager, nil
+}
+
+func (p *ansiblePager) applyFilter(query *AnsibleQuery) (*AnsibleQuery, error) {
+	if p.filter != nil {
+		return p.filter(query)
+	}
+	return query, nil
+}
+
+func (p *ansiblePager) toCursor(a *Ansible) Cursor {
+	return p.order.Field.toCursor(a)
+}
+
+func (p *ansiblePager) applyCursors(query *AnsibleQuery, after, before *Cursor) *AnsibleQuery {
+	for _, predicate := range cursorsToPredicates(
+		p.order.Direction, after, before,
+		p.order.Field.field, DefaultAnsibleOrder.Field.field,
+	) {
+		query = query.Where(predicate)
+	}
+	return query
+}
+
+func (p *ansiblePager) applyOrder(query *AnsibleQuery, reverse bool) *AnsibleQuery {
+	direction := p.order.Direction
+	if reverse {
+		direction = direction.reverse()
+	}
+	query = query.Order(direction.orderFunc(p.order.Field.field))
+	if p.order.Field != DefaultAnsibleOrder.Field {
+		query = query.Order(direction.orderFunc(DefaultAnsibleOrder.Field.field))
+	}
+	return query
+}
+
+// Paginate executes the query and returns a relay based cursor connection to Ansible.
+func (a *AnsibleQuery) Paginate(
+	ctx context.Context, after *Cursor, first *int,
+	before *Cursor, last *int, opts ...AnsiblePaginateOption,
+) (*AnsibleConnection, error) {
+	if err := validateFirstLast(first, last); err != nil {
+		return nil, err
+	}
+	pager, err := newAnsiblePager(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if a, err = pager.applyFilter(a); err != nil {
+		return nil, err
+	}
+
+	conn := &AnsibleConnection{Edges: []*AnsibleEdge{}}
+	if !hasCollectedField(ctx, edgesField) || first != nil && *first == 0 || last != nil && *last == 0 {
+		if hasCollectedField(ctx, totalCountField) ||
+			hasCollectedField(ctx, pageInfoField) {
+			count, err := a.Count(ctx)
+			if err != nil {
+				return nil, err
+			}
+			conn.TotalCount = count
+			conn.PageInfo.HasNextPage = first != nil && count > 0
+			conn.PageInfo.HasPreviousPage = last != nil && count > 0
+		}
+		return conn, nil
+	}
+
+	if (after != nil || first != nil || before != nil || last != nil) && hasCollectedField(ctx, totalCountField) {
+		count, err := a.Clone().Count(ctx)
+		if err != nil {
+			return nil, err
+		}
+		conn.TotalCount = count
+	}
+
+	a = pager.applyCursors(a, after, before)
+	a = pager.applyOrder(a, last != nil)
+	var limit int
+	if first != nil {
+		limit = *first + 1
+	} else if last != nil {
+		limit = *last + 1
+	}
+	if limit > 0 {
+		a = a.Limit(limit)
+	}
+
+	if field := getCollectedField(ctx, edgesField, nodeField); field != nil {
+		a = a.collectField(graphql.GetOperationContext(ctx), *field)
+	}
+
+	nodes, err := a.All(ctx)
+	if err != nil || len(nodes) == 0 {
+		return conn, err
+	}
+
+	if len(nodes) == limit {
+		conn.PageInfo.HasNextPage = first != nil
+		conn.PageInfo.HasPreviousPage = last != nil
+		nodes = nodes[:len(nodes)-1]
+	}
+
+	var nodeAt func(int) *Ansible
+	if last != nil {
+		n := len(nodes) - 1
+		nodeAt = func(i int) *Ansible {
+			return nodes[n-i]
+		}
+	} else {
+		nodeAt = func(i int) *Ansible {
+			return nodes[i]
+		}
+	}
+
+	conn.Edges = make([]*AnsibleEdge, len(nodes))
+	for i := range nodes {
+		node := nodeAt(i)
+		conn.Edges[i] = &AnsibleEdge{
+			Node:   node,
+			Cursor: pager.toCursor(node),
+		}
+	}
+
+	conn.PageInfo.StartCursor = &conn.Edges[0].Cursor
+	conn.PageInfo.EndCursor = &conn.Edges[len(conn.Edges)-1].Cursor
+	if conn.TotalCount == 0 {
+		conn.TotalCount = len(nodes)
+	}
+
+	return conn, nil
+}
+
+// AnsibleOrderField defines the ordering field of Ansible.
+type AnsibleOrderField struct {
+	field    string
+	toCursor func(*Ansible) Cursor
+}
+
+// AnsibleOrder defines the ordering of Ansible.
+type AnsibleOrder struct {
+	Direction OrderDirection     `json:"direction"`
+	Field     *AnsibleOrderField `json:"field"`
+}
+
+// DefaultAnsibleOrder is the default ordering of Ansible.
+var DefaultAnsibleOrder = &AnsibleOrder{
+	Direction: OrderDirectionAsc,
+	Field: &AnsibleOrderField{
+		field: ansible.FieldID,
+		toCursor: func(a *Ansible) Cursor {
+			return Cursor{ID: a.ID}
+		},
+	},
+}
+
+// ToEdge converts Ansible into AnsibleEdge.
+func (a *Ansible) ToEdge(order *AnsibleOrder) *AnsibleEdge {
+	if order == nil {
+		order = DefaultAnsibleOrder
+	}
+	return &AnsibleEdge{
+		Node:   a,
+		Cursor: order.Field.toCursor(a),
 	}
 }
 
