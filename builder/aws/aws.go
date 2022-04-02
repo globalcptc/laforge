@@ -6,7 +6,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/gen0cide/laforge/ent"
@@ -46,16 +45,6 @@ func (builder AWSBuilder) generateVmName(competition *ent.Competition, team *ent
 	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + host.Hostname + "-" + builder.generateBuildID(build))
 }
 
-/*
-func (builder AWSBuilder) generateRouterName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + builder.generateBuildID(build))
-}
-
-func (builder AWSBuilder) generateNetworkName(competition *ent.Competition, team *ent.Team, network *ent.Network, build *ent.Build) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + network.Name + "-" + builder.generateBuildID(build))
-}
-*/
-
 func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
 
 	// Get information about host from ENT
@@ -79,7 +68,9 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 
 	entProNetwork, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
+	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
@@ -151,7 +142,9 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
+	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
@@ -186,7 +179,10 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 
 func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
 	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
+
+	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
@@ -207,7 +203,10 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 
 func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
 	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
+
+	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
@@ -231,7 +230,9 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
+	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
@@ -239,7 +240,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	// Describe the network with info from above and get ready to deploy
 	client := ec2.NewFromConfig(cfg)
 	input := &ec2.CreateVpcInput{
-		CidrBlock: aws.String(entNetwork.Cidr),
+		CidrBlock: &entNetwork.Cidr,
 	}
 
 	// Deploy Network
@@ -248,8 +249,20 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return err
 	}
 	id := *results.Vpc.VpcId
+
+	subnetInput := &ec2.CreateSubnetInput{
+		VpcId:     &id,
+		CidrBlock: &entNetwork.Cidr,
+	}
+	result, err := client.CreateSubnet(ctx, subnetInput)
+	if err != nil {
+		return err
+	}
+	subnetID := *result.Subnet.SubnetId
+
 	newVars := entNetwork.Vars
 	newVars["VpcId"] = id
+	newVars["SubnetID"] = subnetID
 	err = entNetwork.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return err
@@ -260,12 +273,24 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	provisionedNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Only(ctx)
 	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(builder.AWS_Access_Key_Id, builder.AWS_Secret_Access_Key, builder.AWS_Session_Token)), config.WithRegion(builder.Region))
+
+	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
 	vpcID := entNetwork.Vars["VpcId"]
+	subnetID := entNetwork.Vars["SubnetID"]
 	client := ec2.NewFromConfig(cfg)
+	subnetInput := &ec2.DeleteSubnetInput{
+		SubnetId: &subnetID,
+	}
+	subnetResults, err := client.DeleteSubnet(ctx, subnetInput)
+	if err != nil {
+		println(err.Error())
+		return err
+	}
 	input := &ec2.DeleteVpcInput{
 		VpcId: &vpcID,
 	}
@@ -273,6 +298,7 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 	if err != nil {
 		return err
 	}
-	fmt.Println(results)
+	_ = results
+	_ = subnetResults
 	return
 }
