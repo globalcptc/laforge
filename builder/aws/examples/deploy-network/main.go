@@ -33,16 +33,7 @@ func deployTeam() string {
 		os.Exit(1)
 	}
 	id := *results.Vpc.VpcId
-	subnetInput := &ec2.CreateSubnetInput{
-		VpcId:     &id,
-		CidrBlock: &cidr,
-	}
-	result, err := client.CreateSubnet(ctx, subnetInput)
-	if err != nil {
-		println(err.Error())
-		os.Exit(1)
-	}
-	println("Subnet ID: " + *result.Subnet.SubnetId)
+
 	return id
 }
 
@@ -57,22 +48,17 @@ func main() {
 
 	// Describe the network with info from above and get ready to deploy
 	client := ec2.NewFromConfig(cfg)
-	desc := "Example Security Group"
 	vpcID := deployTeam()
-
-	input := &ec2.CreateSecurityGroupInput{
-		Description: &desc,
-		GroupName:   &desc,
-		VpcId:       &vpcID,
+	subnetInput := &ec2.CreateSubnetInput{
+		VpcId:     &vpcID,
+		CidrBlock: &cidr,
 	}
-
-	// Deploy Network
-	results, err := client.CreateSecurityGroup(ctx, input)
+	result, err := client.CreateSubnet(ctx, subnetInput)
 	if err != nil {
 		println(err.Error())
-		return
+		os.Exit(1)
 	}
-	println("Security Group ID: " + *results.GroupId)
+	println("Subnet ID: " + *result.Subnet.SubnetId)
 	println("VPC ID: " + vpcID)
 	return
 }

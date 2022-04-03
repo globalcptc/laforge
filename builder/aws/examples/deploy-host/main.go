@@ -18,9 +18,10 @@ const (
 var numInstances int32 = 1
 var instanceType types.InstanceType
 var vmName string = "Test Ubuntu VM"
-var ipAddress string = "10.0.0.6"
-var secGroupID = "sg-0823517c8484680f9"
-var subnetId string = "subnet-02c200476ee4d77f9"
+var ipAddress string = "10.0.0.1"
+var secGroupID = ""
+var subnetId string = ""
+var vpcID string = ""
 
 type EC2CreateInstanceAPI interface {
 	RunInstances(ctx context.Context,
@@ -37,6 +38,22 @@ func main() {
 		println(err.Error())
 		return
 	}
+	client := ec2.NewFromConfig(cfg)
+	desc := "Example Security Group"
+	input := &ec2.CreateSecurityGroupInput{
+		Description: &desc,
+		GroupName:   &desc,
+		VpcId:       &vpcID,
+	}
+
+	// Deploy Network
+	results, err := client.CreateSecurityGroup(ctx, input)
+	if err != nil {
+		println(err.Error())
+		return
+	}
+	println("Security Group ID: " + *results.GroupId)
+
 	switch InstanceSize {
 	case "nano":
 		instanceType = types.InstanceTypeT2Nano
@@ -52,7 +69,7 @@ func main() {
 		instanceType = types.InstanceTypeT2Xlarge
 	}
 
-	input := &ec2.RunInstancesInput{
+	hostInput := &ec2.RunInstancesInput{
 		ImageId:          aws.String(AMI),
 		InstanceType:     instanceType,
 		MinCount:         &numInstances,
@@ -62,9 +79,8 @@ func main() {
 		PrivateIpAddress: &ipAddress,
 		SubnetId:         &subnetId,
 	}
-	client := ec2.NewFromConfig(cfg)
 
-	result, err := client.RunInstances(ctx, input)
+	result, err := client.RunInstances(ctx, hostInput)
 	if err != nil {
 		println(err.Error())
 		return

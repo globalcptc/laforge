@@ -9,7 +9,6 @@ import (
 )
 
 var Region = "us-east-1"
-var Security_Group_Id = "sg-0823517c8484680f9"
 var vpcID = "vpc-0f84f412513823015"
 var subnetId = "subnet-02c200476ee4d77f9"
 
@@ -45,7 +44,7 @@ func main() {
 		println(err.Error())
 		os.Exit(1)
 	}
-	secGroupID := Security_Group_Id
+
 	client := ec2.NewFromConfig(cfg)
 	subnetInput := &ec2.DeleteSubnetInput{
 		SubnetId: &subnetId,
@@ -57,15 +56,5 @@ func main() {
 		os.Exit(1)
 	}
 	println("Subnet " + subnetId + " deleted successfully.")
-	input := &ec2.DeleteSecurityGroupInput{
-		GroupId: &secGroupID,
-	}
-	results, err := client.DeleteSecurityGroup(ctx, input)
-	_ = results
-	if err != nil {
-		println(err.Error())
-		os.Exit(1)
-	}
 	TeardownTeam()
-	println("Security Group " + secGroupID + " deleted successfully.")
 }
