@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/competition"
@@ -333,6 +334,21 @@ func (ec *EnvironmentCreate) AddEnvironmentToHostDependency(h ...*HostDependency
 		ids[i] = h[i].ID
 	}
 	return ec.AddEnvironmentToHostDependencyIDs(ids...)
+}
+
+// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
+func (ec *EnvironmentCreate) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddEnvironmentToAnsibleIDs(ids...)
+	return ec
+}
+
+// AddEnvironmentToAnsible adds the "EnvironmentToAnsible" edges to the Ansible entity.
+func (ec *EnvironmentCreate) AddEnvironmentToAnsible(a ...*Ansible) *EnvironmentCreate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return ec.AddEnvironmentToAnsibleIDs(ids...)
 }
 
 // AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
@@ -889,6 +905,25 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: hostdependency.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ec.mutation.EnvironmentToAnsibleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
 				},
 			},
 		}

@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/dnsrecord"
 	"github.com/gen0cide/laforge/ent/filedelete"
@@ -46,6 +47,7 @@ type ProvisioningStepQuery struct {
 	withProvisioningStepToFileDelete        *FileDeleteQuery
 	withProvisioningStepToFileDownload      *FileDownloadQuery
 	withProvisioningStepToFileExtract       *FileExtractQuery
+	withProvisioningStepToAnsible           *AnsibleQuery
 	withProvisioningStepToPlan              *PlanQuery
 	withProvisioningStepToAgentTask         *AgentTaskQuery
 	withProvisioningStepToGinFileMiddleware *GinFileMiddlewareQuery
@@ -255,6 +257,28 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToFileExtract() *FileExtr
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(fileextract.Table, fileextract.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToFileExtractTable, provisioningstep.ProvisioningStepToFileExtractColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProvisioningStepToAnsible chains the current query on the "ProvisioningStepToAnsible" edge.
+func (psq *ProvisioningStepQuery) QueryProvisioningStepToAnsible() *AnsibleQuery {
+	query := &AnsibleQuery{config: psq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := psq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := psq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
+			sqlgraph.To(ansible.Table, ansible.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToAnsibleTable, provisioningstep.ProvisioningStepToAnsibleColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -517,6 +541,7 @@ func (psq *ProvisioningStepQuery) Clone() *ProvisioningStepQuery {
 		withProvisioningStepToFileDelete:        psq.withProvisioningStepToFileDelete.Clone(),
 		withProvisioningStepToFileDownload:      psq.withProvisioningStepToFileDownload.Clone(),
 		withProvisioningStepToFileExtract:       psq.withProvisioningStepToFileExtract.Clone(),
+		withProvisioningStepToAnsible:           psq.withProvisioningStepToAnsible.Clone(),
 		withProvisioningStepToPlan:              psq.withProvisioningStepToPlan.Clone(),
 		withProvisioningStepToAgentTask:         psq.withProvisioningStepToAgentTask.Clone(),
 		withProvisioningStepToGinFileMiddleware: psq.withProvisioningStepToGinFileMiddleware.Clone(),
@@ -611,6 +636,17 @@ func (psq *ProvisioningStepQuery) WithProvisioningStepToFileExtract(opts ...func
 		opt(query)
 	}
 	psq.withProvisioningStepToFileExtract = query
+	return psq
+}
+
+// WithProvisioningStepToAnsible tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningStepToAnsible" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithProvisioningStepToAnsible(opts ...func(*AnsibleQuery)) *ProvisioningStepQuery {
+	query := &AnsibleQuery{config: psq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	psq.withProvisioningStepToAnsible = query
 	return psq
 }
 
@@ -713,7 +749,7 @@ func (psq *ProvisioningStepQuery) sqlAll(ctx context.Context) ([]*ProvisioningSt
 		nodes       = []*ProvisioningStep{}
 		withFKs     = psq.withFKs
 		_spec       = psq.querySpec()
-		loadedTypes = [11]bool{
+		loadedTypes = [12]bool{
 			psq.withProvisioningStepToStatus != nil,
 			psq.withProvisioningStepToProvisionedHost != nil,
 			psq.withProvisioningStepToScript != nil,
@@ -722,12 +758,13 @@ func (psq *ProvisioningStepQuery) sqlAll(ctx context.Context) ([]*ProvisioningSt
 			psq.withProvisioningStepToFileDelete != nil,
 			psq.withProvisioningStepToFileDownload != nil,
 			psq.withProvisioningStepToFileExtract != nil,
+			psq.withProvisioningStepToAnsible != nil,
 			psq.withProvisioningStepToPlan != nil,
 			psq.withProvisioningStepToAgentTask != nil,
 			psq.withProvisioningStepToGinFileMiddleware != nil,
 		}
 	)
-	if psq.withProvisioningStepToProvisionedHost != nil || psq.withProvisioningStepToScript != nil || psq.withProvisioningStepToCommand != nil || psq.withProvisioningStepToDNSRecord != nil || psq.withProvisioningStepToFileDelete != nil || psq.withProvisioningStepToFileDownload != nil || psq.withProvisioningStepToFileExtract != nil || psq.withProvisioningStepToPlan != nil || psq.withProvisioningStepToGinFileMiddleware != nil {
+	if psq.withProvisioningStepToProvisionedHost != nil || psq.withProvisioningStepToScript != nil || psq.withProvisioningStepToCommand != nil || psq.withProvisioningStepToDNSRecord != nil || psq.withProvisioningStepToFileDelete != nil || psq.withProvisioningStepToFileDownload != nil || psq.withProvisioningStepToFileExtract != nil || psq.withProvisioningStepToAnsible != nil || psq.withProvisioningStepToPlan != nil || psq.withProvisioningStepToGinFileMiddleware != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -980,6 +1017,35 @@ func (psq *ProvisioningStepQuery) sqlAll(ctx context.Context) ([]*ProvisioningSt
 			}
 			for i := range nodes {
 				nodes[i].Edges.ProvisioningStepToFileExtract = n
+			}
+		}
+	}
+
+	if query := psq.withProvisioningStepToAnsible; query != nil {
+		ids := make([]uuid.UUID, 0, len(nodes))
+		nodeids := make(map[uuid.UUID][]*ProvisioningStep)
+		for i := range nodes {
+			if nodes[i].provisioning_step_provisioning_step_to_ansible == nil {
+				continue
+			}
+			fk := *nodes[i].provisioning_step_provisioning_step_to_ansible
+			if _, ok := nodeids[fk]; !ok {
+				ids = append(ids, fk)
+			}
+			nodeids[fk] = append(nodeids[fk], nodes[i])
+		}
+		query.Where(ansible.IDIn(ids...))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			nodes, ok := nodeids[n.ID]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_ansible" returned %v`, n.ID)
+			}
+			for i := range nodes {
+				nodes[i].Edges.ProvisioningStepToAnsible = n
 			}
 		}
 	}

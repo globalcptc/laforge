@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/x/sync/semaphore"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/network"
@@ -23,21 +23,21 @@ import (
 )
 
 const (
-	ID			= "openstack"
-	Name		= "Openstack"
-	Description	= "Builder that interfaces with Openstack"
-	Author		= "Tenchi Mata <github.com/0xk7>"
-	Version		= "0.1"
+	ID          = "openstack"
+	Name        = "Openstack"
+	Description = "Builder that interfaces with Openstack"
+	Author      = "Tenchi Mata <github.com/0xk7>"
+	Version     = "0.1"
 )
 
 type openstackBuilder struct {
-	HttpClient			http.Client
-	IdentityEndpoint 	http.Client
-	Username 			string
-	Password 			string
-	TenantID 			string
-	Logger				*logging.Logger
-	MaxWorkers			int
+	HttpClient       http.Client
+	IdentityEndpoint http.Client
+	Username         string
+	Password         string
+	TenantID         string
+	Logger           *logging.Logger
+	MaxWorkers       int
 }
 
 func (builder openstackBuilder) generateBuildID(build *ent.Build) string {
@@ -94,9 +94,9 @@ func (builder openstackBuilder) DeployHOST(ctx context.Context, provisionedHost 
 
 	//build server
 	server, err := servers.Create(client, servers.CreateOpts{
-		Name: name,
+		Name:       name,
 		FlavorName: "flavor_name",
-		ImageName: "image_name",
+		ImageName:  "image_name",
 	}).Extract()
 	if err != nil {
 		fmt.Println("Unable to create server: %s", err)

@@ -63,6 +63,8 @@ const (
 	EdgeEnvironmentToNetwork = "EnvironmentToNetwork"
 	// EdgeEnvironmentToHostDependency holds the string denoting the environmenttohostdependency edge name in mutations.
 	EdgeEnvironmentToHostDependency = "EnvironmentToHostDependency"
+	// EdgeEnvironmentToAnsible holds the string denoting the environmenttoansible edge name in mutations.
+	EdgeEnvironmentToAnsible = "EnvironmentToAnsible"
 	// EdgeEnvironmentToBuild holds the string denoting the environmenttobuild edge name in mutations.
 	EdgeEnvironmentToBuild = "EnvironmentToBuild"
 	// EdgeEnvironmentToRepository holds the string denoting the environmenttorepository edge name in mutations.
@@ -170,6 +172,13 @@ const (
 	EnvironmentToHostDependencyInverseTable = "host_dependencies"
 	// EnvironmentToHostDependencyColumn is the table column denoting the EnvironmentToHostDependency relation/edge.
 	EnvironmentToHostDependencyColumn = "environment_environment_to_host_dependency"
+	// EnvironmentToAnsibleTable is the table that holds the EnvironmentToAnsible relation/edge.
+	EnvironmentToAnsibleTable = "ansibles"
+	// EnvironmentToAnsibleInverseTable is the table name for the Ansible entity.
+	// It exists in this package in order to avoid circular dependency with the "ansible" package.
+	EnvironmentToAnsibleInverseTable = "ansibles"
+	// EnvironmentToAnsibleColumn is the table column denoting the EnvironmentToAnsible relation/edge.
+	EnvironmentToAnsibleColumn = "environment_environment_to_ansible"
 	// EnvironmentToBuildTable is the table that holds the EnvironmentToBuild relation/edge.
 	EnvironmentToBuildTable = "builds"
 	// EnvironmentToBuildInverseTable is the table name for the Build entity.

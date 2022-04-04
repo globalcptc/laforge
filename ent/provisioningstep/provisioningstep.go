@@ -35,6 +35,8 @@ const (
 	EdgeProvisioningStepToFileDownload = "ProvisioningStepToFileDownload"
 	// EdgeProvisioningStepToFileExtract holds the string denoting the provisioningsteptofileextract edge name in mutations.
 	EdgeProvisioningStepToFileExtract = "ProvisioningStepToFileExtract"
+	// EdgeProvisioningStepToAnsible holds the string denoting the provisioningsteptoansible edge name in mutations.
+	EdgeProvisioningStepToAnsible = "ProvisioningStepToAnsible"
 	// EdgeProvisioningStepToPlan holds the string denoting the provisioningsteptoplan edge name in mutations.
 	EdgeProvisioningStepToPlan = "ProvisioningStepToPlan"
 	// EdgeProvisioningStepToAgentTask holds the string denoting the provisioningsteptoagenttask edge name in mutations.
@@ -99,6 +101,13 @@ const (
 	ProvisioningStepToFileExtractInverseTable = "file_extracts"
 	// ProvisioningStepToFileExtractColumn is the table column denoting the ProvisioningStepToFileExtract relation/edge.
 	ProvisioningStepToFileExtractColumn = "provisioning_step_provisioning_step_to_file_extract"
+	// ProvisioningStepToAnsibleTable is the table that holds the ProvisioningStepToAnsible relation/edge.
+	ProvisioningStepToAnsibleTable = "provisioning_steps"
+	// ProvisioningStepToAnsibleInverseTable is the table name for the Ansible entity.
+	// It exists in this package in order to avoid circular dependency with the "ansible" package.
+	ProvisioningStepToAnsibleInverseTable = "ansibles"
+	// ProvisioningStepToAnsibleColumn is the table column denoting the ProvisioningStepToAnsible relation/edge.
+	ProvisioningStepToAnsibleColumn = "provisioning_step_provisioning_step_to_ansible"
 	// ProvisioningStepToPlanTable is the table that holds the ProvisioningStepToPlan relation/edge.
 	ProvisioningStepToPlanTable = "provisioning_steps"
 	// ProvisioningStepToPlanInverseTable is the table name for the Plan entity.
@@ -141,6 +150,7 @@ var ForeignKeys = []string{
 	"provisioning_step_provisioning_step_to_file_delete",
 	"provisioning_step_provisioning_step_to_file_download",
 	"provisioning_step_provisioning_step_to_file_extract",
+	"provisioning_step_provisioning_step_to_ansible",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -174,6 +184,7 @@ const (
 	TypeFileDelete   Type = "FileDelete"
 	TypeFileDownload Type = "FileDownload"
 	TypeFileExtract  Type = "FileExtract"
+	TypeAnsible      Type = "Ansible"
 )
 
 func (_type Type) String() string {
@@ -183,7 +194,7 @@ func (_type Type) String() string {
 // TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
 func TypeValidator(_type Type) error {
 	switch _type {
-	case TypeScript, TypeCommand, TypeDNSRecord, TypeFileDelete, TypeFileDownload, TypeFileExtract:
+	case TypeScript, TypeCommand, TypeDNSRecord, TypeFileDelete, TypeFileDownload, TypeFileExtract, TypeAnsible:
 		return nil
 	default:
 		return fmt.Errorf("provisioningstep: invalid enum value for type field: %q", _type)

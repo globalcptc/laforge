@@ -92,6 +92,22 @@ func (at *AgentTask) AgentTaskToAdhocPlan(ctx context.Context) ([]*AdhocPlan, er
 	return result, err
 }
 
+func (a *Ansible) AnsibleToUser(ctx context.Context) ([]*User, error) {
+	result, err := a.Edges.AnsibleToUserOrErr()
+	if IsNotLoaded(err) {
+		result, err = a.QueryAnsibleToUser().All(ctx)
+	}
+	return result, err
+}
+
+func (a *Ansible) AnsibleFromEnvironment(ctx context.Context) (*Environment, error) {
+	result, err := a.Edges.AnsibleFromEnvironmentOrErr()
+	if IsNotLoaded(err) {
+		result, err = a.QueryAnsibleFromEnvironment().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (au *AuthUser) AuthUserToToken(ctx context.Context) ([]*Token, error) {
 	result, err := au.Edges.AuthUserToTokenOrErr()
 	if IsNotLoaded(err) {
@@ -416,6 +432,14 @@ func (e *Environment) EnvironmentToHostDependency(ctx context.Context) ([]*HostD
 	result, err := e.Edges.EnvironmentToHostDependencyOrErr()
 	if IsNotLoaded(err) {
 		result, err = e.QueryEnvironmentToHostDependency().All(ctx)
+	}
+	return result, err
+}
+
+func (e *Environment) EnvironmentToAnsible(ctx context.Context) ([]*Ansible, error) {
+	result, err := e.Edges.EnvironmentToAnsibleOrErr()
+	if IsNotLoaded(err) {
+		result, err = e.QueryEnvironmentToAnsible().All(ctx)
 	}
 	return result, err
 }
@@ -936,6 +960,14 @@ func (ps *ProvisioningStep) ProvisioningStepToFileExtract(ctx context.Context) (
 	result, err := ps.Edges.ProvisioningStepToFileExtractOrErr()
 	if IsNotLoaded(err) {
 		result, err = ps.QueryProvisioningStepToFileExtract().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (ps *ProvisioningStep) ProvisioningStepToAnsible(ctx context.Context) (*Ansible, error) {
+	result, err := ps.Edges.ProvisioningStepToAnsibleOrErr()
+	if IsNotLoaded(err) {
+		result, err = ps.QueryProvisioningStepToAnsible().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

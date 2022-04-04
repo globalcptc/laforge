@@ -17,6 +17,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/lru"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/gen0cide/laforge"
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -113,35 +114,30 @@ func playgroundHandler() gin.HandlerFunc {
 	}
 }
 
-func createDefaultAdminUser(client *ent.Client, ctx context.Context) error {
-	adminUsername, usernameOK := os.LookupEnv("ADMIN_USER")
-	adminPassword, passwordOK := os.LookupEnv("ADMIN_PASS")
-	if !usernameOK || !passwordOK {
-		return fmt.Errorf("ENVs ADMIN_USER or ADMIN_PASS are not set")
-	}
+func createDefaultAdminUser(client *ent.Client, ctx context.Context, laforgeConfig *utils.ServerConfig) error {
 	entAuthUserExsist, _ := client.AuthUser.Query().Where(
 		authuser.And(
-			authuser.UsernameEQ(adminUsername),
+			authuser.UsernameEQ(laforgeConfig.Database.AdminUser),
 			authuser.ProviderEQ(authuser.ProviderLOCAL),
 		)).Exist(ctx)
 	if !entAuthUserExsist {
-		sshFolderPath := fmt.Sprintf(utils.UserKeyPath, strings.ToLower(authuser.ProviderLOCAL.String()), adminUsername)
+		sshFolderPath := fmt.Sprintf(utils.UserKeyPath, strings.ToLower(authuser.ProviderLOCAL.String()), laforgeConfig.Database.AdminUser)
 		err := os.MkdirAll(sshFolderPath, os.ModeAppend|os.ModePerm)
 		if err != nil {
 			return err
 		}
-		sshPrivateFile := fmt.Sprintf("%s/id_rsa", sshFolderPath)
-		err = utils.MakeSSHKeyPair(sshPrivateFile)
+		sshPrivateFile := fmt.Sprintf("%s/id_ed25519", sshFolderPath)
+		err = utils.MakeED25519KeyPair(sshPrivateFile)
 		if err != nil {
 			return err
 		}
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), 8)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(laforgeConfig.Database.AdminPass), 8)
 		if err != nil {
 			return err
 		}
 		password := string(hashedPassword[:])
 		client.AuthUser.Create().
-			SetUsername(adminUsername).
+			SetUsername(laforgeConfig.Database.AdminUser).
 			SetPassword(password).
 			SetRole(authuser.RoleADMIN).
 			SetProvider(authuser.ProviderLOCAL).
@@ -187,9 +183,18 @@ func tempServerTaskHandler(client *ent.Client) gin.HandlerFunc {
 }
 
 func main() {
+	laforge.PrintLogo()
+
+	// Load main server configuration
+	laforgeConfig, err := utils.LoadServerConfig()
+	if err != nil {
+		logrus.Errorf("failed to load LaForge config: %v", err)
+		return
+	}
+
 	// Start logging all Logrus output to files
-	ginMode := os.Getenv("GIN_MODE")
-	if ginMode == "release" {
+	if laforgeConfig.GinMode == "release" {
+		gin.SetMode(gin.ReleaseMode)
 		_, err := os.Stat("logs")
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -208,20 +213,15 @@ func main() {
 			logrus.SetOutput(logFile)
 		}
 	}
-	isDebug := os.Getenv("LAFORGE_DEBUG")
-	if isDebug == "true" {
+	if laforgeConfig.Debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	pgHost, ok := os.LookupEnv("PG_URI")
-	client := &ent.Client{}
-
-	if !ok {
-		logrus.Errorf("no value set for PG_URI env variable. please set the postgres connection uri")
+	if laforgeConfig.Database.PostgresUri == "" {
+		logrus.Errorf("Database.PostgresUri not set in LaForge config")
 		os.Exit(1)
-	} else {
-		client = ent.PGOpen(pgHost)
 	}
+	client := ent.PGOpen(laforgeConfig.Database.PostgresUri)
 
 	ctx := context.Background()
 	defer ctx.Done()
@@ -232,7 +232,7 @@ func main() {
 		logrus.Fatalf("failed creating schema resources: %v", err)
 	}
 
-	if err := createDefaultAdminUser(client, ctx); err != nil {
+	if err := createDefaultAdminUser(client, ctx, laforgeConfig); err != nil {
 		logrus.Fatal(err)
 	}
 
@@ -302,27 +302,24 @@ func main() {
 		logrus.Fatalf("failed to listen: %v", err)
 	}
 
-	redisHost, okRS := os.LookupEnv("REDIS_SERVER")
-
 	rdb := &redis.Client{}
-	if okRS {
+	if laforgeConfig.Graphql.RedisServerUri != "" && laforgeConfig.Graphql.RedisPassword != "" {
 		rdb = redis.NewClient(&redis.Options{
-			Addr:     redisHost,
-			Password: os.Getenv("REDIS_PASSWORD"),
+			Addr:     laforgeConfig.Graphql.RedisServerUri,
+			Password: laforgeConfig.Graphql.RedisPassword,
 			DB:       0, // use default DB
 		})
-
-	} else {
+	} else if laforgeConfig.Graphql.RedisServerUri != "" {
 		rdb = redis.NewClient(&redis.Options{
-			Addr:     "localhost:6379",
-			Password: os.Getenv("REDIS_PASSWORD"),
+			Addr:     laforgeConfig.Graphql.RedisServerUri,
+			Password: "",
 			DB:       0, // use default DB
 		})
 	}
 
 	go func() {
-		logFolder, ok := os.LookupEnv("LAFORGE_LOG_FOLDER")
-		if !ok {
+		logFolder := laforgeConfig.LogFolder
+		if logFolder == "" {
 			// Default log location
 			logFolder = "/var/log/laforge"
 		}
@@ -354,7 +351,7 @@ func main() {
 		for {
 			select {
 			case message := <-ch:
-				subLog.Log.Infof("Message %v recived from %v", message.Payload, message.Channel)
+				subLog.Log.Infof("Message %v received from %v", message.Payload, message.Channel)
 			// close when context done
 			case <-ctx.Done():
 				subLog.Log.Infof("Main Channel CTX Closing, Closing Sub Channel")
@@ -364,19 +361,14 @@ func main() {
 		}
 	}()
 
-	auth.InitGoth()
+	auth.InitGoth(laforgeConfig)
 
 	router := gin.Default()
-
-	cors_urls := []string{"http://localhost", "http://localhost:4200"}
-	if env_value, exists := os.LookupEnv("CORS_ALLOWED_ORIGINS"); exists {
-		cors_urls = strings.Split(env_value, ",")
-	}
 
 	// Add CORS middleware around every request
 	// See https://github.com/rs/cors for full option listing
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     cors_urls,
+		AllowOrigins:     laforgeConfig.UI.AllowedOrigins,
 		AllowMethods:     []string{"GET", "PUT", "PATCH"},
 		AllowHeaders:     []string{"Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "accept", "origin", "Cache-Control", "X-Requested-With"},
 		AllowCredentials: true,
@@ -394,13 +386,13 @@ func main() {
 	authGroup.GET("/login", func(c *gin.Context) {
 		c.Redirect(301, "/ui/")
 	})
-	authGroup.POST("/local/login", auth.LocalLogin(client))
+	authGroup.POST("/local/login", auth.LocalLogin(client, laforgeConfig))
 	authGroup.GET("/:provider/login", auth.GothicBeginAuth())
-	authGroup.GET("/:provider/callback", auth.GothicCallbackHandler(client))
-	authGroup.GET("/logout", auth.Logout(client))
+	authGroup.GET("/:provider/callback", auth.GothicCallbackHandler(client, laforgeConfig))
+	authGroup.GET("/logout", auth.Logout(client, laforgeConfig))
 
 	api := router.Group("/api")
-	api.Use(auth.Middleware(client))
+	api.Use(auth.Middleware(client, laforgeConfig))
 
 	api.POST("/query", gqlHandler)
 	api.GET("/query", gqlHandler)

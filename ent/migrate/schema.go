@@ -84,7 +84,7 @@ var (
 	// AgentTasksColumns holds the columns for the "agent_tasks" table.
 	AgentTasksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "command", Type: field.TypeEnum, Enums: []string{"DEFAULT", "DELETE", "REBOOT", "EXTRACT", "DOWNLOAD", "CREATEUSER", "CREATEUSERPASS", "ADDTOGROUP", "EXECUTE", "VALIDATE", "CHANGEPERMS", "APPENDFILE"}},
+		{Name: "command", Type: field.TypeEnum, Enums: []string{"DEFAULT", "DELETE", "REBOOT", "EXTRACT", "DOWNLOAD", "CREATEUSER", "CREATEUSERPASS", "ADDTOGROUP", "EXECUTE", "VALIDATE", "CHANGEPERMS", "APPENDFILE", "ANSIBLE"}},
 		{Name: "args", Type: field.TypeString},
 		{Name: "number", Type: field.TypeInt},
 		{Name: "output", Type: field.TypeString, Default: ""},
@@ -110,6 +110,34 @@ var (
 				Columns:    []*schema.Column{AgentTasksColumns[8]},
 				RefColumns: []*schema.Column{ProvisionedHostsColumns[0]},
 				OnDelete:   schema.SetNull,
+			},
+		},
+	}
+	// AnsiblesColumns holds the columns for the "ansibles" table.
+	AnsiblesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
+		{Name: "hcl_id", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString},
+		{Name: "source", Type: field.TypeString},
+		{Name: "playbook_name", Type: field.TypeString},
+		{Name: "method", Type: field.TypeEnum, Enums: []string{"local"}},
+		{Name: "inventory", Type: field.TypeString},
+		{Name: "abs_path", Type: field.TypeString},
+		{Name: "tags", Type: field.TypeJSON},
+		{Name: "environment_environment_to_ansible", Type: field.TypeUUID, Nullable: true},
+	}
+	// AnsiblesTable holds the schema information for the "ansibles" table.
+	AnsiblesTable = &schema.Table{
+		Name:       "ansibles",
+		Columns:    AnsiblesColumns,
+		PrimaryKey: []*schema.Column{AnsiblesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "ansibles_environments_EnvironmentToAnsible",
+				Columns:    []*schema.Column{AnsiblesColumns[10]},
+				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -772,7 +800,7 @@ var (
 	// ProvisioningStepsColumns holds the columns for the "provisioning_steps" table.
 	ProvisioningStepsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract"}},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract", "Ansible"}},
 		{Name: "step_number", Type: field.TypeInt},
 		{Name: "gin_file_middleware_gin_file_middleware_to_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
@@ -783,6 +811,7 @@ var (
 		{Name: "provisioning_step_provisioning_step_to_file_delete", Type: field.TypeUUID, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_file_download", Type: field.TypeUUID, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_file_extract", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioning_step_provisioning_step_to_ansible", Type: field.TypeUUID, Nullable: true},
 	}
 	// ProvisioningStepsTable holds the schema information for the "provisioning_steps" table.
 	ProvisioningStepsTable = &schema.Table{
@@ -842,6 +871,12 @@ var (
 				Symbol:     "provisioning_steps_file_extracts_ProvisioningStepToFileExtract",
 				Columns:    []*schema.Column{ProvisioningStepsColumns[11]},
 				RefColumns: []*schema.Column{FileExtractsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provisioning_steps_ansibles_ProvisioningStepToAnsible",
+				Columns:    []*schema.Column{ProvisioningStepsColumns[12]},
+				RefColumns: []*schema.Column{AnsiblesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -1125,6 +1160,7 @@ var (
 		{Name: "uuid", Type: field.TypeString},
 		{Name: "email", Type: field.TypeString},
 		{Name: "hcl_id", Type: field.TypeString},
+		{Name: "ansible_ansible_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "command_command_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "finding_finding_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "host_host_to_user", Type: field.TypeUUID, Nullable: true},
@@ -1137,26 +1173,32 @@ var (
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "users_commands_CommandToUser",
+				Symbol:     "users_ansibles_AnsibleToUser",
 				Columns:    []*schema.Column{UsersColumns[5]},
+				RefColumns: []*schema.Column{AnsiblesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "users_commands_CommandToUser",
+				Columns:    []*schema.Column{UsersColumns[6]},
 				RefColumns: []*schema.Column{CommandsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "users_findings_FindingToUser",
-				Columns:    []*schema.Column{UsersColumns[6]},
+				Columns:    []*schema.Column{UsersColumns[7]},
 				RefColumns: []*schema.Column{FindingsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "users_hosts_HostToUser",
-				Columns:    []*schema.Column{UsersColumns[7]},
+				Columns:    []*schema.Column{UsersColumns[8]},
 				RefColumns: []*schema.Column{HostsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "users_scripts_ScriptToUser",
-				Columns:    []*schema.Column{UsersColumns[8]},
+				Columns:    []*schema.Column{UsersColumns[9]},
 				RefColumns: []*schema.Column{ScriptsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -1367,6 +1409,7 @@ var (
 		AdhocPlansTable,
 		AgentStatusTable,
 		AgentTasksTable,
+		AnsiblesTable,
 		AuthUsersTable,
 		BuildsTable,
 		BuildCommitsTable,
@@ -1419,6 +1462,7 @@ func init() {
 	AgentStatusTable.ForeignKeys[2].RefTable = BuildsTable
 	AgentTasksTable.ForeignKeys[0].RefTable = ProvisioningStepsTable
 	AgentTasksTable.ForeignKeys[1].RefTable = ProvisionedHostsTable
+	AnsiblesTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	BuildsTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	BuildsTable.ForeignKeys[1].RefTable = CompetitionsTable
 	BuildsTable.ForeignKeys[2].RefTable = BuildCommitsTable
@@ -1465,6 +1509,7 @@ func init() {
 	ProvisioningStepsTable.ForeignKeys[6].RefTable = FileDeletesTable
 	ProvisioningStepsTable.ForeignKeys[7].RefTable = FileDownloadsTable
 	ProvisioningStepsTable.ForeignKeys[8].RefTable = FileExtractsTable
+	ProvisioningStepsTable.ForeignKeys[9].RefTable = AnsiblesTable
 	RepoCommitsTable.ForeignKeys[0].RefTable = RepositoriesTable
 	ScriptsTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	ServerTasksTable.ForeignKeys[0].RefTable = AuthUsersTable
@@ -1484,10 +1529,11 @@ func init() {
 	TeamsTable.ForeignKeys[0].RefTable = PlansTable
 	TeamsTable.ForeignKeys[1].RefTable = BuildsTable
 	TokensTable.ForeignKeys[0].RefTable = AuthUsersTable
-	UsersTable.ForeignKeys[0].RefTable = CommandsTable
-	UsersTable.ForeignKeys[1].RefTable = FindingsTable
-	UsersTable.ForeignKeys[2].RefTable = HostsTable
-	UsersTable.ForeignKeys[3].RefTable = ScriptsTable
+	UsersTable.ForeignKeys[0].RefTable = AnsiblesTable
+	UsersTable.ForeignKeys[1].RefTable = CommandsTable
+	UsersTable.ForeignKeys[2].RefTable = FindingsTable
+	UsersTable.ForeignKeys[3].RefTable = HostsTable
+	UsersTable.ForeignKeys[4].RefTable = ScriptsTable
 	AdhocPlanNextAdhocPlanTable.ForeignKeys[0].RefTable = AdhocPlansTable
 	AdhocPlanNextAdhocPlanTable.ForeignKeys[1].RefTable = AdhocPlansTable
 	CompetitionCompetitionToDNSTable.ForeignKeys[0].RefTable = CompetitionsTable

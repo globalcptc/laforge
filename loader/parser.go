@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gen0cide/laforge/ent"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/competition"
 	"github.com/gen0cide/laforge/ent/disk"
@@ -62,6 +63,7 @@ type DefinedConfigs struct {
 	DefinedFileDelete   []*ent.FileDelete            `hcl:"file_delete,block" json:"file_delete,omitempty"`
 	DefinedFileExtract  []*ent.FileExtract           `hcl:"file_extract,block" json:"file_extract,omitempty"`
 	DefinedIdentities   []*ent.Identity              `hcl:"identity,block" json:"identities,omitempty"`
+	DefinedAnsible      []*ent.Ansible               `hcl:"ansible,block" json:"ansible,omitempty"`
 	Competitions        map[string]*ent.Competition  `json:"-"`
 	Hosts               map[string]*ent.Host         `json:"-"`
 	Networks            map[string]*ent.Network      `json:"-"`
@@ -73,6 +75,7 @@ type DefinedConfigs struct {
 	FileDelete          map[string]*ent.FileDelete   `json:"-"`
 	FileExtract         map[string]*ent.FileExtract  `json:"-"`
 	Identities          map[string]*ent.Identity     `json:"-"`
+	Ansible             map[string]*ent.Ansible      `json:"-"`
 }
 
 // Loader defines the Laforge configuration loader object
@@ -254,6 +257,7 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 		FileDelete:   map[string]*ent.FileDelete{},
 		FileExtract:  map[string]*ent.FileExtract{},
 		Identities:   map[string]*ent.Identity{},
+		Ansible:      map[string]*ent.Ansible{},
 	}
 	for _, filename := range filenames {
 		element := l.ConfigMap[filename]
@@ -347,6 +351,16 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 				continue
 			}
 		}
+		for _, x := range element.DefinedAnsible {
+			dir := path.Dir(element.Filename)
+			absPath := path.Join(dir, x.Source)
+			x.AbsPath = absPath
+			_, found := combinedConfigs.Ansible[x.HclID]
+			if !found {
+				combinedConfigs.Ansible[x.HclID] = x
+				continue
+			}
+		}
 	}
 	return combinedConfigs, nil
 }
@@ -408,6 +422,10 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 		if err != nil {
 			return nil, err
 		}
+		returnedAnsible, err := createAnsible(ctx, client, log, loadedConfig.Ansible, cEnviroment.HclID)
+		if err != nil {
+			return nil, err
+		}
 		// returnedHostDependencies is empty if ran once but ok when ran multiple times
 		returnedHosts, returnedHostDependencies, err := createHosts(ctx, client, log, loadedConfig.Hosts, cEnviroment.HclID, environmentHosts)
 		if err != nil {
@@ -449,6 +467,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 					AddEnvironmentToHostDependency(returnedHostDependencies...).
 					AddEnvironmentToIncludedNetwork(returnedIncludedNetworks...).
 					AddEnvironmentToDNS(returnedDNS...).
+					AddEnvironmentToAnsible(returnedAnsible...).
 					Save(ctx)
 				if err != nil {
 					log.Log.Errorf("Failed to Create Environment %v. Err: %v", cEnviroment.HclID, err)
@@ -827,6 +846,62 @@ func createScripts(ctx context.Context, client *ent.Client, log *logging.Logger,
 		returnedScripts = append(returnedScripts, dbScript...)
 	}
 	return returnedScripts, returnedAllFindings, nil
+}
+
+func createAnsible(ctx context.Context, client *ent.Client, log *logging.Logger, configAnsible map[string]*ent.Ansible, envHclID string) ([]*ent.Ansible, error) {
+	bulk := []*ent.AnsibleCreate{}
+	returnedAnsible := []*ent.Ansible{}
+	for _, cAnsible := range configAnsible {
+		entAnsible, err := client.Ansible.
+			Query().
+			Where(
+				ansible.And(
+					ansible.HclIDEQ(cAnsible.HclID),
+					ansible.HasAnsibleFromEnvironmentWith(environment.HclIDEQ(envHclID)),
+				),
+			).
+			Only(ctx)
+		if err != nil {
+			if err == err.(*ent.NotFoundError) {
+				createdQuery := client.Ansible.Create().
+					SetName(cAnsible.Name).
+					SetHclID(cAnsible.HclID).
+					SetDescription(cAnsible.Description).
+					SetSource(cAnsible.Source).
+					SetPlaybookName(cAnsible.PlaybookName).
+					SetMethod(cAnsible.Method).
+					SetInventory(cAnsible.Inventory).
+					SetTags(cAnsible.Tags).
+					SetAbsPath(cAnsible.AbsPath)
+				bulk = append(bulk, createdQuery)
+				continue
+			}
+		}
+		entAnsible, err = entAnsible.Update().
+			SetName(cAnsible.Name).
+			SetHclID(cAnsible.HclID).
+			SetDescription(cAnsible.Description).
+			SetSource(cAnsible.Source).
+			SetPlaybookName(cAnsible.PlaybookName).
+			SetMethod(cAnsible.Method).
+			SetInventory(cAnsible.Inventory).
+			SetTags(cAnsible.Tags).
+			SetAbsPath(cAnsible.AbsPath).
+			Save(ctx)
+		if err != nil {
+			log.Log.Errorf("Failed to Update Ansible %v. Err: %v", cAnsible.HclID, err)
+			return nil, err
+		}
+	}
+	if len(bulk) > 0 {
+		dbAnsible, err := client.Ansible.CreateBulk(bulk...).Save(ctx)
+		if err != nil {
+			log.Log.Errorf("Failed to create bulk Ansible. Err: %v", err)
+			return nil, err
+		}
+		returnedAnsible = append(returnedAnsible, dbAnsible...)
+	}
+	return returnedAnsible, nil
 }
 
 func createCommands(ctx context.Context, client *ent.Client, log *logging.Logger, configCommands map[string]*ent.Command, envHclID string) ([]*ent.Command, error) {

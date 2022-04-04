@@ -24,7 +24,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func DeleteBuild(client *ent.Client, rdb *redis.Client, logger *logging.Logger, currentUser *ent.AuthUser, serverTask *ent.ServerTask, taskStatus *ent.Status, entBuild *ent.Build, spawnedDelete chan bool) (bool, error) {
+func DeleteBuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, currentUser *ent.AuthUser, serverTask *ent.ServerTask, taskStatus *ent.Status, entBuild *ent.Build, spawnedDelete chan bool) (bool, error) {
 	deleteContext := context.Background()
 	defer deleteContext.Done()
 
@@ -134,7 +134,7 @@ func DeleteBuild(client *ent.Client, rdb *redis.Client, logger *logging.Logger, 
 		return false, err
 	}
 
-	genericBuilder, err := builder.BuilderFromEnvironment(environment, logger)
+	genericBuilder, err := builder.BuilderFromEnvironment(laforgeConfig.Builders, environment, logger)
 	if err != nil {
 		logger.Log.Errorf("error generating builder: %v", err)
 		taskStatus, serverTask, err = utils.FailServerTask(deleteContext, client, rdb, taskStatus, serverTask)

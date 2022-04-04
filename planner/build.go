@@ -3,7 +3,6 @@ package planner
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -22,7 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.AuthUser, serverTask *ent.ServerTask, taskStatus *ent.Status, entBuild *ent.Build) error {
+func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, currentUser *ent.AuthUser, serverTask *ent.ServerTask, taskStatus *ent.Status, entBuild *ent.Build) error {
 	logger.Log.Debug("BUILDER | START BUILD")
 	ctx := context.Background()
 	defer ctx.Done()
@@ -159,7 +158,7 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 		return err
 	}
 
-	genericBuilder, err := builder.BuilderFromEnvironment(environment, logger)
+	genericBuilder, err := builder.BuilderFromEnvironment(laforgeConfig.Builders, environment, logger)
 	if err != nil {
 		logger.Log.Errorf("error generating builder: %v", err)
 		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
@@ -185,7 +184,7 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 
 	for _, entPlan := range rootPlans {
 		wg.Add(1)
-		go buildRoutine(client, logger, &genericBuilder, ctx, entPlan, &wg)
+		go buildRoutine(client, laforgeConfig, logger, &genericBuilder, ctx, entPlan, &wg)
 	}
 
 	wg.Wait()
@@ -206,7 +205,7 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 	return nil
 }
 
-func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entPlan *ent.Plan, wg *sync.WaitGroup) {
+func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entPlan *ent.Plan, wg *sync.WaitGroup) {
 	logger.Log.WithFields(logrus.Fields{
 		"plan": entPlan.ID,
 	}).Debugf("BUILDER | BUILD ROUTINE START")
@@ -376,7 +375,7 @@ func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.B
 			rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
 			planErr = fmt.Errorf("parent node for Provisioning Step has failed")
 		} else {
-			planErr = execStep(client, logger, ctx, entProvisioningStep)
+			planErr = execStep(client, laforgeConfig, logger, ctx, entProvisioningStep)
 		}
 	case plan.TypeStartTeam:
 		entTeam, err := entPlan.QueryPlanToTeam().Only(ctx)
@@ -436,7 +435,7 @@ func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.B
 	nextPlans, err := entPlan.QueryNextPlan().All(ctx)
 	for _, nextPlan := range nextPlans {
 		wg.Add(1)
-		go buildRoutine(client, logger, builder, ctx, nextPlan, wg)
+		go buildRoutine(client, laforgeConfig, logger, builder, ctx, nextPlan, wg)
 	}
 
 }
@@ -798,7 +797,7 @@ func checkHostStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 	return nil
 }
 
-func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, entStep *ent.ProvisioningStep) error {
+func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, ctx context.Context, entStep *ent.ProvisioningStep) error {
 	stepStatus, err := entStep.QueryProvisioningStepToStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
@@ -810,11 +809,6 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 		return err
 	}
 	rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
-	downloadURL, ok := os.LookupEnv("API_DOWNLOAD_URL")
-
-	if !ok {
-		downloadURL = "http://localhost:8080/api/download/"
-	}
 
 	entProvisionedHost, err := entStep.QueryProvisioningStepToProvisionedHost().Only(ctx)
 	if err != nil {
@@ -850,7 +844,7 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 		}
 		_, err = client.AgentTask.Create().
 			SetCommand(agenttask.CommandDOWNLOAD).
-			SetArgs(entScript.Source + "💔" + downloadURL + entGinMiddleware.URLID).
+			SetArgs(entScript.Source + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID).
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
 			SetAgentTaskToProvisionedHost(entProvisionedHost).
@@ -960,7 +954,7 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 		} else {
 			_, err = client.AgentTask.Create().
 				SetCommand(agenttask.CommandDOWNLOAD).
-				SetArgs(entFileDownload.Destination + "💔" + downloadURL + entGinMiddleware.URLID).
+				SetArgs(entFileDownload.Destination + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
 				SetAgentTaskToProvisionedHost(entProvisionedHost).
@@ -991,6 +985,77 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 		}
 	case provisioningstep.TypeDNSRecord:
 		break
+	case provisioningstep.TypeAnsible:
+		entAnsible, err := entStep.QueryProvisioningStepToAnsible().Only(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed querying Ansible for Provioning Step: %v", err)
+			return err
+		}
+		entGinMiddleware, err := entStep.QueryProvisioningStepToGinFileMiddleware().Only(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed querying Gin File Middleware for Script: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandDOWNLOAD).
+			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandEXTRACT).
+			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + "/tmp").
+			SetNumber(taskCount + 1).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandANSIBLE).
+			SetArgs("/tmp/" + entAnsible.Name + "/" + entAnsible.PlaybookName + "💔" + string(entAnsible.Method) + "💔" + entAnsible.Inventory).
+			SetNumber(taskCount + 2).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Execute: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandDELETE).
+			SetArgs("/tmp/" + entAnsible.Name).
+			SetNumber(taskCount + 3).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandDELETE).
+			SetArgs("/tmp/" + entAnsible.Name + ".zip").
+			SetNumber(taskCount + 4).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
+			return err
+		}
 	default:
 		break
 	}

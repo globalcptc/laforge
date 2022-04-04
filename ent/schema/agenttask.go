@@ -30,6 +30,7 @@ func (AgentTask) Fields() []ent.Field {
 			"VALIDATE",
 			"CHANGEPERMS",
 			"APPENDFILE",
+			"ANSIBLE",
 		),
 		field.String("args"),
 		field.Int("number"),
