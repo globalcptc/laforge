@@ -45,6 +45,12 @@ func (pnu *ProvisionedNetworkUpdate) SetCidr(s string) *ProvisionedNetworkUpdate
 	return pnu
 }
 
+// SetVars sets the "vars" field.
+func (pnu *ProvisionedNetworkUpdate) SetVars(m map[string]string) *ProvisionedNetworkUpdate {
+	pnu.mutation.SetVars(m)
+	return pnu
+}
+
 // SetProvisionedNetworkToStatusID sets the "ProvisionedNetworkToStatus" edge to the Status entity by ID.
 func (pnu *ProvisionedNetworkUpdate) SetProvisionedNetworkToStatusID(id uuid.UUID) *ProvisionedNetworkUpdate {
 	pnu.mutation.SetProvisionedNetworkToStatusID(id)
@@ -295,6 +301,13 @@ func (pnu *ProvisionedNetworkUpdate) sqlSave(ctx context.Context) (n int, err er
 			Type:   field.TypeString,
 			Value:  value,
 			Column: provisionednetwork.FieldCidr,
+		})
+	}
+	if value, ok := pnu.mutation.Vars(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: provisionednetwork.FieldVars,
 		})
 	}
 	if pnu.mutation.ProvisionedNetworkToStatusCleared() {
@@ -554,6 +567,12 @@ func (pnuo *ProvisionedNetworkUpdateOne) SetName(s string) *ProvisionedNetworkUp
 // SetCidr sets the "cidr" field.
 func (pnuo *ProvisionedNetworkUpdateOne) SetCidr(s string) *ProvisionedNetworkUpdateOne {
 	pnuo.mutation.SetCidr(s)
+	return pnuo
+}
+
+// SetVars sets the "vars" field.
+func (pnuo *ProvisionedNetworkUpdateOne) SetVars(m map[string]string) *ProvisionedNetworkUpdateOne {
+	pnuo.mutation.SetVars(m)
 	return pnuo
 }
 
@@ -831,6 +850,13 @@ func (pnuo *ProvisionedNetworkUpdateOne) sqlSave(ctx context.Context) (_node *Pr
 			Type:   field.TypeString,
 			Value:  value,
 			Column: provisionednetwork.FieldCidr,
+		})
+	}
+	if value, ok := pnuo.mutation.Vars(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: provisionednetwork.FieldVars,
 		})
 	}
 	if pnuo.mutation.ProvisionedNetworkToStatusCleared() {

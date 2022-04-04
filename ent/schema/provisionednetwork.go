@@ -20,6 +20,7 @@ func (ProvisionedNetwork) Fields() []ent.Field {
 			Default(uuid.New),
 		field.String("name"),
 		field.String("cidr"),
+		field.JSON("vars", map[string]string{}),
 	}
 }
 

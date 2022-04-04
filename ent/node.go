@@ -2531,7 +2531,7 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     ph.ID,
 		Type:   "ProvisionedHost",
-		Fields: make([]*Field, 2),
+		Fields: make([]*Field, 3),
 		Edges:  make([]*Edge, 10),
 	}
 	var buf []byte
@@ -2549,6 +2549,14 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	node.Fields[1] = &Field{
 		Type:  "provisionedhost.AddonType",
 		Name:  "addon_type",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(ph.Vars); err != nil {
+		return nil, err
+	}
+	node.Fields[2] = &Field{
+		Type:  "map[string]string",
+		Name:  "vars",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{
@@ -2658,7 +2666,7 @@ func (pn *ProvisionedNetwork) Node(ctx context.Context) (node *Node, err error) 
 	node = &Node{
 		ID:     pn.ID,
 		Type:   "ProvisionedNetwork",
-		Fields: make([]*Field, 2),
+		Fields: make([]*Field, 3),
 		Edges:  make([]*Edge, 6),
 	}
 	var buf []byte
@@ -2676,6 +2684,14 @@ func (pn *ProvisionedNetwork) Node(ctx context.Context) (node *Node, err error) 
 	node.Fields[1] = &Field{
 		Type:  "string",
 		Name:  "cidr",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(pn.Vars); err != nil {
+		return nil, err
+	}
+	node.Fields[2] = &Field{
+		Type:  "map[string]string",
+		Name:  "vars",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{

@@ -22348,6 +22348,7 @@ type ProvisionedHostMutation struct {
 	id                                          *uuid.UUID
 	subnet_ip                                   *string
 	addon_type                                  *provisionedhost.AddonType
+	vars                                        *map[string]string
 	clearedFields                               map[string]struct{}
 	_ProvisionedHostToStatus                    *uuid.UUID
 	cleared_ProvisionedHostToStatus             bool
@@ -22545,6 +22546,42 @@ func (m *ProvisionedHostMutation) AddonTypeCleared() bool {
 func (m *ProvisionedHostMutation) ResetAddonType() {
 	m.addon_type = nil
 	delete(m.clearedFields, provisionedhost.FieldAddonType)
+}
+
+// SetVars sets the "vars" field.
+func (m *ProvisionedHostMutation) SetVars(value map[string]string) {
+	m.vars = &value
+}
+
+// Vars returns the value of the "vars" field in the mutation.
+func (m *ProvisionedHostMutation) Vars() (r map[string]string, exists bool) {
+	v := m.vars
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVars returns the old "vars" field's value of the ProvisionedHost entity.
+// If the ProvisionedHost object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProvisionedHostMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldVars is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldVars requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVars: %w", err)
+	}
+	return oldValue.Vars, nil
+}
+
+// ResetVars resets all changes to the "vars" field.
+func (m *ProvisionedHostMutation) ResetVars() {
+	m.vars = nil
 }
 
 // SetProvisionedHostToStatusID sets the "ProvisionedHostToStatus" edge to the Status entity by id.
@@ -23001,12 +23038,15 @@ func (m *ProvisionedHostMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProvisionedHostMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 3)
 	if m.subnet_ip != nil {
 		fields = append(fields, provisionedhost.FieldSubnetIP)
 	}
 	if m.addon_type != nil {
 		fields = append(fields, provisionedhost.FieldAddonType)
+	}
+	if m.vars != nil {
+		fields = append(fields, provisionedhost.FieldVars)
 	}
 	return fields
 }
@@ -23020,6 +23060,8 @@ func (m *ProvisionedHostMutation) Field(name string) (ent.Value, bool) {
 		return m.SubnetIP()
 	case provisionedhost.FieldAddonType:
 		return m.AddonType()
+	case provisionedhost.FieldVars:
+		return m.Vars()
 	}
 	return nil, false
 }
@@ -23033,6 +23075,8 @@ func (m *ProvisionedHostMutation) OldField(ctx context.Context, name string) (en
 		return m.OldSubnetIP(ctx)
 	case provisionedhost.FieldAddonType:
 		return m.OldAddonType(ctx)
+	case provisionedhost.FieldVars:
+		return m.OldVars(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProvisionedHost field %s", name)
 }
@@ -23055,6 +23099,13 @@ func (m *ProvisionedHostMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAddonType(v)
+		return nil
+	case provisionedhost.FieldVars:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVars(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedHost field %s", name)
@@ -23119,6 +23170,9 @@ func (m *ProvisionedHostMutation) ResetField(name string) error {
 		return nil
 	case provisionedhost.FieldAddonType:
 		m.ResetAddonType()
+		return nil
+	case provisionedhost.FieldVars:
+		m.ResetVars()
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedHost field %s", name)
@@ -23394,6 +23448,7 @@ type ProvisionedNetworkMutation struct {
 	id                                          *uuid.UUID
 	name                                        *string
 	cidr                                        *string
+	vars                                        *map[string]string
 	clearedFields                               map[string]struct{}
 	_ProvisionedNetworkToStatus                 *uuid.UUID
 	cleared_ProvisionedNetworkToStatus          bool
@@ -23568,6 +23623,42 @@ func (m *ProvisionedNetworkMutation) OldCidr(ctx context.Context) (v string, err
 // ResetCidr resets all changes to the "cidr" field.
 func (m *ProvisionedNetworkMutation) ResetCidr() {
 	m.cidr = nil
+}
+
+// SetVars sets the "vars" field.
+func (m *ProvisionedNetworkMutation) SetVars(value map[string]string) {
+	m.vars = &value
+}
+
+// Vars returns the value of the "vars" field in the mutation.
+func (m *ProvisionedNetworkMutation) Vars() (r map[string]string, exists bool) {
+	v := m.vars
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVars returns the old "vars" field's value of the ProvisionedNetwork entity.
+// If the ProvisionedNetwork object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProvisionedNetworkMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldVars is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldVars requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVars: %w", err)
+	}
+	return oldValue.Vars, nil
+}
+
+// ResetVars resets all changes to the "vars" field.
+func (m *ProvisionedNetworkMutation) ResetVars() {
+	m.vars = nil
 }
 
 // SetProvisionedNetworkToStatusID sets the "ProvisionedNetworkToStatus" edge to the Status entity by id.
@@ -23838,12 +23929,15 @@ func (m *ProvisionedNetworkMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProvisionedNetworkMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 3)
 	if m.name != nil {
 		fields = append(fields, provisionednetwork.FieldName)
 	}
 	if m.cidr != nil {
 		fields = append(fields, provisionednetwork.FieldCidr)
+	}
+	if m.vars != nil {
+		fields = append(fields, provisionednetwork.FieldVars)
 	}
 	return fields
 }
@@ -23857,6 +23951,8 @@ func (m *ProvisionedNetworkMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case provisionednetwork.FieldCidr:
 		return m.Cidr()
+	case provisionednetwork.FieldVars:
+		return m.Vars()
 	}
 	return nil, false
 }
@@ -23870,6 +23966,8 @@ func (m *ProvisionedNetworkMutation) OldField(ctx context.Context, name string) 
 		return m.OldName(ctx)
 	case provisionednetwork.FieldCidr:
 		return m.OldCidr(ctx)
+	case provisionednetwork.FieldVars:
+		return m.OldVars(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProvisionedNetwork field %s", name)
 }
@@ -23892,6 +23990,13 @@ func (m *ProvisionedNetworkMutation) SetField(name string, value ent.Value) erro
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCidr(v)
+		return nil
+	case provisionednetwork.FieldVars:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVars(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedNetwork field %s", name)
@@ -23947,6 +24052,9 @@ func (m *ProvisionedNetworkMutation) ResetField(name string) error {
 		return nil
 	case provisionednetwork.FieldCidr:
 		m.ResetCidr()
+		return nil
+	case provisionednetwork.FieldVars:
+		m.ResetVars()
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedNetwork field %s", name)

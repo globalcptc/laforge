@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -26,6 +27,8 @@ type ProvisionedHost struct {
 	SubnetIP string `json:"subnet_ip,omitempty"`
 	// AddonType holds the value of the "addon_type" field.
 	AddonType *provisionedhost.AddonType `json:"addon_type,omitempty"`
+	// Vars holds the value of the "vars" field.
+	Vars map[string]string `json:"vars,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProvisionedHostQuery when eager-loading is set.
 	Edges ProvisionedHostEdges `json:"edges"`
@@ -217,6 +220,8 @@ func (*ProvisionedHost) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case provisionedhost.FieldVars:
+			values[i] = new([]byte)
 		case provisionedhost.FieldSubnetIP, provisionedhost.FieldAddonType:
 			values[i] = new(sql.NullString)
 		case provisionedhost.FieldID:
@@ -266,6 +271,14 @@ func (ph *ProvisionedHost) assignValues(columns []string, values []interface{}) 
 			} else if value.Valid {
 				ph.AddonType = new(provisionedhost.AddonType)
 				*ph.AddonType = provisionedhost.AddonType(value.String)
+			}
+		case provisionedhost.FieldVars:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field vars", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &ph.Vars); err != nil {
+					return fmt.Errorf("unmarshal field vars: %w", err)
+				}
 			}
 		case provisionedhost.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -393,6 +406,8 @@ func (ph *ProvisionedHost) String() string {
 		builder.WriteString(", addon_type=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
+	builder.WriteString(", vars=")
+	builder.WriteString(fmt.Sprintf("%v", ph.Vars))
 	builder.WriteByte(')')
 	return builder.String()
 }
