@@ -158,7 +158,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 		return err
 	}
 
-	genericBuilder, err := builder.BuilderFromEnvironment(environment, logger)
+	genericBuilder, err := builder.BuilderFromEnvironment(laforgeConfig.Builders, environment, logger)
 	if err != nil {
 		logger.Log.Errorf("error generating builder: %v", err)
 		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)

@@ -1,0 +1,22 @@
+{
+  "laforge_server_url": "http://localhost",
+  "max_build_workers": 8,
+  "max_teardown_workers": 16,
+  "vsphere": {
+    "username": "laforge",
+    "password": "laforge",
+    "base_url": "https://vsphere.example.com",
+    "datastore": "Example",
+    "resource_pool": "Example",
+    "folder": "Example",
+    "template_prefix": "Example-"
+  },
+  "nsxt": {
+    "cert_path": "./example.crt",
+    "ca_cert_path": "./ca-cert.pem",
+    "key_path": "./private-key",
+    "base_url": "https://nsxt.example.com",
+    "ip_pool_name": "LaForge IPs",
+    "edge_cluster_path": "/path/to/edge/cluster"
+  }
+}

@@ -118,7 +118,7 @@ func Rebuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerC
 	}
 	rdb.Publish(ctx, "updatedBuildCommit", entRebuildCommit.ID.String())
 
-	genericBuilder, err := builder.BuilderFromEnvironment(env, logger)
+	genericBuilder, err := builder.BuilderFromEnvironment(laforgeConfig.Builders, env, logger)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
 		if err != nil {
