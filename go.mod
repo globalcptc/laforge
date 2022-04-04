@@ -10,6 +10,7 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/UnnoTed/fileb0x v1.1.4 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/apenella/go-ansible v1.1.5
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
 	github.com/bradfitz/iter v0.0.0-20191230175014-e8f45d346db8
@@ -18,7 +19,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/frankban/quicktest v1.13.0 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/ghodss/yaml v1.0.0
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.7.1
 	github.com/go-git/go-git/v5 v5.4.2
@@ -26,7 +27,6 @@ require (
 	github.com/go-playground/validator/v10 v10.6.1 // indirect
 	github.com/go-redis/redis/v8 v8.11.0
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
-	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/gophercloud/gophercloud v0.24.0
@@ -52,7 +52,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.8
 	github.com/mattn/go-zglob v0.0.3
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/mholt/archiver/v3 v3.5.1 // indirect
+	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/nsf/termbox-go v1.1.1 // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
@@ -73,7 +73,7 @@ require (
 	golang.org/x/sys v0.0.0-20220330033206-e17cdc41300f // indirect
 	google.golang.org/genproto v0.0.0-20210510173355-fb37daa5cd7a // indirect
 	google.golang.org/grpc v1.37.1
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.28.0
 	gopkg.in/guregu/null.v4 v4.0.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
