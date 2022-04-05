@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -27,6 +28,25 @@ type AWSBuilder struct {
 	Region                string
 }
 
+type AWSBuilderConfig struct {
+	LaForgeServerUrl      string               `json:"laforge_server_url"`
+	MaxBuildWorkers       int                  `json:"max_build_workers"`
+	MaxTeardownWorkers    int                  `json:"max_teardown_workers"`
+	AWS_Access_Key_Id     string               `json:"aws_access_key_id"`
+	AWS_Secret_Access_Key string               `json:"aws_secret_access_key"`
+	AWS_Session_Token     string               `json:"aws_session_token"`
+	Region                string               `json:"region"`
+	ami_config            map[string]AMIConfig `json:"ami_configs"`
+}
+
+type AMIConfig struct {
+	Name               string `json:"name"`
+	RootDeviceType     string `json:"root_device_type"`
+	VirtualizationType string `json:"virtualization_type"`
+	Architecture       string `json:"architecture"`
+	Owner              string `json:"owner"`
+}
+
 // EC2CreateInstanceAPI defines the interface for the RunInstances function.
 type EC2CreateInstanceAPI interface {
 	RunInstances(ctx context.Context,
@@ -45,10 +65,40 @@ func (builder AWSBuilder) generateBuildID(build *ent.Build) string {
 func (builder AWSBuilder) generateVmName(competition *ent.Competition, team *ent.Team, host *ent.Host, build *ent.Build) string {
 	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + host.Hostname + "-" + builder.generateBuildID(build))
 }
-func (builder AWSBuilder) getAMI() string {
-	//TODO: quick search function that you'd be able to use to get that info, specifically ones that take the filters for name, virtualization-type, root-device-type,  architecture, and owner
-	var ami string = "test"
-	return ami
+func (builder AWSBuilder) getAMI(ctx context.Context, name, vt, rdt, arch, owner string) (string, error) {
+	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(builder.Region))
+	if err != nil {
+		return "", err
+	}
+
+	// Describe the host with info from above and get ready to deploy
+	client := ec2.NewFromConfig(cfg)
+	input := ec2.DescribeImagesInput{
+		DryRun:          aws.Bool(false),
+		ExecutableUsers: []string{"all"},
+		Filters: []types.Filter{
+			{Name: aws.String("name"), Values: []string{name}},
+			{Name: aws.String("root-device-type"), Values: []string{rdt}},
+			{Name: aws.String("virtualization-type"), Values: []string{vt}},
+			{Name: aws.String("architecture"), Values: []string{arch}},
+		},
+		ImageIds:          []string{},
+		IncludeDeprecated: aws.Bool(false),
+		Owners:            []string{owner},
+	}
+	output, err := client.DescribeImages(ctx, &input)
+	if err != nil {
+		return "", err
+	}
+	if len(output.Images) > 0 {
+		image := output.Images[0]
+		return *image.ImageId, nil
+	} else {
+		return "", fmt.Errorf("no images found")
+	}
+
 }
 
 func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
@@ -124,9 +174,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		return err
 	}
 	// Save the Security Group ID so we can deploy the host and tear it down later
-	sgID := SecGroupResults.GroupId
-	var secGroupID []string
-	secGroupID[0] = *SecGroupResults.GroupId
+	sgID := *SecGroupResults.GroupId
 
 	// describe the host to deploy
 	input := &ec2.RunInstancesInput{
@@ -134,7 +182,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		InstanceType:     instanceType,
 		MinCount:         &numInstances,
 		MaxCount:         &numInstances,
-		SecurityGroupIds: secGroupID,
+		SecurityGroupIds: []string{sgID},
 		ClientToken:      &vmName,
 		PrivateIpAddress: &provisionedHost.SubnetIP,
 		SubnetId:         &vpcID,
@@ -148,23 +196,41 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	id := *result.Instances[0].InstanceId
 
 	//Expose TCP ports both Egress and Ingress
-	for i := range host.ExposedTCPPorts {
-		port, ok := strconv.Atoi(host.ExposedTCPPorts[i])
-		if ok != nil {
-			return ok
+	//TODO Egress allow all, Ingress is to and from
+	for _, ports := range host.ExposedTCPPorts {
+		fromPort := 0
+		toPort := 0
+		portList := strings.Split(ports, "-")
+		if len(portList) == 2 {
+			fromPort, err = strconv.Atoi(portList[0])
+			if err != nil {
+				return err
+			}
+			toPort, err = strconv.Atoi(portList[1])
+			if err != nil {
+				return err
+			}
+		} else if len(portList) == 1 {
+			fromPort, err = strconv.Atoi(portList[0])
+			if err != nil {
+				return err
+			}
+			toPort = fromPort
+		} else {
+			return fmt.Errorf("ports not right")
 		}
 		egressinput := &ec2.AuthorizeSecurityGroupEgressInput{
-			GroupId: aws.String(*sgID),
+			GroupId: &sgID,
 			IpPermissions: []types.IpPermission{
 				{
-					FromPort:   aws.Int32(int32(port)),
+					FromPort:   fromPort,
 					IpProtocol: aws.String("tcp"),
 					IpRanges: []types.IpRange{
 						{
 							CidrIp: aws.String(provisionedHost.SubnetIP),
 						},
 					},
-					ToPort: aws.Int32(int32(port)),
+					ToPort: toPort,
 				},
 			},
 		}
@@ -172,29 +238,28 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 			GroupId: aws.String(*sgID),
 			IpPermissions: []types.IpPermission{
 				{
-					FromPort:   aws.Int32(int32(port)),
+					FromPort:   fromPort,
 					IpProtocol: aws.String("tcp"),
 					IpRanges: []types.IpRange{
 						{
 							CidrIp: aws.String(provisionedHost.SubnetIP),
 						},
 					},
-					ToPort: aws.Int32(int32(port)),
+					ToPort: toPort,
 				},
 			},
 		}
-		egressResult, err := client.AuthorizeSecurityGroupEgress(ctx, egressinput)
+		_, err = client.AuthorizeSecurityGroupEgress(ctx, egressinput)
 		if err != nil {
 			return err
 		}
-		_ = egressResult
-		ingressResult, err := client.AuthorizeSecurityGroupIngress(ctx, ingressinput)
+		_, err = client.AuthorizeSecurityGroupIngress(ctx, ingressinput)
 		if err != nil {
 			return err
 		}
-		_ = ingressResult
 	}
 	// Expose UDP Ports both egress and ingress
+	//TODO ALL ALLOW INGRESS keep Egress the same
 	for i := range host.ExposedUDPPorts {
 		port, ok := strconv.Atoi(host.ExposedUDPPorts[i])
 		if ok != nil {
@@ -234,19 +299,17 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		if err != nil {
 			return err
 		}
-		_ = egressResult
 		ingressResult, err := client.AuthorizeSecurityGroupIngress(ctx, ingressinput)
 		if err != nil {
 			return err
 		}
-		_ = ingressResult
 	}
 
 	// Get InstanceId and store it in ENT to access later
 	//TODO add a vars field to ProvisionedHost and update that instead of the vars field for the host object
 	newVars := provisionedHost.HCLProvisionedHostToHost.Vars
 	newVars["InstanceId"] = id
-	newVars["SecGroupId"] = secGroupID[0]
+	newVars["SecGroupId"] = sgID
 	err = host.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return err
@@ -264,10 +327,6 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	if err != nil {
 		return fmt.Errorf("couldn't query build from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
-	entNetworks, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().All(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
-	}
 
 	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
@@ -281,29 +340,25 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	if !ok {
 		return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entTeam.TeamNumber)
 	}
-	// There can be multiple subnets per team so loop through them all and creat them
-	for i := range entNetworks {
-		//Describe subnet to create
-		subnetInput := &ec2.CreateSubnetInput{
-			VpcId:     &vpcID,
-			CidrBlock: &entNetworks[i].Cidr,
-		}
-		result, err := client.CreateSubnet(ctx, subnetInput)
-		if err != nil {
-			return err
-		}
-		subnetID := *result.Subnet.SubnetId
-		if err != nil {
-			return err
-		}
-		// Store subnetID so that it can be used later and torn down
-		// TODO add a vars field to ProvisionedNetwork and use that to hold vars for networks indtead of the network object
-		newVars := entNetworks[i].Vars
-		newVars["SubnetID"] = subnetID
-		err = entNetworks[i].Update().SetVars(newVars).Exec(ctx)
-		if err != nil {
-			return err
-		}
+	//Describe subnet to create
+	subnetInput := &ec2.CreateSubnetInput{
+		VpcId:     &vpcID,
+		CidrBlock: &provisionedNetwork.Cidr,
+	}
+	result, err := client.CreateSubnet(ctx, subnetInput)
+	if err != nil {
+		return err
+	}
+	subnetID := *result.Subnet.SubnetId
+	if err != nil {
+		return err
+	}
+	// Store subnetID so that it can be used later and torn down
+	newVars := provisionedNetwork.Vars
+	newVars["SubnetID"] = subnetID
+	err = provisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return err
 	}
 	return
 }
@@ -386,30 +441,43 @@ func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwor
 // Deploys VPC, one per team
 func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 
+	entEnvironment, err := entTeam.QueryTeamToBuild().QueryBuildToEnvironment().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query enviroment from team \"%v\": %v", entTeam.TeamNumber, err)
+	}
+
+	vpcCidr, ok := entEnvironment.Config["vpc_cidr"]
+	if !ok {
+		return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entEnvironment.Name)
+	}
+
 	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion(builder.Region))
 	if err != nil {
 		return err
 	}
-	// Describe the network with info from above and get ready to deploy
+
+	// Describe the vpc with info from above and get ready to deploy
 	client := ec2.NewFromConfig(cfg)
 	input := &ec2.CreateVpcInput{
-		CidrBlock: &entTeam.Cidr, //TODO Add VPC Cidr to team object
+		CidrBlock: &vpcCidr,
 	}
 
-	// Deploy Network
+	// Deploy VPC
 	results, err := client.CreateVpc(ctx, input)
 	if err != nil {
 		return err
 	}
 	id := *results.Vpc.VpcId
-	//Store VPC ID so that it can be used and torn down later
+
 	newVars := entTeam.Vars
 	newVars["VpcId"] = id
 	err = entTeam.Update().SetVars(newVars).Exec(ctx)
-
-	return
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Terminates VPC

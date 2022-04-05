@@ -46,6 +46,13 @@ func BuilderFromEnvironment(buildersMap map[string]utils.BuilderConfig, environm
 			return
 		}
 		return
+	// case "aws":
+	// 	genericBuilder, err = New(builderConfig.ConfigFile, environment, logger)
+	// 	if err != nil {
+	// 		logrus.Errorf("Failed to make AWS builder. Err: %v", err)
+	// 		return
+	// 	}
+	// 	return
 	case "openstack":
 		genericBuilder, err = NewOpenstackBuilder(environment, logger)
 		if err != nil {
