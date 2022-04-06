@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -29,6 +30,7 @@ type AWSBuilder struct {
 }
 
 type AWSBuilderConfig struct {
+	ServerUrl     string                     `json:"server_url"`
 	AWSConfigFile string                     `json:"aws_config_file"`
 	Region        string                     `json:"region"`
 	AMIConfig     map[string]AMIConfigStruct `json:"ami_configs"`
@@ -60,6 +62,8 @@ func (builder AWSBuilder) generateBuildID(build *ent.Build) string {
 func (builder AWSBuilder) generateVmName(competition *ent.Competition, team *ent.Team, host *ent.Host, build *ent.Build) string {
 	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + host.Hostname + "-" + builder.generateBuildID(build))
 }
+
+//TODO Test
 func (builder AWSBuilder) getAMI(ctx context.Context, name, vt, rdt, arch, owner string) (string, error) {
 
 	// Describe the host with info from above and get ready to deploy
@@ -89,25 +93,30 @@ func (builder AWSBuilder) getAMI(ctx context.Context, name, vt, rdt, arch, owner
 
 }
 
+//TODO add userdata to host input to install agent
 func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
 
 	// Get information about host from ENT
 	entHost, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("Couldnt query host from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
 
 	entBuild, err := provisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
 	if err != nil {
-		return
+		return fmt.Errorf("couldn't query build from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
 	entCompetition, err := entBuild.QueryBuildToCompetition().Only(ctx)
 	if err != nil {
-		return
+		return fmt.Errorf("couldn't query competition from build \"%v\": %v", entBuild.ID, err)
 	}
 	entTeam, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
-		return
+		return fmt.Errorf("couldn't query team from provisioned host \"%v\": %v", entHost.Hostname, err)
+	}
+	agentFile, err := provisionedHost.QueryProvisionedHostToGinFileMiddleware().First(ctx)
+	if err != nil {
+		return fmt.Errorf("error while querying gin file middleware from provisioned host: %v", err)
 	}
 
 	entProNetwork, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
@@ -166,11 +175,40 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	// Deploy Security Group
 	SecGroupResults, err := builder.Client.CreateSecurityGroup(ctx, secGroupinput)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating : %v", err)
 	}
 	// Save the Security Group ID so we can deploy the host and tear it down later
 	sgID := *SecGroupResults.GroupId
-
+	agentUrl := fmt.Sprintf("%s/api/download/%s", builder.Config.ServerUrl, agentFile.URLID)
+	var code string
+	if strings.HasPrefix(entHost.OS, "win") {
+		code = fmt.Sprintf(`powershell -Command mkdir $env:PROGRAMDATA\\Laforge -Force
+		powershell -Command Invoke-WebRequest %s -OutFile \"$env:PROGRAMDATA\\Laforge\\laforge.exe\
+		powershell -Command %%PROGRAMDATA%%\\Laforge\\laforge.exe -service install
+		powershell -Command %%PROGRAMDATA%%\\Laforge\\laforge.exe -service start
+		powershell -Command logoff`, agentUrl)
+	} else {
+		var linuxPassword string
+		if len(entHost.OverridePassword) > 0 {
+			linuxPassword = entHost.OverridePassword
+		} else {
+			linuxPassword = entCompetition.RootPassword
+		}
+		code = fmt.Sprintf(`#!/bin/bash
+		if [ x$1 == x"postcustomization" ]; then
+		while [ ! -f "/laforge.bin" ]
+		do
+		curl -sL -o /laforge.bin %s
+		sleep 10
+		done
+		chmod +x /laforge.bin
+		cd /
+		./laforge.bin -service install
+		./laforge.bin -service start
+		usermod --password $(echo %s | openssl passwd -1 -stdin) laforge
+		fi`, agentUrl, linuxPassword)
+	}
+	userdata := base64.StdEncoding.EncodeToString([]byte(code))
 	// describe the host to deploy
 	input := &ec2.RunInstancesInput{
 		ImageId:          &ami,
@@ -181,17 +219,17 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		ClientToken:      &vmName,
 		PrivateIpAddress: &provisionedHost.SubnetIP,
 		SubnetId:         &subnetID,
+		UserData:         &userdata,
 	}
 
 	// Deploy Host
 	result, err := builder.Client.RunInstances(ctx, input)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating instance %v : %v", entHost.ID, err)
 	}
 	id := *result.Instances[0].InstanceId
 
 	//Expose TCP ports both Egress and Ingress
-	//TODO Egress allow all, Ingress is to and from
 	for _, ports := range entHost.ExposedTCPPorts {
 		fromPort := 0
 		toPort := 0
@@ -199,16 +237,16 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		if len(portList) == 2 {
 			fromPort, err = strconv.Atoi(portList[0])
 			if err != nil {
-				return err
+				return fmt.Errorf("error converting Fromport %v from string to int : %v", portList[0], err)
 			}
 			toPort, err = strconv.Atoi(portList[1])
 			if err != nil {
-				return err
+				return fmt.Errorf("error converting Tooport %v from string to int : %v", portList[1], err)
 			}
 		} else if len(portList) == 1 {
 			fromPort, err = strconv.Atoi(portList[0])
 			if err != nil {
-				return err
+				return fmt.Errorf("error converting Fromport %v from string to int : %v", portList[0], err)
 			}
 			toPort = fromPort
 		} else {
@@ -233,8 +271,55 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 			GroupId: aws.String(sgID),
 			IpPermissions: []types.IpPermission{
 				{
-					FromPort:   aws.Int32(int32(fromPort)),
+					FromPort:   aws.Int32(int32(1)),
 					IpProtocol: aws.String("tcp"),
+					IpRanges: []types.IpRange{
+						{
+							CidrIp: aws.String(provisionedHost.SubnetIP),
+						},
+					},
+					ToPort: aws.Int32(int32(65535)),
+				},
+			},
+		}
+		_, err = builder.Client.AuthorizeSecurityGroupEgress(ctx, egressinput)
+		if err != nil {
+			return fmt.Errorf("error creating egress rule %v", err)
+		}
+		_, err = builder.Client.AuthorizeSecurityGroupIngress(ctx, ingressinput)
+		if err != nil {
+			return fmt.Errorf("error creating ingress rule %v", err)
+		}
+	}
+	// Expose UDP Ports both egress and ingress
+	for _, ports := range entHost.ExposedUDPPorts {
+		fromPort := 0
+		toPort := 0
+		portList := strings.Split(ports, "-")
+		if len(portList) == 2 {
+			fromPort, err = strconv.Atoi(portList[0])
+			if err != nil {
+				return fmt.Errorf("error converting Fromport %v from string to int : %v", portList[0], err)
+			}
+			toPort, err = strconv.Atoi(portList[1])
+			if err != nil {
+				return fmt.Errorf("error converting Tooport %v from string to int : %v", portList[1], err)
+			}
+		} else if len(portList) == 1 {
+			fromPort, err = strconv.Atoi(portList[0])
+			if err != nil {
+				return fmt.Errorf("error converting Fromport %v from string to int : %v", portList[0], err)
+			}
+			toPort = fromPort
+		} else {
+			return fmt.Errorf("ports not right")
+		}
+		egressinput := &ec2.AuthorizeSecurityGroupEgressInput{
+			GroupId: aws.String(sgID),
+			IpPermissions: []types.IpPermission{
+				{
+					FromPort:   aws.Int32(int32(fromPort)),
+					IpProtocol: aws.String("udp"),
 					IpRanges: []types.IpRange{
 						{
 							CidrIp: aws.String(provisionedHost.SubnetIP),
@@ -244,70 +329,38 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 				},
 			},
 		}
-		_, err = builder.Client.AuthorizeSecurityGroupEgress(ctx, egressinput)
-		if err != nil {
-			return err
-		}
-		_, err = builder.Client.AuthorizeSecurityGroupIngress(ctx, ingressinput)
-		if err != nil {
-			return err
-		}
-	}
-	// Expose UDP Ports both egress and ingress
-	//TODO ALL ALLOW INGRESS keep Egress the same
-	for i := range entHost.ExposedUDPPorts {
-		port, ok := strconv.Atoi(entHost.ExposedUDPPorts[i])
-		if ok != nil {
-			return ok
-		}
-		egressinput := &ec2.AuthorizeSecurityGroupEgressInput{
-			GroupId: aws.String(sgID),
-			IpPermissions: []types.IpPermission{
-				{
-					FromPort:   aws.Int32(int32(port)),
-					IpProtocol: aws.String("udp"),
-					IpRanges: []types.IpRange{
-						{
-							CidrIp: aws.String(provisionedHost.SubnetIP),
-						},
-					},
-					ToPort: aws.Int32(int32(port)),
-				},
-			},
-		}
 		ingressinput := &ec2.AuthorizeSecurityGroupIngressInput{
 			GroupId: aws.String(sgID),
 			IpPermissions: []types.IpPermission{
 				{
-					FromPort:   aws.Int32(int32(port)),
+					FromPort:   aws.Int32(int32(1)),
 					IpProtocol: aws.String("udp"),
 					IpRanges: []types.IpRange{
 						{
 							CidrIp: aws.String(provisionedHost.SubnetIP),
 						},
 					},
-					ToPort: aws.Int32(int32(port)),
+					ToPort: aws.Int32(int32(65535)),
 				},
 			},
 		}
 		_, err = builder.Client.AuthorizeSecurityGroupEgress(ctx, egressinput)
 		if err != nil {
-			return err
+			return fmt.Errorf("error creating egress rule %v", err)
 		}
 		_, err = builder.Client.AuthorizeSecurityGroupIngress(ctx, ingressinput)
 		if err != nil {
-			return err
+			return fmt.Errorf("error creating ingress rule %v", err)
 		}
 	}
 
 	// Get InstanceId and store it in ENT to access later
-	//TODO add a vars field to ProvisionedHost and update that instead of the vars field for the host object
 	newVars := provisionedHost.Vars
 	newVars["InstanceId"] = id
 	newVars["SecGroupId"] = sgID
 	err = provisionedHost.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("error updating host vars with Instance and SecGroup IDs %v", err)
 	}
 
 	return
@@ -334,18 +387,18 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	}
 	result, err := builder.Client.CreateSubnet(ctx, subnetInput)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating subnet %v", err)
 	}
 	subnetID := *result.Subnet.SubnetId
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting subnetID from subnet result : %v", err)
 	}
 	// Store subnetID so that it can be used later and torn down
 	newVars := provisionedNetwork.Vars
 	newVars["SubnetID"] = subnetID
 	err = provisionedNetwork.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("error updating network vars with subnetID %v", err)
 	}
 	return
 }
@@ -366,7 +419,7 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 	}
 	_, err = builder.Client.TerminateInstances(ctx, input)
 	if err != nil {
-		return err
+		return fmt.Errorf("error terminating instance %v", err)
 	}
 	//Get security group ID to terminate
 	secGroupID, ok := provisionedHost.Vars["SecGroupId"]
@@ -378,7 +431,7 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 	}
 	_, err = builder.Client.DeleteSecurityGroup(ctx, secGroupInput)
 	if err != nil {
-		return err
+		return fmt.Errorf("error deleting security group %v", err)
 	}
 	return nil
 }
@@ -395,7 +448,7 @@ func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwor
 	}
 	_, err = builder.Client.DeleteSubnet(ctx, subnetInput)
 	if err != nil {
-		return err
+		return fmt.Errorf("error deleting subnet %v", err)
 	}
 	return nil
 }
@@ -421,7 +474,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	// Deploy VPC
 	results, err := builder.Client.CreateVpc(ctx, input)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating vpc %v", err)
 	}
 	id := *results.Vpc.VpcId
 
@@ -429,7 +482,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	newVars["VpcId"] = id
 	err = entTeam.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("error updating team vars with VpcID %v", err)
 	}
 	return nil
 }
@@ -448,7 +501,7 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 	}
 	_, err = builder.Client.DeleteVpc(ctx, input)
 	if err != nil {
-		return err
+		return fmt.Errorf("error deleting vpc %v", err)
 	}
 	return
 }
