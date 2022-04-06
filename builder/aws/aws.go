@@ -93,7 +93,6 @@ func (builder AWSBuilder) getAMI(ctx context.Context, name, vt, rdt, arch, owner
 
 }
 
-//TODO add userdata to host input to install agent
 func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
 
 	// Get information about host from ENT
