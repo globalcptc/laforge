@@ -1,19 +1,17 @@
 package laforge
 
-const (
+var (
 	// Version defines the version of Laforge
-	Version = `0.4.3`
+	Version = `0.9.0`
 
 	// AuthorHandle references my handle
-	AuthorHandle = `gen0cide`
+	AuthorHandles = []string{"gen0cide", "emperorcow", "frybin", "BradHacker"}
 
 	// AuthorName is the author's name
-	AuthorName = `Alex Levinson`
-	AuthorName2 = `Lucas Morris`
+	Authors = []string{"Alex Levinson", "Lucas Morris", "Fred Rybin", "Bradley Harker"}
 
 	// AuthorEmail is the author's email
-	AuthorEmail = `gen0cide.threats@gmail.com`
-	AuthorEmail2 = `emperorcow@gmail.com`
+	AuthorEmails = []string{"gen0cide.threats@gmail.com", "emperorcow@gmail.com", "red@redrybin.me", "harkerbd@gmail.com"}
 
 	// RepoURL is the repository for this code
 	RepoURL = `github.com/gen0cide/laforge`

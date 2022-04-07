@@ -1,7 +1,6 @@
 version: "3.4"
 
 services:
-
   ui:
     build:
       context: ./ui/ng-ui
@@ -26,8 +25,6 @@ services:
       - 50051:50051
     networks:
       - laforge-backend-tier
-    env_file:
-      - .env
     depends_on:
       - redis
       - db

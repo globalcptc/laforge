@@ -1,8 +1,8 @@
 package utils
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -115,15 +115,13 @@ func PullGit(repoPath, privateKey, branchName string) (*object.Commit, error) {
 	return commit, err
 }
 
-// MakeSSHKeyPair make a pair of public and private keys for SSH access.
-// Public key is encoded in the format for inclusion in an OpenSSH authorized_keys file.
-// Private Key generated is PEM encoded
-func MakeSSHKeyPair(privateKeyPath string) error {
+// MakeED25519KeyPair make a pair of public and private keys for SSH access.
+func MakeED25519KeyPair(privateKeyPath string) error {
 	_, fileCheck := os.Stat(privateKeyPath)
 	if fileCheck == nil {
 		return nil
 	}
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		return err
 	}
@@ -134,14 +132,18 @@ func MakeSSHKeyPair(privateKeyPath string) error {
 		return err
 	}
 	defer privateKeyFile.Close()
+	privateKeyBytes, err := x509.MarshalPKCS8PrivateKey(privateKey) // Convert a generated ed25519 key into a PEM block so that the ssh library can ingest it, bit round about tbh
+	if err != nil {
+		return err
+	}
 
-	privateKeyPEM := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
+	privateKeyPEM := &pem.Block{Type: "PRIVATE KEY", Bytes: privateKeyBytes}
 	if err := pem.Encode(privateKeyFile, privateKeyPEM); err != nil {
 		return err
 	}
 
 	// generate and write public key
-	pub, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	pub, err := ssh.NewPublicKey(publicKey)
 	if err != nil {
 		return err
 	}

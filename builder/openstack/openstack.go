@@ -2,13 +2,10 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
 
-	"github.com/x/sync/semaphore"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/network"
@@ -16,30 +13,28 @@ import (
 	"github.com/gen0cide/laforge/logging"
 
 	"github.com/gophercloud/gophercloud/openstack"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	"github.com/gophercloud/gophercloud/pagination"
 )
 
 const (
-	ID			= "openstack"
-	Name		= "Openstack"
-	Description	= "Builder that interfaces with Openstack"
-	Author		= "Tenchi Mata <github.com/0xk7>"
-	Version		= "0.1"
+	ID          = "openstack"
+	Name        = "Openstack"
+	Description = "Builder that interfaces with Openstack"
+	Author      = "Tenchi Mata <github.com/0xk7>"
+	Version     = "0.1"
 )
 
 type openstackBuilder struct {
-	HttpClient			http.Client
-	IdentityEndpoint 	http.Client
-	Username 			string
-	Password 			string
-	TenantID 			string
-	Logger				*logging.Logger
-	MaxWorkers			int
-	DeployWorkerPool	*semaphore.Weighted
-	TeardownWorkerPool	*semaphore.Weighted
+	HttpClient         http.Client
+	IdentityEndpoint   http.Client
+	Username           string
+	Password           string
+	TenantID           string
+	Logger             *logging.Logger
+	MaxWorkers         int
+	DeployWorkerPool   *semaphore.Weighted
+	TeardownWorkerPool *semaphore.Weighted
 }
 
 func (builder openstackBuilder) generateBuildID(build *ent.Build) string {
@@ -67,7 +62,6 @@ func (builder openstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 	if err != nil {
 		return err
 	}
-
 
 	//add configuration here
 	authOpts, err := openstack.AuthOptionsFromEnv()
@@ -108,7 +102,7 @@ func (builder openstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 	// generate vm name from ent
 	vmName := builder.generateVmName(competition, team, host, build)
 	networkName := builder.generateNetworkName(competition, team, network, build)
-	
+
 	err = builder.DeployWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
 		return
@@ -117,10 +111,10 @@ func (builder openstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 
 	//build server
 	server, err := servers.Create(client, servers.CreateOpts{
-		Name: vmName,
+		Name:       vmName,
 		FlavorName: "flavor_name",
-		ImageName: "image_name",
-		Networks: networkName,
+		ImageName:  "image_name",
+		Networks:   networkName,
 	}).Extract()
 	if err != nil {
 		fmt.Println("Unable to create server: %s", err)
@@ -198,9 +192,9 @@ func (builder openstackBuilder) DeployNetwork(ctx context.Context, provisionedNe
 
 func (builder openstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	entProNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(
-			provisionednetwork.HasProvisionedNetworkToNetworkWith(
-				network.NameEQ("vdi"),
-			),
+		provisionednetwork.HasProvisionedNetworkToNetworkWith(
+			network.NameEQ("vdi"),
+		),
 	).First(ctx)
 
 	if err != nil {
@@ -257,7 +251,7 @@ func (builder openstackBuilder) TeardownHost(ctx context.Context, provisionedHos
 	instances[0] = host.InstanceId
 	result, err := servers.Delete(client, instances[0])
 	if err != nil {
-		return err    
+		return err
 	}
 	fmt.Println(result)
 

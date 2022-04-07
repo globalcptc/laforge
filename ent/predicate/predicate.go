@@ -15,6 +15,9 @@ type AgentStatus func(*sql.Selector)
 // AgentTask is the predicate function for agenttask builders.
 type AgentTask func(*sql.Selector)
 
+// Ansible is the predicate function for ansible builders.
+type Ansible func(*sql.Selector)
+
 // AuthUser is the predicate function for authuser builders.
 type AuthUser func(*sql.Selector)
 

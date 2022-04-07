@@ -11,6 +11,7 @@ import (
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -67,6 +68,7 @@ func columnChecker(table string) func(string) error {
 		adhocplan.Table:          adhocplan.ValidColumn,
 		agentstatus.Table:        agentstatus.ValidColumn,
 		agenttask.Table:          agenttask.ValidColumn,
+		ansible.Table:            ansible.ValidColumn,
 		authuser.Table:           authuser.ValidColumn,
 		build.Table:              build.ValidColumn,
 		buildcommit.Table:        buildcommit.ValidColumn,

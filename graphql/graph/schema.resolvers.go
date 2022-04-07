@@ -358,7 +358,7 @@ func (r *mutationResolver) LoadEnvironment(ctx context.Context, envFilePath stri
 	if err != nil {
 		return nil, fmt.Errorf("error creating server task: %v", err)
 	}
-	log, err := logging.CreateLoggerForServerTask(serverTask)
+	log, err := logging.CreateLoggerForServerTask(r.laforgeConfig, serverTask)
 	if err != nil {
 		return nil, err
 	}
@@ -407,7 +407,7 @@ func (r *mutationResolver) CreateBuild(ctx context.Context, envUUID string, rend
 		planner.RenderFilesTaskStatus = nil
 	}
 
-	return planner.CreateBuild(ctx, r.client, r.rdb, currentUser, entEnvironment)
+	return planner.CreateBuild(ctx, r.client, r.rdb, r.laforgeConfig, currentUser, entEnvironment)
 }
 
 func (r *mutationResolver) DeleteUser(ctx context.Context, userUUID string) (bool, error) {
@@ -462,12 +462,12 @@ func (r *mutationResolver) ExecutePlan(ctx context.Context, buildUUID string) (*
 	}
 	r.rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 
-	logger, err := logging.CreateLoggerForServerTask(serverTask)
+	logger, err := logging.CreateLoggerForServerTask(r.laforgeConfig, serverTask)
 	if err != nil {
 		return nil, err
 	}
 
-	go planner.StartBuild(r.client, logger, currentUser, serverTask, taskStatus, b)
+	go planner.StartBuild(r.client, r.laforgeConfig, logger, currentUser, serverTask, taskStatus, b)
 
 	return b, nil
 }
@@ -509,13 +509,13 @@ func (r *mutationResolver) DeleteBuild(ctx context.Context, buildUUID string) (s
 		return "", fmt.Errorf("error assigning environment and build to execute build server task: %v", err)
 	}
 	r.rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
-	log, err := logging.CreateLoggerForServerTask(serverTask)
+	log, err := logging.CreateLoggerForServerTask(r.laforgeConfig, serverTask)
 	if err != nil {
 		return "", fmt.Errorf("error creating logger for build delete: %v", err)
 	}
 
 	spawnedDelete := make(chan bool, 1)
-	go planner.DeleteBuild(r.client, r.rdb, log, currentUser, serverTask, taskStatus, b, spawnedDelete)
+	go planner.DeleteBuild(r.client, r.rdb, r.laforgeConfig, log, currentUser, serverTask, taskStatus, b, spawnedDelete)
 
 	deleteIsSuccess := <-spawnedDelete
 	if deleteIsSuccess {
@@ -618,13 +618,13 @@ func (r *mutationResolver) Rebuild(ctx context.Context, rootPlans []*string) (bo
 	}
 	r.rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 
-	logger, err := logging.CreateLoggerForServerTask(serverTask)
+	logger, err := logging.CreateLoggerForServerTask(r.laforgeConfig, serverTask)
 	if err != nil {
 		return false, err
 	}
 
 	spawnedRebuild := make(chan bool, 1)
-	go planner.Rebuild(r.client, r.rdb, logger, currentUser, serverTask, taskStatus, entPlans, spawnedRebuild)
+	go planner.Rebuild(r.client, r.rdb, r.laforgeConfig, logger, currentUser, serverTask, taskStatus, entPlans, spawnedRebuild)
 
 	rebuildStartedSuccess := <-spawnedRebuild
 	if rebuildStartedSuccess {
@@ -817,11 +817,14 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 		Save(ctx)
 
 	if err != nil {
+		r.client.Repository.DeleteOne(entRepo).Exec(ctx)
 		return nil, fmt.Errorf("couldn't create entRepoCommit: %v", err)
 	}
 
 	err = entRepo.Update().AddRepositoryToRepoCommit(entRepoCommit).Exec(ctx)
 	if err != nil {
+		r.client.Repository.DeleteOne(entRepo).Exec(ctx)
+		r.client.RepoCommit.DeleteOne(entRepoCommit).Exec(ctx)
 		return nil, fmt.Errorf("couldn't add RepoCommit to Repository: %v", err)
 	}
 
@@ -829,6 +832,8 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 
 	loadedEnviroments, err := r.LoadEnvironment(ctx, envPath)
 	if err != nil {
+		r.client.Repository.DeleteOne(entRepo).Exec(ctx)
+		r.client.RepoCommit.DeleteOne(entRepoCommit).Exec(ctx)
 		return nil, err
 	}
 
@@ -983,8 +988,8 @@ func (r *mutationResolver) CreateUser(ctx context.Context, username string, pass
 	if err != nil {
 		return nil, err
 	}
-	sshPrivateFile := fmt.Sprintf("%s/id_rsa", sshFolderPath)
-	err = utils.MakeSSHKeyPair(sshPrivateFile)
+	sshPrivateFile := fmt.Sprintf("%s/id_ed25519", sshFolderPath)
+	err = utils.MakeED25519KeyPair(sshPrivateFile)
 	if err != nil {
 		return nil, err
 	}

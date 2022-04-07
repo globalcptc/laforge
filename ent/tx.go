@@ -18,6 +18,8 @@ type Tx struct {
 	AgentStatus *AgentStatusClient
 	// AgentTask is the client for interacting with the AgentTask builders.
 	AgentTask *AgentTaskClient
+	// Ansible is the client for interacting with the Ansible builders.
+	Ansible *AnsibleClient
 	// AuthUser is the client for interacting with the AuthUser builders.
 	AuthUser *AuthUserClient
 	// Build is the client for interacting with the Build builders.
@@ -222,6 +224,7 @@ func (tx *Tx) init() {
 	tx.AdhocPlan = NewAdhocPlanClient(tx.config)
 	tx.AgentStatus = NewAgentStatusClient(tx.config)
 	tx.AgentTask = NewAgentTaskClient(tx.config)
+	tx.Ansible = NewAnsibleClient(tx.config)
 	tx.AuthUser = NewAuthUserClient(tx.config)
 	tx.Build = NewBuildClient(tx.config)
 	tx.BuildCommit = NewBuildCommitClient(tx.config)
