@@ -63,6 +63,12 @@ func (phu *ProvisionedHostUpdate) ClearAddonType() *ProvisionedHostUpdate {
 	return phu
 }
 
+// SetVars sets the "vars" field.
+func (phu *ProvisionedHostUpdate) SetVars(m map[string]string) *ProvisionedHostUpdate {
+	phu.mutation.SetVars(m)
+	return phu
+}
+
 // SetProvisionedHostToStatusID sets the "ProvisionedHostToStatus" edge to the Status entity by ID.
 func (phu *ProvisionedHostUpdate) SetProvisionedHostToStatusID(id uuid.UUID) *ProvisionedHostUpdate {
 	phu.mutation.SetProvisionedHostToStatusID(id)
@@ -437,6 +443,13 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
 			Column: provisionedhost.FieldAddonType,
+		})
+	}
+	if value, ok := phu.mutation.Vars(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: provisionedhost.FieldVars,
 		})
 	}
 	if phu.mutation.ProvisionedHostToStatusCleared() {
@@ -891,6 +904,12 @@ func (phuo *ProvisionedHostUpdateOne) ClearAddonType() *ProvisionedHostUpdateOne
 	return phuo
 }
 
+// SetVars sets the "vars" field.
+func (phuo *ProvisionedHostUpdateOne) SetVars(m map[string]string) *ProvisionedHostUpdateOne {
+	phuo.mutation.SetVars(m)
+	return phuo
+}
+
 // SetProvisionedHostToStatusID sets the "ProvisionedHostToStatus" edge to the Status entity by ID.
 func (phuo *ProvisionedHostUpdateOne) SetProvisionedHostToStatusID(id uuid.UUID) *ProvisionedHostUpdateOne {
 	phuo.mutation.SetProvisionedHostToStatusID(id)
@@ -1289,6 +1308,13 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
 			Column: provisionedhost.FieldAddonType,
+		})
+	}
+	if value, ok := phuo.mutation.Vars(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: provisionedhost.FieldVars,
 		})
 	}
 	if phuo.mutation.ProvisionedHostToStatusCleared() {

@@ -12,6 +12,9 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/apenella/go-ansible v1.1.5
+	github.com/aws/aws-sdk-go-v2 v1.16.2
+	github.com/aws/aws-sdk-go-v2/config v1.15.3
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.34.0
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
 	github.com/bradfitz/iter v0.0.0-20191230175014-e8f45d346db8
 	github.com/briandowns/formatifier v0.0.0-20150226010542-6d068a6ce63a
@@ -33,7 +36,7 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/hcl/v2 v2.10.0
+	github.com/hashicorp/hcl/v2 v2.11.1
 	github.com/hedwigz/entviz v0.0.0-20211119095041-601c47ba417e // indirect
 	github.com/iamacarpet/go-win64api v0.0.0-20210311141720-fe38760bed28
 	github.com/iancoleman/strcase v0.1.3

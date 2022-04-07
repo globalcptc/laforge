@@ -20,6 +20,7 @@ func (ProvisionedHost) Fields() []ent.Field {
 			Default(uuid.New),
 		field.String("subnet_ip"),
 		field.Enum("addon_type").Values("DNS").Nillable().Optional(),
+		field.JSON("vars", map[string]string{}),
 	}
 }
 

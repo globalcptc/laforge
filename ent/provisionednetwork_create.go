@@ -38,6 +38,12 @@ func (pnc *ProvisionedNetworkCreate) SetCidr(s string) *ProvisionedNetworkCreate
 	return pnc
 }
 
+// SetVars sets the "vars" field.
+func (pnc *ProvisionedNetworkCreate) SetVars(m map[string]string) *ProvisionedNetworkCreate {
+	pnc.mutation.SetVars(m)
+	return pnc
+}
+
 // SetID sets the "id" field.
 func (pnc *ProvisionedNetworkCreate) SetID(u uuid.UUID) *ProvisionedNetworkCreate {
 	pnc.mutation.SetID(u)
@@ -239,6 +245,9 @@ func (pnc *ProvisionedNetworkCreate) check() error {
 	if _, ok := pnc.mutation.Cidr(); !ok {
 		return &ValidationError{Name: "cidr", err: errors.New(`ent: missing required field "cidr"`)}
 	}
+	if _, ok := pnc.mutation.Vars(); !ok {
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+	}
 	return nil
 }
 
@@ -286,6 +295,14 @@ func (pnc *ProvisionedNetworkCreate) createSpec() (*ProvisionedNetwork, *sqlgrap
 			Column: provisionednetwork.FieldCidr,
 		})
 		_node.Cidr = value
+	}
+	if value, ok := pnc.mutation.Vars(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: provisionednetwork.FieldVars,
+		})
+		_node.Vars = value
 	}
 	if nodes := pnc.mutation.ProvisionedNetworkToStatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

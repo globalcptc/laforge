@@ -49,6 +49,12 @@ func (phc *ProvisionedHostCreate) SetNillableAddonType(pt *provisionedhost.Addon
 	return phc
 }
 
+// SetVars sets the "vars" field.
+func (phc *ProvisionedHostCreate) SetVars(m map[string]string) *ProvisionedHostCreate {
+	phc.mutation.SetVars(m)
+	return phc
+}
+
 // SetID sets the "id" field.
 func (phc *ProvisionedHostCreate) SetID(u uuid.UUID) *ProvisionedHostCreate {
 	phc.mutation.SetID(u)
@@ -288,6 +294,9 @@ func (phc *ProvisionedHostCreate) check() error {
 			return &ValidationError{Name: "addon_type", err: fmt.Errorf(`ent: validator failed for field "addon_type": %w`, err)}
 		}
 	}
+	if _, ok := phc.mutation.Vars(); !ok {
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+	}
 	if _, ok := phc.mutation.ProvisionedHostToStatusID(); !ok {
 		return &ValidationError{Name: "ProvisionedHostToStatus", err: errors.New("ent: missing required edge \"ProvisionedHostToStatus\"")}
 	}
@@ -347,6 +356,14 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Column: provisionedhost.FieldAddonType,
 		})
 		_node.AddonType = &value
+	}
+	if value, ok := phc.mutation.Vars(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: provisionedhost.FieldVars,
+		})
+		_node.Vars = value
 	}
 	if nodes := phc.mutation.ProvisionedHostToStatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
