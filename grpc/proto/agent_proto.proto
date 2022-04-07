@@ -57,6 +57,7 @@ message TaskReply {
     VALIDATE = 9;
     CHANGEPERMS = 10;
     APPENDFILE = 11;
+    ANSIBLE = 13;
   }
   Command command = 2;
   string args = 3;

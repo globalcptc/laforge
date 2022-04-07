@@ -3,7 +3,6 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/logging"
+	"github.com/gen0cide/laforge/server/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,19 +34,13 @@ func BuildAgent(logger *logging.Logger, agentID string, serverAddress string, bi
 
 func main() {
 
+	laforgeConfig, err := utils.LoadServerConfig()
+	if err != nil {
+		logrus.Errorf("failed to load LaForge Config: %v", err)
+		return
+	}
+
 	client := &ent.Client{}
-
-	pgHost, ok := os.LookupEnv("PG_URI")
-	if !ok {
-		client = ent.PGOpen("postgresql://laforger:laforge@127.0.0.1/laforge")
-	} else {
-		client = ent.PGOpen(pgHost)
-	}
-
-	serverAddress, ok := os.LookupEnv("GRPC_SERVER")
-	if !ok {
-		serverAddress = "localhost:50051"
-	}
 
 	ctx := context.Background()
 	defer client.Close()
@@ -102,6 +96,6 @@ func main() {
 		}
 
 		binaryName := filepath.Join(envName, "team", fmt.Sprint(teamName), networkName, hostName)
-		BuildAgent(&logger, fmt.Sprint(ph.ID), serverAddress, binaryName, false)
+		BuildAgent(&logger, fmt.Sprint(ph.ID), laforgeConfig.Agent.GrpcServerUri, binaryName, false)
 	}
 }

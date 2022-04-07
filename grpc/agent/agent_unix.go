@@ -1,8 +1,11 @@
+//go:build unix || linux
 // +build unix linux
 
 package main
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +15,10 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+
+	"github.com/apenella/go-ansible/pkg/execute"
+	"github.com/apenella/go-ansible/pkg/options"
+	"github.com/apenella/go-ansible/pkg/playbook"
 )
 
 // RebootSystem Reboots Host Operating System
@@ -150,6 +157,34 @@ func SystemExecuteCommand(command string, args ...string) (string, error) {
 	// }
 	// return string(output)
 	// return output, nil
+}
+
+// SystemExecuteAnsible Runs Ansible Playbook
+func SystemExecuteAnsible(playbookPath, connectionMethod, inventoryList string) (string, error) {
+
+	buff := new(bytes.Buffer)
+
+	ansiblePlaybookConnectionOptions := &options.AnsibleConnectionOptions{
+		Connection: connectionMethod,
+	}
+
+	ansiblePlaybookOptions := &playbook.AnsiblePlaybookOptions{
+		Inventory: inventoryList,
+	}
+
+	executePlaybook := execute.NewDefaultExecute(
+		execute.WithWrite(io.Writer(buff)),
+	)
+
+	playbook := &playbook.AnsiblePlaybookCmd{
+		Playbooks:         []string{playbookPath},
+		ConnectionOptions: ansiblePlaybookConnectionOptions,
+		Options:           ansiblePlaybookOptions,
+		Exec:              executePlaybook,
+	}
+
+	err := playbook.Run(context.TODO())
+	return buff.String(), err
 }
 
 func GetSystemDependencies() []string {

@@ -1,6 +1,6 @@
 # LaForge vSphere + NSX-T Builder
 
-> *NOTE: This builder is still in development and is only verified to work with VMware vCenter Server 7.0*
+> _NOTE: This builder is still in development and is only verified to work with VMware vCenter Server 7.0_
 
 ## Setting up vSphere for use with LaForge
 
@@ -74,7 +74,6 @@ environment "/envs/xxxxx" {
     vsphere_username        = "<USERNAME>"             // Username of the vSphere user used for LaForge
     vsphere_password        = "<PASSWORD>"             // Password of the LaForge user
     vsphere_base_url        = "<URL>"                  // The URL of the vSphere server
-    vsphere_content_library = "<CONTENT_LIBRARY_NAME>" // The name of the Content Library containing the VM Templates for LaForge
     vsphere_datastore       = "<DATASTORE_NAME>"       // The name of the Datastore to place the VMs on
     vsphere_resource_pool   = "<RESOURCE_POOL_NAME>"   // The name of the Resource Pool to assign the VMs to
     vsphere_folder          = "<FOLDER_NAME>"          // The name of the Folder to put the VMs in

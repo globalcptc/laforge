@@ -11,6 +11,7 @@ import (
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -63,6 +64,7 @@ const (
 	TypeAdhocPlan          = "AdhocPlan"
 	TypeAgentStatus        = "AgentStatus"
 	TypeAgentTask          = "AgentTask"
+	TypeAnsible            = "Ansible"
 	TypeAuthUser           = "AuthUser"
 	TypeBuild              = "Build"
 	TypeBuildCommit        = "BuildCommit"
@@ -3020,6 +3022,888 @@ func (m *AgentTaskMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown AgentTask edge %s", name)
+}
+
+// AnsibleMutation represents an operation that mutates the Ansible nodes in the graph.
+type AnsibleMutation struct {
+	config
+	op                             Op
+	typ                            string
+	id                             *uuid.UUID
+	name                           *string
+	hcl_id                         *string
+	description                    *string
+	source                         *string
+	playbook_name                  *string
+	method                         *ansible.Method
+	inventory                      *string
+	abs_path                       *string
+	tags                           *map[string]string
+	clearedFields                  map[string]struct{}
+	_AnsibleToUser                 map[uuid.UUID]struct{}
+	removed_AnsibleToUser          map[uuid.UUID]struct{}
+	cleared_AnsibleToUser          bool
+	_AnsibleFromEnvironment        *uuid.UUID
+	cleared_AnsibleFromEnvironment bool
+	done                           bool
+	oldValue                       func(context.Context) (*Ansible, error)
+	predicates                     []predicate.Ansible
+}
+
+var _ ent.Mutation = (*AnsibleMutation)(nil)
+
+// ansibleOption allows management of the mutation configuration using functional options.
+type ansibleOption func(*AnsibleMutation)
+
+// newAnsibleMutation creates new mutation for the Ansible entity.
+func newAnsibleMutation(c config, op Op, opts ...ansibleOption) *AnsibleMutation {
+	m := &AnsibleMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAnsible,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAnsibleID sets the ID field of the mutation.
+func withAnsibleID(id uuid.UUID) ansibleOption {
+	return func(m *AnsibleMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Ansible
+		)
+		m.oldValue = func(ctx context.Context) (*Ansible, error) {
+			once.Do(func() {
+				if m.done {
+					err = fmt.Errorf("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Ansible.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAnsible sets the old Ansible of the mutation.
+func withAnsible(node *Ansible) ansibleOption {
+	return func(m *AnsibleMutation) {
+		m.oldValue = func(context.Context) (*Ansible, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AnsibleMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AnsibleMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Ansible entities.
+func (m *AnsibleMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AnsibleMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// SetName sets the "name" field.
+func (m *AnsibleMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *AnsibleMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *AnsibleMutation) ResetName() {
+	m.name = nil
+}
+
+// SetHclID sets the "hcl_id" field.
+func (m *AnsibleMutation) SetHclID(s string) {
+	m.hcl_id = &s
+}
+
+// HclID returns the value of the "hcl_id" field in the mutation.
+func (m *AnsibleMutation) HclID() (r string, exists bool) {
+	v := m.hcl_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHclID returns the old "hcl_id" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldHclID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+	}
+	return oldValue.HclID, nil
+}
+
+// ResetHclID resets all changes to the "hcl_id" field.
+func (m *AnsibleMutation) ResetHclID() {
+	m.hcl_id = nil
+}
+
+// SetDescription sets the "description" field.
+func (m *AnsibleMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *AnsibleMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *AnsibleMutation) ResetDescription() {
+	m.description = nil
+}
+
+// SetSource sets the "source" field.
+func (m *AnsibleMutation) SetSource(s string) {
+	m.source = &s
+}
+
+// Source returns the value of the "source" field in the mutation.
+func (m *AnsibleMutation) Source() (r string, exists bool) {
+	v := m.source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSource returns the old "source" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldSource(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSource: %w", err)
+	}
+	return oldValue.Source, nil
+}
+
+// ResetSource resets all changes to the "source" field.
+func (m *AnsibleMutation) ResetSource() {
+	m.source = nil
+}
+
+// SetPlaybookName sets the "playbook_name" field.
+func (m *AnsibleMutation) SetPlaybookName(s string) {
+	m.playbook_name = &s
+}
+
+// PlaybookName returns the value of the "playbook_name" field in the mutation.
+func (m *AnsibleMutation) PlaybookName() (r string, exists bool) {
+	v := m.playbook_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPlaybookName returns the old "playbook_name" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldPlaybookName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldPlaybookName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldPlaybookName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPlaybookName: %w", err)
+	}
+	return oldValue.PlaybookName, nil
+}
+
+// ResetPlaybookName resets all changes to the "playbook_name" field.
+func (m *AnsibleMutation) ResetPlaybookName() {
+	m.playbook_name = nil
+}
+
+// SetMethod sets the "method" field.
+func (m *AnsibleMutation) SetMethod(a ansible.Method) {
+	m.method = &a
+}
+
+// Method returns the value of the "method" field in the mutation.
+func (m *AnsibleMutation) Method() (r ansible.Method, exists bool) {
+	v := m.method
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMethod returns the old "method" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldMethod(ctx context.Context) (v ansible.Method, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldMethod is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldMethod requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMethod: %w", err)
+	}
+	return oldValue.Method, nil
+}
+
+// ResetMethod resets all changes to the "method" field.
+func (m *AnsibleMutation) ResetMethod() {
+	m.method = nil
+}
+
+// SetInventory sets the "inventory" field.
+func (m *AnsibleMutation) SetInventory(s string) {
+	m.inventory = &s
+}
+
+// Inventory returns the value of the "inventory" field in the mutation.
+func (m *AnsibleMutation) Inventory() (r string, exists bool) {
+	v := m.inventory
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInventory returns the old "inventory" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldInventory(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldInventory is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldInventory requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInventory: %w", err)
+	}
+	return oldValue.Inventory, nil
+}
+
+// ResetInventory resets all changes to the "inventory" field.
+func (m *AnsibleMutation) ResetInventory() {
+	m.inventory = nil
+}
+
+// SetAbsPath sets the "abs_path" field.
+func (m *AnsibleMutation) SetAbsPath(s string) {
+	m.abs_path = &s
+}
+
+// AbsPath returns the value of the "abs_path" field in the mutation.
+func (m *AnsibleMutation) AbsPath() (r string, exists bool) {
+	v := m.abs_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAbsPath returns the old "abs_path" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldAbsPath(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldAbsPath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldAbsPath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAbsPath: %w", err)
+	}
+	return oldValue.AbsPath, nil
+}
+
+// ResetAbsPath resets all changes to the "abs_path" field.
+func (m *AnsibleMutation) ResetAbsPath() {
+	m.abs_path = nil
+}
+
+// SetTags sets the "tags" field.
+func (m *AnsibleMutation) SetTags(value map[string]string) {
+	m.tags = &value
+}
+
+// Tags returns the value of the "tags" field in the mutation.
+func (m *AnsibleMutation) Tags() (r map[string]string, exists bool) {
+	v := m.tags
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTags returns the old "tags" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTags: %w", err)
+	}
+	return oldValue.Tags, nil
+}
+
+// ResetTags resets all changes to the "tags" field.
+func (m *AnsibleMutation) ResetTags() {
+	m.tags = nil
+}
+
+// AddAnsibleToUserIDs adds the "AnsibleToUser" edge to the User entity by ids.
+func (m *AnsibleMutation) AddAnsibleToUserIDs(ids ...uuid.UUID) {
+	if m._AnsibleToUser == nil {
+		m._AnsibleToUser = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._AnsibleToUser[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAnsibleToUser clears the "AnsibleToUser" edge to the User entity.
+func (m *AnsibleMutation) ClearAnsibleToUser() {
+	m.cleared_AnsibleToUser = true
+}
+
+// AnsibleToUserCleared reports if the "AnsibleToUser" edge to the User entity was cleared.
+func (m *AnsibleMutation) AnsibleToUserCleared() bool {
+	return m.cleared_AnsibleToUser
+}
+
+// RemoveAnsibleToUserIDs removes the "AnsibleToUser" edge to the User entity by IDs.
+func (m *AnsibleMutation) RemoveAnsibleToUserIDs(ids ...uuid.UUID) {
+	if m.removed_AnsibleToUser == nil {
+		m.removed_AnsibleToUser = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._AnsibleToUser, ids[i])
+		m.removed_AnsibleToUser[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAnsibleToUser returns the removed IDs of the "AnsibleToUser" edge to the User entity.
+func (m *AnsibleMutation) RemovedAnsibleToUserIDs() (ids []uuid.UUID) {
+	for id := range m.removed_AnsibleToUser {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AnsibleToUserIDs returns the "AnsibleToUser" edge IDs in the mutation.
+func (m *AnsibleMutation) AnsibleToUserIDs() (ids []uuid.UUID) {
+	for id := range m._AnsibleToUser {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAnsibleToUser resets all changes to the "AnsibleToUser" edge.
+func (m *AnsibleMutation) ResetAnsibleToUser() {
+	m._AnsibleToUser = nil
+	m.cleared_AnsibleToUser = false
+	m.removed_AnsibleToUser = nil
+}
+
+// SetAnsibleFromEnvironmentID sets the "AnsibleFromEnvironment" edge to the Environment entity by id.
+func (m *AnsibleMutation) SetAnsibleFromEnvironmentID(id uuid.UUID) {
+	m._AnsibleFromEnvironment = &id
+}
+
+// ClearAnsibleFromEnvironment clears the "AnsibleFromEnvironment" edge to the Environment entity.
+func (m *AnsibleMutation) ClearAnsibleFromEnvironment() {
+	m.cleared_AnsibleFromEnvironment = true
+}
+
+// AnsibleFromEnvironmentCleared reports if the "AnsibleFromEnvironment" edge to the Environment entity was cleared.
+func (m *AnsibleMutation) AnsibleFromEnvironmentCleared() bool {
+	return m.cleared_AnsibleFromEnvironment
+}
+
+// AnsibleFromEnvironmentID returns the "AnsibleFromEnvironment" edge ID in the mutation.
+func (m *AnsibleMutation) AnsibleFromEnvironmentID() (id uuid.UUID, exists bool) {
+	if m._AnsibleFromEnvironment != nil {
+		return *m._AnsibleFromEnvironment, true
+	}
+	return
+}
+
+// AnsibleFromEnvironmentIDs returns the "AnsibleFromEnvironment" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AnsibleFromEnvironmentID instead. It exists only for internal usage by the builders.
+func (m *AnsibleMutation) AnsibleFromEnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._AnsibleFromEnvironment; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAnsibleFromEnvironment resets all changes to the "AnsibleFromEnvironment" edge.
+func (m *AnsibleMutation) ResetAnsibleFromEnvironment() {
+	m._AnsibleFromEnvironment = nil
+	m.cleared_AnsibleFromEnvironment = false
+}
+
+// Where appends a list predicates to the AnsibleMutation builder.
+func (m *AnsibleMutation) Where(ps ...predicate.Ansible) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// Op returns the operation name.
+func (m *AnsibleMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (Ansible).
+func (m *AnsibleMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AnsibleMutation) Fields() []string {
+	fields := make([]string, 0, 9)
+	if m.name != nil {
+		fields = append(fields, ansible.FieldName)
+	}
+	if m.hcl_id != nil {
+		fields = append(fields, ansible.FieldHclID)
+	}
+	if m.description != nil {
+		fields = append(fields, ansible.FieldDescription)
+	}
+	if m.source != nil {
+		fields = append(fields, ansible.FieldSource)
+	}
+	if m.playbook_name != nil {
+		fields = append(fields, ansible.FieldPlaybookName)
+	}
+	if m.method != nil {
+		fields = append(fields, ansible.FieldMethod)
+	}
+	if m.inventory != nil {
+		fields = append(fields, ansible.FieldInventory)
+	}
+	if m.abs_path != nil {
+		fields = append(fields, ansible.FieldAbsPath)
+	}
+	if m.tags != nil {
+		fields = append(fields, ansible.FieldTags)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AnsibleMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case ansible.FieldName:
+		return m.Name()
+	case ansible.FieldHclID:
+		return m.HclID()
+	case ansible.FieldDescription:
+		return m.Description()
+	case ansible.FieldSource:
+		return m.Source()
+	case ansible.FieldPlaybookName:
+		return m.PlaybookName()
+	case ansible.FieldMethod:
+		return m.Method()
+	case ansible.FieldInventory:
+		return m.Inventory()
+	case ansible.FieldAbsPath:
+		return m.AbsPath()
+	case ansible.FieldTags:
+		return m.Tags()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AnsibleMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case ansible.FieldName:
+		return m.OldName(ctx)
+	case ansible.FieldHclID:
+		return m.OldHclID(ctx)
+	case ansible.FieldDescription:
+		return m.OldDescription(ctx)
+	case ansible.FieldSource:
+		return m.OldSource(ctx)
+	case ansible.FieldPlaybookName:
+		return m.OldPlaybookName(ctx)
+	case ansible.FieldMethod:
+		return m.OldMethod(ctx)
+	case ansible.FieldInventory:
+		return m.OldInventory(ctx)
+	case ansible.FieldAbsPath:
+		return m.OldAbsPath(ctx)
+	case ansible.FieldTags:
+		return m.OldTags(ctx)
+	}
+	return nil, fmt.Errorf("unknown Ansible field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AnsibleMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case ansible.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case ansible.FieldHclID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHclID(v)
+		return nil
+	case ansible.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	case ansible.FieldSource:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSource(v)
+		return nil
+	case ansible.FieldPlaybookName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPlaybookName(v)
+		return nil
+	case ansible.FieldMethod:
+		v, ok := value.(ansible.Method)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMethod(v)
+		return nil
+	case ansible.FieldInventory:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInventory(v)
+		return nil
+	case ansible.FieldAbsPath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAbsPath(v)
+		return nil
+	case ansible.FieldTags:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTags(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Ansible field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AnsibleMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AnsibleMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AnsibleMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Ansible numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AnsibleMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AnsibleMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AnsibleMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Ansible nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AnsibleMutation) ResetField(name string) error {
+	switch name {
+	case ansible.FieldName:
+		m.ResetName()
+		return nil
+	case ansible.FieldHclID:
+		m.ResetHclID()
+		return nil
+	case ansible.FieldDescription:
+		m.ResetDescription()
+		return nil
+	case ansible.FieldSource:
+		m.ResetSource()
+		return nil
+	case ansible.FieldPlaybookName:
+		m.ResetPlaybookName()
+		return nil
+	case ansible.FieldMethod:
+		m.ResetMethod()
+		return nil
+	case ansible.FieldInventory:
+		m.ResetInventory()
+		return nil
+	case ansible.FieldAbsPath:
+		m.ResetAbsPath()
+		return nil
+	case ansible.FieldTags:
+		m.ResetTags()
+		return nil
+	}
+	return fmt.Errorf("unknown Ansible field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AnsibleMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m._AnsibleToUser != nil {
+		edges = append(edges, ansible.EdgeAnsibleToUser)
+	}
+	if m._AnsibleFromEnvironment != nil {
+		edges = append(edges, ansible.EdgeAnsibleFromEnvironment)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AnsibleMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case ansible.EdgeAnsibleToUser:
+		ids := make([]ent.Value, 0, len(m._AnsibleToUser))
+		for id := range m._AnsibleToUser {
+			ids = append(ids, id)
+		}
+		return ids
+	case ansible.EdgeAnsibleFromEnvironment:
+		if id := m._AnsibleFromEnvironment; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AnsibleMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.removed_AnsibleToUser != nil {
+		edges = append(edges, ansible.EdgeAnsibleToUser)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AnsibleMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case ansible.EdgeAnsibleToUser:
+		ids := make([]ent.Value, 0, len(m.removed_AnsibleToUser))
+		for id := range m.removed_AnsibleToUser {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AnsibleMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.cleared_AnsibleToUser {
+		edges = append(edges, ansible.EdgeAnsibleToUser)
+	}
+	if m.cleared_AnsibleFromEnvironment {
+		edges = append(edges, ansible.EdgeAnsibleFromEnvironment)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AnsibleMutation) EdgeCleared(name string) bool {
+	switch name {
+	case ansible.EdgeAnsibleToUser:
+		return m.cleared_AnsibleToUser
+	case ansible.EdgeAnsibleFromEnvironment:
+		return m.cleared_AnsibleFromEnvironment
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AnsibleMutation) ClearEdge(name string) error {
+	switch name {
+	case ansible.EdgeAnsibleFromEnvironment:
+		m.ClearAnsibleFromEnvironment()
+		return nil
+	}
+	return fmt.Errorf("unknown Ansible unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AnsibleMutation) ResetEdge(name string) error {
+	switch name {
+	case ansible.EdgeAnsibleToUser:
+		m.ResetAnsibleToUser()
+		return nil
+	case ansible.EdgeAnsibleFromEnvironment:
+		m.ResetAnsibleFromEnvironment()
+		return nil
+	}
+	return fmt.Errorf("unknown Ansible edge %s", name)
 }
 
 // AuthUserMutation represents an operation that mutates the AuthUser nodes in the graph.
@@ -9839,6 +10723,9 @@ type EnvironmentMutation struct {
 	_EnvironmentToHostDependency         map[uuid.UUID]struct{}
 	removed_EnvironmentToHostDependency  map[uuid.UUID]struct{}
 	cleared_EnvironmentToHostDependency  bool
+	_EnvironmentToAnsible                map[uuid.UUID]struct{}
+	removed_EnvironmentToAnsible         map[uuid.UUID]struct{}
+	cleared_EnvironmentToAnsible         bool
 	_EnvironmentToBuild                  map[uuid.UUID]struct{}
 	removed_EnvironmentToBuild           map[uuid.UUID]struct{}
 	cleared_EnvironmentToBuild           bool
@@ -11184,6 +12071,60 @@ func (m *EnvironmentMutation) ResetEnvironmentToHostDependency() {
 	m.removed_EnvironmentToHostDependency = nil
 }
 
+// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by ids.
+func (m *EnvironmentMutation) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) {
+	if m._EnvironmentToAnsible == nil {
+		m._EnvironmentToAnsible = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._EnvironmentToAnsible[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEnvironmentToAnsible clears the "EnvironmentToAnsible" edge to the Ansible entity.
+func (m *EnvironmentMutation) ClearEnvironmentToAnsible() {
+	m.cleared_EnvironmentToAnsible = true
+}
+
+// EnvironmentToAnsibleCleared reports if the "EnvironmentToAnsible" edge to the Ansible entity was cleared.
+func (m *EnvironmentMutation) EnvironmentToAnsibleCleared() bool {
+	return m.cleared_EnvironmentToAnsible
+}
+
+// RemoveEnvironmentToAnsibleIDs removes the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
+func (m *EnvironmentMutation) RemoveEnvironmentToAnsibleIDs(ids ...uuid.UUID) {
+	if m.removed_EnvironmentToAnsible == nil {
+		m.removed_EnvironmentToAnsible = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._EnvironmentToAnsible, ids[i])
+		m.removed_EnvironmentToAnsible[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEnvironmentToAnsible returns the removed IDs of the "EnvironmentToAnsible" edge to the Ansible entity.
+func (m *EnvironmentMutation) RemovedEnvironmentToAnsibleIDs() (ids []uuid.UUID) {
+	for id := range m.removed_EnvironmentToAnsible {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EnvironmentToAnsibleIDs returns the "EnvironmentToAnsible" edge IDs in the mutation.
+func (m *EnvironmentMutation) EnvironmentToAnsibleIDs() (ids []uuid.UUID) {
+	for id := range m._EnvironmentToAnsible {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEnvironmentToAnsible resets all changes to the "EnvironmentToAnsible" edge.
+func (m *EnvironmentMutation) ResetEnvironmentToAnsible() {
+	m._EnvironmentToAnsible = nil
+	m.cleared_EnvironmentToAnsible = false
+	m.removed_EnvironmentToAnsible = nil
+}
+
 // AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by ids.
 func (m *EnvironmentMutation) AddEnvironmentToBuildIDs(ids ...uuid.UUID) {
 	if m._EnvironmentToBuild == nil {
@@ -11661,7 +12602,7 @@ func (m *EnvironmentMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EnvironmentMutation) AddedEdges() []string {
-	edges := make([]string, 0, 18)
+	edges := make([]string, 0, 19)
 	if m._EnvironmentToUser != nil {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -11706,6 +12647,9 @@ func (m *EnvironmentMutation) AddedEdges() []string {
 	}
 	if m._EnvironmentToHostDependency != nil {
 		edges = append(edges, environment.EdgeEnvironmentToHostDependency)
+	}
+	if m._EnvironmentToAnsible != nil {
+		edges = append(edges, environment.EdgeEnvironmentToAnsible)
 	}
 	if m._EnvironmentToBuild != nil {
 		edges = append(edges, environment.EdgeEnvironmentToBuild)
@@ -11813,6 +12757,12 @@ func (m *EnvironmentMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case environment.EdgeEnvironmentToAnsible:
+		ids := make([]ent.Value, 0, len(m._EnvironmentToAnsible))
+		for id := range m._EnvironmentToAnsible {
+			ids = append(ids, id)
+		}
+		return ids
 	case environment.EdgeEnvironmentToBuild:
 		ids := make([]ent.Value, 0, len(m._EnvironmentToBuild))
 		for id := range m._EnvironmentToBuild {
@@ -11837,7 +12787,7 @@ func (m *EnvironmentMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EnvironmentMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 18)
+	edges := make([]string, 0, 19)
 	if m.removed_EnvironmentToUser != nil {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -11882,6 +12832,9 @@ func (m *EnvironmentMutation) RemovedEdges() []string {
 	}
 	if m.removed_EnvironmentToHostDependency != nil {
 		edges = append(edges, environment.EdgeEnvironmentToHostDependency)
+	}
+	if m.removed_EnvironmentToAnsible != nil {
+		edges = append(edges, environment.EdgeEnvironmentToAnsible)
 	}
 	if m.removed_EnvironmentToBuild != nil {
 		edges = append(edges, environment.EdgeEnvironmentToBuild)
@@ -11989,6 +12942,12 @@ func (m *EnvironmentMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case environment.EdgeEnvironmentToAnsible:
+		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToAnsible))
+		for id := range m.removed_EnvironmentToAnsible {
+			ids = append(ids, id)
+		}
+		return ids
 	case environment.EdgeEnvironmentToBuild:
 		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToBuild))
 		for id := range m.removed_EnvironmentToBuild {
@@ -12013,7 +12972,7 @@ func (m *EnvironmentMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EnvironmentMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 18)
+	edges := make([]string, 0, 19)
 	if m.cleared_EnvironmentToUser {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -12058,6 +13017,9 @@ func (m *EnvironmentMutation) ClearedEdges() []string {
 	}
 	if m.cleared_EnvironmentToHostDependency {
 		edges = append(edges, environment.EdgeEnvironmentToHostDependency)
+	}
+	if m.cleared_EnvironmentToAnsible {
+		edges = append(edges, environment.EdgeEnvironmentToAnsible)
 	}
 	if m.cleared_EnvironmentToBuild {
 		edges = append(edges, environment.EdgeEnvironmentToBuild)
@@ -12105,6 +13067,8 @@ func (m *EnvironmentMutation) EdgeCleared(name string) bool {
 		return m.cleared_EnvironmentToNetwork
 	case environment.EdgeEnvironmentToHostDependency:
 		return m.cleared_EnvironmentToHostDependency
+	case environment.EdgeEnvironmentToAnsible:
+		return m.cleared_EnvironmentToAnsible
 	case environment.EdgeEnvironmentToBuild:
 		return m.cleared_EnvironmentToBuild
 	case environment.EdgeEnvironmentToRepository:
@@ -12171,6 +13135,9 @@ func (m *EnvironmentMutation) ResetEdge(name string) error {
 		return nil
 	case environment.EdgeEnvironmentToHostDependency:
 		m.ResetEnvironmentToHostDependency()
+		return nil
+	case environment.EdgeEnvironmentToAnsible:
+		m.ResetEnvironmentToAnsible()
 		return nil
 	case environment.EdgeEnvironmentToBuild:
 		m.ResetEnvironmentToBuild()
@@ -23185,6 +24152,8 @@ type ProvisioningStepMutation struct {
 	cleared_ProvisioningStepToFileDownload      bool
 	_ProvisioningStepToFileExtract              *uuid.UUID
 	cleared_ProvisioningStepToFileExtract       bool
+	_ProvisioningStepToAnsible                  *uuid.UUID
+	cleared_ProvisioningStepToAnsible           bool
 	_ProvisioningStepToPlan                     *uuid.UUID
 	cleared_ProvisioningStepToPlan              bool
 	_ProvisioningStepToAgentTask                map[uuid.UUID]struct{}
@@ -23686,6 +24655,45 @@ func (m *ProvisioningStepMutation) ResetProvisioningStepToFileExtract() {
 	m.cleared_ProvisioningStepToFileExtract = false
 }
 
+// SetProvisioningStepToAnsibleID sets the "ProvisioningStepToAnsible" edge to the Ansible entity by id.
+func (m *ProvisioningStepMutation) SetProvisioningStepToAnsibleID(id uuid.UUID) {
+	m._ProvisioningStepToAnsible = &id
+}
+
+// ClearProvisioningStepToAnsible clears the "ProvisioningStepToAnsible" edge to the Ansible entity.
+func (m *ProvisioningStepMutation) ClearProvisioningStepToAnsible() {
+	m.cleared_ProvisioningStepToAnsible = true
+}
+
+// ProvisioningStepToAnsibleCleared reports if the "ProvisioningStepToAnsible" edge to the Ansible entity was cleared.
+func (m *ProvisioningStepMutation) ProvisioningStepToAnsibleCleared() bool {
+	return m.cleared_ProvisioningStepToAnsible
+}
+
+// ProvisioningStepToAnsibleID returns the "ProvisioningStepToAnsible" edge ID in the mutation.
+func (m *ProvisioningStepMutation) ProvisioningStepToAnsibleID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningStepToAnsible != nil {
+		return *m._ProvisioningStepToAnsible, true
+	}
+	return
+}
+
+// ProvisioningStepToAnsibleIDs returns the "ProvisioningStepToAnsible" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProvisioningStepToAnsibleID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningStepMutation) ProvisioningStepToAnsibleIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningStepToAnsible; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProvisioningStepToAnsible resets all changes to the "ProvisioningStepToAnsible" edge.
+func (m *ProvisioningStepMutation) ResetProvisioningStepToAnsible() {
+	m._ProvisioningStepToAnsible = nil
+	m.cleared_ProvisioningStepToAnsible = false
+}
+
 // SetProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by id.
 func (m *ProvisioningStepMutation) SetProvisioningStepToPlanID(id uuid.UUID) {
 	m._ProvisioningStepToPlan = &id
@@ -23968,7 +24976,7 @@ func (m *ProvisioningStepMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProvisioningStepMutation) AddedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m._ProvisioningStepToStatus != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToStatus)
 	}
@@ -23992,6 +25000,9 @@ func (m *ProvisioningStepMutation) AddedEdges() []string {
 	}
 	if m._ProvisioningStepToFileExtract != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToFileExtract)
+	}
+	if m._ProvisioningStepToAnsible != nil {
+		edges = append(edges, provisioningstep.EdgeProvisioningStepToAnsible)
 	}
 	if m._ProvisioningStepToPlan != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToPlan)
@@ -24041,6 +25052,10 @@ func (m *ProvisioningStepMutation) AddedIDs(name string) []ent.Value {
 		if id := m._ProvisioningStepToFileExtract; id != nil {
 			return []ent.Value{*id}
 		}
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		if id := m._ProvisioningStepToAnsible; id != nil {
+			return []ent.Value{*id}
+		}
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		if id := m._ProvisioningStepToPlan; id != nil {
 			return []ent.Value{*id}
@@ -24061,7 +25076,7 @@ func (m *ProvisioningStepMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProvisioningStepMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m.removed_ProvisioningStepToAgentTask != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToAgentTask)
 	}
@@ -24084,7 +25099,7 @@ func (m *ProvisioningStepMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProvisioningStepMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m.cleared_ProvisioningStepToStatus {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToStatus)
 	}
@@ -24108,6 +25123,9 @@ func (m *ProvisioningStepMutation) ClearedEdges() []string {
 	}
 	if m.cleared_ProvisioningStepToFileExtract {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToFileExtract)
+	}
+	if m.cleared_ProvisioningStepToAnsible {
+		edges = append(edges, provisioningstep.EdgeProvisioningStepToAnsible)
 	}
 	if m.cleared_ProvisioningStepToPlan {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToPlan)
@@ -24141,6 +25159,8 @@ func (m *ProvisioningStepMutation) EdgeCleared(name string) bool {
 		return m.cleared_ProvisioningStepToFileDownload
 	case provisioningstep.EdgeProvisioningStepToFileExtract:
 		return m.cleared_ProvisioningStepToFileExtract
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		return m.cleared_ProvisioningStepToAnsible
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		return m.cleared_ProvisioningStepToPlan
 	case provisioningstep.EdgeProvisioningStepToAgentTask:
@@ -24179,6 +25199,9 @@ func (m *ProvisioningStepMutation) ClearEdge(name string) error {
 	case provisioningstep.EdgeProvisioningStepToFileExtract:
 		m.ClearProvisioningStepToFileExtract()
 		return nil
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		m.ClearProvisioningStepToAnsible()
+		return nil
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		m.ClearProvisioningStepToPlan()
 		return nil
@@ -24216,6 +25239,9 @@ func (m *ProvisioningStepMutation) ResetEdge(name string) error {
 		return nil
 	case provisioningstep.EdgeProvisioningStepToFileExtract:
 		m.ResetProvisioningStepToFileExtract()
+		return nil
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		m.ResetProvisioningStepToAnsible()
 		return nil
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		m.ResetProvisioningStepToPlan()

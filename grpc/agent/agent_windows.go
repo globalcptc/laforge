@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -89,6 +90,11 @@ func SystemDownloadFile(path, url string) error {
 	// Write the body to file
 	_, err = io.WriteString(out, body)
 	return err
+}
+
+// SystemExecuteAnsible Runs Ansible Playbook
+func SystemExecuteAnsible(playbookPath, connectionMethod, inventoryList string) (string, error) {
+	return "", fmt.Errorf("Not Implemented for Windows")
 }
 
 // SystemExecuteCommand Runs the Command that is inputted and either returns the error or output

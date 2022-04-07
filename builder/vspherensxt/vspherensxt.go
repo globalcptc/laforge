@@ -29,20 +29,43 @@ const (
 )
 
 type VSphereNSXTBuilder struct {
-	HttpClient                http.Client
-	Username                  string
-	Password                  string
-	NsxtClient                nsxt.NSXTClient
-	VSphereClient             vsphere.VSphere
-	TemplatePrefix            string
-	VSphereContentLibraryName string
-	VSphereDatastore          *types.DatastoreSummary
-	VSphereResourcePool       *object.ResourcePool
-	VSphereFolder             *object.Folder
-	Logger                    *logging.Logger
-	MaxWorkers                int
-	DeployWorkerPool          *semaphore.Weighted
-	TeardownWorkerPool        *semaphore.Weighted
+	Config              VSphereNSXTBuilderConfig
+	HttpClient          http.Client
+	NsxtClient          nsxt.NSXTClient
+	VSphereClient       vsphere.VSphere
+	VSphereDatastore    *types.DatastoreSummary
+	VSphereResourcePool *object.ResourcePool
+	VSphereFolder       *object.Folder
+	Logger              *logging.Logger
+	DeployWorkerPool    *semaphore.Weighted
+	TeardownWorkerPool  *semaphore.Weighted
+}
+
+type VSphereNSXTBuilderConfig struct {
+	LaForgeServerUrl   string               `json:"laforge_server_url"`
+	MaxBuildWorkers    int                  `json:"max_build_workers"`
+	MaxTeardownWorkers int                  `json:"max_teardown_workers"`
+	Vsphere            VSphereBuilderConfig `json:"vsphere"`
+	Nsxt               NSXTBuilderConfig    `json:"nsxt"`
+}
+
+type VSphereBuilderConfig struct {
+	BaseUrl        string `json:"base_url"`
+	Username       string `json:"username"`
+	Password       string `json:"password"`
+	Datastore      string `json:"datastore"`
+	ResourcePool   string `json:"resource_pool"`
+	Folder         string `json:"folder"`
+	TemplatePrefix string `json:"template_prefix"`
+}
+
+type NSXTBuilderConfig struct {
+	BaseUrl         string `json:"base_url"`
+	CertPath        string `json:"cert_path"`
+	CaCertPath      string `json:"ca_cert_path"`
+	KeyPath         string `json:"key_path"`
+	IpPoolName      string `json:"ip_pool_name"`
+	EdgeClusterPath string `json:"edge_cluster_path"`
 }
 
 func (builder VSphereNSXTBuilder) ID() string {
@@ -144,7 +167,7 @@ func (builder VSphereNSXTBuilder) DeployHost(ctx context.Context, provisionedHos
 	}
 	defer builder.DeployWorkerPool.Release(int64(1))
 
-	templateName := (builder.TemplatePrefix + host.OS)
+	templateName := (builder.Config.Vsphere.TemplatePrefix + host.OS)
 	vmName := builder.generateVmName(competition, team, host, build)
 	guestCustomizationName := (vmName + "-Customization-Spec")
 

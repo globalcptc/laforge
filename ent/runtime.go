@@ -8,6 +8,7 @@ import (
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -75,6 +76,12 @@ func init() {
 	agenttaskDescID := agenttaskFields[0].Descriptor()
 	// agenttask.DefaultID holds the default value on creation for the id field.
 	agenttask.DefaultID = agenttaskDescID.Default.(func() uuid.UUID)
+	ansibleFields := schema.Ansible{}.Fields()
+	_ = ansibleFields
+	// ansibleDescID is the schema descriptor for id field.
+	ansibleDescID := ansibleFields[0].Descriptor()
+	// ansible.DefaultID holds the default value on creation for the id field.
+	ansible.DefaultID = ansibleDescID.Default.(func() uuid.UUID)
 	authuserFields := schema.AuthUser{}.Fields()
 	_ = authuserFields
 	// authuserDescFirstName is the schema descriptor for first_name field.

@@ -45,6 +45,18 @@ func (at *AgentTaskQuery) collectField(ctx *graphql.OperationContext, field grap
 }
 
 // CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (a *AnsibleQuery) CollectFields(ctx context.Context, satisfies ...string) *AnsibleQuery {
+	if fc := graphql.GetFieldContext(ctx); fc != nil {
+		a = a.collectField(graphql.GetOperationContext(ctx), fc.Field, satisfies...)
+	}
+	return a
+}
+
+func (a *AnsibleQuery) collectField(ctx *graphql.OperationContext, field graphql.CollectedField, satisfies ...string) *AnsibleQuery {
+	return a
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
 func (au *AuthUserQuery) CollectFields(ctx context.Context, satisfies ...string) *AuthUserQuery {
 	if fc := graphql.GetFieldContext(ctx); fc != nil {
 		au = au.collectField(graphql.GetOperationContext(ctx), fc.Field, satisfies...)
