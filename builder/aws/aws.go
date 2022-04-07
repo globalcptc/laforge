@@ -90,6 +90,9 @@ func (builder AWSBuilder) generateVPCName(competition *ent.Competition, team *en
 func (builder AWSBuilder) generateSubnetName(competition *ent.Competition, team *ent.Team, build *ent.Build, proNet *ent.ProvisionedNetwork) string {
 	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-Network-" + proNet.Name + "-" + builder.generateBuildID(build))
 }
+func (builder AWSBuilder) generatePublicSubnetName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
+	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-Public_Subnet-" + builder.generateBuildID(build))
+}
 
 //TODO Test
 func (builder AWSBuilder) getAMI(ctx context.Context, name, vt, rdt, arch, owner string) (string, error) {
@@ -408,36 +411,42 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	if err != nil {
 		return fmt.Errorf("error getting subnetID from subnet result : %v", err)
 	}
-
-	// Allocate an Elastic IP address
-	allocateIPInput := &ec2.AllocateAddressInput{}
-
-	allocateResult, err := builder.Client.AllocateAddress(ctx, allocateIPInput)
-	if err != nil {
-		return fmt.Errorf("error allocating IP %v", err)
-	}
-	allocateID := *allocateResult.AllocationId
-
-	// create NAT gateway
-	natGatewayInput := &ec2.CreateNatGatewayInput{
-		SubnetId:     &subnetID,
-		AllocationId: &allocateID,
+	//Create route table
+	routeTableInput := &ec2.CreateRouteTableInput{
+		VpcId: &vpcID,
 		TagSpecifications: []types.TagSpecification{{
-			ResourceType: "natgateway",
-			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}}},
-		},
+			ResourceType: "route-table",
+			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}},
+		}},
 	}
-	natGatewayResults, err := builder.Client.CreateNatGateway(ctx, natGatewayInput)
+	routeTableResult, err := builder.Client.CreateRouteTable(ctx, routeTableInput)
 	if err != nil {
-		return fmt.Errorf("error creating nat gateway %v", err)
+		return fmt.Errorf("error creating route table %v", err)
 	}
-	natGatewayID := *natGatewayResults.NatGateway.NatGatewayId
+	routeTableID := *routeTableResult.RouteTable.RouteTableId
+	associateInput := ec2.AssociateRouteTableInput{
+		RouteTableId: &routeTableID,
+		SubnetId:     &subnetID,
+	}
+	_, err = builder.Client.AssociateRouteTable(ctx, &associateInput)
+	if err != nil {
+		return fmt.Errorf("error associating route table %v", err)
+	}
+	//Create route
+	routeInput := ec2.CreateRouteInput{
+		RouteTableId:         &routeTableID,
+		DestinationCidrBlock: aws.String("0.0.0.0/0"),
+		GatewayId:            aws.String(entTeam.Vars["NatGatewayID"]),
+	}
+	_, err = builder.Client.CreateRoute(ctx, &routeInput)
+	if err != nil {
+		return fmt.Errorf("error creating route %v", err)
+	}
 
 	// Store subnetID so that it can be used later and torn down
 	newVars := provisionedNetwork.Vars
 	newVars["SubnetID"] = subnetID
-	newVars["NatGatewayID"] = natGatewayID
-	newVars["AllocationID"] = allocateID
+	newVars["RouteTableID"] = routeTableID
 	err = provisionedNetwork.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("error updating network vars with subnetID %v", err)
@@ -545,7 +554,6 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("error creating internet gateway %v", err)
 	}
 	gatewayID := *gatewayResuts.InternetGateway.InternetGatewayId
-
 	// Attach internet gateway to VPC
 	attachGatewayInput := &ec2.AttachInternetGatewayInput{
 		InternetGatewayId: &gatewayID,
@@ -556,6 +564,52 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("error attaching internet gateway %v", err)
 	}
 
+	subnetName := builder.generatePublicSubnetName(entCompetition, entTeam, entBuild)
+
+	//Describe subnet to create
+	cidr := "10.69.0.0/24"
+	subnetInput := &ec2.CreateSubnetInput{
+		VpcId:     &vpcID,
+		CidrBlock: &cidr, //TODO MAKE SURE THIS IS OK
+		TagSpecifications: []types.TagSpecification{{
+			ResourceType: "subnet",
+			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}},
+		}},
+	}
+	result, err := builder.Client.CreateSubnet(ctx, subnetInput)
+	if err != nil {
+		return fmt.Errorf("error creating subnet %v", err)
+	}
+	publicSubnetID := *result.Subnet.SubnetId
+	if err != nil {
+		return fmt.Errorf("error getting subnetID from subnet result : %v", err)
+	}
+
+	// Allocate an Elastic IP address
+	allocateIPInput := &ec2.AllocateAddressInput{}
+
+	allocateResult, err := builder.Client.AllocateAddress(ctx, allocateIPInput)
+	if err != nil {
+		return fmt.Errorf("error allocating IP %v", err)
+	}
+	allocateID := *allocateResult.AllocationId
+
+	// create NAT gateway
+	natGatewayInput := &ec2.CreateNatGatewayInput{
+		SubnetId:         &publicSubnetID,
+		AllocationId:     &allocateID,
+		ConnectivityType: types.ConnectivityType("public"),
+		TagSpecifications: []types.TagSpecification{{
+			ResourceType: "natgateway",
+			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}}},
+		},
+	}
+	natGatewayResults, err := builder.Client.CreateNatGateway(ctx, natGatewayInput)
+	if err != nil {
+		return fmt.Errorf("error creating nat gateway %v", err)
+	}
+	natGatewayID := *natGatewayResults.NatGateway.NatGatewayId
+
 	// get default route table
 	routeTableInput := &ec2.DescribeRouteTablesInput{
 		Filters: []types.Filter{{Name: aws.String("vpc-id"), Values: []string{vpcID}}},
@@ -565,7 +619,14 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("error describing route tables %v", err)
 	}
 	routeTableID := *routeTableResults.RouteTables[0].RouteTableId
-
+	associateInput := ec2.AssociateRouteTableInput{
+		RouteTableId: &routeTableID,
+		SubnetId:     &publicSubnetID,
+	}
+	_, err = builder.Client.AssociateRouteTable(ctx, &associateInput)
+	if err != nil {
+		return fmt.Errorf("error associating route table %v", err)
+	}
 	//create defult route
 	defaultRouteInput := &ec2.CreateRouteInput{
 		RouteTableId:         &routeTableID,
@@ -581,6 +642,9 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	newVars["VpcId"] = vpcID
 	newVars["GatewayId"] = gatewayID
 	newVars["RouteTableId"] = routeTableID
+	newVars["SubnetID"] = publicSubnetID
+	newVars["NatGatewayID"] = natGatewayID
+	newVars["AllocationID"] = allocateID
 	err = entTeam.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("error updating team vars with VpcID %v", err)
