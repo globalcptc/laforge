@@ -12,6 +12,7 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/logging"
 
+	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
@@ -46,7 +47,7 @@ func (builder openstackBuilder) generateBuildID(build *ent.Build) string {
 }
 
 func (builder openstackBuilder) generateVmName(competition *ent.Competition, team *ent.Team, host *ent.Host, build *ent.Build) string {
-	return (competition.HcID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + host.Hostname + "-" + builder.generateBuildID(build))
+	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + host.Hostname + "-" + builder.generateBuildID(build))
 }
 
 func (builder openstackBuilder) generateRouterName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
@@ -111,20 +112,20 @@ func (builder openstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 
 	//build server
 	server, err := servers.Create(client, servers.CreateOpts{
-		Name:       vmName,
-		FlavorName: "flavor_name",
-		ImageName:  "image_name",
-		Networks:   networkName,
+		Name:      vmName,
+		FlavorRef: "flavor_name",
+		ImageRef:  "image_name",
+		Networks:  networkName,
 	}).Extract()
 	if err != nil {
 		fmt.Println("Unable to create server: %s", err)
 	}
 	fmt.Println("Server ID: %s", server.ID)
 
-	id := *server.id
+	id := server.ID
 	newVars := host.Vars
-	newVars["InstanceId"] = id
-	err = host.Update().SetVars(newVars).Exec(ctx)
+	newVars["openstack_instance_id"] = id
+	err = provisionedHost.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -138,11 +139,11 @@ func (builder openstackBuilder) DeployNetwork(ctx context.Context, provisionedNe
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
-	entEnvironment, err := provisionedNetwork.QueryProvisionedNetworktoBuild().QueryBuildToEnvironment().Only(ctx)
+	entEnvironment, err := provisionedNetwork.QueryProvisionedNetworkToBuild().QueryBuildToEnvironment().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
-	entCompetition, err := provisionedNetwork.QueryEnvironmentToCompetition().Only(ctx)
+	entCompetition, err := provisionedNetwork.QueryProvisionedNetworkToBuild().QueryBuildToEnvironment().QueryEnvironmentToCompetition().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
 	}
@@ -171,17 +172,19 @@ func (builder openstackBuilder) DeployNetwork(ctx context.Context, provisionedNe
 		return err
 	}
 
-	tier1Name := builder.generateRouterName(entCompetition[0], entTeam, entBuild)
+	tier1Name := builder.generateRouterName(entCompetition, entTeam, entBuild)
+	up := true
 
-	opts := networks.CreateOpts{Name: entNetwork, AdminStateUp: networks.Up}
+	opts := networks.CreateOpts{Name: tier1Name, AdminStateUp: &up}
 
 	// Execute the operation and get back a networks.Network struct
 	results, err := networks.Create(client, opts).Extract()
-
-	id := networks.Get(client, "id").Extract()
+	if err != nil {
+		return fmt.Errorf("failed to create network: %v", err)
+	}
 	newVars := entNetwork.Vars
-	newVars[""] = id
-	err = entNetwork.Update.SetVars(newVars).Exec(ctx)
+	newVars["openstack_network_id"] = results.ID
+	err = provisionedNetwork.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -239,7 +242,7 @@ func (builder openstackBuilder) TeardownHost(ctx context.Context, provisionedHos
 		return err
 	}
 
-	vmName := builder.generateVmName(entCompetition, entTeam, host, entBuild)
+	// vmName := builder.generateVmName(entCompetition, entTeam, host, entBuild)
 
 	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
@@ -247,12 +250,9 @@ func (builder openstackBuilder) TeardownHost(ctx context.Context, provisionedHos
 	}
 	defer builder.TeardownWorkerPool.Release(int64(1))
 
-	var instances []string
-	instances[0] = host.InstanceId
-	result, err := servers.Delete(client, instances[0])
-	if err != nil {
-		return err
-	}
+	// var instances []string
+	instanceId := provisionedHost.Vars["openstack_instance_id"]
+	result := servers.Delete(client, instanceId)
 	fmt.Println(result)
 
 	return
@@ -295,7 +295,7 @@ func (builder openstackBuilder) TeardownNetwork(ctx context.Context, provisioned
 		return err
 	}
 
-	networkName := builder.generateNetworkName(entCompetition[0], entTeam, entNetwork, entBuild)
+	// networkName := builder.generateNetworkName(entCompetition[0], entTeam, entNetwork, entBuild)
 
 	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
@@ -303,10 +303,8 @@ func (builder openstackBuilder) TeardownNetwork(ctx context.Context, provisioned
 	}
 	defer builder.TeardownWorkerPool.Release(int64(1))
 
-	result, err := networks.Delete(client, "id")
-	if err != nil {
-		return err
-	}
+	networkId := provisionedNetwork.Vars["openstack_instance_id"]
+	result := networks.Delete(client, networkId)
 	fmt.Println(result)
 
 	return
