@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/gen0cide/laforge/builder/aws"
 	"github.com/gen0cide/laforge/builder/generic"
 	"github.com/gen0cide/laforge/builder/vspherensxt"
 	"github.com/gen0cide/laforge/builder/vspherensxt/nsxt"
@@ -46,6 +49,13 @@ func BuilderFromEnvironment(buildersMap map[string]utils.BuilderConfig, environm
 			return
 		}
 		return
+	case "aws":
+		genericBuilder, err = NewAWSBuilder(builderConfig.ConfigFile, environment, logger)
+		if err != nil {
+			logrus.Errorf("Failed to make AWS builder. Err: %v", err)
+			return
+		}
+		return
 	case "openstack":
 		genericBuilder, err = NewOpenstackBuilder(environment, logger)
 		if err != nil {
@@ -64,6 +74,31 @@ func BuilderFromEnvironment(buildersMap map[string]utils.BuilderConfig, environm
 
 	err = fmt.Errorf("error: builder not found")
 	logrus.Error(err)
+	return
+}
+
+func NewAWSBuilder(configFilePath string, env *ent.Environment, logger *logging.Logger) (builder aws.AWSBuilder, err error) {
+	var builderConfig aws.AWSBuilderConfig
+	err = configs.LoadBuilderConfig(configFilePath, &builderConfig)
+	if err != nil {
+		return
+	}
+
+	cfg, err := awsConfig.LoadDefaultConfig(context.TODO(),
+		awsConfig.WithSharedCredentialsFiles([]string{builderConfig.AWSConfigFile}),
+		awsConfig.WithRegion(builderConfig.Region))
+	if err != nil {
+		return
+	}
+
+	client := ec2.NewFromConfig(cfg)
+	builder = aws.AWSBuilder{
+		Logger:    logger,
+		AMIConfig: builderConfig.AMIConfig,
+		Config:    builderConfig,
+		Client:    client,
+	}
+
 	return
 }
 
