@@ -44,6 +44,26 @@ type AMIConfigStruct struct {
 	Owner              string `json:"owner"`
 }
 
+func (builder AWSBuilder) ID() string {
+	return ID
+}
+
+func (builder AWSBuilder) Name() string {
+	return Name
+}
+
+func (builder AWSBuilder) Description() string {
+	return Description
+}
+
+func (builder AWSBuilder) Author() string {
+	return Author
+}
+
+func (builder AWSBuilder) Version() string {
+	return Version
+}
+
 // EC2CreateInstanceAPI defines the interface for the RunInstances function.
 type EC2CreateInstanceAPI interface {
 	RunInstances(ctx context.Context,
@@ -56,11 +76,19 @@ func (builder AWSBuilder) generateBuildID(build *ent.Build) string {
 	if err != nil {
 		buildId = []byte(fmt.Sprint(build.Revision))
 	}
-	return fmt.Sprintf("%v", buildId)
+	return fmt.Sprintf("%s", buildId)
 }
 
-func (builder AWSBuilder) generateVmName(competition *ent.Competition, team *ent.Team, host *ent.Host, build *ent.Build) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + host.Hostname + "-" + builder.generateBuildID(build))
+func (builder AWSBuilder) generateVmName(competition *ent.Competition, team *ent.Team, host *ent.Host, build *ent.Build, proNet *ent.ProvisionedNetwork) string {
+	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-Network-" + proNet.Name + "-Host-" + host.Hostname + "-" + builder.generateBuildID(build))
+}
+
+func (builder AWSBuilder) generateVPCName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
+	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + builder.generateBuildID(build))
+}
+
+func (builder AWSBuilder) generateSubnetName(competition *ent.Competition, team *ent.Team, build *ent.Build, proNet *ent.ProvisionedNetwork) string {
+	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-Network-" + proNet.Name + "-" + builder.generateBuildID(build))
 }
 
 //TODO Test
@@ -98,7 +126,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	// Get information about host from ENT
 	entHost, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	if err != nil {
-		return fmt.Errorf("Couldnt query host from provisioned host \"%v\": %v", entHost.Hostname, err)
+		return fmt.Errorf("couldnt query host from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
 
 	entBuild, err := provisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
@@ -119,6 +147,9 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	}
 
 	entProNetwork, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query provisioned network from provisioned host \"%v\": %v", entHost.Hostname, err)
+	}
 
 	// Describe the host with info from above and get ready to deploy
 
@@ -154,7 +185,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		amiConfig.Owner,
 	)
 
-	vmName := builder.generateVmName(entCompetition, entTeam, entHost, entBuild)
+	vmName := builder.generateVmName(entCompetition, entTeam, entHost, entBuild, entProNetwork)
 	vpcID, ok := entTeam.Vars["VpcId"]
 	if !ok {
 		return fmt.Errorf("couldn't find vpcID in ProNetwork \"%v\"", entProNetwork.ID)
@@ -164,11 +195,15 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		return fmt.Errorf("couldn't find subnetID in ProNetwork \"%v\"", entProNetwork.ID)
 	}
 	// Before we can create a host, we need to create a Security Group for the host to be in
-	desc := vmName + "'s Security Group"
+	desc := vmName + "_sec_group"
 	secGroupinput := &ec2.CreateSecurityGroupInput{
 		Description: &desc,
 		GroupName:   &desc,
-		VpcId:       &vpcID,
+		TagSpecifications: []types.TagSpecification{{
+			ResourceType: "security-group",
+			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(desc)}},
+		}},
+		VpcId: &vpcID,
 	}
 
 	// Deploy Security Group
@@ -194,7 +229,6 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 			linuxPassword = entCompetition.RootPassword
 		}
 		code = fmt.Sprintf(`#!/bin/bash
-		if [ x$1 == x"postcustomization" ]; then
 		while [ ! -f "/laforge.bin" ]
 		do
 		curl -sL -o /laforge.bin %s
@@ -205,7 +239,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		./laforge.bin -service install
 		./laforge.bin -service start
 		usermod --password $(echo %s | openssl passwd -1 -stdin) laforge
-		fi`, agentUrl, linuxPassword)
+		`, agentUrl, linuxPassword)
 	}
 	userdata := base64.StdEncoding.EncodeToString([]byte(code))
 	// describe the host to deploy
@@ -215,10 +249,13 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		MinCount:         &numInstances,
 		MaxCount:         &numInstances,
 		SecurityGroupIds: []string{sgID},
-		ClientToken:      &vmName,
 		PrivateIpAddress: &provisionedHost.SubnetIP,
 		SubnetId:         &subnetID,
 		UserData:         &userdata,
+		TagSpecifications: []types.TagSpecification{{
+			ResourceType: "instance",
+			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(vmName)}},
+		}},
 	}
 
 	// Deploy Host
@@ -227,6 +264,15 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		return fmt.Errorf("error creating instance %v : %v", entHost.ID, err)
 	}
 	id := *result.Instances[0].InstanceId
+
+	// Get InstanceId and store it in ENT to access later
+	newVars := provisionedHost.Vars
+	newVars["InstanceId"] = id
+	newVars["SecGroupId"] = sgID
+	err = provisionedHost.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("error updating host vars with Instance and SecGroup IDs %v", err)
+	}
 
 	//Expose TCP ports both Egress and Ingress
 	for _, ports := range entHost.ExposedTCPPorts {
@@ -251,39 +297,20 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		} else {
 			return fmt.Errorf("ports not right")
 		}
-		egressinput := &ec2.AuthorizeSecurityGroupEgressInput{
-			GroupId: &sgID,
+		ingressinput := &ec2.AuthorizeSecurityGroupIngressInput{
+			GroupId: aws.String(sgID),
 			IpPermissions: []types.IpPermission{
 				{
 					FromPort:   aws.Int32(int32(fromPort)),
 					IpProtocol: aws.String("tcp"),
 					IpRanges: []types.IpRange{
 						{
-							CidrIp: aws.String(provisionedHost.SubnetIP),
+							CidrIp: aws.String(entProNetwork.Cidr),
 						},
 					},
 					ToPort: aws.Int32(int32(toPort)),
 				},
 			},
-		}
-		ingressinput := &ec2.AuthorizeSecurityGroupIngressInput{
-			GroupId: aws.String(sgID),
-			IpPermissions: []types.IpPermission{
-				{
-					FromPort:   aws.Int32(int32(1)),
-					IpProtocol: aws.String("tcp"),
-					IpRanges: []types.IpRange{
-						{
-							CidrIp: aws.String(provisionedHost.SubnetIP),
-						},
-					},
-					ToPort: aws.Int32(int32(65535)),
-				},
-			},
-		}
-		_, err = builder.Client.AuthorizeSecurityGroupEgress(ctx, egressinput)
-		if err != nil {
-			return fmt.Errorf("error creating egress rule %v", err)
 		}
 		_, err = builder.Client.AuthorizeSecurityGroupIngress(ctx, ingressinput)
 		if err != nil {
@@ -313,7 +340,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		} else {
 			return fmt.Errorf("ports not right")
 		}
-		egressinput := &ec2.AuthorizeSecurityGroupEgressInput{
+		ingressinput := &ec2.AuthorizeSecurityGroupIngressInput{
 			GroupId: aws.String(sgID),
 			IpPermissions: []types.IpPermission{
 				{
@@ -321,45 +348,17 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 					IpProtocol: aws.String("udp"),
 					IpRanges: []types.IpRange{
 						{
-							CidrIp: aws.String(provisionedHost.SubnetIP),
+							CidrIp: aws.String(entProNetwork.Cidr),
 						},
 					},
 					ToPort: aws.Int32(int32(toPort)),
 				},
 			},
 		}
-		ingressinput := &ec2.AuthorizeSecurityGroupIngressInput{
-			GroupId: aws.String(sgID),
-			IpPermissions: []types.IpPermission{
-				{
-					FromPort:   aws.Int32(int32(1)),
-					IpProtocol: aws.String("udp"),
-					IpRanges: []types.IpRange{
-						{
-							CidrIp: aws.String(provisionedHost.SubnetIP),
-						},
-					},
-					ToPort: aws.Int32(int32(65535)),
-				},
-			},
-		}
-		_, err = builder.Client.AuthorizeSecurityGroupEgress(ctx, egressinput)
-		if err != nil {
-			return fmt.Errorf("error creating egress rule %v", err)
-		}
 		_, err = builder.Client.AuthorizeSecurityGroupIngress(ctx, ingressinput)
 		if err != nil {
 			return fmt.Errorf("error creating ingress rule %v", err)
 		}
-	}
-
-	// Get InstanceId and store it in ENT to access later
-	newVars := provisionedHost.Vars
-	newVars["InstanceId"] = id
-	newVars["SecGroupId"] = sgID
-	err = provisionedHost.Update().SetVars(newVars).Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("error updating host vars with Instance and SecGroup IDs %v", err)
 	}
 
 	return
@@ -375,14 +374,31 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 		return fmt.Errorf("couldn't query build from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
 
+	entBuild, err := entTeam.QueryTeamToBuild().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from team \"%d\": %v", entTeam.TeamNumber, err)
+	}
+
+	entCompetition, err := entBuild.QueryBuildToEnvironment().QueryEnvironmentToCompetition().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query competition from team \"%d\": %v", entTeam.TeamNumber, err)
+	}
+
 	vpcID, ok := entTeam.Vars["VpcId"]
 	if !ok {
 		return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entTeam.TeamNumber)
 	}
+
+	subnetName := builder.generateSubnetName(entCompetition, entTeam, entBuild, provisionedNetwork)
+
 	//Describe subnet to create
 	subnetInput := &ec2.CreateSubnetInput{
 		VpcId:     &vpcID,
 		CidrBlock: &provisionedNetwork.Cidr,
+		TagSpecifications: []types.TagSpecification{{
+			ResourceType: "subnet",
+			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}},
+		}},
 	}
 	result, err := builder.Client.CreateSubnet(ctx, subnetInput)
 	if err != nil {
@@ -392,9 +408,36 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	if err != nil {
 		return fmt.Errorf("error getting subnetID from subnet result : %v", err)
 	}
+
+	// Allocate an Elastic IP address
+	allocateIPInput := &ec2.AllocateAddressInput{}
+
+	allocateResult, err := builder.Client.AllocateAddress(ctx, allocateIPInput)
+	if err != nil {
+		return fmt.Errorf("error allocating IP %v", err)
+	}
+	allocateID := *allocateResult.AllocationId
+
+	// create NAT gateway
+	natGatewayInput := &ec2.CreateNatGatewayInput{
+		SubnetId:     &subnetID,
+		AllocationId: &allocateID,
+		TagSpecifications: []types.TagSpecification{{
+			ResourceType: "natgateway",
+			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}}},
+		},
+	}
+	natGatewayResults, err := builder.Client.CreateNatGateway(ctx, natGatewayInput)
+	if err != nil {
+		return fmt.Errorf("error creating nat gateway %v", err)
+	}
+	natGatewayID := *natGatewayResults.NatGateway.NatGatewayId
+
 	// Store subnetID so that it can be used later and torn down
 	newVars := provisionedNetwork.Vars
 	newVars["SubnetID"] = subnetID
+	newVars["NatGatewayID"] = natGatewayID
+	newVars["AllocationID"] = allocateID
 	err = provisionedNetwork.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("error updating network vars with subnetID %v", err)
@@ -410,8 +453,7 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 	if !ok {
 		return fmt.Errorf("couldn't find InstanceID in environment \"%v\"", provisionedHost.ID)
 	}
-	var instances []string
-	instances[0] = instance
+	instances := []string{instance}
 
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: instances,
@@ -460,25 +502,85 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("couldn't query enviroment from team \"%v\": %v", entTeam.TeamNumber, err)
 	}
 
+	entCompetition, err := entEnvironment.QueryEnvironmentToCompetition().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query competition from environment \"%v\": %v", entEnvironment.Name, err)
+	}
+
+	entBuild, err := entTeam.QueryTeamToBuild().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from team \"%v\": %v", entTeam.TeamNumber, err)
+	}
+
 	vpcCidr, ok := entEnvironment.Config["vpc_cidr"]
 	if !ok {
 		return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entEnvironment.Name)
 	}
 
+	VPCName := builder.generateVPCName(entCompetition, entTeam, entBuild)
+
 	// Describe the vpc with info from above and get ready to deploy
 	input := &ec2.CreateVpcInput{
 		CidrBlock: &vpcCidr,
+		TagSpecifications: []types.TagSpecification{{
+			ResourceType: "vpc",
+			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(VPCName)}},
+		}},
 	}
 
 	// Deploy VPC
-	results, err := builder.Client.CreateVpc(ctx, input)
+	vpcResults, err := builder.Client.CreateVpc(ctx, input)
 	if err != nil {
 		return fmt.Errorf("error creating vpc %v", err)
 	}
-	id := *results.Vpc.VpcId
+	vpcID := *vpcResults.Vpc.VpcId
+
+	// Create Inteernet Gateway
+	gatewayInput := &ec2.CreateInternetGatewayInput{
+		TagSpecifications: []types.TagSpecification{{ResourceType: "internet-gateway", Tags: []types.Tag{{Key: aws.String("Name"), Value: aws.String(VPCName)}}}},
+	}
+
+	gatewayResuts, err := builder.Client.CreateInternetGateway(ctx, gatewayInput)
+	if err != nil {
+		return fmt.Errorf("error creating internet gateway %v", err)
+	}
+	gatewayID := *gatewayResuts.InternetGateway.InternetGatewayId
+
+	// Attach internet gateway to VPC
+	attachGatewayInput := &ec2.AttachInternetGatewayInput{
+		InternetGatewayId: &gatewayID,
+		VpcId:             &vpcID,
+	}
+	_, err = builder.Client.AttachInternetGateway(ctx, attachGatewayInput)
+	if err != nil {
+		return fmt.Errorf("error attaching internet gateway %v", err)
+	}
+
+	// get default route table
+	routeTableInput := &ec2.DescribeRouteTablesInput{
+		Filters: []types.Filter{{Name: aws.String("vpc-id"), Values: []string{vpcID}}},
+	}
+	routeTableResults, err := builder.Client.DescribeRouteTables(ctx, routeTableInput)
+	if err != nil {
+		return fmt.Errorf("error describing route tables %v", err)
+	}
+	routeTableID := *routeTableResults.RouteTables[0].RouteTableId
+
+	//create defult route
+	defaultRouteInput := &ec2.CreateRouteInput{
+		RouteTableId:         &routeTableID,
+		DestinationCidrBlock: aws.String("0.0.0.0/0"),
+		GatewayId:            &gatewayID,
+	}
+	_, err = builder.Client.CreateRoute(ctx, defaultRouteInput)
+	if err != nil {
+		return fmt.Errorf("error creating default route %v", err)
+	}
 
 	newVars := entTeam.Vars
-	newVars["VpcId"] = id
+	newVars["VpcId"] = vpcID
+	newVars["GatewayId"] = gatewayID
+	newVars["RouteTableId"] = routeTableID
 	err = entTeam.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("error updating team vars with VpcID %v", err)

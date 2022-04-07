@@ -356,7 +356,11 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	}
 	createProvisonedNetworks := []*ent.ProvisionedNetwork{}
 	for _, buildNetwork := range buildNetworks {
-		pNetwork, _ := createProvisionedNetworks(ctx, client, laforgeConfig, logger, entBuild, entTeam, buildNetwork)
+		pNetwork, err := createProvisionedNetworks(ctx, client, laforgeConfig, logger, entBuild, entTeam, buildNetwork)
+		if err != nil {
+			logger.Log.Errorf("Failed to Create Provisioned Network for Network %v. Err: %v", buildNetwork.Name, err)
+			return nil, err
+		}
 		createProvisonedNetworks = append(createProvisonedNetworks, pNetwork)
 	}
 	for _, pNetwork := range createProvisonedNetworks {
@@ -401,6 +405,7 @@ func createProvisionedNetworks(ctx context.Context, client *ent.Client, laforgeC
 	entProvisionedNetwork, err := client.ProvisionedNetwork.Create().
 		SetName(entNetwork.Name).
 		SetCidr(entNetwork.Cidr).
+		SetVars(map[string]string{}).
 		SetProvisionedNetworkToStatus(entStatus).
 		SetProvisionedNetworkToNetwork(entNetwork).
 		SetProvisionedNetworkToTeam(entTeam).
@@ -552,6 +557,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 
 	entProvisionedHost, err = client.ProvisionedHost.Create().
 		SetSubnetIP(subnetIP).
+		SetVars(map[string]string{}).
 		SetProvisionedHostToStatus(entStatus).
 		SetProvisionedHostToProvisionedNetwork(pNetwork).
 		SetProvisionedHostToHost(entHost).

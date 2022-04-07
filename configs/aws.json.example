@@ -1,0 +1,105 @@
+{
+  "server_url": "http://127.0.0.1:8080",
+  "aws_config_file": "~/.aws/config",
+  "region": "us-east-1",
+  "ami_configs": {
+    "ubuntu16": {
+      "name":"ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "099720109477"
+    },
+    "ubuntu18": {
+      "name":"ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "099720109477"
+    },
+    "ubuntu20": {
+      "name":"ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "099720109477"
+    },
+    "centos7": {
+      "name":"CentOS 7.*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "125523088429"
+    },
+    "centos8": {
+      "name":"CentOS 8.*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "125523088429"
+    },
+    "debian8": {
+      "name":"debian-jessie-amd64-hvm-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "379101102735"
+    },
+    "debian9": {
+      "name":"debian-stretch-hvm-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "379101102735"
+    },
+    "debian10": {
+      "name":"debian-10-amd64-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "136693071363"
+    },
+    "w2k12": {
+      "name":"Windows_Server-2012-R2_RTM-English-64Bit-Base-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "801119661308"
+    },
+    "w2k16": {
+      "name":"Windows_Server-2016-English-Full-Base-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "801119661308"
+    },
+    "w2k19": {
+      "name":"Windows_Server-2019-English-Full-Base-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "801119661308"
+    },
+    "w2k12-sql": {
+      "name":"Windows_Server-2012-R2_RTM-English-64Bit-SQL_2012_SP4_Enterprise-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "801119661308"
+    },
+    "w2k16-sql": {
+      "name":"Windows_Server-2016-English-64Bit-SQL_2012_SP4_Enterprise-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "801119661308"
+    },
+    "w2k19-sql": {
+      "name":"Windows_Server-2019-English-Full-SQL_2016_SP2_Enterprise-*",
+      "root_device_type": "ebs",
+      "virtualization_type": "hvm",
+      "architecture": "x86_64",
+      "owner": "801119661308"
+    }
+  }
+}
