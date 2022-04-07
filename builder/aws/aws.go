@@ -488,6 +488,17 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 
 // TeardownNetwork deletes a subnet
 func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
+	routeTableID, ok := provisionedNetwork.Vars["RouteTableID"]
+	if !ok {
+		return fmt.Errorf("couldn't find RouteTableID in provisioned network \"%v\"", provisionedNetwork.ID)
+	}
+	routeTableInput := &ec2.DeleteRouteTableInput{
+		RouteTableId: &routeTableID,
+	}
+	_, err = builder.Client.DeleteRouteTable(ctx, routeTableInput)
+	if err != nil {
+		return fmt.Errorf("error deleting route table %v", err)
+	}
 
 	subnetID, ok := provisionedNetwork.Vars["SubnetID"]
 	if !ok {
@@ -654,7 +665,61 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 
 //TeardownTeam Terminates VPC
 func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
-	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
+	routeTableID, ok := entTeam.Vars["RouteTableId"]
+	if !ok {
+		return fmt.Errorf("error getting route table id from team vars")
+	}
+	routeTableInput := &ec2.DeleteRouteTableInput{
+		RouteTableId: &routeTableID,
+	}
+	_, err = builder.Client.DeleteRouteTable(ctx, routeTableInput)
+	if err != nil {
+		return fmt.Errorf("error deleting route table %v", err)
+	}
+	natGatewayID, ok := entTeam.Vars["NatGatewayID"]
+	if !ok {
+		return fmt.Errorf("error getting nat gateway id from team vars")
+	}
+	natGatewayInput := &ec2.DeleteNatGatewayInput{
+		NatGatewayId: &natGatewayID,
+	}
+	_, err = builder.Client.DeleteNatGateway(ctx, natGatewayInput)
+	if err != nil {
+		return fmt.Errorf("error deleting nat gateway %v", err)
+	}
+	allocateID, ok := entTeam.Vars["AllocationID"]
+	if !ok {
+		return fmt.Errorf("error getting allocation id from team vars")
+	}
+	allocateInput := &ec2.ReleaseAddressInput{
+		AllocationId: &allocateID,
+	}
+	_, err = builder.Client.ReleaseAddress(ctx, allocateInput)
+	if err != nil {
+		return fmt.Errorf("error releasing address %v", err)
+	}
+	subnetID, ok := entTeam.Vars["SubnetID"]
+	if !ok {
+		return fmt.Errorf("error getting subnet id from team vars")
+	}
+	subnetInput := &ec2.DeleteSubnetInput{
+		SubnetId: &subnetID,
+	}
+	_, err = builder.Client.DeleteSubnet(ctx, subnetInput)
+	if err != nil {
+		return fmt.Errorf("error deleting subnet %v", err)
+	}
+	gatewayID, ok := entTeam.Vars["GatewayId"]
+	if !ok {
+		return fmt.Errorf("error getting gateway id from team vars")
+	}
+	gatewayInput := &ec2.DeleteInternetGatewayInput{
+		InternetGatewayId: &gatewayID,
+	}
+	_, err = builder.Client.DeleteInternetGateway(ctx, gatewayInput)
+	if err != nil {
+		return fmt.Errorf("error deleting gateway %v", err)
+	}
 
 	vpcID, ok := entTeam.Vars["VpcId"]
 	if !ok {
