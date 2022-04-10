@@ -508,6 +508,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			ClearEnvironmentToIncludedNetwork().
 			ClearEnvironmentToDNS().
 			ClearEnvironmentToHost().
+			ClearEnvironmentToAnsible().
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update Environment %v. Err: %v", cEnviroment.HclID, err)
@@ -528,6 +529,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			AddEnvironmentToHostDependency(returnedHostDependencies...).
 			AddEnvironmentToIncludedNetwork(returnedIncludedNetworks...).
 			AddEnvironmentToDNS(returnedDNS...).
+			AddEnvironmentToAnsible(returnedAnsible...).
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update Environment %v with it's edges. Err: %v", cEnviroment.HclID, err)
@@ -892,6 +894,7 @@ func createAnsible(ctx context.Context, client *ent.Client, log *logging.Logger,
 			log.Log.Errorf("Failed to Update Ansible %v. Err: %v", cAnsible.HclID, err)
 			return nil, err
 		}
+		returnedAnsible = append(returnedAnsible, entAnsible)
 	}
 	if len(bulk) > 0 {
 		dbAnsible, err := client.Ansible.CreateBulk(bulk...).Save(ctx)
