@@ -220,10 +220,10 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	var code string
 	if strings.HasPrefix(entHost.OS, "win") {
 		code = fmt.Sprintf(`powershell -Command mkdir $env:PROGRAMDATA\\Laforge -Force
-		powershell -Command Invoke-WebRequest %s -OutFile \"$env:PROGRAMDATA\\Laforge\\laforge.exe\
-		powershell -Command %%PROGRAMDATA%%\\Laforge\\laforge.exe -service install
-		powershell -Command %%PROGRAMDATA%%\\Laforge\\laforge.exe -service start
-		powershell -Command logoff`, agentUrl)
+powershell -Command Invoke-WebRequest %s -OutFile \"$env:PROGRAMDATA\\Laforge\\laforge.exe\
+powershell -Command %%PROGRAMDATA%%\\Laforge\\laforge.exe -service install
+powershell -Command %%PROGRAMDATA%%\\Laforge\\laforge.exe -service start
+powershell -Command logoff`, agentUrl)
 	} else {
 		var linuxPassword string
 		if len(entHost.OverridePassword) > 0 {
