@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -19,7 +20,7 @@ const (
 	Name        = "AWS"
 	Description = "Builder that interfaces with AWS"
 	Author      = "Nicholas Graca <github.com/njg7716>"
-	Version     = "0.1"
+	Version     = "1.0"
 )
 
 type AWSBuilder struct {
@@ -90,8 +91,10 @@ func (builder AWSBuilder) generateVPCName(competition *ent.Competition, team *en
 func (builder AWSBuilder) generateSubnetName(competition *ent.Competition, team *ent.Team, build *ent.Build, proNet *ent.ProvisionedNetwork) string {
 	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-Network-" + proNet.Name + "-" + builder.generateBuildID(build))
 }
+func (builder AWSBuilder) generatePublicSubnetName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
+	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-Public_Subnet-" + builder.generateBuildID(build))
+}
 
-//TODO Test
 func (builder AWSBuilder) getAMI(ctx context.Context, name, vt, rdt, arch, owner string) (string, error) {
 
 	// Describe the host with info from above and get ready to deploy
@@ -386,7 +389,11 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 
 	vpcID, ok := entTeam.Vars["VpcId"]
 	if !ok {
-		return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entTeam.TeamNumber)
+		return fmt.Errorf("couldn't find vpc_cidr in team \"%v\"", entTeam.TeamNumber)
+	}
+	natGatewayID, ok := entTeam.Vars["NatGatewayID"]
+	if !ok {
+		return fmt.Errorf("couldn't find nat_gateway_id in team \"%v\"", entTeam.TeamNumber)
 	}
 
 	subnetName := builder.generateSubnetName(entCompetition, entTeam, entBuild, provisionedNetwork)
@@ -408,36 +415,42 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	if err != nil {
 		return fmt.Errorf("error getting subnetID from subnet result : %v", err)
 	}
-
-	// Allocate an Elastic IP address
-	allocateIPInput := &ec2.AllocateAddressInput{}
-
-	allocateResult, err := builder.Client.AllocateAddress(ctx, allocateIPInput)
-	if err != nil {
-		return fmt.Errorf("error allocating IP %v", err)
-	}
-	allocateID := *allocateResult.AllocationId
-
-	// create NAT gateway
-	natGatewayInput := &ec2.CreateNatGatewayInput{
-		SubnetId:     &subnetID,
-		AllocationId: &allocateID,
+	//Create route table
+	routeTableInput := &ec2.CreateRouteTableInput{
+		VpcId: &vpcID,
 		TagSpecifications: []types.TagSpecification{{
-			ResourceType: "natgateway",
-			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}}},
-		},
+			ResourceType: "route-table",
+			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}},
+		}},
 	}
-	natGatewayResults, err := builder.Client.CreateNatGateway(ctx, natGatewayInput)
+	routeTableResult, err := builder.Client.CreateRouteTable(ctx, routeTableInput)
 	if err != nil {
-		return fmt.Errorf("error creating nat gateway %v", err)
+		return fmt.Errorf("error creating route table %v", err)
 	}
-	natGatewayID := *natGatewayResults.NatGateway.NatGatewayId
+	routeTableID := *routeTableResult.RouteTable.RouteTableId
+	associateInput := ec2.AssociateRouteTableInput{
+		RouteTableId: &routeTableID,
+		SubnetId:     &subnetID,
+	}
+	_, err = builder.Client.AssociateRouteTable(ctx, &associateInput)
+	if err != nil {
+		return fmt.Errorf("error associating route table %v", err)
+	}
+	//Create route
+	routeInput := ec2.CreateRouteInput{
+		RouteTableId:         &routeTableID,
+		DestinationCidrBlock: aws.String("0.0.0.0/0"),
+		NatGatewayId:         aws.String(natGatewayID),
+	}
+	_, err = builder.Client.CreateRoute(ctx, &routeInput)
+	if err != nil {
+		return fmt.Errorf("error creating route %v", err)
+	}
 
 	// Store subnetID so that it can be used later and torn down
 	newVars := provisionedNetwork.Vars
 	newVars["SubnetID"] = subnetID
-	newVars["NatGatewayID"] = natGatewayID
-	newVars["AllocationID"] = allocateID
+	newVars["RouteTableID"] = routeTableID
 	err = provisionedNetwork.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("error updating network vars with subnetID %v", err)
@@ -462,6 +475,9 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 	if err != nil {
 		return fmt.Errorf("error terminating instance %v", err)
 	}
+
+	time.Sleep(time.Minute * 1)
+
 	//Get security group ID to terminate
 	secGroupID, ok := provisionedHost.Vars["SecGroupId"]
 	if !ok {
@@ -491,6 +507,21 @@ func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwor
 	if err != nil {
 		return fmt.Errorf("error deleting subnet %v", err)
 	}
+
+	time.Sleep(time.Second * 30)
+
+	routeTableID, ok := provisionedNetwork.Vars["RouteTableID"]
+	if !ok {
+		return fmt.Errorf("couldn't find RouteTableID in provisioned network \"%v\"", provisionedNetwork.ID)
+	}
+	routeTableInput := &ec2.DeleteRouteTableInput{
+		RouteTableId: &routeTableID,
+	}
+	_, err = builder.Client.DeleteRouteTable(ctx, routeTableInput)
+	if err != nil {
+		return fmt.Errorf("error deleting route table %v", err)
+	}
+
 	return nil
 }
 
@@ -515,6 +546,11 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	vpcCidr, ok := entEnvironment.Config["vpc_cidr"]
 	if !ok {
 		return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entEnvironment.Name)
+	}
+
+	publicCidr, ok := entEnvironment.Config["public_cidr"]
+	if !ok {
+		return fmt.Errorf("couldn't find public_cidr in environment \"%v\"", entEnvironment.Name)
 	}
 
 	VPCName := builder.generateVPCName(entCompetition, entTeam, entBuild)
@@ -545,7 +581,6 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("error creating internet gateway %v", err)
 	}
 	gatewayID := *gatewayResuts.InternetGateway.InternetGatewayId
-
 	// Attach internet gateway to VPC
 	attachGatewayInput := &ec2.AttachInternetGatewayInput{
 		InternetGatewayId: &gatewayID,
@@ -555,6 +590,53 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	if err != nil {
 		return fmt.Errorf("error attaching internet gateway %v", err)
 	}
+
+	subnetName := builder.generatePublicSubnetName(entCompetition, entTeam, entBuild)
+
+	//Describe subnet to create
+	subnetInput := &ec2.CreateSubnetInput{
+		VpcId:     &vpcID,
+		CidrBlock: &publicCidr, //TODO MAKE SURE THIS IS OK
+		TagSpecifications: []types.TagSpecification{{
+			ResourceType: "subnet",
+			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}},
+		}},
+	}
+	result, err := builder.Client.CreateSubnet(ctx, subnetInput)
+	if err != nil {
+		return fmt.Errorf("error creating subnet %v", err)
+	}
+	publicSubnetID := *result.Subnet.SubnetId
+	if err != nil {
+		return fmt.Errorf("error getting subnetID from subnet result : %v", err)
+	}
+
+	// Allocate an Elastic IP address
+	allocateIPInput := &ec2.AllocateAddressInput{}
+
+	allocateResult, err := builder.Client.AllocateAddress(ctx, allocateIPInput)
+	if err != nil {
+		return fmt.Errorf("error allocating IP %v", err)
+	}
+	allocateID := *allocateResult.AllocationId
+
+	time.Sleep(time.Second * 1)
+
+	// create NAT gateway
+	natGatewayInput := &ec2.CreateNatGatewayInput{
+		SubnetId:         &publicSubnetID,
+		AllocationId:     &allocateID,
+		ConnectivityType: types.ConnectivityType("public"),
+		TagSpecifications: []types.TagSpecification{{
+			ResourceType: "natgateway",
+			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}}},
+		},
+	}
+	natGatewayResults, err := builder.Client.CreateNatGateway(ctx, natGatewayInput)
+	if err != nil {
+		return fmt.Errorf("error creating nat gateway %v", err)
+	}
+	natGatewayID := *natGatewayResults.NatGateway.NatGatewayId
 
 	// get default route table
 	routeTableInput := &ec2.DescribeRouteTablesInput{
@@ -566,6 +648,16 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	}
 	routeTableID := *routeTableResults.RouteTables[0].RouteTableId
 
+	time.Sleep(time.Second * 1)
+
+	associateInput := ec2.AssociateRouteTableInput{
+		RouteTableId: &routeTableID,
+		SubnetId:     &publicSubnetID,
+	}
+	_, err = builder.Client.AssociateRouteTable(ctx, &associateInput)
+	if err != nil {
+		return fmt.Errorf("error associating route table %v", err)
+	}
 	//create defult route
 	defaultRouteInput := &ec2.CreateRouteInput{
 		RouteTableId:         &routeTableID,
@@ -581,21 +673,98 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	newVars["VpcId"] = vpcID
 	newVars["GatewayId"] = gatewayID
 	newVars["RouteTableId"] = routeTableID
+	newVars["SubnetID"] = publicSubnetID
+	newVars["NatGatewayID"] = natGatewayID
+	newVars["AllocationID"] = allocateID
 	err = entTeam.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("error updating team vars with VpcID %v", err)
 	}
+
+	time.Sleep(time.Minute * 1)
+
 	return nil
 }
 
 //TeardownTeam Terminates VPC
 func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
-	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
-
 	vpcID, ok := entTeam.Vars["VpcId"]
 	if !ok {
 		return fmt.Errorf("couldn't find vpcID in environment \"%v\"", entTeam.TeamNumber)
 	}
+
+	natGatewayID, ok := entTeam.Vars["NatGatewayID"]
+	if !ok {
+		return fmt.Errorf("error getting nat gateway id from team vars")
+	}
+	natGatewayInput := &ec2.DeleteNatGatewayInput{
+		NatGatewayId: &natGatewayID,
+	}
+	_, err = builder.Client.DeleteNatGateway(ctx, natGatewayInput)
+	if err != nil {
+		return fmt.Errorf("error deleting nat gateway %v", err)
+	}
+
+	builder.Logger.Log.Debugf("Deleted nat gateway %v", natGatewayID)
+
+	time.Sleep(time.Second * 90)
+
+	subnetID, ok := entTeam.Vars["SubnetID"]
+	if !ok {
+		return fmt.Errorf("error getting subnet id from team vars")
+	}
+	subnetInput := &ec2.DeleteSubnetInput{
+		SubnetId: &subnetID,
+	}
+	_, err = builder.Client.DeleteSubnet(ctx, subnetInput)
+	if err != nil {
+		return fmt.Errorf("error deleting subnet %v", err)
+	}
+
+	builder.Logger.Log.Debugf("Deleted subnet %v", subnetID)
+
+	allocateID, ok := entTeam.Vars["AllocationID"]
+	if !ok {
+		return fmt.Errorf("error getting allocation id from team vars")
+	}
+	allocateInput := &ec2.ReleaseAddressInput{
+		AllocationId: &allocateID,
+	}
+	_, err = builder.Client.ReleaseAddress(ctx, allocateInput)
+	if err != nil {
+		return fmt.Errorf("error releasing address %v", err)
+	}
+	builder.Logger.Log.Debugf("Deleted allocation %v", allocateID)
+
+	gatewayID, ok := entTeam.Vars["GatewayId"]
+	if !ok {
+		return fmt.Errorf("error getting gateway id from team vars")
+	}
+
+	// detach internet gateway
+	detachInput := &ec2.DetachInternetGatewayInput{
+		InternetGatewayId: &gatewayID,
+		VpcId:             &vpcID,
+	}
+	_, err = builder.Client.DetachInternetGateway(ctx, detachInput)
+	if err != nil {
+		return fmt.Errorf("error detaching internet gateway %v", err)
+	}
+	builder.Logger.Log.Debugf("Detached internet gateway %v", gatewayID)
+
+	time.Sleep(time.Second * 30)
+
+	gatewayInput := &ec2.DeleteInternetGatewayInput{
+		InternetGatewayId: &gatewayID,
+	}
+	_, err = builder.Client.DeleteInternetGateway(ctx, gatewayInput)
+	if err != nil {
+		return fmt.Errorf("error deleting gateway %v", err)
+	}
+
+	builder.Logger.Log.Debugf("Deleted internet gateway %v", gatewayID)
+
+	time.Sleep(time.Minute * 1)
 
 	input := &ec2.DeleteVpcInput{
 		VpcId: &vpcID,
@@ -604,5 +773,6 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 	if err != nil {
 		return fmt.Errorf("error deleting vpc %v", err)
 	}
+	builder.Logger.Log.Debugf("Deleted vpc %v", vpcID)
 	return
 }
