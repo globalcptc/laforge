@@ -224,7 +224,6 @@ func UserExists(user_name string) (bool, error) { // exists (boolean
 	if err != nil {
 		return false, err
 	}
-	fmt.Println(users)
 	for _, user := range users {
 		if user.Username == user_name {
 			return true, nil
@@ -241,7 +240,6 @@ func HostPortOpen(port int) (bool, error) {
 	}
 	ps_lines := strings.Split(string(ps_output), "\n")
 	for i := 0; i < len(ps_lines); i++ {
-		fmt.Println("ps line", ps_lines[i])
 		if strings.Contains(ps_lines[i], " localhost:"+strconv.Itoa(port)+" ") || strings.Contains(ps_lines[i], " 0.0.0.0:"+strconv.Itoa(port)+" ") || strings.Contains(ps_lines[i], " 127.0.0.1:"+strconv.Itoa(port)+" ") {
 			return true, nil
 		}
@@ -317,7 +315,6 @@ func NetICMP(ip string) (bool, error) { // responded (boolean)
 	if err != nil {
 		return false, err
 	}
-	fmt.Println(string(ps_output))
 	ps_lines := strings.Split(string(ps_output), "\n")
 	for i := 0; i < len(ps_lines); i++ {
 		if strings.HasPrefix(ps_lines[i], "5 packets transmitted, 5 received") { // this is pretty jank
@@ -373,26 +370,20 @@ func UserGroupMember(user_name string, group_name string) (bool, error) { // is 
 	//returns Uid, Gid, Username, Name and HomeDir
 	u, err := user.Lookup(user_name)
 	if err != nil {
-		fmt.Println("This sucks: %s\n", err)
 		return false, err
 	}
-	// fmt.Println("User information: ",u)
 
 	// returns string array of Gids of specific user
 	userGroups, err := u.GroupIds()
 	if err != nil {
-		fmt.Println("This sucks more: %s\n", err)
 		return false, nil
 	}
-	// fmt.Println("UserGroups:\t",userGroups)
 
 	//returns Gid and Name
 	group, err := user.LookupGroup(group_name)
 	if err != nil {
-		fmt.Println("This sucks even more: %s\n", err)
 		return false, nil
 	}
-	// fmt.Println(group)
 
 	for i := range userGroups {
 		if group.Gid == userGroups[i] {
@@ -436,7 +427,6 @@ func HostFirewallPort(port int) (bool, error) {
 	}
 	ps_lines := strings.Split(string(ps_output), "\n")
 	for i := 0; i < len(ps_lines); i++ {
-		fmt.Println("ps line", ps_lines[i])
 		if strings.Contains(ps_lines[i], strconv.Itoa(port)+" ") {
 			return true, nil
 		}
@@ -445,8 +435,8 @@ func HostFirewallPort(port int) (bool, error) {
 }
 
 func main() {
-	fmt.Println("windows")
-	fmt.Println(HostPortOpen(8080))
+	// fmt.Println("windows")
+	// fmt.Println(HostPortOpen(8080))
 	// fmt.Println(NetHttpContentHash("https://curtisf.dev/", "c76fdd9a87b2a3c653968b12973c2498"))
 	// fmt.Println(FileHash("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
 	// fmt.Println(FileContentRegex("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))

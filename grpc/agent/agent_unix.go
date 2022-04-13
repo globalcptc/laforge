@@ -397,7 +397,6 @@ func NetICMP(ip string) (bool, error) { // responded (boolean)
 	// if err != nil {
 	// 	return false, err
 	// }
-	// fmt.Println(string(ps_output))
 	// ps_lines := strings.Split(string(ps_output), "\n")
 	// for i := 0; i < len(ps_lines); i++ {
 	// 	if strings.HasPrefix(ps_lines[i], "5 packets transmitted, 5 received") { // this is pretty jank
@@ -469,7 +468,6 @@ func HostPortOpen(port int) (bool, error) {
 	}
 	ps_lines := strings.Split(string(ps_output), "\n")
 	for i := 0; i < len(ps_lines); i++ {
-		fmt.Println("ps line", ps_lines[i])
 		if strings.Contains(ps_lines[i], " localhost:"+strconv.Itoa(port)+" ") || strings.Contains(ps_lines[i], " 0.0.0.0:"+strconv.Itoa(port)+" ") || strings.Contains(ps_lines[i], " 127.0.0.1:"+strconv.Itoa(port)+" ") {
 			return true, nil
 		}
@@ -485,7 +483,6 @@ func HostFirewallPort(port int) (bool, error) {
 	}
 	ps_lines := strings.Split(string(ps_output), "\n")
 	for i := 0; i < len(ps_lines); i++ {
-		fmt.Println("ps line", ps_lines[i])
 		if strings.Contains(ps_lines[i], "dpt:"+strconv.Itoa(port)) {
 			return true, nil
 		}
