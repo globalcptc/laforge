@@ -219,12 +219,16 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	sgID := *SecGroupResults.GroupId
 	agentUrl := fmt.Sprintf("%s/api/download/%s", builder.Config.ServerUrl, agentFile.URLID)
 	var code string
-	if strings.HasPrefix(entHost.OS, "win") {
-		code = fmt.Sprintf(`powershell -Command mkdir $env:PROGRAMDATA\\Laforge -Force
-		powershell -Command Invoke-WebRequest %s -OutFile \"$env:PROGRAMDATA\\Laforge\\laforge.exe\
-		powershell -Command %%PROGRAMDATA%%\\Laforge\\laforge.exe -service install
-		powershell -Command %%PROGRAMDATA%%\\Laforge\\laforge.exe -service start
-		powershell -Command logoff`, agentUrl)
+	builder.Logger.Log.Debugf("Deploying HostOS : %s", entHost.OS)
+	if strings.HasPrefix(entHost.OS, "w2k") {
+		code = fmt.Sprintf(`<script>
+powershell -Command mkdir $env:PROGRAMDATA\Laforge -Force
+powershell -Command do{	$test = Test-Connection 1.1.1.1 -Quiet; Start-Sleep -s 5}until($test)
+powershell -Command Invoke-WebRequest %s -OutFile $env:PROGRAMDATA\Laforge\laforge.exe
+powershell -Command %%PROGRAMDATA%%\Laforge\laforge.exe -service install
+powershell -Command %%PROGRAMDATA%%\Laforge\laforge.exe -service start
+powershell -Command logoff
+</script>`, agentUrl)
 	} else {
 		var linuxPassword string
 		if len(entHost.OverridePassword) > 0 {
@@ -477,7 +481,7 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 		return fmt.Errorf("error terminating instance %v", err)
 	}
 
-	time.Sleep(time.Minute * 1)
+	time.Sleep(time.Second * 90)
 
 	//Get security group ID to terminate
 	secGroupID, ok := provisionedHost.Vars["SecGroupId"]
