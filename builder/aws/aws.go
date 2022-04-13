@@ -20,7 +20,7 @@ const (
 	Name        = "AWS"
 	Description = "Builder that interfaces with AWS"
 	Author      = "Nicholas Graca <github.com/njg7716>"
-	Version     = "0.1"
+	Version     = "1.0"
 )
 
 type AWSBuilder struct {
@@ -95,7 +95,6 @@ func (builder AWSBuilder) generatePublicSubnetName(competition *ent.Competition,
 	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-Public_Subnet-" + builder.generateBuildID(build))
 }
 
-//TODO Test
 func (builder AWSBuilder) getAMI(ctx context.Context, name, vt, rdt, arch, owner string) (string, error) {
 
 	// Describe the host with info from above and get ready to deploy
@@ -727,19 +726,6 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 	}
 
 	builder.Logger.Log.Debugf("Deleted subnet %v", subnetID)
-
-	// routeTableID, ok := entTeam.Vars["RouteTableId"]
-	// if !ok {
-	// 	return fmt.Errorf("error getting route table id from team vars")
-	// }
-	// routeTableInput := &ec2.DeleteRouteTableInput{
-	// 	RouteTableId: &routeTableID,
-	// }
-	// _, err = builder.Client.DeleteRouteTable(ctx, routeTableInput)
-	// if err != nil {
-	// 	return fmt.Errorf("error deleting route table %v", err)
-	// }
-	// builder.Logger.Log.Debugf("Deleted route table %v", routeTableID)
 
 	allocateID, ok := entTeam.Vars["AllocationID"]
 	if !ok {
