@@ -65,6 +65,12 @@ func (bu *BuildUpdate) AddEnvironmentRevision(i int) *BuildUpdate {
 	return bu
 }
 
+// SetVars sets the "vars" field.
+func (bu *BuildUpdate) SetVars(m map[string]string) *BuildUpdate {
+	bu.mutation.SetVars(m)
+	return bu
+}
+
 // SetCompletedPlan sets the "completed_plan" field.
 func (bu *BuildUpdate) SetCompletedPlan(b bool) *BuildUpdate {
 	bu.mutation.SetCompletedPlan(b)
@@ -560,6 +566,13 @@ func (bu *BuildUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Type:   field.TypeInt,
 			Value:  value,
 			Column: build.FieldEnvironmentRevision,
+		})
+	}
+	if value, ok := bu.mutation.Vars(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: build.FieldVars,
 		})
 	}
 	if value, ok := bu.mutation.CompletedPlan(); ok {
@@ -1167,6 +1180,12 @@ func (buo *BuildUpdateOne) AddEnvironmentRevision(i int) *BuildUpdateOne {
 	return buo
 }
 
+// SetVars sets the "vars" field.
+func (buo *BuildUpdateOne) SetVars(m map[string]string) *BuildUpdateOne {
+	buo.mutation.SetVars(m)
+	return buo
+}
+
 // SetCompletedPlan sets the "completed_plan" field.
 func (buo *BuildUpdateOne) SetCompletedPlan(b bool) *BuildUpdateOne {
 	buo.mutation.SetCompletedPlan(b)
@@ -1686,6 +1705,13 @@ func (buo *BuildUpdateOne) sqlSave(ctx context.Context) (_node *Build, err error
 			Type:   field.TypeInt,
 			Value:  value,
 			Column: build.FieldEnvironmentRevision,
+		})
+	}
+	if value, ok := buo.mutation.Vars(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: build.FieldVars,
 		})
 	}
 	if value, ok := buo.mutation.CompletedPlan(); ok {

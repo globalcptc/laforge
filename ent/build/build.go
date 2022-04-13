@@ -15,6 +15,8 @@ const (
 	FieldRevision = "revision"
 	// FieldEnvironmentRevision holds the string denoting the environment_revision field in the database.
 	FieldEnvironmentRevision = "environment_revision"
+	// FieldVars holds the string denoting the vars field in the database.
+	FieldVars = "vars"
 	// FieldCompletedPlan holds the string denoting the completed_plan field in the database.
 	FieldCompletedPlan = "completed_plan"
 	// EdgeBuildToStatus holds the string denoting the buildtostatus edge name in mutations.
@@ -134,6 +136,7 @@ var Columns = []string{
 	FieldID,
 	FieldRevision,
 	FieldEnvironmentRevision,
+	FieldVars,
 	FieldCompletedPlan,
 }
 

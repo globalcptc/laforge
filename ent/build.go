@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -25,6 +26,8 @@ type Build struct {
 	Revision int `json:"revision,omitempty"`
 	// EnvironmentRevision holds the value of the "environment_revision" field.
 	EnvironmentRevision int `json:"environment_revision,omitempty"`
+	// Vars holds the value of the "vars" field.
+	Vars map[string]string `json:"vars,omitempty"`
 	// CompletedPlan holds the value of the "completed_plan" field.
 	CompletedPlan bool `json:"completed_plan,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -232,6 +235,8 @@ func (*Build) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case build.FieldVars:
+			values[i] = new([]byte)
 		case build.FieldCompletedPlan:
 			values[i] = new(sql.NullBool)
 		case build.FieldRevision, build.FieldEnvironmentRevision:
@@ -278,6 +283,14 @@ func (b *Build) assignValues(columns []string, values []interface{}) error {
 				return fmt.Errorf("unexpected type %T for field environment_revision", values[i])
 			} else if value.Valid {
 				b.EnvironmentRevision = int(value.Int64)
+			}
+		case build.FieldVars:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field vars", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &b.Vars); err != nil {
+					return fmt.Errorf("unmarshal field vars: %w", err)
+				}
 			}
 		case build.FieldCompletedPlan:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -405,6 +418,8 @@ func (b *Build) String() string {
 	builder.WriteString(fmt.Sprintf("%v", b.Revision))
 	builder.WriteString(", environment_revision=")
 	builder.WriteString(fmt.Sprintf("%v", b.EnvironmentRevision))
+	builder.WriteString(", vars=")
+	builder.WriteString(fmt.Sprintf("%v", b.Vars))
 	builder.WriteString(", completed_plan=")
 	builder.WriteString(fmt.Sprintf("%v", b.CompletedPlan))
 	builder.WriteByte(')')
