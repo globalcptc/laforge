@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -13,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/logging"
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -24,17 +26,21 @@ const (
 )
 
 type AWSBuilder struct {
-	Client    *ec2.Client
-	Logger    *logging.Logger
-	AMIConfig map[string]AMIConfigStruct
-	Config    AWSBuilderConfig
+	Client             *ec2.Client
+	Logger             *logging.Logger
+	AMIConfig          map[string]AMIConfigStruct
+	Config             AWSBuilderConfig
+	DeployWorkerPool   *semaphore.Weighted
+	TeardownWorkerPool *semaphore.Weighted
 }
 
 type AWSBuilderConfig struct {
-	ServerUrl     string                     `json:"server_url"`
-	AWSConfigFile string                     `json:"aws_config_file"`
-	Region        string                     `json:"region"`
-	AMIConfig     map[string]AMIConfigStruct `json:"ami_configs"`
+	ServerUrl          string                     `json:"server_url"`
+	AWSConfigFile      string                     `json:"aws_config_file"`
+	Region             string                     `json:"region"`
+	AMIConfig          map[string]AMIConfigStruct `json:"ami_configs"`
+	MaxBuildWorkers    int                        `json:"max_build_workers"`
+	MaxTeardownWorkers int                        `json:"max_teardown_workers"`
 }
 
 type AMIConfigStruct struct {
@@ -154,6 +160,18 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		return fmt.Errorf("couldn't query provisioned network from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
 
+	entNetwork, err := entProNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query network from provisioned network \"%v\": %v", entProNetwork.Name, err)
+	}
+
+	entEnvironment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query environment from competition \"%v\": %v", entCompetition.ID, err)
+	}
+	// Get InstanceId and store it in ENT to access later
+	newVars := provisionedHost.Vars
+
 	// Describe the host with info from above and get ready to deploy
 
 	var numInstances int32 = 1
@@ -197,6 +215,14 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	if !ok {
 		return fmt.Errorf("couldn't find subnetID in ProNetwork \"%v\"", entProNetwork.ID)
 	}
+
+	// Only allow a certain amount of threads to touch AWS at the same time
+	err = builder.DeployWorkerPool.Acquire(ctx, int64(1))
+	if err != nil {
+		return
+	}
+	defer builder.DeployWorkerPool.Release(int64(1))
+
 	// Before we can create a host, we need to create a Security Group for the host to be in
 	desc := vmName + "_sec_group"
 	secGroupinput := &ec2.CreateSecurityGroupInput{
@@ -216,6 +242,12 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	}
 	// Save the Security Group ID so we can deploy the host and tear it down later
 	sgID := *SecGroupResults.GroupId
+	newVars["SecGroupId"] = sgID
+	err = provisionedHost.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("error updating host vars with Instance and SecGroup IDs %v", err)
+	}
+
 	agentUrl := fmt.Sprintf("%s/api/download/%s", builder.Config.ServerUrl, agentFile.URLID)
 	var code string
 	builder.Logger.Log.Debugf("Deploying HostOS : %s", entHost.OS)
@@ -272,19 +304,81 @@ powershell -Command logoff
 	}
 	id := *result.Instances[0].InstanceId
 
-	// Get InstanceId and store it in ENT to access later
-	newVars := provisionedHost.Vars
 	newVars["InstanceId"] = id
-	newVars["SecGroupId"] = sgID
 	err = provisionedHost.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("error updating host vars with Instance and SecGroup IDs %v", err)
+	}
+
+	// Deply host with public IP
+	if entNetwork.Vars["public_net"] == "true" {
+		// Allocate a public IP
+		allocateInput := &ec2.AllocateAddressInput{
+			Domain: types.DomainTypeStandard,
+		}
+		allocateResult, err := builder.Client.AllocateAddress(ctx, allocateInput)
+		if err != nil {
+			return fmt.Errorf("error allocating IP %v", err)
+		}
+		allocateID := *allocateResult.AllocationId
+		publicIP := *allocateResult.PublicIp
+		newVars["AllocationID"] = allocateID
+		newVars["PublicIP"] = publicIP
+		err = provisionedHost.Update().SetVars(newVars).Exec(ctx)
+		associateInput := &ec2.AssociateAddressInput{
+			InstanceId:   aws.String(id),
+			AllocationId: aws.String(allocateID),
+		}
+		// make wait group
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				// check instance state
+				instanceStateResults, err := builder.Client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
+					InstanceIds: []string{id},
+				})
+				if err != nil {
+					builder.Logger.Log.Errorf("error describing instance %v : %v", id, err)
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				instanceState := instanceStateResults.Reservations[0].Instances[0].State.Name
+				if instanceState != "running" {
+					builder.Logger.Log.Errorf("instance %v not running : %v", id, instanceState)
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				break
+			}
+		}()
+
+		wg.Wait()
+		_, err = builder.Client.AssociateAddress(ctx, associateInput)
+		if err != nil {
+			return fmt.Errorf("error associating public IP %v : %v", entHost.ID, err)
+		}
+		if err != nil {
+			return fmt.Errorf("error updating host vars with Instance and SecGroup IDs %v", err)
+		}
 	}
 
 	//Expose TCP ports both Egress and Ingress
 	for _, ports := range entHost.ExposedTCPPorts {
 		fromPort := 0
 		toPort := 0
+		input_cidr := entProNetwork.Cidr
+		if entNetwork.VdiVisible {
+			vpcCidr, ok := entEnvironment.Config["vpc_cidr"]
+			if !ok {
+				return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entEnvironment.Name)
+			}
+			input_cidr = vpcCidr
+		}
+		if entNetwork.Vars["public_net"] == "true" {
+			input_cidr = "0.0.0.0/0"
+		}
 		portList := strings.Split(ports, "-")
 		if len(portList) == 2 {
 			fromPort, err = strconv.Atoi(portList[0])
@@ -312,7 +406,7 @@ powershell -Command logoff
 					IpProtocol: aws.String("tcp"),
 					IpRanges: []types.IpRange{
 						{
-							CidrIp: aws.String(entProNetwork.Cidr),
+							CidrIp: aws.String(input_cidr),
 						},
 					},
 					ToPort: aws.Int32(int32(toPort)),
@@ -328,6 +422,10 @@ powershell -Command logoff
 	for _, ports := range entHost.ExposedUDPPorts {
 		fromPort := 0
 		toPort := 0
+		input_cidr := entProNetwork.Cidr
+		if entNetwork.Vars["public_net"] == "true" {
+			input_cidr = "0.0.0.0/0"
+		}
 		portList := strings.Split(ports, "-")
 		if len(portList) == 2 {
 			fromPort, err = strconv.Atoi(portList[0])
@@ -355,7 +453,7 @@ powershell -Command logoff
 					IpProtocol: aws.String("udp"),
 					IpRanges: []types.IpRange{
 						{
-							CidrIp: aws.String(entProNetwork.Cidr),
+							CidrIp: aws.String(input_cidr),
 						},
 					},
 					ToPort: aws.Int32(int32(toPort)),
@@ -391,6 +489,11 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 		return fmt.Errorf("couldn't query competition from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
 
+	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query network from team \"%d\": %v", entTeam.TeamNumber, err)
+	}
+
 	vpcID, ok := entTeam.Vars["VpcId"]
 	if !ok {
 		return fmt.Errorf("couldn't find vpc_cidr in team \"%v\"", entTeam.TeamNumber)
@@ -399,6 +502,14 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	if !ok {
 		return fmt.Errorf("couldn't find nat_gateway_id in team \"%v\"", entTeam.TeamNumber)
 	}
+	// Store subnetID so that it can be used later and torn down
+	newVars := provisionedNetwork.Vars
+	// Only allow a certain amount of threads to touch AWS at the same time
+	err = builder.DeployWorkerPool.Acquire(ctx, int64(1))
+	if err != nil {
+		return
+	}
+	defer builder.DeployWorkerPool.Release(int64(1))
 
 	subnetName := builder.generateSubnetName(entCompetition, entTeam, entBuild, provisionedNetwork)
 
@@ -419,43 +530,46 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	if err != nil {
 		return fmt.Errorf("error getting subnetID from subnet result : %v", err)
 	}
-	//Create route table
-	routeTableInput := &ec2.CreateRouteTableInput{
-		VpcId: &vpcID,
-		TagSpecifications: []types.TagSpecification{{
-			ResourceType: "route-table",
-			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}},
-		}},
-	}
-	routeTableResult, err := builder.Client.CreateRouteTable(ctx, routeTableInput)
-	if err != nil {
-		return fmt.Errorf("error creating route table %v", err)
-	}
-	routeTableID := *routeTableResult.RouteTable.RouteTableId
-	associateInput := ec2.AssociateRouteTableInput{
-		RouteTableId: &routeTableID,
-		SubnetId:     &subnetID,
-	}
-	_, err = builder.Client.AssociateRouteTable(ctx, &associateInput)
-	if err != nil {
-		return fmt.Errorf("error associating route table %v", err)
-	}
-	//Create route
-	routeInput := ec2.CreateRouteInput{
-		RouteTableId:         &routeTableID,
-		DestinationCidrBlock: aws.String("0.0.0.0/0"),
-		NatGatewayId:         aws.String(natGatewayID),
-	}
-	_, err = builder.Client.CreateRoute(ctx, &routeInput)
-	if err != nil {
-		return fmt.Errorf("error creating route %v", err)
+	newVars["SubnetID"] = subnetID
+	err = provisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	if entNetwork.Vars["public_net"] == "true" {
+		builder.Logger.Log.Debug("Not Creating Custom route table for public network")
+	} else {
+		//Create route table
+		routeTableInput := &ec2.CreateRouteTableInput{
+			VpcId: &vpcID,
+			TagSpecifications: []types.TagSpecification{{
+				ResourceType: "route-table",
+				Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}},
+			}},
+		}
+		routeTableResult, err := builder.Client.CreateRouteTable(ctx, routeTableInput)
+		if err != nil {
+			return fmt.Errorf("error creating route table %v", err)
+		}
+		routeTableID := *routeTableResult.RouteTable.RouteTableId
+		newVars["RouteTableID"] = routeTableID
+		err = provisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+		associateInput := ec2.AssociateRouteTableInput{
+			RouteTableId: &routeTableID,
+			SubnetId:     &subnetID,
+		}
+		_, err = builder.Client.AssociateRouteTable(ctx, &associateInput)
+		if err != nil {
+			return fmt.Errorf("error associating route table %v", err)
+		}
+		//Create route
+		routeInput := ec2.CreateRouteInput{
+			RouteTableId:         &routeTableID,
+			DestinationCidrBlock: aws.String("0.0.0.0/0"),
+			NatGatewayId:         aws.String(natGatewayID),
+		}
+		_, err = builder.Client.CreateRoute(ctx, &routeInput)
+		if err != nil {
+			return fmt.Errorf("error creating route %v", err)
+		}
 	}
 
-	// Store subnetID so that it can be used later and torn down
-	newVars := provisionedNetwork.Vars
-	newVars["SubnetID"] = subnetID
-	newVars["RouteTableID"] = routeTableID
-	err = provisionedNetwork.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("error updating network vars with subnetID %v", err)
 	}
@@ -464,66 +578,121 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 
 //TeardownHost Terminates a host and its security group
 func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
-
+	// Only allow a certain amount of threads to touch AWS at the same time
+	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
+	if err != nil {
+		return
+	}
+	defer builder.TeardownWorkerPool.Release(int64(1))
 	// Get instanceID to terminate before terminating the corresponding security group
 	instance, ok := provisionedHost.Vars["InstanceId"]
-	if !ok {
-		return fmt.Errorf("couldn't find InstanceID in environment \"%v\"", provisionedHost.ID)
-	}
-	instances := []string{instance}
+	if ok {
+		instances := []string{instance}
 
-	input := &ec2.TerminateInstancesInput{
-		InstanceIds: instances,
-	}
-	_, err = builder.Client.TerminateInstances(ctx, input)
-	if err != nil {
-		return fmt.Errorf("error terminating instance %v", err)
-	}
+		input := &ec2.TerminateInstancesInput{
+			InstanceIds: instances,
+		}
+		_, err = builder.Client.TerminateInstances(ctx, input)
+		if err != nil {
+			return fmt.Errorf("error terminating instance %v", err)
+		}
 
-	time.Sleep(time.Second * 90)
+		time.Sleep(time.Second * 100)
+	} else {
+		builder.Logger.Log.Debugf("No instance id found for host %v", provisionedHost)
+	}
+	// make wait group
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			// check instance state
+			instanceStateResults, err := builder.Client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
+				InstanceIds: []string{instance},
+			})
+			if err != nil {
+				builder.Logger.Log.Errorf("error describing instance %v : %v", instance, err)
+				time.Sleep(time.Second * 10)
+				continue
+			}
+			instanceState := instanceStateResults.Reservations[0].Instances[0].State.Name
+			if instanceState != "terminated" {
+				builder.Logger.Log.Errorf("instance %v not terminated : %v", instance, instanceState)
+				time.Sleep(time.Second * 10)
+				continue
+			}
+			break
+		}
+	}()
+
+	wg.Wait()
 
 	//Get security group ID to terminate
 	secGroupID, ok := provisionedHost.Vars["SecGroupId"]
-	if !ok {
-		return fmt.Errorf("couldn't find SecGroupID in environment \"%v\"", provisionedHost.ID)
+	if ok {
+		secGroupInput := &ec2.DeleteSecurityGroupInput{
+			GroupId: &secGroupID,
+		}
+		_, err = builder.Client.DeleteSecurityGroup(ctx, secGroupInput)
+		if err != nil {
+			return fmt.Errorf("error deleting security group %v", err)
+		}
+	} else {
+		builder.Logger.Log.Debugf("No security group id found for host %v", provisionedHost)
 	}
-	secGroupInput := &ec2.DeleteSecurityGroupInput{
-		GroupId: &secGroupID,
+
+	allocateID, ok := provisionedHost.Vars["AllocationID"]
+	if ok {
+		allocateInput := &ec2.ReleaseAddressInput{
+			AllocationId: &allocateID,
+		}
+		_, err = builder.Client.ReleaseAddress(ctx, allocateInput)
+		if err != nil {
+			return fmt.Errorf("error releasing address %v", err)
+		}
+		builder.Logger.Log.Debugf("Deleted allocation %v", allocateID)
+	} else {
+		builder.Logger.Log.Debugf("No allocation id found for host %v", provisionedHost)
 	}
-	_, err = builder.Client.DeleteSecurityGroup(ctx, secGroupInput)
-	if err != nil {
-		return fmt.Errorf("error deleting security group %v", err)
-	}
+
 	return nil
 }
 
 // TeardownNetwork deletes a subnet
 func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
-
-	subnetID, ok := provisionedNetwork.Vars["SubnetID"]
-	if !ok {
-		return fmt.Errorf("couldn't find Subent in PN \"%v\"", provisionedNetwork.Name)
-	}
-	subnetInput := &ec2.DeleteSubnetInput{
-		SubnetId: &subnetID,
-	}
-	_, err = builder.Client.DeleteSubnet(ctx, subnetInput)
+	// Only allow a certain amount of threads to touch AWS at the same time
+	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
-		return fmt.Errorf("error deleting subnet %v", err)
+		return
 	}
+	defer builder.TeardownWorkerPool.Release(int64(1))
+	subnetID, ok := provisionedNetwork.Vars["SubnetID"]
+	if ok {
+		subnetInput := &ec2.DeleteSubnetInput{
+			SubnetId: &subnetID,
+		}
+		_, err = builder.Client.DeleteSubnet(ctx, subnetInput)
+		if err != nil {
+			return fmt.Errorf("error deleting subnet %v", err)
+		}
 
-	time.Sleep(time.Second * 30)
+		time.Sleep(time.Second * 30)
+	} else {
+		builder.Logger.Log.Debugf("No subnet id found for network %v", provisionedNetwork)
+	}
 
 	routeTableID, ok := provisionedNetwork.Vars["RouteTableID"]
-	if !ok {
-		return fmt.Errorf("couldn't find RouteTableID in provisioned network \"%v\"", provisionedNetwork.ID)
-	}
-	routeTableInput := &ec2.DeleteRouteTableInput{
-		RouteTableId: &routeTableID,
-	}
-	_, err = builder.Client.DeleteRouteTable(ctx, routeTableInput)
-	if err != nil {
-		return fmt.Errorf("error deleting route table %v", err)
+	if ok {
+		routeTableInput := &ec2.DeleteRouteTableInput{
+			RouteTableId: &routeTableID,
+		}
+		_, err = builder.Client.DeleteRouteTable(ctx, routeTableInput)
+		if err != nil {
+			return fmt.Errorf("error deleting route table %v", err)
+		}
+	} else {
+		builder.Logger.Log.Debugf("No route table id found for network %v", provisionedNetwork)
 	}
 
 	return nil
@@ -556,6 +725,12 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	if !ok {
 		return fmt.Errorf("couldn't find public_cidr in environment \"%v\"", entEnvironment.Name)
 	}
+	// Only allow a certain amount of threads to touch AWS at the same time
+	err = builder.DeployWorkerPool.Acquire(ctx, int64(1))
+	if err != nil {
+		return
+	}
+	defer builder.DeployWorkerPool.Release(int64(1))
 
 	VPCName := builder.generateVPCName(entCompetition, entTeam, entBuild)
 
@@ -575,7 +750,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	}
 	vpcID := *vpcResults.Vpc.VpcId
 
-	// Create Inteernet Gateway
+	// Create Internet Gateway
 	gatewayInput := &ec2.CreateInternetGatewayInput{
 		TagSpecifications: []types.TagSpecification{{ResourceType: "internet-gateway", Tags: []types.Tag{{Key: aws.String("Name"), Value: aws.String(VPCName)}}}},
 	}
@@ -692,91 +867,97 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 
 //TeardownTeam Terminates VPC
 func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
-	vpcID, ok := entTeam.Vars["VpcId"]
-	if !ok {
-		return fmt.Errorf("couldn't find vpcID in environment \"%v\"", entTeam.TeamNumber)
-	}
-
-	natGatewayID, ok := entTeam.Vars["NatGatewayID"]
-	if !ok {
-		return fmt.Errorf("error getting nat gateway id from team vars")
-	}
-	natGatewayInput := &ec2.DeleteNatGatewayInput{
-		NatGatewayId: &natGatewayID,
-	}
-	_, err = builder.Client.DeleteNatGateway(ctx, natGatewayInput)
+	// Only allow a certain amount of threads to touch AWS at the same time
+	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
-		return fmt.Errorf("error deleting nat gateway %v", err)
+		return
 	}
+	defer builder.TeardownWorkerPool.Release(int64(1))
+	natGatewayID, ok := entTeam.Vars["NatGatewayID"]
+	if ok {
+		natGatewayInput := &ec2.DeleteNatGatewayInput{
+			NatGatewayId: &natGatewayID,
+		}
+		_, err = builder.Client.DeleteNatGateway(ctx, natGatewayInput)
+		if err != nil {
+			return fmt.Errorf("error deleting nat gateway %v", err)
+		}
 
-	builder.Logger.Log.Debugf("Deleted nat gateway %v", natGatewayID)
+		builder.Logger.Log.Debugf("Deleted nat gateway %v", natGatewayID)
 
-	time.Sleep(time.Second * 90)
+		time.Sleep(time.Second * 90)
+	} else {
+		builder.Logger.Log.Debugf("No nat gateway found in Team %v", entTeam.TeamNumber)
+	}
 
 	subnetID, ok := entTeam.Vars["SubnetID"]
-	if !ok {
-		return fmt.Errorf("error getting subnet id from team vars")
-	}
-	subnetInput := &ec2.DeleteSubnetInput{
-		SubnetId: &subnetID,
-	}
-	_, err = builder.Client.DeleteSubnet(ctx, subnetInput)
-	if err != nil {
-		return fmt.Errorf("error deleting subnet %v", err)
-	}
+	if ok {
+		subnetInput := &ec2.DeleteSubnetInput{
+			SubnetId: &subnetID,
+		}
+		_, err = builder.Client.DeleteSubnet(ctx, subnetInput)
+		if err != nil {
+			return fmt.Errorf("error deleting subnet %v", err)
+		}
 
-	builder.Logger.Log.Debugf("Deleted subnet %v", subnetID)
+		builder.Logger.Log.Debugf("Deleted subnet %v", subnetID)
+	}
 
 	allocateID, ok := entTeam.Vars["AllocationID"]
-	if !ok {
-		return fmt.Errorf("error getting allocation id from team vars")
-	}
-	allocateInput := &ec2.ReleaseAddressInput{
-		AllocationId: &allocateID,
-	}
-	_, err = builder.Client.ReleaseAddress(ctx, allocateInput)
-	if err != nil {
-		return fmt.Errorf("error releasing address %v", err)
-	}
-	builder.Logger.Log.Debugf("Deleted allocation %v", allocateID)
-
-	gatewayID, ok := entTeam.Vars["GatewayId"]
-	if !ok {
-		return fmt.Errorf("error getting gateway id from team vars")
+	if ok {
+		allocateInput := &ec2.ReleaseAddressInput{
+			AllocationId: &allocateID,
+		}
+		_, err = builder.Client.ReleaseAddress(ctx, allocateInput)
+		if err != nil {
+			return fmt.Errorf("error releasing address %v", err)
+		}
+		builder.Logger.Log.Debugf("Deleted allocation %v", allocateID)
 	}
 
-	// detach internet gateway
-	detachInput := &ec2.DetachInternetGatewayInput{
-		InternetGatewayId: &gatewayID,
-		VpcId:             &vpcID,
-	}
-	_, err = builder.Client.DetachInternetGateway(ctx, detachInput)
-	if err != nil {
-		return fmt.Errorf("error detaching internet gateway %v", err)
-	}
-	builder.Logger.Log.Debugf("Detached internet gateway %v", gatewayID)
+	vpcID, ok := entTeam.Vars["VpcId"]
+	if ok {
+		gatewayID, ok := entTeam.Vars["GatewayId"]
+		if ok {
+			// detach internet gateway
+			detachInput := &ec2.DetachInternetGatewayInput{
+				InternetGatewayId: &gatewayID,
+				VpcId:             &vpcID,
+			}
+			_, err = builder.Client.DetachInternetGateway(ctx, detachInput)
+			if err != nil {
+				return fmt.Errorf("error detaching internet gateway %v", err)
+			}
+			builder.Logger.Log.Debugf("Detached internet gateway %v", gatewayID)
 
-	time.Sleep(time.Second * 30)
+			time.Sleep(time.Second * 30)
 
-	gatewayInput := &ec2.DeleteInternetGatewayInput{
-		InternetGatewayId: &gatewayID,
-	}
-	_, err = builder.Client.DeleteInternetGateway(ctx, gatewayInput)
-	if err != nil {
-		return fmt.Errorf("error deleting gateway %v", err)
+			gatewayInput := &ec2.DeleteInternetGatewayInput{
+				InternetGatewayId: &gatewayID,
+			}
+			_, err = builder.Client.DeleteInternetGateway(ctx, gatewayInput)
+			if err != nil {
+				return fmt.Errorf("error deleting gateway %v", err)
+			}
+
+			builder.Logger.Log.Debugf("Deleted internet gateway %v", gatewayID)
+
+			time.Sleep(time.Minute * 1)
+		} else {
+			builder.Logger.Log.Debugf("No internet gateway found in Team %v", entTeam.TeamNumber)
+		}
+		input := &ec2.DeleteVpcInput{
+			VpcId: &vpcID,
+		}
+		_, err = builder.Client.DeleteVpc(ctx, input)
+		if err != nil {
+			return fmt.Errorf("error deleting vpc %v", err)
+		}
+		builder.Logger.Log.Debugf("Deleted vpc %v", vpcID)
+
+	} else {
+		builder.Logger.Log.Debugf("No vpc found in Team %v", entTeam.TeamNumber)
 	}
 
-	builder.Logger.Log.Debugf("Deleted internet gateway %v", gatewayID)
-
-	time.Sleep(time.Minute * 1)
-
-	input := &ec2.DeleteVpcInput{
-		VpcId: &vpcID,
-	}
-	_, err = builder.Client.DeleteVpc(ctx, input)
-	if err != nil {
-		return fmt.Errorf("error deleting vpc %v", err)
-	}
-	builder.Logger.Log.Debugf("Deleted vpc %v", vpcID)
 	return
 }
