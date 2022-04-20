@@ -877,8 +877,30 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	if err != nil {
 		return fmt.Errorf("error creating default route %v", err)
 	}
-
-	time.Sleep(time.Minute * 1)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			//check status of NAT gateway
+			natGatewayStatusInput := &ec2.DescribeNatGatewaysInput{
+				NatGatewayIds: []string{natGatewayID},
+			}
+			natGatewayStatusResults, err := builder.Client.DescribeNatGateways(ctx, natGatewayStatusInput)
+			if err != nil {
+				builder.Logger.Log.Errorf("error describing nat gateway %v", err)
+				time.Sleep(time.Second * 10)
+				continue
+			}
+			natGatewayState := natGatewayStatusResults.NatGateways[0].State
+			if natGatewayState != "available" {
+				builder.Logger.Log.Errorf("nat gateway state is %v", natGatewayState)
+				time.Sleep(time.Second * 10)
+				continue
+			}
+			break
+		}
+	}()
 
 	return nil
 }
@@ -903,7 +925,30 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 
 		builder.Logger.Log.Debugf("Deleted nat gateway %v", natGatewayID)
 
-		time.Sleep(time.Second * 90)
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				//check status of NAT gateway
+				natGatewayStatusInput := &ec2.DescribeNatGatewaysInput{
+					NatGatewayIds: []string{natGatewayID},
+				}
+				natGatewayStatusResults, err := builder.Client.DescribeNatGateways(ctx, natGatewayStatusInput)
+				if err != nil {
+					builder.Logger.Log.Errorf("error describing nat gateway %v", err)
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				natGatewayState := natGatewayStatusResults.NatGateways[0].State
+				if natGatewayState != "deleted" {
+					builder.Logger.Log.Errorf("nat gateway state is %v", natGatewayState)
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				break
+			}
+		}()
 	} else {
 		builder.Logger.Log.Debugf("No nat gateway found in Team %v", entTeam.TeamNumber)
 	}
