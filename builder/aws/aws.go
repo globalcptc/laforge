@@ -720,6 +720,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	if !ok {
 		return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entEnvironment.Name)
 	}
+	newVars := entTeam.Vars
 
 	publicCidr, ok := entEnvironment.Config["public_cidr"]
 	if !ok {
@@ -749,6 +750,11 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("error creating vpc %v", err)
 	}
 	vpcID := *vpcResults.Vpc.VpcId
+	newVars["VpcId"] = vpcID
+	err = entTeam.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("error updating team vars with VpcID %v", err)
+	}
 
 	// Create Internet Gateway
 	gatewayInput := &ec2.CreateInternetGatewayInput{
@@ -760,6 +766,11 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("error creating internet gateway %v", err)
 	}
 	gatewayID := *gatewayResuts.InternetGateway.InternetGatewayId
+	newVars["GatewayId"] = gatewayID
+	err = entTeam.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("error updating team vars with Internet Gateway ID %v", err)
+	}
 	// Attach internet gateway to VPC
 	attachGatewayInput := &ec2.AttachInternetGatewayInput{
 		InternetGatewayId: &gatewayID,
@@ -786,6 +797,11 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("error creating subnet %v", err)
 	}
 	publicSubnetID := *result.Subnet.SubnetId
+	newVars["SubnetID"] = publicSubnetID
+	err = entTeam.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("error updating team vars with Public Subnet ID %v", err)
+	}
 	if err != nil {
 		return fmt.Errorf("error getting subnetID from subnet result : %v", err)
 	}
@@ -798,6 +814,11 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("error allocating IP %v", err)
 	}
 	allocateID := *allocateResult.AllocationId
+	newVars["AllocationID"] = allocateID
+	err = entTeam.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("error updating team vars with AllocationID %v", err)
+	}
 
 	time.Sleep(time.Second * 1)
 
@@ -816,7 +837,11 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("error creating nat gateway %v", err)
 	}
 	natGatewayID := *natGatewayResults.NatGateway.NatGatewayId
-
+	newVars["NatGatewayID"] = natGatewayID
+	err = entTeam.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("error updating team vars with NatGatewayID %v", err)
+	}
 	// get default route table
 	routeTableInput := &ec2.DescribeRouteTablesInput{
 		Filters: []types.Filter{{Name: aws.String("vpc-id"), Values: []string{vpcID}}},
@@ -826,6 +851,11 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return fmt.Errorf("error describing route tables %v", err)
 	}
 	routeTableID := *routeTableResults.RouteTables[0].RouteTableId
+	newVars["RouteTableId"] = routeTableID
+	err = entTeam.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("error updating team vars with RouteTableID %v", err)
+	}
 
 	time.Sleep(time.Second * 1)
 
@@ -846,18 +876,6 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	_, err = builder.Client.CreateRoute(ctx, defaultRouteInput)
 	if err != nil {
 		return fmt.Errorf("error creating default route %v", err)
-	}
-
-	newVars := entTeam.Vars
-	newVars["VpcId"] = vpcID
-	newVars["GatewayId"] = gatewayID
-	newVars["RouteTableId"] = routeTableID
-	newVars["SubnetID"] = publicSubnetID
-	newVars["NatGatewayID"] = natGatewayID
-	newVars["AllocationID"] = allocateID
-	err = entTeam.Update().SetVars(newVars).Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("error updating team vars with VpcID %v", err)
 	}
 
 	time.Sleep(time.Minute * 1)
