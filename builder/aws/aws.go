@@ -346,10 +346,11 @@ powershell -Command logoff
 				}
 				instanceState := instanceStateResults.Reservations[0].Instances[0].State.Name
 				if instanceState != "running" {
-					builder.Logger.Log.Errorf("instance %v not running : %v", id, instanceState)
+					builder.Logger.Log.Debugf("instance %v not running : %v", id, instanceState)
 					time.Sleep(time.Second * 10)
 					continue
 				}
+				builder.Logger.Log.Debugf("instance %v is %v", id, instanceState)
 				break
 			}
 		}()
@@ -596,10 +597,9 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 		if err != nil {
 			return fmt.Errorf("error terminating instance %v", err)
 		}
-
-		time.Sleep(time.Second * 100)
 	} else {
 		builder.Logger.Log.Debugf("No instance id found for host %v", provisionedHost)
+		return
 	}
 	// make wait group
 	var wg sync.WaitGroup
@@ -618,10 +618,11 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 			}
 			instanceState := instanceStateResults.Reservations[0].Instances[0].State.Name
 			if instanceState != "terminated" {
-				builder.Logger.Log.Errorf("instance %v not terminated : %v", instance, instanceState)
+				builder.Logger.Log.Debugf("instance %v not terminated : %v", instance, instanceState)
 				time.Sleep(time.Second * 10)
 				continue
 			}
+			builder.Logger.Log.Debugf("instance %v is %v", instance, instanceState)
 			break
 		}
 	}()
@@ -640,6 +641,7 @@ func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent
 		}
 	} else {
 		builder.Logger.Log.Debugf("No security group id found for host %v", provisionedHost)
+		return
 	}
 
 	allocateID, ok := provisionedHost.Vars["AllocationID"]
@@ -680,6 +682,7 @@ func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwor
 		time.Sleep(time.Second * 30)
 	} else {
 		builder.Logger.Log.Debugf("No subnet id found for network %v", provisionedNetwork)
+		return
 	}
 
 	routeTableID, ok := provisionedNetwork.Vars["RouteTableID"]
@@ -693,6 +696,7 @@ func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwor
 		}
 	} else {
 		builder.Logger.Log.Debugf("No route table id found for network %v", provisionedNetwork)
+		return
 	}
 
 	return nil
@@ -786,7 +790,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	//Describe subnet to create
 	subnetInput := &ec2.CreateSubnetInput{
 		VpcId:     &vpcID,
-		CidrBlock: &publicCidr, //TODO MAKE SURE THIS IS OK
+		CidrBlock: &publicCidr,
 		TagSpecifications: []types.TagSpecification{{
 			ResourceType: "subnet",
 			Tags:         []types.Tag{{Key: aws.String("Name"), Value: aws.String(subnetName)}},
@@ -842,6 +846,32 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	if err != nil {
 		return fmt.Errorf("error updating team vars with NatGatewayID %v", err)
 	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			//check status of NAT gateway
+			natGatewayStatusInput := &ec2.DescribeNatGatewaysInput{
+				NatGatewayIds: []string{natGatewayID},
+			}
+			natGatewayStatusResults, err := builder.Client.DescribeNatGateways(ctx, natGatewayStatusInput)
+			if err != nil {
+				builder.Logger.Log.Errorf("error describing nat gateway %v", err)
+				time.Sleep(time.Second * 10)
+				continue
+			}
+			natGatewayState := natGatewayStatusResults.NatGateways[0].State
+			if natGatewayState != "available" {
+				builder.Logger.Log.Debugf("Team %v's nat gateway state is %v", entTeam.TeamNumber, natGatewayState)
+				time.Sleep(time.Second * 10)
+				continue
+			}
+			builder.Logger.Log.Debugf("Team %v's nat gateway state is %v", entTeam.TeamNumber, natGatewayState)
+			break
+		}
+	}()
+	wg.Wait()
 	// get default route table
 	routeTableInput := &ec2.DescribeRouteTablesInput{
 		Filters: []types.Filter{{Name: aws.String("vpc-id"), Values: []string{vpcID}}},
@@ -877,30 +907,6 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	if err != nil {
 		return fmt.Errorf("error creating default route %v", err)
 	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			//check status of NAT gateway
-			natGatewayStatusInput := &ec2.DescribeNatGatewaysInput{
-				NatGatewayIds: []string{natGatewayID},
-			}
-			natGatewayStatusResults, err := builder.Client.DescribeNatGateways(ctx, natGatewayStatusInput)
-			if err != nil {
-				builder.Logger.Log.Errorf("error describing nat gateway %v", err)
-				time.Sleep(time.Second * 10)
-				continue
-			}
-			natGatewayState := natGatewayStatusResults.NatGateways[0].State
-			if natGatewayState != "available" {
-				builder.Logger.Log.Errorf("nat gateway state is %v", natGatewayState)
-				time.Sleep(time.Second * 10)
-				continue
-			}
-			break
-		}
-	}()
 
 	return nil
 }
@@ -923,8 +929,6 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 			return fmt.Errorf("error deleting nat gateway %v", err)
 		}
 
-		builder.Logger.Log.Debugf("Deleted nat gateway %v", natGatewayID)
-
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
@@ -942,15 +946,18 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 				}
 				natGatewayState := natGatewayStatusResults.NatGateways[0].State
 				if natGatewayState != "deleted" {
-					builder.Logger.Log.Errorf("nat gateway state is %v", natGatewayState)
+					builder.Logger.Log.Debugf("Team %v's nat gateway state is %v", entTeam.TeamNumber, natGatewayState)
 					time.Sleep(time.Second * 10)
 					continue
 				}
+				builder.Logger.Log.Debugf("Team %v's nat gateway state is %v", entTeam.TeamNumber, natGatewayState)
 				break
 			}
 		}()
+		wg.Wait()
 	} else {
 		builder.Logger.Log.Debugf("No nat gateway found in Team %v", entTeam.TeamNumber)
+		return
 	}
 
 	subnetID, ok := entTeam.Vars["SubnetID"]
@@ -964,6 +971,9 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 		}
 
 		builder.Logger.Log.Debugf("Deleted subnet %v", subnetID)
+	} else {
+		builder.Logger.Log.Debugf("No subnet found in Team %v", entTeam.TeamNumber)
+		return
 	}
 
 	allocateID, ok := entTeam.Vars["AllocationID"]
@@ -976,6 +986,9 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 			return fmt.Errorf("error releasing address %v", err)
 		}
 		builder.Logger.Log.Debugf("Deleted allocation %v", allocateID)
+	} else {
+		builder.Logger.Log.Debugf("No allocation found in Team %v", entTeam.TeamNumber)
+		return
 	}
 
 	vpcID, ok := entTeam.Vars["VpcId"]
@@ -1008,6 +1021,7 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 			time.Sleep(time.Minute * 1)
 		} else {
 			builder.Logger.Log.Debugf("No internet gateway found in Team %v", entTeam.TeamNumber)
+			return
 		}
 		input := &ec2.DeleteVpcInput{
 			VpcId: &vpcID,
@@ -1020,6 +1034,7 @@ func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (
 
 	} else {
 		builder.Logger.Log.Debugf("No vpc found in Team %v", entTeam.TeamNumber)
+		return
 	}
 
 	return
