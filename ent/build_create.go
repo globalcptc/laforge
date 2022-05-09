@@ -43,6 +43,12 @@ func (bc *BuildCreate) SetEnvironmentRevision(i int) *BuildCreate {
 	return bc
 }
 
+// SetVars sets the "vars" field.
+func (bc *BuildCreate) SetVars(m map[string]string) *BuildCreate {
+	bc.mutation.SetVars(m)
+	return bc
+}
+
 // SetCompletedPlan sets the "completed_plan" field.
 func (bc *BuildCreate) SetCompletedPlan(b bool) *BuildCreate {
 	bc.mutation.SetCompletedPlan(b)
@@ -336,6 +342,9 @@ func (bc *BuildCreate) check() error {
 	if _, ok := bc.mutation.EnvironmentRevision(); !ok {
 		return &ValidationError{Name: "environment_revision", err: errors.New(`ent: missing required field "environment_revision"`)}
 	}
+	if _, ok := bc.mutation.Vars(); !ok {
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+	}
 	if _, ok := bc.mutation.CompletedPlan(); !ok {
 		return &ValidationError{Name: "completed_plan", err: errors.New(`ent: missing required field "completed_plan"`)}
 	}
@@ -392,6 +401,14 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Column: build.FieldEnvironmentRevision,
 		})
 		_node.EnvironmentRevision = value
+	}
+	if value, ok := bc.mutation.Vars(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: build.FieldVars,
+		})
+		_node.Vars = value
 	}
 	if value, ok := bc.mutation.CompletedPlan(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

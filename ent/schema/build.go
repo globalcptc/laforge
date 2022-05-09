@@ -20,6 +20,7 @@ func (Build) Fields() []ent.Field {
 			Default(uuid.New),
 		field.Int("revision"),
 		field.Int("environment_revision"),
+		field.JSON("vars", map[string]string{}),
 		field.Bool("completed_plan").
 			Default(false),
 	}
