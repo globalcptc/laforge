@@ -4930,6 +4930,7 @@ type BuildMutation struct {
 	addrevision                       *int
 	environment_revision              *int
 	addenvironment_revision           *int
+	vars                              *map[string]string
 	completed_plan                    *bool
 	clearedFields                     map[string]struct{}
 	_BuildToStatus                    *uuid.UUID
@@ -5163,6 +5164,42 @@ func (m *BuildMutation) AddedEnvironmentRevision() (r int, exists bool) {
 func (m *BuildMutation) ResetEnvironmentRevision() {
 	m.environment_revision = nil
 	m.addenvironment_revision = nil
+}
+
+// SetVars sets the "vars" field.
+func (m *BuildMutation) SetVars(value map[string]string) {
+	m.vars = &value
+}
+
+// Vars returns the value of the "vars" field in the mutation.
+func (m *BuildMutation) Vars() (r map[string]string, exists bool) {
+	v := m.vars
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVars returns the old "vars" field's value of the Build entity.
+// If the Build object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BuildMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldVars is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldVars requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVars: %w", err)
+	}
+	return oldValue.Vars, nil
+}
+
+// ResetVars resets all changes to the "vars" field.
+func (m *BuildMutation) ResetVars() {
+	m.vars = nil
 }
 
 // SetCompletedPlan sets the "completed_plan" field.
@@ -5793,12 +5830,15 @@ func (m *BuildMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BuildMutation) Fields() []string {
-	fields := make([]string, 0, 3)
+	fields := make([]string, 0, 4)
 	if m.revision != nil {
 		fields = append(fields, build.FieldRevision)
 	}
 	if m.environment_revision != nil {
 		fields = append(fields, build.FieldEnvironmentRevision)
+	}
+	if m.vars != nil {
+		fields = append(fields, build.FieldVars)
 	}
 	if m.completed_plan != nil {
 		fields = append(fields, build.FieldCompletedPlan)
@@ -5815,6 +5855,8 @@ func (m *BuildMutation) Field(name string) (ent.Value, bool) {
 		return m.Revision()
 	case build.FieldEnvironmentRevision:
 		return m.EnvironmentRevision()
+	case build.FieldVars:
+		return m.Vars()
 	case build.FieldCompletedPlan:
 		return m.CompletedPlan()
 	}
@@ -5830,6 +5872,8 @@ func (m *BuildMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldRevision(ctx)
 	case build.FieldEnvironmentRevision:
 		return m.OldEnvironmentRevision(ctx)
+	case build.FieldVars:
+		return m.OldVars(ctx)
 	case build.FieldCompletedPlan:
 		return m.OldCompletedPlan(ctx)
 	}
@@ -5854,6 +5898,13 @@ func (m *BuildMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEnvironmentRevision(v)
+		return nil
+	case build.FieldVars:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVars(v)
 		return nil
 	case build.FieldCompletedPlan:
 		v, ok := value.(bool)
@@ -5943,6 +5994,9 @@ func (m *BuildMutation) ResetField(name string) error {
 		return nil
 	case build.FieldEnvironmentRevision:
 		m.ResetEnvironmentRevision()
+		return nil
+	case build.FieldVars:
+		m.ResetVars()
 		return nil
 	case build.FieldCompletedPlan:
 		m.ResetCompletedPlan()

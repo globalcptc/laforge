@@ -119,7 +119,7 @@ func init() {
 	buildFields := schema.Build{}.Fields()
 	_ = buildFields
 	// buildDescCompletedPlan is the schema descriptor for completed_plan field.
-	buildDescCompletedPlan := buildFields[3].Descriptor()
+	buildDescCompletedPlan := buildFields[4].Descriptor()
 	// build.DefaultCompletedPlan holds the default value on creation for the completed_plan field.
 	build.DefaultCompletedPlan = buildDescCompletedPlan.Default.(bool)
 	// buildDescID is the schema descriptor for id field.

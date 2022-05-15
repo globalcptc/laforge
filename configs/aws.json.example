@@ -2,6 +2,8 @@
   "server_url": "http://127.0.0.1:8080",
   "aws_config_file": "~/.aws/config",
   "region": "us-east-1",
+  "max_build_workers": 8,
+  "max_teardown_workers": 16,
   "ami_configs": {
     "ubuntu16": {
       "name":"ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*",

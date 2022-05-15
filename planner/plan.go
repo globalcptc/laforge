@@ -150,6 +150,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		SetBuildToEnvironment(entEnvironment).
 		SetBuildToStatus(entStatus).
 		SetBuildToCompetition(entCompetition).
+		SetVars(map[string]string{}).
 		Save(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to create Build %v for Environment %v. Err: %v", len(entEnvironment.Edges.EnvironmentToBuild), entEnvironment.HclID, err)

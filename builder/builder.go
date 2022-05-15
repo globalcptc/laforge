@@ -91,13 +91,16 @@ func NewAWSBuilder(configFilePath string, env *ent.Environment, logger *logging.
 	if err != nil {
 		return
 	}
-
+	deployWorkerPool := semaphore.NewWeighted(int64(builderConfig.MaxBuildWorkers))
+	teardownWorkerPool := semaphore.NewWeighted(int64(builderConfig.MaxTeardownWorkers))
 	client := ec2.NewFromConfig(cfg)
 	builder = aws.AWSBuilder{
-		Logger:    logger,
-		AMIConfig: builderConfig.AMIConfig,
-		Config:    builderConfig,
-		Client:    client,
+		Logger:             logger,
+		AMIConfig:          builderConfig.AMIConfig,
+		Config:             builderConfig,
+		Client:             client,
+		DeployWorkerPool:   deployWorkerPool,
+		TeardownWorkerPool: teardownWorkerPool,
 	}
 
 	return
