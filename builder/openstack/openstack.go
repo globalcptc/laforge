@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 
 	"golang.org/x/sync/semaphore"
 
@@ -36,13 +35,18 @@ type OpenstackBuilder struct {
 }
 
 type OpenstackBuilderConfig struct {
-	AuthUrl            string `json:"auth_url"`
-	Username           string `json:"username"`
-	Password           string `json:"password"`
-	ProjectID          string `json:"project_id"`
-	ProjectName        string `json:"project_name"`
-	MaxBuildWorkers    int    `json:"max_build_workers"`
-	MaxTeardownWorkers int    `json:"max_teardown_workers"`
+	AuthUrl            string            `json:"auth_url"`
+	Username           string            `json:"username"`
+	Password           string            `json:"password"`
+	ProjectID          string            `json:"project_id"`
+	ProjectName        string            `json:"project_name"`
+	RegionName         string            `json:"region_name"`
+	DomainName         string            `json:"domain_name"`
+	DomainId           string            `json:"domain_id"`
+	MaxBuildWorkers    int               `json:"max_build_workers"`
+	MaxTeardownWorkers int               `json:"max_teardown_workers"`
+	Flavors            map[string]string `json:"flavors"`
+	Images             map[string]string `json:"images"`
 }
 
 func (builder OpenstackBuilder) ID() string {
@@ -85,50 +89,31 @@ func (builder OpenstackBuilder) generateNetworkName(competition *ent.Competition
 	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + network.Name + "-" + builder.generateBuildID(build))
 }
 
-func (builder OpenstackBuilder) setAuthEnvVars() error {
-	err := os.Setenv("OS_AUTH_URL", builder.Config.AuthUrl)
-	if err != nil {
-		return fmt.Errorf("failed to set OS_AUTH_URL: %v", err)
-	}
-	err = os.Setenv("OS_USERNAME", builder.Config.Username)
-	if err != nil {
-		return fmt.Errorf("failed to set OS_USERNAME: %v", err)
-	}
-	err = os.Setenv("OS_PASSWORD", builder.Config.Password)
-	if err != nil {
-		return fmt.Errorf("failed to set OS_PASSWORD: %v", err)
-	}
-	err = os.Setenv("OS_PROJECT_ID", builder.Config.ProjectID)
-	if err != nil {
-		return fmt.Errorf("failed to set OS_PROJECT_ID: %v", err)
-	}
-	err = os.Setenv("OS_PROJECT_NAME", builder.Config.ProjectName)
-	if err != nil {
-		return fmt.Errorf("failed to set OS_PROJECT_NAME: %v", err)
-	}
-	return nil
-}
-
 func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
 	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = builder.setAuthEnvVars()
-	if err != nil {
-		return fmt.Errorf("failed to set auth env vars: %v", err)
+	authOpts := gophercloud.AuthOptions{
+		IdentityEndpoint: builder.Config.AuthUrl,
+		Username:         builder.Config.Username,
+		Password:         builder.Config.Password,
+		TenantID:         builder.Config.ProjectID,
+		TenantName:       builder.Config.ProjectName,
 	}
-	authOpts, err := openstack.AuthOptionsFromEnv()
-	if err != nil {
-		return err
+	if builder.Config.DomainId != "" {
+		authOpts.DomainID = builder.Config.DomainId
+	} else {
+		authOpts.DomainName = builder.Config.DomainName
 	}
 	provider, err := openstack.AuthenticatedClient(authOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to authenticate: %v", err)
 	}
 	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
-		Region: "RegionOne",
+		Type:   "compute",
+		Region: builder.Config.RegionName,
 	})
 	if err != nil {
 		return err
@@ -164,17 +149,19 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 	}
 	defer builder.DeployWorkerPool.Release(int64(1))
 
+	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", builder.Config.Images[host.OS], builder.Config.Flavors[host.InstanceSize])
 	//build server
 	server, err := servers.Create(client, servers.CreateOpts{
 		Name:      vmName,
-		FlavorRef: "flavor_name",
-		ImageRef:  "image_name",
+		FlavorRef: builder.Config.Flavors[host.InstanceSize],
+		ImageRef:  builder.Config.Images[host.OS],
 		Networks:  networkName,
 	}).Extract()
 	if err != nil {
-		fmt.Println("Unable to create server: %s", err)
+		builder.Logger.Log.Errorf("Unable to create server: %v", err)
+		return
 	}
-	fmt.Println("Server ID: %s", server.ID)
+	builder.Logger.Log.Debugf("Server ID: %s", server.ID)
 
 	id := server.ID
 	newVars := host.Vars

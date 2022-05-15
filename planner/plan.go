@@ -1339,7 +1339,7 @@ func Int2IPv4(nn uint32) net.IP {
 
 func CopyDir(src string, dest string) error {
 
-	if dest[:len(src)] == src {
+	if dest == src {
 		return fmt.Errorf("cannot copy a folder into the folder itself")
 	}
 

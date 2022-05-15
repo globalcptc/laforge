@@ -8,6 +8,7 @@ import (
 
 	"github.com/gen0cide/laforge/builder"
 	"github.com/gen0cide/laforge/ent"
+	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/gen0cide/laforge/server/utils"
 	"github.com/sirupsen/logrus"
@@ -47,20 +48,39 @@ func main() {
 	if err != nil {
 		log.Fatalf("error querying env: %v", err)
 	}
+	logrus.Infof("Found env \"%s\"", env.Name)
 
 	fmt.Println("Creating Openstack builder...")
-	_, err = builder.NewOpenstackBuilder(CONFIG_FILE, env, &defaultLogger)
+	osBuilder, err := builder.NewOpenstackBuilder(CONFIG_FILE, env, &defaultLogger)
 	if err != nil {
 		defaultLogger.Log.Errorf("failed to create Openstack builder: %v", err)
 		os.Exit(1)
 	}
 
-	build, err := env.QueryEnvironmentToBuild().Only(ctx)
+	build, err := env.QueryEnvironmentToBuild().Order(ent.Desc(build.FieldRevision)).First(ctx)
 	if err != nil {
 		log.Fatalf("error querying build from env: %v", err)
 	}
-	_, err = build.QueryBuildToTeam().All(ctx)
+	logrus.Infof("Found build v%d", build.Revision)
+	logrus.Info("Build contains:")
+	teams, err := build.QueryBuildToTeam().All(ctx)
 	if err != nil {
 		log.Fatalf("error querying teams from build: %v", err)
+	}
+	logrus.Infof("%d Teams", len(teams))
+	pnets, err := teams[0].QueryTeamToProvisionedNetwork().All(ctx)
+	if err != nil {
+		log.Fatalf("error querying provisioned networks from team: %v", err)
+	}
+	logrus.Infof("%d Provisioned Networks per Team", len(pnets))
+	phosts, err := pnets[0].QueryProvisionedNetworkToProvisionedHost().All(ctx)
+	if err != nil {
+		log.Fatalf("error querying provisioned hosts from provisioned network: %v", err)
+	}
+	logrus.Infof("%d Provisioned Hosts per Network", len(phosts))
+
+	err = osBuilder.DeployHost(ctx, phosts[0])
+	if err != nil {
+		log.Fatalf("error deploying host to openstack: %v", err)
 	}
 }
