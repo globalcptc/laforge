@@ -1,9 +1,10 @@
-package main
+package openstack
 
 import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	"golang.org/x/sync/semaphore"
 
@@ -26,19 +27,45 @@ const (
 	Version     = "0.1"
 )
 
-type openstackBuilder struct {
+type OpenstackBuilder struct {
+	Config             OpenstackBuilderConfig
 	HttpClient         http.Client
-	IdentityEndpoint   http.Client
-	Username           string
-	Password           string
-	TenantID           string
 	Logger             *logging.Logger
-	MaxWorkers         int
 	DeployWorkerPool   *semaphore.Weighted
 	TeardownWorkerPool *semaphore.Weighted
 }
 
-func (builder openstackBuilder) generateBuildID(build *ent.Build) string {
+type OpenstackBuilderConfig struct {
+	AuthUrl            string `json:"auth_url"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	ProjectID          string `json:"project_id"`
+	ProjectName        string `json:"project_name"`
+	MaxBuildWorkers    int    `json:"max_build_workers"`
+	MaxTeardownWorkers int    `json:"max_teardown_workers"`
+}
+
+func (builder OpenstackBuilder) ID() string {
+	return ID
+}
+
+func (builder OpenstackBuilder) Name() string {
+	return Name
+}
+
+func (builder OpenstackBuilder) Description() string {
+	return Description
+}
+
+func (builder OpenstackBuilder) Author() string {
+	return Author
+}
+
+func (builder OpenstackBuilder) Version() string {
+	return Version
+}
+
+func (builder OpenstackBuilder) generateBuildID(build *ent.Build) string {
 	buildId, err := build.ID.MarshalText()
 	if err != nil {
 		buildId = []byte(fmt.Sprint(build.Revision))
@@ -46,25 +73,52 @@ func (builder openstackBuilder) generateBuildID(build *ent.Build) string {
 	return fmt.Sprintf("%s", buildId)
 }
 
-func (builder openstackBuilder) generateVmName(competition *ent.Competition, team *ent.Team, host *ent.Host, build *ent.Build) string {
+func (builder OpenstackBuilder) generateVmName(competition *ent.Competition, team *ent.Team, host *ent.Host, build *ent.Build) string {
 	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + host.Hostname + "-" + builder.generateBuildID(build))
 }
 
-func (builder openstackBuilder) generateRouterName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
+func (builder OpenstackBuilder) generateRouterName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
 	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + builder.generateBuildID(build))
 }
 
-func (builder openstackBuilder) generateNetworkName(competition *ent.Competition, team *ent.Team, network *ent.Network, build *ent.Build) string {
+func (builder OpenstackBuilder) generateNetworkName(competition *ent.Competition, team *ent.Team, network *ent.Network, build *ent.Build) string {
 	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + network.Name + "-" + builder.generateBuildID(build))
 }
 
-func (builder openstackBuilder) DeployHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
+func (builder OpenstackBuilder) setAuthEnvVars() error {
+	err := os.Setenv("OS_AUTH_URL", builder.Config.AuthUrl)
+	if err != nil {
+		return fmt.Errorf("failed to set OS_AUTH_URL: %v", err)
+	}
+	err = os.Setenv("OS_USERNAME", builder.Config.Username)
+	if err != nil {
+		return fmt.Errorf("failed to set OS_USERNAME: %v", err)
+	}
+	err = os.Setenv("OS_PASSWORD", builder.Config.Password)
+	if err != nil {
+		return fmt.Errorf("failed to set OS_PASSWORD: %v", err)
+	}
+	err = os.Setenv("OS_PROJECT_ID", builder.Config.ProjectID)
+	if err != nil {
+		return fmt.Errorf("failed to set OS_PROJECT_ID: %v", err)
+	}
+	err = os.Setenv("OS_PROJECT_NAME", builder.Config.ProjectName)
+	if err != nil {
+		return fmt.Errorf("failed to set OS_PROJECT_NAME: %v", err)
+	}
+	return nil
+}
+
+func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
 	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	if err != nil {
 		return err
 	}
 
-	//add configuration here
+	err = builder.setAuthEnvVars()
+	if err != nil {
+		return fmt.Errorf("failed to set auth env vars: %v", err)
+	}
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
 		return err
@@ -134,7 +188,7 @@ func (builder openstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 	return
 }
 
-func (builder openstackBuilder) DeployNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
+func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
 	entBuild, err := provisionedNetwork.QueryProvisionedNetworkToBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
@@ -193,7 +247,7 @@ func (builder openstackBuilder) DeployNetwork(ctx context.Context, provisionedNe
 	return
 }
 
-func (builder openstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
+func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	entProNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(
 		provisionednetwork.HasProvisionedNetworkToNetworkWith(
 			network.NameEQ("vdi"),
@@ -210,23 +264,23 @@ func (builder openstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Tea
 	return
 }
 
-func (builder openstackBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
-	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
-	if err != nil {
-		return err
-	}
-	entBuild, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToBuild().Only(ctx)
-	if err != nil {
-		return err
-	}
-	entCompetition, err := entBuild.QueryBuildToCompetition().Only(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query competition from build \"%s\": %v", entBuild.ID, err)
-	}
-	entTeam, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedHost.ID, err)
-	}
+func (builder OpenstackBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
+	// host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
+	// if err != nil {
+	// 	return err
+	// }
+	// entBuild, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToBuild().Only(ctx)
+	// if err != nil {
+	// 	return err
+	// }
+	// entCompetition, err := entBuild.QueryBuildToCompetition().Only(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("couldn't query competition from build \"%s\": %v", entBuild.ID, err)
+	// }
+	// entTeam, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedHost.ID, err)
+	// }
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
 		return err
@@ -258,27 +312,27 @@ func (builder openstackBuilder) TeardownHost(ctx context.Context, provisionedHos
 	return
 }
 
-func (builder openstackBuilder) TeardownNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
-	entBuild, err := provisionedNetwork.QueryProvisionedNetworkToBuild().Only(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
-	}
-	entEnvironment, err := provisionedNetwork.QueryProvisionedNetworkToBuild().QueryBuildToEnvironment().Only(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
-	}
-	entCompetition, err := entEnvironment.EnvironmentToCompetition(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
-	}
-	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
-	}
-	entTeam, err := provisionedNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
-	}
+func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
+	// entBuild, err := provisionedNetwork.QueryProvisionedNetworkToBuild().Only(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+	// }
+	// entEnvironment, err := provisionedNetwork.QueryProvisionedNetworkToBuild().QueryBuildToEnvironment().Only(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+	// }
+	// entCompetition, err := entEnvironment.EnvironmentToCompetition(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
+	// }
+	// entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+	// }
+	// entTeam, err := provisionedNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+	// }
 
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
@@ -310,6 +364,6 @@ func (builder openstackBuilder) TeardownNetwork(ctx context.Context, provisioned
 	return
 }
 
-func (builder openstackBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
+func (builder OpenstackBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	return
 }

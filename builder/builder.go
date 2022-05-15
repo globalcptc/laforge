@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/gen0cide/laforge/builder/aws"
 	"github.com/gen0cide/laforge/builder/generic"
+	lfopenstack "github.com/gen0cide/laforge/builder/openstack"
 	"github.com/gen0cide/laforge/builder/vspherensxt"
 	"github.com/gen0cide/laforge/builder/vspherensxt/nsxt"
 	"github.com/gen0cide/laforge/builder/vspherensxt/vsphere"
@@ -57,7 +58,7 @@ func BuilderFromEnvironment(buildersMap map[string]utils.BuilderConfig, environm
 		}
 		return
 	case "openstack":
-		genericBuilder, err = NewOpenstackBuilder(environment, logger)
+		genericBuilder, err = NewOpenstackBuilder(builderConfig.ConfigFile, environment, logger)
 		if err != nil {
 			logrus.Errorf("Failed to make openstack builder. Err: %v", err)
 			return
@@ -192,8 +193,24 @@ func NewVSphereNSXTBuilder(configFilePath string, env *ent.Environment, logger *
 	return
 }
 
-func NewOpenstackBuilder(env *ent.Environment, logger *logging.Logger) (builder vspherensxt.VSphereNSXTBuilder, err error) {
-	// volumes first
-	// if deleteing volumes set them to error
+func NewOpenstackBuilder(configFilePath string, env *ent.Environment, logger *logging.Logger) (builder lfopenstack.OpenstackBuilder, err error) {
+	var builderConfig lfopenstack.OpenstackBuilderConfig
+	err = configs.LoadBuilderConfig(configFilePath, &builderConfig)
+	if err != nil {
+		return
+	}
+
+	deployWorkerPool := semaphore.NewWeighted(int64(builderConfig.MaxBuildWorkers))
+	teardownWorkerPool := semaphore.NewWeighted(int64(builderConfig.MaxTeardownWorkers))
+
+	builder = lfopenstack.OpenstackBuilder{
+		Config: builderConfig,
+		HttpClient: http.Client{
+			Timeout: 5 * time.Minute,
+		},
+		Logger:             logger,
+		DeployWorkerPool:   deployWorkerPool,
+		TeardownWorkerPool: teardownWorkerPool,
+	}
 	return
 }

@@ -46,7 +46,7 @@ func main() {
 	defaultLogger := logging.CreateNewLogger("./output.lfglog")
 
 	fmt.Println("Creating vSphere/NSX-T builder...")
-	openstackBuilder, err := builder.NewOpenstackBuilder(env, &defaultLogger)
+	openstackBuilder, err := builder.NewOpenstackBuilder("./configs/test_openstack.json", env, &defaultLogger)
 	if err != nil {
 		log.Fatalf("error while creating Openstack builder: %v", err)
 	}
