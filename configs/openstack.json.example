@@ -1,0 +1,28 @@
+{
+  "laforge_server_url": "http://localhost",
+  "max_build_workers": 8,
+  "max_teardown_workers": 8,
+  "auth_url": "",
+  "username": "",
+  "password": "",
+  "project_id": "",
+  "project_name": ""
+  "region_name": "",
+  "flavors": {
+    "nano": "", 
+    "micro": "", 
+    "small": "", 
+    "medium": "", 
+    "large": "", 
+    "xlarge": "" 
+  },
+  "images": {
+    "ubuntu18": "",
+    "ubuntu20": "Ubuntu-Focal-2004",
+    "w2k12": "",
+    "w2k16": "",
+    "w2k19": "",
+    "w2k22": "",
+    "win10": ""
+  }
+}
