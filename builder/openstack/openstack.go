@@ -3,7 +3,10 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"golang.org/x/sync/semaphore"
 
@@ -102,21 +105,22 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 		TenantID:         builder.Config.ProjectID,
 		TenantName:       builder.Config.ProjectName,
 	}
-	if builder.Config.DomainId != "" {
-		authOpts.DomainID = builder.Config.DomainId
-	} else {
+	if builder.Config.DomainName != "" {
 		authOpts.DomainName = builder.Config.DomainName
+	} else {
+		authOpts.DomainID = builder.Config.DomainId
 	}
 	provider, err := openstack.AuthenticatedClient(authOpts)
 	if err != nil {
 		return fmt.Errorf("failed to authenticate: %v", err)
 	}
-	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
-		Type:   "compute",
+	endpointOpts := gophercloud.EndpointOpts{
 		Region: builder.Config.RegionName,
-	})
+	}
+
+	computeClient, err := openstack.NewComputeV2(provider, endpointOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create compute v2 client: %v", err)
 	}
 
 	build, err := provisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
@@ -129,10 +133,10 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 		return err
 	}
 
-	network, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToNetwork().Only(ctx)
-	if err != nil {
-		return err
-	}
+	// network, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToNetwork().Only(ctx)
+	// if err != nil {
+	// 	return err
+	// }
 
 	team, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
@@ -141,7 +145,33 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 
 	// generate vm name from ent
 	vmName := builder.generateVmName(competition, team, host, build)
-	networkName := builder.generateNetworkName(competition, team, network, build)
+	// networkName := builder.generateNetworkName(competition, team, network, build)
+
+	entProvisionedNetwork, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query provisioned network from provisioned host: %v", err)
+	}
+
+	networkAddrParts := strings.Split(entProvisionedNetwork.Cidr, "/")
+	networkAddr := networkAddrParts[0]
+	networkOctetStrings := strings.Split(networkAddr, ".")
+	networkOctets := []byte{0, 0, 0, 0}
+	for i, octetString := range networkOctetStrings {
+		octet, err := strconv.Atoi(octetString)
+		if err != nil {
+			return fmt.Errorf("error while parsing IPv4 Address %s: %v", entProvisionedNetwork.Cidr, err)
+		}
+		networkOctets[i] = byte(octet)
+	}
+
+	_, ipv4Net, err := net.ParseCIDR(entProvisionedNetwork.Cidr)
+	if err != nil {
+		return fmt.Errorf("error while parsing cidr: %v", err)
+	}
+	if len(ipv4Net.Mask) != 4 {
+		return fmt.Errorf("mask is not correct length")
+	}
+	hostAddress := strings.Join(append(networkOctetStrings[:3], fmt.Sprint(host.LastOctet)), ".")
 
 	err = builder.DeployWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
@@ -151,11 +181,16 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 
 	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", builder.Config.Images[host.OS], builder.Config.Flavors[host.InstanceSize])
 	//build server
-	server, err := servers.Create(client, servers.CreateOpts{
+	server, err := servers.Create(computeClient, servers.CreateOpts{
 		Name:      vmName,
 		FlavorRef: builder.Config.Flavors[host.InstanceSize],
 		ImageRef:  builder.Config.Images[host.OS],
-		Networks:  networkName,
+		Networks: []servers.Network{
+			{
+				UUID:    entProvisionedNetwork.Vars["openstack_network_id"],
+				FixedIP: hostAddress,
+			},
+		},
 	}).Extract()
 	if err != nil {
 		builder.Logger.Log.Errorf("Unable to create server: %v", err)

@@ -9,6 +9,8 @@ import (
 	"github.com/gen0cide/laforge/builder"
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/build"
+	"github.com/gen0cide/laforge/ent/provisionednetwork"
+	"github.com/gen0cide/laforge/ent/team"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/gen0cide/laforge/server/utils"
 	"github.com/sirupsen/logrus"
@@ -63,23 +65,27 @@ func main() {
 	}
 	logrus.Infof("Found build v%d", build.Revision)
 	logrus.Info("Build contains:")
-	teams, err := build.QueryBuildToTeam().All(ctx)
-	if err != nil {
-		log.Fatalf("error querying teams from build: %v", err)
-	}
-	logrus.Infof("%d Teams", len(teams))
-	pnets, err := teams[0].QueryTeamToProvisionedNetwork().All(ctx)
-	if err != nil {
-		log.Fatalf("error querying provisioned networks from team: %v", err)
-	}
-	logrus.Infof("%d Provisioned Networks per Team", len(pnets))
-	phosts, err := pnets[0].QueryProvisionedNetworkToProvisionedHost().All(ctx)
-	if err != nil {
-		log.Fatalf("error querying provisioned hosts from provisioned network: %v", err)
-	}
-	logrus.Infof("%d Provisioned Hosts per Network", len(phosts))
+	teamCount := build.QueryBuildToTeam().CountX(ctx)
+	logrus.Infof("%d Teams", teamCount)
+	provisionedNetworkCount := build.QueryBuildToTeam().QueryTeamToProvisionedNetwork().CountX(ctx)
+	logrus.Infof("%d Provisioned Networks", provisionedNetworkCount)
+	provisionedHostCount := build.QueryBuildToTeam().QueryTeamToProvisionedNetwork().QueryProvisionedNetworkToProvisionedHost().CountX(ctx)
+	logrus.Infof("%d Provisioned Hosts", provisionedHostCount)
 
-	err = osBuilder.DeployHost(ctx, phosts[0])
+	entTeam, err := build.QueryBuildToTeam().Order(ent.Asc(team.FieldTeamNumber)).First(ctx)
+	if err != nil {
+		log.Fatalf("error querying team from build: %v", err)
+	}
+	entProvisionedNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(provisionednetwork.NameEQ("vdi")).Only(ctx)
+	if err != nil {
+		log.Fatalf("error querying provisioned network (\"vdi\") from team: %v", err)
+	}
+	entProvisionedHost, err := entProvisionedNetwork.QueryProvisionedNetworkToProvisionedHost().First(ctx)
+	if err != nil {
+		log.Fatalf("error querying provisioned host from provisioned network: %v", err)
+	}
+
+	err = osBuilder.DeployHost(ctx, entProvisionedHost)
 	if err != nil {
 		log.Fatalf("error deploying host to openstack: %v", err)
 	}
