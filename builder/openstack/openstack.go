@@ -5,20 +5,23 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
+	"path"
 	"strconv"
 	"strings"
 
 	"golang.org/x/sync/semaphore"
 
 	"github.com/gen0cide/laforge/ent"
-	"github.com/gen0cide/laforge/ent/network"
-	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/logging"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/secgroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 )
 
 const (
@@ -39,6 +42,8 @@ type OpenstackBuilder struct {
 
 type OpenstackBuilderConfig struct {
 	AuthUrl            string            `json:"auth_url"`
+	ServerUrl          string            `json:"laforge_server_url"`
+	IdentityVersion    string            `json:"identify_version"`
 	Username           string            `json:"username"`
 	Password           string            `json:"password"`
 	ProjectID          string            `json:"project_id"`
@@ -50,6 +55,7 @@ type OpenstackBuilderConfig struct {
 	MaxTeardownWorkers int               `json:"max_teardown_workers"`
 	Flavors            map[string]string `json:"flavors"`
 	Images             map[string]string `json:"images"`
+	ExternalNetworkId  string            `json:"external_network_id"`
 }
 
 func (builder OpenstackBuilder) ID() string {
@@ -92,14 +98,15 @@ func (builder OpenstackBuilder) generateNetworkName(competition *ent.Competition
 	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + network.Name + "-" + builder.generateBuildID(build))
 }
 
-func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
-	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
+func (builder OpenstackBuilder) newAuthProvider() (*gophercloud.ProviderClient, error) {
+	u, err := url.Parse(builder.Config.AuthUrl)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("unable to parse auth_url \"%s\" from builder config", builder.Config.AuthUrl)
 	}
+	u.Path = path.Join(u.Path, builder.Config.IdentityVersion)
 
 	authOpts := gophercloud.AuthOptions{
-		IdentityEndpoint: builder.Config.AuthUrl,
+		IdentityEndpoint: u.String(),
 		Username:         builder.Config.Username,
 		Password:         builder.Config.Password,
 		TenantID:         builder.Config.ProjectID,
@@ -110,7 +117,16 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 	} else {
 		authOpts.DomainID = builder.Config.DomainId
 	}
-	provider, err := openstack.AuthenticatedClient(authOpts)
+	return openstack.AuthenticatedClient(authOpts)
+}
+
+func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHost *ent.ProvisionedHost) (err error) {
+	entHost, err := entProvisionedHost.QueryProvisionedHostToHost().Only(ctx)
+	if err != nil {
+		return err
+	}
+
+	provider, err := builder.newAuthProvider()
 	if err != nil {
 		return fmt.Errorf("failed to authenticate: %v", err)
 	}
@@ -123,12 +139,12 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 		return fmt.Errorf("failed to create compute v2 client: %v", err)
 	}
 
-	build, err := provisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
+	entBuild, err := entProvisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
 	if err != nil {
 		return err
 	}
 
-	competition, err := build.QueryBuildToCompetition().Only(ctx)
+	entCompetition, err := entBuild.QueryBuildToCompetition().Only(ctx)
 	if err != nil {
 		return err
 	}
@@ -138,16 +154,16 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 	// 	return err
 	// }
 
-	team, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := entProvisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
 		return err
 	}
 
 	// generate vm name from ent
-	vmName := builder.generateVmName(competition, team, host, build)
+	vmName := builder.generateVmName(entCompetition, entTeam, entHost, entBuild)
 	// networkName := builder.generateNetworkName(competition, team, network, build)
 
-	entProvisionedNetwork, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	entProvisionedNetwork, err := entProvisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query provisioned network from provisioned host: %v", err)
 	}
@@ -171,7 +187,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 	if len(ipv4Net.Mask) != 4 {
 		return fmt.Errorf("mask is not correct length")
 	}
-	hostAddress := strings.Join(append(networkOctetStrings[:3], fmt.Sprint(host.LastOctet)), ".")
+	hostAddress := strings.Join(append(networkOctetStrings[:3], fmt.Sprint(entHost.LastOctet)), ".")
 
 	err = builder.DeployWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
@@ -179,57 +195,146 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, provisionedHost 
 	}
 	defer builder.DeployWorkerPool.Release(int64(1))
 
-	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", builder.Config.Images[host.OS], builder.Config.Flavors[host.InstanceSize])
+	builder.Logger.Log.Debugf("Creating security group %s", vmName)
+
+	opts := secgroups.CreateOpts{
+		Name:        vmName,
+		Description: fmt.Sprintf("Sec group for VM %s", vmName),
+	}
+	secGroup, err := secgroups.Create(computeClient, opts).Extract()
+	if err != nil {
+		return fmt.Errorf("failed to create security group: %v", err)
+	}
+	entProvisionedHost.Vars["openstack_secgroup_id"] = secGroup.ID
+	err = entProvisionedHost.Update().SetVars(entProvisionedHost.Vars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update provisioned host vars: %v", err)
+	}
+
+	fmt.Printf("%v\n%v", entHost.ExposedTCPPorts, entHost.ExposedUDPPorts)
+
+	ruleOpts := make([]secgroups.CreateRuleOpts, 0)
+
+	for _, port := range entHost.ExposedTCPPorts {
+		destPort, err := strconv.Atoi(port)
+		if err != nil {
+			return fmt.Errorf("could not convert TCP port \"%s\" to integer: %v", port, err)
+		}
+		opts := secgroups.CreateRuleOpts{
+			ParentGroupID: secGroup.ID,
+			FromPort:      destPort,
+			ToPort:        destPort,
+			IPProtocol:    "TCP",
+			CIDR:          "0.0.0.0/0",
+		}
+		ruleOpts = append(ruleOpts, opts)
+	}
+
+	for _, port := range entHost.ExposedUDPPorts {
+		destPort, err := strconv.Atoi(port)
+		if err != nil {
+			return fmt.Errorf("could not convert UDP port \"%s\" to integer: %v", port, err)
+		}
+		opts := secgroups.CreateRuleOpts{
+			ParentGroupID: secGroup.ID,
+			FromPort:      destPort,
+			ToPort:        destPort,
+			IPProtocol:    "UDP",
+			CIDR:          "0.0.0.0/0",
+		}
+		ruleOpts = append(ruleOpts, opts)
+	}
+
+	for _, opts := range ruleOpts {
+		fmt.Printf("%v", ruleOpts)
+		_, err = secgroups.CreateRule(computeClient, opts).Extract()
+		if err != nil {
+			return fmt.Errorf("failed to create security group %s rule to port %d", opts.IPProtocol, opts.FromPort)
+		}
+	}
+
+	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", builder.Config.Images[entHost.OS], builder.Config.Flavors[entHost.InstanceSize])
+
+	var adminPassword string
+	if len(entHost.OverridePassword) > 0 {
+		adminPassword = entHost.OverridePassword
+	} else {
+		adminPassword = entCompetition.RootPassword
+	}
+	agentFile, err := entProvisionedHost.QueryProvisionedHostToGinFileMiddleware().First(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query gin file middleware from provisioned host: %v", err)
+	}
+	agentUrl := fmt.Sprintf("%s/api/download/%s", builder.Config.ServerUrl, agentFile.URLID)
+
+	var userData string
+	if strings.HasPrefix(entHost.OS, "w2k") {
+		userData = "" // TODO: Add Windows Userdata
+	} else {
+		userData = fmt.Sprintf(`#!/bin/bash
+while [ ! -f "/laforge.bin" ]
+do
+curl -sL -o /laforge.bin %s
+sleep 10
+done
+chmod +x /laforge.bin
+cd /
+./laforge.bin -service install
+./laforge.bin -service start
+`, agentUrl)
+	}
 	//build server
 	server, err := servers.Create(computeClient, servers.CreateOpts{
-		Name:      vmName,
-		FlavorRef: builder.Config.Flavors[host.InstanceSize],
-		ImageRef:  builder.Config.Images[host.OS],
-		Networks: []servers.Network{
-			{
-				UUID:    entProvisionedNetwork.Vars["openstack_network_id"],
-				FixedIP: hostAddress,
-			},
-		},
+		Name:           vmName,
+		ImageRef:       builder.Config.Images[entHost.OS],
+		FlavorRef:      builder.Config.Flavors[entHost.InstanceSize],
+		SecurityGroups: []string{entProvisionedHost.Vars["openstack_secgroup_id"]}, // TODO: Remove this and make it dynamic
+		UserData:       []byte(userData),
+		Networks: []servers.Network{{
+			UUID:    entProvisionedNetwork.Vars["openstack_network_id"],
+			FixedIP: hostAddress,
+		}},
+		AdminPass:  adminPassword,
+		AccessIPv4: hostAddress,
 	}).Extract()
 	if err != nil {
 		builder.Logger.Log.Errorf("Unable to create server: %v", err)
 		return
 	}
-	builder.Logger.Log.Debugf("Server ID: %s", server.ID)
+	builder.Logger.Log.WithField("root_password", server.AdminPass).Debugf("Server ID: %s", server.ID)
 
 	id := server.ID
-	newVars := host.Vars
+	newVars := entHost.Vars
 	newVars["openstack_instance_id"] = id
-	err = provisionedHost.Update().SetVars(newVars).Exec(ctx)
+	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Created tagged instance with ID " + id)
+	builder.Logger.Log.Infof("Created tagged instance with ID " + id)
 
 	return
 }
 
-func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
-	entBuild, err := provisionedNetwork.QueryProvisionedNetworkToBuild().Only(ctx)
+func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisionedNetwork *ent.ProvisionedNetwork) (err error) {
+	entBuild, err := entProvisionedNetwork.QueryProvisionedNetworkToBuild().Only(ctx)
 	if err != nil {
-		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", entProvisionedNetwork.Name, err)
 	}
-	entEnvironment, err := provisionedNetwork.QueryProvisionedNetworkToBuild().QueryBuildToEnvironment().Only(ctx)
+	entEnvironment, err := entProvisionedNetwork.QueryProvisionedNetworkToBuild().QueryBuildToEnvironment().Only(ctx)
 	if err != nil {
-		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", entProvisionedNetwork.Name, err)
 	}
-	entCompetition, err := provisionedNetwork.QueryProvisionedNetworkToBuild().QueryBuildToEnvironment().QueryEnvironmentToCompetition().Only(ctx)
+	entCompetition, err := entProvisionedNetwork.QueryProvisionedNetworkToBuild().QueryBuildToEnvironment().QueryEnvironmentToCompetition().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
 	}
-	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	entNetwork, err := entProvisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
 	if err != nil {
-		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", entProvisionedNetwork.Name, err)
 	}
-	entTeam, err := provisionedNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := entProvisionedNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
-		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
+		return fmt.Errorf("couldn't query build from network \"%s\": %v", entProvisionedNetwork.Name, err)
 	}
 
 	//add configuration here
@@ -241,48 +346,101 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, provisionedNe
 	if err != nil {
 		return err
 	}
-	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
-		Region: "RegionOne",
-	})
+	endpointOpts := gophercloud.EndpointOpts{
+		Name:   "neutron",
+		Region: builder.Config.RegionName,
+	}
+
+	client, err := openstack.NewNetworkV2(provider, endpointOpts)
 	if err != nil {
 		return err
 	}
 
-	tier1Name := builder.generateRouterName(entCompetition, entTeam, entBuild)
-	up := true
-
-	opts := networks.CreateOpts{Name: tier1Name, AdminStateUp: &up}
-
-	// Execute the operation and get back a networks.Network struct
-	results, err := networks.Create(client, opts).Extract()
+	osNetwork, err := networks.Create(client, networks.CreateOpts{
+		Name:         builder.generateNetworkName(entCompetition, entTeam, entNetwork, entBuild),
+		AdminStateUp: gophercloud.Enabled,
+	}).Extract()
 	if err != nil {
 		return fmt.Errorf("failed to create network: %v", err)
 	}
 	newVars := entNetwork.Vars
-	newVars["openstack_network_id"] = results.ID
-	err = provisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	newVars["openstack_network_id"] = osNetwork.ID
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update provisioned network vars: %v", err)
 	}
-	fmt.Println(results)
+
+	osSubnet, err := subnets.Create(client, subnets.CreateOpts{
+		NetworkID: osNetwork.ID,
+		CIDR:      entNetwork.Cidr,
+		IPVersion: gophercloud.IPv4,
+		Name:      builder.generateNetworkName(entCompetition, entTeam, entNetwork, entBuild),
+	}).Extract()
+	if err != nil {
+		return fmt.Errorf("failed to create subnet: %v", err)
+	}
+	newVars["openstack_subnet_id"] = osSubnet.ID
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update provisioned network vars: %v", err)
+	}
+
+	// osRouterId := entTeam.Vars["openstack_router_id"]
+	// routers.AddInterface(client)
 
 	return
 }
 
 func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
-	entProNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(
-		provisionednetwork.HasProvisionedNetworkToNetworkWith(
-			network.NameEQ("vdi"),
-		),
-	).First(ctx)
+	entBuild, err := entTeam.QueryTeamToBuild().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query build from team: %v", err)
+		
+	entEnvironment, err := entTeam.QueryTeamToBuild().QueryBuildToEnvironment().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query environment from team: %v", err)
+	}
+	entCompetition, err := entTeam.QueryTeamToBuild().QueryBuildToEnvironment().QueryEnvironmentToCompetition().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query competition from team: %v", err)
+	}
 
+	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
-		return fmt.Errorf("failed to query vdi provisioned network from entTeam: %v", err)
+		return err
 	}
-	err = builder.DeployNetwork(ctx, entProNetwork)
+	provider, err := openstack.AuthenticatedClient(authOpts)
 	if err != nil {
-		return fmt.Errorf("failed to pre-create Tier-1 network: %v", err)
+		return err
 	}
+	endpointOpts := gophercloud.EndpointOpts{
+		Name:   "neutron",
+		Region: builder.Config.RegionName,
+	}
+
+	client, err := openstack.NewNetworkV2(provider, endpointOpts)
+	if err != nil {
+		return err
+	}
+
+	osRouter, err := routers.Create(client, routers.CreateOpts{
+		Name:         builder.generateRouterName(entCompetition, entTeam, entBuild),
+		Description:  fmt.Sprintf("%s@%d Router for Team %d", entEnvironment.Name, entBuild.EnvironmentRevision, entTeam.TeamNumber),
+		AdminStateUp: gophercloud.Enabled,
+		GatewayInfo: &routers.GatewayInfo{
+			NetworkID: builder.Config.ExternalNetworkId,
+		},
+	}).Extract()
+	if err != nil {
+		return fmt.Errorf("failed to create router: %v", err)
+	}
+	newVars := entTeam.Vars
+	newVars["openstack_router_id"] = osRouter.ID
+	err = entTeam.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update team vars: %v", err)
+	}
+
 	return
 }
 

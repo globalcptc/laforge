@@ -6,7 +6,7 @@
   "username": "",
   "password": "",
   "project_id": "",
-  "project_name": ""
+  "project_name": "",
   "region_name": "",
   "flavors": {
     "nano": "", 
@@ -24,5 +24,6 @@
     "w2k19": "",
     "w2k22": "",
     "win10": ""
-  }
+  },
+  "external_network_id": ""
 }

@@ -81,18 +81,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("error querying provisioned network (\"vdi\") from team: %v", err)
 	}
-	entProvisionedHost, err := entProvisionedNetwork.QueryProvisionedNetworkToProvisionedHost().First(ctx)
-	if err != nil {
-		log.Fatalf("error querying provisioned host from provisioned network: %v", err)
-	}
 
 	logrus.WithFields(logrus.Fields{
-		"team":  entTeam.TeamNumber,
-		"pnet":  entProvisionedNetwork.ID,
-		"phost": entProvisionedHost.SubnetIP,
+		"team": entTeam.TeamNumber,
+		"pnet": entProvisionedNetwork.Cidr,
 	}).Info("Deploying host...")
 
-	err = osBuilder.DeployHost(ctx, entProvisionedHost)
+	err = osBuilder.DeployNetwork(ctx, entProvisionedNetwork)
 	if err != nil {
 		log.Fatalf("error deploying host to openstack: %v", err)
 	}
