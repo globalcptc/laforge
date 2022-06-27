@@ -21,6 +21,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 )
 
@@ -338,13 +339,9 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 	}
 
 	//add configuration here
-	authOpts, err := openstack.AuthOptionsFromEnv()
+	provider, err := builder.newAuthProvider()
 	if err != nil {
-		return err
-	}
-	provider, err := openstack.AuthenticatedClient(authOpts)
-	if err != nil {
-		return err
+		return fmt.Errorf("failed to authenticate: %v", err)
 	}
 	endpointOpts := gophercloud.EndpointOpts{
 		Name:   "neutron",
@@ -370,11 +367,35 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 		return fmt.Errorf("failed to update provisioned network vars: %v", err)
 	}
 
+	networkAddrParts := strings.Split(entProvisionedNetwork.Cidr, "/")
+	networkAddr := networkAddrParts[0]
+	networkOctetStrings := strings.Split(networkAddr, ".")
+	networkOctets := []byte{0, 0, 0, 0}
+	for i, octetString := range networkOctetStrings {
+		octet, err := strconv.Atoi(octetString)
+		if err != nil {
+			return fmt.Errorf("error while parsing IPv4 Address %s: %v", entProvisionedNetwork.Cidr, err)
+		}
+		networkOctets[i] = byte(octet)
+	}
+
+	_, ipv4Net, err := net.ParseCIDR(entProvisionedNetwork.Cidr)
+	if err != nil {
+		return fmt.Errorf("error while parsing cidr: %v", err)
+	}
+	if len(ipv4Net.Mask) != 4 {
+		return fmt.Errorf("mask is not correct length")
+	}
+	routerAddress := strings.Join(append(networkOctetStrings[:3], "254"), ".")
+
 	osSubnet, err := subnets.Create(client, subnets.CreateOpts{
-		NetworkID: osNetwork.ID,
-		CIDR:      entNetwork.Cidr,
-		IPVersion: gophercloud.IPv4,
-		Name:      builder.generateNetworkName(entCompetition, entTeam, entNetwork, entBuild),
+		NetworkID:       osNetwork.ID,
+		CIDR:            entNetwork.Cidr,
+		Name:            builder.generateNetworkName(entCompetition, entTeam, entNetwork, entBuild),
+		Description:     fmt.Sprintf("%s@%d Subnet for  Network \"%s\" for Team %d", entEnvironment.Name, entBuild.EnvironmentRevision, entNetwork.Name, entTeam.TeamNumber),
+		AllocationPools: []subnets.AllocationPool{},
+		GatewayIP:       &routerAddress,
+		IPVersion:       gophercloud.IPv4,
 	}).Extract()
 	if err != nil {
 		return fmt.Errorf("failed to create subnet: %v", err)
@@ -385,8 +406,39 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 		return fmt.Errorf("failed to update provisioned network vars: %v", err)
 	}
 
-	// osRouterId := entTeam.Vars["openstack_router_id"]
-	// routers.AddInterface(client)
+	osPort, err := ports.Create(client, ports.CreateOpts{
+		NetworkID:    osNetwork.ID,
+		Description:  fmt.Sprintf("%s@%d Router Interface on Network \"%s\" for Team %d", entEnvironment.Name, entBuild.EnvironmentRevision, entNetwork.Name, entTeam.TeamNumber),
+		AdminStateUp: gophercloud.Enabled,
+		FixedIPs: []ports.IP{{
+			SubnetID:  osSubnet.ID,
+			IPAddress: routerAddress,
+		}},
+	}).Extract()
+	if err != nil {
+		return fmt.Errorf("failed to create port for router: %v", err)
+	}
+	newVars["openstack_subnet_port_id"] = osPort.ID
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update provisioned network vars: %v", err)
+	}
+
+	osRouterId, exists := entTeam.Vars["openstack_router_id"]
+	if !exists {
+		return fmt.Errorf("failed to get openstack_router_id from team vars")
+	}
+	osInterface, err := routers.AddInterface(client, osRouterId, routers.AddInterfaceOpts{
+		PortID: osPort.ID,
+	}).Extract()
+	if err != nil {
+		return fmt.Errorf("failed to create router interface: %v", err)
+	}
+	newVars["openstack_router_interface_id"] = osInterface.ID
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update provisioned network vars: %v", err)
+	}
 
 	return
 }
@@ -395,7 +447,7 @@ func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Tea
 	entBuild, err := entTeam.QueryTeamToBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from team: %v", err)
-		
+	}
 	entEnvironment, err := entTeam.QueryTeamToBuild().QueryBuildToEnvironment().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query environment from team: %v", err)
@@ -405,13 +457,9 @@ func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Tea
 		return fmt.Errorf("couldn't query competition from team: %v", err)
 	}
 
-	authOpts, err := openstack.AuthOptionsFromEnv()
+	provider, err := builder.newAuthProvider()
 	if err != nil {
-		return err
-	}
-	provider, err := openstack.AuthenticatedClient(authOpts)
-	if err != nil {
-		return err
+		return fmt.Errorf("failed to authenticate: %v", err)
 	}
 	endpointOpts := gophercloud.EndpointOpts{
 		Name:   "neutron",
@@ -440,11 +488,11 @@ func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Tea
 	if err != nil {
 		return fmt.Errorf("failed to update team vars: %v", err)
 	}
-
 	return
 }
 
 func (builder OpenstackBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
+	// func (builder OpenstackBuilder) TeardownHost(ctx contecontext)
 	// host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	// if err != nil {
 	// 	return err

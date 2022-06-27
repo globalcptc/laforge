@@ -9,7 +9,6 @@ import (
 	"github.com/gen0cide/laforge/builder"
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/build"
-	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/gen0cide/laforge/server/utils"
@@ -77,18 +76,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("error querying team from build: %v", err)
 	}
-	entProvisionedNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(provisionednetwork.NameEQ("vdi")).Only(ctx)
-	if err != nil {
-		log.Fatalf("error querying provisioned network (\"vdi\") from team: %v", err)
-	}
 
 	logrus.WithFields(logrus.Fields{
 		"team": entTeam.TeamNumber,
-		"pnet": entProvisionedNetwork.Cidr,
-	}).Info("Deploying network...")
+	}).Info("Deploying team...")
 
-	err = osBuilder.DeployNetwork(ctx, entProvisionedNetwork)
+	err = osBuilder.DeployTeam(ctx, entTeam)
 	if err != nil {
-		log.Fatalf("error deploying network to openstack: %v", err)
+		log.Fatalf("error deploying team to openstack: %v", err)
 	}
 }
