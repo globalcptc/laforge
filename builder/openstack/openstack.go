@@ -568,7 +568,7 @@ func (builder OpenstackBuilder) TeardownHost(ctx context.Context, entProvisioned
 		return fmt.Errorf("failed to delete host: %v", err)
 	}
 	newVars := entProvisionedHost.Vars
-	delete(newVars, "openstack_router_id")
+	delete(newVars, "openstack_instance_id")
 	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update provisioned host vars: %v", err)
@@ -634,16 +634,6 @@ func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisio
 	}
 	newVars := entProvisionedNetwork.Vars
 	delete(newVars, "openstack_router_interface_id")
-	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to update provisioned network vars: %v", err)
-	}
-
-	// Delete Openstack subnet port
-	err = ports.Delete(networkClient, entProvisionedNetwork.Vars["openstack_subnet_port_id"]).ExtractErr()
-	if err != nil {
-		return fmt.Errorf("failed to delete subnet ports: %v", err)
-	}
 	delete(newVars, "openstack_subnet_port_id")
 	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
@@ -675,5 +665,44 @@ func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisio
 }
 
 func (builder OpenstackBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
+	// ###################
+	// Wait on open thread
+	// ###################
+	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
+	if err != nil {
+		return
+	}
+	defer builder.TeardownWorkerPool.Release(int64(1))
+
+	// #############################
+	// Generate authenticated client
+	// #############################
+	provider, err := builder.newAuthProvider()
+	if err != nil {
+		return fmt.Errorf("failed to authenticate: %v", err)
+	}
+	endpointOpts := gophercloud.EndpointOpts{
+		Name:   "neutron",
+		Region: builder.Config.RegionName,
+	}
+	networkClient, err := openstack.NewNetworkV2(provider, endpointOpts)
+	if err != nil {
+		return err
+	}
+
+	// #############
+	// Teardown team
+	// #############
+	// Delete Openstack router
+	err = routers.Delete(networkClient, entTeam.Vars["openstack_router_id"]).ExtractErr()
+	if err != nil {
+		return fmt.Errorf("failed to delete router: %v", err)
+	}
+	newVars := entTeam.Vars
+	delete(newVars, "openstack_router_id")
+	err = entTeam.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update team vars: %v", err)
+	}
 	return
 }
