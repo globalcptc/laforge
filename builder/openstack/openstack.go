@@ -552,7 +552,6 @@ func (builder OpenstackBuilder) TeardownHost(ctx context.Context, entProvisioned
 		return fmt.Errorf("failed to authenticate: %v", err)
 	}
 	endpointOpts := gophercloud.EndpointOpts{
-		Name:   "neutron",
 		Region: builder.Config.RegionName,
 	}
 	computeClient, err := openstack.NewComputeV2(provider, endpointOpts)
@@ -588,34 +587,90 @@ func (builder OpenstackBuilder) TeardownHost(ctx context.Context, entProvisioned
 	return
 }
 
-func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, provisionedNetwork *ent.ProvisionedNetwork) (err error) {
-	authOpts, err := openstack.AuthOptionsFromEnv()
+func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisionedNetwork *ent.ProvisionedNetwork) (err error) {
+	entTeam, err := entProvisionedNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
-		return err
-	}
-	provider, err := openstack.AuthenticatedClient(authOpts)
-	if err != nil {
-		return err
-	}
-	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
-		Region: "RegionOne",
-	})
-	if err != nil {
-		return err
+		return fmt.Errorf("failed to query team from proviisoned network: %v", err)
 	}
 
-	// networkName := builder.generateNetworkName(entCompetition[0], entTeam, entNetwork, entBuild)
-
+	// ###################
+	// Wait on open thread
+	// ###################
 	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
 		return
 	}
 	defer builder.TeardownWorkerPool.Release(int64(1))
 
-	networkId := provisionedNetwork.Vars["openstack_instance_id"]
-	result := networks.Delete(client, networkId)
-	fmt.Println(result)
+	// #############################
+	// Generate authenticated client
+	// #############################
+	provider, err := builder.newAuthProvider()
+	if err != nil {
+		return fmt.Errorf("failed to authenticate: %v", err)
+	}
+	endpointOpts := gophercloud.EndpointOpts{
+		Name:   "neutron",
+		Region: builder.Config.RegionName,
+	}
+	networkClient, err := openstack.NewNetworkV2(provider, endpointOpts)
+	if err != nil {
+		return err
+	}
 
+	// ################
+	// Teardown network
+	// ################
+	// Delete Openstack router interface
+	osRouterId, exists := entTeam.Vars["openstack_router_id"]
+	if !exists {
+		return fmt.Errorf("failed to get openstack_router_id from team vars")
+	}
+	_, err = routers.RemoveInterface(networkClient, osRouterId, routers.RemoveInterfaceOpts{
+		PortID: entProvisionedNetwork.Vars["openstack_subnet_port_id"],
+	}).Extract()
+	if err != nil {
+		return fmt.Errorf("failed to delete router interface: %v", err)
+	}
+	newVars := entProvisionedNetwork.Vars
+	delete(newVars, "openstack_router_interface_id")
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update provisioned network vars: %v", err)
+	}
+
+	// Delete Openstack subnet port
+	err = ports.Delete(networkClient, entProvisionedNetwork.Vars["openstack_subnet_port_id"]).ExtractErr()
+	if err != nil {
+		return fmt.Errorf("failed to delete subnet ports: %v", err)
+	}
+	delete(newVars, "openstack_subnet_port_id")
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update provisioned network vars: %v", err)
+	}
+
+	// Delete Openstack subnet
+	err = subnets.Delete(networkClient, entProvisionedNetwork.Vars["openstack_subnet_id"]).ExtractErr()
+	if err != nil {
+		return fmt.Errorf("failed to delete subnet: %v", err)
+	}
+	delete(newVars, "openstack_subnet_id")
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update provisioned network vars: %v", err)
+	}
+
+	// Delete Openstack network
+	err = networks.Delete(networkClient, entProvisionedNetwork.Vars["openstack_network_id"]).ExtractErr()
+	if err != nil {
+		return fmt.Errorf("failed to delete network: %v", err)
+	}
+	delete(newVars, "openstack_network_id")
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update provisioned network vars: %v", err)
+	}
 	return
 }
 
