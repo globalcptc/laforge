@@ -270,7 +270,14 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 
 	var userData string
 	if strings.HasPrefix(entHost.OS, "w2k") {
-		userData = "" // TODO: Add Windows Userdata
+		userData = fmt.Sprintf(`<script>
+powershell -Command mkdir $env:PROGRAMDATA\Laforge -Force
+powershell -Command do{	$test = Test-Connection 1.1.1.1 -Quiet; Start-Sleep -s 5}until($test)
+powershell -Command Invoke-WebRequest %s -OutFile $env:PROGRAMDATA\Laforge\laforge.exe
+powershell -Command %%PROGRAMDATA%%\Laforge\laforge.exe -service install
+powershell -Command %%PROGRAMDATA%%\Laforge\laforge.exe -service start
+powershell -Command logoff
+</script>`, agentUrl)
 	} else {
 		userData = fmt.Sprintf(`#!/bin/bash
 while [ ! -f "/laforge.bin" ]
