@@ -84,7 +84,7 @@ func (builder OpenstackBuilder) generateBuildID(build *ent.Build) string {
 	if err != nil {
 		buildId = []byte(fmt.Sprint(build.Revision))
 	}
-	return fmt.Sprintf("%s", buildId)
+	return string(buildId)
 }
 
 func (builder OpenstackBuilder) generateVmName(competition *ent.Competition, team *ent.Team, host *ent.Host, build *ent.Build) string {
@@ -124,27 +124,23 @@ func (builder OpenstackBuilder) newAuthProvider() (*gophercloud.ProviderClient, 
 func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHost *ent.ProvisionedHost) (err error) {
 	entHost, err := entProvisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed querying host from provisioned host: %v", err)
 	}
-
 	entProvisionedNetwork, err := entProvisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query provisioned network from provisioned host: %v", err)
 	}
-
 	entBuild, err := entProvisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed querying build from provisioned host: %v", err)
 	}
-
 	entCompetition, err := entBuild.QueryBuildToCompetition().Only(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed querying competition from provisioned host: %v", err)
 	}
-
 	entTeam, err := entProvisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed querying team from provisioned host: %v", err)
 	}
 
 	// ###################
@@ -152,7 +148,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	// ###################
 	err = builder.DeployWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
-		return
+		return fmt.Errorf("failed to acquire thread: %v", err)
 	}
 	defer builder.DeployWorkerPool.Release(int64(1))
 
@@ -203,13 +199,13 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 		Name:        vmName,
 		Description: fmt.Sprintf("Sec group for VM %s", vmName),
 	}
-	secGroup, err := secgroups.Create(computeClient, opts).Extract()
+	osSecGroup, err := secgroups.Create(computeClient, opts).Extract()
 	if err != nil {
 		return fmt.Errorf("failed to create security group: %v", err)
 	}
 
 	newVars := entHost.Vars
-	newVars["openstack_secgroup_id"] = secGroup.ID
+	newVars["openstack_secgroup_id"] = osSecGroup.ID
 	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update provisioned host vars: %v", err)
@@ -221,7 +217,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 			return fmt.Errorf("could not convert TCP port \"%s\" to integer: %v", port, err)
 		}
 		opts := secgroups.CreateRuleOpts{
-			ParentGroupID: secGroup.ID,
+			ParentGroupID: osSecGroup.ID,
 			FromPort:      destPort,
 			ToPort:        destPort,
 			IPProtocol:    "TCP",
@@ -235,7 +231,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 			return fmt.Errorf("could not convert UDP port \"%s\" to integer: %v", port, err)
 		}
 		opts := secgroups.CreateRuleOpts{
-			ParentGroupID: secGroup.ID,
+			ParentGroupID: osSecGroup.ID,
 			FromPort:      destPort,
 			ToPort:        destPort,
 			IPProtocol:    "UDP",
@@ -244,7 +240,6 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 		ruleOpts = append(ruleOpts, opts)
 	}
 	for _, opts := range ruleOpts {
-		fmt.Printf("%v", ruleOpts)
 		_, err = secgroups.CreateRule(computeClient, opts).Extract()
 		if err != nil {
 			return fmt.Errorf("failed to create security group %s rule to port %d", opts.IPProtocol, opts.FromPort)
@@ -294,7 +289,7 @@ cd /
 		Name:           vmName,
 		ImageRef:       builder.Config.Images[entHost.OS],
 		FlavorRef:      builder.Config.Flavors[entHost.InstanceSize],
-		SecurityGroups: []string{entProvisionedHost.Vars["openstack_secgroup_id"]},
+		SecurityGroups: []string{osSecGroup.ID},
 		UserData:       []byte(userData),
 		Networks: []servers.Network{{
 			UUID:    entProvisionedNetwork.Vars["openstack_network_id"],
@@ -313,7 +308,7 @@ cd /
 	newVars["openstack_instance_id"] = server.ID
 	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update provisioned host vars: %v", err)
 	}
 	return
 }
@@ -345,7 +340,7 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 	// ###################
 	err = builder.DeployWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
-		return
+		return fmt.Errorf("failed to acquire thread: %v", err)
 	}
 	defer builder.DeployWorkerPool.Release(int64(1))
 
@@ -362,7 +357,7 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 	}
 	networkClient, err := openstack.NewNetworkV2(provider, endpointOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create openstack network client: %v", err)
 	}
 
 	// ##############
@@ -488,7 +483,7 @@ func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Tea
 	// ###################
 	err = builder.DeployWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
-		return
+		return fmt.Errorf("failed to acquire thread: %v", err)
 	}
 	defer builder.DeployWorkerPool.Release(int64(1))
 
@@ -505,7 +500,7 @@ func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Tea
 	}
 	networkClient, err := openstack.NewNetworkV2(provider, endpointOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create openstack network client: %v", err)
 	}
 
 	// ###########
@@ -540,7 +535,7 @@ func (builder OpenstackBuilder) TeardownHost(ctx context.Context, entProvisioned
 	// ###################
 	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
-		return
+		return fmt.Errorf("failed to acquire thread: %v", err)
 	}
 	defer builder.TeardownWorkerPool.Release(int64(1))
 
@@ -556,7 +551,7 @@ func (builder OpenstackBuilder) TeardownHost(ctx context.Context, entProvisioned
 	}
 	computeClient, err := openstack.NewComputeV2(provider, endpointOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create openstack compute client: %v", err)
 	}
 
 	// #############
@@ -598,7 +593,7 @@ func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisio
 	// ###################
 	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
-		return
+		return fmt.Errorf("failed to acquire thread: %v", err)
 	}
 	defer builder.TeardownWorkerPool.Release(int64(1))
 
@@ -615,7 +610,7 @@ func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisio
 	}
 	networkClient, err := openstack.NewNetworkV2(provider, endpointOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create openstack network client: %v", err)
 	}
 
 	// ################
@@ -670,7 +665,7 @@ func (builder OpenstackBuilder) TeardownTeam(ctx context.Context, entTeam *ent.T
 	// ###################
 	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
-		return
+		return fmt.Errorf("failed to acquire thread: %v", err)
 	}
 	defer builder.TeardownWorkerPool.Release(int64(1))
 
@@ -687,7 +682,7 @@ func (builder OpenstackBuilder) TeardownTeam(ctx context.Context, entTeam *ent.T
 	}
 	networkClient, err := openstack.NewNetworkV2(provider, endpointOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create openstack network client: %v", err)
 	}
 
 	// #############
