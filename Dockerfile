@@ -26,6 +26,8 @@ ENV PATH="/app/docker_files:${PATH}"
 RUN go mod download && go mod verify
 RUN go build -o server_binary server/server.go
 
+RUN mkdir /var/log/laforge
+
 EXPOSE 8080 50051
 
 CMD ["./server_binary"]

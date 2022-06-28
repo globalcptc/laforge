@@ -1864,6 +1864,9 @@ func (r *subscriptionResolver) StreamServerTaskLog(ctx context.Context, taskID s
 		fileTicker := time.NewTicker(filePeriod)
 
 		fi, err := os.Stat(entServerTask.LogFilePath)
+		if err != nil {
+			return
+		}
 		lastModified := fi.ModTime()
 		fileBytes, err := ioutil.ReadFile(entServerTask.LogFilePath)
 		if err != nil {
