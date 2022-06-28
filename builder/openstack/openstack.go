@@ -412,6 +412,12 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 	}
 	routerAddress := strings.Join(append(networkOctetStrings[:3], "254"), ".")
 
+	dnsServer := "1.1.1.1"
+	envDnsServer, exists := entEnvironment.Config["master_dns_server"]
+	if exists {
+		dnsServer = envDnsServer
+	}
+
 	// Create openstack subnet on network
 	osSubnet, err := subnets.Create(networkClient, subnets.CreateOpts{
 		NetworkID:       osNetwork.ID,
@@ -421,6 +427,7 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 		AllocationPools: []subnets.AllocationPool{},
 		GatewayIP:       &routerAddress,
 		IPVersion:       gophercloud.IPv4,
+		DNSNameservers:  []string{dnsServer},
 	}).Extract()
 	if err != nil {
 		return fmt.Errorf("failed to create subnet: %v", err)
