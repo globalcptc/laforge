@@ -9,6 +9,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/sync/semaphore"
 
@@ -119,6 +120,16 @@ func (builder OpenstackBuilder) newAuthProvider() (*gophercloud.ProviderClient, 
 		authOpts.DomainID = builder.Config.DomainId
 	}
 	return openstack.AuthenticatedClient(authOpts)
+}
+
+func waitForObjectDelete(getFunc func() error) {
+	for {
+		err := getFunc()
+		if err != nil {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
 }
 
 func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHost *ent.ProvisionedHost) (err error) {
@@ -562,6 +573,12 @@ func (builder OpenstackBuilder) TeardownHost(ctx context.Context, entProvisioned
 	if err != nil {
 		return fmt.Errorf("failed to delete host: %v", err)
 	}
+	// Wait for the network to actually be deleted (Openstack queues actions asynchronously)
+	waitForObjectDelete(func() error {
+		_, err := servers.Get(computeClient, entProvisionedHost.Vars["openstack_instance_id"]).Extract()
+		return err
+	})
+	// Remove from vars
 	newVars := entProvisionedHost.Vars
 	delete(newVars, "openstack_instance_id")
 	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctx)
@@ -574,6 +591,12 @@ func (builder OpenstackBuilder) TeardownHost(ctx context.Context, entProvisioned
 	if err != nil {
 		return fmt.Errorf("failed to delete security group: %v", err)
 	}
+	// Wait for the network to actually be deleted (Openstack queues actions asynchronously)
+	waitForObjectDelete(func() error {
+		_, err := secgroups.Get(computeClient, entProvisionedHost.Vars["openstack_secgroup_id"]).Extract()
+		return err
+	})
+	// Remove from vars
 	delete(newVars, "openstack_secgroup_id")
 	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
@@ -627,6 +650,13 @@ func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisio
 	if err != nil {
 		return fmt.Errorf("failed to delete router interface: %v", err)
 	}
+
+	// Wait for the router port to actually be deleted (Openstack queues actions asynchronously)
+	waitForObjectDelete(func() error {
+		_, err := ports.Get(networkClient, entProvisionedNetwork.Vars["openstack_subnet_port_id"]).Extract()
+		return err
+	})
+	// Remove from vars
 	newVars := entProvisionedNetwork.Vars
 	delete(newVars, "openstack_router_interface_id")
 	delete(newVars, "openstack_subnet_port_id")
@@ -640,6 +670,12 @@ func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisio
 	if err != nil {
 		return fmt.Errorf("failed to delete subnet: %v", err)
 	}
+	// Wait for the subnet to actually be deleted (Openstack queues actions asynchronously)
+	waitForObjectDelete(func() error {
+		_, err := subnets.Get(networkClient, entProvisionedNetwork.Vars["openstack_subnet_id"]).Extract()
+		return err
+	})
+	// Remove from vars
 	delete(newVars, "openstack_subnet_id")
 	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
@@ -651,6 +687,12 @@ func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisio
 	if err != nil {
 		return fmt.Errorf("failed to delete network: %v", err)
 	}
+	// Wait for the network to actually be deleted (Openstack queues actions asynchronously)
+	waitForObjectDelete(func() error {
+		_, err := networks.Get(networkClient, entProvisionedNetwork.Vars["openstack_network_id"]).Extract()
+		return err
+	})
+	// Remove from vars
 	delete(newVars, "openstack_network_id")
 	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
@@ -693,6 +735,12 @@ func (builder OpenstackBuilder) TeardownTeam(ctx context.Context, entTeam *ent.T
 	if err != nil {
 		return fmt.Errorf("failed to delete router: %v", err)
 	}
+	// Wait for the network to actually be deleted (Openstack queues actions asynchronously)
+	waitForObjectDelete(func() error {
+		_, err := routers.Get(networkClient, entTeam.Vars["openstack_router_id"]).Extract()
+		return err
+	})
+	// Remove from vars
 	newVars := entTeam.Vars
 	delete(newVars, "openstack_router_id")
 	err = entTeam.Update().SetVars(newVars).Exec(ctx)
