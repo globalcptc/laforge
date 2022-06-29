@@ -1,0 +1,25 @@
+{
+    "name": "laforge",
+    "displayName": "LaForge Support",
+    "description": "Syntax highlighting and autocompletion for LaForge",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.68.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "laforge",
+            "aliases": ["laforge", "LaForge"],
+            "extensions": [".laforge"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "laforge",
+            "scopeName": "source.laforge",
+            "path": "./syntaxes/laforge.tmLanguage.json"
+        }]
+    }
+}
