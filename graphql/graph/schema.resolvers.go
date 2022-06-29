@@ -1453,6 +1453,12 @@ func (r *queryResolver) ListBuildStatuses(ctx context.Context, buildUUID string)
 	}
 	statuses = append(statuses, planStatuses...)
 
+	teamStatuses, err := r.client.Team.Query().Where(team.HasTeamToBuildWith(build.IDEQ(uuid))).QueryTeamToStatus().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying team statuses from build: %v", err)
+	}
+	statuses = append(statuses, teamStatuses...)
+
 	provisionedNetworkStatuses, err := r.client.ProvisionedNetwork.Query().Where(provisionednetwork.HasProvisionedNetworkToBuildWith(build.IDEQ(uuid))).QueryProvisionedNetworkToStatus().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed querying provisioned network statuses from build: %v", err)

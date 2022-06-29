@@ -115,6 +115,8 @@ export class StepComponent implements OnInit, OnDestroy {
         return 'trash';
       case LaForgeProvisioningStepType.FileExtract:
         return 'file-archive';
+      case LaForgeProvisioningStepType.Ansible:
+        return 'archive';
       default:
         return 'minus-circle';
     }
@@ -173,6 +175,8 @@ export class StepComponent implements OnInit, OnDestroy {
         return 'FileDelete';
       case LaForgeProvisioningStepType.FileExtract:
         return 'FileExtract';
+      case LaForgeProvisioningStepType.Ansible:
+        return 'Ansible';
       default:
         return 'Step';
     }

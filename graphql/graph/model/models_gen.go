@@ -543,6 +543,7 @@ func (e ProvisionStatusFor) MarshalGQL(w io.Writer) {
 type ProvisioningStepType string
 
 const (
+	ProvisioningStepTypeAnsible      ProvisioningStepType = "Ansible"
 	ProvisioningStepTypeScript       ProvisioningStepType = "Script"
 	ProvisioningStepTypeCommand      ProvisioningStepType = "Command"
 	ProvisioningStepTypeDNSRecord    ProvisioningStepType = "DNSRecord"
@@ -553,6 +554,7 @@ const (
 )
 
 var AllProvisioningStepType = []ProvisioningStepType{
+	ProvisioningStepTypeAnsible,
 	ProvisioningStepTypeScript,
 	ProvisioningStepTypeCommand,
 	ProvisioningStepTypeDNSRecord,
@@ -564,7 +566,7 @@ var AllProvisioningStepType = []ProvisioningStepType{
 
 func (e ProvisioningStepType) IsValid() bool {
 	switch e {
-	case ProvisioningStepTypeScript, ProvisioningStepTypeCommand, ProvisioningStepTypeDNSRecord, ProvisioningStepTypeFileDelete, ProvisioningStepTypeFileDownload, ProvisioningStepTypeFileExtract, ProvisioningStepTypeUndefined:
+	case ProvisioningStepTypeAnsible, ProvisioningStepTypeScript, ProvisioningStepTypeCommand, ProvisioningStepTypeDNSRecord, ProvisioningStepTypeFileDelete, ProvisioningStepTypeFileDownload, ProvisioningStepTypeFileExtract, ProvisioningStepTypeUndefined:
 		return true
 	}
 	return false

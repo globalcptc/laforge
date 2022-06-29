@@ -122,16 +122,6 @@ func (builder OpenstackBuilder) newAuthProvider() (*gophercloud.ProviderClient, 
 	return openstack.AuthenticatedClient(authOpts)
 }
 
-func waitForObjectDeploy(getFunc func() bool) {
-	for {
-		deployed := getFunc()
-		if deployed {
-			break
-		}
-		time.Sleep(3 * time.Second)
-	}
-}
-
 func waitForObjectTeardown(getFunc func() error) {
 	for {
 		err := getFunc()

@@ -3653,6 +3653,7 @@ enum PlanType {
 }
 
 enum ProvisioningStepType {
+  Ansible
   Script
   Command
   DNSRecord
