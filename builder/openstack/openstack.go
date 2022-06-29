@@ -141,6 +141,10 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	if err != nil {
 		return fmt.Errorf("failed to query provisioned network from provisioned host: %v", err)
 	}
+	entNetwork, err := entProvisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query network from provisioned network: %v", err)
+	}
 	entBuild, err := entProvisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed querying build from provisioned host: %v", err)
@@ -152,6 +156,10 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	entTeam, err := entProvisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed querying team from provisioned host: %v", err)
+	}
+	entEnvironment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("failed querying environment from build: %v", err)
 	}
 
 	// ###################
@@ -220,6 +228,17 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	if err != nil {
 		return fmt.Errorf("failed to update provisioned host vars: %v", err)
 	}
+	input_cidr := entProvisionedNetwork.Cidr
+	if entNetwork.VdiVisible {
+		vpcCidr, ok := entEnvironment.Config["vpc_cidr"]
+		if !ok {
+			return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entEnvironment.Name)
+		}
+		input_cidr = vpcCidr
+	}
+	if entNetwork.Vars["public_net"] == "true" {
+		input_cidr = "0.0.0.0/0"
+	}
 	ruleOpts := make([]secgroups.CreateRuleOpts, 0)
 	for _, port := range entHost.ExposedTCPPorts {
 		fromPort := 0
@@ -247,7 +266,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 			FromPort:      fromPort,
 			ToPort:        toPort,
 			IPProtocol:    "TCP",
-			CIDR:          "0.0.0.0/0",
+			CIDR:          input_cidr,
 		}
 		ruleOpts = append(ruleOpts, opts)
 	}
@@ -277,7 +296,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 			FromPort:      fromPort,
 			ToPort:        toPort,
 			IPProtocol:    "UDP",
-			CIDR:          "0.0.0.0/0",
+			CIDR:          input_cidr,
 		}
 		ruleOpts = append(ruleOpts, opts)
 	}
