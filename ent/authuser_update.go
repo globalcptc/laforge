@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -292,12 +293,12 @@ func (auu *AuthUserUpdate) ExecX(ctx context.Context) {
 func (auu *AuthUserUpdate) check() error {
 	if v, ok := auu.mutation.Role(); ok {
 		if err := authuser.RoleValidator(v); err != nil {
-			return &ValidationError{Name: "role", err: fmt.Errorf("ent: validator failed for field \"role\": %w", err)}
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "AuthUser.role": %w`, err)}
 		}
 	}
 	if v, ok := auu.mutation.Provider(); ok {
 		if err := authuser.ProviderValidator(v); err != nil {
-			return &ValidationError{Name: "provider", err: fmt.Errorf("ent: validator failed for field \"provider\": %w", err)}
+			return &ValidationError{Name: "provider", err: fmt.Errorf(`ent: validator failed for field "AuthUser.provider": %w`, err)}
 		}
 	}
 	return nil
@@ -795,12 +796,12 @@ func (auuo *AuthUserUpdateOne) ExecX(ctx context.Context) {
 func (auuo *AuthUserUpdateOne) check() error {
 	if v, ok := auuo.mutation.Role(); ok {
 		if err := authuser.RoleValidator(v); err != nil {
-			return &ValidationError{Name: "role", err: fmt.Errorf("ent: validator failed for field \"role\": %w", err)}
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "AuthUser.role": %w`, err)}
 		}
 	}
 	if v, ok := auuo.mutation.Provider(); ok {
 		if err := authuser.ProviderValidator(v); err != nil {
-			return &ValidationError{Name: "provider", err: fmt.Errorf("ent: validator failed for field \"provider\": %w", err)}
+			return &ValidationError{Name: "provider", err: fmt.Errorf(`ent: validator failed for field "AuthUser.provider": %w`, err)}
 		}
 	}
 	return nil
@@ -819,7 +820,7 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 	}
 	id, ok := auuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing AuthUser.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "AuthUser.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := auuo.fields; len(fields) > 0 {

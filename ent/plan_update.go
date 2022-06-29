@@ -379,11 +379,11 @@ func (pu *PlanUpdate) ExecX(ctx context.Context) {
 func (pu *PlanUpdate) check() error {
 	if v, ok := pu.mutation.GetType(); ok {
 		if err := plan.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf("ent: validator failed for field \"type\": %w", err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Plan.type": %w`, err)}
 		}
 	}
 	if _, ok := pu.mutation.PlanToStatusID(); pu.mutation.PlanToStatusCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"PlanToStatus\"")
+		return errors.New(`ent: clearing a required unique edge "Plan.PlanToStatus"`)
 	}
 	return nil
 }
@@ -1176,11 +1176,11 @@ func (puo *PlanUpdateOne) ExecX(ctx context.Context) {
 func (puo *PlanUpdateOne) check() error {
 	if v, ok := puo.mutation.GetType(); ok {
 		if err := plan.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf("ent: validator failed for field \"type\": %w", err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Plan.type": %w`, err)}
 		}
 	}
 	if _, ok := puo.mutation.PlanToStatusID(); puo.mutation.PlanToStatusCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"PlanToStatus\"")
+		return errors.New(`ent: clearing a required unique edge "Plan.PlanToStatus"`)
 	}
 	return nil
 }
@@ -1198,7 +1198,7 @@ func (puo *PlanUpdateOne) sqlSave(ctx context.Context) (_node *Plan, err error) 
 	}
 	id, ok := puo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Plan.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Plan.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := puo.fields; len(fields) > 0 {

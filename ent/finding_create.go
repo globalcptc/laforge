@@ -60,6 +60,14 @@ func (fc *FindingCreate) SetID(u uuid.UUID) *FindingCreate {
 	return fc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (fc *FindingCreate) SetNillableID(u *uuid.UUID) *FindingCreate {
+	if u != nil {
+		fc.SetID(*u)
+	}
+	return fc
+}
+
 // AddFindingToUserIDs adds the "FindingToUser" edge to the User entity by IDs.
 func (fc *FindingCreate) AddFindingToUserIDs(ids ...uuid.UUID) *FindingCreate {
 	fc.mutation.AddFindingToUserIDs(ids...)
@@ -212,29 +220,29 @@ func (fc *FindingCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (fc *FindingCreate) check() error {
 	if _, ok := fc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Finding.name"`)}
 	}
 	if _, ok := fc.mutation.Description(); !ok {
-		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "description"`)}
+		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Finding.description"`)}
 	}
 	if _, ok := fc.mutation.Severity(); !ok {
-		return &ValidationError{Name: "severity", err: errors.New(`ent: missing required field "severity"`)}
+		return &ValidationError{Name: "severity", err: errors.New(`ent: missing required field "Finding.severity"`)}
 	}
 	if v, ok := fc.mutation.Severity(); ok {
 		if err := finding.SeverityValidator(v); err != nil {
-			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "severity": %w`, err)}
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "Finding.severity": %w`, err)}
 		}
 	}
 	if _, ok := fc.mutation.Difficulty(); !ok {
-		return &ValidationError{Name: "difficulty", err: errors.New(`ent: missing required field "difficulty"`)}
+		return &ValidationError{Name: "difficulty", err: errors.New(`ent: missing required field "Finding.difficulty"`)}
 	}
 	if v, ok := fc.mutation.Difficulty(); ok {
 		if err := finding.DifficultyValidator(v); err != nil {
-			return &ValidationError{Name: "difficulty", err: fmt.Errorf(`ent: validator failed for field "difficulty": %w`, err)}
+			return &ValidationError{Name: "difficulty", err: fmt.Errorf(`ent: validator failed for field "Finding.difficulty": %w`, err)}
 		}
 	}
 	if _, ok := fc.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Finding.tags"`)}
 	}
 	return nil
 }
@@ -248,7 +256,11 @@ func (fc *FindingCreate) sqlSave(ctx context.Context) (*Finding, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -266,7 +278,7 @@ func (fc *FindingCreate) createSpec() (*Finding, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := fc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := fc.mutation.Name(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

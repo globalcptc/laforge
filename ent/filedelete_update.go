@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -345,7 +346,7 @@ func (fduo *FileDeleteUpdateOne) sqlSave(ctx context.Context) (_node *FileDelete
 	}
 	id, ok := fduo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing FileDelete.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "FileDelete.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := fduo.fields; len(fields) > 0 {

@@ -87,6 +87,14 @@ func (fdc *FileDownloadCreate) SetID(u uuid.UUID) *FileDownloadCreate {
 	return fdc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (fdc *FileDownloadCreate) SetNillableID(u *uuid.UUID) *FileDownloadCreate {
+	if u != nil {
+		fdc.SetID(*u)
+	}
+	return fdc
+}
+
 // SetFileDownloadToEnvironmentID sets the "FileDownloadToEnvironment" edge to the Environment entity by ID.
 func (fdc *FileDownloadCreate) SetFileDownloadToEnvironmentID(id uuid.UUID) *FileDownloadCreate {
 	fdc.mutation.SetFileDownloadToEnvironmentID(id)
@@ -186,34 +194,34 @@ func (fdc *FileDownloadCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (fdc *FileDownloadCreate) check() error {
 	if _, ok := fdc.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "FileDownload.hcl_id"`)}
 	}
 	if _, ok := fdc.mutation.SourceType(); !ok {
-		return &ValidationError{Name: "source_type", err: errors.New(`ent: missing required field "source_type"`)}
+		return &ValidationError{Name: "source_type", err: errors.New(`ent: missing required field "FileDownload.source_type"`)}
 	}
 	if _, ok := fdc.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "source"`)}
+		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "FileDownload.source"`)}
 	}
 	if _, ok := fdc.mutation.Destination(); !ok {
-		return &ValidationError{Name: "destination", err: errors.New(`ent: missing required field "destination"`)}
+		return &ValidationError{Name: "destination", err: errors.New(`ent: missing required field "FileDownload.destination"`)}
 	}
 	if _, ok := fdc.mutation.Template(); !ok {
-		return &ValidationError{Name: "template", err: errors.New(`ent: missing required field "template"`)}
+		return &ValidationError{Name: "template", err: errors.New(`ent: missing required field "FileDownload.template"`)}
 	}
 	if _, ok := fdc.mutation.Perms(); !ok {
-		return &ValidationError{Name: "perms", err: errors.New(`ent: missing required field "perms"`)}
+		return &ValidationError{Name: "perms", err: errors.New(`ent: missing required field "FileDownload.perms"`)}
 	}
 	if _, ok := fdc.mutation.Disabled(); !ok {
-		return &ValidationError{Name: "disabled", err: errors.New(`ent: missing required field "disabled"`)}
+		return &ValidationError{Name: "disabled", err: errors.New(`ent: missing required field "FileDownload.disabled"`)}
 	}
 	if _, ok := fdc.mutation.Md5(); !ok {
-		return &ValidationError{Name: "md5", err: errors.New(`ent: missing required field "md5"`)}
+		return &ValidationError{Name: "md5", err: errors.New(`ent: missing required field "FileDownload.md5"`)}
 	}
 	if _, ok := fdc.mutation.AbsPath(); !ok {
-		return &ValidationError{Name: "abs_path", err: errors.New(`ent: missing required field "abs_path"`)}
+		return &ValidationError{Name: "abs_path", err: errors.New(`ent: missing required field "FileDownload.abs_path"`)}
 	}
 	if _, ok := fdc.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "FileDownload.tags"`)}
 	}
 	return nil
 }
@@ -227,7 +235,11 @@ func (fdc *FileDownloadCreate) sqlSave(ctx context.Context) (*FileDownload, erro
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -245,7 +257,7 @@ func (fdc *FileDownloadCreate) createSpec() (*FileDownload, *sqlgraph.CreateSpec
 	)
 	if id, ok := fdc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := fdc.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

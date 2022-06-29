@@ -53,6 +53,14 @@ func (cc *CompetitionCreate) SetID(u uuid.UUID) *CompetitionCreate {
 	return cc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (cc *CompetitionCreate) SetNillableID(u *uuid.UUID) *CompetitionCreate {
+	if u != nil {
+		cc.SetID(*u)
+	}
+	return cc
+}
+
 // AddCompetitionToDNSIDs adds the "CompetitionToDNS" edge to the DNS entity by IDs.
 func (cc *CompetitionCreate) AddCompetitionToDNSIDs(ids ...uuid.UUID) *CompetitionCreate {
 	cc.mutation.AddCompetitionToDNSIDs(ids...)
@@ -182,16 +190,16 @@ func (cc *CompetitionCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (cc *CompetitionCreate) check() error {
 	if _, ok := cc.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Competition.hcl_id"`)}
 	}
 	if _, ok := cc.mutation.RootPassword(); !ok {
-		return &ValidationError{Name: "root_password", err: errors.New(`ent: missing required field "root_password"`)}
+		return &ValidationError{Name: "root_password", err: errors.New(`ent: missing required field "Competition.root_password"`)}
 	}
 	if _, ok := cc.mutation.Config(); !ok {
-		return &ValidationError{Name: "config", err: errors.New(`ent: missing required field "config"`)}
+		return &ValidationError{Name: "config", err: errors.New(`ent: missing required field "Competition.config"`)}
 	}
 	if _, ok := cc.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Competition.tags"`)}
 	}
 	return nil
 }
@@ -205,7 +213,11 @@ func (cc *CompetitionCreate) sqlSave(ctx context.Context) (*Competition, error) 
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -223,7 +235,7 @@ func (cc *CompetitionCreate) createSpec() (*Competition, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := cc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := cc.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

@@ -253,7 +253,7 @@ func (hq *HostQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single Host entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one Host entity is not found.
+// Returns a *NotSingularError when more than one Host entity is found.
 // Returns a *NotFoundError when no Host entities are found.
 func (hq *HostQuery) Only(ctx context.Context) (*Host, error) {
 	nodes, err := hq.Limit(2).All(ctx)
@@ -280,7 +280,7 @@ func (hq *HostQuery) OnlyX(ctx context.Context) *Host {
 }
 
 // OnlyID is like Only, but returns the only Host ID in the query.
-// Returns a *NotSingularError when exactly one Host ID is not found.
+// Returns a *NotSingularError when more than one Host ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (hq *HostQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -395,8 +395,9 @@ func (hq *HostQuery) Clone() *HostQuery {
 		withDependOnHostToHostDependency: hq.withDependOnHostToHostDependency.Clone(),
 		withDependByHostToHostDependency: hq.withDependByHostToHostDependency.Clone(),
 		// clone intermediate query.
-		sql:  hq.sql.Clone(),
-		path: hq.path,
+		sql:    hq.sql.Clone(),
+		path:   hq.path,
+		unique: hq.unique,
 	}
 }
 
@@ -781,6 +782,10 @@ func (hq *HostQuery) sqlAll(ctx context.Context) ([]*Host, error) {
 
 func (hq *HostQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := hq.querySpec()
+	_spec.Node.Columns = hq.fields
+	if len(hq.fields) > 0 {
+		_spec.Unique = hq.unique != nil && *hq.unique
+	}
 	return sqlgraph.CountNodes(ctx, hq.driver, _spec)
 }
 
@@ -851,6 +856,9 @@ func (hq *HostQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if hq.sql != nil {
 		selector = hq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if hq.unique != nil && *hq.unique {
+		selector.Distinct()
 	}
 	for _, p := range hq.predicates {
 		p(selector)
@@ -1130,9 +1138,7 @@ func (hgb *HostGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range hgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(hgb.fields...)...)

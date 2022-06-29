@@ -33,6 +33,7 @@ func CreateNewLogger(logFilePath string) Logger {
 		logrus.Error("Failed create log file")
 	}
 
+	logrus.Infof("\033[1;34mLog File Created: \033[0m%s", logFilePath)
 	return Logger{
 		Log:     log,
 		LogFile: logFilePath,

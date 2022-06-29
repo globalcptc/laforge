@@ -50,6 +50,14 @@ func (pnc *ProvisionedNetworkCreate) SetID(u uuid.UUID) *ProvisionedNetworkCreat
 	return pnc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (pnc *ProvisionedNetworkCreate) SetNillableID(u *uuid.UUID) *ProvisionedNetworkCreate {
+	if u != nil {
+		pnc.SetID(*u)
+	}
+	return pnc
+}
+
 // SetProvisionedNetworkToStatusID sets the "ProvisionedNetworkToStatus" edge to the Status entity by ID.
 func (pnc *ProvisionedNetworkCreate) SetProvisionedNetworkToStatusID(id uuid.UUID) *ProvisionedNetworkCreate {
 	pnc.mutation.SetProvisionedNetworkToStatusID(id)
@@ -240,13 +248,13 @@ func (pnc *ProvisionedNetworkCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (pnc *ProvisionedNetworkCreate) check() error {
 	if _, ok := pnc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "ProvisionedNetwork.name"`)}
 	}
 	if _, ok := pnc.mutation.Cidr(); !ok {
-		return &ValidationError{Name: "cidr", err: errors.New(`ent: missing required field "cidr"`)}
+		return &ValidationError{Name: "cidr", err: errors.New(`ent: missing required field "ProvisionedNetwork.cidr"`)}
 	}
 	if _, ok := pnc.mutation.Vars(); !ok {
-		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "ProvisionedNetwork.vars"`)}
 	}
 	return nil
 }
@@ -260,7 +268,11 @@ func (pnc *ProvisionedNetworkCreate) sqlSave(ctx context.Context) (*ProvisionedN
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -278,7 +290,7 @@ func (pnc *ProvisionedNetworkCreate) createSpec() (*ProvisionedNetwork, *sqlgrap
 	)
 	if id, ok := pnc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := pnc.mutation.Name(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

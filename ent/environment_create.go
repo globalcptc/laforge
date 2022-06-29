@@ -111,6 +111,14 @@ func (ec *EnvironmentCreate) SetID(u uuid.UUID) *EnvironmentCreate {
 	return ec
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (ec *EnvironmentCreate) SetNillableID(u *uuid.UUID) *EnvironmentCreate {
+	if u != nil {
+		ec.SetID(*u)
+	}
+	return ec
+}
+
 // AddEnvironmentToUserIDs adds the "EnvironmentToUser" edge to the User entity by IDs.
 func (ec *EnvironmentCreate) AddEnvironmentToUserIDs(ids ...uuid.UUID) *EnvironmentCreate {
 	ec.mutation.AddEnvironmentToUserIDs(ids...)
@@ -476,37 +484,37 @@ func (ec *EnvironmentCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (ec *EnvironmentCreate) check() error {
 	if _, ok := ec.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Environment.hcl_id"`)}
 	}
 	if _, ok := ec.mutation.CompetitionID(); !ok {
-		return &ValidationError{Name: "competition_id", err: errors.New(`ent: missing required field "competition_id"`)}
+		return &ValidationError{Name: "competition_id", err: errors.New(`ent: missing required field "Environment.competition_id"`)}
 	}
 	if _, ok := ec.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Environment.name"`)}
 	}
 	if _, ok := ec.mutation.Description(); !ok {
-		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "description"`)}
+		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Environment.description"`)}
 	}
 	if _, ok := ec.mutation.Builder(); !ok {
-		return &ValidationError{Name: "builder", err: errors.New(`ent: missing required field "builder"`)}
+		return &ValidationError{Name: "builder", err: errors.New(`ent: missing required field "Environment.builder"`)}
 	}
 	if _, ok := ec.mutation.TeamCount(); !ok {
-		return &ValidationError{Name: "team_count", err: errors.New(`ent: missing required field "team_count"`)}
+		return &ValidationError{Name: "team_count", err: errors.New(`ent: missing required field "Environment.team_count"`)}
 	}
 	if _, ok := ec.mutation.Revision(); !ok {
-		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "revision"`)}
+		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "Environment.revision"`)}
 	}
 	if _, ok := ec.mutation.AdminCidrs(); !ok {
-		return &ValidationError{Name: "admin_cidrs", err: errors.New(`ent: missing required field "admin_cidrs"`)}
+		return &ValidationError{Name: "admin_cidrs", err: errors.New(`ent: missing required field "Environment.admin_cidrs"`)}
 	}
 	if _, ok := ec.mutation.ExposedVdiPorts(); !ok {
-		return &ValidationError{Name: "exposed_vdi_ports", err: errors.New(`ent: missing required field "exposed_vdi_ports"`)}
+		return &ValidationError{Name: "exposed_vdi_ports", err: errors.New(`ent: missing required field "Environment.exposed_vdi_ports"`)}
 	}
 	if _, ok := ec.mutation.Config(); !ok {
-		return &ValidationError{Name: "config", err: errors.New(`ent: missing required field "config"`)}
+		return &ValidationError{Name: "config", err: errors.New(`ent: missing required field "Environment.config"`)}
 	}
 	if _, ok := ec.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Environment.tags"`)}
 	}
 	return nil
 }
@@ -520,7 +528,11 @@ func (ec *EnvironmentCreate) sqlSave(ctx context.Context) (*Environment, error) 
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -538,7 +550,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := ec.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := ec.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

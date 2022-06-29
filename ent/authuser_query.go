@@ -157,7 +157,7 @@ func (auq *AuthUserQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single AuthUser entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one AuthUser entity is not found.
+// Returns a *NotSingularError when more than one AuthUser entity is found.
 // Returns a *NotFoundError when no AuthUser entities are found.
 func (auq *AuthUserQuery) Only(ctx context.Context) (*AuthUser, error) {
 	nodes, err := auq.Limit(2).All(ctx)
@@ -184,7 +184,7 @@ func (auq *AuthUserQuery) OnlyX(ctx context.Context) *AuthUser {
 }
 
 // OnlyID is like Only, but returns the only AuthUser ID in the query.
-// Returns a *NotSingularError when exactly one AuthUser ID is not found.
+// Returns a *NotSingularError when more than one AuthUser ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (auq *AuthUserQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -295,8 +295,9 @@ func (auq *AuthUserQuery) Clone() *AuthUserQuery {
 		withAuthUserToToken:       auq.withAuthUserToToken.Clone(),
 		withAuthUserToServerTasks: auq.withAuthUserToServerTasks.Clone(),
 		// clone intermediate query.
-		sql:  auq.sql.Clone(),
-		path: auq.path,
+		sql:    auq.sql.Clone(),
+		path:   auq.path,
+		unique: auq.unique,
 	}
 }
 
@@ -475,6 +476,10 @@ func (auq *AuthUserQuery) sqlAll(ctx context.Context) ([]*AuthUser, error) {
 
 func (auq *AuthUserQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := auq.querySpec()
+	_spec.Node.Columns = auq.fields
+	if len(auq.fields) > 0 {
+		_spec.Unique = auq.unique != nil && *auq.unique
+	}
 	return sqlgraph.CountNodes(ctx, auq.driver, _spec)
 }
 
@@ -545,6 +550,9 @@ func (auq *AuthUserQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if auq.sql != nil {
 		selector = auq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if auq.unique != nil && *auq.unique {
+		selector.Distinct()
 	}
 	for _, p := range auq.predicates {
 		p(selector)
@@ -824,9 +832,7 @@ func (augb *AuthUserGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range augb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(augb.fields...)...)

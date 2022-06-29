@@ -339,6 +339,7 @@ export type LaForgeMutation = {
   executePlan?: Maybe<LaForgeBuild>;
   deleteBuild: Scalars['String'];
   createTask: Scalars['Boolean'];
+  dumpBuild: Scalars['String'];
   rebuild: Scalars['Boolean'];
   approveCommit: Scalars['Boolean'];
   cancelCommit: Scalars['Boolean'];
@@ -378,6 +379,10 @@ export type LaForgeMutationCreateTaskArgs = {
   proHostUUID: Scalars['String'];
   command: LaForgeAgentCommand;
   args: Scalars['String'];
+};
+
+export type LaForgeMutationDumpBuildArgs = {
+  buildUUID: Scalars['String'];
 };
 
 export type LaForgeMutationRebuildArgs = {
@@ -577,6 +582,7 @@ export type LaForgeProvisioningStep = {
 };
 
 export enum LaForgeProvisioningStepType {
+  Ansible = 'Ansible',
   Script = 'Script',
   Command = 'Command',
   DnsRecord = 'DNSRecord',

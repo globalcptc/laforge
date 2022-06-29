@@ -182,7 +182,7 @@ func (bcq *BuildCommitQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single BuildCommit entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one BuildCommit entity is not found.
+// Returns a *NotSingularError when more than one BuildCommit entity is found.
 // Returns a *NotFoundError when no BuildCommit entities are found.
 func (bcq *BuildCommitQuery) Only(ctx context.Context) (*BuildCommit, error) {
 	nodes, err := bcq.Limit(2).All(ctx)
@@ -209,7 +209,7 @@ func (bcq *BuildCommitQuery) OnlyX(ctx context.Context) *BuildCommit {
 }
 
 // OnlyID is like Only, but returns the only BuildCommit ID in the query.
-// Returns a *NotSingularError when exactly one BuildCommit ID is not found.
+// Returns a *NotSingularError when more than one BuildCommit ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (bcq *BuildCommitQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -321,8 +321,9 @@ func (bcq *BuildCommitQuery) Clone() *BuildCommitQuery {
 		withBuildCommitToServerTask: bcq.withBuildCommitToServerTask.Clone(),
 		withBuildCommitToPlanDiffs:  bcq.withBuildCommitToPlanDiffs.Clone(),
 		// clone intermediate query.
-		sql:  bcq.sql.Clone(),
-		path: bcq.path,
+		sql:    bcq.sql.Clone(),
+		path:   bcq.path,
+		unique: bcq.unique,
 	}
 }
 
@@ -549,6 +550,10 @@ func (bcq *BuildCommitQuery) sqlAll(ctx context.Context) ([]*BuildCommit, error)
 
 func (bcq *BuildCommitQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := bcq.querySpec()
+	_spec.Node.Columns = bcq.fields
+	if len(bcq.fields) > 0 {
+		_spec.Unique = bcq.unique != nil && *bcq.unique
+	}
 	return sqlgraph.CountNodes(ctx, bcq.driver, _spec)
 }
 
@@ -619,6 +624,9 @@ func (bcq *BuildCommitQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if bcq.sql != nil {
 		selector = bcq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if bcq.unique != nil && *bcq.unique {
+		selector.Distinct()
 	}
 	for _, p := range bcq.predicates {
 		p(selector)
@@ -898,9 +906,7 @@ func (bcgb *BuildCommitGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range bcgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(bcgb.fields...)...)

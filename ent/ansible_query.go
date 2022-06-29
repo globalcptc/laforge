@@ -158,7 +158,7 @@ func (aq *AnsibleQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single Ansible entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one Ansible entity is not found.
+// Returns a *NotSingularError when more than one Ansible entity is found.
 // Returns a *NotFoundError when no Ansible entities are found.
 func (aq *AnsibleQuery) Only(ctx context.Context) (*Ansible, error) {
 	nodes, err := aq.Limit(2).All(ctx)
@@ -185,7 +185,7 @@ func (aq *AnsibleQuery) OnlyX(ctx context.Context) *Ansible {
 }
 
 // OnlyID is like Only, but returns the only Ansible ID in the query.
-// Returns a *NotSingularError when exactly one Ansible ID is not found.
+// Returns a *NotSingularError when more than one Ansible ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (aq *AnsibleQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -296,8 +296,9 @@ func (aq *AnsibleQuery) Clone() *AnsibleQuery {
 		withAnsibleToUser:          aq.withAnsibleToUser.Clone(),
 		withAnsibleFromEnvironment: aq.withAnsibleFromEnvironment.Clone(),
 		// clone intermediate query.
-		sql:  aq.sql.Clone(),
-		path: aq.path,
+		sql:    aq.sql.Clone(),
+		path:   aq.path,
+		unique: aq.unique,
 	}
 }
 
@@ -483,6 +484,10 @@ func (aq *AnsibleQuery) sqlAll(ctx context.Context) ([]*Ansible, error) {
 
 func (aq *AnsibleQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := aq.querySpec()
+	_spec.Node.Columns = aq.fields
+	if len(aq.fields) > 0 {
+		_spec.Unique = aq.unique != nil && *aq.unique
+	}
 	return sqlgraph.CountNodes(ctx, aq.driver, _spec)
 }
 
@@ -553,6 +558,9 @@ func (aq *AnsibleQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if aq.sql != nil {
 		selector = aq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if aq.unique != nil && *aq.unique {
+		selector.Distinct()
 	}
 	for _, p := range aq.predicates {
 		p(selector)
@@ -832,9 +840,7 @@ func (agb *AnsibleGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range agb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(agb.fields...)...)

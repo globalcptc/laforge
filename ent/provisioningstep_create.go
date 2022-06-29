@@ -50,6 +50,14 @@ func (psc *ProvisioningStepCreate) SetID(u uuid.UUID) *ProvisioningStepCreate {
 	return psc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (psc *ProvisioningStepCreate) SetNillableID(u *uuid.UUID) *ProvisioningStepCreate {
+	if u != nil {
+		psc.SetID(*u)
+	}
+	return psc
+}
+
 // SetProvisioningStepToStatusID sets the "ProvisioningStepToStatus" edge to the Status entity by ID.
 func (psc *ProvisioningStepCreate) SetProvisioningStepToStatusID(id uuid.UUID) *ProvisioningStepCreate {
 	psc.mutation.SetProvisioningStepToStatusID(id)
@@ -354,15 +362,15 @@ func (psc *ProvisioningStepCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (psc *ProvisioningStepCreate) check() error {
 	if _, ok := psc.mutation.GetType(); !ok {
-		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "type"`)}
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "ProvisioningStep.type"`)}
 	}
 	if v, ok := psc.mutation.GetType(); ok {
 		if err := provisioningstep.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "type": %w`, err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ProvisioningStep.type": %w`, err)}
 		}
 	}
 	if _, ok := psc.mutation.StepNumber(); !ok {
-		return &ValidationError{Name: "step_number", err: errors.New(`ent: missing required field "step_number"`)}
+		return &ValidationError{Name: "step_number", err: errors.New(`ent: missing required field "ProvisioningStep.step_number"`)}
 	}
 	return nil
 }
@@ -376,7 +384,11 @@ func (psc *ProvisioningStepCreate) sqlSave(ctx context.Context) (*ProvisioningSt
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -394,7 +406,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 	)
 	if id, ok := psc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := psc.mutation.GetType(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

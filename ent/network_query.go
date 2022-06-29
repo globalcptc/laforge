@@ -182,7 +182,7 @@ func (nq *NetworkQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single Network entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one Network entity is not found.
+// Returns a *NotSingularError when more than one Network entity is found.
 // Returns a *NotFoundError when no Network entities are found.
 func (nq *NetworkQuery) Only(ctx context.Context) (*Network, error) {
 	nodes, err := nq.Limit(2).All(ctx)
@@ -209,7 +209,7 @@ func (nq *NetworkQuery) OnlyX(ctx context.Context) *Network {
 }
 
 // OnlyID is like Only, but returns the only Network ID in the query.
-// Returns a *NotSingularError when exactly one Network ID is not found.
+// Returns a *NotSingularError when more than one Network ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (nq *NetworkQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -321,8 +321,9 @@ func (nq *NetworkQuery) Clone() *NetworkQuery {
 		withNetworkToHostDependency:  nq.withNetworkToHostDependency.Clone(),
 		withNetworkToIncludedNetwork: nq.withNetworkToIncludedNetwork.Clone(),
 		// clone intermediate query.
-		sql:  nq.sql.Clone(),
-		path: nq.path,
+		sql:    nq.sql.Clone(),
+		path:   nq.path,
+		unique: nq.unique,
 	}
 }
 
@@ -549,6 +550,10 @@ func (nq *NetworkQuery) sqlAll(ctx context.Context) ([]*Network, error) {
 
 func (nq *NetworkQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := nq.querySpec()
+	_spec.Node.Columns = nq.fields
+	if len(nq.fields) > 0 {
+		_spec.Unique = nq.unique != nil && *nq.unique
+	}
 	return sqlgraph.CountNodes(ctx, nq.driver, _spec)
 }
 
@@ -619,6 +624,9 @@ func (nq *NetworkQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if nq.sql != nil {
 		selector = nq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if nq.unique != nil && *nq.unique {
+		selector.Distinct()
 	}
 	for _, p := range nq.predicates {
 		p(selector)
@@ -898,9 +906,7 @@ func (ngb *NetworkGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range ngb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(ngb.fields...)...)

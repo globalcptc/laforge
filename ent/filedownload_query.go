@@ -133,7 +133,7 @@ func (fdq *FileDownloadQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single FileDownload entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one FileDownload entity is not found.
+// Returns a *NotSingularError when more than one FileDownload entity is found.
 // Returns a *NotFoundError when no FileDownload entities are found.
 func (fdq *FileDownloadQuery) Only(ctx context.Context) (*FileDownload, error) {
 	nodes, err := fdq.Limit(2).All(ctx)
@@ -160,7 +160,7 @@ func (fdq *FileDownloadQuery) OnlyX(ctx context.Context) *FileDownload {
 }
 
 // OnlyID is like Only, but returns the only FileDownload ID in the query.
-// Returns a *NotSingularError when exactly one FileDownload ID is not found.
+// Returns a *NotSingularError when more than one FileDownload ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (fdq *FileDownloadQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -270,8 +270,9 @@ func (fdq *FileDownloadQuery) Clone() *FileDownloadQuery {
 		predicates:                    append([]predicate.FileDownload{}, fdq.predicates...),
 		withFileDownloadToEnvironment: fdq.withFileDownloadToEnvironment.Clone(),
 		// clone intermediate query.
-		sql:  fdq.sql.Clone(),
-		path: fdq.path,
+		sql:    fdq.sql.Clone(),
+		path:   fdq.path,
+		unique: fdq.unique,
 	}
 }
 
@@ -416,6 +417,10 @@ func (fdq *FileDownloadQuery) sqlAll(ctx context.Context) ([]*FileDownload, erro
 
 func (fdq *FileDownloadQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := fdq.querySpec()
+	_spec.Node.Columns = fdq.fields
+	if len(fdq.fields) > 0 {
+		_spec.Unique = fdq.unique != nil && *fdq.unique
+	}
 	return sqlgraph.CountNodes(ctx, fdq.driver, _spec)
 }
 
@@ -486,6 +491,9 @@ func (fdq *FileDownloadQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if fdq.sql != nil {
 		selector = fdq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if fdq.unique != nil && *fdq.unique {
+		selector.Distinct()
 	}
 	for _, p := range fdq.predicates {
 		p(selector)
@@ -765,9 +773,7 @@ func (fdgb *FileDownloadGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range fdgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(fdgb.fields...)...)

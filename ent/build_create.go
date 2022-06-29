@@ -69,6 +69,14 @@ func (bc *BuildCreate) SetID(u uuid.UUID) *BuildCreate {
 	return bc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (bc *BuildCreate) SetNillableID(u *uuid.UUID) *BuildCreate {
+	if u != nil {
+		bc.SetID(*u)
+	}
+	return bc
+}
+
 // SetBuildToStatusID sets the "BuildToStatus" edge to the Status entity by ID.
 func (bc *BuildCreate) SetBuildToStatusID(id uuid.UUID) *BuildCreate {
 	bc.mutation.SetBuildToStatusID(id)
@@ -337,22 +345,22 @@ func (bc *BuildCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (bc *BuildCreate) check() error {
 	if _, ok := bc.mutation.Revision(); !ok {
-		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "revision"`)}
+		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "Build.revision"`)}
 	}
 	if _, ok := bc.mutation.EnvironmentRevision(); !ok {
-		return &ValidationError{Name: "environment_revision", err: errors.New(`ent: missing required field "environment_revision"`)}
+		return &ValidationError{Name: "environment_revision", err: errors.New(`ent: missing required field "Build.environment_revision"`)}
 	}
 	if _, ok := bc.mutation.Vars(); !ok {
-		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "Build.vars"`)}
 	}
 	if _, ok := bc.mutation.CompletedPlan(); !ok {
-		return &ValidationError{Name: "completed_plan", err: errors.New(`ent: missing required field "completed_plan"`)}
+		return &ValidationError{Name: "completed_plan", err: errors.New(`ent: missing required field "Build.completed_plan"`)}
 	}
 	if _, ok := bc.mutation.BuildToEnvironmentID(); !ok {
-		return &ValidationError{Name: "BuildToEnvironment", err: errors.New("ent: missing required edge \"BuildToEnvironment\"")}
+		return &ValidationError{Name: "BuildToEnvironment", err: errors.New(`ent: missing required edge "Build.BuildToEnvironment"`)}
 	}
 	if _, ok := bc.mutation.BuildToCompetitionID(); !ok {
-		return &ValidationError{Name: "BuildToCompetition", err: errors.New("ent: missing required edge \"BuildToCompetition\"")}
+		return &ValidationError{Name: "BuildToCompetition", err: errors.New(`ent: missing required edge "Build.BuildToCompetition"`)}
 	}
 	return nil
 }
@@ -366,7 +374,11 @@ func (bc *BuildCreate) sqlSave(ctx context.Context) (*Build, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -384,7 +396,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := bc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := bc.mutation.Revision(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

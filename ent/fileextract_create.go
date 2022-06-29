@@ -57,6 +57,14 @@ func (fec *FileExtractCreate) SetID(u uuid.UUID) *FileExtractCreate {
 	return fec
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (fec *FileExtractCreate) SetNillableID(u *uuid.UUID) *FileExtractCreate {
+	if u != nil {
+		fec.SetID(*u)
+	}
+	return fec
+}
+
 // SetFileExtractToEnvironmentID sets the "FileExtractToEnvironment" edge to the Environment entity by ID.
 func (fec *FileExtractCreate) SetFileExtractToEnvironmentID(id uuid.UUID) *FileExtractCreate {
 	fec.mutation.SetFileExtractToEnvironmentID(id)
@@ -156,19 +164,19 @@ func (fec *FileExtractCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (fec *FileExtractCreate) check() error {
 	if _, ok := fec.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "FileExtract.hcl_id"`)}
 	}
 	if _, ok := fec.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "source"`)}
+		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "FileExtract.source"`)}
 	}
 	if _, ok := fec.mutation.Destination(); !ok {
-		return &ValidationError{Name: "destination", err: errors.New(`ent: missing required field "destination"`)}
+		return &ValidationError{Name: "destination", err: errors.New(`ent: missing required field "FileExtract.destination"`)}
 	}
 	if _, ok := fec.mutation.GetType(); !ok {
-		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "type"`)}
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "FileExtract.type"`)}
 	}
 	if _, ok := fec.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "FileExtract.tags"`)}
 	}
 	return nil
 }
@@ -182,7 +190,11 @@ func (fec *FileExtractCreate) sqlSave(ctx context.Context) (*FileExtract, error)
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -200,7 +212,7 @@ func (fec *FileExtractCreate) createSpec() (*FileExtract, *sqlgraph.CreateSpec) 
 	)
 	if id, ok := fec.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := fec.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

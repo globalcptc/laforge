@@ -199,7 +199,7 @@ func (builder VSphereNSXTBuilder) DeployNetwork(ctx context.Context, provisioned
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
-	entCompetition, err := entEnvironment.EnvironmentToCompetition(ctx)
+	entCompetition, err := entEnvironment.QueryEnvironmentToCompetition().All(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
 	}
@@ -370,6 +370,9 @@ func (builder VSphereNSXTBuilder) DeployNetwork(ctx context.Context, provisioned
 	if nsxtError != nil {
 		return fmt.Errorf("nsx-t error %s (%d): %s", nsxtError.HttpStatus, nsxtError.ErrorCode, nsxtError.Message)
 	}
+
+	// Give some time for NSX-T to sync to VSphere
+	time.Sleep(1 * time.Minute)
 	return
 }
 
@@ -454,7 +457,7 @@ func (builder VSphereNSXTBuilder) TeardownNetwork(ctx context.Context, provision
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
-	entCompetition, err := entEnvironment.EnvironmentToCompetition(ctx)
+	entCompetition, err := entEnvironment.QueryEnvironmentToCompetition().All(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
 	}

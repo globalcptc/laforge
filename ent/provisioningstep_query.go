@@ -398,7 +398,7 @@ func (psq *ProvisioningStepQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single ProvisioningStep entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one ProvisioningStep entity is not found.
+// Returns a *NotSingularError when more than one ProvisioningStep entity is found.
 // Returns a *NotFoundError when no ProvisioningStep entities are found.
 func (psq *ProvisioningStepQuery) Only(ctx context.Context) (*ProvisioningStep, error) {
 	nodes, err := psq.Limit(2).All(ctx)
@@ -425,7 +425,7 @@ func (psq *ProvisioningStepQuery) OnlyX(ctx context.Context) *ProvisioningStep {
 }
 
 // OnlyID is like Only, but returns the only ProvisioningStep ID in the query.
-// Returns a *NotSingularError when exactly one ProvisioningStep ID is not found.
+// Returns a *NotSingularError when more than one ProvisioningStep ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (psq *ProvisioningStepQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -546,8 +546,9 @@ func (psq *ProvisioningStepQuery) Clone() *ProvisioningStepQuery {
 		withProvisioningStepToAgentTask:         psq.withProvisioningStepToAgentTask.Clone(),
 		withProvisioningStepToGinFileMiddleware: psq.withProvisioningStepToGinFileMiddleware.Clone(),
 		// clone intermediate query.
-		sql:  psq.sql.Clone(),
-		path: psq.path,
+		sql:    psq.sql.Clone(),
+		path:   psq.path,
+		unique: psq.unique,
 	}
 }
 
@@ -1142,6 +1143,10 @@ func (psq *ProvisioningStepQuery) sqlAll(ctx context.Context) ([]*ProvisioningSt
 
 func (psq *ProvisioningStepQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := psq.querySpec()
+	_spec.Node.Columns = psq.fields
+	if len(psq.fields) > 0 {
+		_spec.Unique = psq.unique != nil && *psq.unique
+	}
 	return sqlgraph.CountNodes(ctx, psq.driver, _spec)
 }
 
@@ -1212,6 +1217,9 @@ func (psq *ProvisioningStepQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if psq.sql != nil {
 		selector = psq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if psq.unique != nil && *psq.unique {
+		selector.Distinct()
 	}
 	for _, p := range psq.predicates {
 		p(selector)
@@ -1491,9 +1499,7 @@ func (psgb *ProvisioningStepGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range psgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(psgb.fields...)...)

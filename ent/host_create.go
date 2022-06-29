@@ -115,6 +115,14 @@ func (hc *HostCreate) SetID(u uuid.UUID) *HostCreate {
 	return hc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (hc *HostCreate) SetNillableID(u *uuid.UUID) *HostCreate {
+	if u != nil {
+		hc.SetID(*u)
+	}
+	return hc
+}
+
 // SetHostToDiskID sets the "HostToDisk" edge to the Disk entity by ID.
 func (hc *HostCreate) SetHostToDiskID(id uuid.UUID) *HostCreate {
 	hc.mutation.SetHostToDiskID(id)
@@ -293,43 +301,43 @@ func (hc *HostCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (hc *HostCreate) check() error {
 	if _, ok := hc.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Host.hcl_id"`)}
 	}
 	if _, ok := hc.mutation.Hostname(); !ok {
-		return &ValidationError{Name: "hostname", err: errors.New(`ent: missing required field "hostname"`)}
+		return &ValidationError{Name: "hostname", err: errors.New(`ent: missing required field "Host.hostname"`)}
 	}
 	if _, ok := hc.mutation.Description(); !ok {
-		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "description"`)}
+		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Host.description"`)}
 	}
 	if _, ok := hc.mutation.OS(); !ok {
-		return &ValidationError{Name: "OS", err: errors.New(`ent: missing required field "OS"`)}
+		return &ValidationError{Name: "OS", err: errors.New(`ent: missing required field "Host.OS"`)}
 	}
 	if _, ok := hc.mutation.LastOctet(); !ok {
-		return &ValidationError{Name: "last_octet", err: errors.New(`ent: missing required field "last_octet"`)}
+		return &ValidationError{Name: "last_octet", err: errors.New(`ent: missing required field "Host.last_octet"`)}
 	}
 	if _, ok := hc.mutation.InstanceSize(); !ok {
-		return &ValidationError{Name: "instance_size", err: errors.New(`ent: missing required field "instance_size"`)}
+		return &ValidationError{Name: "instance_size", err: errors.New(`ent: missing required field "Host.instance_size"`)}
 	}
 	if _, ok := hc.mutation.AllowMACChanges(); !ok {
-		return &ValidationError{Name: "allow_mac_changes", err: errors.New(`ent: missing required field "allow_mac_changes"`)}
+		return &ValidationError{Name: "allow_mac_changes", err: errors.New(`ent: missing required field "Host.allow_mac_changes"`)}
 	}
 	if _, ok := hc.mutation.ExposedTCPPorts(); !ok {
-		return &ValidationError{Name: "exposed_tcp_ports", err: errors.New(`ent: missing required field "exposed_tcp_ports"`)}
+		return &ValidationError{Name: "exposed_tcp_ports", err: errors.New(`ent: missing required field "Host.exposed_tcp_ports"`)}
 	}
 	if _, ok := hc.mutation.ExposedUDPPorts(); !ok {
-		return &ValidationError{Name: "exposed_udp_ports", err: errors.New(`ent: missing required field "exposed_udp_ports"`)}
+		return &ValidationError{Name: "exposed_udp_ports", err: errors.New(`ent: missing required field "Host.exposed_udp_ports"`)}
 	}
 	if _, ok := hc.mutation.OverridePassword(); !ok {
-		return &ValidationError{Name: "override_password", err: errors.New(`ent: missing required field "override_password"`)}
+		return &ValidationError{Name: "override_password", err: errors.New(`ent: missing required field "Host.override_password"`)}
 	}
 	if _, ok := hc.mutation.Vars(); !ok {
-		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "Host.vars"`)}
 	}
 	if _, ok := hc.mutation.UserGroups(); !ok {
-		return &ValidationError{Name: "user_groups", err: errors.New(`ent: missing required field "user_groups"`)}
+		return &ValidationError{Name: "user_groups", err: errors.New(`ent: missing required field "Host.user_groups"`)}
 	}
 	if _, ok := hc.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Host.tags"`)}
 	}
 	return nil
 }
@@ -343,7 +351,11 @@ func (hc *HostCreate) sqlSave(ctx context.Context) (*Host, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -361,7 +373,7 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := hc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := hc.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

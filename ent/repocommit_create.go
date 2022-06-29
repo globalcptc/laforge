@@ -76,6 +76,14 @@ func (rcc *RepoCommitCreate) SetID(u uuid.UUID) *RepoCommitCreate {
 	return rcc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (rcc *RepoCommitCreate) SetNillableID(u *uuid.UUID) *RepoCommitCreate {
+	if u != nil {
+		rcc.SetID(*u)
+	}
+	return rcc
+}
+
 // SetRepoCommitToRepositoryID sets the "RepoCommitToRepository" edge to the Repository entity by ID.
 func (rcc *RepoCommitCreate) SetRepoCommitToRepositoryID(id uuid.UUID) *RepoCommitCreate {
 	rcc.mutation.SetRepoCommitToRepositoryID(id)
@@ -175,28 +183,28 @@ func (rcc *RepoCommitCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (rcc *RepoCommitCreate) check() error {
 	if _, ok := rcc.mutation.Revision(); !ok {
-		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "revision"`)}
+		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "RepoCommit.revision"`)}
 	}
 	if _, ok := rcc.mutation.Hash(); !ok {
-		return &ValidationError{Name: "hash", err: errors.New(`ent: missing required field "hash"`)}
+		return &ValidationError{Name: "hash", err: errors.New(`ent: missing required field "RepoCommit.hash"`)}
 	}
 	if _, ok := rcc.mutation.Author(); !ok {
-		return &ValidationError{Name: "author", err: errors.New(`ent: missing required field "author"`)}
+		return &ValidationError{Name: "author", err: errors.New(`ent: missing required field "RepoCommit.author"`)}
 	}
 	if _, ok := rcc.mutation.Committer(); !ok {
-		return &ValidationError{Name: "committer", err: errors.New(`ent: missing required field "committer"`)}
+		return &ValidationError{Name: "committer", err: errors.New(`ent: missing required field "RepoCommit.committer"`)}
 	}
 	if _, ok := rcc.mutation.PgpSignature(); !ok {
-		return &ValidationError{Name: "pgp_signature", err: errors.New(`ent: missing required field "pgp_signature"`)}
+		return &ValidationError{Name: "pgp_signature", err: errors.New(`ent: missing required field "RepoCommit.pgp_signature"`)}
 	}
 	if _, ok := rcc.mutation.Message(); !ok {
-		return &ValidationError{Name: "message", err: errors.New(`ent: missing required field "message"`)}
+		return &ValidationError{Name: "message", err: errors.New(`ent: missing required field "RepoCommit.message"`)}
 	}
 	if _, ok := rcc.mutation.TreeHash(); !ok {
-		return &ValidationError{Name: "tree_hash", err: errors.New(`ent: missing required field "tree_hash"`)}
+		return &ValidationError{Name: "tree_hash", err: errors.New(`ent: missing required field "RepoCommit.tree_hash"`)}
 	}
 	if _, ok := rcc.mutation.ParentHashes(); !ok {
-		return &ValidationError{Name: "parent_hashes", err: errors.New(`ent: missing required field "parent_hashes"`)}
+		return &ValidationError{Name: "parent_hashes", err: errors.New(`ent: missing required field "RepoCommit.parent_hashes"`)}
 	}
 	return nil
 }
@@ -210,7 +218,11 @@ func (rcc *RepoCommitCreate) sqlSave(ctx context.Context) (*RepoCommit, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -228,7 +240,7 @@ func (rcc *RepoCommitCreate) createSpec() (*RepoCommit, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := rcc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := rcc.mutation.Revision(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

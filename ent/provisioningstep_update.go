@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -438,7 +439,7 @@ func (psu *ProvisioningStepUpdate) ExecX(ctx context.Context) {
 func (psu *ProvisioningStepUpdate) check() error {
 	if v, ok := psu.mutation.GetType(); ok {
 		if err := provisioningstep.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf("ent: validator failed for field \"type\": %w", err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ProvisioningStep.type": %w`, err)}
 		}
 	}
 	return nil
@@ -1347,7 +1348,7 @@ func (psuo *ProvisioningStepUpdateOne) ExecX(ctx context.Context) {
 func (psuo *ProvisioningStepUpdateOne) check() error {
 	if v, ok := psuo.mutation.GetType(); ok {
 		if err := provisioningstep.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf("ent: validator failed for field \"type\": %w", err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ProvisioningStep.type": %w`, err)}
 		}
 	}
 	return nil
@@ -1366,7 +1367,7 @@ func (psuo *ProvisioningStepUpdateOne) sqlSave(ctx context.Context) (_node *Prov
 	}
 	id, ok := psuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing ProvisioningStep.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProvisioningStep.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := psuo.fields; len(fields) > 0 {

@@ -1,4 +1,4 @@
-FROM golang:1.17.7-bullseye
+FROM golang:1.18.3-bullseye
 
 RUN set -eux; \
     apt-get update; \
@@ -25,6 +25,8 @@ ENV PATH="/app/docker_files:${PATH}"
 
 RUN go mod download && go mod verify
 RUN go build -o server_binary server/server.go
+
+RUN mkdir /var/log/laforge
 
 EXPOSE 8080 50051
 

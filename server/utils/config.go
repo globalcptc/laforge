@@ -4,18 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
+
+	"github.com/sirupsen/logrus"
 )
 
 type ServerConfig struct {
-	Builders  map[string]BuilderConfig `json:"builders"`
-	Database  DatabaseConfig           `json:"database"`
-	Auth      AuthConfig               `json:"auth"`
-	UI        UIConfig                 `json:"ui"`
-	Agent     AgentConfig              `json:"agent"`
-	Graphql   GraphqlConfig            `json:"graphql"`
-	Debug     bool                     `json:"debug"`
-	LogFolder string                   `json:"log_folder"`
-	GinMode   string                   `json:"gin_mode"`
+	ConfigFile string                   `json:"-"`
+	Builders   map[string]BuilderConfig `json:"builders"`
+	Database   DatabaseConfig           `json:"database"`
+	Auth       AuthConfig               `json:"auth"`
+	UI         UIConfig                 `json:"ui"`
+	Agent      AgentConfig              `json:"agent"`
+	Graphql    GraphqlConfig            `json:"graphql"`
+	Debug      bool                     `json:"debug"`
+	LogFolder  string                   `json:"log_folder"`
+	GinMode    string                   `json:"gin_mode"`
 }
 
 type BuilderConfig struct {
@@ -53,12 +57,17 @@ type GraphqlConfig struct {
 
 func LoadServerConfig() (*ServerConfig, error) {
 	// Config file overrides. There might be a better way to define this
-	configFile := "conf.json"
-	if _, err := os.Stat("config.dev.json"); err == nil {
-		configFile = "config.dev.json"
+	cwd, err := os.Getwd()
+	if err != nil {
+		logrus.Warn("failed to get current working directory, using relative paths for config file instead")
+		cwd = "./"
 	}
-	if _, err := os.Stat("config.prod.json"); err == nil {
-		configFile = "config.prod.json"
+	configFile := path.Join(cwd, "conf.json")
+	if _, err := os.Stat(path.Join(cwd, "conf.dev.json")); err == nil {
+		configFile = path.Join(cwd, "conf.dev.json")
+	}
+	if _, err := os.Stat(path.Join(cwd, "conf.prod.json")); err == nil {
+		configFile = path.Join(cwd, "conf.prod.json")
 	}
 	// Read in the config file
 	configBytes, err := os.ReadFile(configFile)
@@ -71,5 +80,6 @@ func LoadServerConfig() (*ServerConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal server config (\"%s\"): %v", configFile, err)
 	}
+	loadedConfig.ConfigFile = configFile
 	return &loadedConfig, nil
 }

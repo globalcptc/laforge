@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -239,12 +240,12 @@ func (cu *CommandUpdate) ExecX(ctx context.Context) {
 func (cu *CommandUpdate) check() error {
 	if v, ok := cu.mutation.Cooldown(); ok {
 		if err := command.CooldownValidator(v); err != nil {
-			return &ValidationError{Name: "cooldown", err: fmt.Errorf("ent: validator failed for field \"cooldown\": %w", err)}
+			return &ValidationError{Name: "cooldown", err: fmt.Errorf(`ent: validator failed for field "Command.cooldown": %w`, err)}
 		}
 	}
 	if v, ok := cu.mutation.Timeout(); ok {
 		if err := command.TimeoutValidator(v); err != nil {
-			return &ValidationError{Name: "timeout", err: fmt.Errorf("ent: validator failed for field \"timeout\": %w", err)}
+			return &ValidationError{Name: "timeout", err: fmt.Errorf(`ent: validator failed for field "Command.timeout": %w`, err)}
 		}
 	}
 	return nil
@@ -684,12 +685,12 @@ func (cuo *CommandUpdateOne) ExecX(ctx context.Context) {
 func (cuo *CommandUpdateOne) check() error {
 	if v, ok := cuo.mutation.Cooldown(); ok {
 		if err := command.CooldownValidator(v); err != nil {
-			return &ValidationError{Name: "cooldown", err: fmt.Errorf("ent: validator failed for field \"cooldown\": %w", err)}
+			return &ValidationError{Name: "cooldown", err: fmt.Errorf(`ent: validator failed for field "Command.cooldown": %w`, err)}
 		}
 	}
 	if v, ok := cuo.mutation.Timeout(); ok {
 		if err := command.TimeoutValidator(v); err != nil {
-			return &ValidationError{Name: "timeout", err: fmt.Errorf("ent: validator failed for field \"timeout\": %w", err)}
+			return &ValidationError{Name: "timeout", err: fmt.Errorf(`ent: validator failed for field "Command.timeout": %w`, err)}
 		}
 	}
 	return nil
@@ -708,7 +709,7 @@ func (cuo *CommandUpdateOne) sqlSave(ctx context.Context) (_node *Command, err e
 	}
 	id, ok := cuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Command.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Command.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := cuo.fields; len(fields) > 0 {

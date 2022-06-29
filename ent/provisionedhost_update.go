@@ -389,20 +389,20 @@ func (phu *ProvisionedHostUpdate) ExecX(ctx context.Context) {
 func (phu *ProvisionedHostUpdate) check() error {
 	if v, ok := phu.mutation.AddonType(); ok {
 		if err := provisionedhost.AddonTypeValidator(v); err != nil {
-			return &ValidationError{Name: "addon_type", err: fmt.Errorf("ent: validator failed for field \"addon_type\": %w", err)}
+			return &ValidationError{Name: "addon_type", err: fmt.Errorf(`ent: validator failed for field "ProvisionedHost.addon_type": %w`, err)}
 		}
 	}
 	if _, ok := phu.mutation.ProvisionedHostToStatusID(); phu.mutation.ProvisionedHostToStatusCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToStatus\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToStatus"`)
 	}
 	if _, ok := phu.mutation.ProvisionedHostToProvisionedNetworkID(); phu.mutation.ProvisionedHostToProvisionedNetworkCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToProvisionedNetwork\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToProvisionedNetwork"`)
 	}
 	if _, ok := phu.mutation.ProvisionedHostToHostID(); phu.mutation.ProvisionedHostToHostCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToHost\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToHost"`)
 	}
 	if _, ok := phu.mutation.ProvisionedHostToBuildID(); phu.mutation.ProvisionedHostToBuildCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToBuild\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToBuild"`)
 	}
 	return nil
 }
@@ -1237,20 +1237,20 @@ func (phuo *ProvisionedHostUpdateOne) ExecX(ctx context.Context) {
 func (phuo *ProvisionedHostUpdateOne) check() error {
 	if v, ok := phuo.mutation.AddonType(); ok {
 		if err := provisionedhost.AddonTypeValidator(v); err != nil {
-			return &ValidationError{Name: "addon_type", err: fmt.Errorf("ent: validator failed for field \"addon_type\": %w", err)}
+			return &ValidationError{Name: "addon_type", err: fmt.Errorf(`ent: validator failed for field "ProvisionedHost.addon_type": %w`, err)}
 		}
 	}
 	if _, ok := phuo.mutation.ProvisionedHostToStatusID(); phuo.mutation.ProvisionedHostToStatusCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToStatus\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToStatus"`)
 	}
 	if _, ok := phuo.mutation.ProvisionedHostToProvisionedNetworkID(); phuo.mutation.ProvisionedHostToProvisionedNetworkCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToProvisionedNetwork\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToProvisionedNetwork"`)
 	}
 	if _, ok := phuo.mutation.ProvisionedHostToHostID(); phuo.mutation.ProvisionedHostToHostCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToHost\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToHost"`)
 	}
 	if _, ok := phuo.mutation.ProvisionedHostToBuildID(); phuo.mutation.ProvisionedHostToBuildCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToBuild\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToBuild"`)
 	}
 	return nil
 }
@@ -1268,7 +1268,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 	}
 	id, ok := phuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing ProvisionedHost.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProvisionedHost.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := phuo.fields; len(fields) > 0 {

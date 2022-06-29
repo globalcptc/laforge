@@ -237,16 +237,16 @@ func (atu *AgentTaskUpdate) ExecX(ctx context.Context) {
 func (atu *AgentTaskUpdate) check() error {
 	if v, ok := atu.mutation.Command(); ok {
 		if err := agenttask.CommandValidator(v); err != nil {
-			return &ValidationError{Name: "command", err: fmt.Errorf("ent: validator failed for field \"command\": %w", err)}
+			return &ValidationError{Name: "command", err: fmt.Errorf(`ent: validator failed for field "AgentTask.command": %w`, err)}
 		}
 	}
 	if v, ok := atu.mutation.State(); ok {
 		if err := agenttask.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf("ent: validator failed for field \"state\": %w", err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "AgentTask.state": %w`, err)}
 		}
 	}
 	if _, ok := atu.mutation.AgentTaskToProvisionedHostID(); atu.mutation.AgentTaskToProvisionedHostCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"AgentTaskToProvisionedHost\"")
+		return errors.New(`ent: clearing a required unique edge "AgentTask.AgentTaskToProvisionedHost"`)
 	}
 	return nil
 }
@@ -674,16 +674,16 @@ func (atuo *AgentTaskUpdateOne) ExecX(ctx context.Context) {
 func (atuo *AgentTaskUpdateOne) check() error {
 	if v, ok := atuo.mutation.Command(); ok {
 		if err := agenttask.CommandValidator(v); err != nil {
-			return &ValidationError{Name: "command", err: fmt.Errorf("ent: validator failed for field \"command\": %w", err)}
+			return &ValidationError{Name: "command", err: fmt.Errorf(`ent: validator failed for field "AgentTask.command": %w`, err)}
 		}
 	}
 	if v, ok := atuo.mutation.State(); ok {
 		if err := agenttask.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf("ent: validator failed for field \"state\": %w", err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "AgentTask.state": %w`, err)}
 		}
 	}
 	if _, ok := atuo.mutation.AgentTaskToProvisionedHostID(); atuo.mutation.AgentTaskToProvisionedHostCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"AgentTaskToProvisionedHost\"")
+		return errors.New(`ent: clearing a required unique edge "AgentTask.AgentTaskToProvisionedHost"`)
 	}
 	return nil
 }
@@ -701,7 +701,7 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 	}
 	id, ok := atuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing AgentTask.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "AgentTask.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := atuo.fields; len(fields) > 0 {

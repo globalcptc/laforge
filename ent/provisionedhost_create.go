@@ -61,6 +61,14 @@ func (phc *ProvisionedHostCreate) SetID(u uuid.UUID) *ProvisionedHostCreate {
 	return phc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (phc *ProvisionedHostCreate) SetNillableID(u *uuid.UUID) *ProvisionedHostCreate {
+	if u != nil {
+		phc.SetID(*u)
+	}
+	return phc
+}
+
 // SetProvisionedHostToStatusID sets the "ProvisionedHostToStatus" edge to the Status entity by ID.
 func (phc *ProvisionedHostCreate) SetProvisionedHostToStatusID(id uuid.UUID) *ProvisionedHostCreate {
 	phc.mutation.SetProvisionedHostToStatusID(id)
@@ -287,27 +295,27 @@ func (phc *ProvisionedHostCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (phc *ProvisionedHostCreate) check() error {
 	if _, ok := phc.mutation.SubnetIP(); !ok {
-		return &ValidationError{Name: "subnet_ip", err: errors.New(`ent: missing required field "subnet_ip"`)}
+		return &ValidationError{Name: "subnet_ip", err: errors.New(`ent: missing required field "ProvisionedHost.subnet_ip"`)}
 	}
 	if v, ok := phc.mutation.AddonType(); ok {
 		if err := provisionedhost.AddonTypeValidator(v); err != nil {
-			return &ValidationError{Name: "addon_type", err: fmt.Errorf(`ent: validator failed for field "addon_type": %w`, err)}
+			return &ValidationError{Name: "addon_type", err: fmt.Errorf(`ent: validator failed for field "ProvisionedHost.addon_type": %w`, err)}
 		}
 	}
 	if _, ok := phc.mutation.Vars(); !ok {
-		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "ProvisionedHost.vars"`)}
 	}
 	if _, ok := phc.mutation.ProvisionedHostToStatusID(); !ok {
-		return &ValidationError{Name: "ProvisionedHostToStatus", err: errors.New("ent: missing required edge \"ProvisionedHostToStatus\"")}
+		return &ValidationError{Name: "ProvisionedHostToStatus", err: errors.New(`ent: missing required edge "ProvisionedHost.ProvisionedHostToStatus"`)}
 	}
 	if _, ok := phc.mutation.ProvisionedHostToProvisionedNetworkID(); !ok {
-		return &ValidationError{Name: "ProvisionedHostToProvisionedNetwork", err: errors.New("ent: missing required edge \"ProvisionedHostToProvisionedNetwork\"")}
+		return &ValidationError{Name: "ProvisionedHostToProvisionedNetwork", err: errors.New(`ent: missing required edge "ProvisionedHost.ProvisionedHostToProvisionedNetwork"`)}
 	}
 	if _, ok := phc.mutation.ProvisionedHostToHostID(); !ok {
-		return &ValidationError{Name: "ProvisionedHostToHost", err: errors.New("ent: missing required edge \"ProvisionedHostToHost\"")}
+		return &ValidationError{Name: "ProvisionedHostToHost", err: errors.New(`ent: missing required edge "ProvisionedHost.ProvisionedHostToHost"`)}
 	}
 	if _, ok := phc.mutation.ProvisionedHostToBuildID(); !ok {
-		return &ValidationError{Name: "ProvisionedHostToBuild", err: errors.New("ent: missing required edge \"ProvisionedHostToBuild\"")}
+		return &ValidationError{Name: "ProvisionedHostToBuild", err: errors.New(`ent: missing required edge "ProvisionedHost.ProvisionedHostToBuild"`)}
 	}
 	return nil
 }
@@ -321,7 +329,11 @@ func (phc *ProvisionedHostCreate) sqlSave(ctx context.Context) (*ProvisionedHost
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -339,7 +351,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 	)
 	if id, ok := phc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := phc.mutation.SubnetIP(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

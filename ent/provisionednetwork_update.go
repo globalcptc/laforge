@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -816,7 +817,7 @@ func (pnuo *ProvisionedNetworkUpdateOne) sqlSave(ctx context.Context) (_node *Pr
 	}
 	id, ok := pnuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing ProvisionedNetwork.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProvisionedNetwork.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := pnuo.fields; len(fields) > 0 {

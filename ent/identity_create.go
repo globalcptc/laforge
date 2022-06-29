@@ -81,6 +81,14 @@ func (ic *IdentityCreate) SetID(u uuid.UUID) *IdentityCreate {
 	return ic
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (ic *IdentityCreate) SetNillableID(u *uuid.UUID) *IdentityCreate {
+	if u != nil {
+		ic.SetID(*u)
+	}
+	return ic
+}
+
 // SetIdentityToEnvironmentID sets the "IdentityToEnvironment" edge to the Environment entity by ID.
 func (ic *IdentityCreate) SetIdentityToEnvironmentID(id uuid.UUID) *IdentityCreate {
 	ic.mutation.SetIdentityToEnvironmentID(id)
@@ -180,31 +188,31 @@ func (ic *IdentityCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (ic *IdentityCreate) check() error {
 	if _, ok := ic.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Identity.hcl_id"`)}
 	}
 	if _, ok := ic.mutation.FirstName(); !ok {
-		return &ValidationError{Name: "first_name", err: errors.New(`ent: missing required field "first_name"`)}
+		return &ValidationError{Name: "first_name", err: errors.New(`ent: missing required field "Identity.first_name"`)}
 	}
 	if _, ok := ic.mutation.LastName(); !ok {
-		return &ValidationError{Name: "last_name", err: errors.New(`ent: missing required field "last_name"`)}
+		return &ValidationError{Name: "last_name", err: errors.New(`ent: missing required field "Identity.last_name"`)}
 	}
 	if _, ok := ic.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "email"`)}
+		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "Identity.email"`)}
 	}
 	if _, ok := ic.mutation.Password(); !ok {
-		return &ValidationError{Name: "password", err: errors.New(`ent: missing required field "password"`)}
+		return &ValidationError{Name: "password", err: errors.New(`ent: missing required field "Identity.password"`)}
 	}
 	if _, ok := ic.mutation.Description(); !ok {
-		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "description"`)}
+		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Identity.description"`)}
 	}
 	if _, ok := ic.mutation.AvatarFile(); !ok {
-		return &ValidationError{Name: "avatar_file", err: errors.New(`ent: missing required field "avatar_file"`)}
+		return &ValidationError{Name: "avatar_file", err: errors.New(`ent: missing required field "Identity.avatar_file"`)}
 	}
 	if _, ok := ic.mutation.Vars(); !ok {
-		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "Identity.vars"`)}
 	}
 	if _, ok := ic.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Identity.tags"`)}
 	}
 	return nil
 }
@@ -218,7 +226,11 @@ func (ic *IdentityCreate) sqlSave(ctx context.Context) (*Identity, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -236,7 +248,7 @@ func (ic *IdentityCreate) createSpec() (*Identity, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := ic.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := ic.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

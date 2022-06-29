@@ -41,7 +41,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	var wg sync.WaitGroup
 
 	for _, entPlan := range entPlans {
-		entStatus, err := entPlan.PlanToStatus(ctx)
+		entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
 
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
@@ -70,7 +70,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 					logger.Log.Errorf("Failed to Query Provisioned Network. Err: %v", err)
 					return
 				}
-				entStatus, err := entProNetwork.ProvisionedNetworkToStatus(ctx)
+				entStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -83,7 +83,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 					logger.Log.Errorf("Failed to Query Provisioned Host. Err: %v", err)
 					return
 				}
-				entStatus, err := entProHost.ProvisionedHostToStatus(ctx)
+				entStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -96,7 +96,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 					logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 					return
 				}
-				entStatus, err := entProvisioningStep.ProvisioningStepToStatus(ctx)
+				entStatus, err := entProvisioningStep.QueryProvisioningStepToStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -109,7 +109,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 					logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 					return
 				}
-				entStatus, err := entTeam.TeamToStatus(ctx)
+				entStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -122,7 +122,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 					logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 					return
 				}
-				entStatus, err := entBuild.BuildToStatus(ctx)
+				entStatus, err := entBuild.QueryBuildToStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -211,7 +211,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 	}).Debugf("BUILDER | BUILD ROUTINE START")
 	defer wg.Done()
 
-	entStatus, err := entPlan.PlanToStatus(ctx)
+	entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
 
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
@@ -299,7 +299,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 	logger.Log.WithFields(logrus.Fields{
 		"plan": entPlan.ID,
 	}).Debugf("BUILDER | done waiting on parents")
-	entStatus, err = entPlan.PlanToStatus(ctx)
+	entStatus, err = entPlan.QueryPlanToStatus().Only(ctx)
 
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
@@ -384,7 +384,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			return
 		}
 		if parentNodeFailed {
-			teamStatus, err := entTeam.TeamToStatus(ctx)
+			teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
 			if err != nil {
 				logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
 				return
@@ -405,7 +405,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 			return
 		}
-		entStatus, err := entBuild.BuildToStatus(ctx)
+		entStatus, err := entBuild.QueryBuildToStatus().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 			return
@@ -533,8 +533,6 @@ func buildNetwork(client *ent.Client, logger *logging.Logger, builder *builder.B
 		return err
 	}
 	logger.Log.Infof("deployed %s successfully", entProNetwork.Name)
-	// Allow networks to set up
-	time.Sleep(1 * time.Minute)
 
 	// _, saveErr = networkStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Save(ctx)
 	// if saveErr != nil {
@@ -548,7 +546,7 @@ func buildNetwork(client *ent.Client, logger *logging.Logger, builder *builder.B
 func buildTeam(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entTeam *ent.Team) error {
 	logger.Log.Infof("deploying Team: %d", entTeam.TeamNumber)
 
-	teamStatus, err := entTeam.TeamToStatus(ctx)
+	teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Team status: %v", err)
 		return err

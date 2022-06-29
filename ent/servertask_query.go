@@ -254,7 +254,7 @@ func (stq *ServerTaskQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single ServerTask entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one ServerTask entity is not found.
+// Returns a *NotSingularError when more than one ServerTask entity is found.
 // Returns a *NotFoundError when no ServerTask entities are found.
 func (stq *ServerTaskQuery) Only(ctx context.Context) (*ServerTask, error) {
 	nodes, err := stq.Limit(2).All(ctx)
@@ -281,7 +281,7 @@ func (stq *ServerTaskQuery) OnlyX(ctx context.Context) *ServerTask {
 }
 
 // OnlyID is like Only, but returns the only ServerTask ID in the query.
-// Returns a *NotSingularError when exactly one ServerTask ID is not found.
+// Returns a *NotSingularError when more than one ServerTask ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (stq *ServerTaskQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -396,8 +396,9 @@ func (stq *ServerTaskQuery) Clone() *ServerTaskQuery {
 		withServerTaskToBuildCommit:       stq.withServerTaskToBuildCommit.Clone(),
 		withServerTaskToGinFileMiddleware: stq.withServerTaskToGinFileMiddleware.Clone(),
 		// clone intermediate query.
-		sql:  stq.sql.Clone(),
-		path: stq.path,
+		sql:    stq.sql.Clone(),
+		path:   stq.path,
+		unique: stq.unique,
 	}
 }
 
@@ -746,6 +747,10 @@ func (stq *ServerTaskQuery) sqlAll(ctx context.Context) ([]*ServerTask, error) {
 
 func (stq *ServerTaskQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := stq.querySpec()
+	_spec.Node.Columns = stq.fields
+	if len(stq.fields) > 0 {
+		_spec.Unique = stq.unique != nil && *stq.unique
+	}
 	return sqlgraph.CountNodes(ctx, stq.driver, _spec)
 }
 
@@ -816,6 +821,9 @@ func (stq *ServerTaskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if stq.sql != nil {
 		selector = stq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if stq.unique != nil && *stq.unique {
+		selector.Distinct()
 	}
 	for _, p := range stq.predicates {
 		p(selector)
@@ -1095,9 +1103,7 @@ func (stgb *ServerTaskGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range stgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(stgb.fields...)...)

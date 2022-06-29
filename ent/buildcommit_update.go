@@ -229,16 +229,16 @@ func (bcu *BuildCommitUpdate) ExecX(ctx context.Context) {
 func (bcu *BuildCommitUpdate) check() error {
 	if v, ok := bcu.mutation.GetType(); ok {
 		if err := buildcommit.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf("ent: validator failed for field \"type\": %w", err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "BuildCommit.type": %w`, err)}
 		}
 	}
 	if v, ok := bcu.mutation.State(); ok {
 		if err := buildcommit.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf("ent: validator failed for field \"state\": %w", err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "BuildCommit.state": %w`, err)}
 		}
 	}
 	if _, ok := bcu.mutation.BuildCommitToBuildID(); bcu.mutation.BuildCommitToBuildCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"BuildCommitToBuild\"")
+		return errors.New(`ent: clearing a required unique edge "BuildCommit.BuildCommitToBuild"`)
 	}
 	return nil
 }
@@ -662,16 +662,16 @@ func (bcuo *BuildCommitUpdateOne) ExecX(ctx context.Context) {
 func (bcuo *BuildCommitUpdateOne) check() error {
 	if v, ok := bcuo.mutation.GetType(); ok {
 		if err := buildcommit.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf("ent: validator failed for field \"type\": %w", err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "BuildCommit.type": %w`, err)}
 		}
 	}
 	if v, ok := bcuo.mutation.State(); ok {
 		if err := buildcommit.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf("ent: validator failed for field \"state\": %w", err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "BuildCommit.state": %w`, err)}
 		}
 	}
 	if _, ok := bcuo.mutation.BuildCommitToBuildID(); bcuo.mutation.BuildCommitToBuildCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"BuildCommitToBuild\"")
+		return errors.New(`ent: clearing a required unique edge "BuildCommit.BuildCommitToBuild"`)
 	}
 	return nil
 }
@@ -689,7 +689,7 @@ func (bcuo *BuildCommitUpdateOne) sqlSave(ctx context.Context) (_node *BuildComm
 	}
 	id, ok := bcuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing BuildCommit.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "BuildCommit.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := bcuo.fields; len(fields) > 0 {

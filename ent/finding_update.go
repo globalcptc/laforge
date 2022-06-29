@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -241,12 +242,12 @@ func (fu *FindingUpdate) ExecX(ctx context.Context) {
 func (fu *FindingUpdate) check() error {
 	if v, ok := fu.mutation.Severity(); ok {
 		if err := finding.SeverityValidator(v); err != nil {
-			return &ValidationError{Name: "severity", err: fmt.Errorf("ent: validator failed for field \"severity\": %w", err)}
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "Finding.severity": %w`, err)}
 		}
 	}
 	if v, ok := fu.mutation.Difficulty(); ok {
 		if err := finding.DifficultyValidator(v); err != nil {
-			return &ValidationError{Name: "difficulty", err: fmt.Errorf("ent: validator failed for field \"difficulty\": %w", err)}
+			return &ValidationError{Name: "difficulty", err: fmt.Errorf(`ent: validator failed for field "Finding.difficulty": %w`, err)}
 		}
 	}
 	return nil
@@ -700,12 +701,12 @@ func (fuo *FindingUpdateOne) ExecX(ctx context.Context) {
 func (fuo *FindingUpdateOne) check() error {
 	if v, ok := fuo.mutation.Severity(); ok {
 		if err := finding.SeverityValidator(v); err != nil {
-			return &ValidationError{Name: "severity", err: fmt.Errorf("ent: validator failed for field \"severity\": %w", err)}
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "Finding.severity": %w`, err)}
 		}
 	}
 	if v, ok := fuo.mutation.Difficulty(); ok {
 		if err := finding.DifficultyValidator(v); err != nil {
-			return &ValidationError{Name: "difficulty", err: fmt.Errorf("ent: validator failed for field \"difficulty\": %w", err)}
+			return &ValidationError{Name: "difficulty", err: fmt.Errorf(`ent: validator failed for field "Finding.difficulty": %w`, err)}
 		}
 	}
 	return nil
@@ -724,7 +725,7 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 	}
 	id, ok := fuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Finding.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Finding.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := fuo.fields; len(fields) > 0 {

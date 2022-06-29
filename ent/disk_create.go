@@ -33,6 +33,14 @@ func (dc *DiskCreate) SetID(u uuid.UUID) *DiskCreate {
 	return dc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (dc *DiskCreate) SetNillableID(u *uuid.UUID) *DiskCreate {
+	if u != nil {
+		dc.SetID(*u)
+	}
+	return dc
+}
+
 // SetDiskToHostID sets the "DiskToHost" edge to the Host entity by ID.
 func (dc *DiskCreate) SetDiskToHostID(id uuid.UUID) *DiskCreate {
 	dc.mutation.SetDiskToHostID(id)
@@ -132,11 +140,11 @@ func (dc *DiskCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (dc *DiskCreate) check() error {
 	if _, ok := dc.mutation.Size(); !ok {
-		return &ValidationError{Name: "size", err: errors.New(`ent: missing required field "size"`)}
+		return &ValidationError{Name: "size", err: errors.New(`ent: missing required field "Disk.size"`)}
 	}
 	if v, ok := dc.mutation.Size(); ok {
 		if err := disk.SizeValidator(v); err != nil {
-			return &ValidationError{Name: "size", err: fmt.Errorf(`ent: validator failed for field "size": %w`, err)}
+			return &ValidationError{Name: "size", err: fmt.Errorf(`ent: validator failed for field "Disk.size": %w`, err)}
 		}
 	}
 	return nil
@@ -151,7 +159,11 @@ func (dc *DiskCreate) sqlSave(ctx context.Context) (*Disk, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -169,7 +181,7 @@ func (dc *DiskCreate) createSpec() (*Disk, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := dc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := dc.mutation.Size(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
