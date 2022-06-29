@@ -204,7 +204,7 @@ func (hdq *HostDependencyQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single HostDependency entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one HostDependency entity is not found.
+// Returns a *NotSingularError when more than one HostDependency entity is found.
 // Returns a *NotFoundError when no HostDependency entities are found.
 func (hdq *HostDependencyQuery) Only(ctx context.Context) (*HostDependency, error) {
 	nodes, err := hdq.Limit(2).All(ctx)
@@ -231,7 +231,7 @@ func (hdq *HostDependencyQuery) OnlyX(ctx context.Context) *HostDependency {
 }
 
 // OnlyID is like Only, but returns the only HostDependency ID in the query.
-// Returns a *NotSingularError when exactly one HostDependency ID is not found.
+// Returns a *NotSingularError when more than one HostDependency ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (hdq *HostDependencyQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -344,8 +344,9 @@ func (hdq *HostDependencyQuery) Clone() *HostDependencyQuery {
 		withHostDependencyToNetwork:      hdq.withHostDependencyToNetwork.Clone(),
 		withHostDependencyToEnvironment:  hdq.withHostDependencyToEnvironment.Clone(),
 		// clone intermediate query.
-		sql:  hdq.sql.Clone(),
-		path: hdq.path,
+		sql:    hdq.sql.Clone(),
+		path:   hdq.path,
+		unique: hdq.unique,
 	}
 }
 
@@ -613,6 +614,10 @@ func (hdq *HostDependencyQuery) sqlAll(ctx context.Context) ([]*HostDependency, 
 
 func (hdq *HostDependencyQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := hdq.querySpec()
+	_spec.Node.Columns = hdq.fields
+	if len(hdq.fields) > 0 {
+		_spec.Unique = hdq.unique != nil && *hdq.unique
+	}
 	return sqlgraph.CountNodes(ctx, hdq.driver, _spec)
 }
 
@@ -683,6 +688,9 @@ func (hdq *HostDependencyQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if hdq.sql != nil {
 		selector = hdq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if hdq.unique != nil && *hdq.unique {
+		selector.Distinct()
 	}
 	for _, p := range hdq.predicates {
 		p(selector)
@@ -962,9 +970,7 @@ func (hdgb *HostDependencyGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range hdgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(hdgb.fields...)...)

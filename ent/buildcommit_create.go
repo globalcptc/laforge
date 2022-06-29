@@ -62,6 +62,14 @@ func (bcc *BuildCommitCreate) SetID(u uuid.UUID) *BuildCommitCreate {
 	return bcc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (bcc *BuildCommitCreate) SetNillableID(u *uuid.UUID) *BuildCommitCreate {
+	if u != nil {
+		bcc.SetID(*u)
+	}
+	return bcc
+}
+
 // SetBuildCommitToBuildID sets the "BuildCommitToBuild" edge to the Build entity by ID.
 func (bcc *BuildCommitCreate) SetBuildCommitToBuildID(id uuid.UUID) *BuildCommitCreate {
 	bcc.mutation.SetBuildCommitToBuildID(id)
@@ -187,29 +195,29 @@ func (bcc *BuildCommitCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (bcc *BuildCommitCreate) check() error {
 	if _, ok := bcc.mutation.GetType(); !ok {
-		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "type"`)}
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "BuildCommit.type"`)}
 	}
 	if v, ok := bcc.mutation.GetType(); ok {
 		if err := buildcommit.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "type": %w`, err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "BuildCommit.type": %w`, err)}
 		}
 	}
 	if _, ok := bcc.mutation.Revision(); !ok {
-		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "revision"`)}
+		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "BuildCommit.revision"`)}
 	}
 	if _, ok := bcc.mutation.State(); !ok {
-		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "state"`)}
+		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "BuildCommit.state"`)}
 	}
 	if v, ok := bcc.mutation.State(); ok {
 		if err := buildcommit.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "state": %w`, err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "BuildCommit.state": %w`, err)}
 		}
 	}
 	if _, ok := bcc.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "created_at"`)}
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "BuildCommit.created_at"`)}
 	}
 	if _, ok := bcc.mutation.BuildCommitToBuildID(); !ok {
-		return &ValidationError{Name: "BuildCommitToBuild", err: errors.New("ent: missing required edge \"BuildCommitToBuild\"")}
+		return &ValidationError{Name: "BuildCommitToBuild", err: errors.New(`ent: missing required edge "BuildCommit.BuildCommitToBuild"`)}
 	}
 	return nil
 }
@@ -223,7 +231,11 @@ func (bcc *BuildCommitCreate) sqlSave(ctx context.Context) (*BuildCommit, error)
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -241,7 +253,7 @@ func (bcc *BuildCommitCreate) createSpec() (*BuildCommit, *sqlgraph.CreateSpec) 
 	)
 	if id, ok := bcc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := bcc.mutation.GetType(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

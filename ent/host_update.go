@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -1186,7 +1187,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 	}
 	id, ok := huo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Host.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Host.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := huo.fields; len(fields) > 0 {

@@ -33,6 +33,9 @@ services:
       - ./server/logs/:/app/logs
       - ./server/users/:/app/users
       - ./server/repos/:/app/repos
+      - ./configs/:/app/configs
+      - ./grpc/agent/static/:/app/grpc/agent/static
+      - ./grpc/server/static/:/app/grpc/server/static
 
   db:
     image: library/postgres:14.2-alpine

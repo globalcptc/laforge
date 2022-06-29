@@ -54,6 +54,14 @@ func (gfmc *GinFileMiddlewareCreate) SetID(u uuid.UUID) *GinFileMiddlewareCreate
 	return gfmc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (gfmc *GinFileMiddlewareCreate) SetNillableID(u *uuid.UUID) *GinFileMiddlewareCreate {
+	if u != nil {
+		gfmc.SetID(*u)
+	}
+	return gfmc
+}
+
 // SetGinFileMiddlewareToProvisionedHostID sets the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity by ID.
 func (gfmc *GinFileMiddlewareCreate) SetGinFileMiddlewareToProvisionedHostID(id uuid.UUID) *GinFileMiddlewareCreate {
 	gfmc.mutation.SetGinFileMiddlewareToProvisionedHostID(id)
@@ -176,13 +184,13 @@ func (gfmc *GinFileMiddlewareCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (gfmc *GinFileMiddlewareCreate) check() error {
 	if _, ok := gfmc.mutation.URLID(); !ok {
-		return &ValidationError{Name: "url_id", err: errors.New(`ent: missing required field "url_id"`)}
+		return &ValidationError{Name: "url_id", err: errors.New(`ent: missing required field "GinFileMiddleware.url_id"`)}
 	}
 	if _, ok := gfmc.mutation.FilePath(); !ok {
-		return &ValidationError{Name: "file_path", err: errors.New(`ent: missing required field "file_path"`)}
+		return &ValidationError{Name: "file_path", err: errors.New(`ent: missing required field "GinFileMiddleware.file_path"`)}
 	}
 	if _, ok := gfmc.mutation.Accessed(); !ok {
-		return &ValidationError{Name: "accessed", err: errors.New(`ent: missing required field "accessed"`)}
+		return &ValidationError{Name: "accessed", err: errors.New(`ent: missing required field "GinFileMiddleware.accessed"`)}
 	}
 	return nil
 }
@@ -196,7 +204,11 @@ func (gfmc *GinFileMiddlewareCreate) sqlSave(ctx context.Context) (*GinFileMiddl
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -214,7 +226,7 @@ func (gfmc *GinFileMiddlewareCreate) createSpec() (*GinFileMiddleware, *sqlgraph
 	)
 	if id, ok := gfmc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := gfmc.mutation.URLID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

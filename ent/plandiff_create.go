@@ -40,6 +40,14 @@ func (pdc *PlanDiffCreate) SetID(u uuid.UUID) *PlanDiffCreate {
 	return pdc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (pdc *PlanDiffCreate) SetNillableID(u *uuid.UUID) *PlanDiffCreate {
+	if u != nil {
+		pdc.SetID(*u)
+	}
+	return pdc
+}
+
 // SetPlanDiffToBuildCommitID sets the "PlanDiffToBuildCommit" edge to the BuildCommit entity by ID.
 func (pdc *PlanDiffCreate) SetPlanDiffToBuildCommitID(id uuid.UUID) *PlanDiffCreate {
 	pdc.mutation.SetPlanDiffToBuildCommitID(id)
@@ -142,21 +150,21 @@ func (pdc *PlanDiffCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (pdc *PlanDiffCreate) check() error {
 	if _, ok := pdc.mutation.Revision(); !ok {
-		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "revision"`)}
+		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "PlanDiff.revision"`)}
 	}
 	if _, ok := pdc.mutation.NewState(); !ok {
-		return &ValidationError{Name: "new_state", err: errors.New(`ent: missing required field "new_state"`)}
+		return &ValidationError{Name: "new_state", err: errors.New(`ent: missing required field "PlanDiff.new_state"`)}
 	}
 	if v, ok := pdc.mutation.NewState(); ok {
 		if err := plandiff.NewStateValidator(v); err != nil {
-			return &ValidationError{Name: "new_state", err: fmt.Errorf(`ent: validator failed for field "new_state": %w`, err)}
+			return &ValidationError{Name: "new_state", err: fmt.Errorf(`ent: validator failed for field "PlanDiff.new_state": %w`, err)}
 		}
 	}
 	if _, ok := pdc.mutation.PlanDiffToBuildCommitID(); !ok {
-		return &ValidationError{Name: "PlanDiffToBuildCommit", err: errors.New("ent: missing required edge \"PlanDiffToBuildCommit\"")}
+		return &ValidationError{Name: "PlanDiffToBuildCommit", err: errors.New(`ent: missing required edge "PlanDiff.PlanDiffToBuildCommit"`)}
 	}
 	if _, ok := pdc.mutation.PlanDiffToPlanID(); !ok {
-		return &ValidationError{Name: "PlanDiffToPlan", err: errors.New("ent: missing required edge \"PlanDiffToPlan\"")}
+		return &ValidationError{Name: "PlanDiffToPlan", err: errors.New(`ent: missing required edge "PlanDiff.PlanDiffToPlan"`)}
 	}
 	return nil
 }
@@ -170,7 +178,11 @@ func (pdc *PlanDiffCreate) sqlSave(ctx context.Context) (*PlanDiff, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -188,7 +200,7 @@ func (pdc *PlanDiffCreate) createSpec() (*PlanDiff, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := pdc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := pdc.mutation.Revision(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

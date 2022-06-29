@@ -65,6 +65,14 @@ func (nc *NetworkCreate) SetID(u uuid.UUID) *NetworkCreate {
 	return nc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (nc *NetworkCreate) SetNillableID(u *uuid.UUID) *NetworkCreate {
+	if u != nil {
+		nc.SetID(*u)
+	}
+	return nc
+}
+
 // SetNetworkToEnvironmentID sets the "NetworkToEnvironment" edge to the Environment entity by ID.
 func (nc *NetworkCreate) SetNetworkToEnvironmentID(id uuid.UUID) *NetworkCreate {
 	nc.mutation.SetNetworkToEnvironmentID(id)
@@ -194,22 +202,22 @@ func (nc *NetworkCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (nc *NetworkCreate) check() error {
 	if _, ok := nc.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Network.hcl_id"`)}
 	}
 	if _, ok := nc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Network.name"`)}
 	}
 	if _, ok := nc.mutation.Cidr(); !ok {
-		return &ValidationError{Name: "cidr", err: errors.New(`ent: missing required field "cidr"`)}
+		return &ValidationError{Name: "cidr", err: errors.New(`ent: missing required field "Network.cidr"`)}
 	}
 	if _, ok := nc.mutation.VdiVisible(); !ok {
-		return &ValidationError{Name: "vdi_visible", err: errors.New(`ent: missing required field "vdi_visible"`)}
+		return &ValidationError{Name: "vdi_visible", err: errors.New(`ent: missing required field "Network.vdi_visible"`)}
 	}
 	if _, ok := nc.mutation.Vars(); !ok {
-		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "Network.vars"`)}
 	}
 	if _, ok := nc.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Network.tags"`)}
 	}
 	return nil
 }
@@ -223,7 +231,11 @@ func (nc *NetworkCreate) sqlSave(ctx context.Context) (*Network, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -241,7 +253,7 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := nc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := nc.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

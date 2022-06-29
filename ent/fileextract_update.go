@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -383,7 +384,7 @@ func (feuo *FileExtractUpdateOne) sqlSave(ctx context.Context) (_node *FileExtra
 	}
 	id, ok := feuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing FileExtract.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "FileExtract.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := feuo.fields; len(fields) > 0 {

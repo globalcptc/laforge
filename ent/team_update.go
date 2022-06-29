@@ -222,7 +222,7 @@ func (tu *TeamUpdate) ExecX(ctx context.Context) {
 // check runs all checks and user-defined validators on the builder.
 func (tu *TeamUpdate) check() error {
 	if _, ok := tu.mutation.TeamToBuildID(); tu.mutation.TeamToBuildCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"TeamToBuild\"")
+		return errors.New(`ent: clearing a required unique edge "Team.TeamToBuild"`)
 	}
 	return nil
 }
@@ -641,7 +641,7 @@ func (tuo *TeamUpdateOne) ExecX(ctx context.Context) {
 // check runs all checks and user-defined validators on the builder.
 func (tuo *TeamUpdateOne) check() error {
 	if _, ok := tuo.mutation.TeamToBuildID(); tuo.mutation.TeamToBuildCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"TeamToBuild\"")
+		return errors.New(`ent: clearing a required unique edge "Team.TeamToBuild"`)
 	}
 	return nil
 }
@@ -659,7 +659,7 @@ func (tuo *TeamUpdateOne) sqlSave(ctx context.Context) (_node *Team, err error) 
 	}
 	id, ok := tuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Team.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Team.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := tuo.fields; len(fields) > 0 {

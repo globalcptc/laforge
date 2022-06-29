@@ -133,7 +133,7 @@ func (dq *DiskQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single Disk entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one Disk entity is not found.
+// Returns a *NotSingularError when more than one Disk entity is found.
 // Returns a *NotFoundError when no Disk entities are found.
 func (dq *DiskQuery) Only(ctx context.Context) (*Disk, error) {
 	nodes, err := dq.Limit(2).All(ctx)
@@ -160,7 +160,7 @@ func (dq *DiskQuery) OnlyX(ctx context.Context) *Disk {
 }
 
 // OnlyID is like Only, but returns the only Disk ID in the query.
-// Returns a *NotSingularError when exactly one Disk ID is not found.
+// Returns a *NotSingularError when more than one Disk ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (dq *DiskQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -270,8 +270,9 @@ func (dq *DiskQuery) Clone() *DiskQuery {
 		predicates:     append([]predicate.Disk{}, dq.predicates...),
 		withDiskToHost: dq.withDiskToHost.Clone(),
 		// clone intermediate query.
-		sql:  dq.sql.Clone(),
-		path: dq.path,
+		sql:    dq.sql.Clone(),
+		path:   dq.path,
+		unique: dq.unique,
 	}
 }
 
@@ -416,6 +417,10 @@ func (dq *DiskQuery) sqlAll(ctx context.Context) ([]*Disk, error) {
 
 func (dq *DiskQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := dq.querySpec()
+	_spec.Node.Columns = dq.fields
+	if len(dq.fields) > 0 {
+		_spec.Unique = dq.unique != nil && *dq.unique
+	}
 	return sqlgraph.CountNodes(ctx, dq.driver, _spec)
 }
 
@@ -486,6 +491,9 @@ func (dq *DiskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if dq.sql != nil {
 		selector = dq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if dq.unique != nil && *dq.unique {
+		selector.Distinct()
 	}
 	for _, p := range dq.predicates {
 		p(selector)
@@ -765,9 +773,7 @@ func (dgb *DiskGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range dgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(dgb.fields...)...)

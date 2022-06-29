@@ -68,6 +68,14 @@ func (rc *RepositoryCreate) SetID(u uuid.UUID) *RepositoryCreate {
 	return rc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (rc *RepositoryCreate) SetNillableID(u *uuid.UUID) *RepositoryCreate {
+	if u != nil {
+		rc.SetID(*u)
+	}
+	return rc
+}
+
 // AddRepositoryToEnvironmentIDs adds the "RepositoryToEnvironment" edge to the Environment entity by IDs.
 func (rc *RepositoryCreate) AddRepositoryToEnvironmentIDs(ids ...uuid.UUID) *RepositoryCreate {
 	rc.mutation.AddRepositoryToEnvironmentIDs(ids...)
@@ -186,16 +194,16 @@ func (rc *RepositoryCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (rc *RepositoryCreate) check() error {
 	if _, ok := rc.mutation.RepoURL(); !ok {
-		return &ValidationError{Name: "repo_url", err: errors.New(`ent: missing required field "repo_url"`)}
+		return &ValidationError{Name: "repo_url", err: errors.New(`ent: missing required field "Repository.repo_url"`)}
 	}
 	if _, ok := rc.mutation.BranchName(); !ok {
-		return &ValidationError{Name: "branch_name", err: errors.New(`ent: missing required field "branch_name"`)}
+		return &ValidationError{Name: "branch_name", err: errors.New(`ent: missing required field "Repository.branch_name"`)}
 	}
 	if _, ok := rc.mutation.EnviromentFilepath(); !ok {
-		return &ValidationError{Name: "enviroment_filepath", err: errors.New(`ent: missing required field "enviroment_filepath"`)}
+		return &ValidationError{Name: "enviroment_filepath", err: errors.New(`ent: missing required field "Repository.enviroment_filepath"`)}
 	}
 	if _, ok := rc.mutation.FolderPath(); !ok {
-		return &ValidationError{Name: "folder_path", err: errors.New(`ent: missing required field "folder_path"`)}
+		return &ValidationError{Name: "folder_path", err: errors.New(`ent: missing required field "Repository.folder_path"`)}
 	}
 	return nil
 }
@@ -209,7 +217,11 @@ func (rc *RepositoryCreate) sqlSave(ctx context.Context) (*Repository, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -227,7 +239,7 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := rc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := rc.mutation.RepoURL(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

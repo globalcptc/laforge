@@ -122,7 +122,17 @@ func (builder OpenstackBuilder) newAuthProvider() (*gophercloud.ProviderClient, 
 	return openstack.AuthenticatedClient(authOpts)
 }
 
-func waitForObjectDelete(getFunc func() error) {
+func waitForObjectDeploy(getFunc func() bool) {
+	for {
+		deployed := getFunc()
+		if deployed {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+}
+
+func waitForObjectTeardown(getFunc func() error) {
 	for {
 		err := getFunc()
 		if err != nil {
@@ -214,7 +224,6 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	if err != nil {
 		return fmt.Errorf("failed to create security group: %v", err)
 	}
-
 	newVars := entHost.Vars
 	newVars["openstack_secgroup_id"] = osSecGroup.ID
 	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctx)
@@ -223,28 +232,60 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	}
 	ruleOpts := make([]secgroups.CreateRuleOpts, 0)
 	for _, port := range entHost.ExposedTCPPorts {
-		destPort, err := strconv.Atoi(port)
-		if err != nil {
-			return fmt.Errorf("could not convert TCP port \"%s\" to integer: %v", port, err)
+		fromPort := 0
+		toPort := 0
+		portRange := strings.Split(port, "-")
+		if len(portRange) == 1 {
+			destPort, err := strconv.Atoi(portRange[0])
+			if err != nil {
+				return fmt.Errorf("could not convert TCP port \"%s\" to integer: %v", port, err)
+			}
+			fromPort = destPort
+			toPort = destPort
+		} else {
+			fromPort, err = strconv.Atoi(portRange[0])
+			if err != nil {
+				return fmt.Errorf("could not convert TCP port \"%s\" to integer: %v", port, err)
+			}
+			toPort, err = strconv.Atoi(portRange[1])
+			if err != nil {
+				return fmt.Errorf("could not convert TCP port \"%s\" to integer: %v", port, err)
+			}
 		}
 		opts := secgroups.CreateRuleOpts{
 			ParentGroupID: osSecGroup.ID,
-			FromPort:      destPort,
-			ToPort:        destPort,
+			FromPort:      fromPort,
+			ToPort:        toPort,
 			IPProtocol:    "TCP",
 			CIDR:          "0.0.0.0/0",
 		}
 		ruleOpts = append(ruleOpts, opts)
 	}
 	for _, port := range entHost.ExposedUDPPorts {
-		destPort, err := strconv.Atoi(port)
-		if err != nil {
-			return fmt.Errorf("could not convert UDP port \"%s\" to integer: %v", port, err)
+		fromPort := 0
+		toPort := 0
+		portRange := strings.Split(port, "-")
+		if len(portRange) == 1 {
+			destPort, err := strconv.Atoi(portRange[0])
+			if err != nil {
+				return fmt.Errorf("could not convert TCP port \"%s\" to integer: %v", port, err)
+			}
+			fromPort = destPort
+			toPort = destPort
+		} else {
+			fromPort, err = strconv.Atoi(portRange[0])
+			if err != nil {
+				return fmt.Errorf("could not convert TCP port \"%s\" to integer: %v", port, err)
+			}
+			toPort, err = strconv.Atoi(portRange[1])
+			if err != nil {
+				return fmt.Errorf("could not convert TCP port \"%s\" to integer: %v", port, err)
+			}
 		}
 		opts := secgroups.CreateRuleOpts{
 			ParentGroupID: osSecGroup.ID,
-			FromPort:      destPort,
-			ToPort:        destPort,
+			FromPort:      fromPort,
+			ToPort:        toPort,
 			IPProtocol:    "UDP",
 			CIDR:          "0.0.0.0/0",
 		}
@@ -296,7 +337,7 @@ cd /
 
 	// Create the host
 	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", builder.Config.Images[entHost.OS], builder.Config.Flavors[entHost.InstanceSize])
-	server, err := servers.Create(computeClient, servers.CreateOpts{
+	osServer, err := servers.Create(computeClient, servers.CreateOpts{
 		Name:           vmName,
 		ImageRef:       builder.Config.Images[entHost.OS],
 		FlavorRef:      builder.Config.Flavors[entHost.InstanceSize],
@@ -310,13 +351,13 @@ cd /
 		AccessIPv4: hostAddress,
 	}).Extract()
 	if err != nil {
-		builder.Logger.Log.Errorf("Unable to create server: %v", err)
-		return
+		return fmt.Errorf("failed to create server: %v", err)
 	}
-	builder.Logger.Log.WithField("root_password", server.AdminPass).Debugf("Server ID: %s", server.ID)
+	// Wait for the server to provision and boot
+	servers.WaitForStatus(computeClient, osServer.ID, "Active", 60)
 
 	// Store Openstack instance ID in provisioned host vars
-	newVars["openstack_instance_id"] = server.ID
+	newVars["openstack_instance_id"] = osServer.ID
 	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update provisioned host vars: %v", err)
@@ -581,7 +622,7 @@ func (builder OpenstackBuilder) TeardownHost(ctx context.Context, entProvisioned
 		return fmt.Errorf("failed to delete host: %v", err)
 	}
 	// Wait for the network to actually be deleted (Openstack queues actions asynchronously)
-	waitForObjectDelete(func() error {
+	waitForObjectTeardown(func() error {
 		_, err := servers.Get(computeClient, entProvisionedHost.Vars["openstack_instance_id"]).Extract()
 		return err
 	})
@@ -599,7 +640,7 @@ func (builder OpenstackBuilder) TeardownHost(ctx context.Context, entProvisioned
 		return fmt.Errorf("failed to delete security group: %v", err)
 	}
 	// Wait for the network to actually be deleted (Openstack queues actions asynchronously)
-	waitForObjectDelete(func() error {
+	waitForObjectTeardown(func() error {
 		_, err := secgroups.Get(computeClient, entProvisionedHost.Vars["openstack_secgroup_id"]).Extract()
 		return err
 	})
@@ -659,7 +700,7 @@ func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisio
 	}
 
 	// Wait for the router port to actually be deleted (Openstack queues actions asynchronously)
-	waitForObjectDelete(func() error {
+	waitForObjectTeardown(func() error {
 		_, err := ports.Get(networkClient, entProvisionedNetwork.Vars["openstack_subnet_port_id"]).Extract()
 		return err
 	})
@@ -678,7 +719,7 @@ func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisio
 		return fmt.Errorf("failed to delete subnet: %v", err)
 	}
 	// Wait for the subnet to actually be deleted (Openstack queues actions asynchronously)
-	waitForObjectDelete(func() error {
+	waitForObjectTeardown(func() error {
 		_, err := subnets.Get(networkClient, entProvisionedNetwork.Vars["openstack_subnet_id"]).Extract()
 		return err
 	})
@@ -695,7 +736,7 @@ func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisio
 		return fmt.Errorf("failed to delete network: %v", err)
 	}
 	// Wait for the network to actually be deleted (Openstack queues actions asynchronously)
-	waitForObjectDelete(func() error {
+	waitForObjectTeardown(func() error {
 		_, err := networks.Get(networkClient, entProvisionedNetwork.Vars["openstack_network_id"]).Extract()
 		return err
 	})
@@ -743,7 +784,7 @@ func (builder OpenstackBuilder) TeardownTeam(ctx context.Context, entTeam *ent.T
 		return fmt.Errorf("failed to delete router: %v", err)
 	}
 	// Wait for the network to actually be deleted (Openstack queues actions asynchronously)
-	waitForObjectDelete(func() error {
+	waitForObjectTeardown(func() error {
 		_, err := routers.Get(networkClient, entTeam.Vars["openstack_router_id"]).Extract()
 		return err
 	})

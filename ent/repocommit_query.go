@@ -133,7 +133,7 @@ func (rcq *RepoCommitQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single RepoCommit entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one RepoCommit entity is not found.
+// Returns a *NotSingularError when more than one RepoCommit entity is found.
 // Returns a *NotFoundError when no RepoCommit entities are found.
 func (rcq *RepoCommitQuery) Only(ctx context.Context) (*RepoCommit, error) {
 	nodes, err := rcq.Limit(2).All(ctx)
@@ -160,7 +160,7 @@ func (rcq *RepoCommitQuery) OnlyX(ctx context.Context) *RepoCommit {
 }
 
 // OnlyID is like Only, but returns the only RepoCommit ID in the query.
-// Returns a *NotSingularError when exactly one RepoCommit ID is not found.
+// Returns a *NotSingularError when more than one RepoCommit ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (rcq *RepoCommitQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -270,8 +270,9 @@ func (rcq *RepoCommitQuery) Clone() *RepoCommitQuery {
 		predicates:                 append([]predicate.RepoCommit{}, rcq.predicates...),
 		withRepoCommitToRepository: rcq.withRepoCommitToRepository.Clone(),
 		// clone intermediate query.
-		sql:  rcq.sql.Clone(),
-		path: rcq.path,
+		sql:    rcq.sql.Clone(),
+		path:   rcq.path,
+		unique: rcq.unique,
 	}
 }
 
@@ -416,6 +417,10 @@ func (rcq *RepoCommitQuery) sqlAll(ctx context.Context) ([]*RepoCommit, error) {
 
 func (rcq *RepoCommitQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := rcq.querySpec()
+	_spec.Node.Columns = rcq.fields
+	if len(rcq.fields) > 0 {
+		_spec.Unique = rcq.unique != nil && *rcq.unique
+	}
 	return sqlgraph.CountNodes(ctx, rcq.driver, _spec)
 }
 
@@ -486,6 +491,9 @@ func (rcq *RepoCommitQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if rcq.sql != nil {
 		selector = rcq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if rcq.unique != nil && *rcq.unique {
+		selector.Distinct()
 	}
 	for _, p := range rcq.predicates {
 		p(selector)
@@ -765,9 +773,7 @@ func (rcgb *RepoCommitGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range rcgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(rcgb.fields...)...)

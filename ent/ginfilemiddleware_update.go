@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -447,7 +448,7 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 	}
 	id, ok := gfmuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing GinFileMiddleware.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "GinFileMiddleware.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := gfmuo.fields; len(fields) > 0 {

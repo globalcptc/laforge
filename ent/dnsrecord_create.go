@@ -75,6 +75,14 @@ func (drc *DNSRecordCreate) SetID(u uuid.UUID) *DNSRecordCreate {
 	return drc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (drc *DNSRecordCreate) SetNillableID(u *uuid.UUID) *DNSRecordCreate {
+	if u != nil {
+		drc.SetID(*u)
+	}
+	return drc
+}
+
 // SetDNSRecordToEnvironmentID sets the "DNSRecordToEnvironment" edge to the Environment entity by ID.
 func (drc *DNSRecordCreate) SetDNSRecordToEnvironmentID(id uuid.UUID) *DNSRecordCreate {
 	drc.mutation.SetDNSRecordToEnvironmentID(id)
@@ -174,28 +182,28 @@ func (drc *DNSRecordCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (drc *DNSRecordCreate) check() error {
 	if _, ok := drc.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "DNSRecord.hcl_id"`)}
 	}
 	if _, ok := drc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "DNSRecord.name"`)}
 	}
 	if _, ok := drc.mutation.Values(); !ok {
-		return &ValidationError{Name: "values", err: errors.New(`ent: missing required field "values"`)}
+		return &ValidationError{Name: "values", err: errors.New(`ent: missing required field "DNSRecord.values"`)}
 	}
 	if _, ok := drc.mutation.GetType(); !ok {
-		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "type"`)}
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "DNSRecord.type"`)}
 	}
 	if _, ok := drc.mutation.Zone(); !ok {
-		return &ValidationError{Name: "zone", err: errors.New(`ent: missing required field "zone"`)}
+		return &ValidationError{Name: "zone", err: errors.New(`ent: missing required field "DNSRecord.zone"`)}
 	}
 	if _, ok := drc.mutation.Vars(); !ok {
-		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "DNSRecord.vars"`)}
 	}
 	if _, ok := drc.mutation.Disabled(); !ok {
-		return &ValidationError{Name: "disabled", err: errors.New(`ent: missing required field "disabled"`)}
+		return &ValidationError{Name: "disabled", err: errors.New(`ent: missing required field "DNSRecord.disabled"`)}
 	}
 	if _, ok := drc.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "DNSRecord.tags"`)}
 	}
 	return nil
 }
@@ -209,7 +217,11 @@ func (drc *DNSRecordCreate) sqlSave(ctx context.Context) (*DNSRecord, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -227,7 +239,7 @@ func (drc *DNSRecordCreate) createSpec() (*DNSRecord, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := drc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := drc.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

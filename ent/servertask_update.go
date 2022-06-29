@@ -327,14 +327,14 @@ func (stu *ServerTaskUpdate) ExecX(ctx context.Context) {
 func (stu *ServerTaskUpdate) check() error {
 	if v, ok := stu.mutation.GetType(); ok {
 		if err := servertask.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf("ent: validator failed for field \"type\": %w", err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ServerTask.type": %w`, err)}
 		}
 	}
 	if _, ok := stu.mutation.ServerTaskToAuthUserID(); stu.mutation.ServerTaskToAuthUserCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ServerTaskToAuthUser\"")
+		return errors.New(`ent: clearing a required unique edge "ServerTask.ServerTaskToAuthUser"`)
 	}
 	if _, ok := stu.mutation.ServerTaskToStatusID(); stu.mutation.ServerTaskToStatusCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ServerTaskToStatus\"")
+		return errors.New(`ent: clearing a required unique edge "ServerTask.ServerTaskToStatus"`)
 	}
 	return nil
 }
@@ -963,14 +963,14 @@ func (stuo *ServerTaskUpdateOne) ExecX(ctx context.Context) {
 func (stuo *ServerTaskUpdateOne) check() error {
 	if v, ok := stuo.mutation.GetType(); ok {
 		if err := servertask.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf("ent: validator failed for field \"type\": %w", err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ServerTask.type": %w`, err)}
 		}
 	}
 	if _, ok := stuo.mutation.ServerTaskToAuthUserID(); stuo.mutation.ServerTaskToAuthUserCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ServerTaskToAuthUser\"")
+		return errors.New(`ent: clearing a required unique edge "ServerTask.ServerTaskToAuthUser"`)
 	}
 	if _, ok := stuo.mutation.ServerTaskToStatusID(); stuo.mutation.ServerTaskToStatusCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ServerTaskToStatus\"")
+		return errors.New(`ent: clearing a required unique edge "ServerTask.ServerTaskToStatus"`)
 	}
 	return nil
 }
@@ -988,7 +988,7 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 	}
 	id, ok := stuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing ServerTask.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ServerTask.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := stuo.fields; len(fields) > 0 {

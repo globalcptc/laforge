@@ -158,7 +158,7 @@ func (gfmq *GinFileMiddlewareQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single GinFileMiddleware entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one GinFileMiddleware entity is not found.
+// Returns a *NotSingularError when more than one GinFileMiddleware entity is found.
 // Returns a *NotFoundError when no GinFileMiddleware entities are found.
 func (gfmq *GinFileMiddlewareQuery) Only(ctx context.Context) (*GinFileMiddleware, error) {
 	nodes, err := gfmq.Limit(2).All(ctx)
@@ -185,7 +185,7 @@ func (gfmq *GinFileMiddlewareQuery) OnlyX(ctx context.Context) *GinFileMiddlewar
 }
 
 // OnlyID is like Only, but returns the only GinFileMiddleware ID in the query.
-// Returns a *NotSingularError when exactly one GinFileMiddleware ID is not found.
+// Returns a *NotSingularError when more than one GinFileMiddleware ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (gfmq *GinFileMiddlewareQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -296,8 +296,9 @@ func (gfmq *GinFileMiddlewareQuery) Clone() *GinFileMiddlewareQuery {
 		withGinFileMiddlewareToProvisionedHost:  gfmq.withGinFileMiddlewareToProvisionedHost.Clone(),
 		withGinFileMiddlewareToProvisioningStep: gfmq.withGinFileMiddlewareToProvisioningStep.Clone(),
 		// clone intermediate query.
-		sql:  gfmq.sql.Clone(),
-		path: gfmq.path,
+		sql:    gfmq.sql.Clone(),
+		path:   gfmq.path,
+		unique: gfmq.unique,
 	}
 }
 
@@ -478,6 +479,10 @@ func (gfmq *GinFileMiddlewareQuery) sqlAll(ctx context.Context) ([]*GinFileMiddl
 
 func (gfmq *GinFileMiddlewareQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := gfmq.querySpec()
+	_spec.Node.Columns = gfmq.fields
+	if len(gfmq.fields) > 0 {
+		_spec.Unique = gfmq.unique != nil && *gfmq.unique
+	}
 	return sqlgraph.CountNodes(ctx, gfmq.driver, _spec)
 }
 
@@ -548,6 +553,9 @@ func (gfmq *GinFileMiddlewareQuery) sqlQuery(ctx context.Context) *sql.Selector 
 	if gfmq.sql != nil {
 		selector = gfmq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if gfmq.unique != nil && *gfmq.unique {
+		selector.Distinct()
 	}
 	for _, p := range gfmq.predicates {
 		p(selector)
@@ -827,9 +835,7 @@ func (gfmgb *GinFileMiddlewareGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range gfmgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(gfmgb.fields...)...)

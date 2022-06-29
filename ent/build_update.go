@@ -514,10 +514,10 @@ func (bu *BuildUpdate) ExecX(ctx context.Context) {
 // check runs all checks and user-defined validators on the builder.
 func (bu *BuildUpdate) check() error {
 	if _, ok := bu.mutation.BuildToEnvironmentID(); bu.mutation.BuildToEnvironmentCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"BuildToEnvironment\"")
+		return errors.New(`ent: clearing a required unique edge "Build.BuildToEnvironment"`)
 	}
 	if _, ok := bu.mutation.BuildToCompetitionID(); bu.mutation.BuildToCompetitionCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"BuildToCompetition\"")
+		return errors.New(`ent: clearing a required unique edge "Build.BuildToCompetition"`)
 	}
 	return nil
 }
@@ -1636,10 +1636,10 @@ func (buo *BuildUpdateOne) ExecX(ctx context.Context) {
 // check runs all checks and user-defined validators on the builder.
 func (buo *BuildUpdateOne) check() error {
 	if _, ok := buo.mutation.BuildToEnvironmentID(); buo.mutation.BuildToEnvironmentCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"BuildToEnvironment\"")
+		return errors.New(`ent: clearing a required unique edge "Build.BuildToEnvironment"`)
 	}
 	if _, ok := buo.mutation.BuildToCompetitionID(); buo.mutation.BuildToCompetitionCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"BuildToCompetition\"")
+		return errors.New(`ent: clearing a required unique edge "Build.BuildToCompetition"`)
 	}
 	return nil
 }
@@ -1657,7 +1657,7 @@ func (buo *BuildUpdateOne) sqlSave(ctx context.Context) (_node *Build, err error
 	}
 	id, ok := buo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Build.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Build.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := buo.fields; len(fields) > 0 {

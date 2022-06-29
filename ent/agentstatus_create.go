@@ -113,6 +113,14 @@ func (asc *AgentStatusCreate) SetID(u uuid.UUID) *AgentStatusCreate {
 	return asc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (asc *AgentStatusCreate) SetNillableID(u *uuid.UUID) *AgentStatusCreate {
+	if u != nil {
+		asc.SetID(*u)
+	}
+	return asc
+}
+
 // SetAgentStatusToProvisionedHostID sets the "AgentStatusToProvisionedHost" edge to the ProvisionedHost entity by ID.
 func (asc *AgentStatusCreate) SetAgentStatusToProvisionedHostID(id uuid.UUID) *AgentStatusCreate {
 	asc.mutation.SetAgentStatusToProvisionedHostID(id)
@@ -250,46 +258,46 @@ func (asc *AgentStatusCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (asc *AgentStatusCreate) check() error {
 	if _, ok := asc.mutation.ClientID(); !ok {
-		return &ValidationError{Name: "ClientID", err: errors.New(`ent: missing required field "ClientID"`)}
+		return &ValidationError{Name: "ClientID", err: errors.New(`ent: missing required field "AgentStatus.ClientID"`)}
 	}
 	if _, ok := asc.mutation.Hostname(); !ok {
-		return &ValidationError{Name: "Hostname", err: errors.New(`ent: missing required field "Hostname"`)}
+		return &ValidationError{Name: "Hostname", err: errors.New(`ent: missing required field "AgentStatus.Hostname"`)}
 	}
 	if _, ok := asc.mutation.UpTime(); !ok {
-		return &ValidationError{Name: "UpTime", err: errors.New(`ent: missing required field "UpTime"`)}
+		return &ValidationError{Name: "UpTime", err: errors.New(`ent: missing required field "AgentStatus.UpTime"`)}
 	}
 	if _, ok := asc.mutation.BootTime(); !ok {
-		return &ValidationError{Name: "BootTime", err: errors.New(`ent: missing required field "BootTime"`)}
+		return &ValidationError{Name: "BootTime", err: errors.New(`ent: missing required field "AgentStatus.BootTime"`)}
 	}
 	if _, ok := asc.mutation.NumProcs(); !ok {
-		return &ValidationError{Name: "NumProcs", err: errors.New(`ent: missing required field "NumProcs"`)}
+		return &ValidationError{Name: "NumProcs", err: errors.New(`ent: missing required field "AgentStatus.NumProcs"`)}
 	}
 	if _, ok := asc.mutation.Os(); !ok {
-		return &ValidationError{Name: "Os", err: errors.New(`ent: missing required field "Os"`)}
+		return &ValidationError{Name: "Os", err: errors.New(`ent: missing required field "AgentStatus.Os"`)}
 	}
 	if _, ok := asc.mutation.HostID(); !ok {
-		return &ValidationError{Name: "HostID", err: errors.New(`ent: missing required field "HostID"`)}
+		return &ValidationError{Name: "HostID", err: errors.New(`ent: missing required field "AgentStatus.HostID"`)}
 	}
 	if _, ok := asc.mutation.Load1(); !ok {
-		return &ValidationError{Name: "Load1", err: errors.New(`ent: missing required field "Load1"`)}
+		return &ValidationError{Name: "Load1", err: errors.New(`ent: missing required field "AgentStatus.Load1"`)}
 	}
 	if _, ok := asc.mutation.Load5(); !ok {
-		return &ValidationError{Name: "Load5", err: errors.New(`ent: missing required field "Load5"`)}
+		return &ValidationError{Name: "Load5", err: errors.New(`ent: missing required field "AgentStatus.Load5"`)}
 	}
 	if _, ok := asc.mutation.Load15(); !ok {
-		return &ValidationError{Name: "Load15", err: errors.New(`ent: missing required field "Load15"`)}
+		return &ValidationError{Name: "Load15", err: errors.New(`ent: missing required field "AgentStatus.Load15"`)}
 	}
 	if _, ok := asc.mutation.TotalMem(); !ok {
-		return &ValidationError{Name: "TotalMem", err: errors.New(`ent: missing required field "TotalMem"`)}
+		return &ValidationError{Name: "TotalMem", err: errors.New(`ent: missing required field "AgentStatus.TotalMem"`)}
 	}
 	if _, ok := asc.mutation.FreeMem(); !ok {
-		return &ValidationError{Name: "FreeMem", err: errors.New(`ent: missing required field "FreeMem"`)}
+		return &ValidationError{Name: "FreeMem", err: errors.New(`ent: missing required field "AgentStatus.FreeMem"`)}
 	}
 	if _, ok := asc.mutation.UsedMem(); !ok {
-		return &ValidationError{Name: "UsedMem", err: errors.New(`ent: missing required field "UsedMem"`)}
+		return &ValidationError{Name: "UsedMem", err: errors.New(`ent: missing required field "AgentStatus.UsedMem"`)}
 	}
 	if _, ok := asc.mutation.Timestamp(); !ok {
-		return &ValidationError{Name: "Timestamp", err: errors.New(`ent: missing required field "Timestamp"`)}
+		return &ValidationError{Name: "Timestamp", err: errors.New(`ent: missing required field "AgentStatus.Timestamp"`)}
 	}
 	return nil
 }
@@ -303,7 +311,11 @@ func (asc *AgentStatusCreate) sqlSave(ctx context.Context) (*AgentStatus, error)
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -321,7 +333,7 @@ func (asc *AgentStatusCreate) createSpec() (*AgentStatus, *sqlgraph.CreateSpec) 
 	)
 	if id, ok := asc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := asc.mutation.ClientID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

@@ -11,8 +11,8 @@ var (
 	// AdhocPlansColumns holds the columns for the "adhoc_plans" table.
 	AdhocPlansColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "adhoc_plan_adhoc_plan_to_build", Type: field.TypeUUID, Nullable: true},
-		{Name: "adhoc_plan_adhoc_plan_to_agent_task", Type: field.TypeUUID, Nullable: true},
+		{Name: "adhoc_plan_adhoc_plan_to_build", Type: field.TypeUUID},
+		{Name: "adhoc_plan_adhoc_plan_to_agent_task", Type: field.TypeUUID},
 	}
 	// AdhocPlansTable holds the schema information for the "adhoc_plans" table.
 	AdhocPlansTable = &schema.Table{
@@ -24,13 +24,13 @@ var (
 				Symbol:     "adhoc_plans_builds_AdhocPlanToBuild",
 				Columns:    []*schema.Column{AdhocPlansColumns[1]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "adhoc_plans_agent_tasks_AdhocPlanToAgentTask",
 				Columns:    []*schema.Column{AdhocPlansColumns[2]},
 				RefColumns: []*schema.Column{AgentTasksColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 		},
 	}
@@ -91,7 +91,7 @@ var (
 		{Name: "state", Type: field.TypeEnum, Enums: []string{"AWAITING", "INPROGRESS", "FAILED", "COMPLETE"}},
 		{Name: "error_message", Type: field.TypeString, Default: ""},
 		{Name: "agent_task_agent_task_to_provisioning_step", Type: field.TypeUUID, Nullable: true},
-		{Name: "agent_task_agent_task_to_provisioned_host", Type: field.TypeUUID, Nullable: true},
+		{Name: "agent_task_agent_task_to_provisioned_host", Type: field.TypeUUID},
 	}
 	// AgentTasksTable holds the schema information for the "agent_tasks" table.
 	AgentTasksTable = &schema.Table{
@@ -109,7 +109,7 @@ var (
 				Symbol:     "agent_tasks_provisioned_hosts_AgentTaskToProvisionedHost",
 				Columns:    []*schema.Column{AgentTasksColumns[8]},
 				RefColumns: []*schema.Column{ProvisionedHostsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 		},
 	}
@@ -169,8 +169,8 @@ var (
 		{Name: "environment_revision", Type: field.TypeInt},
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "completed_plan", Type: field.TypeBool, Default: false},
-		{Name: "build_build_to_environment", Type: field.TypeUUID, Nullable: true},
-		{Name: "build_build_to_competition", Type: field.TypeUUID, Nullable: true},
+		{Name: "build_build_to_environment", Type: field.TypeUUID},
+		{Name: "build_build_to_competition", Type: field.TypeUUID},
 		{Name: "build_build_to_latest_build_commit", Type: field.TypeUUID, Nullable: true},
 		{Name: "build_build_to_repo_commit", Type: field.TypeUUID, Nullable: true},
 	}
@@ -184,13 +184,13 @@ var (
 				Symbol:     "builds_environments_BuildToEnvironment",
 				Columns:    []*schema.Column{BuildsColumns[5]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "builds_competitions_BuildToCompetition",
 				Columns:    []*schema.Column{BuildsColumns[6]},
 				RefColumns: []*schema.Column{CompetitionsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "builds_build_commits_BuildToLatestBuildCommit",
@@ -213,7 +213,7 @@ var (
 		{Name: "revision", Type: field.TypeInt},
 		{Name: "state", Type: field.TypeEnum, Enums: []string{"PLANNING", "INPROGRESS", "APPLIED", "CANCELLED", "APPROVED"}},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "build_commit_build_commit_to_build", Type: field.TypeUUID, Nullable: true},
+		{Name: "build_commit_build_commit_to_build", Type: field.TypeUUID},
 	}
 	// BuildCommitsTable holds the schema information for the "build_commits" table.
 	BuildCommitsTable = &schema.Table{
@@ -225,7 +225,7 @@ var (
 				Symbol:     "build_commits_builds_BuildCommitToBuild",
 				Columns:    []*schema.Column{BuildCommitsColumns[5]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 		},
 	}
@@ -677,8 +677,8 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "revision", Type: field.TypeInt},
 		{Name: "new_state", Type: field.TypeEnum, Enums: []string{"PLANNING", "AWAITING", "INPROGRESS", "FAILED", "COMPLETE", "TAINTED", "TODELETE", "DELETEINPROGRESS", "DELETED", "TOREBUILD"}},
-		{Name: "plan_diff_plan_diff_to_build_commit", Type: field.TypeUUID, Nullable: true},
-		{Name: "plan_diff_plan_diff_to_plan", Type: field.TypeUUID, Nullable: true},
+		{Name: "plan_diff_plan_diff_to_build_commit", Type: field.TypeUUID},
+		{Name: "plan_diff_plan_diff_to_plan", Type: field.TypeUUID},
 	}
 	// PlanDiffsTable holds the schema information for the "plan_diffs" table.
 	PlanDiffsTable = &schema.Table{
@@ -690,13 +690,13 @@ var (
 				Symbol:     "plan_diffs_build_commits_PlanDiffToBuildCommit",
 				Columns:    []*schema.Column{PlanDiffsColumns[3]},
 				RefColumns: []*schema.Column{BuildCommitsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "plan_diffs_plans_PlanDiffToPlan",
 				Columns:    []*schema.Column{PlanDiffsColumns[4]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 		},
 	}
@@ -708,10 +708,10 @@ var (
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "gin_file_middleware_gin_file_middleware_to_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "provisioned_host_provisioned_host_to_provisioned_network", Type: field.TypeUUID, Nullable: true},
-		{Name: "provisioned_host_provisioned_host_to_host", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioned_host_provisioned_host_to_provisioned_network", Type: field.TypeUUID},
+		{Name: "provisioned_host_provisioned_host_to_host", Type: field.TypeUUID},
 		{Name: "provisioned_host_provisioned_host_to_end_step_plan", Type: field.TypeUUID, Nullable: true},
-		{Name: "provisioned_host_provisioned_host_to_build", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioned_host_provisioned_host_to_build", Type: field.TypeUUID},
 	}
 	// ProvisionedHostsTable holds the schema information for the "provisioned_hosts" table.
 	ProvisionedHostsTable = &schema.Table{
@@ -735,13 +735,13 @@ var (
 				Symbol:     "provisioned_hosts_provisioned_networks_ProvisionedHostToProvisionedNetwork",
 				Columns:    []*schema.Column{ProvisionedHostsColumns[6]},
 				RefColumns: []*schema.Column{ProvisionedNetworksColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "provisioned_hosts_hosts_ProvisionedHostToHost",
 				Columns:    []*schema.Column{ProvisionedHostsColumns[7]},
 				RefColumns: []*schema.Column{HostsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "provisioned_hosts_plans_ProvisionedHostToEndStepPlan",
@@ -753,7 +753,7 @@ var (
 				Symbol:     "provisioned_hosts_builds_ProvisionedHostToBuild",
 				Columns:    []*schema.Column{ProvisionedHostsColumns[9]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 		},
 	}
@@ -966,7 +966,7 @@ var (
 		{Name: "end_time", Type: field.TypeTime, Nullable: true},
 		{Name: "errors", Type: field.TypeJSON, Nullable: true},
 		{Name: "log_file_path", Type: field.TypeString, Nullable: true},
-		{Name: "server_task_server_task_to_auth_user", Type: field.TypeUUID, Nullable: true},
+		{Name: "server_task_server_task_to_auth_user", Type: field.TypeUUID},
 		{Name: "server_task_server_task_to_environment", Type: field.TypeUUID, Nullable: true},
 		{Name: "server_task_server_task_to_build", Type: field.TypeUUID, Nullable: true},
 		{Name: "server_task_server_task_to_build_commit", Type: field.TypeUUID, Nullable: true},
@@ -981,7 +981,7 @@ var (
 				Symbol:     "server_tasks_auth_users_ServerTaskToAuthUser",
 				Columns:    []*schema.Column{ServerTasksColumns[6]},
 				RefColumns: []*schema.Column{AuthUsersColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "server_tasks_environments_ServerTaskToEnvironment",
@@ -1113,7 +1113,7 @@ var (
 		{Name: "team_number", Type: field.TypeInt},
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "plan_plan_to_team", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "team_team_to_build", Type: field.TypeUUID, Nullable: true},
+		{Name: "team_team_to_build", Type: field.TypeUUID},
 	}
 	// TeamsTable holds the schema information for the "teams" table.
 	TeamsTable = &schema.Table{
@@ -1131,7 +1131,7 @@ var (
 				Symbol:     "teams_builds_TeamToBuild",
 				Columns:    []*schema.Column{TeamsColumns[4]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 		},
 	}
@@ -1140,7 +1140,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "token", Type: field.TypeString},
 		{Name: "expire_at", Type: field.TypeInt64},
-		{Name: "auth_user_auth_user_to_token", Type: field.TypeUUID, Nullable: true},
+		{Name: "auth_user_auth_user_to_token", Type: field.TypeUUID},
 	}
 	// TokensTable holds the schema information for the "tokens" table.
 	TokensTable = &schema.Table{

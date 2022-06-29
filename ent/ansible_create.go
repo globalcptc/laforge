@@ -82,6 +82,14 @@ func (ac *AnsibleCreate) SetID(u uuid.UUID) *AnsibleCreate {
 	return ac
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (ac *AnsibleCreate) SetNillableID(u *uuid.UUID) *AnsibleCreate {
+	if u != nil {
+		ac.SetID(*u)
+	}
+	return ac
+}
+
 // AddAnsibleToUserIDs adds the "AnsibleToUser" edge to the User entity by IDs.
 func (ac *AnsibleCreate) AddAnsibleToUserIDs(ids ...uuid.UUID) *AnsibleCreate {
 	ac.mutation.AddAnsibleToUserIDs(ids...)
@@ -196,36 +204,36 @@ func (ac *AnsibleCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (ac *AnsibleCreate) check() error {
 	if _, ok := ac.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Ansible.name"`)}
 	}
 	if _, ok := ac.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Ansible.hcl_id"`)}
 	}
 	if _, ok := ac.mutation.Description(); !ok {
-		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "description"`)}
+		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Ansible.description"`)}
 	}
 	if _, ok := ac.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "source"`)}
+		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "Ansible.source"`)}
 	}
 	if _, ok := ac.mutation.PlaybookName(); !ok {
-		return &ValidationError{Name: "playbook_name", err: errors.New(`ent: missing required field "playbook_name"`)}
+		return &ValidationError{Name: "playbook_name", err: errors.New(`ent: missing required field "Ansible.playbook_name"`)}
 	}
 	if _, ok := ac.mutation.Method(); !ok {
-		return &ValidationError{Name: "method", err: errors.New(`ent: missing required field "method"`)}
+		return &ValidationError{Name: "method", err: errors.New(`ent: missing required field "Ansible.method"`)}
 	}
 	if v, ok := ac.mutation.Method(); ok {
 		if err := ansible.MethodValidator(v); err != nil {
-			return &ValidationError{Name: "method", err: fmt.Errorf(`ent: validator failed for field "method": %w`, err)}
+			return &ValidationError{Name: "method", err: fmt.Errorf(`ent: validator failed for field "Ansible.method": %w`, err)}
 		}
 	}
 	if _, ok := ac.mutation.Inventory(); !ok {
-		return &ValidationError{Name: "inventory", err: errors.New(`ent: missing required field "inventory"`)}
+		return &ValidationError{Name: "inventory", err: errors.New(`ent: missing required field "Ansible.inventory"`)}
 	}
 	if _, ok := ac.mutation.AbsPath(); !ok {
-		return &ValidationError{Name: "abs_path", err: errors.New(`ent: missing required field "abs_path"`)}
+		return &ValidationError{Name: "abs_path", err: errors.New(`ent: missing required field "Ansible.abs_path"`)}
 	}
 	if _, ok := ac.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Ansible.tags"`)}
 	}
 	return nil
 }
@@ -239,7 +247,11 @@ func (ac *AnsibleCreate) sqlSave(ctx context.Context) (*Ansible, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -257,7 +269,7 @@ func (ac *AnsibleCreate) createSpec() (*Ansible, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := ac.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := ac.mutation.Name(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

@@ -45,6 +45,14 @@ func (fdc *FileDeleteCreate) SetID(u uuid.UUID) *FileDeleteCreate {
 	return fdc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (fdc *FileDeleteCreate) SetNillableID(u *uuid.UUID) *FileDeleteCreate {
+	if u != nil {
+		fdc.SetID(*u)
+	}
+	return fdc
+}
+
 // SetFileDeleteToEnvironmentID sets the "FileDeleteToEnvironment" edge to the Environment entity by ID.
 func (fdc *FileDeleteCreate) SetFileDeleteToEnvironmentID(id uuid.UUID) *FileDeleteCreate {
 	fdc.mutation.SetFileDeleteToEnvironmentID(id)
@@ -144,13 +152,13 @@ func (fdc *FileDeleteCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (fdc *FileDeleteCreate) check() error {
 	if _, ok := fdc.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "FileDelete.hcl_id"`)}
 	}
 	if _, ok := fdc.mutation.Path(); !ok {
-		return &ValidationError{Name: "path", err: errors.New(`ent: missing required field "path"`)}
+		return &ValidationError{Name: "path", err: errors.New(`ent: missing required field "FileDelete.path"`)}
 	}
 	if _, ok := fdc.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "FileDelete.tags"`)}
 	}
 	return nil
 }
@@ -164,7 +172,11 @@ func (fdc *FileDeleteCreate) sqlSave(ctx context.Context) (*FileDelete, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -182,7 +194,7 @@ func (fdc *FileDeleteCreate) createSpec() (*FileDelete, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := fdc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := fdc.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

@@ -133,7 +133,7 @@ func (drq *DNSRecordQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single DNSRecord entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one DNSRecord entity is not found.
+// Returns a *NotSingularError when more than one DNSRecord entity is found.
 // Returns a *NotFoundError when no DNSRecord entities are found.
 func (drq *DNSRecordQuery) Only(ctx context.Context) (*DNSRecord, error) {
 	nodes, err := drq.Limit(2).All(ctx)
@@ -160,7 +160,7 @@ func (drq *DNSRecordQuery) OnlyX(ctx context.Context) *DNSRecord {
 }
 
 // OnlyID is like Only, but returns the only DNSRecord ID in the query.
-// Returns a *NotSingularError when exactly one DNSRecord ID is not found.
+// Returns a *NotSingularError when more than one DNSRecord ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (drq *DNSRecordQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -270,8 +270,9 @@ func (drq *DNSRecordQuery) Clone() *DNSRecordQuery {
 		predicates:                 append([]predicate.DNSRecord{}, drq.predicates...),
 		withDNSRecordToEnvironment: drq.withDNSRecordToEnvironment.Clone(),
 		// clone intermediate query.
-		sql:  drq.sql.Clone(),
-		path: drq.path,
+		sql:    drq.sql.Clone(),
+		path:   drq.path,
+		unique: drq.unique,
 	}
 }
 
@@ -416,6 +417,10 @@ func (drq *DNSRecordQuery) sqlAll(ctx context.Context) ([]*DNSRecord, error) {
 
 func (drq *DNSRecordQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := drq.querySpec()
+	_spec.Node.Columns = drq.fields
+	if len(drq.fields) > 0 {
+		_spec.Unique = drq.unique != nil && *drq.unique
+	}
 	return sqlgraph.CountNodes(ctx, drq.driver, _spec)
 }
 
@@ -486,6 +491,9 @@ func (drq *DNSRecordQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if drq.sql != nil {
 		selector = drq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if drq.unique != nil && *drq.unique {
+		selector.Distinct()
 	}
 	for _, p := range drq.predicates {
 		p(selector)
@@ -765,9 +773,7 @@ func (drgb *DNSRecordGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range drgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(drgb.fields...)...)

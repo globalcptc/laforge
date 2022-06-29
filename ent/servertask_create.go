@@ -87,6 +87,14 @@ func (stc *ServerTaskCreate) SetID(u uuid.UUID) *ServerTaskCreate {
 	return stc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (stc *ServerTaskCreate) SetNillableID(u *uuid.UUID) *ServerTaskCreate {
+	if u != nil {
+		stc.SetID(*u)
+	}
+	return stc
+}
+
 // SetServerTaskToAuthUserID sets the "ServerTaskToAuthUser" edge to the AuthUser entity by ID.
 func (stc *ServerTaskCreate) SetServerTaskToAuthUserID(id uuid.UUID) *ServerTaskCreate {
 	stc.mutation.SetServerTaskToAuthUserID(id)
@@ -261,18 +269,18 @@ func (stc *ServerTaskCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (stc *ServerTaskCreate) check() error {
 	if _, ok := stc.mutation.GetType(); !ok {
-		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "type"`)}
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "ServerTask.type"`)}
 	}
 	if v, ok := stc.mutation.GetType(); ok {
 		if err := servertask.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "type": %w`, err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ServerTask.type": %w`, err)}
 		}
 	}
 	if _, ok := stc.mutation.ServerTaskToAuthUserID(); !ok {
-		return &ValidationError{Name: "ServerTaskToAuthUser", err: errors.New("ent: missing required edge \"ServerTaskToAuthUser\"")}
+		return &ValidationError{Name: "ServerTaskToAuthUser", err: errors.New(`ent: missing required edge "ServerTask.ServerTaskToAuthUser"`)}
 	}
 	if _, ok := stc.mutation.ServerTaskToStatusID(); !ok {
-		return &ValidationError{Name: "ServerTaskToStatus", err: errors.New("ent: missing required edge \"ServerTaskToStatus\"")}
+		return &ValidationError{Name: "ServerTaskToStatus", err: errors.New(`ent: missing required edge "ServerTask.ServerTaskToStatus"`)}
 	}
 	return nil
 }
@@ -286,7 +294,11 @@ func (stc *ServerTaskCreate) sqlSave(ctx context.Context) (*ServerTask, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -304,7 +316,7 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := stc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := stc.mutation.GetType(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

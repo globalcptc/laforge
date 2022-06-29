@@ -7,4 +7,4 @@ cert: ## Create certificates to encrypt the gRPC connection
 		-out service.pem -days 365 -sha256 -extfile certificate.conf -extensions req_ext
 
 clean:
-	rm *.cert *.key *.pem *.csr *.srl
+	rm *.cert *.key *.pem *.csr 

@@ -94,7 +94,7 @@ func DeleteBuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.Ser
 
 	var wg sync.WaitGroup
 	for _, entPlan := range entPlans {
-		planStatus, err := entPlan.PlanToStatus(deleteContext)
+		planStatus, err := entPlan.QueryPlanToStatus().Only(deleteContext)
 		if err != nil {
 			taskStatus, serverTask, err = utils.FailServerTask(deleteContext, client, rdb, taskStatus, serverTask)
 			if err != nil {
@@ -399,7 +399,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 
 		if hasTaintedNextPlans {
 			logger.Log.Errorf("error: children are TAINTED for entPlan %s", entPlan.ID)
-			entStatus, err := entPlan.PlanToStatus(ctx)
+			entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
 			if err != nil {
 				logger.Log.Errorf("error querying status from ent plan: %v", err)
 				return
@@ -445,7 +445,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 
 	logger.Log.Debugf("fr deleting  | %s - %s", entPlan.Type, entPlan.ID)
 
-	entStatus, err := entPlan.PlanToStatus(ctx)
+	entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("error querying status from ent plan: %v", err)
 		return
@@ -477,7 +477,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 	case plan.TypeStartTeam:
 		deleteErr = provisionedStatus.Update().SetState(status.StateDELETED).Exec(ctx)
 		rdb.Publish(ctx, "updatedStatus", provisionedStatus.ID.String())
-		entTeam, err := entPlan.PlanToTeam(ctx)
+		entTeam, err := entPlan.QueryPlanToTeam().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("error querying team from ent plan: %v", err)
 			return
@@ -485,7 +485,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 		logger.Log.Debugf("del team  | %s", entPlan.ID)
 		deleteErr = deleteTeam(client, logger, builder, ctx, entTeam)
 	case plan.TypeProvisionNetwork:
-		entProNetwork, err := entPlan.PlanToProvisionedNetwork(ctx)
+		entProNetwork, err := entPlan.QueryPlanToProvisionedNetwork().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("error querying provisioned network from ent plan: %v", err)
 			return
@@ -493,7 +493,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 		logger.Log.Debugf("del network  | %s", entPlan.ID)
 		deleteErr = deleteNetwork(client, logger, builder, ctx, entProNetwork)
 	case plan.TypeProvisionHost:
-		entProHost, err := entPlan.PlanToProvisionedHost(ctx)
+		entProHost, err := entPlan.QueryPlanToProvisionedHost().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("error querying provisioned host from ent plan: %v", err)
 			return
@@ -639,7 +639,7 @@ func deleteNetwork(client *ent.Client, logger *logging.Logger, builder *builder.
 
 func deleteTeam(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entTeam *ent.Team) error {
 	logger.Log.Infof("del network  | %d", entTeam.TeamNumber)
-	teamStatus, err := entTeam.TeamToStatus(ctx)
+	teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Team status: %v", err)
 		return err

@@ -113,6 +113,14 @@ func (sc *ScriptCreate) SetID(u uuid.UUID) *ScriptCreate {
 	return sc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (sc *ScriptCreate) SetNillableID(u *uuid.UUID) *ScriptCreate {
+	if u != nil {
+		sc.SetID(*u)
+	}
+	return sc
+}
+
 // AddScriptToUserIDs adds the "ScriptToUser" edge to the User entity by IDs.
 func (sc *ScriptCreate) AddScriptToUserIDs(ids ...uuid.UUID) *ScriptCreate {
 	sc.mutation.AddScriptToUserIDs(ids...)
@@ -242,46 +250,46 @@ func (sc *ScriptCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (sc *ScriptCreate) check() error {
 	if _, ok := sc.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Script.hcl_id"`)}
 	}
 	if _, ok := sc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Script.name"`)}
 	}
 	if _, ok := sc.mutation.Language(); !ok {
-		return &ValidationError{Name: "language", err: errors.New(`ent: missing required field "language"`)}
+		return &ValidationError{Name: "language", err: errors.New(`ent: missing required field "Script.language"`)}
 	}
 	if _, ok := sc.mutation.Description(); !ok {
-		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "description"`)}
+		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Script.description"`)}
 	}
 	if _, ok := sc.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "source"`)}
+		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "Script.source"`)}
 	}
 	if _, ok := sc.mutation.SourceType(); !ok {
-		return &ValidationError{Name: "source_type", err: errors.New(`ent: missing required field "source_type"`)}
+		return &ValidationError{Name: "source_type", err: errors.New(`ent: missing required field "Script.source_type"`)}
 	}
 	if _, ok := sc.mutation.Cooldown(); !ok {
-		return &ValidationError{Name: "cooldown", err: errors.New(`ent: missing required field "cooldown"`)}
+		return &ValidationError{Name: "cooldown", err: errors.New(`ent: missing required field "Script.cooldown"`)}
 	}
 	if _, ok := sc.mutation.Timeout(); !ok {
-		return &ValidationError{Name: "timeout", err: errors.New(`ent: missing required field "timeout"`)}
+		return &ValidationError{Name: "timeout", err: errors.New(`ent: missing required field "Script.timeout"`)}
 	}
 	if _, ok := sc.mutation.IgnoreErrors(); !ok {
-		return &ValidationError{Name: "ignore_errors", err: errors.New(`ent: missing required field "ignore_errors"`)}
+		return &ValidationError{Name: "ignore_errors", err: errors.New(`ent: missing required field "Script.ignore_errors"`)}
 	}
 	if _, ok := sc.mutation.Args(); !ok {
-		return &ValidationError{Name: "args", err: errors.New(`ent: missing required field "args"`)}
+		return &ValidationError{Name: "args", err: errors.New(`ent: missing required field "Script.args"`)}
 	}
 	if _, ok := sc.mutation.Disabled(); !ok {
-		return &ValidationError{Name: "disabled", err: errors.New(`ent: missing required field "disabled"`)}
+		return &ValidationError{Name: "disabled", err: errors.New(`ent: missing required field "Script.disabled"`)}
 	}
 	if _, ok := sc.mutation.Vars(); !ok {
-		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "Script.vars"`)}
 	}
 	if _, ok := sc.mutation.AbsPath(); !ok {
-		return &ValidationError{Name: "abs_path", err: errors.New(`ent: missing required field "abs_path"`)}
+		return &ValidationError{Name: "abs_path", err: errors.New(`ent: missing required field "Script.abs_path"`)}
 	}
 	if _, ok := sc.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Script.tags"`)}
 	}
 	return nil
 }
@@ -295,7 +303,11 @@ func (sc *ScriptCreate) sqlSave(ctx context.Context) (*Script, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -313,7 +325,7 @@ func (sc *ScriptCreate) createSpec() (*Script, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := sc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := sc.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

@@ -397,7 +397,7 @@ func (bq *BuildQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single Build entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one Build entity is not found.
+// Returns a *NotSingularError when more than one Build entity is found.
 // Returns a *NotFoundError when no Build entities are found.
 func (bq *BuildQuery) Only(ctx context.Context) (*Build, error) {
 	nodes, err := bq.Limit(2).All(ctx)
@@ -424,7 +424,7 @@ func (bq *BuildQuery) OnlyX(ctx context.Context) *Build {
 }
 
 // OnlyID is like Only, but returns the only Build ID in the query.
-// Returns a *NotSingularError when exactly one Build ID is not found.
+// Returns a *NotSingularError when more than one Build ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (bq *BuildQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -545,8 +545,9 @@ func (bq *BuildQuery) Clone() *BuildQuery {
 		withBuildToAgentStatuses:      bq.withBuildToAgentStatuses.Clone(),
 		withBuildToServerTasks:        bq.withBuildToServerTasks.Clone(),
 		// clone intermediate query.
-		sql:  bq.sql.Clone(),
-		path: bq.path,
+		sql:    bq.sql.Clone(),
+		path:   bq.path,
+		unique: bq.unique,
 	}
 }
 
@@ -1141,6 +1142,10 @@ func (bq *BuildQuery) sqlAll(ctx context.Context) ([]*Build, error) {
 
 func (bq *BuildQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := bq.querySpec()
+	_spec.Node.Columns = bq.fields
+	if len(bq.fields) > 0 {
+		_spec.Unique = bq.unique != nil && *bq.unique
+	}
 	return sqlgraph.CountNodes(ctx, bq.driver, _spec)
 }
 
@@ -1211,6 +1216,9 @@ func (bq *BuildQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if bq.sql != nil {
 		selector = bq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if bq.unique != nil && *bq.unique {
+		selector.Distinct()
 	}
 	for _, p := range bq.predicates {
 		p(selector)
@@ -1490,9 +1498,7 @@ func (bgb *BuildGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range bgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(bgb.fields...)...)

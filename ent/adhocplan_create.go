@@ -29,6 +29,14 @@ func (apc *AdhocPlanCreate) SetID(u uuid.UUID) *AdhocPlanCreate {
 	return apc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (apc *AdhocPlanCreate) SetNillableID(u *uuid.UUID) *AdhocPlanCreate {
+	if u != nil {
+		apc.SetID(*u)
+	}
+	return apc
+}
+
 // AddPrevAdhocPlanIDs adds the "PrevAdhocPlan" edge to the AdhocPlan entity by IDs.
 func (apc *AdhocPlanCreate) AddPrevAdhocPlanIDs(ids ...uuid.UUID) *AdhocPlanCreate {
 	apc.mutation.AddPrevAdhocPlanIDs(ids...)
@@ -172,13 +180,13 @@ func (apc *AdhocPlanCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (apc *AdhocPlanCreate) check() error {
 	if _, ok := apc.mutation.AdhocPlanToBuildID(); !ok {
-		return &ValidationError{Name: "AdhocPlanToBuild", err: errors.New("ent: missing required edge \"AdhocPlanToBuild\"")}
+		return &ValidationError{Name: "AdhocPlanToBuild", err: errors.New(`ent: missing required edge "AdhocPlan.AdhocPlanToBuild"`)}
 	}
 	if _, ok := apc.mutation.AdhocPlanToStatusID(); !ok {
-		return &ValidationError{Name: "AdhocPlanToStatus", err: errors.New("ent: missing required edge \"AdhocPlanToStatus\"")}
+		return &ValidationError{Name: "AdhocPlanToStatus", err: errors.New(`ent: missing required edge "AdhocPlan.AdhocPlanToStatus"`)}
 	}
 	if _, ok := apc.mutation.AdhocPlanToAgentTaskID(); !ok {
-		return &ValidationError{Name: "AdhocPlanToAgentTask", err: errors.New("ent: missing required edge \"AdhocPlanToAgentTask\"")}
+		return &ValidationError{Name: "AdhocPlanToAgentTask", err: errors.New(`ent: missing required edge "AdhocPlan.AdhocPlanToAgentTask"`)}
 	}
 	return nil
 }
@@ -192,7 +200,11 @@ func (apc *AdhocPlanCreate) sqlSave(ctx context.Context) (*AdhocPlan, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -210,7 +222,7 @@ func (apc *AdhocPlanCreate) createSpec() (*AdhocPlan, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := apc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if nodes := apc.mutation.PrevAdhocPlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

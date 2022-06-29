@@ -254,7 +254,7 @@ func (pnq *ProvisionedNetworkQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single ProvisionedNetwork entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one ProvisionedNetwork entity is not found.
+// Returns a *NotSingularError when more than one ProvisionedNetwork entity is found.
 // Returns a *NotFoundError when no ProvisionedNetwork entities are found.
 func (pnq *ProvisionedNetworkQuery) Only(ctx context.Context) (*ProvisionedNetwork, error) {
 	nodes, err := pnq.Limit(2).All(ctx)
@@ -281,7 +281,7 @@ func (pnq *ProvisionedNetworkQuery) OnlyX(ctx context.Context) *ProvisionedNetwo
 }
 
 // OnlyID is like Only, but returns the only ProvisionedNetwork ID in the query.
-// Returns a *NotSingularError when exactly one ProvisionedNetwork ID is not found.
+// Returns a *NotSingularError when more than one ProvisionedNetwork ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (pnq *ProvisionedNetworkQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -396,8 +396,9 @@ func (pnq *ProvisionedNetworkQuery) Clone() *ProvisionedNetworkQuery {
 		withProvisionedNetworkToProvisionedHost: pnq.withProvisionedNetworkToProvisionedHost.Clone(),
 		withProvisionedNetworkToPlan:            pnq.withProvisionedNetworkToPlan.Clone(),
 		// clone intermediate query.
-		sql:  pnq.sql.Clone(),
-		path: pnq.path,
+		sql:    pnq.sql.Clone(),
+		path:   pnq.path,
+		unique: pnq.unique,
 	}
 }
 
@@ -746,6 +747,10 @@ func (pnq *ProvisionedNetworkQuery) sqlAll(ctx context.Context) ([]*ProvisionedN
 
 func (pnq *ProvisionedNetworkQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := pnq.querySpec()
+	_spec.Node.Columns = pnq.fields
+	if len(pnq.fields) > 0 {
+		_spec.Unique = pnq.unique != nil && *pnq.unique
+	}
 	return sqlgraph.CountNodes(ctx, pnq.driver, _spec)
 }
 
@@ -816,6 +821,9 @@ func (pnq *ProvisionedNetworkQuery) sqlQuery(ctx context.Context) *sql.Selector 
 	if pnq.sql != nil {
 		selector = pnq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if pnq.unique != nil && *pnq.unique {
+		selector.Distinct()
 	}
 	for _, p := range pnq.predicates {
 		p(selector)
@@ -1095,9 +1103,7 @@ func (pngb *ProvisionedNetworkGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range pngb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(pngb.fields...)...)

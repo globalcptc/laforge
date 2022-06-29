@@ -94,6 +94,14 @@ func (cc *CommandCreate) SetID(u uuid.UUID) *CommandCreate {
 	return cc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (cc *CommandCreate) SetNillableID(u *uuid.UUID) *CommandCreate {
+	if u != nil {
+		cc.SetID(*u)
+	}
+	return cc
+}
+
 // AddCommandToUserIDs adds the "CommandToUser" edge to the User entity by IDs.
 func (cc *CommandCreate) AddCommandToUserIDs(ids ...uuid.UUID) *CommandCreate {
 	cc.mutation.AddCommandToUserIDs(ids...)
@@ -208,47 +216,47 @@ func (cc *CommandCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (cc *CommandCreate) check() error {
 	if _, ok := cc.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Command.hcl_id"`)}
 	}
 	if _, ok := cc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Command.name"`)}
 	}
 	if _, ok := cc.mutation.Description(); !ok {
-		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "description"`)}
+		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Command.description"`)}
 	}
 	if _, ok := cc.mutation.Program(); !ok {
-		return &ValidationError{Name: "program", err: errors.New(`ent: missing required field "program"`)}
+		return &ValidationError{Name: "program", err: errors.New(`ent: missing required field "Command.program"`)}
 	}
 	if _, ok := cc.mutation.Args(); !ok {
-		return &ValidationError{Name: "args", err: errors.New(`ent: missing required field "args"`)}
+		return &ValidationError{Name: "args", err: errors.New(`ent: missing required field "Command.args"`)}
 	}
 	if _, ok := cc.mutation.IgnoreErrors(); !ok {
-		return &ValidationError{Name: "ignore_errors", err: errors.New(`ent: missing required field "ignore_errors"`)}
+		return &ValidationError{Name: "ignore_errors", err: errors.New(`ent: missing required field "Command.ignore_errors"`)}
 	}
 	if _, ok := cc.mutation.Disabled(); !ok {
-		return &ValidationError{Name: "disabled", err: errors.New(`ent: missing required field "disabled"`)}
+		return &ValidationError{Name: "disabled", err: errors.New(`ent: missing required field "Command.disabled"`)}
 	}
 	if _, ok := cc.mutation.Cooldown(); !ok {
-		return &ValidationError{Name: "cooldown", err: errors.New(`ent: missing required field "cooldown"`)}
+		return &ValidationError{Name: "cooldown", err: errors.New(`ent: missing required field "Command.cooldown"`)}
 	}
 	if v, ok := cc.mutation.Cooldown(); ok {
 		if err := command.CooldownValidator(v); err != nil {
-			return &ValidationError{Name: "cooldown", err: fmt.Errorf(`ent: validator failed for field "cooldown": %w`, err)}
+			return &ValidationError{Name: "cooldown", err: fmt.Errorf(`ent: validator failed for field "Command.cooldown": %w`, err)}
 		}
 	}
 	if _, ok := cc.mutation.Timeout(); !ok {
-		return &ValidationError{Name: "timeout", err: errors.New(`ent: missing required field "timeout"`)}
+		return &ValidationError{Name: "timeout", err: errors.New(`ent: missing required field "Command.timeout"`)}
 	}
 	if v, ok := cc.mutation.Timeout(); ok {
 		if err := command.TimeoutValidator(v); err != nil {
-			return &ValidationError{Name: "timeout", err: fmt.Errorf(`ent: validator failed for field "timeout": %w`, err)}
+			return &ValidationError{Name: "timeout", err: fmt.Errorf(`ent: validator failed for field "Command.timeout": %w`, err)}
 		}
 	}
 	if _, ok := cc.mutation.Vars(); !ok {
-		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "Command.vars"`)}
 	}
 	if _, ok := cc.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Command.tags"`)}
 	}
 	return nil
 }
@@ -262,7 +270,11 @@ func (cc *CommandCreate) sqlSave(ctx context.Context) (*Command, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -280,7 +292,7 @@ func (cc *CommandCreate) createSpec() (*Command, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := cc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := cc.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

@@ -1547,7 +1547,7 @@ func validateHostDependencies(ctx context.Context, client *ent.Client, log *logg
 			ClearHostDependencyToNetwork().
 			Save(ctx)
 		if err != nil {
-			dependedByHost, queryErr := uncheckedHostDependency.HostDependencyToDependByHost(ctx)
+			dependedByHost, queryErr := uncheckedHostDependency.QueryHostDependencyToDependByHost().Only(ctx)
 			if queryErr != nil {
 				log.Log.Errorf("Unable to find the host depended by %v Err: %v", uncheckedHostDependency.HostID, queryErr)
 				return nil, queryErr
@@ -1560,7 +1560,7 @@ func validateHostDependencies(ctx context.Context, client *ent.Client, log *logg
 			SetHostDependencyToNetwork(entNetwork).
 			Save(ctx)
 		if err != nil {
-			dependedByHost, queryErr := uncheckedHostDependency.HostDependencyToDependByHost(ctx)
+			dependedByHost, queryErr := uncheckedHostDependency.QueryHostDependencyToDependByHost().Only(ctx)
 			if queryErr != nil {
 				log.Log.Errorf("Unable to find the host depended by %v Err: %v", uncheckedHostDependency.HostID, queryErr)
 				return nil, queryErr

@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -213,7 +214,7 @@ func (au *AnsibleUpdate) ExecX(ctx context.Context) {
 func (au *AnsibleUpdate) check() error {
 	if v, ok := au.mutation.Method(); ok {
 		if err := ansible.MethodValidator(v); err != nil {
-			return &ValidationError{Name: "method", err: fmt.Errorf("ent: validator failed for field \"method\": %w", err)}
+			return &ValidationError{Name: "method", err: fmt.Errorf(`ent: validator failed for field "Ansible.method": %w`, err)}
 		}
 	}
 	return nil
@@ -599,7 +600,7 @@ func (auo *AnsibleUpdateOne) ExecX(ctx context.Context) {
 func (auo *AnsibleUpdateOne) check() error {
 	if v, ok := auo.mutation.Method(); ok {
 		if err := ansible.MethodValidator(v); err != nil {
-			return &ValidationError{Name: "method", err: fmt.Errorf("ent: validator failed for field \"method\": %w", err)}
+			return &ValidationError{Name: "method", err: fmt.Errorf(`ent: validator failed for field "Ansible.method": %w`, err)}
 		}
 	}
 	return nil
@@ -618,7 +619,7 @@ func (auo *AnsibleUpdateOne) sqlSave(ctx context.Context) (_node *Ansible, err e
 	}
 	id, ok := auo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Ansible.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Ansible.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := auo.fields; len(fields) > 0 {

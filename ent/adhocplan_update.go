@@ -222,13 +222,13 @@ func (apu *AdhocPlanUpdate) ExecX(ctx context.Context) {
 // check runs all checks and user-defined validators on the builder.
 func (apu *AdhocPlanUpdate) check() error {
 	if _, ok := apu.mutation.AdhocPlanToBuildID(); apu.mutation.AdhocPlanToBuildCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"AdhocPlanToBuild\"")
+		return errors.New(`ent: clearing a required unique edge "AdhocPlan.AdhocPlanToBuild"`)
 	}
 	if _, ok := apu.mutation.AdhocPlanToStatusID(); apu.mutation.AdhocPlanToStatusCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"AdhocPlanToStatus\"")
+		return errors.New(`ent: clearing a required unique edge "AdhocPlan.AdhocPlanToStatus"`)
 	}
 	if _, ok := apu.mutation.AdhocPlanToAgentTaskID(); apu.mutation.AdhocPlanToAgentTaskCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"AdhocPlanToAgentTask\"")
+		return errors.New(`ent: clearing a required unique edge "AdhocPlan.AdhocPlanToAgentTask"`)
 	}
 	return nil
 }
@@ -681,13 +681,13 @@ func (apuo *AdhocPlanUpdateOne) ExecX(ctx context.Context) {
 // check runs all checks and user-defined validators on the builder.
 func (apuo *AdhocPlanUpdateOne) check() error {
 	if _, ok := apuo.mutation.AdhocPlanToBuildID(); apuo.mutation.AdhocPlanToBuildCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"AdhocPlanToBuild\"")
+		return errors.New(`ent: clearing a required unique edge "AdhocPlan.AdhocPlanToBuild"`)
 	}
 	if _, ok := apuo.mutation.AdhocPlanToStatusID(); apuo.mutation.AdhocPlanToStatusCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"AdhocPlanToStatus\"")
+		return errors.New(`ent: clearing a required unique edge "AdhocPlan.AdhocPlanToStatus"`)
 	}
 	if _, ok := apuo.mutation.AdhocPlanToAgentTaskID(); apuo.mutation.AdhocPlanToAgentTaskCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"AdhocPlanToAgentTask\"")
+		return errors.New(`ent: clearing a required unique edge "AdhocPlan.AdhocPlanToAgentTask"`)
 	}
 	return nil
 }
@@ -705,7 +705,7 @@ func (apuo *AdhocPlanUpdateOne) sqlSave(ctx context.Context) (_node *AdhocPlan, 
 	}
 	id, ok := apuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing AdhocPlan.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "AdhocPlan.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := apuo.fields; len(fields) > 0 {

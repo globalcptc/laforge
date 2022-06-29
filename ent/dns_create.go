@@ -64,6 +64,14 @@ func (dc *DNSCreate) SetID(u uuid.UUID) *DNSCreate {
 	return dc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (dc *DNSCreate) SetNillableID(u *uuid.UUID) *DNSCreate {
+	if u != nil {
+		dc.SetID(*u)
+	}
+	return dc
+}
+
 // AddDNSToEnvironmentIDs adds the "DNSToEnvironment" edge to the Environment entity by IDs.
 func (dc *DNSCreate) AddDNSToEnvironmentIDs(ids ...uuid.UUID) *DNSCreate {
 	dc.mutation.AddDNSToEnvironmentIDs(ids...)
@@ -174,22 +182,22 @@ func (dc *DNSCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (dc *DNSCreate) check() error {
 	if _, ok := dc.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "DNS.hcl_id"`)}
 	}
 	if _, ok := dc.mutation.GetType(); !ok {
-		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "type"`)}
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "DNS.type"`)}
 	}
 	if _, ok := dc.mutation.RootDomain(); !ok {
-		return &ValidationError{Name: "root_domain", err: errors.New(`ent: missing required field "root_domain"`)}
+		return &ValidationError{Name: "root_domain", err: errors.New(`ent: missing required field "DNS.root_domain"`)}
 	}
 	if _, ok := dc.mutation.DNSServers(); !ok {
-		return &ValidationError{Name: "dns_servers", err: errors.New(`ent: missing required field "dns_servers"`)}
+		return &ValidationError{Name: "dns_servers", err: errors.New(`ent: missing required field "DNS.dns_servers"`)}
 	}
 	if _, ok := dc.mutation.NtpServers(); !ok {
-		return &ValidationError{Name: "ntp_servers", err: errors.New(`ent: missing required field "ntp_servers"`)}
+		return &ValidationError{Name: "ntp_servers", err: errors.New(`ent: missing required field "DNS.ntp_servers"`)}
 	}
 	if _, ok := dc.mutation.Config(); !ok {
-		return &ValidationError{Name: "config", err: errors.New(`ent: missing required field "config"`)}
+		return &ValidationError{Name: "config", err: errors.New(`ent: missing required field "DNS.config"`)}
 	}
 	return nil
 }
@@ -203,7 +211,11 @@ func (dc *DNSCreate) sqlSave(ctx context.Context) (*DNS, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -221,7 +233,7 @@ func (dc *DNSCreate) createSpec() (*DNS, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := dc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := dc.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
