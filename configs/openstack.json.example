@@ -3,6 +3,7 @@
   "max_build_workers": 8,
   "max_teardown_workers": 8,
   "auth_url": "",
+  "identify_version": "v3",
   "username": "",
   "password": "",
   "project_id": "",
