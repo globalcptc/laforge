@@ -28,6 +28,9 @@ RUN go build -o server_binary server/server.go
 
 RUN mkdir /var/log/laforge
 
+RUN mkdir ~/.ssh
+RUN ssh-keygen -F github.com || ssh-keyscan github.com >> ~/.ssh/known_hosts
+
 EXPOSE 8080 50051
 
 CMD ["./server_binary"]
