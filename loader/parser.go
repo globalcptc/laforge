@@ -378,70 +378,109 @@ func LoadEnvironment(ctx context.Context, client *ent.Client, log *logging.Logge
 	return createEnviroments(ctx, client, log, loadedConfig.Environments, loadedConfig)
 }
 
+// rollback calls to tx.Rollback and wraps the given error
+// with the rollback error if occurred.
+func rollback(tx *ent.Tx, err error) error {
+	if rerr := tx.Rollback(); rerr != nil {
+		err = fmt.Errorf("%w: %v", err, rerr)
+	}
+	return err
+}
+
 // Need to combine everything here
 func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Logger, configEnvs map[string]*ent.Environment, loadedConfig *DefinedConfigs) ([]*ent.Environment, error) {
+	txClient, err := client.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("starting a transaction: %w", err)
+	}
 	returnedEnvironment := []*ent.Environment{}
 	for _, cEnviroment := range configEnvs {
+		log.Log.Debugf("Creating ENV: %v", cEnviroment.HclID)
+
 		environmentHosts := []string{}
 		for _, cIncludedNetwork := range cEnviroment.HCLEnvironmentToIncludedNetwork {
 			environmentHosts = append(environmentHosts, cIncludedNetwork.Hosts...)
 		}
-		returnedCompetitions, returnedDNS, err := createCompetitions(ctx, client, log, loadedConfig.Competitions, cEnviroment.HclID)
+		returnedCompetitions, returnedDNS, err := createCompetitions(txClient, ctx, log, loadedConfig.Competitions, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in competition into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedScripts, returnedFindings, err := createScripts(ctx, client, log, loadedConfig.Scripts, cEnviroment.HclID)
+		returnedScripts, returnedFindings, err := createScripts(txClient, ctx, log, loadedConfig.Scripts, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in findings into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedCommands, err := createCommands(ctx, client, log, loadedConfig.Commands, cEnviroment.HclID)
+		returnedCommands, err := createCommands(txClient, ctx, log, loadedConfig.Commands, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in commands into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedDNSRecords, err := createDNSRecords(ctx, client, log, loadedConfig.DNSRecords, cEnviroment.HclID)
+		returnedDNSRecords, err := createDNSRecords(txClient, ctx, log, loadedConfig.DNSRecords, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in dns_records into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedFileDownloads, err := createFileDownload(ctx, client, log, loadedConfig.FileDownload, cEnviroment.HclID)
+		returnedFileDownloads, err := createFileDownload(txClient, ctx, log, loadedConfig.FileDownload, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in file_downloads into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedFileDeletes, err := createFileDelete(ctx, client, log, loadedConfig.FileDelete, cEnviroment.HclID)
+		returnedFileDeletes, err := createFileDelete(txClient, ctx, log, loadedConfig.FileDelete, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in file_delets into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedFileExtracts, err := createFileExtract(ctx, client, log, loadedConfig.FileExtract, cEnviroment.HclID)
+		returnedFileExtracts, err := createFileExtract(txClient, ctx, log, loadedConfig.FileExtract, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in file_extracts into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedIdentities, err := createIdentities(ctx, client, log, loadedConfig.Identities, cEnviroment.HclID)
+		returnedIdentities, err := createIdentities(txClient, ctx, log, loadedConfig.Identities, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in identities into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedNetworks, err := createNetworks(ctx, client, log, loadedConfig.Networks, cEnviroment.HCLEnvironmentToIncludedNetwork, cEnviroment.HclID)
+		returnedNetworks, err := createNetworks(txClient, ctx, log, loadedConfig.Networks, cEnviroment.HCLEnvironmentToIncludedNetwork, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in competition into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedAnsible, err := createAnsible(ctx, client, log, loadedConfig.Ansible, cEnviroment.HclID)
+		returnedAnsible, err := createAnsible(txClient, ctx, log, loadedConfig.Ansible, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in Ansible into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
 		// returnedHostDependencies is empty if ran once but ok when ran multiple times
-		returnedHosts, returnedHostDependencies, err := createHosts(ctx, client, log, loadedConfig.Hosts, cEnviroment.HclID, environmentHosts)
+		returnedHosts, returnedHostDependencies, err := createHosts(txClient, ctx, log, loadedConfig.Hosts, cEnviroment.HclID, environmentHosts)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in Hosts into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedIncludedNetworks, err := createIncludedNetwork(ctx, client, log, cEnviroment.HCLEnvironmentToIncludedNetwork, cEnviroment.HclID)
+		returnedIncludedNetworks, err := createIncludedNetwork(txClient, ctx, log, cEnviroment.HCLEnvironmentToIncludedNetwork, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in included_networks into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		entEnvironment, err := client.Environment.
+		entEnvironment, err := txClient.Environment.
 			Query().
 			Where(environment.HclIDEQ(cEnviroment.HclID)).
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				newEnvironment, err := client.Environment.Create().
+				newEnvironment, err := txClient.Environment.Create().
 					SetHclID(cEnviroment.HclID).
 					SetAdminCidrs(cEnviroment.AdminCidrs).
 					SetBuilder(cEnviroment.Builder).
@@ -470,11 +509,13 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 					AddEnvironmentToAnsible(returnedAnsible...).
 					Save(ctx)
 				if err != nil {
+					err = rollback(txClient, err)
 					log.Log.Errorf("Failed to Create Environment %v. Err: %v", cEnviroment.HclID, err)
 					return nil, err
 				}
-				_, err = validateHostDependencies(ctx, client, log, returnedHostDependencies, cEnviroment.HclID)
+				_, err = validateHostDependencies(txClient, ctx, log, returnedHostDependencies, cEnviroment.HclID)
 				if err != nil {
+					err = rollback(txClient, err)
 					log.Log.Errorf("Failed to Validate Host Dependencies in Environment %v. Err: %v", cEnviroment.HclID, err)
 					return nil, err
 				}
@@ -511,6 +552,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			ClearEnvironmentToAnsible().
 			Save(ctx)
 		if err != nil {
+			err = rollback(txClient, err)
 			log.Log.Errorf("Failed to Update Environment %v. Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
@@ -532,29 +574,39 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			AddEnvironmentToAnsible(returnedAnsible...).
 			Save(ctx)
 		if err != nil {
+			err = rollback(txClient, err)
 			log.Log.Errorf("Failed to Update Environment %v with it's edges. Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		_, err = validateHostDependencies(ctx, client, log, returnedHostDependencies, cEnviroment.HclID)
+		_, err = validateHostDependencies(txClient, ctx, log, returnedHostDependencies, cEnviroment.HclID)
 		if err != nil {
+			err = rollback(txClient, err)
 			log.Log.Errorf("Failed to Validate Host Dependencies in Environment %v. Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
 		returnedEnvironment = append(returnedEnvironment, entEnvironment)
 	}
+	err = txClient.Commit()
+	if err != nil {
+		err = rollback(txClient, err)
+		log.Log.Errorf("Failed Commit Environments. Err: %v", err)
+		return nil, err
+	}
+	log.Log.Info("Sucessfully imported ENV")
 	return returnedEnvironment, nil
 }
 
-func createCompetitions(ctx context.Context, client *ent.Client, log *logging.Logger, configCompetitions map[string]*ent.Competition, envHclID string) ([]*ent.Competition, []*ent.DNS, error) {
+func createCompetitions(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configCompetitions map[string]*ent.Competition, envHclID string) ([]*ent.Competition, []*ent.DNS, error) {
 	bulk := []*ent.CompetitionCreate{}
 	returnedCompetitions := []*ent.Competition{}
 	returnedAllDNS := []*ent.DNS{}
 	for _, cCompetition := range configCompetitions {
-		returnedDNS, err := createDNS(ctx, client, log, cCompetition.HCLCompetitionToDNS, envHclID)
+		log.Log.Debugf("Creating Competition: %v for Env: %v", cCompetition.HclID, envHclID)
+		returnedDNS, err := createDNS(txClient, ctx, log, cCompetition.HCLCompetitionToDNS, envHclID)
 		if err != nil {
 			return nil, nil, err
 		}
-		entCompetition, err := client.Competition.
+		entCompetition, err := txClient.Competition.
 			Query().
 			Where(
 				competition.And(
@@ -565,7 +617,7 @@ func createCompetitions(ctx context.Context, client *ent.Client, log *logging.Lo
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.Competition.Create().
+				createdQuery := txClient.Competition.Create().
 					SetConfig(cCompetition.Config).
 					SetHclID(cCompetition.HclID).
 					SetRootPassword(cCompetition.RootPassword).
@@ -595,7 +647,7 @@ func createCompetitions(ctx context.Context, client *ent.Client, log *logging.Lo
 		returnedCompetitions = append(returnedCompetitions, entCompetition)
 	}
 	if len(bulk) > 0 {
-		dbCompetitions, err := client.Competition.CreateBulk(bulk...).Save(ctx)
+		dbCompetitions, err := txClient.Competition.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk Competitions. Err: %v", err)
 			return nil, nil, err
@@ -621,21 +673,22 @@ func removeDuplicateValues(stringSlice []string) []string {
 	return list
 }
 
-func createHosts(ctx context.Context, client *ent.Client, log *logging.Logger, configHosts map[string]*ent.Host, envHclID string, environmentHosts []string) ([]*ent.Host, []*ent.HostDependency, error) {
+func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configHosts map[string]*ent.Host, envHclID string, environmentHosts []string) ([]*ent.Host, []*ent.HostDependency, error) {
 	returnedHosts := []*ent.Host{}
 	returnedAllHostDependencies := []*ent.HostDependency{}
 	environmentHosts = removeDuplicateValues(environmentHosts)
 	for _, cHostID := range environmentHosts {
+		log.Log.Debugf("Creating Host: %v for Env: %v", cHostID, envHclID)
 		cHost, ok := configHosts[cHostID]
 		if !ok {
 			log.Log.Errorf("Host %v was not defined in the Enviroment %v", cHostID, envHclID)
 			return nil, nil, fmt.Errorf("err: Host %v was not defined in the Enviroment %v", cHostID, envHclID)
 		}
-		returnedDisk, err := createDisk(ctx, client, log, cHost.HCLHostToDisk, cHost.HclID, envHclID)
+		returnedDisk, err := createDisk(txClient, ctx, log, cHost.HCLHostToDisk, cHost.HclID, envHclID)
 		if err != nil {
 			return nil, nil, err
 		}
-		entHost, err := client.Host.
+		entHost, err := txClient.Host.
 			Query().
 			Where(
 				host.And(
@@ -646,7 +699,7 @@ func createHosts(ctx context.Context, client *ent.Client, log *logging.Logger, c
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				entHost, err = client.Host.Create().
+				entHost, err = txClient.Host.Create().
 					SetAllowMACChanges(cHost.AllowMACChanges).
 					SetDescription(cHost.Description).
 					SetExposedTCPPorts(cHost.ExposedTCPPorts).
@@ -700,7 +753,7 @@ func createHosts(ctx context.Context, client *ent.Client, log *logging.Logger, c
 		}
 
 		returnedHosts = append(returnedHosts, entHost)
-		returnedHostDependencies, err := createHostDependencies(ctx, client, log, cHost.HCLDependOnHostToHostDependency, envHclID, entHost)
+		returnedHostDependencies, err := createHostDependencies(txClient, ctx, log, cHost.HCLDependOnHostToHostDependency, envHclID, entHost)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -709,10 +762,11 @@ func createHosts(ctx context.Context, client *ent.Client, log *logging.Logger, c
 	return returnedHosts, returnedAllHostDependencies, nil
 }
 
-func createNetworks(ctx context.Context, client *ent.Client, log *logging.Logger, configNetworks map[string]*ent.Network, configIncludedNetworks []*ent.IncludedNetwork, envHclID string) ([]*ent.Network, error) {
+func createNetworks(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configNetworks map[string]*ent.Network, configIncludedNetworks []*ent.IncludedNetwork, envHclID string) ([]*ent.Network, error) {
 	bulk := []*ent.NetworkCreate{}
 	returnedNetworks := []*ent.Network{}
 	for _, cNetwork := range configNetworks {
+		log.Log.Debugf("Creating Network: %v for Env: %v", cNetwork.HclID, envHclID)
 		included := false
 		for _, cIncludedNetwork := range configIncludedNetworks {
 			if cIncludedNetwork.Name == cNetwork.HclID {
@@ -723,7 +777,7 @@ func createNetworks(ctx context.Context, client *ent.Client, log *logging.Logger
 		if !included {
 			continue
 		}
-		entNetwork, err := client.Network.
+		entNetwork, err := txClient.Network.
 			Query().
 			Where(
 				network.And(
@@ -734,7 +788,7 @@ func createNetworks(ctx context.Context, client *ent.Client, log *logging.Logger
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.Network.Create().
+				createdQuery := txClient.Network.Create().
 					SetCidr(cNetwork.Cidr).
 					SetHclID(cNetwork.HclID).
 					SetName(cNetwork.Name).
@@ -760,7 +814,7 @@ func createNetworks(ctx context.Context, client *ent.Client, log *logging.Logger
 		returnedNetworks = append(returnedNetworks, entNetwork)
 	}
 	if len(bulk) > 0 {
-		dbNetwork, err := client.Network.CreateBulk(bulk...).Save(ctx)
+		dbNetwork, err := txClient.Network.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk Networks. Err: %v", err)
 			return nil, err
@@ -770,16 +824,17 @@ func createNetworks(ctx context.Context, client *ent.Client, log *logging.Logger
 	return returnedNetworks, nil
 }
 
-func createScripts(ctx context.Context, client *ent.Client, log *logging.Logger, configScript map[string]*ent.Script, envHclID string) ([]*ent.Script, []*ent.Finding, error) {
+func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configScript map[string]*ent.Script, envHclID string) ([]*ent.Script, []*ent.Finding, error) {
 	bulk := []*ent.ScriptCreate{}
 	returnedScripts := []*ent.Script{}
 	returnedAllFindings := []*ent.Finding{}
 	for _, cScript := range configScript {
-		returnedFindings, err := createFindings(ctx, client, log, cScript.HCLScriptToFinding, envHclID, cScript.HclID)
+		log.Log.Debugf("Creating Script: %v for Env: %v", cScript.HclID, envHclID)
+		returnedFindings, err := createFindings(txClient, ctx, log, cScript.HCLScriptToFinding, envHclID, cScript.HclID)
 		if err != nil {
 			return nil, nil, err
 		}
-		entScript, err := client.Script.
+		entScript, err := txClient.Script.
 			Query().
 			Where(
 				script.And(
@@ -790,7 +845,7 @@ func createScripts(ctx context.Context, client *ent.Client, log *logging.Logger,
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.Script.Create().
+				createdQuery := txClient.Script.Create().
 					SetHclID(cScript.HclID).
 					SetName(cScript.Name).
 					SetLanguage(cScript.Language).
@@ -840,7 +895,7 @@ func createScripts(ctx context.Context, client *ent.Client, log *logging.Logger,
 		returnedScripts = append(returnedScripts, entScript)
 	}
 	if len(bulk) > 0 {
-		dbScript, err := client.Script.CreateBulk(bulk...).Save(ctx)
+		dbScript, err := txClient.Script.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk Scripts. Err: %v", err)
 			return nil, nil, err
@@ -850,11 +905,12 @@ func createScripts(ctx context.Context, client *ent.Client, log *logging.Logger,
 	return returnedScripts, returnedAllFindings, nil
 }
 
-func createAnsible(ctx context.Context, client *ent.Client, log *logging.Logger, configAnsible map[string]*ent.Ansible, envHclID string) ([]*ent.Ansible, error) {
+func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configAnsible map[string]*ent.Ansible, envHclID string) ([]*ent.Ansible, error) {
 	bulk := []*ent.AnsibleCreate{}
 	returnedAnsible := []*ent.Ansible{}
 	for _, cAnsible := range configAnsible {
-		entAnsible, err := client.Ansible.
+		log.Log.Debugf("Creating Ansible: %v for Env: %v", cAnsible.HclID, envHclID)
+		entAnsible, err := txClient.Ansible.
 			Query().
 			Where(
 				ansible.And(
@@ -865,7 +921,7 @@ func createAnsible(ctx context.Context, client *ent.Client, log *logging.Logger,
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.Ansible.Create().
+				createdQuery := txClient.Ansible.Create().
 					SetName(cAnsible.Name).
 					SetHclID(cAnsible.HclID).
 					SetDescription(cAnsible.Description).
@@ -897,7 +953,7 @@ func createAnsible(ctx context.Context, client *ent.Client, log *logging.Logger,
 		returnedAnsible = append(returnedAnsible, entAnsible)
 	}
 	if len(bulk) > 0 {
-		dbAnsible, err := client.Ansible.CreateBulk(bulk...).Save(ctx)
+		dbAnsible, err := txClient.Ansible.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk Ansible. Err: %v", err)
 			return nil, err
@@ -907,11 +963,12 @@ func createAnsible(ctx context.Context, client *ent.Client, log *logging.Logger,
 	return returnedAnsible, nil
 }
 
-func createCommands(ctx context.Context, client *ent.Client, log *logging.Logger, configCommands map[string]*ent.Command, envHclID string) ([]*ent.Command, error) {
+func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configCommands map[string]*ent.Command, envHclID string) ([]*ent.Command, error) {
 	bulk := []*ent.CommandCreate{}
 	returnedCommands := []*ent.Command{}
 	for _, cCommand := range configCommands {
-		entCommand, err := client.Command.
+		log.Log.Debugf("Creating Command: %v for Env: %v", cCommand.HclID, envHclID)
+		entCommand, err := txClient.Command.
 			Query().
 			Where(
 				command.And(
@@ -922,7 +979,7 @@ func createCommands(ctx context.Context, client *ent.Client, log *logging.Logger
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.Command.Create().
+				createdQuery := txClient.Command.Create().
 					SetArgs(cCommand.Args).
 					SetCooldown(cCommand.Cooldown).
 					SetDescription(cCommand.Description).
@@ -958,7 +1015,7 @@ func createCommands(ctx context.Context, client *ent.Client, log *logging.Logger
 		returnedCommands = append(returnedCommands, entCommand)
 	}
 	if len(bulk) > 0 {
-		dbCommand, err := client.Command.CreateBulk(bulk...).Save(ctx)
+		dbCommand, err := txClient.Command.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk Command. Err: %v", err)
 			return nil, err
@@ -968,11 +1025,13 @@ func createCommands(ctx context.Context, client *ent.Client, log *logging.Logger
 	return returnedCommands, nil
 }
 
-func createDNSRecords(ctx context.Context, client *ent.Client, log *logging.Logger, configDNSRecords map[string]*ent.DNSRecord, envHclID string) ([]*ent.DNSRecord, error) {
+func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configDNSRecords map[string]*ent.DNSRecord, envHclID string) ([]*ent.DNSRecord, error) {
 	bulk := []*ent.DNSRecordCreate{}
 	returnedDNSRecords := []*ent.DNSRecord{}
 	for _, cDNSRecord := range configDNSRecords {
-		entDNSRecord, err := client.DNSRecord.
+		log.Log.Debugf("Creating DNSRecord: %v for Env: %v", cDNSRecord.HclID, envHclID)
+
+		entDNSRecord, err := txClient.DNSRecord.
 			Query().
 			Where(
 				dnsrecord.And(
@@ -983,7 +1042,7 @@ func createDNSRecords(ctx context.Context, client *ent.Client, log *logging.Logg
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.DNSRecord.Create().
+				createdQuery := txClient.DNSRecord.Create().
 					SetDisabled(cDNSRecord.Disabled).
 					SetHclID(cDNSRecord.HclID).
 					SetName(cDNSRecord.Name).
@@ -1013,7 +1072,7 @@ func createDNSRecords(ctx context.Context, client *ent.Client, log *logging.Logg
 		returnedDNSRecords = append(returnedDNSRecords, entDNSRecord)
 	}
 	if len(bulk) > 0 {
-		dbDNSRecords, err := client.DNSRecord.CreateBulk(bulk...).Save(ctx)
+		dbDNSRecords, err := txClient.DNSRecord.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk DNS Records. Err: %v", err)
 			return nil, err
@@ -1023,11 +1082,13 @@ func createDNSRecords(ctx context.Context, client *ent.Client, log *logging.Logg
 	return returnedDNSRecords, nil
 }
 
-func createFileDownload(ctx context.Context, client *ent.Client, log *logging.Logger, configFileDownloads map[string]*ent.FileDownload, envHclID string) ([]*ent.FileDownload, error) {
+func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFileDownloads map[string]*ent.FileDownload, envHclID string) ([]*ent.FileDownload, error) {
 	bulk := []*ent.FileDownloadCreate{}
 	returnedFileDownloads := []*ent.FileDownload{}
 	for _, cFileDownload := range configFileDownloads {
-		entFileDownload, err := client.FileDownload.
+		log.Log.Debugf("Creating FileDownload: %v for Env: %v", cFileDownload.HclID, envHclID)
+
+		entFileDownload, err := txClient.FileDownload.
 			Query().
 			Where(
 				filedownload.And(
@@ -1038,7 +1099,7 @@ func createFileDownload(ctx context.Context, client *ent.Client, log *logging.Lo
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.FileDownload.Create().
+				createdQuery := txClient.FileDownload.Create().
 					SetHclID(cFileDownload.HclID).
 					SetSourceType(cFileDownload.SourceType).
 					SetSource(cFileDownload.Source).
@@ -1072,7 +1133,7 @@ func createFileDownload(ctx context.Context, client *ent.Client, log *logging.Lo
 		returnedFileDownloads = append(returnedFileDownloads, entFileDownload)
 	}
 	if len(bulk) > 0 {
-		dbFileDownloads, err := client.FileDownload.CreateBulk(bulk...).Save(ctx)
+		dbFileDownloads, err := txClient.FileDownload.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk File Downloads. Err: %v", err)
 			return nil, err
@@ -1082,11 +1143,13 @@ func createFileDownload(ctx context.Context, client *ent.Client, log *logging.Lo
 	return returnedFileDownloads, nil
 }
 
-func createFileDelete(ctx context.Context, client *ent.Client, log *logging.Logger, configFileDeletes map[string]*ent.FileDelete, envHclID string) ([]*ent.FileDelete, error) {
+func createFileDelete(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFileDeletes map[string]*ent.FileDelete, envHclID string) ([]*ent.FileDelete, error) {
 	bulk := []*ent.FileDeleteCreate{}
 	returnedFileDeletes := []*ent.FileDelete{}
 	for _, cFileDelete := range configFileDeletes {
-		entFileDelete, err := client.FileDelete.
+		log.Log.Debugf("Creating FileDelete: %v for Env: %v", cFileDelete.HclID, envHclID)
+
+		entFileDelete, err := txClient.FileDelete.
 			Query().
 			Where(
 				filedelete.And(
@@ -1097,7 +1160,7 @@ func createFileDelete(ctx context.Context, client *ent.Client, log *logging.Logg
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.FileDelete.Create().
+				createdQuery := txClient.FileDelete.Create().
 					SetHclID(cFileDelete.HclID).
 					SetPath(cFileDelete.Path).
 					SetTags(cFileDelete.Tags)
@@ -1117,7 +1180,7 @@ func createFileDelete(ctx context.Context, client *ent.Client, log *logging.Logg
 		returnedFileDeletes = append(returnedFileDeletes, entFileDelete)
 	}
 	if len(bulk) > 0 {
-		dbFileDelete, err := client.FileDelete.CreateBulk(bulk...).Save(ctx)
+		dbFileDelete, err := txClient.FileDelete.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk File Delete. Err: %v", err)
 			return nil, err
@@ -1127,11 +1190,13 @@ func createFileDelete(ctx context.Context, client *ent.Client, log *logging.Logg
 	return returnedFileDeletes, nil
 }
 
-func createFileExtract(ctx context.Context, client *ent.Client, log *logging.Logger, configFileExtracts map[string]*ent.FileExtract, envHclID string) ([]*ent.FileExtract, error) {
+func createFileExtract(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFileExtracts map[string]*ent.FileExtract, envHclID string) ([]*ent.FileExtract, error) {
 	bulk := []*ent.FileExtractCreate{}
 	returnedFileExtracts := []*ent.FileExtract{}
 	for _, cFileExtract := range configFileExtracts {
-		entFileExtract, err := client.FileExtract.
+		log.Log.Debugf("Creating FileExtract: %v for Env: %v", cFileExtract.HclID, envHclID)
+
+		entFileExtract, err := txClient.FileExtract.
 			Query().
 			Where(
 				fileextract.And(
@@ -1142,7 +1207,7 @@ func createFileExtract(ctx context.Context, client *ent.Client, log *logging.Log
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.FileExtract.Create().
+				createdQuery := txClient.FileExtract.Create().
 					SetDestination(cFileExtract.Destination).
 					SetHclID(cFileExtract.HclID).
 					SetSource(cFileExtract.Source).
@@ -1166,7 +1231,7 @@ func createFileExtract(ctx context.Context, client *ent.Client, log *logging.Log
 		returnedFileExtracts = append(returnedFileExtracts, entFileExtract)
 	}
 	if len(bulk) > 0 {
-		dbFileExtracts, err := client.FileExtract.CreateBulk(bulk...).Save(ctx)
+		dbFileExtracts, err := txClient.FileExtract.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk File Extract. Err: %v", err)
 			return nil, err
@@ -1176,11 +1241,13 @@ func createFileExtract(ctx context.Context, client *ent.Client, log *logging.Log
 	return returnedFileExtracts, nil
 }
 
-func createIdentities(ctx context.Context, client *ent.Client, log *logging.Logger, configIdentities map[string]*ent.Identity, envHclID string) ([]*ent.Identity, error) {
+func createIdentities(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configIdentities map[string]*ent.Identity, envHclID string) ([]*ent.Identity, error) {
 	bulk := []*ent.IdentityCreate{}
 	returnedIdentities := []*ent.Identity{}
 	for _, cIdentity := range configIdentities {
-		entIdentity, err := client.Identity.
+		log.Log.Debugf("Creating Identity: %v for Env: %v", cIdentity.HclID, envHclID)
+
+		entIdentity, err := txClient.Identity.
 			Query().
 			Where(
 				identity.And(
@@ -1191,7 +1258,7 @@ func createIdentities(ctx context.Context, client *ent.Client, log *logging.Logg
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.Identity.Create().
+				createdQuery := txClient.Identity.Create().
 					SetAvatarFile(cIdentity.AvatarFile).
 					SetDescription(cIdentity.Description).
 					SetEmail(cIdentity.Email).
@@ -1223,7 +1290,7 @@ func createIdentities(ctx context.Context, client *ent.Client, log *logging.Logg
 		returnedIdentities = append(returnedIdentities, entIdentity)
 	}
 	if len(bulk) > 0 {
-		dbIdentities, err := client.Identity.CreateBulk(bulk...).Save(ctx)
+		dbIdentities, err := txClient.Identity.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk Identities. Err: %v", err)
 			return nil, err
@@ -1233,11 +1300,13 @@ func createIdentities(ctx context.Context, client *ent.Client, log *logging.Logg
 	return returnedIdentities, nil
 }
 
-func createFindings(ctx context.Context, client *ent.Client, log *logging.Logger, configFindings []*ent.Finding, envHclID string, entScriptID string) ([]*ent.Finding, error) {
+func createFindings(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFindings []*ent.Finding, envHclID string, entScriptID string) ([]*ent.Finding, error) {
 	bulk := []*ent.FindingCreate{}
 	returnedFindings := []*ent.Finding{}
 	for _, cFinding := range configFindings {
-		entFinding, err := client.Finding.
+		log.Log.Debugf("Creating Finding: %v for Env: %v", cFinding.Name, envHclID)
+
+		entFinding, err := txClient.Finding.
 			Query().
 			Where(
 				finding.And(
@@ -1249,7 +1318,7 @@ func createFindings(ctx context.Context, client *ent.Client, log *logging.Logger
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.Finding.Create().
+				createdQuery := txClient.Finding.Create().
 					SetDescription(cFinding.Description).
 					SetDifficulty(cFinding.Difficulty).
 					SetName(cFinding.Name).
@@ -1273,7 +1342,7 @@ func createFindings(ctx context.Context, client *ent.Client, log *logging.Logger
 		returnedFindings = append(returnedFindings, entFinding)
 	}
 	if len(bulk) > 0 {
-		dbFinding, err := client.Finding.CreateBulk(bulk...).Save(ctx)
+		dbFinding, err := txClient.Finding.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk Findings. Err: %v", err)
 			return nil, err
@@ -1283,11 +1352,13 @@ func createFindings(ctx context.Context, client *ent.Client, log *logging.Logger
 	return returnedFindings, nil
 }
 
-func createHostDependencies(ctx context.Context, client *ent.Client, log *logging.Logger, configHostDependencies []*ent.HostDependency, envHclID string, dependByHost *ent.Host) ([]*ent.HostDependency, error) {
+func createHostDependencies(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configHostDependencies []*ent.HostDependency, envHclID string, dependByHost *ent.Host) ([]*ent.HostDependency, error) {
 	bulk := []*ent.HostDependencyCreate{}
 	returnedHostDependencies := []*ent.HostDependency{}
 	for _, cHostDependency := range configHostDependencies {
-		entHostDependency, err := client.HostDependency.
+		log.Log.Debugf("Creating HostDependency for host %v to host %v in network %v for Env: %v", dependByHost.HclID, cHostDependency.HostID, cHostDependency.NetworkID, envHclID)
+
+		entHostDependency, err := txClient.HostDependency.
 			Query().
 			Where(
 				hostdependency.And(
@@ -1300,7 +1371,7 @@ func createHostDependencies(ctx context.Context, client *ent.Client, log *loggin
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.HostDependency.Create().
+				createdQuery := txClient.HostDependency.Create().
 					SetHostID(cHostDependency.HostID).
 					SetNetworkID(cHostDependency.NetworkID).
 					SetHostDependencyToDependByHost(dependByHost)
@@ -1327,7 +1398,7 @@ func createHostDependencies(ctx context.Context, client *ent.Client, log *loggin
 		returnedHostDependencies = append(returnedHostDependencies, entHostDependency)
 	}
 	if len(bulk) > 0 {
-		dbHostDependency, err := client.HostDependency.CreateBulk(bulk...).Save(ctx)
+		dbHostDependency, err := txClient.HostDependency.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk Host Dependencies. Err: %v", err)
 			return nil, err
@@ -1337,11 +1408,12 @@ func createHostDependencies(ctx context.Context, client *ent.Client, log *loggin
 	return returnedHostDependencies, nil
 }
 
-func createDNS(ctx context.Context, client *ent.Client, log *logging.Logger, configDNS []*ent.DNS, envHclID string) ([]*ent.DNS, error) {
+func createDNS(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configDNS []*ent.DNS, envHclID string) ([]*ent.DNS, error) {
 	bulk := []*ent.DNSCreate{}
 	returnedDNS := []*ent.DNS{}
 	for _, cDNS := range configDNS {
-		entDNS, err := client.DNS.
+		log.Log.Debugf("Creating DNS: %v for Env: %v", cDNS.HclID, envHclID)
+		entDNS, err := txClient.DNS.
 			Query().
 			Where(
 				dns.And(
@@ -1352,7 +1424,7 @@ func createDNS(ctx context.Context, client *ent.Client, log *logging.Logger, con
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.DNS.Create().
+				createdQuery := txClient.DNS.Create().
 					SetConfig(cDNS.Config).
 					SetDNSServers(cDNS.DNSServers).
 					SetHclID(cDNS.HclID).
@@ -1378,7 +1450,7 @@ func createDNS(ctx context.Context, client *ent.Client, log *logging.Logger, con
 		returnedDNS = append(returnedDNS, entDNS)
 	}
 	if len(bulk) > 0 {
-		dbDNS, err := client.DNS.CreateBulk(bulk...).Save(ctx)
+		dbDNS, err := txClient.DNS.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk DNS. Err: %v", err)
 			return nil, err
@@ -1388,8 +1460,8 @@ func createDNS(ctx context.Context, client *ent.Client, log *logging.Logger, con
 	return returnedDNS, nil
 }
 
-func createDisk(ctx context.Context, client *ent.Client, log *logging.Logger, configDisk *ent.Disk, hostHclID string, envHclID string) (*ent.Disk, error) {
-	entDisk, err := client.Disk.
+func createDisk(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configDisk *ent.Disk, hostHclID string, envHclID string) (*ent.Disk, error) {
+	entDisk, err := txClient.Disk.
 		Query().
 		Where(
 			disk.And(
@@ -1404,7 +1476,7 @@ func createDisk(ctx context.Context, client *ent.Client, log *logging.Logger, co
 		Only(ctx)
 	if err != nil {
 		if err == err.(*ent.NotFoundError) {
-			entDisk, err = client.Disk.Create().
+			entDisk, err = txClient.Disk.Create().
 				SetSize(configDisk.Size).
 				Save(ctx)
 			if err != nil {
@@ -1423,11 +1495,11 @@ func createDisk(ctx context.Context, client *ent.Client, log *logging.Logger, co
 	return entDisk, nil
 }
 
-func createIncludedNetwork(ctx context.Context, client *ent.Client, log *logging.Logger, configIncludedNetworks []*ent.IncludedNetwork, envHclID string) ([]*ent.IncludedNetwork, error) {
+func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configIncludedNetworks []*ent.IncludedNetwork, envHclID string) ([]*ent.IncludedNetwork, error) {
 	bulk := []*ent.IncludedNetworkCreate{}
 	returnedIncludedNetworks := []*ent.IncludedNetwork{}
 	for _, cIncludedNetwork := range configIncludedNetworks {
-		entNetwork, err := client.Network.Query().Where(
+		entNetwork, err := txClient.Network.Query().Where(
 			network.And(
 				network.HclIDEQ(cIncludedNetwork.Name),
 				network.Or(
@@ -1442,7 +1514,7 @@ func createIncludedNetwork(ctx context.Context, client *ent.Client, log *logging
 		}
 		entHosts := []*ent.Host{}
 		for _, cHostHclID := range cIncludedNetwork.Hosts {
-			entHost, err := client.Host.Query().Where(
+			entHost, err := txClient.Host.Query().Where(
 				host.And(
 					host.HclIDEQ(cHostHclID),
 					host.Or(
@@ -1457,7 +1529,7 @@ func createIncludedNetwork(ctx context.Context, client *ent.Client, log *logging
 			}
 			entHosts = append(entHosts, entHost)
 		}
-		entIncludedNetwork, err := client.IncludedNetwork.
+		entIncludedNetwork, err := txClient.IncludedNetwork.
 			Query().
 			Where(
 				includednetwork.And(
@@ -1468,7 +1540,7 @@ func createIncludedNetwork(ctx context.Context, client *ent.Client, log *logging
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.IncludedNetwork.Create().
+				createdQuery := txClient.IncludedNetwork.Create().
 					SetName(cIncludedNetwork.Name).
 					SetHosts(cIncludedNetwork.Hosts).
 					SetIncludedNetworkToNetwork(entNetwork).
@@ -1498,7 +1570,7 @@ func createIncludedNetwork(ctx context.Context, client *ent.Client, log *logging
 		returnedIncludedNetworks = append(returnedIncludedNetworks, entIncludedNetwork)
 	}
 	if len(bulk) > 0 {
-		dbIncludedNetwork, err := client.IncludedNetwork.CreateBulk(bulk...).Save(ctx)
+		dbIncludedNetwork, err := txClient.IncludedNetwork.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to create bulk Included Network. Err: %v", err)
 			return nil, err
@@ -1508,10 +1580,10 @@ func createIncludedNetwork(ctx context.Context, client *ent.Client, log *logging
 	return returnedIncludedNetworks, nil
 }
 
-func validateHostDependencies(ctx context.Context, client *ent.Client, log *logging.Logger, uncheckedHostDependencies []*ent.HostDependency, envHclID string) ([]*ent.HostDependency, error) {
+func validateHostDependencies(txClient *ent.Tx, ctx context.Context, log *logging.Logger, uncheckedHostDependencies []*ent.HostDependency, envHclID string) ([]*ent.HostDependency, error) {
 	checkedHostDependencies := []*ent.HostDependency{}
 	for _, uncheckedHostDependency := range uncheckedHostDependencies {
-		entNetwork, err := client.Network.Query().Where(
+		entNetwork, err := txClient.Network.Query().Where(
 			network.And(
 				network.HclIDEQ(uncheckedHostDependency.NetworkID),
 				network.HasNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
@@ -1521,7 +1593,7 @@ func validateHostDependencies(ctx context.Context, client *ent.Client, log *logg
 			log.Log.Errorf("Unable to Query %v network in %v enviroment. Err: %v", uncheckedHostDependency.NetworkID, envHclID, err)
 			return nil, err
 		}
-		entHost, err := client.Host.Query().Where(
+		entHost, err := txClient.Host.Query().Where(
 			host.And(
 				host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),
 				host.HclIDEQ(uncheckedHostDependency.HostID),
@@ -1531,7 +1603,7 @@ func validateHostDependencies(ctx context.Context, client *ent.Client, log *logg
 			log.Log.Errorf("Unable to Query %v host in %v enviroment. Err: %v", uncheckedHostDependency.HostID, envHclID, err)
 			return nil, err
 		}
-		_, err = client.IncludedNetwork.Query().Where(
+		_, err = txClient.IncludedNetwork.Query().Where(
 			includednetwork.And(
 				includednetwork.HasIncludedNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
 				includednetwork.HasIncludedNetworkToHostWith(host.HclIDEQ(uncheckedHostDependency.HostID)),
