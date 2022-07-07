@@ -323,6 +323,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		ApproveCommit            func(childComplexity int, commitUUID string) int
+		CancelBuild              func(childComplexity int, buildUUID string) int
 		CancelCommit             func(childComplexity int, commitUUID string) int
 		CreateAgentTasks         func(childComplexity int, hostHclid string, command model.AgentCommand, buildUUID string, args []string, teams []int) int
 		CreateBatchAgentTasks    func(childComplexity int, proHostUUIDs []string, command model.AgentCommand, args []string) int
@@ -339,6 +340,7 @@ type ComplexityRoot struct {
 		ModifyAdminUserInfo      func(childComplexity int, userID string, username *string, firstName *string, lastName *string, email *string, phone *string, company *string, occupation *string, role *model.RoleLevel, provider *model.ProviderType) int
 		ModifySelfPassword       func(childComplexity int, currentPassword string, newPassword string) int
 		ModifySelfUserInfo       func(childComplexity int, firstName *string, lastName *string, email *string, phone *string, company *string, occupation *string) int
+		NukeBackend              func(childComplexity int) int
 		Rebuild                  func(childComplexity int, rootPlans []*string) int
 		UpdateEnviromentViaPull  func(childComplexity int, envUUID string) int
 	}
@@ -545,6 +547,11 @@ type ComplexityRoot struct {
 		Value func(childComplexity int) int
 	}
 
+	IntMap struct {
+		Key   func(childComplexity int) int
+		Value func(childComplexity int) int
+	}
+
 	TagMap struct {
 		Key   func(childComplexity int) int
 		Value func(childComplexity int) int
@@ -658,11 +665,13 @@ type MutationResolver interface {
 	CreateBatchAgentTasks(ctx context.Context, proHostUUIDs []string, command model.AgentCommand, args []string) ([]*ent.AgentTask, error)
 	CreateEnviromentFromRepo(ctx context.Context, repoURL string, branchName string, envFilePath string) ([]*ent.Environment, error)
 	UpdateEnviromentViaPull(ctx context.Context, envUUID string) ([]*ent.Environment, error)
+	CancelBuild(ctx context.Context, buildUUID string) (bool, error)
 	ModifySelfPassword(ctx context.Context, currentPassword string, newPassword string) (bool, error)
 	ModifySelfUserInfo(ctx context.Context, firstName *string, lastName *string, email *string, phone *string, company *string, occupation *string) (*ent.AuthUser, error)
 	CreateUser(ctx context.Context, username string, password string, role model.RoleLevel, provider model.ProviderType) (*ent.AuthUser, error)
 	ModifyAdminUserInfo(ctx context.Context, userID string, username *string, firstName *string, lastName *string, email *string, phone *string, company *string, occupation *string, role *model.RoleLevel, provider *model.ProviderType) (*ent.AuthUser, error)
 	ModifyAdminPassword(ctx context.Context, userID string, newPassword string) (bool, error)
+	NukeBackend(ctx context.Context) ([]*model.IntMap, error)
 }
 type NetworkResolver interface {
 	ID(ctx context.Context, obj *ent.Network) (string, error)
@@ -2099,6 +2108,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.ApproveCommit(childComplexity, args["commitUUID"].(string)), true
 
+	case "Mutation.cancelBuild":
+		if e.complexity.Mutation.CancelBuild == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_cancelBuild_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CancelBuild(childComplexity, args["buildUUID"].(string)), true
+
 	case "Mutation.cancelCommit":
 		if e.complexity.Mutation.CancelCommit == nil {
 			break
@@ -2290,6 +2311,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.ModifySelfUserInfo(childComplexity, args["firstName"].(*string), args["lastName"].(*string), args["email"].(*string), args["phone"].(*string), args["company"].(*string), args["occupation"].(*string)), true
+
+	case "Mutation.nukeBackend":
+		if e.complexity.Mutation.NukeBackend == nil {
+			break
+		}
+
+		return e.complexity.Mutation.NukeBackend(childComplexity), true
 
 	case "Mutation.rebuild":
 		if e.complexity.Mutation.Rebuild == nil {
@@ -3467,6 +3495,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ConfigMap.Value(childComplexity), true
 
+	case "intMap.key":
+		if e.complexity.IntMap.Key == nil {
+			break
+		}
+
+		return e.complexity.IntMap.Key(childComplexity), true
+
+	case "intMap.value":
+		if e.complexity.IntMap.Value == nil {
+			break
+		}
+
+		return e.complexity.IntMap.Value(childComplexity), true
+
 	case "tagMap.key":
 		if e.complexity.TagMap.Key == nil {
 			break
@@ -3598,6 +3640,11 @@ type configMap {
 type tagMap {
   key: String!
   value: String!
+}
+
+type intMap {
+  key: String!
+  value: Int!
 }
 
 enum FindingSeverity {
@@ -4212,6 +4259,10 @@ type Mutation {
   updateEnviromentViaPull(envUUID: String!): [Environment]!
     @hasRole(roles: [ADMIN, USER])
 
+  cancelBuild(
+    buildUUID: String!
+  ): Boolean! @hasRole(roles: [ADMIN, USER])
+
   # User Info
   modifySelfPassword(currentPassword: String!, newPassword: String!): Boolean!
     @hasRole(roles: [ADMIN, USER])
@@ -4245,6 +4296,8 @@ type Mutation {
   ): AuthUser @hasRole(roles: [ADMIN])
   modifyAdminPassword(userID: String!, newPassword: String!): Boolean!
     @hasRole(roles: [ADMIN])
+
+  nukeBackend: [intMap]! @hasRole(roles: [ADMIN])
 }
 
 type Subscription {
@@ -4291,6 +4344,21 @@ func (ec *executionContext) field_Mutation_approveCommit_args(ctx context.Contex
 		}
 	}
 	args["commitUUID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_cancelBuild_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["buildUUID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("buildUUID"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["buildUUID"] = arg0
 	return args, nil
 }
 
@@ -16236,6 +16304,85 @@ func (ec *executionContext) fieldContext_Mutation_updateEnviromentViaPull(ctx co
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_cancelBuild(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_cancelBuild(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().CancelBuild(rctx, fc.Args["buildUUID"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalNRoleLevel2ᚕgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐRoleLevelᚄ(ctx, []interface{}{"ADMIN", "USER"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(bool); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be bool`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_cancelBuild(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_cancelBuild_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_modifySelfPassword(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_modifySelfPassword(ctx, field)
 	if err != nil {
@@ -16690,6 +16837,80 @@ func (ec *executionContext) fieldContext_Mutation_modifyAdminPassword(ctx contex
 	if fc.Args, err = ec.field_Mutation_modifyAdminPassword_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_nukeBackend(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_nukeBackend(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().NukeBackend(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalNRoleLevel2ᚕgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐRoleLevelᚄ(ctx, []interface{}{"ADMIN"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.IntMap); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/gen0cide/laforge/graphql/graph/model.IntMap`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.IntMap)
+	fc.Result = res
+	return ec.marshalNintMap2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐIntMap(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_nukeBackend(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "key":
+				return ec.fieldContext_intMap_key(ctx, field)
+			case "value":
+				return ec.fieldContext_intMap_value(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type intMap", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -28042,6 +28263,94 @@ func (ec *executionContext) fieldContext_configMap_value(ctx context.Context, fi
 	return fc, nil
 }
 
+func (ec *executionContext) _intMap_key(ctx context.Context, field graphql.CollectedField, obj *model.IntMap) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_intMap_key(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Key, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_intMap_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "intMap",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _intMap_value(ctx context.Context, field graphql.CollectedField, obj *model.IntMap) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_intMap_value(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Value, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_intMap_value(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "intMap",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _tagMap_key(ctx context.Context, field graphql.CollectedField, obj *model.TagMap) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_tagMap_key(ctx, field)
 	if err != nil {
@@ -31134,6 +31443,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "cancelBuild":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_cancelBuild(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "modifySelfPassword":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -31165,6 +31483,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_modifyAdminPassword(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "nukeBackend":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_nukeBackend(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -34115,6 +34442,41 @@ func (ec *executionContext) _configMap(ctx context.Context, sel ast.SelectionSet
 	return out
 }
 
+var intMapImplementors = []string{"intMap"}
+
+func (ec *executionContext) _intMap(ctx context.Context, sel ast.SelectionSet, obj *model.IntMap) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, intMapImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("intMap")
+		case "key":
+
+			out.Values[i] = ec._intMap_key(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "value":
+
+			out.Values[i] = ec._intMap_value(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var tagMapImplementors = []string{"tagMap"}
 
 func (ec *executionContext) _tagMap(ctx context.Context, sel ast.SelectionSet, obj *model.TagMap) graphql.Marshaler {
@@ -36137,6 +36499,44 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
+func (ec *executionContext) marshalNintMap2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐIntMap(ctx context.Context, sel ast.SelectionSet, v []*model.IntMap) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOintMap2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐIntMap(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
+}
+
 func (ec *executionContext) marshalNtagMap2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐTagMap(ctx context.Context, sel ast.SelectionSet, v []*model.TagMap) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -37142,6 +37542,13 @@ func (ec *executionContext) marshalOconfigMap2ᚖgithubᚗcomᚋgen0cideᚋlafor
 		return graphql.Null
 	}
 	return ec._configMap(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOintMap2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐIntMap(ctx context.Context, sel ast.SelectionSet, v *model.IntMap) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._intMap(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOtagMap2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐTagMap(ctx context.Context, sel ast.SelectionSet, v []*model.TagMap) graphql.Marshaler {

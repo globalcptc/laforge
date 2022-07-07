@@ -19,6 +19,11 @@ type tagMap {
   value: String!
 }
 
+type intMap {
+  key: String!
+  value: Int!
+}
+
 enum FindingSeverity {
   ZeroSeverity
   LowSeverity
@@ -631,6 +636,10 @@ type Mutation {
   updateEnviromentViaPull(envUUID: String!): [Environment]!
     @hasRole(roles: [ADMIN, USER])
 
+  cancelBuild(
+    buildUUID: String!
+  ): Boolean! @hasRole(roles: [ADMIN, USER])
+
   # User Info
   modifySelfPassword(currentPassword: String!, newPassword: String!): Boolean!
     @hasRole(roles: [ADMIN, USER])
@@ -664,6 +673,8 @@ type Mutation {
   ): AuthUser @hasRole(roles: [ADMIN])
   modifyAdminPassword(userID: String!, newPassword: String!): Boolean!
     @hasRole(roles: [ADMIN])
+
+  nukeBackend: [intMap]! @hasRole(roles: [ADMIN])
 }
 
 type Subscription {

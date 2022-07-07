@@ -904,6 +904,15 @@ func (r *mutationResolver) UpdateEnviromentViaPull(ctx context.Context, envUUID 
 	return r.LoadEnvironment(ctx, envPath)
 }
 
+func (r *mutationResolver) CancelBuild(ctx context.Context, buildUUID string) (bool, error) {
+	uuid, err := uuid.Parse(buildUUID)
+
+	if err != nil {
+		return false, fmt.Errorf("failed casting UUID to UUID: %v", err)
+	}
+	return planner.CancelBuild(uuid), nil
+}
+
 func (r *mutationResolver) ModifySelfPassword(ctx context.Context, currentPassword string, newPassword string) (bool, error) {
 	currentUser, err := auth.ForContext(ctx)
 	if err != nil {
@@ -1117,6 +1126,22 @@ func (r *mutationResolver) ModifyAdminPassword(ctx context.Context, userID strin
 	}
 
 	return true, nil
+}
+
+func (r *mutationResolver) NukeBackend(ctx context.Context) ([]*model.IntMap, error) {
+	results := make([]*model.IntMap, 0)
+	returnedResults, err := utils.ClearDB(ctx, r.client, r.laforgeConfig)
+	for varKey, varValue := range returnedResults {
+		tempVar := &model.IntMap{
+			Key:   varKey,
+			Value: varValue,
+		}
+		results = append(results, tempVar)
+	}
+	if err != nil {
+		return results, err
+	}
+	return results, nil
 }
 
 func (r *networkResolver) ID(ctx context.Context, obj *ent.Network) (string, error) {

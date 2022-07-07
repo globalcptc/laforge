@@ -30,6 +30,11 @@ type ConfigMap struct {
 	Value string `json:"value"`
 }
 
+type IntMap struct {
+	Key   string `json:"key"`
+	Value int    `json:"value"`
+}
+
 type TagMap struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
