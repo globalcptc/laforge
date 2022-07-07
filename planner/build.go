@@ -18,14 +18,28 @@ import (
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/gen0cide/laforge/server/utils"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
+var cancelMap = map[uuid.UUID]context.CancelFunc{}
+
+func CancelBuild(id uuid.UUID) bool {
+	if cancelMap[id] != nil {
+		cancelMap[id]()
+		delete(cancelMap, id)
+		return true
+	}
+	return false
+}
+
 func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, currentUser *ent.AuthUser, serverTask *ent.ServerTask, taskStatus *ent.Status, entBuild *ent.Build) error {
 	logger.Log.Debug("BUILDER | START BUILD")
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer ctx.Done()
-
+	cancelMap[entBuild.ID] = cancel
+	ctxClosing := context.Background()
+	defer ctxClosing.Done()
 	entPlans, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePLANNING))).All(ctx)
 
 	if err != nil {
@@ -139,7 +153,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 
 	rootPlans, err := entBuild.QueryBuildToPlan().Where(plan.TypeEQ(plan.TypeStartBuild)).All(ctx)
 	if err != nil {
-		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
+		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
 		if err != nil {
 			logger.Log.Errorf("error failing execute build server task: %v", err)
 			return err
@@ -149,7 +163,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	}
 	environment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
 	if err != nil {
-		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
+		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
 		if err != nil {
 			logger.Log.Errorf("error failing execute build server task: %v", err)
 			return err
@@ -161,7 +175,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	genericBuilder, err := builder.BuilderFromEnvironment(laforgeConfig.Builders, environment, logger)
 	if err != nil {
 		logger.Log.Errorf("error generating builder: %v", err)
-		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
+		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
 		if err != nil {
 			logger.Log.Errorf("error failing execute build server task: %v", err)
 			return err
@@ -175,12 +189,12 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 		return err
 	}
 
-	err = entRootCommit.Update().SetState(buildcommit.StateINPROGRESS).Exec(ctx)
+	err = entRootCommit.Update().SetState(buildcommit.StateINPROGRESS).Exec(ctxClosing)
 	if err != nil {
 		logger.Log.Errorf("error while cancelling rebuild commit: %v", err)
 		return err
 	}
-	rdb.Publish(ctx, "updatedBuildCommit", entRootCommit.ID.String())
+	rdb.Publish(ctxClosing, "updatedBuildCommit", entRootCommit.ID.String())
 
 	for _, entPlan := range rootPlans {
 		wg.Add(1)
@@ -189,18 +203,18 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 
 	wg.Wait()
 
-	taskStatus, serverTask, err = utils.CompleteServerTask(ctx, client, rdb, taskStatus, serverTask)
+	taskStatus, serverTask, err = utils.CompleteServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
 	if err != nil {
 		logger.Log.Errorf("error completing execute build server task: %v", err)
 		return err
 	}
 
-	err = entRootCommit.Update().SetState(buildcommit.StateAPPLIED).Exec(ctx)
+	err = entRootCommit.Update().SetState(buildcommit.StateAPPLIED).Exec(ctxClosing)
 	if err != nil {
 		logger.Log.Errorf("error while cancelling rebuild commit: %v", err)
 		return err
 	}
-	rdb.Publish(ctx, "updatedBuildCommit", entRootCommit.ID.String())
+	rdb.Publish(ctxClosing, "updatedBuildCommit", entRootCommit.ID.String())
 
 	return nil
 }
@@ -210,6 +224,8 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		"plan": entPlan.ID,
 	}).Debugf("BUILDER | BUILD ROUTINE START")
 	defer wg.Done()
+	ctxClosing := context.Background()
+	defer ctxClosing.Done()
 
 	entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
 
@@ -247,7 +263,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 
 	parentNodeFailed := false
 
-	entStatus, err = entStatus.Update().SetState(status.StatePARENTAWAITING).Save(ctx)
+	entStatus, err = entStatus.Update().SetState(status.StatePARENTAWAITING).Save(ctxClosing)
 	if err != nil {
 		logger.Log.WithFields(logrus.Fields{
 			"plan": entPlan.ID,
@@ -306,8 +322,8 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		return
 	}
 
-	entStatus.Update().SetState(status.StateINPROGRESS).Save(ctx)
-	rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
+	entStatus.Update().SetState(status.StateINPROGRESS).Save(ctxClosing)
+	rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
 
 	var planErr error = nil
 	switch entPlan.Type {
@@ -318,17 +334,17 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			return
 		}
 		if parentNodeFailed {
-			networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
+			networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
 				return
 			}
-			_, saveErr := networkStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+			_, saveErr := networkStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctxClosing)
 			if saveErr != nil {
 				logger.Log.Errorf("Error while setting Provisioned Network status to FAILED: %v", saveErr)
 				return
 			}
-			rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+			rdb.Publish(ctxClosing, "updatedStatus", networkStatus.ID.String())
 			planErr = fmt.Errorf("parent node for Provionded Network has failed")
 		} else {
 			planErr = buildNetwork(client, logger, builder, ctx, entProNetwork)
@@ -340,17 +356,17 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			return
 		}
 		if parentNodeFailed {
-			hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
+			hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
 				return
 			}
-			_, saveErr := hostStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+			_, saveErr := hostStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctxClosing)
 			if saveErr != nil {
 				logger.Log.Errorf("Error while setting Provisioned Network status to FAILED: %v", saveErr)
 				return
 			}
-			rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
+			rdb.Publish(ctxClosing, "updatedStatus", hostStatus.ID.String())
 			planErr = fmt.Errorf("parent node for Provionded Host has failed")
 		} else {
 			planErr = buildHost(client, logger, builder, ctx, entProHost)
@@ -362,17 +378,17 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			return
 		}
 		if parentNodeFailed {
-			stepStatus, err := entProvisioningStep.QueryProvisioningStepToStatus().Only(ctx)
+			stepStatus, err := entProvisioningStep.QueryProvisioningStepToStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
 				return
 			}
-			_, err = stepStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+			_, err = stepStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("error while trying to set ent.ProvisioningStep.Status.State to status.StateFAILED: %v", err)
 				return
 			}
-			rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
+			rdb.Publish(ctxClosing, "updatedStatus", stepStatus.ID.String())
 			planErr = fmt.Errorf("parent node for Provisioning Step has failed")
 		} else {
 			planErr = execStep(client, laforgeConfig, logger, ctx, entProvisioningStep)
@@ -384,17 +400,17 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			return
 		}
 		if parentNodeFailed {
-			teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+			teamStatus, err := entTeam.QueryTeamToStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
 				return
 			}
-			_, err = teamStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+			_, err = teamStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("error while trying to set ent.ProvisioningStep.Status.State to status.StateFAILED: %v", err)
 				return
 			}
-			rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+			rdb.Publish(ctxClosing, "updatedStatus", teamStatus.ID.String())
 			planErr = fmt.Errorf("parent node for Team has failed")
 		} else {
 			planErr = buildTeam(client, logger, builder, ctx, entTeam)
@@ -410,22 +426,23 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 			return
 		}
-		entStatus.Update().SetState(status.StateCOMPLETE).Save(ctx)
-		rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
+		entStatus.Update().SetState(status.StateCOMPLETE).Save(ctxClosing)
+		rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
 	default:
 		break
 	}
 
 	if planErr != nil {
-		entStatus.Update().SetState(status.StateFAILED).SetFailed(true).Save(ctx)
-		rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
+		entStatus.Update().SetState(status.StateFAILED).SetFailed(true).Save(ctxClosing)
+		rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
 		logger.Log.WithFields(logrus.Fields{
 			"type":    entPlan.Type,
 			"builder": (*builder).ID(),
 		}).Errorf("error while executing plan: %v", planErr)
 	} else {
-		entStatus.Update().SetState(status.StateCOMPLETE).SetCompleted(true).Save(ctx)
-		rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
+
+		entStatus.Update().SetState(status.StateCOMPLETE).SetCompleted(true).Save(ctxClosing)
+		rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
 	}
 
 	logger.Log.WithFields(logrus.Fields{
