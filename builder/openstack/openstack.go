@@ -18,6 +18,7 @@ import (
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/secgroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
@@ -136,6 +137,10 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	entHost, err := entProvisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed querying host from provisioned host: %v", err)
+	}
+	entDisk, err := entHost.QueryHostToDisk().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("failed querying disk from host: %v", err)
 	}
 	entProvisionedNetwork, err := entProvisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
 	if err != nil {
@@ -344,9 +349,18 @@ cd /
 `, agentUrl)
 	}
 
-	// Create the host
-	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", builder.Config.Images[entHost.OS], builder.Config.Flavors[entHost.InstanceSize])
-	osServer, err := servers.Create(computeClient, servers.CreateOpts{
+	blockOps := []bootfromvolume.BlockDevice{
+		{
+			UUID:                builder.Config.Images[entHost.OS],
+			BootIndex:           0,
+			DeleteOnTermination: true,
+			DestinationType:     bootfromvolume.DestinationVolume,
+			SourceType:          bootfromvolume.SourceImage,
+			VolumeSize:          entDisk.Size,
+		},
+	}
+
+	hostOps := servers.CreateOpts{
 		Name:           vmName,
 		ImageRef:       builder.Config.Images[entHost.OS],
 		FlavorRef:      builder.Config.Flavors[entHost.InstanceSize],
@@ -358,12 +372,21 @@ cd /
 		}},
 		AdminPass:  adminPassword,
 		AccessIPv4: hostAddress,
-	}).Extract()
+	}
+
+	createOpts := bootfromvolume.CreateOptsExt{
+		CreateOptsBuilder: hostOps,
+		BlockDevice:       blockOps,
+	}
+
+	// Create the host
+	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", builder.Config.Images[entHost.OS], builder.Config.Flavors[entHost.InstanceSize])
+	osServer, err := bootfromvolume.Create(computeClient, createOpts).Extract()
 	if err != nil {
 		return fmt.Errorf("failed to create server: %v", err)
 	}
-	// Wait for the server to provision and boot
-	servers.WaitForStatus(computeClient, osServer.ID, "Active", 60)
+
+	builder.Logger.Log.Debugf("Openstack ID: %v", osServer.ID)
 
 	// Store Openstack instance ID in provisioned host vars
 	newVars["openstack_instance_id"] = osServer.ID
