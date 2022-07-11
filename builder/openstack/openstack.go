@@ -19,6 +19,7 @@ import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/secgroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
@@ -59,6 +60,7 @@ type OpenstackBuilderConfig struct {
 	Flavors            map[string]string `json:"flavors"`
 	Images             map[string]string `json:"images"`
 	ExternalNetworkId  string            `json:"external_network_id"`
+	FloatingIPPool     string            `json:"floating_ip_pool"`
 }
 
 func (builder OpenstackBuilder) ID() string {
@@ -133,7 +135,22 @@ func waitForObjectTeardown(getFunc func() error) {
 	}
 }
 
+func waitForObject(getFunc func() (bool, error)) error {
+	for {
+		valid, err := getFunc()
+		if valid {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		time.Sleep(3 * time.Second)
+	}
+}
+
 func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHost *ent.ProvisionedHost) (err error) {
+	ctxClosing := context.Background()
+	defer ctxClosing.Done()
 	entHost, err := entProvisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed querying host from provisioned host: %v", err)
@@ -229,7 +246,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	}
 	newVars := entHost.Vars
 	newVars["openstack_secgroup_id"] = osSecGroup.ID
-	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctx)
+	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctxClosing)
 	if err != nil {
 		return fmt.Errorf("failed to update provisioned host vars: %v", err)
 	}
@@ -240,6 +257,13 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 			return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entEnvironment.Name)
 		}
 		input_cidr = vpcCidr
+	}
+	if entProvisionedNetwork.Name == "vdi" {
+		vdiWhitelist, ok := entEnvironment.Config["vdi_whitelist"]
+		if !ok {
+			return fmt.Errorf("couldn't find vdi_whitelist in environment \"%v\"", entEnvironment.Name)
+		}
+		input_cidr = vdiWhitelist
 	}
 	if entNetwork.Vars["public_net"] == "true" {
 		input_cidr = "0.0.0.0/0"
@@ -326,7 +350,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	agentUrl := fmt.Sprintf("%s/api/download/%s", builder.Config.ServerUrl, agentFile.URLID)
 
 	var userData string
-	if strings.HasPrefix(entHost.OS, "w2k") {
+	if strings.HasPrefix(entHost.OS, "w2k") || strings.HasPrefix(entHost.OS, "win") {
 		userData = fmt.Sprintf(`<script>
 powershell -Command mkdir $env:PROGRAMDATA\Laforge -Force
 powershell -Command do{	$test = Test-Connection 1.1.1.1 -Quiet; Start-Sleep -s 5}until($test)
@@ -386,18 +410,71 @@ cd /
 		return fmt.Errorf("failed to create server: %v", err)
 	}
 
-	builder.Logger.Log.Debugf("Openstack ID: %v", osServer.ID)
-
 	// Store Openstack instance ID in provisioned host vars
 	newVars["openstack_instance_id"] = osServer.ID
-	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctx)
+	err = entProvisionedHost.Update().SetVars(newVars).Exec(ctxClosing)
 	if err != nil {
 		return fmt.Errorf("failed to update provisioned host vars: %v", err)
+	}
+
+	// Deply host with public IP
+	if entNetwork.Vars["public_net"] == "true" {
+		floatingIPOpts := floatingips.CreateOpts{
+			Pool: builder.Config.FloatingIPPool,
+		}
+		fipResult, err := floatingips.Create(computeClient, floatingIPOpts).Extract()
+		if err != nil {
+			return fmt.Errorf("failed to request floating IP: %v", err)
+		}
+		fipaddress := fipResult.IP
+		// Store Floating IP in provisioned host vars
+		newVars["PublicIP"] = fipaddress
+		newVars["floatingip_id"] = fipResult.ID
+		err = entProvisionedHost.Update().SetVars(newVars).Exec(ctxClosing)
+		if err != nil {
+			return fmt.Errorf("failed to update provisioned host vars: %v", err)
+		}
+	}
+
+	err = waitForObject(func() (bool, error) {
+		results, err := servers.Get(computeClient, osServer.ID).Extract()
+		if err != nil {
+			return false, err
+		}
+		if len(results.AttachedVolumes) == 1 {
+			newVars["instance_volume_id"] = results.AttachedVolumes[0].ID
+			err = entProvisionedHost.Update().SetVars(newVars).Exec(ctxClosing)
+			if err != nil {
+				return false, fmt.Errorf("failed to update provisioned host vars: %v", err)
+			}
+		}
+		if results.Status == "ERROR" {
+			return false, fmt.Errorf("host in ERROR state")
+		}
+		if results.Status == "ACTIVE" {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to wait for host to become active: %v", err)
+	}
+	floatingip, exists := newVars["PublicIP"]
+	if exists {
+		associateOpts := floatingips.AssociateOpts{
+			FloatingIP: floatingip,
+		}
+		err = floatingips.AssociateInstance(computeClient, newVars["openstack_instance_id"], associateOpts).ExtractErr()
+		if err != nil {
+			return fmt.Errorf("failed to associate floating IP: %v", err)
+		}
 	}
 	return
 }
 
 func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisionedNetwork *ent.ProvisionedNetwork) (err error) {
+	ctxClosing := context.Background()
+	defer ctxClosing.Done()
 	entBuild, err := entProvisionedNetwork.QueryProvisionedNetworkToBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", entProvisionedNetwork.Name, err)
@@ -459,7 +536,7 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 	// Store the Openstack network ID in provisioned network vars
 	newVars := entProvisionedNetwork.Vars
 	newVars["openstack_network_id"] = osNetwork.ID
-	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctxClosing)
 	if err != nil {
 		return fmt.Errorf("failed to update provisioned network vars: %v", err)
 	}
@@ -508,7 +585,7 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 
 	// Store Openstack subnet ID in provisioned network vars
 	newVars["openstack_subnet_id"] = osSubnet.ID
-	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctxClosing)
 	if err != nil {
 		return fmt.Errorf("failed to update provisioned network vars: %v", err)
 	}
@@ -529,7 +606,7 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 
 	// Store Openstack port ID in provisioned network vars
 	newVars["openstack_subnet_port_id"] = osPort.ID
-	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctxClosing)
 	if err != nil {
 		return fmt.Errorf("failed to update provisioned network vars: %v", err)
 	}
@@ -548,7 +625,7 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 
 	// Store Openstack interface ID in provisioned network vars
 	newVars["openstack_router_interface_id"] = osInterface.ID
-	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctx)
+	err = entProvisionedNetwork.Update().SetVars(newVars).Exec(ctxClosing)
 	if err != nil {
 		return fmt.Errorf("failed to update provisioned network vars: %v", err)
 	}
@@ -556,6 +633,8 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 }
 
 func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
+	ctxClosing := context.Background()
+	defer ctxClosing.Done()
 	entBuild, err := entTeam.QueryTeamToBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from team: %v", err)
@@ -613,7 +692,7 @@ func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Tea
 	// Store Openstack router ID in team vars
 	newVars := entTeam.Vars
 	newVars["openstack_router_id"] = osRouter.ID
-	err = entTeam.Update().SetVars(newVars).Exec(ctx)
+	err = entTeam.Update().SetVars(newVars).Exec(ctxClosing)
 	if err != nil {
 		return fmt.Errorf("failed to update team vars: %v", err)
 	}
@@ -645,13 +724,37 @@ func (builder OpenstackBuilder) TeardownHost(ctx context.Context, entProvisioned
 		return fmt.Errorf("failed to create openstack compute client: %v", err)
 	}
 
+	newVars := entProvisionedHost.Vars
+	osServerId, instanceExists := entProvisionedHost.Vars["openstack_instance_id"]
+
+	// ###########
+	// Dissasociate floating IP
+	// ###########
+	floatingIP, exists := newVars["PublicIP"]
+	if exists {
+		if instanceExists {
+			disassociateOpts := floatingips.DisassociateOpts{
+				FloatingIP: floatingIP,
+			}
+			err := floatingips.DisassociateInstance(computeClient, osServerId, disassociateOpts).ExtractErr()
+			if err != nil {
+				return fmt.Errorf("failed to dissociate IP: %v", err)
+			}
+		}
+		floatingIPID, exists := newVars["floatingip_id"]
+		if exists {
+			err := floatingips.Delete(computeClient, floatingIPID).ExtractErr()
+			if err != nil {
+				return fmt.Errorf("failed to delete floating IP: %v", err)
+			}
+		}
+	}
+
 	// #############
 	// Teardown host
 	// #############
-	newVars := entProvisionedHost.Vars
 	// Delete Openstack instance if it exists
-	osServerId, exists := entProvisionedHost.Vars["openstack_instance_id"]
-	if exists {
+	if instanceExists {
 		err = servers.Delete(computeClient, osServerId).ExtractErr()
 		if err != nil {
 			return fmt.Errorf("failed to delete host: %v", err)

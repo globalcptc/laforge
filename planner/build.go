@@ -203,10 +203,18 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 
 	wg.Wait()
 
-	taskStatus, serverTask, err = utils.CompleteServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
-	if err != nil {
-		logger.Log.Errorf("error completing execute build server task: %v", err)
-		return err
+	if ctx.Err() != nil {
+		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
+		if err != nil {
+			logger.Log.Errorf("error failing execute build server task: %v", err)
+			return err
+		}
+	} else {
+		taskStatus, serverTask, err = utils.CompleteServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
+		if err != nil {
+			logger.Log.Errorf("error completing execute build server task: %v", err)
+			return err
+		}
 	}
 
 	err = entRootCommit.Update().SetState(buildcommit.StateAPPLIED).Exec(ctxClosing)

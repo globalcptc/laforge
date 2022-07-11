@@ -26,5 +26,6 @@
     "w2k22": "",
     "win10": ""
   },
-  "external_network_id": ""
+  "external_network_id": "",
+  "floating_ip_pool": ""
 }
