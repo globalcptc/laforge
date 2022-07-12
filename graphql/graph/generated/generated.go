@@ -372,6 +372,22 @@ type ComplexityRoot struct {
 		Type                     func(childComplexity int) int
 	}
 
+	PlanCounts struct {
+		Awaiting         func(childComplexity int) int
+		Cancelled        func(childComplexity int) int
+		Complete         func(childComplexity int) int
+		DeleteInProgress func(childComplexity int) int
+		Deleted          func(childComplexity int) int
+		Failed           func(childComplexity int) int
+		InProgress       func(childComplexity int) int
+		ParentAwaiting   func(childComplexity int) int
+		Planning         func(childComplexity int) int
+		Tainted          func(childComplexity int) int
+		ToDelete         func(childComplexity int) int
+		ToRebuild        func(childComplexity int) int
+		Undefined        func(childComplexity int) int
+	}
+
 	PlanDiff struct {
 		ID                    func(childComplexity int) int
 		NewState              func(childComplexity int) int
@@ -431,6 +447,7 @@ type ComplexityRoot struct {
 		GetBuildCommits     func(childComplexity int, envUUID string) int
 		GetBuilds           func(childComplexity int) int
 		GetCurrentUserTasks func(childComplexity int) int
+		GetPlanStatusCounts func(childComplexity int, buildUUID string) int
 		GetServerTasks      func(childComplexity int) int
 		GetUserList         func(childComplexity int) int
 		ListAgentStatuses   func(childComplexity int, buildUUID string) int
@@ -723,6 +740,7 @@ type QueryResolver interface {
 	ListBuildStatuses(ctx context.Context, buildUUID string) ([]*ent.Status, error)
 	GetAllAgentStatus(ctx context.Context, buildUUID string, count int, offset int) (*model.AgentStatusBatch, error)
 	GetAllPlanStatus(ctx context.Context, buildUUID string, count int, offset int) (*model.StatusBatch, error)
+	GetPlanStatusCounts(ctx context.Context, buildUUID string) (*model.PlanCounts, error)
 	ViewServerTaskLogs(ctx context.Context, taskID string) (string, error)
 	ViewAgentTask(ctx context.Context, taskID string) (*ent.AgentTask, error)
 	ServerTasks(ctx context.Context, taskUUIDs []*string) ([]*ent.ServerTask, error)
@@ -2490,6 +2508,97 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Plan.Type(childComplexity), true
 
+	case "PlanCounts.awaiting":
+		if e.complexity.PlanCounts.Awaiting == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.Awaiting(childComplexity), true
+
+	case "PlanCounts.cancelled":
+		if e.complexity.PlanCounts.Cancelled == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.Cancelled(childComplexity), true
+
+	case "PlanCounts.complete":
+		if e.complexity.PlanCounts.Complete == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.Complete(childComplexity), true
+
+	case "PlanCounts.deleteInProgress":
+		if e.complexity.PlanCounts.DeleteInProgress == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.DeleteInProgress(childComplexity), true
+
+	case "PlanCounts.deleted":
+		if e.complexity.PlanCounts.Deleted == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.Deleted(childComplexity), true
+
+	case "PlanCounts.failed":
+		if e.complexity.PlanCounts.Failed == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.Failed(childComplexity), true
+
+	case "PlanCounts.inProgress":
+		if e.complexity.PlanCounts.InProgress == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.InProgress(childComplexity), true
+
+	case "PlanCounts.parentAwaiting":
+		if e.complexity.PlanCounts.ParentAwaiting == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.ParentAwaiting(childComplexity), true
+
+	case "PlanCounts.planning":
+		if e.complexity.PlanCounts.Planning == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.Planning(childComplexity), true
+
+	case "PlanCounts.tainted":
+		if e.complexity.PlanCounts.Tainted == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.Tainted(childComplexity), true
+
+	case "PlanCounts.toDelete":
+		if e.complexity.PlanCounts.ToDelete == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.ToDelete(childComplexity), true
+
+	case "PlanCounts.toRebuild":
+		if e.complexity.PlanCounts.ToRebuild == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.ToRebuild(childComplexity), true
+
+	case "PlanCounts.undefined":
+		if e.complexity.PlanCounts.Undefined == nil {
+			break
+		}
+
+		return e.complexity.PlanCounts.Undefined(childComplexity), true
+
 	case "PlanDiff.id":
 		if e.complexity.PlanDiff.ID == nil {
 			break
@@ -2851,6 +2960,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.GetCurrentUserTasks(childComplexity), true
+
+	case "Query.getPlanStatusCounts":
+		if e.complexity.Query.GetPlanStatusCounts == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getPlanStatusCounts_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetPlanStatusCounts(childComplexity, args["buildUUID"].(string)), true
 
 	case "Query.getServerTasks":
 		if e.complexity.Query.GetServerTasks == nil {
@@ -4174,6 +4295,22 @@ type StatusBatch {
   pageInfo: LaForgePageInfo!
 }
 
+type PlanCounts {
+  planning: Int!
+  awaiting: Int!
+  parentAwaiting: Int!
+  inProgress: Int!
+  failed: Int!
+  complete: Int!
+  tainted: Int!
+  undefined: Int!
+  toDelete: Int!
+  deleteInProgress: Int!
+  deleted: Int!
+  toRebuild: Int!
+  cancelled: Int!
+}
+
 # TODO: Can use on INPUT_FIELD_DEFINITION if wanna have auth on a per variable level
 directive @hasRole(roles: [RoleLevel!]!) on FIELD_DEFINITION
 
@@ -4211,6 +4348,7 @@ type Query {
   ): AgentStatusBatch @hasRole(roles: [ADMIN, USER])
   getAllPlanStatus(buildUUID: String!, count: Int!, offset: Int!): StatusBatch
     @hasRole(roles: [ADMIN, USER])
+  getPlanStatusCounts(buildUUID: String!): PlanCounts! @hasRole(roles: [ADMIN, USER])
   viewServerTaskLogs(taskID: String!): String! @hasRole(roles: [ADMIN, USER])
   viewAgentTask(taskID: String!): AgentTask! @hasRole(roles: [ADMIN, USER])
   serverTasks(taskUUIDs: [String]!): [ServerTask] @hasRole(roles: [ADMIN, USER])
@@ -5070,6 +5208,21 @@ func (ec *executionContext) field_Query_getBuildCommits_args(ctx context.Context
 		}
 	}
 	args["envUUID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getPlanStatusCounts_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["buildUUID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("buildUUID"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["buildUUID"] = arg0
 	return args, nil
 }
 
@@ -18098,6 +18251,578 @@ func (ec *executionContext) fieldContext_Plan_PlanToPlanDiffs(ctx context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _PlanCounts_planning(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_planning(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Planning, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_planning(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_awaiting(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_awaiting(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Awaiting, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_awaiting(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_parentAwaiting(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_parentAwaiting(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ParentAwaiting, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_parentAwaiting(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_inProgress(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_inProgress(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.InProgress, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_inProgress(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_failed(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_failed(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Failed, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_failed(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_complete(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_complete(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Complete, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_complete(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_tainted(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_tainted(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Tainted, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_tainted(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_undefined(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_undefined(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Undefined, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_undefined(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_toDelete(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_toDelete(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ToDelete, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_toDelete(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_deleteInProgress(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_deleteInProgress(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DeleteInProgress, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_deleteInProgress(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_deleted(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_deleted(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Deleted, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_deleted(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_toRebuild(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_toRebuild(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ToRebuild, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_toRebuild(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlanCounts_cancelled(ctx context.Context, field graphql.CollectedField, obj *model.PlanCounts) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlanCounts_cancelled(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Cancelled, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlanCounts_cancelled(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlanCounts",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _PlanDiff_id(ctx context.Context, field graphql.CollectedField, obj *ent.PlanDiff) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_PlanDiff_id(ctx, field)
 	if err != nil {
@@ -22148,6 +22873,113 @@ func (ec *executionContext) fieldContext_Query_getAllPlanStatus(ctx context.Cont
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_getAllPlanStatus_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_getPlanStatusCounts(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getPlanStatusCounts(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetPlanStatusCounts(rctx, fc.Args["buildUUID"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalNRoleLevel2ᚕgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐRoleLevelᚄ(ctx, []interface{}{"ADMIN", "USER"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.PlanCounts); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/gen0cide/laforge/graphql/graph/model.PlanCounts`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PlanCounts)
+	fc.Result = res
+	return ec.marshalNPlanCounts2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐPlanCounts(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_getPlanStatusCounts(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "planning":
+				return ec.fieldContext_PlanCounts_planning(ctx, field)
+			case "awaiting":
+				return ec.fieldContext_PlanCounts_awaiting(ctx, field)
+			case "parentAwaiting":
+				return ec.fieldContext_PlanCounts_parentAwaiting(ctx, field)
+			case "inProgress":
+				return ec.fieldContext_PlanCounts_inProgress(ctx, field)
+			case "failed":
+				return ec.fieldContext_PlanCounts_failed(ctx, field)
+			case "complete":
+				return ec.fieldContext_PlanCounts_complete(ctx, field)
+			case "tainted":
+				return ec.fieldContext_PlanCounts_tainted(ctx, field)
+			case "undefined":
+				return ec.fieldContext_PlanCounts_undefined(ctx, field)
+			case "toDelete":
+				return ec.fieldContext_PlanCounts_toDelete(ctx, field)
+			case "deleteInProgress":
+				return ec.fieldContext_PlanCounts_deleteInProgress(ctx, field)
+			case "deleted":
+				return ec.fieldContext_PlanCounts_deleted(ctx, field)
+			case "toRebuild":
+				return ec.fieldContext_PlanCounts_toRebuild(ctx, field)
+			case "cancelled":
+				return ec.fieldContext_PlanCounts_cancelled(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PlanCounts", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_getPlanStatusCounts_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -31889,6 +32721,118 @@ func (ec *executionContext) _Plan(ctx context.Context, sel ast.SelectionSet, obj
 	return out
 }
 
+var planCountsImplementors = []string{"PlanCounts"}
+
+func (ec *executionContext) _PlanCounts(ctx context.Context, sel ast.SelectionSet, obj *model.PlanCounts) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, planCountsImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PlanCounts")
+		case "planning":
+
+			out.Values[i] = ec._PlanCounts_planning(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "awaiting":
+
+			out.Values[i] = ec._PlanCounts_awaiting(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "parentAwaiting":
+
+			out.Values[i] = ec._PlanCounts_parentAwaiting(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "inProgress":
+
+			out.Values[i] = ec._PlanCounts_inProgress(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "failed":
+
+			out.Values[i] = ec._PlanCounts_failed(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "complete":
+
+			out.Values[i] = ec._PlanCounts_complete(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "tainted":
+
+			out.Values[i] = ec._PlanCounts_tainted(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "undefined":
+
+			out.Values[i] = ec._PlanCounts_undefined(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "toDelete":
+
+			out.Values[i] = ec._PlanCounts_toDelete(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteInProgress":
+
+			out.Values[i] = ec._PlanCounts_deleteInProgress(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleted":
+
+			out.Values[i] = ec._PlanCounts_deleted(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "toRebuild":
+
+			out.Values[i] = ec._PlanCounts_toRebuild(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "cancelled":
+
+			out.Values[i] = ec._PlanCounts_cancelled(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var planDiffImplementors = []string{"PlanDiff"}
 
 func (ec *executionContext) _PlanDiff(ctx context.Context, sel ast.SelectionSet, obj *ent.PlanDiff) graphql.Marshaler {
@@ -32993,6 +33937,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_getAllPlanStatus(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "getPlanStatusCounts":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getPlanStatusCounts(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			}
 
@@ -35483,6 +36450,20 @@ func (ec *executionContext) marshalNPlan2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋ
 		return graphql.Null
 	}
 	return ec._Plan(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNPlanCounts2githubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐPlanCounts(ctx context.Context, sel ast.SelectionSet, v model.PlanCounts) graphql.Marshaler {
+	return ec._PlanCounts(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPlanCounts2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐPlanCounts(ctx context.Context, sel ast.SelectionSet, v *model.PlanCounts) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PlanCounts(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNPlanDiff2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐPlanDiff(ctx context.Context, sel ast.SelectionSet, v []*ent.PlanDiff) graphql.Marshaler {

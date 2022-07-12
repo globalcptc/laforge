@@ -20,6 +20,22 @@ type LaForgePageInfo struct {
 	NextOffset int `json:"nextOffset"`
 }
 
+type PlanCounts struct {
+	Planning         int `json:"planning"`
+	Awaiting         int `json:"awaiting"`
+	ParentAwaiting   int `json:"parentAwaiting"`
+	InProgress       int `json:"inProgress"`
+	Failed           int `json:"failed"`
+	Complete         int `json:"complete"`
+	Tainted          int `json:"tainted"`
+	Undefined        int `json:"undefined"`
+	ToDelete         int `json:"toDelete"`
+	DeleteInProgress int `json:"deleteInProgress"`
+	Deleted          int `json:"deleted"`
+	ToRebuild        int `json:"toRebuild"`
+	Cancelled        int `json:"cancelled"`
+}
+
 type StatusBatch struct {
 	Statuses []*ent.Status    `json:"statuses"`
 	PageInfo *LaForgePageInfo `json:"pageInfo"`

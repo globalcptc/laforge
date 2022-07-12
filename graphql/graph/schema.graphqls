@@ -551,6 +551,22 @@ type StatusBatch {
   pageInfo: LaForgePageInfo!
 }
 
+type PlanCounts {
+  planning: Int!
+  awaiting: Int!
+  parentAwaiting: Int!
+  inProgress: Int!
+  failed: Int!
+  complete: Int!
+  tainted: Int!
+  undefined: Int!
+  toDelete: Int!
+  deleteInProgress: Int!
+  deleted: Int!
+  toRebuild: Int!
+  cancelled: Int!
+}
+
 # TODO: Can use on INPUT_FIELD_DEFINITION if wanna have auth on a per variable level
 directive @hasRole(roles: [RoleLevel!]!) on FIELD_DEFINITION
 
@@ -588,6 +604,7 @@ type Query {
   ): AgentStatusBatch @hasRole(roles: [ADMIN, USER])
   getAllPlanStatus(buildUUID: String!, count: Int!, offset: Int!): StatusBatch
     @hasRole(roles: [ADMIN, USER])
+  getPlanStatusCounts(buildUUID: String!): PlanCounts! @hasRole(roles: [ADMIN, USER])
   viewServerTaskLogs(taskID: String!): String! @hasRole(roles: [ADMIN, USER])
   viewAgentTask(taskID: String!): AgentTask! @hasRole(roles: [ADMIN, USER])
   serverTasks(taskUUIDs: [String]!): [ServerTask] @hasRole(roles: [ADMIN, USER])

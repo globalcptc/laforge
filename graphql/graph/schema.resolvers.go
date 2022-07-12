@@ -1555,6 +1555,82 @@ func (r *queryResolver) GetAllPlanStatus(ctx context.Context, buildUUID string, 
 	}, nil
 }
 
+func (r *queryResolver) GetPlanStatusCounts(ctx context.Context, buildUUID string) (*model.PlanCounts, error) {
+	uuid, err := uuid.Parse(buildUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	entBuild, err := r.client.Build.Query().Where(build.IDEQ(uuid)).Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	planningCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePLANNING))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all planning plans from build: %v", err)
+	}
+	awaitingCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateAWAITING))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all awaiting plans from build: %v", err)
+	}
+	parentAwaitingCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePARENTAWAITING))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all parent_awaiting plans from build: %v", err)
+	}
+	inProgressCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateINPROGRESS))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all in_progress plans from build: %v", err)
+	}
+	failedCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateFAILED))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all failed plans from build: %v", err)
+	}
+	completeCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateCOMPLETE))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all complete plans from build: %v", err)
+	}
+	taintedCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTAINTED))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all tainted plans from build: %v", err)
+	}
+	toDeleteCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTODELETE))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all to_delete plans from build: %v", err)
+	}
+	deleteInProgressCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateDELETEINPROGRESS))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all delete_in_progress plans from build: %v", err)
+	}
+	deletedCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateDELETED))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all deleted plans from build: %v", err)
+	}
+	toRebuildCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTOREBUILD))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all to_rebuild plans from build: %v", err)
+	}
+	cancelledCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateCANCELLED))).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all cancelled plans from build: %v", err)
+	}
+
+	return &model.PlanCounts{
+		Planning:         planningCount,
+		Awaiting:         awaitingCount,
+		ParentAwaiting:   parentAwaitingCount,
+		InProgress:       inProgressCount,
+		Failed:           failedCount,
+		Complete:         completeCount,
+		Tainted:          taintedCount,
+		Undefined:        0,
+		ToDelete:         toDeleteCount,
+		DeleteInProgress: deleteInProgressCount,
+		Deleted:          deletedCount,
+		ToRebuild:        toRebuildCount,
+		Cancelled:        cancelledCount,
+	}, nil
+}
+
 func (r *queryResolver) ViewServerTaskLogs(ctx context.Context, taskID string) (string, error) {
 	uuid, err := uuid.Parse(taskID)
 
