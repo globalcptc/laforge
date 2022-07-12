@@ -215,6 +215,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 			logger.Log.Errorf("error completing execute build server task: %v", err)
 			return err
 		}
+		delete(cancelMap, entBuild.ID)
 	}
 
 	err = entRootCommit.Update().SetState(buildcommit.StateAPPLIED).Exec(ctxClosing)
