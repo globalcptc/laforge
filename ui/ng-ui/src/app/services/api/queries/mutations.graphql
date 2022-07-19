@@ -12,6 +12,10 @@ mutation ExecuteBuild($buildId: String!) {
   }
 }
 
+mutation CancelBuild($buildId: String!) {
+  cancelBuild(buildUUID: $buildId)
+}
+
 mutation CreateBuild($envId: String!) {
   createBuild(envUUID: $envId, renderFiles: true) {
     id

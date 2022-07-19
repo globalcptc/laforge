@@ -249,6 +249,10 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
+  buildIsCancellable(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): boolean {
+    return buildCommit.state === LaForgeBuildCommitState.Inprogress;
+  }
+
   buildCommitIsCancellable(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): boolean {
     if (buildCommit.state === LaForgeBuildCommitState.Cancelled) return false;
     if (buildCommit.state === LaForgeBuildCommitState.Inprogress) return false;
@@ -319,6 +323,29 @@ export class HomeComponent implements OnInit, OnDestroy {
           // .afterDismissed()
           // .subscribe(() => window.location.reload());
         }
+      },
+      (err) => {
+        console.error(err);
+        this.snackbar.open('Error while creating build. Please check logs for details.', 'Okay', {
+          duration: 3000,
+          panelClass: ['bg-danger', 'text-white']
+        });
+      }
+    );
+  }
+
+  cancelBuild(buildId: string) {
+    this.snackbar.open('Build is being cancelled...', null, {
+      duration: 1000,
+      panelClass: ['bg-info', 'text-white']
+    });
+    this.api.cancelBuild(buildId).then(
+      () => {
+        this.snackbar.open('Build cancelled successfully.', null, {
+          duration: 1000,
+          panelClass: ['bg-success', 'text-white']
+        });
+        setTimeout(() => window.location.reload(), 1000);
       },
       (err) => {
         console.error(err);

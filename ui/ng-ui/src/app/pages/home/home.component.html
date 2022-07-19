@@ -149,10 +149,14 @@
             <div class="controls">
               <div class="btn-group btn-group-sm">
                 <button
-                  *ngIf="buildCommitIsCancellable(buildCommit)"
+                  *ngIf="buildIsCancellable(buildCommit) || buildCommitIsCancellable(buildCommit)"
                   class="btn btn-danger"
                   [ngClass]="{ 'btn-icon': showIconsOnly }"
-                  (click)="cancelBuildCommit(buildCommit)"
+                  (click)="
+                    buildIsCancellable(buildCommit.BuildCommitToBuild.id)
+                      ? cancelBuild(buildCommit.BuildCommitToBuild.id)
+                      : cancelBuildCommit(buildCommit)
+                  "
                 >
                   <ng-container *ngIf="showIconsOnly"><i class="fa fa-times"></i></ng-container>
                   <ng-container *ngIf="!showIconsOnly">Cancel</ng-container>

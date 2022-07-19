@@ -242,3 +242,20 @@ query GetBuildCommits($buildId: String!) {
     }
   }
 }
+
+query GetPlanStatusCounts($buildId: String!) {
+  getPlanStatusCounts(buildUUID: $buildId) {
+    planning
+    awaiting
+    parentAwaiting
+    inProgress
+    failed
+    complete
+    tainted
+    toDelete
+    deleteInProgress
+    deleted
+    toRebuild
+    cancelled
+  }
+}

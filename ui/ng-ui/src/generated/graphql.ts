@@ -347,11 +347,13 @@ export type LaForgeMutation = {
   createBatchAgentTasks: Array<Maybe<LaForgeAgentTask>>;
   createEnviromentFromRepo: Array<Maybe<LaForgeEnvironment>>;
   updateEnviromentViaPull: Array<Maybe<LaForgeEnvironment>>;
+  cancelBuild: Scalars['Boolean'];
   modifySelfPassword: Scalars['Boolean'];
   modifySelfUserInfo?: Maybe<LaForgeAuthUser>;
   createUser?: Maybe<LaForgeAuthUser>;
   modifyAdminUserInfo?: Maybe<LaForgeAuthUser>;
   modifyAdminPassword: Scalars['Boolean'];
+  nukeBackend: Array<Maybe<LaForgeIntMap>>;
 };
 
 export type LaForgeMutationLoadEnvironmentArgs = {
@@ -421,6 +423,10 @@ export type LaForgeMutationUpdateEnviromentViaPullArgs = {
   envUUID: Scalars['String'];
 };
 
+export type LaForgeMutationCancelBuildArgs = {
+  buildUUID: Scalars['String'];
+};
+
 export type LaForgeMutationModifySelfPasswordArgs = {
   currentPassword: Scalars['String'];
   newPassword: Scalars['String'];
@@ -487,6 +493,23 @@ export type LaForgePlan = {
   PlanToProvisioningStep: LaForgeProvisioningStep;
   PlanToStatus: LaForgeStatus;
   PlanToPlanDiffs: Array<Maybe<LaForgePlanDiff>>;
+};
+
+export type LaForgePlanCounts = {
+  __typename?: 'PlanCounts';
+  planning: Scalars['Int'];
+  awaiting: Scalars['Int'];
+  parentAwaiting: Scalars['Int'];
+  inProgress: Scalars['Int'];
+  failed: Scalars['Int'];
+  complete: Scalars['Int'];
+  tainted: Scalars['Int'];
+  undefined: Scalars['Int'];
+  toDelete: Scalars['Int'];
+  deleteInProgress: Scalars['Int'];
+  deleted: Scalars['Int'];
+  toRebuild: Scalars['Int'];
+  cancelled: Scalars['Int'];
 };
 
 export type LaForgePlanDiff = {
@@ -615,6 +638,7 @@ export type LaForgeQuery = {
   listBuildStatuses?: Maybe<Array<Maybe<LaForgeStatus>>>;
   getAllAgentStatus?: Maybe<LaForgeAgentStatusBatch>;
   getAllPlanStatus?: Maybe<LaForgeStatusBatch>;
+  getPlanStatusCounts: LaForgePlanCounts;
   viewServerTaskLogs: Scalars['String'];
   viewAgentTask: LaForgeAgentTask;
   serverTasks?: Maybe<Array<Maybe<LaForgeServerTask>>>;
@@ -682,6 +706,10 @@ export type LaForgeQueryGetAllPlanStatusArgs = {
   buildUUID: Scalars['String'];
   count: Scalars['Int'];
   offset: Scalars['Int'];
+};
+
+export type LaForgeQueryGetPlanStatusCountsArgs = {
+  buildUUID: Scalars['String'];
 };
 
 export type LaForgeQueryViewServerTaskLogsArgs = {
@@ -825,6 +853,12 @@ export type LaForgeConfigMap = {
   __typename?: 'configMap';
   key: Scalars['String'];
   value: Scalars['String'];
+};
+
+export type LaForgeIntMap = {
+  __typename?: 'intMap';
+  key: Scalars['String'];
+  value: Scalars['Int'];
 };
 
 export type LaForgeTagMap = {
@@ -1080,6 +1114,28 @@ export type LaForgeGetBuildCommitsQuery = { __typename?: 'Query' } & {
     { __typename?: 'Build' } & Pick<LaForgeBuild, 'id'> & {
         BuildToBuildCommits: Array<Maybe<{ __typename?: 'BuildCommit' } & LaForgeBuildCommitFieldsFragment>>;
       }
+  >;
+};
+
+export type LaForgeGetPlanStatusCountsQueryVariables = Exact<{
+  buildId: Scalars['String'];
+}>;
+
+export type LaForgeGetPlanStatusCountsQuery = { __typename?: 'Query' } & {
+  getPlanStatusCounts: { __typename?: 'PlanCounts' } & Pick<
+    LaForgePlanCounts,
+    | 'planning'
+    | 'awaiting'
+    | 'parentAwaiting'
+    | 'inProgress'
+    | 'failed'
+    | 'complete'
+    | 'tainted'
+    | 'toDelete'
+    | 'deleteInProgress'
+    | 'deleted'
+    | 'toRebuild'
+    | 'cancelled'
   >;
 };
 
@@ -1435,6 +1491,12 @@ export type LaForgeExecuteBuildMutationVariables = Exact<{
 export type LaForgeExecuteBuildMutation = { __typename?: 'Mutation' } & {
   executePlan?: Maybe<{ __typename?: 'Build' } & Pick<LaForgeBuild, 'id'>>;
 };
+
+export type LaForgeCancelBuildMutationVariables = Exact<{
+  buildId: Scalars['String'];
+}>;
+
+export type LaForgeCancelBuildMutation = { __typename?: 'Mutation' } & Pick<LaForgeMutation, 'cancelBuild'>;
 
 export type LaForgeCreateBuildMutationVariables = Exact<{
   envId: Scalars['String'];
@@ -2194,6 +2256,35 @@ export class LaForgeGetBuildCommitsGQL extends Apollo.Query<LaForgeGetBuildCommi
     super(apollo);
   }
 }
+export const GetPlanStatusCountsDocument = gql`
+  query GetPlanStatusCounts($buildId: String!) {
+    getPlanStatusCounts(buildUUID: $buildId) {
+      planning
+      awaiting
+      parentAwaiting
+      inProgress
+      failed
+      complete
+      tainted
+      toDelete
+      deleteInProgress
+      deleted
+      toRebuild
+      cancelled
+    }
+  }
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeGetPlanStatusCountsGQL extends Apollo.Query<LaForgeGetPlanStatusCountsQuery, LaForgeGetPlanStatusCountsQueryVariables> {
+  document = GetPlanStatusCountsDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
 export const ListBuildCommitsDocument = gql`
   query ListBuildCommits($envUUID: String!) {
     getBuildCommits(envUUID: $envUUID) {
@@ -2660,6 +2751,22 @@ export const ExecuteBuildDocument = gql`
 })
 export class LaForgeExecuteBuildGQL extends Apollo.Mutation<LaForgeExecuteBuildMutation, LaForgeExecuteBuildMutationVariables> {
   document = ExecuteBuildDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
+export const CancelBuildDocument = gql`
+  mutation CancelBuild($buildId: String!) {
+    cancelBuild(buildUUID: $buildId)
+  }
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeCancelBuildGQL extends Apollo.Mutation<LaForgeCancelBuildMutation, LaForgeCancelBuildMutationVariables> {
+  document = CancelBuildDocument;
 
   constructor(apollo: Apollo.Apollo) {
     super(apollo);

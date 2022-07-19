@@ -46,7 +46,11 @@ import {
   LaForgeGetServerTaskLogsQuery,
   LaForgeGetServerTaskLogsGQL,
   LaForgeGetServerTasksGQL,
-  LaForgeGetServerTasksQuery
+  LaForgeGetServerTasksQuery,
+  LaForgeGetPlanStatusCountsGQL,
+  LaForgeGetPlanStatusCountsQuery,
+  LaForgeCancelBuildGQL,
+  LaForgeCancelBuildCommitMutation
 } from '@graphql';
 
 @Injectable({
@@ -79,7 +83,9 @@ export class ApiService {
     private listBuildStatusesGQL: LaForgeListBuildStatusesGQL,
     private listAgentStatusesGQL: LaForgeListAgentStatusesGQL,
     private getServerTaskLogsGQL: LaForgeGetServerTaskLogsGQL,
-    private getServerTasksGQL: LaForgeGetServerTasksGQL
+    private getServerTasksGQL: LaForgeGetServerTasksGQL,
+    private getPlanStatusCounts: LaForgeGetPlanStatusCountsGQL,
+    private cancelBuildGQL: LaForgeCancelBuildGQL
   ) {}
 
   /**
@@ -560,6 +566,50 @@ export class ApiService {
             return reject(errors);
           }
           resolve(data.serverTasks);
+        });
+    });
+  }
+
+  /**
+   * Gets the counts of all types of plan statuses
+   * @param buildUUID The UUID of the build
+   * @returns Categorized counts of plan statuses
+   */
+  public getPlanStatusCountCache(buildUUID: string): Promise<LaForgeGetPlanStatusCountsQuery['getPlanStatusCounts']> {
+    return new Promise((resolve, reject) => {
+      this.getPlanStatusCounts
+        .fetch(
+          {
+            buildId: buildUUID
+          },
+          {
+            fetchPolicy: 'no-cache'
+          }
+        )
+        .toPromise()
+        .then(({ data, error, errors }) => {
+          if (error) {
+            return reject(error);
+          } else if (errors) {
+            return reject(errors);
+          }
+          resolve(data.getPlanStatusCounts);
+        });
+    });
+  }
+
+  public cancelBuild(buildUUID: string): Promise<LaForgeCancelBuildCommitMutation['cancelCommit']> {
+    return new Promise((resolve, reject) => {
+      this.cancelBuildGQL
+        .mutate({
+          buildId: buildUUID
+        })
+        .toPromise()
+        .then(({ data, errors }) => {
+          if (errors) {
+            return reject(errors);
+          }
+          resolve(data.cancelBuild);
         });
     });
   }
