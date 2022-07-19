@@ -104,11 +104,12 @@
               </span>
             </div>
             <div>
-              <div class="btn-group btn-group-sm" *ngIf="buildIsManagable(buildCommitGroup[0].BuildCommitToBuild)">
+              <div class="btn-group btn-group-sm">
                 <a
                   class="btn btn-sm btn-primary"
                   [ngClass]="{ 'btn-icon': showIconsOnly }"
                   [href]="'/manage/' + buildCommitGroup[0].BuildCommitToBuild.id"
+                  *ngIf="buildIsManagable(buildCommitGroup[0].BuildCommitToBuild)"
                 >
                   <ng-container *ngIf="showIconsOnly"><i class="fa fa-cogs"></i></ng-container>
                   <ng-container *ngIf="!showIconsOnly">Manage</ng-container>

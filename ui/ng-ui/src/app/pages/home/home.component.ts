@@ -274,9 +274,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   buildIsManagable(build: LaForgeListBuildCommitsQuery['getBuildCommits'][0]['BuildCommitToBuild']): boolean {
-    if (build.buildToStatus.state === LaForgeProvisionStatus.Deleted) return false;
     if (build.buildToStatus.state === LaForgeProvisionStatus.Planning) return false;
-    if (build.buildToStatus.state === LaForgeProvisionStatus.Cancelled) return false;
     return true;
   }
 
