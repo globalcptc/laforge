@@ -1,8 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { ActivatedRoute } from '@angular/router';
-import { LaForgeGetBuildTreeQuery, LaForgeGetPlanStatusCountsQuery } from '@graphql';
+import { ActivatedRoute, Router } from '@angular/router';
+import { LaForgeGetBuildTreeQuery, LaForgeGetPlanStatusCountsQuery, LaForgeProvisionStatus } from '@graphql';
 import { ApiService } from '@services/api/api.service';
 import { StatusService } from '@services/status/status.service';
 import { BehaviorSubject, Subscription } from 'rxjs';
@@ -33,6 +33,7 @@ export class BuildComponent implements OnInit, OnDestroy {
     private snackbar: MatSnackBar,
     private api: ApiService,
     private route: ActivatedRoute,
+    private router: Router,
     private status: StatusService,
     private dialog: MatDialog
   ) {
@@ -102,5 +103,39 @@ export class BuildComponent implements OnInit, OnDestroy {
         taskUUIDs
       }
     });
+  }
+
+  buildIsCancellable(): boolean {
+    const _build = this.build.getValue();
+    if (!_build) return false;
+    const _buildStatus = this.status.getStatusValue(_build.buildToStatus.id);
+    if (!_buildStatus) return false;
+    if (_buildStatus.state === LaForgeProvisionStatus.Deleted) return false;
+    if (_buildStatus.state === LaForgeProvisionStatus.Deleteinprogress) return false;
+    if (_buildStatus.state === LaForgeProvisionStatus.Todelete) return false;
+    return true;
+  }
+
+  cancelBuild(buildId: string) {
+    this.snackbar.open('Build is being cancelled...', null, {
+      duration: 1000,
+      panelClass: ['bg-info', 'text-white']
+    });
+    this.api.cancelBuild(buildId).then(
+      () => {
+        this.snackbar.open('Build cancelled successfully.', null, {
+          duration: 1000,
+          panelClass: ['bg-success', 'text-white']
+        });
+        setTimeout(() => this.router.navigate(['manage', this.build.getValue().id]), 1000);
+      },
+      (err) => {
+        console.error(err);
+        this.snackbar.open('Error while creating build. Please check logs for details.', 'Okay', {
+          duration: 3000,
+          panelClass: ['bg-danger', 'text-white']
+        });
+      }
+    );
   }
 }

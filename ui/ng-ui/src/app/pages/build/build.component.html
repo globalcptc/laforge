@@ -33,7 +33,7 @@
     <div class="d-flex align-items-center">
       <span class="badge badge-pill badge-info d-flex align-items-center px-3">
         <h4 class="mb-0">{{ _planStatusCounts.inProgress + _planStatusCounts.deleteInProgress }}</h4>
-        <i class="fa fa-spinner text-white mx-2"></i>
+        <i class="fa fa-tasks text-white mx-2"></i>
         In Progress
       </span>
     </div>
@@ -66,6 +66,7 @@
           <div class="btn-group btn-group-sm">
             <a class="btn btn-primary" [href]="'/manage/' + _build.id">Manage</a>
             <button class="btn btn-dark" (click)="viewBuildLogs()">View Logs</button>
+            <button class="btn btn-danger" (click)="cancelBuild(_build.id)" *ngIf="buildIsCancellable()">Cancel Build</button>
           </div>
         </mat-card-title>
         <mat-card-subtitle>{{ _build.buildToEnvironment.description }}</mat-card-subtitle>

@@ -79,6 +79,9 @@ export class HomeComponent implements OnInit, OnDestroy {
             duration: 1000,
             panelClass: ['bg-success', 'text-white']
           });
+          const buildsElement = document.getElementById(`builds-${updatedCommit.BuildCommitToBuild.buildToEnvironment.id}`);
+          if (buildsElement.style.maxHeight !== '0px') buildsElement.style.maxHeight = '0px';
+          else buildsElement.style.maxHeight = buildsElement.scrollHeight + 'px';
         } else envBuildCommits.splice(index, 1, updatedCommit);
         buildCommitMap[updatedCommit.BuildCommitToBuild.buildToEnvironment.id] = envBuildCommits;
       } else {
@@ -278,6 +281,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   buildIsDestroyable(buildCommitGroup: LaForgeListBuildCommitsQuery['getBuildCommits']): boolean {
+    if (buildCommitGroup.sort((a, b) => b.revision - a.revision)[0].type === LaForgeBuildCommitType.Delete) return false;
     if (
       buildCommitGroup.filter((bc) => bc.state === LaForgeBuildCommitState.Inprogress || bc.state === LaForgeBuildCommitState.Planning)
         .length > 0

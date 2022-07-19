@@ -79,6 +79,10 @@ export class StatusService implements OnDestroy {
     return this.statusSubjectMap[statusId];
   }
 
+  public getStatusValue(statusId: string): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | null {
+    return this.statusSubjectMap[statusId]?.getValue() ?? null;
+  }
+
   public getAgentStatusSubject(clientId: string): BehaviorSubject<LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus']> {
     if (!this.agentStatusSubjectMap[clientId]) this.agentStatusSubjectMap[clientId] = new BehaviorSubject(null);
     return this.agentStatusSubjectMap[clientId];

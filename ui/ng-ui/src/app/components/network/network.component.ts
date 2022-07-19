@@ -93,6 +93,7 @@ export class NetworkComponent implements OnInit, OnDestroy {
 
   allChildrenResponding(): boolean {
     if (this.mode === 'plan') return true;
+    if (!this.planStatus.getValue() || !this.provisionStatus.getValue()) return false;
     return (
       this.planStatus.getValue().state === LaForgeProvisionStatus.Complete &&
       this.provisionStatus.getValue().state === LaForgeProvisionStatus.Complete

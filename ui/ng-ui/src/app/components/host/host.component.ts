@@ -246,6 +246,7 @@ export class HostComponent implements OnInit, OnDestroy {
   childrenCompleted(): boolean {
     if (this.mode === 'plan') return true;
     if (this.mode === 'manage') return true;
+    if (!this.planStatus.getValue() || !this.provisionStatus.getValue()) return false;
     return (
       this.planStatus.getValue().state === LaForgeProvisionStatus.Complete &&
       this.provisionStatus.getValue().state === LaForgeProvisionStatus.Complete
