@@ -28,6 +28,7 @@ import (
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/loader/include"
 	"github.com/gen0cide/laforge/logging"
+	"github.com/google/uuid"
 	hcl2 "github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/ext/transform"
 	gohcl2 "github.com/hashicorp/hcl/v2/gohcl"
@@ -387,6 +388,24 @@ func rollback(tx *ent.Tx, err error) error {
 	return err
 }
 
+// getHostIDs gets Host IDs from array of Host objects and returns a array of Host IDs
+func getHostIDs(hosts []*ent.Host) []uuid.UUID {
+	var hostIDs []uuid.UUID
+	for _, h := range hosts {
+		hostIDs = append(hostIDs, h.ID)
+	}
+	return hostIDs
+}
+
+// getNetworkIDs gets Network IDs from array of Network objects and returns a array of Network IDs
+func getNetworkIDs(networks []*ent.Network) []uuid.UUID {
+	var networkIDs []uuid.UUID
+	for _, n := range networks {
+		networkIDs = append(networkIDs, n.ID)
+	}
+	return networkIDs
+}
+
 // Need to combine everything here
 func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Logger, configEnvs map[string]*ent.Environment, loadedConfig *DefinedConfigs) ([]*ent.Environment, error) {
 	txClient, err := client.Tx(ctx)
@@ -455,6 +474,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			log.Log.Errorf("Error loading in competition into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
+		returnedNetworkIDs := getNetworkIDs(returnedNetworks)
 		returnedAnsible, err := createAnsible(txClient, ctx, log, loadedConfig.Ansible, cEnviroment.HclID)
 		if err != nil {
 			err = rollback(txClient, err)
@@ -468,7 +488,8 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			log.Log.Errorf("Error loading in Hosts into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedIncludedNetworks, err := createIncludedNetwork(txClient, ctx, log, cEnviroment.HCLEnvironmentToIncludedNetwork, cEnviroment.HclID)
+		returnedHostIDs := getHostIDs(returnedHosts)
+		returnedIncludedNetworks, err := createIncludedNetwork(txClient, ctx, log, cEnviroment.HCLEnvironmentToIncludedNetwork, cEnviroment.HclID, returnedHostIDs, returnedNetworkIDs)
 		if err != nil {
 			err = rollback(txClient, err)
 			log.Log.Errorf("Error loading in included_networks into env: %v, Err: %v", cEnviroment.HclID, err)
@@ -1495,17 +1516,18 @@ func createDisk(txClient *ent.Tx, ctx context.Context, log *logging.Logger, conf
 	return entDisk, nil
 }
 
-func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configIncludedNetworks []*ent.IncludedNetwork, envHclID string) ([]*ent.IncludedNetwork, error) {
+func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configIncludedNetworks []*ent.IncludedNetwork, envHclID string, returnedHostIDs, returnedNetworkIDS []uuid.UUID) ([]*ent.IncludedNetwork, error) {
 	bulk := []*ent.IncludedNetworkCreate{}
 	returnedIncludedNetworks := []*ent.IncludedNetwork{}
 	for _, cIncludedNetwork := range configIncludedNetworks {
 		entNetwork, err := txClient.Network.Query().Where(
 			network.And(
 				network.HclIDEQ(cIncludedNetwork.Name),
-				network.Or(
-					network.Not(network.HasNetworkToEnvironment()),
-					network.HasNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
-				),
+				network.IDIn(returnedNetworkIDS...),
+				// network.Or(
+				// 	network.Not(network.HasNetworkToEnvironment()),
+				// 	network.HasNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
+				// ),
 			),
 		).Only(ctx)
 		if err != nil {
@@ -1517,10 +1539,11 @@ func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.L
 			entHost, err := txClient.Host.Query().Where(
 				host.And(
 					host.HclIDEQ(cHostHclID),
-					host.Or(
-						host.Not(host.HasHostToEnvironment()),
-						host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),
-					),
+					host.IDIn(returnedHostIDs...),
+					// host.Or(
+					// 	host.Not(host.HasHostToEnvironment()),
+					// 	host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					// ),
 				),
 			).Only(ctx)
 			if err != nil {
