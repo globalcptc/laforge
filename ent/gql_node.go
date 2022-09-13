@@ -1560,7 +1560,7 @@ func (fd *FileDownload) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     fd.ID,
 		Type:   "FileDownload",
-		Fields: make([]*Field, 10),
+		Fields: make([]*Field, 11),
 		Edges:  make([]*Edge, 1),
 	}
 	var buf []byte
@@ -1636,10 +1636,18 @@ func (fd *FileDownload) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "abs_path",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(fd.Tags); err != nil {
+	if buf, err = json.Marshal(fd.IsTxt); err != nil {
 		return nil, err
 	}
 	node.Fields[9] = &Field{
+		Type:  "bool",
+		Name:  "is_txt",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(fd.Tags); err != nil {
+		return nil, err
+	}
+	node.Fields[10] = &Field{
 		Type:  "map[string]string",
 		Name:  "tags",
 		Value: string(buf),

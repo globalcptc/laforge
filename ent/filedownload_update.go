@@ -83,6 +83,20 @@ func (fdu *FileDownloadUpdate) SetAbsPath(s string) *FileDownloadUpdate {
 	return fdu
 }
 
+// SetIsTxt sets the "is_txt" field.
+func (fdu *FileDownloadUpdate) SetIsTxt(b bool) *FileDownloadUpdate {
+	fdu.mutation.SetIsTxt(b)
+	return fdu
+}
+
+// SetNillableIsTxt sets the "is_txt" field if the given value is not nil.
+func (fdu *FileDownloadUpdate) SetNillableIsTxt(b *bool) *FileDownloadUpdate {
+	if b != nil {
+		fdu.SetIsTxt(*b)
+	}
+	return fdu
+}
+
 // SetTags sets the "tags" field.
 func (fdu *FileDownloadUpdate) SetTags(m map[string]string) *FileDownloadUpdate {
 	fdu.mutation.SetTags(m)
@@ -254,6 +268,13 @@ func (fdu *FileDownloadUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: filedownload.FieldAbsPath,
 		})
 	}
+	if value, ok := fdu.mutation.IsTxt(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeBool,
+			Value:  value,
+			Column: filedownload.FieldIsTxt,
+		})
+	}
 	if value, ok := fdu.mutation.Tags(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeJSON,
@@ -366,6 +387,20 @@ func (fduo *FileDownloadUpdateOne) SetMd5(s string) *FileDownloadUpdateOne {
 // SetAbsPath sets the "abs_path" field.
 func (fduo *FileDownloadUpdateOne) SetAbsPath(s string) *FileDownloadUpdateOne {
 	fduo.mutation.SetAbsPath(s)
+	return fduo
+}
+
+// SetIsTxt sets the "is_txt" field.
+func (fduo *FileDownloadUpdateOne) SetIsTxt(b bool) *FileDownloadUpdateOne {
+	fduo.mutation.SetIsTxt(b)
+	return fduo
+}
+
+// SetNillableIsTxt sets the "is_txt" field if the given value is not nil.
+func (fduo *FileDownloadUpdateOne) SetNillableIsTxt(b *bool) *FileDownloadUpdateOne {
+	if b != nil {
+		fduo.SetIsTxt(*b)
+	}
 	return fduo
 }
 
@@ -562,6 +597,13 @@ func (fduo *FileDownloadUpdateOne) sqlSave(ctx context.Context) (_node *FileDown
 			Type:   field.TypeString,
 			Value:  value,
 			Column: filedownload.FieldAbsPath,
+		})
+	}
+	if value, ok := fduo.mutation.IsTxt(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeBool,
+			Value:  value,
+			Column: filedownload.FieldIsTxt,
 		})
 	}
 	if value, ok := fduo.mutation.Tags(); ok {

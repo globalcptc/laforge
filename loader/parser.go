@@ -1130,7 +1130,8 @@ func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 					SetDisabled(cFileDownload.Disabled).
 					SetMd5(cFileDownload.Md5).
 					SetAbsPath(cFileDownload.AbsPath).
-					SetTags(cFileDownload.Tags)
+					SetTags(cFileDownload.Tags).
+					SetIsTxt(cFileDownload.IsTxt)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
@@ -1146,6 +1147,7 @@ func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 			SetMd5(cFileDownload.Md5).
 			SetAbsPath(cFileDownload.AbsPath).
 			SetTags(cFileDownload.Tags).
+			SetIsTxt(cFileDownload.IsTxt).
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update File Download %v. Err: %v", cFileDownload.HclID, err)

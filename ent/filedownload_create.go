@@ -75,6 +75,20 @@ func (fdc *FileDownloadCreate) SetAbsPath(s string) *FileDownloadCreate {
 	return fdc
 }
 
+// SetIsTxt sets the "is_txt" field.
+func (fdc *FileDownloadCreate) SetIsTxt(b bool) *FileDownloadCreate {
+	fdc.mutation.SetIsTxt(b)
+	return fdc
+}
+
+// SetNillableIsTxt sets the "is_txt" field if the given value is not nil.
+func (fdc *FileDownloadCreate) SetNillableIsTxt(b *bool) *FileDownloadCreate {
+	if b != nil {
+		fdc.SetIsTxt(*b)
+	}
+	return fdc
+}
+
 // SetTags sets the "tags" field.
 func (fdc *FileDownloadCreate) SetTags(m map[string]string) *FileDownloadCreate {
 	fdc.mutation.SetTags(m)
@@ -185,6 +199,10 @@ func (fdc *FileDownloadCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (fdc *FileDownloadCreate) defaults() {
+	if _, ok := fdc.mutation.IsTxt(); !ok {
+		v := filedownload.DefaultIsTxt
+		fdc.mutation.SetIsTxt(v)
+	}
 	if _, ok := fdc.mutation.ID(); !ok {
 		v := filedownload.DefaultID()
 		fdc.mutation.SetID(v)
@@ -219,6 +237,9 @@ func (fdc *FileDownloadCreate) check() error {
 	}
 	if _, ok := fdc.mutation.AbsPath(); !ok {
 		return &ValidationError{Name: "abs_path", err: errors.New(`ent: missing required field "FileDownload.abs_path"`)}
+	}
+	if _, ok := fdc.mutation.IsTxt(); !ok {
+		return &ValidationError{Name: "is_txt", err: errors.New(`ent: missing required field "FileDownload.is_txt"`)}
 	}
 	if _, ok := fdc.mutation.Tags(); !ok {
 		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "FileDownload.tags"`)}
@@ -330,6 +351,14 @@ func (fdc *FileDownloadCreate) createSpec() (*FileDownload, *sqlgraph.CreateSpec
 			Column: filedownload.FieldAbsPath,
 		})
 		_node.AbsPath = value
+	}
+	if value, ok := fdc.mutation.IsTxt(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeBool,
+			Value:  value,
+			Column: filedownload.FieldIsTxt,
+		})
+		_node.IsTxt = value
 	}
 	if value, ok := fdc.mutation.Tags(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

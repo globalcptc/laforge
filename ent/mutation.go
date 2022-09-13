@@ -13963,6 +13963,7 @@ type FileDownloadMutation struct {
 	disabled                          *bool
 	md5                               *string
 	abs_path                          *string
+	is_txt                            *bool
 	tags                              *map[string]string
 	clearedFields                     map[string]struct{}
 	_FileDownloadToEnvironment        *uuid.UUID
@@ -14400,6 +14401,42 @@ func (m *FileDownloadMutation) ResetAbsPath() {
 	m.abs_path = nil
 }
 
+// SetIsTxt sets the "is_txt" field.
+func (m *FileDownloadMutation) SetIsTxt(b bool) {
+	m.is_txt = &b
+}
+
+// IsTxt returns the value of the "is_txt" field in the mutation.
+func (m *FileDownloadMutation) IsTxt() (r bool, exists bool) {
+	v := m.is_txt
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsTxt returns the old "is_txt" field's value of the FileDownload entity.
+// If the FileDownload object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FileDownloadMutation) OldIsTxt(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsTxt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsTxt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsTxt: %w", err)
+	}
+	return oldValue.IsTxt, nil
+}
+
+// ResetIsTxt resets all changes to the "is_txt" field.
+func (m *FileDownloadMutation) ResetIsTxt() {
+	m.is_txt = nil
+}
+
 // SetTags sets the "tags" field.
 func (m *FileDownloadMutation) SetTags(value map[string]string) {
 	m.tags = &value
@@ -14494,7 +14531,7 @@ func (m *FileDownloadMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FileDownloadMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.hcl_id != nil {
 		fields = append(fields, filedownload.FieldHclID)
 	}
@@ -14521,6 +14558,9 @@ func (m *FileDownloadMutation) Fields() []string {
 	}
 	if m.abs_path != nil {
 		fields = append(fields, filedownload.FieldAbsPath)
+	}
+	if m.is_txt != nil {
+		fields = append(fields, filedownload.FieldIsTxt)
 	}
 	if m.tags != nil {
 		fields = append(fields, filedownload.FieldTags)
@@ -14551,6 +14591,8 @@ func (m *FileDownloadMutation) Field(name string) (ent.Value, bool) {
 		return m.Md5()
 	case filedownload.FieldAbsPath:
 		return m.AbsPath()
+	case filedownload.FieldIsTxt:
+		return m.IsTxt()
 	case filedownload.FieldTags:
 		return m.Tags()
 	}
@@ -14580,6 +14622,8 @@ func (m *FileDownloadMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldMd5(ctx)
 	case filedownload.FieldAbsPath:
 		return m.OldAbsPath(ctx)
+	case filedownload.FieldIsTxt:
+		return m.OldIsTxt(ctx)
 	case filedownload.FieldTags:
 		return m.OldTags(ctx)
 	}
@@ -14653,6 +14697,13 @@ func (m *FileDownloadMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAbsPath(v)
+		return nil
+	case filedownload.FieldIsTxt:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsTxt(v)
 		return nil
 	case filedownload.FieldTags:
 		v, ok := value.(map[string]string)
@@ -14736,6 +14787,9 @@ func (m *FileDownloadMutation) ResetField(name string) error {
 		return nil
 	case filedownload.FieldAbsPath:
 		m.ResetAbsPath()
+		return nil
+	case filedownload.FieldIsTxt:
+		m.ResetIsTxt()
 		return nil
 	case filedownload.FieldTags:
 		m.ResetTags()

@@ -400,6 +400,7 @@ var (
 		{Name: "disabled", Type: field.TypeBool},
 		{Name: "md5", Type: field.TypeString},
 		{Name: "abs_path", Type: field.TypeString},
+		{Name: "is_txt", Type: field.TypeBool, Default: false},
 		{Name: "tags", Type: field.TypeJSON},
 		{Name: "environment_environment_to_file_download", Type: field.TypeUUID, Nullable: true},
 	}
@@ -411,7 +412,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "file_downloads_environments_EnvironmentToFileDownload",
-				Columns:    []*schema.Column{FileDownloadsColumns[11]},
+				Columns:    []*schema.Column{FileDownloadsColumns[12]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

@@ -51,7 +51,7 @@ func AddSystemUserGroup(groupname string, username string) error {
 	return err
 }
 
-func SystemDownloadFile(path, url string) error {
+func SystemDownloadFile(path, url, is_txt string) error {
 	retryCount := 5
 	var resp *http.Response
 	var err error
@@ -80,15 +80,21 @@ func SystemDownloadFile(path, url string) error {
 	}
 	defer out.Close()
 
-	// Convert Unix line endings to windows line endings
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	body := strings.Replace(string(bodyBytes), "\n", "\r\n", -1)
+	if is_txt == "true" {
+		// Write the body to file
+		_, err = io.Copy(out, resp.Body)
+	} else {
+		// Convert Unix line endings to windows line endings
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		body := strings.Replace(string(bodyBytes), "\n", "\r\n", -1)
 
-	// Write the body to file
-	_, err = io.WriteString(out, body)
+		// Write the body to file
+		_, err = io.WriteString(out, body)
+	}
+
 	return err
 }
 

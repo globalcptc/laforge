@@ -192,6 +192,10 @@ func init() {
 	filedelete.DefaultID = filedeleteDescID.Default.(func() uuid.UUID)
 	filedownloadFields := schema.FileDownload{}.Fields()
 	_ = filedownloadFields
+	// filedownloadDescIsTxt is the schema descriptor for is_txt field.
+	filedownloadDescIsTxt := filedownloadFields[10].Descriptor()
+	// filedownload.DefaultIsTxt holds the default value on creation for the is_txt field.
+	filedownload.DefaultIsTxt = filedownloadDescIsTxt.Default.(bool)
 	// filedownloadDescID is the schema descriptor for id field.
 	filedownloadDescID := filedownloadFields[0].Descriptor()
 	// filedownload.DefaultID holds the default value on creation for the id field.

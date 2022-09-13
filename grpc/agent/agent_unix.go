@@ -68,7 +68,7 @@ func AddSystemUserGroup(groupname string, username string) error {
 }
 
 // SystemDownloadFile Download a file with OS specific file endings
-func SystemDownloadFile(path, url string) error {
+func SystemDownloadFile(path, url, is_txt string) error {
 	retryCount := 5
 	var resp *http.Response
 	var err error

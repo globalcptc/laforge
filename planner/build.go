@@ -868,7 +868,7 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 		}
 		_, err = client.AgentTask.Create().
 			SetCommand(agenttask.CommandDOWNLOAD).
-			SetArgs(entScript.Source + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID).
+			SetArgs(entScript.Source + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + "true").
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
 			SetAgentTaskToProvisionedHost(entProvisionedHost).
@@ -969,7 +969,7 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 		if entFileDownload.SourceType == "remote" {
 			_, err = client.AgentTask.Create().
 				SetCommand(agenttask.CommandDOWNLOAD).
-				SetArgs(entFileDownload.Destination + "💔" + entFileDownload.Source).
+				SetArgs(entFileDownload.Destination + "💔" + entFileDownload.Source + "💔" + strings.ToLower(fmt.Sprintf("%v", entFileDownload.IsTxt))).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
 				SetAgentTaskToProvisionedHost(entProvisionedHost).
@@ -978,7 +978,7 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 		} else {
 			_, err = client.AgentTask.Create().
 				SetCommand(agenttask.CommandDOWNLOAD).
-				SetArgs(entFileDownload.Destination + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID).
+				SetArgs(entFileDownload.Destination + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + strings.ToLower(fmt.Sprintf("%v", entFileDownload.IsTxt))).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
 				SetAgentTaskToProvisionedHost(entProvisionedHost).
@@ -1022,7 +1022,7 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 		}
 		_, err = client.AgentTask.Create().
 			SetCommand(agenttask.CommandDOWNLOAD).
-			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID).
+			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + "false").
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
 			SetAgentTaskToProvisionedHost(entProvisionedHost).

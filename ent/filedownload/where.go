@@ -155,6 +155,13 @@ func AbsPath(v string) predicate.FileDownload {
 	})
 }
 
+// IsTxt applies equality check predicate on the "is_txt" field. It's identical to IsTxtEQ.
+func IsTxt(v bool) predicate.FileDownload {
+	return predicate.FileDownload(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldIsTxt), v))
+	})
+}
+
 // HclIDEQ applies the EQ predicate on the "hcl_id" field.
 func HclIDEQ(v string) predicate.FileDownload {
 	return predicate.FileDownload(func(s *sql.Selector) {
@@ -957,6 +964,20 @@ func AbsPathEqualFold(v string) predicate.FileDownload {
 func AbsPathContainsFold(v string) predicate.FileDownload {
 	return predicate.FileDownload(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldAbsPath), v))
+	})
+}
+
+// IsTxtEQ applies the EQ predicate on the "is_txt" field.
+func IsTxtEQ(v bool) predicate.FileDownload {
+	return predicate.FileDownload(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldIsTxt), v))
+	})
+}
+
+// IsTxtNEQ applies the NEQ predicate on the "is_txt" field.
+func IsTxtNEQ(v bool) predicate.FileDownload {
+	return predicate.FileDownload(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldIsTxt), v))
 	})
 }
 
