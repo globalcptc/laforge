@@ -81,9 +81,6 @@ func SystemDownloadFile(path, url, is_txt string) error {
 	defer out.Close()
 
 	if is_txt == "true" {
-		// Write the body to file
-		_, err = io.Copy(out, resp.Body)
-	} else {
 		// Convert Unix line endings to windows line endings
 		bodyBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -93,6 +90,9 @@ func SystemDownloadFile(path, url, is_txt string) error {
 
 		// Write the body to file
 		_, err = io.WriteString(out, body)
+	} else {
+		// Write the body to file
+		_, err = io.Copy(out, resp.Body)
 	}
 
 	return err
