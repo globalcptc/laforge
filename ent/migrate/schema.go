@@ -806,7 +806,8 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "run_time", Type: field.TypeTime},
 		{Name: "agent_task_agent_task_to_provisioned_schedule_step", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "provisioned_schedule_step_provisioned_schedule_step_to_schedule_step", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioned_host_provisioned_host_to_provisioned_schedule_step", Type: field.TypeUUID},
+		{Name: "schedule_step_schedule_step_to_provisioned_schedule_step", Type: field.TypeUUID},
 	}
 	// ProvisionedScheduleStepsTable holds the schema information for the "provisioned_schedule_steps" table.
 	ProvisionedScheduleStepsTable = &schema.Table{
@@ -821,10 +822,16 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "provisioned_schedule_steps_schedule_steps_ProvisionedScheduleStepToScheduleStep",
+				Symbol:     "provisioned_schedule_steps_provisioned_hosts_ProvisionedHostToProvisionedScheduleStep",
 				Columns:    []*schema.Column{ProvisionedScheduleStepsColumns[3]},
+				RefColumns: []*schema.Column{ProvisionedHostsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "provisioned_schedule_steps_schedule_steps_ScheduleStepToProvisionedScheduleStep",
+				Columns:    []*schema.Column{ProvisionedScheduleStepsColumns[4]},
 				RefColumns: []*schema.Column{ScheduleStepsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 		},
 	}
@@ -961,7 +968,7 @@ var (
 		{Name: "start_time", Type: field.TypeTime},
 		{Name: "end_time", Type: field.TypeTime},
 		{Name: "interval", Type: field.TypeInt},
-		{Name: "schedule_step_schedule_step_to_provisioned_host", Type: field.TypeUUID, Nullable: true},
+		{Name: "host_host_to_schedule_step", Type: field.TypeUUID},
 		{Name: "schedule_step_schedule_step_to_script", Type: field.TypeUUID, Nullable: true},
 		{Name: "schedule_step_schedule_step_to_command", Type: field.TypeUUID, Nullable: true},
 		{Name: "schedule_step_schedule_step_to_file_delete", Type: field.TypeUUID, Nullable: true},
@@ -976,10 +983,10 @@ var (
 		PrimaryKey: []*schema.Column{ScheduleStepsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "schedule_steps_provisioned_hosts_ScheduleStepToProvisionedHost",
+				Symbol:     "schedule_steps_hosts_HostToScheduleStep",
 				Columns:    []*schema.Column{ScheduleStepsColumns[6]},
-				RefColumns: []*schema.Column{ProvisionedHostsColumns[0]},
-				OnDelete:   schema.SetNull,
+				RefColumns: []*schema.Column{HostsColumns[0]},
+				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "schedule_steps_scripts_ScheduleStepToScript",
@@ -1614,7 +1621,8 @@ func init() {
 	ProvisionedNetworksTable.ForeignKeys[2].RefTable = BuildsTable
 	ProvisionedNetworksTable.ForeignKeys[3].RefTable = TeamsTable
 	ProvisionedScheduleStepsTable.ForeignKeys[0].RefTable = AgentTasksTable
-	ProvisionedScheduleStepsTable.ForeignKeys[1].RefTable = ScheduleStepsTable
+	ProvisionedScheduleStepsTable.ForeignKeys[1].RefTable = ProvisionedHostsTable
+	ProvisionedScheduleStepsTable.ForeignKeys[2].RefTable = ScheduleStepsTable
 	ProvisioningStepsTable.ForeignKeys[0].RefTable = GinFileMiddlewaresTable
 	ProvisioningStepsTable.ForeignKeys[1].RefTable = PlansTable
 	ProvisioningStepsTable.ForeignKeys[2].RefTable = ProvisionedHostsTable
@@ -1626,7 +1634,7 @@ func init() {
 	ProvisioningStepsTable.ForeignKeys[8].RefTable = FileExtractsTable
 	ProvisioningStepsTable.ForeignKeys[9].RefTable = AnsiblesTable
 	RepoCommitsTable.ForeignKeys[0].RefTable = RepositoriesTable
-	ScheduleStepsTable.ForeignKeys[0].RefTable = ProvisionedHostsTable
+	ScheduleStepsTable.ForeignKeys[0].RefTable = HostsTable
 	ScheduleStepsTable.ForeignKeys[1].RefTable = ScriptsTable
 	ScheduleStepsTable.ForeignKeys[2].RefTable = CommandsTable
 	ScheduleStepsTable.ForeignKeys[3].RefTable = FileDeletesTable

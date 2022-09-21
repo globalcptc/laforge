@@ -17,6 +17,7 @@ import (
 	"github.com/gen0cide/laforge/ent/hostdependency"
 	"github.com/gen0cide/laforge/ent/includednetwork"
 	"github.com/gen0cide/laforge/ent/predicate"
+	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
@@ -32,6 +33,7 @@ type HostQuery struct {
 	predicates                       []predicate.Host
 	withHostToDisk                   *DiskQuery
 	withHostToUser                   *UserQuery
+	withHostToScheduleStep           *ScheduleStepQuery
 	withHostToEnvironment            *EnvironmentQuery
 	withHostToIncludedNetwork        *IncludedNetworkQuery
 	withDependOnHostToHostDependency *HostDependencyQuery
@@ -110,6 +112,28 @@ func (hq *HostQuery) QueryHostToUser() *UserQuery {
 			sqlgraph.From(host.Table, host.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, host.HostToUserTable, host.HostToUserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(hq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryHostToScheduleStep chains the current query on the "HostToScheduleStep" edge.
+func (hq *HostQuery) QueryHostToScheduleStep() *ScheduleStepQuery {
+	query := &ScheduleStepQuery{config: hq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := hq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := hq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(host.Table, host.FieldID, selector),
+			sqlgraph.To(schedulestep.Table, schedulestep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, host.HostToScheduleStepTable, host.HostToScheduleStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(hq.driver.Dialect(), step)
 		return fromU, nil
@@ -388,6 +412,7 @@ func (hq *HostQuery) Clone() *HostQuery {
 		predicates:                       append([]predicate.Host{}, hq.predicates...),
 		withHostToDisk:                   hq.withHostToDisk.Clone(),
 		withHostToUser:                   hq.withHostToUser.Clone(),
+		withHostToScheduleStep:           hq.withHostToScheduleStep.Clone(),
 		withHostToEnvironment:            hq.withHostToEnvironment.Clone(),
 		withHostToIncludedNetwork:        hq.withHostToIncludedNetwork.Clone(),
 		withDependOnHostToHostDependency: hq.withDependOnHostToHostDependency.Clone(),
@@ -418,6 +443,17 @@ func (hq *HostQuery) WithHostToUser(opts ...func(*UserQuery)) *HostQuery {
 		opt(query)
 	}
 	hq.withHostToUser = query
+	return hq
+}
+
+// WithHostToScheduleStep tells the query-builder to eager-load the nodes that are connected to
+// the "HostToScheduleStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (hq *HostQuery) WithHostToScheduleStep(opts ...func(*ScheduleStepQuery)) *HostQuery {
+	query := &ScheduleStepQuery{config: hq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	hq.withHostToScheduleStep = query
 	return hq
 }
 
@@ -534,9 +570,10 @@ func (hq *HostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Host, e
 		nodes       = []*Host{}
 		withFKs     = hq.withFKs
 		_spec       = hq.querySpec()
-		loadedTypes = [6]bool{
+		loadedTypes = [7]bool{
 			hq.withHostToDisk != nil,
 			hq.withHostToUser != nil,
+			hq.withHostToScheduleStep != nil,
 			hq.withHostToEnvironment != nil,
 			hq.withHostToIncludedNetwork != nil,
 			hq.withDependOnHostToHostDependency != nil,
@@ -577,6 +614,13 @@ func (hq *HostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Host, e
 		if err := hq.loadHostToUser(ctx, query, nodes,
 			func(n *Host) { n.Edges.HostToUser = []*User{} },
 			func(n *Host, e *User) { n.Edges.HostToUser = append(n.Edges.HostToUser, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := hq.withHostToScheduleStep; query != nil {
+		if err := hq.loadHostToScheduleStep(ctx, query, nodes,
+			func(n *Host) { n.Edges.HostToScheduleStep = []*ScheduleStep{} },
+			func(n *Host, e *ScheduleStep) { n.Edges.HostToScheduleStep = append(n.Edges.HostToScheduleStep, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -670,6 +714,37 @@ func (hq *HostQuery) loadHostToUser(ctx context.Context, query *UserQuery, nodes
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "host_host_to_user" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (hq *HostQuery) loadHostToScheduleStep(ctx context.Context, query *ScheduleStepQuery, nodes []*Host, init func(*Host), assign func(*Host, *ScheduleStep)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Host)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ScheduleStep(func(s *sql.Selector) {
+		s.Where(sql.InValues(host.HostToScheduleStepColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.host_host_to_schedule_step
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "host_host_to_schedule_step" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "host_host_to_schedule_step" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

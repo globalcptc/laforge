@@ -30,7 +30,13 @@ func (ProvisionedScheduleStep) Edges() []ent.Edge {
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("ProvisionedScheduleStepToScheduleStep", ScheduleStep.Type).
+		edge.From("ProvisionedScheduleStepToScheduleStep", ScheduleStep.Type).
+			Ref("ScheduleStepToProvisionedScheduleStep").
+			Required().
+			Unique(),
+		edge.From("ProvisionedScheduleStepToProvisionedHost", ProvisionedHost.Type).
+			Ref("ProvisionedHostToProvisionedScheduleStep").
+			Required().
 			Unique(),
 		edge.From("ProvisionedScheduleStepToAgentTask", AgentTask.Type).
 			Ref("AgentTaskToProvisionedScheduleStep").

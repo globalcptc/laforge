@@ -16,8 +16,8 @@ import (
 	"github.com/gen0cide/laforge/ent/filedelete"
 	"github.com/gen0cide/laforge/ent/filedownload"
 	"github.com/gen0cide/laforge/ent/fileextract"
+	"github.com/gen0cide/laforge/ent/host"
 	"github.com/gen0cide/laforge/ent/predicate"
-	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
 	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/script"
@@ -35,7 +35,6 @@ type ScheduleStepQuery struct {
 	fields                                    []string
 	predicates                                []predicate.ScheduleStep
 	withScheduleStepToStatus                  *StatusQuery
-	withScheduleStepToProvisionedHost         *ProvisionedHostQuery
 	withScheduleStepToScript                  *ScriptQuery
 	withScheduleStepToCommand                 *CommandQuery
 	withScheduleStepToFileDelete              *FileDeleteQuery
@@ -43,6 +42,7 @@ type ScheduleStepQuery struct {
 	withScheduleStepToFileExtract             *FileExtractQuery
 	withScheduleStepToAnsible                 *AnsibleQuery
 	withScheduleStepToProvisionedScheduleStep *ProvisionedScheduleStepQuery
+	withScheduleStepToHost                    *HostQuery
 	withFKs                                   bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -95,28 +95,6 @@ func (ssq *ScheduleStepQuery) QueryScheduleStepToStatus() *StatusQuery {
 			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, selector),
 			sqlgraph.To(status.Table, status.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, schedulestep.ScheduleStepToStatusTable, schedulestep.ScheduleStepToStatusColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(ssq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryScheduleStepToProvisionedHost chains the current query on the "ScheduleStepToProvisionedHost" edge.
-func (ssq *ScheduleStepQuery) QueryScheduleStepToProvisionedHost() *ProvisionedHostQuery {
-	query := &ProvisionedHostQuery{config: ssq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := ssq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := ssq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, selector),
-			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, schedulestep.ScheduleStepToProvisionedHostTable, schedulestep.ScheduleStepToProvisionedHostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(ssq.driver.Dialect(), step)
 		return fromU, nil
@@ -270,7 +248,29 @@ func (ssq *ScheduleStepQuery) QueryScheduleStepToProvisionedScheduleStep() *Prov
 		step := sqlgraph.NewStep(
 			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, selector),
 			sqlgraph.To(provisionedschedulestep.Table, provisionedschedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, schedulestep.ScheduleStepToProvisionedScheduleStepTable, schedulestep.ScheduleStepToProvisionedScheduleStepColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, schedulestep.ScheduleStepToProvisionedScheduleStepTable, schedulestep.ScheduleStepToProvisionedScheduleStepColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(ssq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryScheduleStepToHost chains the current query on the "ScheduleStepToHost" edge.
+func (ssq *ScheduleStepQuery) QueryScheduleStepToHost() *HostQuery {
+	query := &HostQuery{config: ssq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := ssq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := ssq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, selector),
+			sqlgraph.To(host.Table, host.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, schedulestep.ScheduleStepToHostTable, schedulestep.ScheduleStepToHostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(ssq.driver.Dialect(), step)
 		return fromU, nil
@@ -454,20 +454,20 @@ func (ssq *ScheduleStepQuery) Clone() *ScheduleStepQuery {
 		return nil
 	}
 	return &ScheduleStepQuery{
-		config:                            ssq.config,
-		limit:                             ssq.limit,
-		offset:                            ssq.offset,
-		order:                             append([]OrderFunc{}, ssq.order...),
-		predicates:                        append([]predicate.ScheduleStep{}, ssq.predicates...),
-		withScheduleStepToStatus:          ssq.withScheduleStepToStatus.Clone(),
-		withScheduleStepToProvisionedHost: ssq.withScheduleStepToProvisionedHost.Clone(),
-		withScheduleStepToScript:          ssq.withScheduleStepToScript.Clone(),
-		withScheduleStepToCommand:         ssq.withScheduleStepToCommand.Clone(),
-		withScheduleStepToFileDelete:      ssq.withScheduleStepToFileDelete.Clone(),
-		withScheduleStepToFileDownload:    ssq.withScheduleStepToFileDownload.Clone(),
-		withScheduleStepToFileExtract:     ssq.withScheduleStepToFileExtract.Clone(),
-		withScheduleStepToAnsible:         ssq.withScheduleStepToAnsible.Clone(),
+		config:                         ssq.config,
+		limit:                          ssq.limit,
+		offset:                         ssq.offset,
+		order:                          append([]OrderFunc{}, ssq.order...),
+		predicates:                     append([]predicate.ScheduleStep{}, ssq.predicates...),
+		withScheduleStepToStatus:       ssq.withScheduleStepToStatus.Clone(),
+		withScheduleStepToScript:       ssq.withScheduleStepToScript.Clone(),
+		withScheduleStepToCommand:      ssq.withScheduleStepToCommand.Clone(),
+		withScheduleStepToFileDelete:   ssq.withScheduleStepToFileDelete.Clone(),
+		withScheduleStepToFileDownload: ssq.withScheduleStepToFileDownload.Clone(),
+		withScheduleStepToFileExtract:  ssq.withScheduleStepToFileExtract.Clone(),
+		withScheduleStepToAnsible:      ssq.withScheduleStepToAnsible.Clone(),
 		withScheduleStepToProvisionedScheduleStep: ssq.withScheduleStepToProvisionedScheduleStep.Clone(),
+		withScheduleStepToHost:                    ssq.withScheduleStepToHost.Clone(),
 		// clone intermediate query.
 		sql:    ssq.sql.Clone(),
 		path:   ssq.path,
@@ -483,17 +483,6 @@ func (ssq *ScheduleStepQuery) WithScheduleStepToStatus(opts ...func(*StatusQuery
 		opt(query)
 	}
 	ssq.withScheduleStepToStatus = query
-	return ssq
-}
-
-// WithScheduleStepToProvisionedHost tells the query-builder to eager-load the nodes that are connected to
-// the "ScheduleStepToProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
-func (ssq *ScheduleStepQuery) WithScheduleStepToProvisionedHost(opts ...func(*ProvisionedHostQuery)) *ScheduleStepQuery {
-	query := &ProvisionedHostQuery{config: ssq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	ssq.withScheduleStepToProvisionedHost = query
 	return ssq
 }
 
@@ -574,6 +563,17 @@ func (ssq *ScheduleStepQuery) WithScheduleStepToProvisionedScheduleStep(opts ...
 	return ssq
 }
 
+// WithScheduleStepToHost tells the query-builder to eager-load the nodes that are connected to
+// the "ScheduleStepToHost" edge. The optional arguments are used to configure the query builder of the edge.
+func (ssq *ScheduleStepQuery) WithScheduleStepToHost(opts ...func(*HostQuery)) *ScheduleStepQuery {
+	query := &HostQuery{config: ssq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	ssq.withScheduleStepToHost = query
+	return ssq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -645,7 +645,6 @@ func (ssq *ScheduleStepQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		_spec       = ssq.querySpec()
 		loadedTypes = [9]bool{
 			ssq.withScheduleStepToStatus != nil,
-			ssq.withScheduleStepToProvisionedHost != nil,
 			ssq.withScheduleStepToScript != nil,
 			ssq.withScheduleStepToCommand != nil,
 			ssq.withScheduleStepToFileDelete != nil,
@@ -653,9 +652,10 @@ func (ssq *ScheduleStepQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 			ssq.withScheduleStepToFileExtract != nil,
 			ssq.withScheduleStepToAnsible != nil,
 			ssq.withScheduleStepToProvisionedScheduleStep != nil,
+			ssq.withScheduleStepToHost != nil,
 		}
 	)
-	if ssq.withScheduleStepToProvisionedHost != nil || ssq.withScheduleStepToScript != nil || ssq.withScheduleStepToCommand != nil || ssq.withScheduleStepToFileDelete != nil || ssq.withScheduleStepToFileDownload != nil || ssq.withScheduleStepToFileExtract != nil || ssq.withScheduleStepToAnsible != nil {
+	if ssq.withScheduleStepToScript != nil || ssq.withScheduleStepToCommand != nil || ssq.withScheduleStepToFileDelete != nil || ssq.withScheduleStepToFileDownload != nil || ssq.withScheduleStepToFileExtract != nil || ssq.withScheduleStepToAnsible != nil || ssq.withScheduleStepToHost != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -682,12 +682,6 @@ func (ssq *ScheduleStepQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	if query := ssq.withScheduleStepToStatus; query != nil {
 		if err := ssq.loadScheduleStepToStatus(ctx, query, nodes, nil,
 			func(n *ScheduleStep, e *Status) { n.Edges.ScheduleStepToStatus = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := ssq.withScheduleStepToProvisionedHost; query != nil {
-		if err := ssq.loadScheduleStepToProvisionedHost(ctx, query, nodes, nil,
-			func(n *ScheduleStep, e *ProvisionedHost) { n.Edges.ScheduleStepToProvisionedHost = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -736,6 +730,12 @@ func (ssq *ScheduleStepQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 			return nil, err
 		}
 	}
+	if query := ssq.withScheduleStepToHost; query != nil {
+		if err := ssq.loadScheduleStepToHost(ctx, query, nodes, nil,
+			func(n *ScheduleStep, e *Host) { n.Edges.ScheduleStepToHost = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -764,35 +764,6 @@ func (ssq *ScheduleStepQuery) loadScheduleStepToStatus(ctx context.Context, quer
 			return fmt.Errorf(`unexpected foreign-key "schedule_step_schedule_step_to_status" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
-	}
-	return nil
-}
-func (ssq *ScheduleStepQuery) loadScheduleStepToProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*ScheduleStep, init func(*ScheduleStep), assign func(*ScheduleStep, *ProvisionedHost)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*ScheduleStep)
-	for i := range nodes {
-		if nodes[i].schedule_step_schedule_step_to_provisioned_host == nil {
-			continue
-		}
-		fk := *nodes[i].schedule_step_schedule_step_to_provisioned_host
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	query.Where(provisionedhost.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "schedule_step_schedule_step_to_provisioned_host" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
 	}
 	return nil
 }
@@ -989,15 +960,44 @@ func (ssq *ScheduleStepQuery) loadScheduleStepToProvisionedScheduleStep(ctx cont
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioned_schedule_step_provisioned_schedule_step_to_schedule_step
+		fk := n.schedule_step_schedule_step_to_provisioned_schedule_step
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioned_schedule_step_provisioned_schedule_step_to_schedule_step" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "schedule_step_schedule_step_to_provisioned_schedule_step" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_schedule_step_provisioned_schedule_step_to_schedule_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "schedule_step_schedule_step_to_provisioned_schedule_step" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
+	}
+	return nil
+}
+func (ssq *ScheduleStepQuery) loadScheduleStepToHost(ctx context.Context, query *HostQuery, nodes []*ScheduleStep, init func(*ScheduleStep), assign func(*ScheduleStep, *Host)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*ScheduleStep)
+	for i := range nodes {
+		if nodes[i].host_host_to_schedule_step == nil {
+			continue
+		}
+		fk := *nodes[i].host_host_to_schedule_step
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(host.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "host_host_to_schedule_step" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }

@@ -15,7 +15,7 @@ import (
 	"github.com/gen0cide/laforge/ent/filedelete"
 	"github.com/gen0cide/laforge/ent/filedownload"
 	"github.com/gen0cide/laforge/ent/fileextract"
-	"github.com/gen0cide/laforge/ent/provisionedhost"
+	"github.com/gen0cide/laforge/ent/host"
 	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
 	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/script"
@@ -91,25 +91,6 @@ func (ssc *ScheduleStepCreate) SetNillableScheduleStepToStatusID(id *uuid.UUID) 
 // SetScheduleStepToStatus sets the "ScheduleStepToStatus" edge to the Status entity.
 func (ssc *ScheduleStepCreate) SetScheduleStepToStatus(s *Status) *ScheduleStepCreate {
 	return ssc.SetScheduleStepToStatusID(s.ID)
-}
-
-// SetScheduleStepToProvisionedHostID sets the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (ssc *ScheduleStepCreate) SetScheduleStepToProvisionedHostID(id uuid.UUID) *ScheduleStepCreate {
-	ssc.mutation.SetScheduleStepToProvisionedHostID(id)
-	return ssc
-}
-
-// SetNillableScheduleStepToProvisionedHostID sets the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
-func (ssc *ScheduleStepCreate) SetNillableScheduleStepToProvisionedHostID(id *uuid.UUID) *ScheduleStepCreate {
-	if id != nil {
-		ssc = ssc.SetScheduleStepToProvisionedHostID(*id)
-	}
-	return ssc
-}
-
-// SetScheduleStepToProvisionedHost sets the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (ssc *ScheduleStepCreate) SetScheduleStepToProvisionedHost(p *ProvisionedHost) *ScheduleStepCreate {
-	return ssc.SetScheduleStepToProvisionedHostID(p.ID)
 }
 
 // SetScheduleStepToScriptID sets the "ScheduleStepToScript" edge to the Script entity by ID.
@@ -241,6 +222,17 @@ func (ssc *ScheduleStepCreate) AddScheduleStepToProvisionedScheduleStep(p ...*Pr
 	return ssc.AddScheduleStepToProvisionedScheduleStepIDs(ids...)
 }
 
+// SetScheduleStepToHostID sets the "ScheduleStepToHost" edge to the Host entity by ID.
+func (ssc *ScheduleStepCreate) SetScheduleStepToHostID(id uuid.UUID) *ScheduleStepCreate {
+	ssc.mutation.SetScheduleStepToHostID(id)
+	return ssc
+}
+
+// SetScheduleStepToHost sets the "ScheduleStepToHost" edge to the Host entity.
+func (ssc *ScheduleStepCreate) SetScheduleStepToHost(h *Host) *ScheduleStepCreate {
+	return ssc.SetScheduleStepToHostID(h.ID)
+}
+
 // Mutation returns the ScheduleStepMutation object of the builder.
 func (ssc *ScheduleStepCreate) Mutation() *ScheduleStepMutation {
 	return ssc.mutation
@@ -346,6 +338,9 @@ func (ssc *ScheduleStepCreate) check() error {
 	if _, ok := ssc.mutation.Interval(); !ok {
 		return &ValidationError{Name: "interval", err: errors.New(`ent: missing required field "ScheduleStep.interval"`)}
 	}
+	if _, ok := ssc.mutation.ScheduleStepToHostID(); !ok {
+		return &ValidationError{Name: "ScheduleStepToHost", err: errors.New(`ent: missing required edge "ScheduleStep.ScheduleStepToHost"`)}
+	}
 	return nil
 }
 
@@ -439,26 +434,6 @@ func (ssc *ScheduleStepCreate) createSpec() (*ScheduleStep, *sqlgraph.CreateSpec
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := ssc.mutation.ScheduleStepToProvisionedHostIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   schedulestep.ScheduleStepToProvisionedHostTable,
-			Columns: []string{schedulestep.ScheduleStepToProvisionedHostColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.schedule_step_schedule_step_to_provisioned_host = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := ssc.mutation.ScheduleStepToScriptIDs(); len(nodes) > 0 {
@@ -584,7 +559,7 @@ func (ssc *ScheduleStepCreate) createSpec() (*ScheduleStep, *sqlgraph.CreateSpec
 	if nodes := ssc.mutation.ScheduleStepToProvisionedScheduleStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: true,
+			Inverse: false,
 			Table:   schedulestep.ScheduleStepToProvisionedScheduleStepTable,
 			Columns: []string{schedulestep.ScheduleStepToProvisionedScheduleStepColumn},
 			Bidi:    false,
@@ -598,6 +573,26 @@ func (ssc *ScheduleStepCreate) createSpec() (*ScheduleStep, *sqlgraph.CreateSpec
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ssc.mutation.ScheduleStepToHostIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   schedulestep.ScheduleStepToHostTable,
+			Columns: []string{schedulestep.ScheduleStepToHostColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: host.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.host_host_to_schedule_step = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

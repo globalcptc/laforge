@@ -27,8 +27,6 @@ const (
 	FieldInterval = "interval"
 	// EdgeScheduleStepToStatus holds the string denoting the schedulesteptostatus edge name in mutations.
 	EdgeScheduleStepToStatus = "ScheduleStepToStatus"
-	// EdgeScheduleStepToProvisionedHost holds the string denoting the schedulesteptoprovisionedhost edge name in mutations.
-	EdgeScheduleStepToProvisionedHost = "ScheduleStepToProvisionedHost"
 	// EdgeScheduleStepToScript holds the string denoting the schedulesteptoscript edge name in mutations.
 	EdgeScheduleStepToScript = "ScheduleStepToScript"
 	// EdgeScheduleStepToCommand holds the string denoting the schedulesteptocommand edge name in mutations.
@@ -43,6 +41,8 @@ const (
 	EdgeScheduleStepToAnsible = "ScheduleStepToAnsible"
 	// EdgeScheduleStepToProvisionedScheduleStep holds the string denoting the schedulesteptoprovisionedschedulestep edge name in mutations.
 	EdgeScheduleStepToProvisionedScheduleStep = "ScheduleStepToProvisionedScheduleStep"
+	// EdgeScheduleStepToHost holds the string denoting the schedulesteptohost edge name in mutations.
+	EdgeScheduleStepToHost = "ScheduleStepToHost"
 	// Table holds the table name of the schedulestep in the database.
 	Table = "schedule_steps"
 	// ScheduleStepToStatusTable is the table that holds the ScheduleStepToStatus relation/edge.
@@ -52,13 +52,6 @@ const (
 	ScheduleStepToStatusInverseTable = "status"
 	// ScheduleStepToStatusColumn is the table column denoting the ScheduleStepToStatus relation/edge.
 	ScheduleStepToStatusColumn = "schedule_step_schedule_step_to_status"
-	// ScheduleStepToProvisionedHostTable is the table that holds the ScheduleStepToProvisionedHost relation/edge.
-	ScheduleStepToProvisionedHostTable = "schedule_steps"
-	// ScheduleStepToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
-	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
-	ScheduleStepToProvisionedHostInverseTable = "provisioned_hosts"
-	// ScheduleStepToProvisionedHostColumn is the table column denoting the ScheduleStepToProvisionedHost relation/edge.
-	ScheduleStepToProvisionedHostColumn = "schedule_step_schedule_step_to_provisioned_host"
 	// ScheduleStepToScriptTable is the table that holds the ScheduleStepToScript relation/edge.
 	ScheduleStepToScriptTable = "schedule_steps"
 	// ScheduleStepToScriptInverseTable is the table name for the Script entity.
@@ -107,7 +100,14 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "provisionedschedulestep" package.
 	ScheduleStepToProvisionedScheduleStepInverseTable = "provisioned_schedule_steps"
 	// ScheduleStepToProvisionedScheduleStepColumn is the table column denoting the ScheduleStepToProvisionedScheduleStep relation/edge.
-	ScheduleStepToProvisionedScheduleStepColumn = "provisioned_schedule_step_provisioned_schedule_step_to_schedule_step"
+	ScheduleStepToProvisionedScheduleStepColumn = "schedule_step_schedule_step_to_provisioned_schedule_step"
+	// ScheduleStepToHostTable is the table that holds the ScheduleStepToHost relation/edge.
+	ScheduleStepToHostTable = "schedule_steps"
+	// ScheduleStepToHostInverseTable is the table name for the Host entity.
+	// It exists in this package in order to avoid circular dependency with the "host" package.
+	ScheduleStepToHostInverseTable = "hosts"
+	// ScheduleStepToHostColumn is the table column denoting the ScheduleStepToHost relation/edge.
+	ScheduleStepToHostColumn = "host_host_to_schedule_step"
 )
 
 // Columns holds all SQL columns for schedulestep fields.
@@ -123,7 +123,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "schedule_steps"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"schedule_step_schedule_step_to_provisioned_host",
+	"host_host_to_schedule_step",
 	"schedule_step_schedule_step_to_script",
 	"schedule_step_schedule_step_to_command",
 	"schedule_step_schedule_step_to_file_delete",

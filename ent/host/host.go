@@ -43,6 +43,8 @@ const (
 	EdgeHostToDisk = "HostToDisk"
 	// EdgeHostToUser holds the string denoting the hosttouser edge name in mutations.
 	EdgeHostToUser = "HostToUser"
+	// EdgeHostToScheduleStep holds the string denoting the hosttoschedulestep edge name in mutations.
+	EdgeHostToScheduleStep = "HostToScheduleStep"
 	// EdgeHostToEnvironment holds the string denoting the hosttoenvironment edge name in mutations.
 	EdgeHostToEnvironment = "HostToEnvironment"
 	// EdgeHostToIncludedNetwork holds the string denoting the hosttoincludednetwork edge name in mutations.
@@ -67,6 +69,13 @@ const (
 	HostToUserInverseTable = "users"
 	// HostToUserColumn is the table column denoting the HostToUser relation/edge.
 	HostToUserColumn = "host_host_to_user"
+	// HostToScheduleStepTable is the table that holds the HostToScheduleStep relation/edge.
+	HostToScheduleStepTable = "schedule_steps"
+	// HostToScheduleStepInverseTable is the table name for the ScheduleStep entity.
+	// It exists in this package in order to avoid circular dependency with the "schedulestep" package.
+	HostToScheduleStepInverseTable = "schedule_steps"
+	// HostToScheduleStepColumn is the table column denoting the HostToScheduleStep relation/edge.
+	HostToScheduleStepColumn = "host_host_to_schedule_step"
 	// HostToEnvironmentTable is the table that holds the HostToEnvironment relation/edge.
 	HostToEnvironmentTable = "hosts"
 	// HostToEnvironmentInverseTable is the table name for the Environment entity.

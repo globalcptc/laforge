@@ -878,6 +878,34 @@ func HasHostToUserWith(preds ...predicate.User) predicate.Host {
 	})
 }
 
+// HasHostToScheduleStep applies the HasEdge predicate on the "HostToScheduleStep" edge.
+func HasHostToScheduleStep() predicate.Host {
+	return predicate.Host(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(HostToScheduleStepTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, HostToScheduleStepTable, HostToScheduleStepColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasHostToScheduleStepWith applies the HasEdge predicate on the "HostToScheduleStep" edge with a given conditions (other predicates).
+func HasHostToScheduleStepWith(preds ...predicate.ScheduleStep) predicate.Host {
+	return predicate.Host(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(HostToScheduleStepInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, HostToScheduleStepTable, HostToScheduleStepColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasHostToEnvironment applies the HasEdge predicate on the "HostToEnvironment" edge.
 func HasHostToEnvironment() predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {

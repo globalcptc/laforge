@@ -31,6 +31,8 @@ const (
 	EdgeProvisionedHostToEndStepPlan = "ProvisionedHostToEndStepPlan"
 	// EdgeProvisionedHostToBuild holds the string denoting the provisionedhosttobuild edge name in mutations.
 	EdgeProvisionedHostToBuild = "ProvisionedHostToBuild"
+	// EdgeProvisionedHostToProvisionedScheduleStep holds the string denoting the provisionedhosttoprovisionedschedulestep edge name in mutations.
+	EdgeProvisionedHostToProvisionedScheduleStep = "ProvisionedHostToProvisionedScheduleStep"
 	// EdgeProvisionedHostToProvisioningStep holds the string denoting the provisionedhosttoprovisioningstep edge name in mutations.
 	EdgeProvisionedHostToProvisioningStep = "ProvisionedHostToProvisioningStep"
 	// EdgeProvisionedHostToAgentStatus holds the string denoting the provisionedhosttoagentstatus edge name in mutations.
@@ -78,6 +80,13 @@ const (
 	ProvisionedHostToBuildInverseTable = "builds"
 	// ProvisionedHostToBuildColumn is the table column denoting the ProvisionedHostToBuild relation/edge.
 	ProvisionedHostToBuildColumn = "provisioned_host_provisioned_host_to_build"
+	// ProvisionedHostToProvisionedScheduleStepTable is the table that holds the ProvisionedHostToProvisionedScheduleStep relation/edge.
+	ProvisionedHostToProvisionedScheduleStepTable = "provisioned_schedule_steps"
+	// ProvisionedHostToProvisionedScheduleStepInverseTable is the table name for the ProvisionedScheduleStep entity.
+	// It exists in this package in order to avoid circular dependency with the "provisionedschedulestep" package.
+	ProvisionedHostToProvisionedScheduleStepInverseTable = "provisioned_schedule_steps"
+	// ProvisionedHostToProvisionedScheduleStepColumn is the table column denoting the ProvisionedHostToProvisionedScheduleStep relation/edge.
+	ProvisionedHostToProvisionedScheduleStepColumn = "provisioned_host_provisioned_host_to_provisioned_schedule_step"
 	// ProvisionedHostToProvisioningStepTable is the table that holds the ProvisionedHostToProvisioningStep relation/edge.
 	ProvisionedHostToProvisioningStepTable = "provisioning_steps"
 	// ProvisionedHostToProvisioningStepInverseTable is the table name for the ProvisioningStep entity.

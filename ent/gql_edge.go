@@ -564,6 +564,14 @@ func (h *Host) HostToUser(ctx context.Context) ([]*User, error) {
 	return result, err
 }
 
+func (h *Host) HostToScheduleStep(ctx context.Context) ([]*ScheduleStep, error) {
+	result, err := h.Edges.HostToScheduleStepOrErr()
+	if IsNotLoaded(err) {
+		result, err = h.QueryHostToScheduleStep().All(ctx)
+	}
+	return result, err
+}
+
 func (h *Host) HostToEnvironment(ctx context.Context) (*Environment, error) {
 	result, err := h.Edges.HostToEnvironmentOrErr()
 	if IsNotLoaded(err) {
@@ -820,6 +828,14 @@ func (ph *ProvisionedHost) ProvisionedHostToBuild(ctx context.Context) (*Build, 
 	return result, err
 }
 
+func (ph *ProvisionedHost) ProvisionedHostToProvisionedScheduleStep(ctx context.Context) ([]*ProvisionedScheduleStep, error) {
+	result, err := ph.Edges.ProvisionedHostToProvisionedScheduleStepOrErr()
+	if IsNotLoaded(err) {
+		result, err = ph.QueryProvisionedHostToProvisionedScheduleStep().All(ctx)
+	}
+	return result, err
+}
+
 func (ph *ProvisionedHost) ProvisionedHostToProvisioningStep(ctx context.Context) ([]*ProvisioningStep, error) {
 	result, err := ph.Edges.ProvisionedHostToProvisioningStepOrErr()
 	if IsNotLoaded(err) {
@@ -921,7 +937,15 @@ func (pss *ProvisionedScheduleStep) ProvisionedScheduleStepToScheduleStep(ctx co
 	if IsNotLoaded(err) {
 		result, err = pss.QueryProvisionedScheduleStepToScheduleStep().Only(ctx)
 	}
-	return result, MaskNotFound(err)
+	return result, err
+}
+
+func (pss *ProvisionedScheduleStep) ProvisionedScheduleStepToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
+	result, err := pss.Edges.ProvisionedScheduleStepToProvisionedHostOrErr()
+	if IsNotLoaded(err) {
+		result, err = pss.QueryProvisionedScheduleStepToProvisionedHost().Only(ctx)
+	}
+	return result, err
 }
 
 func (pss *ProvisionedScheduleStep) ProvisionedScheduleStepToAgentTask(ctx context.Context) (*AgentTask, error) {
@@ -1060,14 +1084,6 @@ func (ss *ScheduleStep) ScheduleStepToStatus(ctx context.Context) (*Status, erro
 	return result, MaskNotFound(err)
 }
 
-func (ss *ScheduleStep) ScheduleStepToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
-	result, err := ss.Edges.ScheduleStepToProvisionedHostOrErr()
-	if IsNotLoaded(err) {
-		result, err = ss.QueryScheduleStepToProvisionedHost().Only(ctx)
-	}
-	return result, MaskNotFound(err)
-}
-
 func (ss *ScheduleStep) ScheduleStepToScript(ctx context.Context) (*Script, error) {
 	result, err := ss.Edges.ScheduleStepToScriptOrErr()
 	if IsNotLoaded(err) {
@@ -1120,6 +1136,14 @@ func (ss *ScheduleStep) ScheduleStepToProvisionedScheduleStep(ctx context.Contex
 	result, err := ss.Edges.ScheduleStepToProvisionedScheduleStepOrErr()
 	if IsNotLoaded(err) {
 		result, err = ss.QueryScheduleStepToProvisionedScheduleStep().All(ctx)
+	}
+	return result, err
+}
+
+func (ss *ScheduleStep) ScheduleStepToHost(ctx context.Context) (*Host, error) {
+	result, err := ss.Edges.ScheduleStepToHostOrErr()
+	if IsNotLoaded(err) {
+		result, err = ss.QueryScheduleStepToHost().Only(ctx)
 	}
 	return result, err
 }

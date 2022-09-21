@@ -16,8 +16,8 @@ import (
 	"github.com/gen0cide/laforge/ent/filedelete"
 	"github.com/gen0cide/laforge/ent/filedownload"
 	"github.com/gen0cide/laforge/ent/fileextract"
+	"github.com/gen0cide/laforge/ent/host"
 	"github.com/gen0cide/laforge/ent/predicate"
-	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
 	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/script"
@@ -92,25 +92,6 @@ func (ssu *ScheduleStepUpdate) SetNillableScheduleStepToStatusID(id *uuid.UUID) 
 // SetScheduleStepToStatus sets the "ScheduleStepToStatus" edge to the Status entity.
 func (ssu *ScheduleStepUpdate) SetScheduleStepToStatus(s *Status) *ScheduleStepUpdate {
 	return ssu.SetScheduleStepToStatusID(s.ID)
-}
-
-// SetScheduleStepToProvisionedHostID sets the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (ssu *ScheduleStepUpdate) SetScheduleStepToProvisionedHostID(id uuid.UUID) *ScheduleStepUpdate {
-	ssu.mutation.SetScheduleStepToProvisionedHostID(id)
-	return ssu
-}
-
-// SetNillableScheduleStepToProvisionedHostID sets the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
-func (ssu *ScheduleStepUpdate) SetNillableScheduleStepToProvisionedHostID(id *uuid.UUID) *ScheduleStepUpdate {
-	if id != nil {
-		ssu = ssu.SetScheduleStepToProvisionedHostID(*id)
-	}
-	return ssu
-}
-
-// SetScheduleStepToProvisionedHost sets the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (ssu *ScheduleStepUpdate) SetScheduleStepToProvisionedHost(p *ProvisionedHost) *ScheduleStepUpdate {
-	return ssu.SetScheduleStepToProvisionedHostID(p.ID)
 }
 
 // SetScheduleStepToScriptID sets the "ScheduleStepToScript" edge to the Script entity by ID.
@@ -242,6 +223,17 @@ func (ssu *ScheduleStepUpdate) AddScheduleStepToProvisionedScheduleStep(p ...*Pr
 	return ssu.AddScheduleStepToProvisionedScheduleStepIDs(ids...)
 }
 
+// SetScheduleStepToHostID sets the "ScheduleStepToHost" edge to the Host entity by ID.
+func (ssu *ScheduleStepUpdate) SetScheduleStepToHostID(id uuid.UUID) *ScheduleStepUpdate {
+	ssu.mutation.SetScheduleStepToHostID(id)
+	return ssu
+}
+
+// SetScheduleStepToHost sets the "ScheduleStepToHost" edge to the Host entity.
+func (ssu *ScheduleStepUpdate) SetScheduleStepToHost(h *Host) *ScheduleStepUpdate {
+	return ssu.SetScheduleStepToHostID(h.ID)
+}
+
 // Mutation returns the ScheduleStepMutation object of the builder.
 func (ssu *ScheduleStepUpdate) Mutation() *ScheduleStepMutation {
 	return ssu.mutation
@@ -250,12 +242,6 @@ func (ssu *ScheduleStepUpdate) Mutation() *ScheduleStepMutation {
 // ClearScheduleStepToStatus clears the "ScheduleStepToStatus" edge to the Status entity.
 func (ssu *ScheduleStepUpdate) ClearScheduleStepToStatus() *ScheduleStepUpdate {
 	ssu.mutation.ClearScheduleStepToStatus()
-	return ssu
-}
-
-// ClearScheduleStepToProvisionedHost clears the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (ssu *ScheduleStepUpdate) ClearScheduleStepToProvisionedHost() *ScheduleStepUpdate {
-	ssu.mutation.ClearScheduleStepToProvisionedHost()
 	return ssu
 }
 
@@ -314,6 +300,12 @@ func (ssu *ScheduleStepUpdate) RemoveScheduleStepToProvisionedScheduleStep(p ...
 		ids[i] = p[i].ID
 	}
 	return ssu.RemoveScheduleStepToProvisionedScheduleStepIDs(ids...)
+}
+
+// ClearScheduleStepToHost clears the "ScheduleStepToHost" edge to the Host entity.
+func (ssu *ScheduleStepUpdate) ClearScheduleStepToHost() *ScheduleStepUpdate {
+	ssu.mutation.ClearScheduleStepToHost()
+	return ssu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -382,6 +374,9 @@ func (ssu *ScheduleStepUpdate) check() error {
 		if err := schedulestep.TypeValidator(v); err != nil {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ScheduleStep.type": %w`, err)}
 		}
+	}
+	if _, ok := ssu.mutation.ScheduleStepToHostID(); ssu.mutation.ScheduleStepToHostCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ScheduleStep.ScheduleStepToHost"`)
 	}
 	return nil
 }
@@ -473,41 +468,6 @@ func (ssu *ScheduleStepUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: status.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if ssu.mutation.ScheduleStepToProvisionedHostCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   schedulestep.ScheduleStepToProvisionedHostTable,
-			Columns: []string{schedulestep.ScheduleStepToProvisionedHostColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := ssu.mutation.ScheduleStepToProvisionedHostIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   schedulestep.ScheduleStepToProvisionedHostTable,
-			Columns: []string{schedulestep.ScheduleStepToProvisionedHostColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
 				},
 			},
 		}
@@ -729,7 +689,7 @@ func (ssu *ScheduleStepUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if ssu.mutation.ScheduleStepToProvisionedScheduleStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: true,
+			Inverse: false,
 			Table:   schedulestep.ScheduleStepToProvisionedScheduleStepTable,
 			Columns: []string{schedulestep.ScheduleStepToProvisionedScheduleStepColumn},
 			Bidi:    false,
@@ -745,7 +705,7 @@ func (ssu *ScheduleStepUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if nodes := ssu.mutation.RemovedScheduleStepToProvisionedScheduleStepIDs(); len(nodes) > 0 && !ssu.mutation.ScheduleStepToProvisionedScheduleStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: true,
+			Inverse: false,
 			Table:   schedulestep.ScheduleStepToProvisionedScheduleStepTable,
 			Columns: []string{schedulestep.ScheduleStepToProvisionedScheduleStepColumn},
 			Bidi:    false,
@@ -764,7 +724,7 @@ func (ssu *ScheduleStepUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if nodes := ssu.mutation.ScheduleStepToProvisionedScheduleStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: true,
+			Inverse: false,
 			Table:   schedulestep.ScheduleStepToProvisionedScheduleStepTable,
 			Columns: []string{schedulestep.ScheduleStepToProvisionedScheduleStepColumn},
 			Bidi:    false,
@@ -772,6 +732,41 @@ func (ssu *ScheduleStepUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: provisionedschedulestep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ssu.mutation.ScheduleStepToHostCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   schedulestep.ScheduleStepToHostTable,
+			Columns: []string{schedulestep.ScheduleStepToHostColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: host.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ssu.mutation.ScheduleStepToHostIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   schedulestep.ScheduleStepToHostTable,
+			Columns: []string{schedulestep.ScheduleStepToHostColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: host.FieldID,
 				},
 			},
 		}
@@ -853,25 +848,6 @@ func (ssuo *ScheduleStepUpdateOne) SetNillableScheduleStepToStatusID(id *uuid.UU
 // SetScheduleStepToStatus sets the "ScheduleStepToStatus" edge to the Status entity.
 func (ssuo *ScheduleStepUpdateOne) SetScheduleStepToStatus(s *Status) *ScheduleStepUpdateOne {
 	return ssuo.SetScheduleStepToStatusID(s.ID)
-}
-
-// SetScheduleStepToProvisionedHostID sets the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (ssuo *ScheduleStepUpdateOne) SetScheduleStepToProvisionedHostID(id uuid.UUID) *ScheduleStepUpdateOne {
-	ssuo.mutation.SetScheduleStepToProvisionedHostID(id)
-	return ssuo
-}
-
-// SetNillableScheduleStepToProvisionedHostID sets the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
-func (ssuo *ScheduleStepUpdateOne) SetNillableScheduleStepToProvisionedHostID(id *uuid.UUID) *ScheduleStepUpdateOne {
-	if id != nil {
-		ssuo = ssuo.SetScheduleStepToProvisionedHostID(*id)
-	}
-	return ssuo
-}
-
-// SetScheduleStepToProvisionedHost sets the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (ssuo *ScheduleStepUpdateOne) SetScheduleStepToProvisionedHost(p *ProvisionedHost) *ScheduleStepUpdateOne {
-	return ssuo.SetScheduleStepToProvisionedHostID(p.ID)
 }
 
 // SetScheduleStepToScriptID sets the "ScheduleStepToScript" edge to the Script entity by ID.
@@ -1003,6 +979,17 @@ func (ssuo *ScheduleStepUpdateOne) AddScheduleStepToProvisionedScheduleStep(p ..
 	return ssuo.AddScheduleStepToProvisionedScheduleStepIDs(ids...)
 }
 
+// SetScheduleStepToHostID sets the "ScheduleStepToHost" edge to the Host entity by ID.
+func (ssuo *ScheduleStepUpdateOne) SetScheduleStepToHostID(id uuid.UUID) *ScheduleStepUpdateOne {
+	ssuo.mutation.SetScheduleStepToHostID(id)
+	return ssuo
+}
+
+// SetScheduleStepToHost sets the "ScheduleStepToHost" edge to the Host entity.
+func (ssuo *ScheduleStepUpdateOne) SetScheduleStepToHost(h *Host) *ScheduleStepUpdateOne {
+	return ssuo.SetScheduleStepToHostID(h.ID)
+}
+
 // Mutation returns the ScheduleStepMutation object of the builder.
 func (ssuo *ScheduleStepUpdateOne) Mutation() *ScheduleStepMutation {
 	return ssuo.mutation
@@ -1011,12 +998,6 @@ func (ssuo *ScheduleStepUpdateOne) Mutation() *ScheduleStepMutation {
 // ClearScheduleStepToStatus clears the "ScheduleStepToStatus" edge to the Status entity.
 func (ssuo *ScheduleStepUpdateOne) ClearScheduleStepToStatus() *ScheduleStepUpdateOne {
 	ssuo.mutation.ClearScheduleStepToStatus()
-	return ssuo
-}
-
-// ClearScheduleStepToProvisionedHost clears the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (ssuo *ScheduleStepUpdateOne) ClearScheduleStepToProvisionedHost() *ScheduleStepUpdateOne {
-	ssuo.mutation.ClearScheduleStepToProvisionedHost()
 	return ssuo
 }
 
@@ -1075,6 +1056,12 @@ func (ssuo *ScheduleStepUpdateOne) RemoveScheduleStepToProvisionedScheduleStep(p
 		ids[i] = p[i].ID
 	}
 	return ssuo.RemoveScheduleStepToProvisionedScheduleStepIDs(ids...)
+}
+
+// ClearScheduleStepToHost clears the "ScheduleStepToHost" edge to the Host entity.
+func (ssuo *ScheduleStepUpdateOne) ClearScheduleStepToHost() *ScheduleStepUpdateOne {
+	ssuo.mutation.ClearScheduleStepToHost()
+	return ssuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -1156,6 +1143,9 @@ func (ssuo *ScheduleStepUpdateOne) check() error {
 		if err := schedulestep.TypeValidator(v); err != nil {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ScheduleStep.type": %w`, err)}
 		}
+	}
+	if _, ok := ssuo.mutation.ScheduleStepToHostID(); ssuo.mutation.ScheduleStepToHostCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ScheduleStep.ScheduleStepToHost"`)
 	}
 	return nil
 }
@@ -1264,41 +1254,6 @@ func (ssuo *ScheduleStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedule
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: status.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if ssuo.mutation.ScheduleStepToProvisionedHostCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   schedulestep.ScheduleStepToProvisionedHostTable,
-			Columns: []string{schedulestep.ScheduleStepToProvisionedHostColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := ssuo.mutation.ScheduleStepToProvisionedHostIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   schedulestep.ScheduleStepToProvisionedHostTable,
-			Columns: []string{schedulestep.ScheduleStepToProvisionedHostColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
 				},
 			},
 		}
@@ -1520,7 +1475,7 @@ func (ssuo *ScheduleStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedule
 	if ssuo.mutation.ScheduleStepToProvisionedScheduleStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: true,
+			Inverse: false,
 			Table:   schedulestep.ScheduleStepToProvisionedScheduleStepTable,
 			Columns: []string{schedulestep.ScheduleStepToProvisionedScheduleStepColumn},
 			Bidi:    false,
@@ -1536,7 +1491,7 @@ func (ssuo *ScheduleStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedule
 	if nodes := ssuo.mutation.RemovedScheduleStepToProvisionedScheduleStepIDs(); len(nodes) > 0 && !ssuo.mutation.ScheduleStepToProvisionedScheduleStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: true,
+			Inverse: false,
 			Table:   schedulestep.ScheduleStepToProvisionedScheduleStepTable,
 			Columns: []string{schedulestep.ScheduleStepToProvisionedScheduleStepColumn},
 			Bidi:    false,
@@ -1555,7 +1510,7 @@ func (ssuo *ScheduleStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedule
 	if nodes := ssuo.mutation.ScheduleStepToProvisionedScheduleStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: true,
+			Inverse: false,
 			Table:   schedulestep.ScheduleStepToProvisionedScheduleStepTable,
 			Columns: []string{schedulestep.ScheduleStepToProvisionedScheduleStepColumn},
 			Bidi:    false,
@@ -1563,6 +1518,41 @@ func (ssuo *ScheduleStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedule
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: provisionedschedulestep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ssuo.mutation.ScheduleStepToHostCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   schedulestep.ScheduleStepToHostTable,
+			Columns: []string{schedulestep.ScheduleStepToHostColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: host.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ssuo.mutation.ScheduleStepToHostIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   schedulestep.ScheduleStepToHostTable,
+			Columns: []string{schedulestep.ScheduleStepToHostColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: host.FieldID,
 				},
 			},
 		}

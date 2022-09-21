@@ -19,6 +19,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
+	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/google/uuid"
@@ -130,6 +131,21 @@ func (phu *ProvisionedHostUpdate) SetProvisionedHostToBuildID(id uuid.UUID) *Pro
 // SetProvisionedHostToBuild sets the "ProvisionedHostToBuild" edge to the Build entity.
 func (phu *ProvisionedHostUpdate) SetProvisionedHostToBuild(b *Build) *ProvisionedHostUpdate {
 	return phu.SetProvisionedHostToBuildID(b.ID)
+}
+
+// AddProvisionedHostToProvisionedScheduleStepIDs adds the "ProvisionedHostToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by IDs.
+func (phu *ProvisionedHostUpdate) AddProvisionedHostToProvisionedScheduleStepIDs(ids ...uuid.UUID) *ProvisionedHostUpdate {
+	phu.mutation.AddProvisionedHostToProvisionedScheduleStepIDs(ids...)
+	return phu
+}
+
+// AddProvisionedHostToProvisionedScheduleStep adds the "ProvisionedHostToProvisionedScheduleStep" edges to the ProvisionedScheduleStep entity.
+func (phu *ProvisionedHostUpdate) AddProvisionedHostToProvisionedScheduleStep(p ...*ProvisionedScheduleStep) *ProvisionedHostUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return phu.AddProvisionedHostToProvisionedScheduleStepIDs(ids...)
 }
 
 // AddProvisionedHostToProvisioningStepIDs adds the "ProvisionedHostToProvisioningStep" edge to the ProvisioningStep entity by IDs.
@@ -248,6 +264,27 @@ func (phu *ProvisionedHostUpdate) ClearProvisionedHostToEndStepPlan() *Provision
 func (phu *ProvisionedHostUpdate) ClearProvisionedHostToBuild() *ProvisionedHostUpdate {
 	phu.mutation.ClearProvisionedHostToBuild()
 	return phu
+}
+
+// ClearProvisionedHostToProvisionedScheduleStep clears all "ProvisionedHostToProvisionedScheduleStep" edges to the ProvisionedScheduleStep entity.
+func (phu *ProvisionedHostUpdate) ClearProvisionedHostToProvisionedScheduleStep() *ProvisionedHostUpdate {
+	phu.mutation.ClearProvisionedHostToProvisionedScheduleStep()
+	return phu
+}
+
+// RemoveProvisionedHostToProvisionedScheduleStepIDs removes the "ProvisionedHostToProvisionedScheduleStep" edge to ProvisionedScheduleStep entities by IDs.
+func (phu *ProvisionedHostUpdate) RemoveProvisionedHostToProvisionedScheduleStepIDs(ids ...uuid.UUID) *ProvisionedHostUpdate {
+	phu.mutation.RemoveProvisionedHostToProvisionedScheduleStepIDs(ids...)
+	return phu
+}
+
+// RemoveProvisionedHostToProvisionedScheduleStep removes "ProvisionedHostToProvisionedScheduleStep" edges to ProvisionedScheduleStep entities.
+func (phu *ProvisionedHostUpdate) RemoveProvisionedHostToProvisionedScheduleStep(p ...*ProvisionedScheduleStep) *ProvisionedHostUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return phu.RemoveProvisionedHostToProvisionedScheduleStepIDs(ids...)
 }
 
 // ClearProvisionedHostToProvisioningStep clears all "ProvisionedHostToProvisioningStep" edges to the ProvisioningStep entity.
@@ -627,6 +664,60 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if phu.mutation.ProvisionedHostToProvisionedScheduleStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   provisionedhost.ProvisionedHostToProvisionedScheduleStepTable,
+			Columns: []string{provisionedhost.ProvisionedHostToProvisionedScheduleStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisionedschedulestep.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := phu.mutation.RemovedProvisionedHostToProvisionedScheduleStepIDs(); len(nodes) > 0 && !phu.mutation.ProvisionedHostToProvisionedScheduleStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   provisionedhost.ProvisionedHostToProvisionedScheduleStepTable,
+			Columns: []string{provisionedhost.ProvisionedHostToProvisionedScheduleStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisionedschedulestep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := phu.mutation.ProvisionedHostToProvisionedScheduleStepIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   provisionedhost.ProvisionedHostToProvisionedScheduleStepTable,
+			Columns: []string{provisionedhost.ProvisionedHostToProvisionedScheduleStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisionedschedulestep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if phu.mutation.ProvisionedHostToProvisioningStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -973,6 +1064,21 @@ func (phuo *ProvisionedHostUpdateOne) SetProvisionedHostToBuild(b *Build) *Provi
 	return phuo.SetProvisionedHostToBuildID(b.ID)
 }
 
+// AddProvisionedHostToProvisionedScheduleStepIDs adds the "ProvisionedHostToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by IDs.
+func (phuo *ProvisionedHostUpdateOne) AddProvisionedHostToProvisionedScheduleStepIDs(ids ...uuid.UUID) *ProvisionedHostUpdateOne {
+	phuo.mutation.AddProvisionedHostToProvisionedScheduleStepIDs(ids...)
+	return phuo
+}
+
+// AddProvisionedHostToProvisionedScheduleStep adds the "ProvisionedHostToProvisionedScheduleStep" edges to the ProvisionedScheduleStep entity.
+func (phuo *ProvisionedHostUpdateOne) AddProvisionedHostToProvisionedScheduleStep(p ...*ProvisionedScheduleStep) *ProvisionedHostUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return phuo.AddProvisionedHostToProvisionedScheduleStepIDs(ids...)
+}
+
 // AddProvisionedHostToProvisioningStepIDs adds the "ProvisionedHostToProvisioningStep" edge to the ProvisioningStep entity by IDs.
 func (phuo *ProvisionedHostUpdateOne) AddProvisionedHostToProvisioningStepIDs(ids ...uuid.UUID) *ProvisionedHostUpdateOne {
 	phuo.mutation.AddProvisionedHostToProvisioningStepIDs(ids...)
@@ -1089,6 +1195,27 @@ func (phuo *ProvisionedHostUpdateOne) ClearProvisionedHostToEndStepPlan() *Provi
 func (phuo *ProvisionedHostUpdateOne) ClearProvisionedHostToBuild() *ProvisionedHostUpdateOne {
 	phuo.mutation.ClearProvisionedHostToBuild()
 	return phuo
+}
+
+// ClearProvisionedHostToProvisionedScheduleStep clears all "ProvisionedHostToProvisionedScheduleStep" edges to the ProvisionedScheduleStep entity.
+func (phuo *ProvisionedHostUpdateOne) ClearProvisionedHostToProvisionedScheduleStep() *ProvisionedHostUpdateOne {
+	phuo.mutation.ClearProvisionedHostToProvisionedScheduleStep()
+	return phuo
+}
+
+// RemoveProvisionedHostToProvisionedScheduleStepIDs removes the "ProvisionedHostToProvisionedScheduleStep" edge to ProvisionedScheduleStep entities by IDs.
+func (phuo *ProvisionedHostUpdateOne) RemoveProvisionedHostToProvisionedScheduleStepIDs(ids ...uuid.UUID) *ProvisionedHostUpdateOne {
+	phuo.mutation.RemoveProvisionedHostToProvisionedScheduleStepIDs(ids...)
+	return phuo
+}
+
+// RemoveProvisionedHostToProvisionedScheduleStep removes "ProvisionedHostToProvisionedScheduleStep" edges to ProvisionedScheduleStep entities.
+func (phuo *ProvisionedHostUpdateOne) RemoveProvisionedHostToProvisionedScheduleStep(p ...*ProvisionedScheduleStep) *ProvisionedHostUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return phuo.RemoveProvisionedHostToProvisionedScheduleStepIDs(ids...)
 }
 
 // ClearProvisionedHostToProvisioningStep clears all "ProvisionedHostToProvisioningStep" edges to the ProvisioningStep entity.
@@ -1490,6 +1617,60 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: build.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if phuo.mutation.ProvisionedHostToProvisionedScheduleStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   provisionedhost.ProvisionedHostToProvisionedScheduleStepTable,
+			Columns: []string{provisionedhost.ProvisionedHostToProvisionedScheduleStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisionedschedulestep.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := phuo.mutation.RemovedProvisionedHostToProvisionedScheduleStepIDs(); len(nodes) > 0 && !phuo.mutation.ProvisionedHostToProvisionedScheduleStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   provisionedhost.ProvisionedHostToProvisionedScheduleStepTable,
+			Columns: []string{provisionedhost.ProvisionedHostToProvisionedScheduleStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisionedschedulestep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := phuo.mutation.ProvisionedHostToProvisionedScheduleStepIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   provisionedhost.ProvisionedHostToProvisionedScheduleStepTable,
+			Columns: []string{provisionedhost.ProvisionedHostToProvisionedScheduleStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisionedschedulestep.FieldID,
 				},
 			},
 		}

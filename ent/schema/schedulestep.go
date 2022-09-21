@@ -42,8 +42,6 @@ func (ScheduleStep) Edges() []ent.Edge {
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("ScheduleStepToProvisionedHost", ProvisionedHost.Type).
-			Unique(),
 		edge.To("ScheduleStepToScript", Script.Type).
 			Unique(),
 		edge.To("ScheduleStepToCommand", Command.Type).
@@ -56,7 +54,10 @@ func (ScheduleStep) Edges() []ent.Edge {
 			Unique(),
 		edge.To("ScheduleStepToAnsible", Ansible.Type).
 			Unique(),
-		edge.From("ScheduleStepToProvisionedScheduleStep", ProvisionedScheduleStep.Type).
-			Ref("ProvisionedScheduleStepToScheduleStep"),
+		edge.To("ScheduleStepToProvisionedScheduleStep", ProvisionedScheduleStep.Type),
+		edge.From("ScheduleStepToHost", Host.Type).
+			Ref("HostToScheduleStep").
+			Required().
+			Unique(),
 	}
 }

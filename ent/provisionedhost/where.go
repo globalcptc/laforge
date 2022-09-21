@@ -376,6 +376,34 @@ func HasProvisionedHostToBuildWith(preds ...predicate.Build) predicate.Provision
 	})
 }
 
+// HasProvisionedHostToProvisionedScheduleStep applies the HasEdge predicate on the "ProvisionedHostToProvisionedScheduleStep" edge.
+func HasProvisionedHostToProvisionedScheduleStep() predicate.ProvisionedHost {
+	return predicate.ProvisionedHost(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ProvisionedHostToProvisionedScheduleStepTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProvisionedHostToProvisionedScheduleStepTable, ProvisionedHostToProvisionedScheduleStepColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProvisionedHostToProvisionedScheduleStepWith applies the HasEdge predicate on the "ProvisionedHostToProvisionedScheduleStep" edge with a given conditions (other predicates).
+func HasProvisionedHostToProvisionedScheduleStepWith(preds ...predicate.ProvisionedScheduleStep) predicate.ProvisionedHost {
+	return predicate.ProvisionedHost(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ProvisionedHostToProvisionedScheduleStepInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProvisionedHostToProvisionedScheduleStepTable, ProvisionedHostToProvisionedScheduleStepColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasProvisionedHostToProvisioningStep applies the HasEdge predicate on the "ProvisionedHostToProvisioningStep" edge.
 func HasProvisionedHostToProvisioningStep() predicate.ProvisionedHost {
 	return predicate.ProvisionedHost(func(s *sql.Selector) {

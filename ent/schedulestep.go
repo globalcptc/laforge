@@ -13,7 +13,7 @@ import (
 	"github.com/gen0cide/laforge/ent/filedelete"
 	"github.com/gen0cide/laforge/ent/filedownload"
 	"github.com/gen0cide/laforge/ent/fileextract"
-	"github.com/gen0cide/laforge/ent/provisionedhost"
+	"github.com/gen0cide/laforge/ent/host"
 	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/status"
@@ -42,8 +42,6 @@ type ScheduleStep struct {
 	// Edges put into the main struct to be loaded via hcl
 	// ScheduleStepToStatus holds the value of the ScheduleStepToStatus edge.
 	HCLScheduleStepToStatus *Status `json:"ScheduleStepToStatus,omitempty"`
-	// ScheduleStepToProvisionedHost holds the value of the ScheduleStepToProvisionedHost edge.
-	HCLScheduleStepToProvisionedHost *ProvisionedHost `json:"ScheduleStepToProvisionedHost,omitempty"`
 	// ScheduleStepToScript holds the value of the ScheduleStepToScript edge.
 	HCLScheduleStepToScript *Script `json:"ScheduleStepToScript,omitempty"`
 	// ScheduleStepToCommand holds the value of the ScheduleStepToCommand edge.
@@ -58,22 +56,22 @@ type ScheduleStep struct {
 	HCLScheduleStepToAnsible *Ansible `json:"ScheduleStepToAnsible,omitempty"`
 	// ScheduleStepToProvisionedScheduleStep holds the value of the ScheduleStepToProvisionedScheduleStep edge.
 	HCLScheduleStepToProvisionedScheduleStep []*ProvisionedScheduleStep `json:"ScheduleStepToProvisionedScheduleStep,omitempty"`
+	// ScheduleStepToHost holds the value of the ScheduleStepToHost edge.
+	HCLScheduleStepToHost *Host `json:"ScheduleStepToHost,omitempty"`
 	//
-	schedule_step_schedule_step_to_provisioned_host *uuid.UUID
-	schedule_step_schedule_step_to_script           *uuid.UUID
-	schedule_step_schedule_step_to_command          *uuid.UUID
-	schedule_step_schedule_step_to_file_delete      *uuid.UUID
-	schedule_step_schedule_step_to_file_download    *uuid.UUID
-	schedule_step_schedule_step_to_file_extract     *uuid.UUID
-	schedule_step_schedule_step_to_ansible          *uuid.UUID
+	host_host_to_schedule_step                   *uuid.UUID
+	schedule_step_schedule_step_to_script        *uuid.UUID
+	schedule_step_schedule_step_to_command       *uuid.UUID
+	schedule_step_schedule_step_to_file_delete   *uuid.UUID
+	schedule_step_schedule_step_to_file_download *uuid.UUID
+	schedule_step_schedule_step_to_file_extract  *uuid.UUID
+	schedule_step_schedule_step_to_ansible       *uuid.UUID
 }
 
 // ScheduleStepEdges holds the relations/edges for other nodes in the graph.
 type ScheduleStepEdges struct {
 	// ScheduleStepToStatus holds the value of the ScheduleStepToStatus edge.
 	ScheduleStepToStatus *Status `json:"ScheduleStepToStatus,omitempty"`
-	// ScheduleStepToProvisionedHost holds the value of the ScheduleStepToProvisionedHost edge.
-	ScheduleStepToProvisionedHost *ProvisionedHost `json:"ScheduleStepToProvisionedHost,omitempty"`
 	// ScheduleStepToScript holds the value of the ScheduleStepToScript edge.
 	ScheduleStepToScript *Script `json:"ScheduleStepToScript,omitempty"`
 	// ScheduleStepToCommand holds the value of the ScheduleStepToCommand edge.
@@ -88,6 +86,8 @@ type ScheduleStepEdges struct {
 	ScheduleStepToAnsible *Ansible `json:"ScheduleStepToAnsible,omitempty"`
 	// ScheduleStepToProvisionedScheduleStep holds the value of the ScheduleStepToProvisionedScheduleStep edge.
 	ScheduleStepToProvisionedScheduleStep []*ProvisionedScheduleStep `json:"ScheduleStepToProvisionedScheduleStep,omitempty"`
+	// ScheduleStepToHost holds the value of the ScheduleStepToHost edge.
+	ScheduleStepToHost *Host `json:"ScheduleStepToHost,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [9]bool
@@ -107,24 +107,10 @@ func (e ScheduleStepEdges) ScheduleStepToStatusOrErr() (*Status, error) {
 	return nil, &NotLoadedError{edge: "ScheduleStepToStatus"}
 }
 
-// ScheduleStepToProvisionedHostOrErr returns the ScheduleStepToProvisionedHost value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e ScheduleStepEdges) ScheduleStepToProvisionedHostOrErr() (*ProvisionedHost, error) {
-	if e.loadedTypes[1] {
-		if e.ScheduleStepToProvisionedHost == nil {
-			// The edge ScheduleStepToProvisionedHost was loaded in eager-loading,
-			// but was not found.
-			return nil, &NotFoundError{label: provisionedhost.Label}
-		}
-		return e.ScheduleStepToProvisionedHost, nil
-	}
-	return nil, &NotLoadedError{edge: "ScheduleStepToProvisionedHost"}
-}
-
 // ScheduleStepToScriptOrErr returns the ScheduleStepToScript value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e ScheduleStepEdges) ScheduleStepToScriptOrErr() (*Script, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[1] {
 		if e.ScheduleStepToScript == nil {
 			// The edge ScheduleStepToScript was loaded in eager-loading,
 			// but was not found.
@@ -138,7 +124,7 @@ func (e ScheduleStepEdges) ScheduleStepToScriptOrErr() (*Script, error) {
 // ScheduleStepToCommandOrErr returns the ScheduleStepToCommand value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e ScheduleStepEdges) ScheduleStepToCommandOrErr() (*Command, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[2] {
 		if e.ScheduleStepToCommand == nil {
 			// The edge ScheduleStepToCommand was loaded in eager-loading,
 			// but was not found.
@@ -152,7 +138,7 @@ func (e ScheduleStepEdges) ScheduleStepToCommandOrErr() (*Command, error) {
 // ScheduleStepToFileDeleteOrErr returns the ScheduleStepToFileDelete value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e ScheduleStepEdges) ScheduleStepToFileDeleteOrErr() (*FileDelete, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[3] {
 		if e.ScheduleStepToFileDelete == nil {
 			// The edge ScheduleStepToFileDelete was loaded in eager-loading,
 			// but was not found.
@@ -166,7 +152,7 @@ func (e ScheduleStepEdges) ScheduleStepToFileDeleteOrErr() (*FileDelete, error) 
 // ScheduleStepToFileDownloadOrErr returns the ScheduleStepToFileDownload value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e ScheduleStepEdges) ScheduleStepToFileDownloadOrErr() (*FileDownload, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[4] {
 		if e.ScheduleStepToFileDownload == nil {
 			// The edge ScheduleStepToFileDownload was loaded in eager-loading,
 			// but was not found.
@@ -180,7 +166,7 @@ func (e ScheduleStepEdges) ScheduleStepToFileDownloadOrErr() (*FileDownload, err
 // ScheduleStepToFileExtractOrErr returns the ScheduleStepToFileExtract value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e ScheduleStepEdges) ScheduleStepToFileExtractOrErr() (*FileExtract, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[5] {
 		if e.ScheduleStepToFileExtract == nil {
 			// The edge ScheduleStepToFileExtract was loaded in eager-loading,
 			// but was not found.
@@ -194,7 +180,7 @@ func (e ScheduleStepEdges) ScheduleStepToFileExtractOrErr() (*FileExtract, error
 // ScheduleStepToAnsibleOrErr returns the ScheduleStepToAnsible value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e ScheduleStepEdges) ScheduleStepToAnsibleOrErr() (*Ansible, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[6] {
 		if e.ScheduleStepToAnsible == nil {
 			// The edge ScheduleStepToAnsible was loaded in eager-loading,
 			// but was not found.
@@ -208,10 +194,24 @@ func (e ScheduleStepEdges) ScheduleStepToAnsibleOrErr() (*Ansible, error) {
 // ScheduleStepToProvisionedScheduleStepOrErr returns the ScheduleStepToProvisionedScheduleStep value or an error if the edge
 // was not loaded in eager-loading.
 func (e ScheduleStepEdges) ScheduleStepToProvisionedScheduleStepOrErr() ([]*ProvisionedScheduleStep, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[7] {
 		return e.ScheduleStepToProvisionedScheduleStep, nil
 	}
 	return nil, &NotLoadedError{edge: "ScheduleStepToProvisionedScheduleStep"}
+}
+
+// ScheduleStepToHostOrErr returns the ScheduleStepToHost value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ScheduleStepEdges) ScheduleStepToHostOrErr() (*Host, error) {
+	if e.loadedTypes[8] {
+		if e.ScheduleStepToHost == nil {
+			// The edge ScheduleStepToHost was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: host.Label}
+		}
+		return e.ScheduleStepToHost, nil
+	}
+	return nil, &NotLoadedError{edge: "ScheduleStepToHost"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -229,7 +229,7 @@ func (*ScheduleStep) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullTime)
 		case schedulestep.FieldID:
 			values[i] = new(uuid.UUID)
-		case schedulestep.ForeignKeys[0]: // schedule_step_schedule_step_to_provisioned_host
+		case schedulestep.ForeignKeys[0]: // host_host_to_schedule_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case schedulestep.ForeignKeys[1]: // schedule_step_schedule_step_to_script
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -296,10 +296,10 @@ func (ss *ScheduleStep) assignValues(columns []string, values []interface{}) err
 			}
 		case schedulestep.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field schedule_step_schedule_step_to_provisioned_host", values[i])
+				return fmt.Errorf("unexpected type %T for field host_host_to_schedule_step", values[i])
 			} else if value.Valid {
-				ss.schedule_step_schedule_step_to_provisioned_host = new(uuid.UUID)
-				*ss.schedule_step_schedule_step_to_provisioned_host = *value.S.(*uuid.UUID)
+				ss.host_host_to_schedule_step = new(uuid.UUID)
+				*ss.host_host_to_schedule_step = *value.S.(*uuid.UUID)
 			}
 		case schedulestep.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -353,11 +353,6 @@ func (ss *ScheduleStep) QueryScheduleStepToStatus() *StatusQuery {
 	return (&ScheduleStepClient{config: ss.config}).QueryScheduleStepToStatus(ss)
 }
 
-// QueryScheduleStepToProvisionedHost queries the "ScheduleStepToProvisionedHost" edge of the ScheduleStep entity.
-func (ss *ScheduleStep) QueryScheduleStepToProvisionedHost() *ProvisionedHostQuery {
-	return (&ScheduleStepClient{config: ss.config}).QueryScheduleStepToProvisionedHost(ss)
-}
-
 // QueryScheduleStepToScript queries the "ScheduleStepToScript" edge of the ScheduleStep entity.
 func (ss *ScheduleStep) QueryScheduleStepToScript() *ScriptQuery {
 	return (&ScheduleStepClient{config: ss.config}).QueryScheduleStepToScript(ss)
@@ -391,6 +386,11 @@ func (ss *ScheduleStep) QueryScheduleStepToAnsible() *AnsibleQuery {
 // QueryScheduleStepToProvisionedScheduleStep queries the "ScheduleStepToProvisionedScheduleStep" edge of the ScheduleStep entity.
 func (ss *ScheduleStep) QueryScheduleStepToProvisionedScheduleStep() *ProvisionedScheduleStepQuery {
 	return (&ScheduleStepClient{config: ss.config}).QueryScheduleStepToProvisionedScheduleStep(ss)
+}
+
+// QueryScheduleStepToHost queries the "ScheduleStepToHost" edge of the ScheduleStep entity.
+func (ss *ScheduleStep) QueryScheduleStepToHost() *HostQuery {
+	return (&ScheduleStepClient{config: ss.config}).QueryScheduleStepToHost(ss)
 }
 
 // Update returns a builder for updating this ScheduleStep.

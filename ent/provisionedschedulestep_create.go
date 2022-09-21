@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
 	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/status"
@@ -69,17 +70,20 @@ func (pssc *ProvisionedScheduleStepCreate) SetProvisionedScheduleStepToScheduleS
 	return pssc
 }
 
-// SetNillableProvisionedScheduleStepToScheduleStepID sets the "ProvisionedScheduleStepToScheduleStep" edge to the ScheduleStep entity by ID if the given value is not nil.
-func (pssc *ProvisionedScheduleStepCreate) SetNillableProvisionedScheduleStepToScheduleStepID(id *uuid.UUID) *ProvisionedScheduleStepCreate {
-	if id != nil {
-		pssc = pssc.SetProvisionedScheduleStepToScheduleStepID(*id)
-	}
-	return pssc
-}
-
 // SetProvisionedScheduleStepToScheduleStep sets the "ProvisionedScheduleStepToScheduleStep" edge to the ScheduleStep entity.
 func (pssc *ProvisionedScheduleStepCreate) SetProvisionedScheduleStepToScheduleStep(s *ScheduleStep) *ProvisionedScheduleStepCreate {
 	return pssc.SetProvisionedScheduleStepToScheduleStepID(s.ID)
+}
+
+// SetProvisionedScheduleStepToProvisionedHostID sets the "ProvisionedScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (pssc *ProvisionedScheduleStepCreate) SetProvisionedScheduleStepToProvisionedHostID(id uuid.UUID) *ProvisionedScheduleStepCreate {
+	pssc.mutation.SetProvisionedScheduleStepToProvisionedHostID(id)
+	return pssc
+}
+
+// SetProvisionedScheduleStepToProvisionedHost sets the "ProvisionedScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
+func (pssc *ProvisionedScheduleStepCreate) SetProvisionedScheduleStepToProvisionedHost(p *ProvisionedHost) *ProvisionedScheduleStepCreate {
+	return pssc.SetProvisionedScheduleStepToProvisionedHostID(p.ID)
 }
 
 // SetProvisionedScheduleStepToAgentTaskID sets the "ProvisionedScheduleStepToAgentTask" edge to the AgentTask entity by ID.
@@ -189,6 +193,12 @@ func (pssc *ProvisionedScheduleStepCreate) check() error {
 	if _, ok := pssc.mutation.RunTime(); !ok {
 		return &ValidationError{Name: "run_time", err: errors.New(`ent: missing required field "ProvisionedScheduleStep.run_time"`)}
 	}
+	if _, ok := pssc.mutation.ProvisionedScheduleStepToScheduleStepID(); !ok {
+		return &ValidationError{Name: "ProvisionedScheduleStepToScheduleStep", err: errors.New(`ent: missing required edge "ProvisionedScheduleStep.ProvisionedScheduleStepToScheduleStep"`)}
+	}
+	if _, ok := pssc.mutation.ProvisionedScheduleStepToProvisionedHostID(); !ok {
+		return &ValidationError{Name: "ProvisionedScheduleStepToProvisionedHost", err: errors.New(`ent: missing required edge "ProvisionedScheduleStep.ProvisionedScheduleStepToProvisionedHost"`)}
+	}
 	return nil
 }
 
@@ -255,7 +265,7 @@ func (pssc *ProvisionedScheduleStepCreate) createSpec() (*ProvisionedScheduleSte
 	if nodes := pssc.mutation.ProvisionedScheduleStepToScheduleStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
-			Inverse: false,
+			Inverse: true,
 			Table:   provisionedschedulestep.ProvisionedScheduleStepToScheduleStepTable,
 			Columns: []string{provisionedschedulestep.ProvisionedScheduleStepToScheduleStepColumn},
 			Bidi:    false,
@@ -269,7 +279,27 @@ func (pssc *ProvisionedScheduleStepCreate) createSpec() (*ProvisionedScheduleSte
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioned_schedule_step_provisioned_schedule_step_to_schedule_step = &nodes[0]
+		_node.schedule_step_schedule_step_to_provisioned_schedule_step = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := pssc.mutation.ProvisionedScheduleStepToProvisionedHostIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   provisionedschedulestep.ProvisionedScheduleStepToProvisionedHostTable,
+			Columns: []string{provisionedschedulestep.ProvisionedScheduleStepToProvisionedHostColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisionedhost.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.provisioned_host_provisioned_host_to_provisioned_schedule_step = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := pssc.mutation.ProvisionedScheduleStepToAgentTaskIDs(); len(nodes) > 0 {

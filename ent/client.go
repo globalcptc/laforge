@@ -3215,6 +3215,22 @@ func (c *HostClient) QueryHostToUser(h *Host) *UserQuery {
 	return query
 }
 
+// QueryHostToScheduleStep queries the HostToScheduleStep edge of a Host.
+func (c *HostClient) QueryHostToScheduleStep(h *Host) *ScheduleStepQuery {
+	query := &ScheduleStepQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := h.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(host.Table, host.FieldID, id),
+			sqlgraph.To(schedulestep.Table, schedulestep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, host.HostToScheduleStepTable, host.HostToScheduleStepColumn),
+		)
+		fromV = sqlgraph.Neighbors(h.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryHostToEnvironment queries the HostToEnvironment edge of a Host.
 func (c *HostClient) QueryHostToEnvironment(h *Host) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
@@ -4357,6 +4373,22 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToBuild(ph *ProvisionedHost)
 	return query
 }
 
+// QueryProvisionedHostToProvisionedScheduleStep queries the ProvisionedHostToProvisionedScheduleStep edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryProvisionedHostToProvisionedScheduleStep(ph *ProvisionedHost) *ProvisionedScheduleStepQuery {
+	query := &ProvisionedScheduleStepQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := ph.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
+			sqlgraph.To(provisionedschedulestep.Table, provisionedschedulestep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, provisionedhost.ProvisionedHostToProvisionedScheduleStepTable, provisionedhost.ProvisionedHostToProvisionedScheduleStepColumn),
+		)
+		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryProvisionedHostToProvisioningStep queries the ProvisionedHostToProvisioningStep edge of a ProvisionedHost.
 func (c *ProvisionedHostClient) QueryProvisionedHostToProvisioningStep(ph *ProvisionedHost) *ProvisioningStepQuery {
 	query := &ProvisioningStepQuery{config: c.config}
@@ -4737,7 +4769,23 @@ func (c *ProvisionedScheduleStepClient) QueryProvisionedScheduleStepToScheduleSt
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedschedulestep.Table, provisionedschedulestep.FieldID, id),
 			sqlgraph.To(schedulestep.Table, schedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionedschedulestep.ProvisionedScheduleStepToScheduleStepTable, provisionedschedulestep.ProvisionedScheduleStepToScheduleStepColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, provisionedschedulestep.ProvisionedScheduleStepToScheduleStepTable, provisionedschedulestep.ProvisionedScheduleStepToScheduleStepColumn),
+		)
+		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisionedScheduleStepToProvisionedHost queries the ProvisionedScheduleStepToProvisionedHost edge of a ProvisionedScheduleStep.
+func (c *ProvisionedScheduleStepClient) QueryProvisionedScheduleStepToProvisionedHost(pss *ProvisionedScheduleStep) *ProvisionedHostQuery {
+	query := &ProvisionedHostQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pss.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisionedschedulestep.Table, provisionedschedulestep.FieldID, id),
+			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, provisionedschedulestep.ProvisionedScheduleStepToProvisionedHostTable, provisionedschedulestep.ProvisionedScheduleStepToProvisionedHostColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -5377,22 +5425,6 @@ func (c *ScheduleStepClient) QueryScheduleStepToStatus(ss *ScheduleStep) *Status
 	return query
 }
 
-// QueryScheduleStepToProvisionedHost queries the ScheduleStepToProvisionedHost edge of a ScheduleStep.
-func (c *ScheduleStepClient) QueryScheduleStepToProvisionedHost(ss *ScheduleStep) *ProvisionedHostQuery {
-	query := &ProvisionedHostQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := ss.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
-			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, schedulestep.ScheduleStepToProvisionedHostTable, schedulestep.ScheduleStepToProvisionedHostColumn),
-		)
-		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryScheduleStepToScript queries the ScheduleStepToScript edge of a ScheduleStep.
 func (c *ScheduleStepClient) QueryScheduleStepToScript(ss *ScheduleStep) *ScriptQuery {
 	query := &ScriptQuery{config: c.config}
@@ -5497,7 +5529,23 @@ func (c *ScheduleStepClient) QueryScheduleStepToProvisionedScheduleStep(ss *Sche
 		step := sqlgraph.NewStep(
 			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
 			sqlgraph.To(provisionedschedulestep.Table, provisionedschedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, schedulestep.ScheduleStepToProvisionedScheduleStepTable, schedulestep.ScheduleStepToProvisionedScheduleStepColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, schedulestep.ScheduleStepToProvisionedScheduleStepTable, schedulestep.ScheduleStepToProvisionedScheduleStepColumn),
+		)
+		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryScheduleStepToHost queries the ScheduleStepToHost edge of a ScheduleStep.
+func (c *ScheduleStepClient) QueryScheduleStepToHost(ss *ScheduleStep) *HostQuery {
+	query := &HostQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := ss.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
+			sqlgraph.To(host.Table, host.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, schedulestep.ScheduleStepToHostTable, schedulestep.ScheduleStepToHostColumn),
 		)
 		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
 		return fromV, nil

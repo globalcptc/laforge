@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
 	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/status"
@@ -31,11 +32,14 @@ type ProvisionedScheduleStep struct {
 	HCLProvisionedScheduleStepToStatus *Status `json:"ProvisionedScheduleStepToStatus,omitempty"`
 	// ProvisionedScheduleStepToScheduleStep holds the value of the ProvisionedScheduleStepToScheduleStep edge.
 	HCLProvisionedScheduleStepToScheduleStep *ScheduleStep `json:"ProvisionedScheduleStepToScheduleStep,omitempty"`
+	// ProvisionedScheduleStepToProvisionedHost holds the value of the ProvisionedScheduleStepToProvisionedHost edge.
+	HCLProvisionedScheduleStepToProvisionedHost *ProvisionedHost `json:"ProvisionedScheduleStepToProvisionedHost,omitempty"`
 	// ProvisionedScheduleStepToAgentTask holds the value of the ProvisionedScheduleStepToAgentTask edge.
 	HCLProvisionedScheduleStepToAgentTask *AgentTask `json:"ProvisionedScheduleStepToAgentTask,omitempty"`
 	//
-	agent_task_agent_task_to_provisioned_schedule_step                   *uuid.UUID
-	provisioned_schedule_step_provisioned_schedule_step_to_schedule_step *uuid.UUID
+	agent_task_agent_task_to_provisioned_schedule_step             *uuid.UUID
+	provisioned_host_provisioned_host_to_provisioned_schedule_step *uuid.UUID
+	schedule_step_schedule_step_to_provisioned_schedule_step       *uuid.UUID
 }
 
 // ProvisionedScheduleStepEdges holds the relations/edges for other nodes in the graph.
@@ -44,11 +48,13 @@ type ProvisionedScheduleStepEdges struct {
 	ProvisionedScheduleStepToStatus *Status `json:"ProvisionedScheduleStepToStatus,omitempty"`
 	// ProvisionedScheduleStepToScheduleStep holds the value of the ProvisionedScheduleStepToScheduleStep edge.
 	ProvisionedScheduleStepToScheduleStep *ScheduleStep `json:"ProvisionedScheduleStepToScheduleStep,omitempty"`
+	// ProvisionedScheduleStepToProvisionedHost holds the value of the ProvisionedScheduleStepToProvisionedHost edge.
+	ProvisionedScheduleStepToProvisionedHost *ProvisionedHost `json:"ProvisionedScheduleStepToProvisionedHost,omitempty"`
 	// ProvisionedScheduleStepToAgentTask holds the value of the ProvisionedScheduleStepToAgentTask edge.
 	ProvisionedScheduleStepToAgentTask *AgentTask `json:"ProvisionedScheduleStepToAgentTask,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // ProvisionedScheduleStepToStatusOrErr returns the ProvisionedScheduleStepToStatus value or an error if the edge
@@ -79,10 +85,24 @@ func (e ProvisionedScheduleStepEdges) ProvisionedScheduleStepToScheduleStepOrErr
 	return nil, &NotLoadedError{edge: "ProvisionedScheduleStepToScheduleStep"}
 }
 
+// ProvisionedScheduleStepToProvisionedHostOrErr returns the ProvisionedScheduleStepToProvisionedHost value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProvisionedScheduleStepEdges) ProvisionedScheduleStepToProvisionedHostOrErr() (*ProvisionedHost, error) {
+	if e.loadedTypes[2] {
+		if e.ProvisionedScheduleStepToProvisionedHost == nil {
+			// The edge ProvisionedScheduleStepToProvisionedHost was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: provisionedhost.Label}
+		}
+		return e.ProvisionedScheduleStepToProvisionedHost, nil
+	}
+	return nil, &NotLoadedError{edge: "ProvisionedScheduleStepToProvisionedHost"}
+}
+
 // ProvisionedScheduleStepToAgentTaskOrErr returns the ProvisionedScheduleStepToAgentTask value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e ProvisionedScheduleStepEdges) ProvisionedScheduleStepToAgentTaskOrErr() (*AgentTask, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		if e.ProvisionedScheduleStepToAgentTask == nil {
 			// The edge ProvisionedScheduleStepToAgentTask was loaded in eager-loading,
 			// but was not found.
@@ -104,7 +124,9 @@ func (*ProvisionedScheduleStep) scanValues(columns []string) ([]interface{}, err
 			values[i] = new(uuid.UUID)
 		case provisionedschedulestep.ForeignKeys[0]: // agent_task_agent_task_to_provisioned_schedule_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisionedschedulestep.ForeignKeys[1]: // provisioned_schedule_step_provisioned_schedule_step_to_schedule_step
+		case provisionedschedulestep.ForeignKeys[1]: // provisioned_host_provisioned_host_to_provisioned_schedule_step
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case provisionedschedulestep.ForeignKeys[2]: // schedule_step_schedule_step_to_provisioned_schedule_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type ProvisionedScheduleStep", columns[i])
@@ -142,10 +164,17 @@ func (pss *ProvisionedScheduleStep) assignValues(columns []string, values []inte
 			}
 		case provisionedschedulestep.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioned_schedule_step_provisioned_schedule_step_to_schedule_step", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioned_host_provisioned_host_to_provisioned_schedule_step", values[i])
 			} else if value.Valid {
-				pss.provisioned_schedule_step_provisioned_schedule_step_to_schedule_step = new(uuid.UUID)
-				*pss.provisioned_schedule_step_provisioned_schedule_step_to_schedule_step = *value.S.(*uuid.UUID)
+				pss.provisioned_host_provisioned_host_to_provisioned_schedule_step = new(uuid.UUID)
+				*pss.provisioned_host_provisioned_host_to_provisioned_schedule_step = *value.S.(*uuid.UUID)
+			}
+		case provisionedschedulestep.ForeignKeys[2]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field schedule_step_schedule_step_to_provisioned_schedule_step", values[i])
+			} else if value.Valid {
+				pss.schedule_step_schedule_step_to_provisioned_schedule_step = new(uuid.UUID)
+				*pss.schedule_step_schedule_step_to_provisioned_schedule_step = *value.S.(*uuid.UUID)
 			}
 		}
 	}
@@ -160,6 +189,11 @@ func (pss *ProvisionedScheduleStep) QueryProvisionedScheduleStepToStatus() *Stat
 // QueryProvisionedScheduleStepToScheduleStep queries the "ProvisionedScheduleStepToScheduleStep" edge of the ProvisionedScheduleStep entity.
 func (pss *ProvisionedScheduleStep) QueryProvisionedScheduleStepToScheduleStep() *ScheduleStepQuery {
 	return (&ProvisionedScheduleStepClient{config: pss.config}).QueryProvisionedScheduleStepToScheduleStep(pss)
+}
+
+// QueryProvisionedScheduleStepToProvisionedHost queries the "ProvisionedScheduleStepToProvisionedHost" edge of the ProvisionedScheduleStep entity.
+func (pss *ProvisionedScheduleStep) QueryProvisionedScheduleStepToProvisionedHost() *ProvisionedHostQuery {
+	return (&ProvisionedScheduleStepClient{config: pss.config}).QueryProvisionedScheduleStepToProvisionedHost(pss)
 }
 
 // QueryProvisionedScheduleStepToAgentTask queries the "ProvisionedScheduleStepToAgentTask" edge of the ProvisionedScheduleStep entity.

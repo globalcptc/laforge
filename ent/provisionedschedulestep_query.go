@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/predicate"
+	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
 	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/status"
@@ -22,16 +23,17 @@ import (
 // ProvisionedScheduleStepQuery is the builder for querying ProvisionedScheduleStep entities.
 type ProvisionedScheduleStepQuery struct {
 	config
-	limit                                     *int
-	offset                                    *int
-	unique                                    *bool
-	order                                     []OrderFunc
-	fields                                    []string
-	predicates                                []predicate.ProvisionedScheduleStep
-	withProvisionedScheduleStepToStatus       *StatusQuery
-	withProvisionedScheduleStepToScheduleStep *ScheduleStepQuery
-	withProvisionedScheduleStepToAgentTask    *AgentTaskQuery
-	withFKs                                   bool
+	limit                                        *int
+	offset                                       *int
+	unique                                       *bool
+	order                                        []OrderFunc
+	fields                                       []string
+	predicates                                   []predicate.ProvisionedScheduleStep
+	withProvisionedScheduleStepToStatus          *StatusQuery
+	withProvisionedScheduleStepToScheduleStep    *ScheduleStepQuery
+	withProvisionedScheduleStepToProvisionedHost *ProvisionedHostQuery
+	withProvisionedScheduleStepToAgentTask       *AgentTaskQuery
+	withFKs                                      bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -104,7 +106,29 @@ func (pssq *ProvisionedScheduleStepQuery) QueryProvisionedScheduleStepToSchedule
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedschedulestep.Table, provisionedschedulestep.FieldID, selector),
 			sqlgraph.To(schedulestep.Table, schedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionedschedulestep.ProvisionedScheduleStepToScheduleStepTable, provisionedschedulestep.ProvisionedScheduleStepToScheduleStepColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, provisionedschedulestep.ProvisionedScheduleStepToScheduleStepTable, provisionedschedulestep.ProvisionedScheduleStepToScheduleStepColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(pssq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProvisionedScheduleStepToProvisionedHost chains the current query on the "ProvisionedScheduleStepToProvisionedHost" edge.
+func (pssq *ProvisionedScheduleStepQuery) QueryProvisionedScheduleStepToProvisionedHost() *ProvisionedHostQuery {
+	query := &ProvisionedHostQuery{config: pssq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := pssq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := pssq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisionedschedulestep.Table, provisionedschedulestep.FieldID, selector),
+			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, provisionedschedulestep.ProvisionedScheduleStepToProvisionedHostTable, provisionedschedulestep.ProvisionedScheduleStepToProvisionedHostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pssq.driver.Dialect(), step)
 		return fromU, nil
@@ -316,8 +340,9 @@ func (pssq *ProvisionedScheduleStepQuery) Clone() *ProvisionedScheduleStepQuery 
 		order:                               append([]OrderFunc{}, pssq.order...),
 		predicates:                          append([]predicate.ProvisionedScheduleStep{}, pssq.predicates...),
 		withProvisionedScheduleStepToStatus: pssq.withProvisionedScheduleStepToStatus.Clone(),
-		withProvisionedScheduleStepToScheduleStep: pssq.withProvisionedScheduleStepToScheduleStep.Clone(),
-		withProvisionedScheduleStepToAgentTask:    pssq.withProvisionedScheduleStepToAgentTask.Clone(),
+		withProvisionedScheduleStepToScheduleStep:    pssq.withProvisionedScheduleStepToScheduleStep.Clone(),
+		withProvisionedScheduleStepToProvisionedHost: pssq.withProvisionedScheduleStepToProvisionedHost.Clone(),
+		withProvisionedScheduleStepToAgentTask:       pssq.withProvisionedScheduleStepToAgentTask.Clone(),
 		// clone intermediate query.
 		sql:    pssq.sql.Clone(),
 		path:   pssq.path,
@@ -344,6 +369,17 @@ func (pssq *ProvisionedScheduleStepQuery) WithProvisionedScheduleStepToScheduleS
 		opt(query)
 	}
 	pssq.withProvisionedScheduleStepToScheduleStep = query
+	return pssq
+}
+
+// WithProvisionedScheduleStepToProvisionedHost tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedScheduleStepToProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
+func (pssq *ProvisionedScheduleStepQuery) WithProvisionedScheduleStepToProvisionedHost(opts ...func(*ProvisionedHostQuery)) *ProvisionedScheduleStepQuery {
+	query := &ProvisionedHostQuery{config: pssq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	pssq.withProvisionedScheduleStepToProvisionedHost = query
 	return pssq
 }
 
@@ -427,13 +463,14 @@ func (pssq *ProvisionedScheduleStepQuery) sqlAll(ctx context.Context, hooks ...q
 		nodes       = []*ProvisionedScheduleStep{}
 		withFKs     = pssq.withFKs
 		_spec       = pssq.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			pssq.withProvisionedScheduleStepToStatus != nil,
 			pssq.withProvisionedScheduleStepToScheduleStep != nil,
+			pssq.withProvisionedScheduleStepToProvisionedHost != nil,
 			pssq.withProvisionedScheduleStepToAgentTask != nil,
 		}
 	)
-	if pssq.withProvisionedScheduleStepToScheduleStep != nil || pssq.withProvisionedScheduleStepToAgentTask != nil {
+	if pssq.withProvisionedScheduleStepToScheduleStep != nil || pssq.withProvisionedScheduleStepToProvisionedHost != nil || pssq.withProvisionedScheduleStepToAgentTask != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -466,6 +503,14 @@ func (pssq *ProvisionedScheduleStepQuery) sqlAll(ctx context.Context, hooks ...q
 	if query := pssq.withProvisionedScheduleStepToScheduleStep; query != nil {
 		if err := pssq.loadProvisionedScheduleStepToScheduleStep(ctx, query, nodes, nil,
 			func(n *ProvisionedScheduleStep, e *ScheduleStep) { n.Edges.ProvisionedScheduleStepToScheduleStep = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := pssq.withProvisionedScheduleStepToProvisionedHost; query != nil {
+		if err := pssq.loadProvisionedScheduleStepToProvisionedHost(ctx, query, nodes, nil,
+			func(n *ProvisionedScheduleStep, e *ProvisionedHost) {
+				n.Edges.ProvisionedScheduleStepToProvisionedHost = e
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -510,10 +555,10 @@ func (pssq *ProvisionedScheduleStepQuery) loadProvisionedScheduleStepToScheduleS
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionedScheduleStep)
 	for i := range nodes {
-		if nodes[i].provisioned_schedule_step_provisioned_schedule_step_to_schedule_step == nil {
+		if nodes[i].schedule_step_schedule_step_to_provisioned_schedule_step == nil {
 			continue
 		}
-		fk := *nodes[i].provisioned_schedule_step_provisioned_schedule_step_to_schedule_step
+		fk := *nodes[i].schedule_step_schedule_step_to_provisioned_schedule_step
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -527,7 +572,36 @@ func (pssq *ProvisionedScheduleStepQuery) loadProvisionedScheduleStepToScheduleS
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_schedule_step_provisioned_schedule_step_to_schedule_step" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "schedule_step_schedule_step_to_provisioned_schedule_step" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (pssq *ProvisionedScheduleStepQuery) loadProvisionedScheduleStepToProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*ProvisionedScheduleStep, init func(*ProvisionedScheduleStep), assign func(*ProvisionedScheduleStep, *ProvisionedHost)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*ProvisionedScheduleStep)
+	for i := range nodes {
+		if nodes[i].provisioned_host_provisioned_host_to_provisioned_schedule_step == nil {
+			continue
+		}
+		fk := *nodes[i].provisioned_host_provisioned_host_to_provisioned_schedule_step
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(provisionedhost.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_host_to_provisioned_schedule_step" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

@@ -17,6 +17,8 @@ const (
 	EdgeProvisionedScheduleStepToStatus = "ProvisionedScheduleStepToStatus"
 	// EdgeProvisionedScheduleStepToScheduleStep holds the string denoting the provisionedschedulesteptoschedulestep edge name in mutations.
 	EdgeProvisionedScheduleStepToScheduleStep = "ProvisionedScheduleStepToScheduleStep"
+	// EdgeProvisionedScheduleStepToProvisionedHost holds the string denoting the provisionedschedulesteptoprovisionedhost edge name in mutations.
+	EdgeProvisionedScheduleStepToProvisionedHost = "ProvisionedScheduleStepToProvisionedHost"
 	// EdgeProvisionedScheduleStepToAgentTask holds the string denoting the provisionedschedulesteptoagenttask edge name in mutations.
 	EdgeProvisionedScheduleStepToAgentTask = "ProvisionedScheduleStepToAgentTask"
 	// Table holds the table name of the provisionedschedulestep in the database.
@@ -34,7 +36,14 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "schedulestep" package.
 	ProvisionedScheduleStepToScheduleStepInverseTable = "schedule_steps"
 	// ProvisionedScheduleStepToScheduleStepColumn is the table column denoting the ProvisionedScheduleStepToScheduleStep relation/edge.
-	ProvisionedScheduleStepToScheduleStepColumn = "provisioned_schedule_step_provisioned_schedule_step_to_schedule_step"
+	ProvisionedScheduleStepToScheduleStepColumn = "schedule_step_schedule_step_to_provisioned_schedule_step"
+	// ProvisionedScheduleStepToProvisionedHostTable is the table that holds the ProvisionedScheduleStepToProvisionedHost relation/edge.
+	ProvisionedScheduleStepToProvisionedHostTable = "provisioned_schedule_steps"
+	// ProvisionedScheduleStepToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
+	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
+	ProvisionedScheduleStepToProvisionedHostInverseTable = "provisioned_hosts"
+	// ProvisionedScheduleStepToProvisionedHostColumn is the table column denoting the ProvisionedScheduleStepToProvisionedHost relation/edge.
+	ProvisionedScheduleStepToProvisionedHostColumn = "provisioned_host_provisioned_host_to_provisioned_schedule_step"
 	// ProvisionedScheduleStepToAgentTaskTable is the table that holds the ProvisionedScheduleStepToAgentTask relation/edge.
 	ProvisionedScheduleStepToAgentTaskTable = "provisioned_schedule_steps"
 	// ProvisionedScheduleStepToAgentTaskInverseTable is the table name for the AgentTask entity.
@@ -54,7 +63,8 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"agent_task_agent_task_to_provisioned_schedule_step",
-	"provisioned_schedule_step_provisioned_schedule_step_to_schedule_step",
+	"provisioned_host_provisioned_host_to_provisioned_schedule_step",
+	"schedule_step_schedule_step_to_provisioned_schedule_step",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

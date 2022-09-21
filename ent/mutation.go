@@ -16922,6 +16922,9 @@ type HostMutation struct {
 	_HostToUser                          map[uuid.UUID]struct{}
 	removed_HostToUser                   map[uuid.UUID]struct{}
 	cleared_HostToUser                   bool
+	_HostToScheduleStep                  map[uuid.UUID]struct{}
+	removed_HostToScheduleStep           map[uuid.UUID]struct{}
+	cleared_HostToScheduleStep           bool
 	_HostToEnvironment                   *uuid.UUID
 	cleared_HostToEnvironment            bool
 	_HostToIncludedNetwork               map[uuid.UUID]struct{}
@@ -17672,6 +17675,60 @@ func (m *HostMutation) ResetHostToUser() {
 	m.removed_HostToUser = nil
 }
 
+// AddHostToScheduleStepIDs adds the "HostToScheduleStep" edge to the ScheduleStep entity by ids.
+func (m *HostMutation) AddHostToScheduleStepIDs(ids ...uuid.UUID) {
+	if m._HostToScheduleStep == nil {
+		m._HostToScheduleStep = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._HostToScheduleStep[ids[i]] = struct{}{}
+	}
+}
+
+// ClearHostToScheduleStep clears the "HostToScheduleStep" edge to the ScheduleStep entity.
+func (m *HostMutation) ClearHostToScheduleStep() {
+	m.cleared_HostToScheduleStep = true
+}
+
+// HostToScheduleStepCleared reports if the "HostToScheduleStep" edge to the ScheduleStep entity was cleared.
+func (m *HostMutation) HostToScheduleStepCleared() bool {
+	return m.cleared_HostToScheduleStep
+}
+
+// RemoveHostToScheduleStepIDs removes the "HostToScheduleStep" edge to the ScheduleStep entity by IDs.
+func (m *HostMutation) RemoveHostToScheduleStepIDs(ids ...uuid.UUID) {
+	if m.removed_HostToScheduleStep == nil {
+		m.removed_HostToScheduleStep = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._HostToScheduleStep, ids[i])
+		m.removed_HostToScheduleStep[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedHostToScheduleStep returns the removed IDs of the "HostToScheduleStep" edge to the ScheduleStep entity.
+func (m *HostMutation) RemovedHostToScheduleStepIDs() (ids []uuid.UUID) {
+	for id := range m.removed_HostToScheduleStep {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// HostToScheduleStepIDs returns the "HostToScheduleStep" edge IDs in the mutation.
+func (m *HostMutation) HostToScheduleStepIDs() (ids []uuid.UUID) {
+	for id := range m._HostToScheduleStep {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetHostToScheduleStep resets all changes to the "HostToScheduleStep" edge.
+func (m *HostMutation) ResetHostToScheduleStep() {
+	m._HostToScheduleStep = nil
+	m.cleared_HostToScheduleStep = false
+	m.removed_HostToScheduleStep = nil
+}
+
 // SetHostToEnvironmentID sets the "HostToEnvironment" edge to the Environment entity by id.
 func (m *HostMutation) SetHostToEnvironmentID(id uuid.UUID) {
 	m._HostToEnvironment = &id
@@ -18236,12 +18293,15 @@ func (m *HostMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *HostMutation) AddedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m._HostToDisk != nil {
 		edges = append(edges, host.EdgeHostToDisk)
 	}
 	if m._HostToUser != nil {
 		edges = append(edges, host.EdgeHostToUser)
+	}
+	if m._HostToScheduleStep != nil {
+		edges = append(edges, host.EdgeHostToScheduleStep)
 	}
 	if m._HostToEnvironment != nil {
 		edges = append(edges, host.EdgeHostToEnvironment)
@@ -18269,6 +18329,12 @@ func (m *HostMutation) AddedIDs(name string) []ent.Value {
 	case host.EdgeHostToUser:
 		ids := make([]ent.Value, 0, len(m._HostToUser))
 		for id := range m._HostToUser {
+			ids = append(ids, id)
+		}
+		return ids
+	case host.EdgeHostToScheduleStep:
+		ids := make([]ent.Value, 0, len(m._HostToScheduleStep))
+		for id := range m._HostToScheduleStep {
 			ids = append(ids, id)
 		}
 		return ids
@@ -18300,9 +18366,12 @@ func (m *HostMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *HostMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.removed_HostToUser != nil {
 		edges = append(edges, host.EdgeHostToUser)
+	}
+	if m.removed_HostToScheduleStep != nil {
+		edges = append(edges, host.EdgeHostToScheduleStep)
 	}
 	if m.removed_HostToIncludedNetwork != nil {
 		edges = append(edges, host.EdgeHostToIncludedNetwork)
@@ -18323,6 +18392,12 @@ func (m *HostMutation) RemovedIDs(name string) []ent.Value {
 	case host.EdgeHostToUser:
 		ids := make([]ent.Value, 0, len(m.removed_HostToUser))
 		for id := range m.removed_HostToUser {
+			ids = append(ids, id)
+		}
+		return ids
+	case host.EdgeHostToScheduleStep:
+		ids := make([]ent.Value, 0, len(m.removed_HostToScheduleStep))
+		for id := range m.removed_HostToScheduleStep {
 			ids = append(ids, id)
 		}
 		return ids
@@ -18350,12 +18425,15 @@ func (m *HostMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *HostMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.cleared_HostToDisk {
 		edges = append(edges, host.EdgeHostToDisk)
 	}
 	if m.cleared_HostToUser {
 		edges = append(edges, host.EdgeHostToUser)
+	}
+	if m.cleared_HostToScheduleStep {
+		edges = append(edges, host.EdgeHostToScheduleStep)
 	}
 	if m.cleared_HostToEnvironment {
 		edges = append(edges, host.EdgeHostToEnvironment)
@@ -18380,6 +18458,8 @@ func (m *HostMutation) EdgeCleared(name string) bool {
 		return m.cleared_HostToDisk
 	case host.EdgeHostToUser:
 		return m.cleared_HostToUser
+	case host.EdgeHostToScheduleStep:
+		return m.cleared_HostToScheduleStep
 	case host.EdgeHostToEnvironment:
 		return m.cleared_HostToEnvironment
 	case host.EdgeHostToIncludedNetwork:
@@ -18415,6 +18495,9 @@ func (m *HostMutation) ResetEdge(name string) error {
 		return nil
 	case host.EdgeHostToUser:
 		m.ResetHostToUser()
+		return nil
+	case host.EdgeHostToScheduleStep:
+		m.ResetHostToScheduleStep()
 		return nil
 	case host.EdgeHostToEnvironment:
 		m.ResetHostToEnvironment()
@@ -22990,39 +23073,42 @@ func (m *PlanDiffMutation) ResetEdge(name string) error {
 // ProvisionedHostMutation represents an operation that mutates the ProvisionedHost nodes in the graph.
 type ProvisionedHostMutation struct {
 	config
-	op                                          Op
-	typ                                         string
-	id                                          *uuid.UUID
-	subnet_ip                                   *string
-	addon_type                                  *provisionedhost.AddonType
-	vars                                        *map[string]string
-	clearedFields                               map[string]struct{}
-	_ProvisionedHostToStatus                    *uuid.UUID
-	cleared_ProvisionedHostToStatus             bool
-	_ProvisionedHostToProvisionedNetwork        *uuid.UUID
-	cleared_ProvisionedHostToProvisionedNetwork bool
-	_ProvisionedHostToHost                      *uuid.UUID
-	cleared_ProvisionedHostToHost               bool
-	_ProvisionedHostToEndStepPlan               *uuid.UUID
-	cleared_ProvisionedHostToEndStepPlan        bool
-	_ProvisionedHostToBuild                     *uuid.UUID
-	cleared_ProvisionedHostToBuild              bool
-	_ProvisionedHostToProvisioningStep          map[uuid.UUID]struct{}
-	removed_ProvisionedHostToProvisioningStep   map[uuid.UUID]struct{}
-	cleared_ProvisionedHostToProvisioningStep   bool
-	_ProvisionedHostToAgentStatus               map[uuid.UUID]struct{}
-	removed_ProvisionedHostToAgentStatus        map[uuid.UUID]struct{}
-	cleared_ProvisionedHostToAgentStatus        bool
-	_ProvisionedHostToAgentTask                 map[uuid.UUID]struct{}
-	removed_ProvisionedHostToAgentTask          map[uuid.UUID]struct{}
-	cleared_ProvisionedHostToAgentTask          bool
-	_ProvisionedHostToPlan                      *uuid.UUID
-	cleared_ProvisionedHostToPlan               bool
-	_ProvisionedHostToGinFileMiddleware         *uuid.UUID
-	cleared_ProvisionedHostToGinFileMiddleware  bool
-	done                                        bool
-	oldValue                                    func(context.Context) (*ProvisionedHost, error)
-	predicates                                  []predicate.ProvisionedHost
+	op                                               Op
+	typ                                              string
+	id                                               *uuid.UUID
+	subnet_ip                                        *string
+	addon_type                                       *provisionedhost.AddonType
+	vars                                             *map[string]string
+	clearedFields                                    map[string]struct{}
+	_ProvisionedHostToStatus                         *uuid.UUID
+	cleared_ProvisionedHostToStatus                  bool
+	_ProvisionedHostToProvisionedNetwork             *uuid.UUID
+	cleared_ProvisionedHostToProvisionedNetwork      bool
+	_ProvisionedHostToHost                           *uuid.UUID
+	cleared_ProvisionedHostToHost                    bool
+	_ProvisionedHostToEndStepPlan                    *uuid.UUID
+	cleared_ProvisionedHostToEndStepPlan             bool
+	_ProvisionedHostToBuild                          *uuid.UUID
+	cleared_ProvisionedHostToBuild                   bool
+	_ProvisionedHostToProvisionedScheduleStep        map[uuid.UUID]struct{}
+	removed_ProvisionedHostToProvisionedScheduleStep map[uuid.UUID]struct{}
+	cleared_ProvisionedHostToProvisionedScheduleStep bool
+	_ProvisionedHostToProvisioningStep               map[uuid.UUID]struct{}
+	removed_ProvisionedHostToProvisioningStep        map[uuid.UUID]struct{}
+	cleared_ProvisionedHostToProvisioningStep        bool
+	_ProvisionedHostToAgentStatus                    map[uuid.UUID]struct{}
+	removed_ProvisionedHostToAgentStatus             map[uuid.UUID]struct{}
+	cleared_ProvisionedHostToAgentStatus             bool
+	_ProvisionedHostToAgentTask                      map[uuid.UUID]struct{}
+	removed_ProvisionedHostToAgentTask               map[uuid.UUID]struct{}
+	cleared_ProvisionedHostToAgentTask               bool
+	_ProvisionedHostToPlan                           *uuid.UUID
+	cleared_ProvisionedHostToPlan                    bool
+	_ProvisionedHostToGinFileMiddleware              *uuid.UUID
+	cleared_ProvisionedHostToGinFileMiddleware       bool
+	done                                             bool
+	oldValue                                         func(context.Context) (*ProvisionedHost, error)
+	predicates                                       []predicate.ProvisionedHost
 }
 
 var _ ent.Mutation = (*ProvisionedHostMutation)(nil)
@@ -23445,6 +23531,60 @@ func (m *ProvisionedHostMutation) ResetProvisionedHostToBuild() {
 	m.cleared_ProvisionedHostToBuild = false
 }
 
+// AddProvisionedHostToProvisionedScheduleStepIDs adds the "ProvisionedHostToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ids.
+func (m *ProvisionedHostMutation) AddProvisionedHostToProvisionedScheduleStepIDs(ids ...uuid.UUID) {
+	if m._ProvisionedHostToProvisionedScheduleStep == nil {
+		m._ProvisionedHostToProvisionedScheduleStep = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._ProvisionedHostToProvisionedScheduleStep[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProvisionedHostToProvisionedScheduleStep clears the "ProvisionedHostToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
+func (m *ProvisionedHostMutation) ClearProvisionedHostToProvisionedScheduleStep() {
+	m.cleared_ProvisionedHostToProvisionedScheduleStep = true
+}
+
+// ProvisionedHostToProvisionedScheduleStepCleared reports if the "ProvisionedHostToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity was cleared.
+func (m *ProvisionedHostMutation) ProvisionedHostToProvisionedScheduleStepCleared() bool {
+	return m.cleared_ProvisionedHostToProvisionedScheduleStep
+}
+
+// RemoveProvisionedHostToProvisionedScheduleStepIDs removes the "ProvisionedHostToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by IDs.
+func (m *ProvisionedHostMutation) RemoveProvisionedHostToProvisionedScheduleStepIDs(ids ...uuid.UUID) {
+	if m.removed_ProvisionedHostToProvisionedScheduleStep == nil {
+		m.removed_ProvisionedHostToProvisionedScheduleStep = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._ProvisionedHostToProvisionedScheduleStep, ids[i])
+		m.removed_ProvisionedHostToProvisionedScheduleStep[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProvisionedHostToProvisionedScheduleStep returns the removed IDs of the "ProvisionedHostToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
+func (m *ProvisionedHostMutation) RemovedProvisionedHostToProvisionedScheduleStepIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ProvisionedHostToProvisionedScheduleStep {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProvisionedHostToProvisionedScheduleStepIDs returns the "ProvisionedHostToProvisionedScheduleStep" edge IDs in the mutation.
+func (m *ProvisionedHostMutation) ProvisionedHostToProvisionedScheduleStepIDs() (ids []uuid.UUID) {
+	for id := range m._ProvisionedHostToProvisionedScheduleStep {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProvisionedHostToProvisionedScheduleStep resets all changes to the "ProvisionedHostToProvisionedScheduleStep" edge.
+func (m *ProvisionedHostMutation) ResetProvisionedHostToProvisionedScheduleStep() {
+	m._ProvisionedHostToProvisionedScheduleStep = nil
+	m.cleared_ProvisionedHostToProvisionedScheduleStep = false
+	m.removed_ProvisionedHostToProvisionedScheduleStep = nil
+}
+
 // AddProvisionedHostToProvisioningStepIDs adds the "ProvisionedHostToProvisioningStep" edge to the ProvisioningStep entity by ids.
 func (m *ProvisionedHostMutation) AddProvisionedHostToProvisioningStepIDs(ids ...uuid.UUID) {
 	if m._ProvisionedHostToProvisioningStep == nil {
@@ -23846,7 +23986,7 @@ func (m *ProvisionedHostMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProvisionedHostMutation) AddedEdges() []string {
-	edges := make([]string, 0, 10)
+	edges := make([]string, 0, 11)
 	if m._ProvisionedHostToStatus != nil {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToStatus)
 	}
@@ -23861,6 +24001,9 @@ func (m *ProvisionedHostMutation) AddedEdges() []string {
 	}
 	if m._ProvisionedHostToBuild != nil {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToBuild)
+	}
+	if m._ProvisionedHostToProvisionedScheduleStep != nil {
+		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisionedScheduleStep)
 	}
 	if m._ProvisionedHostToProvisioningStep != nil {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningStep)
@@ -23904,6 +24047,12 @@ func (m *ProvisionedHostMutation) AddedIDs(name string) []ent.Value {
 		if id := m._ProvisionedHostToBuild; id != nil {
 			return []ent.Value{*id}
 		}
+	case provisionedhost.EdgeProvisionedHostToProvisionedScheduleStep:
+		ids := make([]ent.Value, 0, len(m._ProvisionedHostToProvisionedScheduleStep))
+		for id := range m._ProvisionedHostToProvisionedScheduleStep {
+			ids = append(ids, id)
+		}
+		return ids
 	case provisionedhost.EdgeProvisionedHostToProvisioningStep:
 		ids := make([]ent.Value, 0, len(m._ProvisionedHostToProvisioningStep))
 		for id := range m._ProvisionedHostToProvisioningStep {
@@ -23936,7 +24085,10 @@ func (m *ProvisionedHostMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProvisionedHostMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 10)
+	edges := make([]string, 0, 11)
+	if m.removed_ProvisionedHostToProvisionedScheduleStep != nil {
+		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisionedScheduleStep)
+	}
 	if m.removed_ProvisionedHostToProvisioningStep != nil {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningStep)
 	}
@@ -23953,6 +24105,12 @@ func (m *ProvisionedHostMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ProvisionedHostMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case provisionedhost.EdgeProvisionedHostToProvisionedScheduleStep:
+		ids := make([]ent.Value, 0, len(m.removed_ProvisionedHostToProvisionedScheduleStep))
+		for id := range m.removed_ProvisionedHostToProvisionedScheduleStep {
+			ids = append(ids, id)
+		}
+		return ids
 	case provisionedhost.EdgeProvisionedHostToProvisioningStep:
 		ids := make([]ent.Value, 0, len(m.removed_ProvisionedHostToProvisioningStep))
 		for id := range m.removed_ProvisionedHostToProvisioningStep {
@@ -23977,7 +24135,7 @@ func (m *ProvisionedHostMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProvisionedHostMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 10)
+	edges := make([]string, 0, 11)
 	if m.cleared_ProvisionedHostToStatus {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToStatus)
 	}
@@ -23992,6 +24150,9 @@ func (m *ProvisionedHostMutation) ClearedEdges() []string {
 	}
 	if m.cleared_ProvisionedHostToBuild {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToBuild)
+	}
+	if m.cleared_ProvisionedHostToProvisionedScheduleStep {
+		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisionedScheduleStep)
 	}
 	if m.cleared_ProvisionedHostToProvisioningStep {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningStep)
@@ -24025,6 +24186,8 @@ func (m *ProvisionedHostMutation) EdgeCleared(name string) bool {
 		return m.cleared_ProvisionedHostToEndStepPlan
 	case provisionedhost.EdgeProvisionedHostToBuild:
 		return m.cleared_ProvisionedHostToBuild
+	case provisionedhost.EdgeProvisionedHostToProvisionedScheduleStep:
+		return m.cleared_ProvisionedHostToProvisionedScheduleStep
 	case provisionedhost.EdgeProvisionedHostToProvisioningStep:
 		return m.cleared_ProvisionedHostToProvisioningStep
 	case provisionedhost.EdgeProvisionedHostToAgentStatus:
@@ -24086,6 +24249,9 @@ func (m *ProvisionedHostMutation) ResetEdge(name string) error {
 		return nil
 	case provisionedhost.EdgeProvisionedHostToBuild:
 		m.ResetProvisionedHostToBuild()
+		return nil
+	case provisionedhost.EdgeProvisionedHostToProvisionedScheduleStep:
+		m.ResetProvisionedHostToProvisionedScheduleStep()
 		return nil
 	case provisionedhost.EdgeProvisionedHostToProvisioningStep:
 		m.ResetProvisionedHostToProvisioningStep()
@@ -24922,20 +25088,22 @@ func (m *ProvisionedNetworkMutation) ResetEdge(name string) error {
 // ProvisionedScheduleStepMutation represents an operation that mutates the ProvisionedScheduleStep nodes in the graph.
 type ProvisionedScheduleStepMutation struct {
 	config
-	op                                            Op
-	typ                                           string
-	id                                            *uuid.UUID
-	run_time                                      *time.Time
-	clearedFields                                 map[string]struct{}
-	_ProvisionedScheduleStepToStatus              *uuid.UUID
-	cleared_ProvisionedScheduleStepToStatus       bool
-	_ProvisionedScheduleStepToScheduleStep        *uuid.UUID
-	cleared_ProvisionedScheduleStepToScheduleStep bool
-	_ProvisionedScheduleStepToAgentTask           *uuid.UUID
-	cleared_ProvisionedScheduleStepToAgentTask    bool
-	done                                          bool
-	oldValue                                      func(context.Context) (*ProvisionedScheduleStep, error)
-	predicates                                    []predicate.ProvisionedScheduleStep
+	op                                               Op
+	typ                                              string
+	id                                               *uuid.UUID
+	run_time                                         *time.Time
+	clearedFields                                    map[string]struct{}
+	_ProvisionedScheduleStepToStatus                 *uuid.UUID
+	cleared_ProvisionedScheduleStepToStatus          bool
+	_ProvisionedScheduleStepToScheduleStep           *uuid.UUID
+	cleared_ProvisionedScheduleStepToScheduleStep    bool
+	_ProvisionedScheduleStepToProvisionedHost        *uuid.UUID
+	cleared_ProvisionedScheduleStepToProvisionedHost bool
+	_ProvisionedScheduleStepToAgentTask              *uuid.UUID
+	cleared_ProvisionedScheduleStepToAgentTask       bool
+	done                                             bool
+	oldValue                                         func(context.Context) (*ProvisionedScheduleStep, error)
+	predicates                                       []predicate.ProvisionedScheduleStep
 }
 
 var _ ent.Mutation = (*ProvisionedScheduleStepMutation)(nil)
@@ -25156,6 +25324,45 @@ func (m *ProvisionedScheduleStepMutation) ResetProvisionedScheduleStepToSchedule
 	m.cleared_ProvisionedScheduleStepToScheduleStep = false
 }
 
+// SetProvisionedScheduleStepToProvisionedHostID sets the "ProvisionedScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by id.
+func (m *ProvisionedScheduleStepMutation) SetProvisionedScheduleStepToProvisionedHostID(id uuid.UUID) {
+	m._ProvisionedScheduleStepToProvisionedHost = &id
+}
+
+// ClearProvisionedScheduleStepToProvisionedHost clears the "ProvisionedScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
+func (m *ProvisionedScheduleStepMutation) ClearProvisionedScheduleStepToProvisionedHost() {
+	m.cleared_ProvisionedScheduleStepToProvisionedHost = true
+}
+
+// ProvisionedScheduleStepToProvisionedHostCleared reports if the "ProvisionedScheduleStepToProvisionedHost" edge to the ProvisionedHost entity was cleared.
+func (m *ProvisionedScheduleStepMutation) ProvisionedScheduleStepToProvisionedHostCleared() bool {
+	return m.cleared_ProvisionedScheduleStepToProvisionedHost
+}
+
+// ProvisionedScheduleStepToProvisionedHostID returns the "ProvisionedScheduleStepToProvisionedHost" edge ID in the mutation.
+func (m *ProvisionedScheduleStepMutation) ProvisionedScheduleStepToProvisionedHostID() (id uuid.UUID, exists bool) {
+	if m._ProvisionedScheduleStepToProvisionedHost != nil {
+		return *m._ProvisionedScheduleStepToProvisionedHost, true
+	}
+	return
+}
+
+// ProvisionedScheduleStepToProvisionedHostIDs returns the "ProvisionedScheduleStepToProvisionedHost" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProvisionedScheduleStepToProvisionedHostID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedScheduleStepMutation) ProvisionedScheduleStepToProvisionedHostIDs() (ids []uuid.UUID) {
+	if id := m._ProvisionedScheduleStepToProvisionedHost; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProvisionedScheduleStepToProvisionedHost resets all changes to the "ProvisionedScheduleStepToProvisionedHost" edge.
+func (m *ProvisionedScheduleStepMutation) ResetProvisionedScheduleStepToProvisionedHost() {
+	m._ProvisionedScheduleStepToProvisionedHost = nil
+	m.cleared_ProvisionedScheduleStepToProvisionedHost = false
+}
+
 // SetProvisionedScheduleStepToAgentTaskID sets the "ProvisionedScheduleStepToAgentTask" edge to the AgentTask entity by id.
 func (m *ProvisionedScheduleStepMutation) SetProvisionedScheduleStepToAgentTaskID(id uuid.UUID) {
 	m._ProvisionedScheduleStepToAgentTask = &id
@@ -25313,12 +25520,15 @@ func (m *ProvisionedScheduleStepMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProvisionedScheduleStepMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m._ProvisionedScheduleStepToStatus != nil {
 		edges = append(edges, provisionedschedulestep.EdgeProvisionedScheduleStepToStatus)
 	}
 	if m._ProvisionedScheduleStepToScheduleStep != nil {
 		edges = append(edges, provisionedschedulestep.EdgeProvisionedScheduleStepToScheduleStep)
+	}
+	if m._ProvisionedScheduleStepToProvisionedHost != nil {
+		edges = append(edges, provisionedschedulestep.EdgeProvisionedScheduleStepToProvisionedHost)
 	}
 	if m._ProvisionedScheduleStepToAgentTask != nil {
 		edges = append(edges, provisionedschedulestep.EdgeProvisionedScheduleStepToAgentTask)
@@ -25338,6 +25548,10 @@ func (m *ProvisionedScheduleStepMutation) AddedIDs(name string) []ent.Value {
 		if id := m._ProvisionedScheduleStepToScheduleStep; id != nil {
 			return []ent.Value{*id}
 		}
+	case provisionedschedulestep.EdgeProvisionedScheduleStepToProvisionedHost:
+		if id := m._ProvisionedScheduleStepToProvisionedHost; id != nil {
+			return []ent.Value{*id}
+		}
 	case provisionedschedulestep.EdgeProvisionedScheduleStepToAgentTask:
 		if id := m._ProvisionedScheduleStepToAgentTask; id != nil {
 			return []ent.Value{*id}
@@ -25348,7 +25562,7 @@ func (m *ProvisionedScheduleStepMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProvisionedScheduleStepMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	return edges
 }
 
@@ -25362,12 +25576,15 @@ func (m *ProvisionedScheduleStepMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProvisionedScheduleStepMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.cleared_ProvisionedScheduleStepToStatus {
 		edges = append(edges, provisionedschedulestep.EdgeProvisionedScheduleStepToStatus)
 	}
 	if m.cleared_ProvisionedScheduleStepToScheduleStep {
 		edges = append(edges, provisionedschedulestep.EdgeProvisionedScheduleStepToScheduleStep)
+	}
+	if m.cleared_ProvisionedScheduleStepToProvisionedHost {
+		edges = append(edges, provisionedschedulestep.EdgeProvisionedScheduleStepToProvisionedHost)
 	}
 	if m.cleared_ProvisionedScheduleStepToAgentTask {
 		edges = append(edges, provisionedschedulestep.EdgeProvisionedScheduleStepToAgentTask)
@@ -25383,6 +25600,8 @@ func (m *ProvisionedScheduleStepMutation) EdgeCleared(name string) bool {
 		return m.cleared_ProvisionedScheduleStepToStatus
 	case provisionedschedulestep.EdgeProvisionedScheduleStepToScheduleStep:
 		return m.cleared_ProvisionedScheduleStepToScheduleStep
+	case provisionedschedulestep.EdgeProvisionedScheduleStepToProvisionedHost:
+		return m.cleared_ProvisionedScheduleStepToProvisionedHost
 	case provisionedschedulestep.EdgeProvisionedScheduleStepToAgentTask:
 		return m.cleared_ProvisionedScheduleStepToAgentTask
 	}
@@ -25398,6 +25617,9 @@ func (m *ProvisionedScheduleStepMutation) ClearEdge(name string) error {
 		return nil
 	case provisionedschedulestep.EdgeProvisionedScheduleStepToScheduleStep:
 		m.ClearProvisionedScheduleStepToScheduleStep()
+		return nil
+	case provisionedschedulestep.EdgeProvisionedScheduleStepToProvisionedHost:
+		m.ClearProvisionedScheduleStepToProvisionedHost()
 		return nil
 	case provisionedschedulestep.EdgeProvisionedScheduleStepToAgentTask:
 		m.ClearProvisionedScheduleStepToAgentTask()
@@ -25415,6 +25637,9 @@ func (m *ProvisionedScheduleStepMutation) ResetEdge(name string) error {
 		return nil
 	case provisionedschedulestep.EdgeProvisionedScheduleStepToScheduleStep:
 		m.ResetProvisionedScheduleStepToScheduleStep()
+		return nil
+	case provisionedschedulestep.EdgeProvisionedScheduleStepToProvisionedHost:
+		m.ResetProvisionedScheduleStepToProvisionedHost()
 		return nil
 	case provisionedschedulestep.EdgeProvisionedScheduleStepToAgentTask:
 		m.ResetProvisionedScheduleStepToAgentTask()
@@ -28042,8 +28267,6 @@ type ScheduleStepMutation struct {
 	clearedFields                                 map[string]struct{}
 	_ScheduleStepToStatus                         *uuid.UUID
 	cleared_ScheduleStepToStatus                  bool
-	_ScheduleStepToProvisionedHost                *uuid.UUID
-	cleared_ScheduleStepToProvisionedHost         bool
 	_ScheduleStepToScript                         *uuid.UUID
 	cleared_ScheduleStepToScript                  bool
 	_ScheduleStepToCommand                        *uuid.UUID
@@ -28059,6 +28282,8 @@ type ScheduleStepMutation struct {
 	_ScheduleStepToProvisionedScheduleStep        map[uuid.UUID]struct{}
 	removed_ScheduleStepToProvisionedScheduleStep map[uuid.UUID]struct{}
 	cleared_ScheduleStepToProvisionedScheduleStep bool
+	_ScheduleStepToHost                           *uuid.UUID
+	cleared_ScheduleStepToHost                    bool
 	done                                          bool
 	oldValue                                      func(context.Context) (*ScheduleStep, error)
 	predicates                                    []predicate.ScheduleStep
@@ -28407,45 +28632,6 @@ func (m *ScheduleStepMutation) ResetScheduleStepToStatus() {
 	m.cleared_ScheduleStepToStatus = false
 }
 
-// SetScheduleStepToProvisionedHostID sets the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by id.
-func (m *ScheduleStepMutation) SetScheduleStepToProvisionedHostID(id uuid.UUID) {
-	m._ScheduleStepToProvisionedHost = &id
-}
-
-// ClearScheduleStepToProvisionedHost clears the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (m *ScheduleStepMutation) ClearScheduleStepToProvisionedHost() {
-	m.cleared_ScheduleStepToProvisionedHost = true
-}
-
-// ScheduleStepToProvisionedHostCleared reports if the "ScheduleStepToProvisionedHost" edge to the ProvisionedHost entity was cleared.
-func (m *ScheduleStepMutation) ScheduleStepToProvisionedHostCleared() bool {
-	return m.cleared_ScheduleStepToProvisionedHost
-}
-
-// ScheduleStepToProvisionedHostID returns the "ScheduleStepToProvisionedHost" edge ID in the mutation.
-func (m *ScheduleStepMutation) ScheduleStepToProvisionedHostID() (id uuid.UUID, exists bool) {
-	if m._ScheduleStepToProvisionedHost != nil {
-		return *m._ScheduleStepToProvisionedHost, true
-	}
-	return
-}
-
-// ScheduleStepToProvisionedHostIDs returns the "ScheduleStepToProvisionedHost" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ScheduleStepToProvisionedHostID instead. It exists only for internal usage by the builders.
-func (m *ScheduleStepMutation) ScheduleStepToProvisionedHostIDs() (ids []uuid.UUID) {
-	if id := m._ScheduleStepToProvisionedHost; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetScheduleStepToProvisionedHost resets all changes to the "ScheduleStepToProvisionedHost" edge.
-func (m *ScheduleStepMutation) ResetScheduleStepToProvisionedHost() {
-	m._ScheduleStepToProvisionedHost = nil
-	m.cleared_ScheduleStepToProvisionedHost = false
-}
-
 // SetScheduleStepToScriptID sets the "ScheduleStepToScript" edge to the Script entity by id.
 func (m *ScheduleStepMutation) SetScheduleStepToScriptID(id uuid.UUID) {
 	m._ScheduleStepToScript = &id
@@ -28734,6 +28920,45 @@ func (m *ScheduleStepMutation) ResetScheduleStepToProvisionedScheduleStep() {
 	m.removed_ScheduleStepToProvisionedScheduleStep = nil
 }
 
+// SetScheduleStepToHostID sets the "ScheduleStepToHost" edge to the Host entity by id.
+func (m *ScheduleStepMutation) SetScheduleStepToHostID(id uuid.UUID) {
+	m._ScheduleStepToHost = &id
+}
+
+// ClearScheduleStepToHost clears the "ScheduleStepToHost" edge to the Host entity.
+func (m *ScheduleStepMutation) ClearScheduleStepToHost() {
+	m.cleared_ScheduleStepToHost = true
+}
+
+// ScheduleStepToHostCleared reports if the "ScheduleStepToHost" edge to the Host entity was cleared.
+func (m *ScheduleStepMutation) ScheduleStepToHostCleared() bool {
+	return m.cleared_ScheduleStepToHost
+}
+
+// ScheduleStepToHostID returns the "ScheduleStepToHost" edge ID in the mutation.
+func (m *ScheduleStepMutation) ScheduleStepToHostID() (id uuid.UUID, exists bool) {
+	if m._ScheduleStepToHost != nil {
+		return *m._ScheduleStepToHost, true
+	}
+	return
+}
+
+// ScheduleStepToHostIDs returns the "ScheduleStepToHost" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ScheduleStepToHostID instead. It exists only for internal usage by the builders.
+func (m *ScheduleStepMutation) ScheduleStepToHostIDs() (ids []uuid.UUID) {
+	if id := m._ScheduleStepToHost; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetScheduleStepToHost resets all changes to the "ScheduleStepToHost" edge.
+func (m *ScheduleStepMutation) ResetScheduleStepToHost() {
+	m._ScheduleStepToHost = nil
+	m.cleared_ScheduleStepToHost = false
+}
+
 // Where appends a list predicates to the ScheduleStepMutation builder.
 func (m *ScheduleStepMutation) Where(ps ...predicate.ScheduleStep) {
 	m.predicates = append(m.predicates, ps...)
@@ -28939,9 +29164,6 @@ func (m *ScheduleStepMutation) AddedEdges() []string {
 	if m._ScheduleStepToStatus != nil {
 		edges = append(edges, schedulestep.EdgeScheduleStepToStatus)
 	}
-	if m._ScheduleStepToProvisionedHost != nil {
-		edges = append(edges, schedulestep.EdgeScheduleStepToProvisionedHost)
-	}
 	if m._ScheduleStepToScript != nil {
 		edges = append(edges, schedulestep.EdgeScheduleStepToScript)
 	}
@@ -28963,6 +29185,9 @@ func (m *ScheduleStepMutation) AddedEdges() []string {
 	if m._ScheduleStepToProvisionedScheduleStep != nil {
 		edges = append(edges, schedulestep.EdgeScheduleStepToProvisionedScheduleStep)
 	}
+	if m._ScheduleStepToHost != nil {
+		edges = append(edges, schedulestep.EdgeScheduleStepToHost)
+	}
 	return edges
 }
 
@@ -28972,10 +29197,6 @@ func (m *ScheduleStepMutation) AddedIDs(name string) []ent.Value {
 	switch name {
 	case schedulestep.EdgeScheduleStepToStatus:
 		if id := m._ScheduleStepToStatus; id != nil {
-			return []ent.Value{*id}
-		}
-	case schedulestep.EdgeScheduleStepToProvisionedHost:
-		if id := m._ScheduleStepToProvisionedHost; id != nil {
 			return []ent.Value{*id}
 		}
 	case schedulestep.EdgeScheduleStepToScript:
@@ -29008,6 +29229,10 @@ func (m *ScheduleStepMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case schedulestep.EdgeScheduleStepToHost:
+		if id := m._ScheduleStepToHost; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
@@ -29041,9 +29266,6 @@ func (m *ScheduleStepMutation) ClearedEdges() []string {
 	if m.cleared_ScheduleStepToStatus {
 		edges = append(edges, schedulestep.EdgeScheduleStepToStatus)
 	}
-	if m.cleared_ScheduleStepToProvisionedHost {
-		edges = append(edges, schedulestep.EdgeScheduleStepToProvisionedHost)
-	}
 	if m.cleared_ScheduleStepToScript {
 		edges = append(edges, schedulestep.EdgeScheduleStepToScript)
 	}
@@ -29065,6 +29287,9 @@ func (m *ScheduleStepMutation) ClearedEdges() []string {
 	if m.cleared_ScheduleStepToProvisionedScheduleStep {
 		edges = append(edges, schedulestep.EdgeScheduleStepToProvisionedScheduleStep)
 	}
+	if m.cleared_ScheduleStepToHost {
+		edges = append(edges, schedulestep.EdgeScheduleStepToHost)
+	}
 	return edges
 }
 
@@ -29074,8 +29299,6 @@ func (m *ScheduleStepMutation) EdgeCleared(name string) bool {
 	switch name {
 	case schedulestep.EdgeScheduleStepToStatus:
 		return m.cleared_ScheduleStepToStatus
-	case schedulestep.EdgeScheduleStepToProvisionedHost:
-		return m.cleared_ScheduleStepToProvisionedHost
 	case schedulestep.EdgeScheduleStepToScript:
 		return m.cleared_ScheduleStepToScript
 	case schedulestep.EdgeScheduleStepToCommand:
@@ -29090,6 +29313,8 @@ func (m *ScheduleStepMutation) EdgeCleared(name string) bool {
 		return m.cleared_ScheduleStepToAnsible
 	case schedulestep.EdgeScheduleStepToProvisionedScheduleStep:
 		return m.cleared_ScheduleStepToProvisionedScheduleStep
+	case schedulestep.EdgeScheduleStepToHost:
+		return m.cleared_ScheduleStepToHost
 	}
 	return false
 }
@@ -29100,9 +29325,6 @@ func (m *ScheduleStepMutation) ClearEdge(name string) error {
 	switch name {
 	case schedulestep.EdgeScheduleStepToStatus:
 		m.ClearScheduleStepToStatus()
-		return nil
-	case schedulestep.EdgeScheduleStepToProvisionedHost:
-		m.ClearScheduleStepToProvisionedHost()
 		return nil
 	case schedulestep.EdgeScheduleStepToScript:
 		m.ClearScheduleStepToScript()
@@ -29122,6 +29344,9 @@ func (m *ScheduleStepMutation) ClearEdge(name string) error {
 	case schedulestep.EdgeScheduleStepToAnsible:
 		m.ClearScheduleStepToAnsible()
 		return nil
+	case schedulestep.EdgeScheduleStepToHost:
+		m.ClearScheduleStepToHost()
+		return nil
 	}
 	return fmt.Errorf("unknown ScheduleStep unique edge %s", name)
 }
@@ -29132,9 +29357,6 @@ func (m *ScheduleStepMutation) ResetEdge(name string) error {
 	switch name {
 	case schedulestep.EdgeScheduleStepToStatus:
 		m.ResetScheduleStepToStatus()
-		return nil
-	case schedulestep.EdgeScheduleStepToProvisionedHost:
-		m.ResetScheduleStepToProvisionedHost()
 		return nil
 	case schedulestep.EdgeScheduleStepToScript:
 		m.ResetScheduleStepToScript()
@@ -29156,6 +29378,9 @@ func (m *ScheduleStepMutation) ResetEdge(name string) error {
 		return nil
 	case schedulestep.EdgeScheduleStepToProvisionedScheduleStep:
 		m.ResetScheduleStepToProvisionedScheduleStep()
+		return nil
+	case schedulestep.EdgeScheduleStepToHost:
+		m.ResetScheduleStepToHost()
 		return nil
 	}
 	return fmt.Errorf("unknown ScheduleStep edge %s", name)
