@@ -103,4 +103,13 @@ export class AdminComponent implements OnInit {
       .afterClosed()
       .subscribe(() => this.refreshUserList());
   }
+
+  nukeBackend() {
+    this.api.nukeBackend().then(console.log, (err) => {
+      this.errorMessage.next(err);
+      this.snackbar.open(err, 'Okay', {
+        panelClass: ['bg-danger', 'text-white']
+      });
+    })
+  }
 }

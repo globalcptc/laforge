@@ -906,6 +906,12 @@ export type LaForgeCreateUserMutation = { __typename?: 'Mutation' } & {
   createUser?: Maybe<{ __typename?: 'AuthUser' } & LaForgeUserListFieldsFragment>;
 };
 
+export type LaForgeNukeBackendMutationVariables = Exact<{ [key: string]: never }>;
+
+export type LaForgeNukeBackendMutation = { __typename?: 'Mutation' } & {
+  nukeBackend: Array<Maybe<{ __typename?: 'intMap' } & Pick<LaForgeIntMap, 'key' | 'value'>>>;
+};
+
 export type LaForgeGetAgentTasksQueryVariables = Exact<{
   proStepId: Scalars['String'];
 }>;
@@ -1898,6 +1904,25 @@ export const CreateUserDocument = gql`
 })
 export class LaForgeCreateUserGQL extends Apollo.Mutation<LaForgeCreateUserMutation, LaForgeCreateUserMutationVariables> {
   document = CreateUserDocument;
+
+  constructor(apollo: Apollo.Apollo) {
+    super(apollo);
+  }
+}
+export const NukeBackendDocument = gql`
+  mutation NukeBackend {
+    nukeBackend {
+      key
+      value
+    }
+  }
+`;
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LaForgeNukeBackendGQL extends Apollo.Mutation<LaForgeNukeBackendMutation, LaForgeNukeBackendMutationVariables> {
+  document = NukeBackendDocument;
 
   constructor(apollo: Apollo.Apollo) {
     super(apollo);
