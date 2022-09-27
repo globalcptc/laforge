@@ -329,6 +329,14 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 		}
 		ruleOpts = append(ruleOpts, opts)
 	}
+	icmp_opts := secgroups.CreateRuleOpts{
+		ParentGroupID: osSecGroup.ID,
+		FromPort:      -1,
+		ToPort:        -1,
+		IPProtocol:    "ICMP",
+		CIDR:          "0.0.0.0/0",
+	}
+	ruleOpts = append(ruleOpts, icmp_opts)
 	for _, opts := range ruleOpts {
 		_, err = secgroups.CreateRule(computeClient, opts).Extract()
 		if err != nil {

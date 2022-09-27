@@ -364,8 +364,8 @@ func (r *mutationResolver) LoadEnvironment(ctx context.Context, envFilePath stri
 	}
 	results, err := loader.LoadEnvironment(ctx, r.client, log, envFilePath)
 	if err != nil {
-		taskStatus, serverTask, err = utils.FailServerTask(ctx, r.client, r.rdb, taskStatus, serverTask, err)
-		if err != nil {
+		_, _, taskErr := utils.FailServerTask(ctx, r.client, r.rdb, taskStatus, serverTask, err)
+		if taskErr != nil {
 			return nil, fmt.Errorf("error failing server task: %v", err)
 		}
 		return nil, err
