@@ -88,15 +88,15 @@ func (builder OpenstackBuilder) generateBuildID(entBuild *ent.Build) string {
 }
 
 func (builder OpenstackBuilder) generateVmName(entEnvironment *ent.Environment, entTeam *ent.Team, entHost *ent.Host, entBuild *ent.Build) string {
-	return (entEnvironment.HclID + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-" + entHost.Hostname + "-" + builder.generateBuildID(entBuild))
+	return (entEnvironment.Name + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-" + entHost.Hostname + "-" + builder.generateBuildID(entBuild))
 }
 
 func (builder OpenstackBuilder) generateRouterName(entEnvironment *ent.Environment, entTeam *ent.Team, entBuild *ent.Build) string {
-	return (entEnvironment.HclID + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-" + builder.generateBuildID(entBuild))
+	return (entEnvironment.Name + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-" + builder.generateBuildID(entBuild))
 }
 
 func (builder OpenstackBuilder) generateNetworkName(entEnvironment *ent.Environment, entTeam *ent.Team, entNetwork *ent.Network, entBuild *ent.Build) string {
-	return (entEnvironment.HclID + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-" + entNetwork.Name + "-" + builder.generateBuildID(entBuild))
+	return (entEnvironment.Name + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-" + entNetwork.Name + "-" + builder.generateBuildID(entBuild))
 }
 
 func (builder OpenstackBuilder) newAuthProvider() (*gophercloud.ProviderClient, error) {
