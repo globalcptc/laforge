@@ -63,6 +63,7 @@ var TemplateFuncLib = template.FuncMap{
 	"TagEquals":            TagEquals,
 	"Octet":                Octet,
 	"Base":                 path.Base,
+	"CIDR":                 CIDR,
 }
 
 // Octet is a template helper function to get a network's octet at a specified offset
@@ -101,12 +102,12 @@ func CIDR(n *ent.Network) string {
 	cidr := strings.Split(n.Cidr, "/")
 
 	// We should have two things, if we don't, there's a problem
-	if len(octets) <= 2 {
+	if len(cidr) < 2 {
 		return "INVALID_CIDR"
 	}
 
 	// Now we can return it.
-	return cidr[len(cidr)-1]
+	return cidr[1]
 }
 
 func TagEquals(h *ent.Host, tag, value string) bool {
