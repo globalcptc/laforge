@@ -325,6 +325,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 		}
 		ruleOpts = append(ruleOpts, opts)
 	}
+	// Always allow ICMP to hosts
 	icmp_opts := secgroups.CreateRuleOpts{
 		ParentGroupID: osSecGroup.ID,
 		FromPort:      -1,
