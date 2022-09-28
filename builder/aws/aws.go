@@ -77,24 +77,23 @@ type EC2CreateInstanceAPI interface {
 		optFns ...func(*ec2.Options)) (*ec2.RunInstancesOutput, error)
 }
 
-func (builder AWSBuilder) generateBuildID(build *ent.Build) string {
-	buildId := build.ID.String()
-	return buildId
+func (builder AWSBuilder) generateBuildID(entBuild *ent.Build) string {
+	return string([]rune(entBuild.ID.String())[:8])
 }
 
-func (builder AWSBuilder) generateVmName(competition *ent.Competition, team *ent.Team, host *ent.Host, build *ent.Build, proNet *ent.ProvisionedNetwork) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-Network-" + proNet.Name + "-Host-" + host.Hostname + "-" + builder.generateBuildID(build))
+func (builder AWSBuilder) generateVmName(entEnvironment *ent.Environment, entTeam *ent.Team, entHost *ent.Host, entBuild *ent.Build, entProvisionedNetwork *ent.ProvisionedNetwork) string {
+	return (entEnvironment.Name + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-network-" + entProvisionedNetwork.Name + "-Host-" + entHost.Hostname + "-" + builder.generateBuildID(entBuild))
 }
 
-func (builder AWSBuilder) generateVPCName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + builder.generateBuildID(build))
+func (builder AWSBuilder) generateVPCName(entEnvironment *ent.Environment, entTeam *ent.Team, entBuild *ent.Build) string {
+	return (entEnvironment.Name + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-" + builder.generateBuildID(entBuild))
 }
 
-func (builder AWSBuilder) generateSubnetName(competition *ent.Competition, team *ent.Team, build *ent.Build, proNet *ent.ProvisionedNetwork) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-Network-" + proNet.Name + "-" + builder.generateBuildID(build))
+func (builder AWSBuilder) generateSubnetName(entEnvironment *ent.Environment, entTeam *ent.Team, entBuild *ent.Build, entProvisionedNetwork *ent.ProvisionedNetwork) string {
+	return (entEnvironment.Name + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-network-" + entProvisionedNetwork.Name + "-" + builder.generateBuildID(entBuild))
 }
-func (builder AWSBuilder) generatePublicSubnetName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-Public_Subnet-" + builder.generateBuildID(build))
+func (builder AWSBuilder) generatePublicSubnetName(entEnvironment *ent.Environment, entTeam *ent.Team, entBuild *ent.Build) string {
+	return (entEnvironment.Name + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-public_subnet-" + builder.generateBuildID(entBuild))
 }
 
 func (builder AWSBuilder) getAMI(ctx context.Context, name, vt, rdt, arch, owner string) (string, error) {
@@ -145,7 +144,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	// Get information about host from ENT
 	entHost, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
 	if err != nil {
-		return fmt.Errorf("couldnt query host from provisioned host \"%v\": %v", entHost.Hostname, err)
+		return fmt.Errorf("couldn't query host from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
 
 	entBuild, err := provisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
@@ -216,7 +215,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		amiConfig.Owner,
 	)
 
-	vmName := builder.generateVmName(entCompetition, entTeam, entHost, entBuild, entProNetwork)
+	vmName := builder.generateVmName(entEnvironment, entTeam, entHost, entBuild, entProNetwork)
 	vpcID, ok := entTeam.Vars["VpcId"]
 	if !ok {
 		return fmt.Errorf("couldn't find vpcID in ProNetwork \"%v\"", entProNetwork.ID)
@@ -349,7 +348,7 @@ powershell -Command logoff
 		return fmt.Errorf("error waiting for instance to be running %v", err)
 	}
 
-	// Deply host with public IP
+	// Deploy host with public IP
 	if entNetwork.Vars["public_net"] == "true" {
 		// Allocate a public IP
 		allocateInput := &ec2.AllocateAddressInput{
@@ -513,9 +512,9 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 		return fmt.Errorf("couldn't query build from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
 
-	entCompetition, err := entBuild.QueryBuildToEnvironment().QueryEnvironmentToCompetition().Only(ctx)
+	entEnvironment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
 	if err != nil {
-		return fmt.Errorf("couldn't query competition from team \"%d\": %v", entTeam.TeamNumber, err)
+		return fmt.Errorf("couldn't query environment from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
 
 	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
@@ -542,7 +541,7 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	}
 	defer builder.DeployWorkerPool.Release(int64(1))
 
-	subnetName := builder.generateSubnetName(entCompetition, entTeam, entBuild, provisionedNetwork)
+	subnetName := builder.generateSubnetName(entEnvironment, entTeam, entBuild, provisionedNetwork)
 
 	//Describe subnet to create
 	subnetInput := &ec2.CreateSubnetInput{
@@ -622,11 +621,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	}
 	entEnvironment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
 	if err != nil {
-		return fmt.Errorf("couldn't query enviroment from build \"%v\": %v", entTeam.TeamNumber, err)
-	}
-	entCompetition, err := entEnvironment.QueryEnvironmentToCompetition().Only(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query competition from environment \"%v\": %v", entEnvironment.Name, err)
+		return fmt.Errorf("couldn't query environment from build \"%v\": %v", entTeam.TeamNumber, err)
 	}
 
 	vpcCidr, ok := entEnvironment.Config["vpc_cidr"]
@@ -649,7 +644,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	}
 	defer builder.DeployWorkerPool.Release(int64(1))
 
-	VPCName := builder.generateVPCName(entCompetition, entTeam, entBuild)
+	VPCName := builder.generateVPCName(entEnvironment, entTeam, entBuild)
 
 	// Describe the vpc with info from above and get ready to deploy
 	input := &ec2.CreateVpcInput{
@@ -691,7 +686,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return false, nil
 	})
 	if err != nil {
-		return fmt.Errorf("error waiting for vpc to be avalible %v", err)
+		return fmt.Errorf("error waiting for vpc to be available %v", err)
 	}
 
 	// Create Internet Gateway
@@ -721,7 +716,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	}
 	builder.Logger.Log.Debugf("Attached Internet Gateway: %s", entTeam.ID)
 
-	subnetName := builder.generatePublicSubnetName(entCompetition, entTeam, entBuild)
+	subnetName := builder.generatePublicSubnetName(entEnvironment, entTeam, entBuild)
 
 	//Describe subnet to create
 	subnetInput := &ec2.CreateSubnetInput{
@@ -760,7 +755,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 		return false, nil
 	})
 	if err != nil {
-		return fmt.Errorf("error waiting for subnet to be avaible %v", err)
+		return fmt.Errorf("error waiting for subnet to be available %v", err)
 	}
 
 	// Allocate an Elastic IP address
