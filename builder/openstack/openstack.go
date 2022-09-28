@@ -83,24 +83,20 @@ func (builder OpenstackBuilder) Version() string {
 	return Version
 }
 
-func (builder OpenstackBuilder) generateBuildID(build *ent.Build) string {
-	buildId, err := build.ID.MarshalText()
-	if err != nil {
-		buildId = []byte(fmt.Sprint(build.Revision))
-	}
-	return string(buildId)
+func (builder OpenstackBuilder) generateBuildID(entBuild *ent.Build) string {
+	return string([]rune(entBuild.ID.String())[:8])
 }
 
-func (builder OpenstackBuilder) generateVmName(competition *ent.Competition, team *ent.Team, host *ent.Host, build *ent.Build) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + host.Hostname + "-" + builder.generateBuildID(build))
+func (builder OpenstackBuilder) generateVmName(entEnvironment *ent.Environment, entTeam *ent.Team, entHost *ent.Host, entBuild *ent.Build) string {
+	return (entEnvironment.HclID + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-" + entHost.Hostname + "-" + builder.generateBuildID(entBuild))
 }
 
-func (builder OpenstackBuilder) generateRouterName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + builder.generateBuildID(build))
+func (builder OpenstackBuilder) generateRouterName(entEnvironment *ent.Environment, entTeam *ent.Team, entBuild *ent.Build) string {
+	return (entEnvironment.HclID + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-" + builder.generateBuildID(entBuild))
 }
 
-func (builder OpenstackBuilder) generateNetworkName(competition *ent.Competition, team *ent.Team, network *ent.Network, build *ent.Build) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + network.Name + "-" + builder.generateBuildID(build))
+func (builder OpenstackBuilder) generateNetworkName(entEnvironment *ent.Environment, entTeam *ent.Team, entNetwork *ent.Network, entBuild *ent.Build) string {
+	return (entEnvironment.HclID + "-team-" + fmt.Sprintf("%02d", entTeam.TeamNumber) + "-" + entNetwork.Name + "-" + builder.generateBuildID(entBuild))
 }
 
 func (builder OpenstackBuilder) newAuthProvider() (*gophercloud.ProviderClient, error) {
@@ -211,7 +207,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	// ###########
 	// Deploy Host
 	// ###########
-	vmName := builder.generateVmName(entCompetition, entTeam, entHost, entBuild)
+	vmName := builder.generateVmName(entEnvironment, entTeam, entHost, entBuild)
 
 	// Generate host IP address
 	networkAddrParts := strings.Split(entProvisionedNetwork.Cidr, "/")
@@ -491,10 +487,6 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", entProvisionedNetwork.Name, err)
 	}
-	entCompetition, err := entProvisionedNetwork.QueryProvisionedNetworkToBuild().QueryBuildToEnvironment().QueryEnvironmentToCompetition().Only(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
-	}
 	entNetwork, err := entProvisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", entProvisionedNetwork.Name, err)
@@ -534,7 +526,7 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 	// ##############
 	// Create the network
 	osNetwork, err := networks.Create(networkClient, networks.CreateOpts{
-		Name:         builder.generateNetworkName(entCompetition, entTeam, entNetwork, entBuild),
+		Name:         builder.generateNetworkName(entEnvironment, entTeam, entNetwork, entBuild),
 		AdminStateUp: gophercloud.Enabled,
 	}).Extract()
 	if err != nil {
@@ -580,7 +572,7 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 	osSubnet, err := subnets.Create(networkClient, subnets.CreateOpts{
 		NetworkID:       osNetwork.ID,
 		CIDR:            entNetwork.Cidr,
-		Name:            builder.generateNetworkName(entCompetition, entTeam, entNetwork, entBuild),
+		Name:            builder.generateNetworkName(entEnvironment, entTeam, entNetwork, entBuild),
 		Description:     fmt.Sprintf("%s@%d Subnet for  Network \"%s\" for Team %d", entEnvironment.Name, entBuild.EnvironmentRevision, entNetwork.Name, entTeam.TeamNumber),
 		AllocationPools: []subnets.AllocationPool{},
 		GatewayIP:       &routerAddress,
@@ -651,10 +643,6 @@ func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Tea
 	if err != nil {
 		return fmt.Errorf("couldn't query environment from team: %v", err)
 	}
-	entCompetition, err := entTeam.QueryTeamToBuild().QueryBuildToEnvironment().QueryEnvironmentToCompetition().Only(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't query competition from team: %v", err)
-	}
 
 	// ###################
 	// Wait on open thread
@@ -686,7 +674,7 @@ func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Tea
 	// ###########
 	// Create router for team
 	osRouter, err := routers.Create(networkClient, routers.CreateOpts{
-		Name:         builder.generateRouterName(entCompetition, entTeam, entBuild),
+		Name:         builder.generateRouterName(entEnvironment, entTeam, entBuild),
 		Description:  fmt.Sprintf("%s@%d Router for Team %d", entEnvironment.Name, entBuild.EnvironmentRevision, entTeam.TeamNumber),
 		AdminStateUp: gophercloud.Enabled,
 		GatewayInfo: &routers.GatewayInfo{
