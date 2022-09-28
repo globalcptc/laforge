@@ -66,16 +66,47 @@ var TemplateFuncLib = template.FuncMap{
 }
 
 // Octet is a template helper function to get a network's octet at a specified offset
-func Octet(n *ent.Network) string {
+func Octet(n *ent.Network, octet int) string {
+	// Check if we've got the CIDR itself before we make errors
 	if n.Cidr == "" {
 		return "NO_CIDR"
 	}
+
+	// Split the IP.IP.IP.IP/MASK on the dots
 	octets := strings.Split(n.Cidr, ".")
+
+	// We should have 4 things, if not, it's wrong
 	if len(octets) <= 3 {
 		return "INVALID_CIDR"
 	}
 
-	return octets[2]
+	// If we are pulling the last octet, we'll also have the CIDR range, which is a problem.
+	// If not, then we can just return the result
+	if octet == 4 {
+		last := strings.Split(octets[octet-1], "/")
+		return last[0]
+	} else {
+		return octets[octet-1]
+	}
+}
+
+// CIDR is a template helper function to get the subnet off a CIDR range
+func CIDR(n *ent.Network) string {
+	// If we don't even have the property, there's a problem
+	if n.Cidr == "" {
+		return "NO_CIDR"
+	}
+
+	// Let's split on the / to get the mask
+	cidr := strings.Split(n.Cidr, "/")
+
+	// We should have two things, if we don't, there's a problem
+	if len(octets) <= 2 {
+		return "INVALID_CIDR"
+	}
+
+	// Now we can return it.
+	return cidr[len(cidr)-1]
 }
 
 func TagEquals(h *ent.Host, tag, value string) bool {
