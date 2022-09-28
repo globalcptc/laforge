@@ -50,7 +50,9 @@ import {
   LaForgeGetPlanStatusCountsGQL,
   LaForgeGetPlanStatusCountsQuery,
   LaForgeCancelBuildGQL,
-  LaForgeCancelBuildCommitMutation
+  LaForgeCancelBuildCommitMutation,
+  LaForgeNukeBackendGQL,
+  LaForgeNukeBackendMutation
 } from '@graphql';
 
 @Injectable({
@@ -85,7 +87,8 @@ export class ApiService {
     private getServerTaskLogsGQL: LaForgeGetServerTaskLogsGQL,
     private getServerTasksGQL: LaForgeGetServerTasksGQL,
     private getPlanStatusCounts: LaForgeGetPlanStatusCountsGQL,
-    private cancelBuildGQL: LaForgeCancelBuildGQL
+    private cancelBuildGQL: LaForgeCancelBuildGQL,
+    private nukeBackendGQL: LaForgeNukeBackendGQL
   ) {}
 
   /**
@@ -610,6 +613,20 @@ export class ApiService {
             return reject(errors);
           }
           resolve(data.cancelBuild);
+        });
+    });
+  }
+
+  public nukeBackend(): Promise<LaForgeNukeBackendMutation['nukeBackend']> {
+    return new Promise((resolve, reject) => {
+      this.nukeBackendGQL
+        .mutate()
+        .toPromise()
+        .then(({ data, errors }) => {
+          if (errors) {
+            return reject(errors);
+          }
+          resolve(data.nukeBackend);
         });
     });
   }

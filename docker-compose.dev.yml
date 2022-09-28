@@ -1,38 +1,39 @@
 version: "3.4"
 
 services:
-  ui:
-    build:
-      context: ./ui/ng-ui
-      dockerfile: ./Dockerfile
-    ports:
-      - 80:80
-    restart: unless-stopped
-    networks:
-      - laforge-backend-tier
-    # depends_on:
-    #   - backend
-    volumes:
-      - /app/node_modules/
-      # backend:
-      #   build:
-      #     context: .
-      #     dockerfile: ./Dockerfile
-      #   restart: unless-stopped
-      #   ports:
-      #     - 8080:8080
-      #     - 50051:50051
-      #   networks:
-      #     - laforge-backend-tier
-      #   depends_on:
-      #     - redis
-      #     - db
-      #   volumes:
-      #     - ./server/builds/:/app/builds
-      #     - ./server/logs/:/app/logs
-      #     - ./server/users/:/app/users
-      #     - ./server/repos/:/app/repos
-      # - ./configs/:/app/configs
+  # ui:
+  #   build:
+  #     context: ./ui/ng-ui
+  #     dockerfile: ./Dockerfile
+  #   ports:
+  #     - 80:80
+  #   restart: unless-stopped
+  #   networks:
+  #     - laforge-backend-tier
+  #   # depends_on:
+  #   #   - backend
+  #   volumes:
+  #     - /app/node_modules/
+  # backend:
+  #   build:
+  #     context: .
+  #     dockerfile: ./Dockerfile
+  #   restart: unless-stopped
+  #   ports:
+  #     - 8080:8080
+  #     - 50051:50051
+  #   networks:
+  #     - laforge-backend-tier
+  #   depends_on:
+  #     - redis
+  #     - db
+  #   volumes:
+  #     - ./server/builds/:/app/builds
+  #     - ./server/logs/:/app/logs
+  #     - ./server/users/:/app/users
+  #     - ./server/repos/:/app/repos
+  #     - ./configs/:/app/configs
+  #     - ./conf.dev.json/:/app/conf.dev.json
 
   db:
     image: library/postgres:14.2-alpine
