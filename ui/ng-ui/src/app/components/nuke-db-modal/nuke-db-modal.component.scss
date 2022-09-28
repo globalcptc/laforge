@@ -29,3 +29,9 @@
 .flex-fill {
   flex-basis: 0px !important;
 }
+
+.summary-of-nuke {
+  max-height: 75vh;
+  overflow-y: scroll;
+  overflow-y: overlay;
+}

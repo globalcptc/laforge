@@ -21,7 +21,9 @@
         </ng-container>
         <ng-container matColumnDef="username">
           <mat-header-cell *matHeaderCellDef>Username</mat-header-cell>
-          <mat-cell *matCellDef="let user"><code>{{ user.username }}</code></mat-cell>
+          <mat-cell *matCellDef="let user">
+            <code>{{ user.username }}</code>
+          </mat-cell>
         </ng-container>
         <ng-container matColumnDef="email">
           <mat-header-cell *matHeaderCellDef>Email</mat-header-cell>
@@ -50,3 +52,10 @@
     </ng-container>
   </mat-card-content>
 </mat-card>
+
+<div class="w-100 mt-3 d-flex align-items-center justify-content-center">
+  <button mat-flat-button (click)="toggleNukeBackendModal()" color="warn">
+    Nuke the Database
+    <i class="fad fa-biohazard text-white ml-2"></i>
+  </button>
+</div>

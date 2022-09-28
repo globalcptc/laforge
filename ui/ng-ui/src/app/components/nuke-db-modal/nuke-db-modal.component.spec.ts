@@ -1,19 +1,19 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { DeleteBuildModalComponent } from './nuke-db-modal.component';
+import { NukeDbModalComponent } from './nuke-db-modal.component';
 
-describe('DeleteBuildModalComponent', () => {
-  let component: DeleteBuildModalComponent;
-  let fixture: ComponentFixture<DeleteBuildModalComponent>;
+describe('NukeDbModalComponent', () => {
+  let component: NukeDbModalComponent;
+  let fixture: ComponentFixture<NukeDbModalComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [DeleteBuildModalComponent]
+      declarations: [NukeDbModalComponent]
     }).compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(DeleteBuildModalComponent);
+    fixture = TestBed.createComponent(NukeDbModalComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

@@ -89,7 +89,7 @@ export class ApiService {
     private getPlanStatusCounts: LaForgeGetPlanStatusCountsGQL,
     private cancelBuildGQL: LaForgeCancelBuildGQL,
     private nukeBackendGQL: LaForgeNukeBackendGQL
-  ) { }
+  ) {}
 
   /**
    * Pulls status objects for all plans on a build
@@ -618,7 +618,7 @@ export class ApiService {
   }
 
   public nukeBackend(): Promise<LaForgeNukeBackendMutation['nukeBackend']> {
-    return new Promis((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       this.nukeBackendGQL
         .mutate()
         .toPromise()
@@ -627,7 +627,7 @@ export class ApiService {
             return reject(errors);
           }
           resolve(data.nukeBackend);
-        })
-    })
+        });
+    });
   }
 }

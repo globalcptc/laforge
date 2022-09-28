@@ -1,44 +1,64 @@
-<div class="row">
-  <div class="col-12">
-    <p class="text-center">
-      Are you sure you want to wipe the
-      <b>entire database</b>
-      ?
-      <br />
-      If this is correct, please type
-      <code>yes i really really do</code>
-      in the textbox below.
+<ng-container *ngIf="!(nukeResult | async)">
+  <div class="row">
+    <div class="col-12">
+      <p class="text-center">
+        Are you sure you want to
+        <b>wipe the entire database</b>
+        ?
+        <br />
+        If this is correct, please type
+        <code>yes i really really do</code>
+        in the textbox below.
+      </p>
+    </div>
+    <div class="col-12">
+      <mat-form-field appearance="fill" class="w-100">
+        <mat-label>Do you really want this?</mat-label>
+        <input matInput type="text" #yesIReallyReallyDo (keyup)="yesIDoChange(yesIReallyReallyDo.value)" />
+      </mat-form-field>
+    </div>
+  </div>
+</ng-container>
+
+<ng-container *ngIf="nukeResult | async as _nukeResult">
+  <p>Summary of Deleted Objects:</p>
+  <div class="summary-of-nuke">
+    <p *ngFor="let result of _nukeResult">
+      <b>{{ result.value }}</b>
+      &nbsp;-&nbsp;{{ result.key }}
     </p>
   </div>
-  <div class="col-12">
-    <mat-form-field appearance="fill" class="w-100">
-      <mat-label>Do you really want this?</mat-label>
-      <input matInput type="text" #yesIReallyReallyDo (keyup)="yesIDoChange(yesIReallyReallyDo.value)" />
-    </mat-form-field>
-  </div>
-</div>
+</ng-container>
 <hr />
 <div class="delete-build-dialog-footer d-flex align-items-center">
   <div class="flex-fill d-flex align-items-center justify-content-around">
-    <button mat-flat-button (click)="onClose()" class="mx-3 bg-light flex-fill" [disabled]="nukeDbLoading" [disableRipple]="nukeDbLoading">
-      <i class="fas fa-times mr-2"></i>
-      Cancel
-    </button>
     <button
-      mat-raised-button
-      color="warn"
-      (click)="triggerNukeDb()"
-      class="mx-3 flex-fill"
-      [disabled]="!nukeDbConfirmed || nukeDbLoading"
-      [disableRipple]="!nukeDbConfirmed || nukeDbLoading"
+      mat-flat-button
+      (click)="onClose()"
+      class="mx-3 bg-light flex-fill"
+      [disabled]="nukeDbLoading | async"
+      [disableRipple]="nukeDbLoading | async"
     >
-      <ng-container *ngIf="nukeDbLoading">
-        <i class="fas fa-spinner fa-spin"></i>
-      </ng-container>
-      <ng-container *ngIf="!nukeDbLoading">
-        <i class="fad fa-biohazard mr-2"></i>
-        Nuke It!
-      </ng-container>
+      <i class="fas fa-times mr-2"></i>
+      {{ (nukeResult | async) ? 'Close' : 'Cancel' }}
     </button>
+    <ng-container *ngIf="!(nukeResult | async)">
+      <button
+        mat-raised-button
+        color="warn"
+        (click)="triggerNukeDb()"
+        class="mx-3 flex-fill"
+        [disabled]="!(nukeDbConfirmed | async) || (nukeDbLoading | async)"
+        [disableRipple]="!(nukeDbConfirmed | async) || (nukeDbLoading | async)"
+      >
+        <ng-container *ngIf="nukeDbLoading | async">
+          <i class="fas fa-spinner fa-spin"></i>
+        </ng-container>
+        <ng-container *ngIf="!(nukeDbLoading | async)">
+          <i class="fad fa-biohazard mr-2"></i>
+          Nuke It!
+        </ng-container>
+      </button>
+    </ng-container>
   </div>
 </div>

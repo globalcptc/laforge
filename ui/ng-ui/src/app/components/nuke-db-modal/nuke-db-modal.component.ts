@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
+import { LaForgeNukeBackendMutation } from '@graphql';
 import { ApiService } from '@services/api/api.service';
 import { BehaviorSubject } from 'rxjs';
 
@@ -13,6 +14,7 @@ import { BehaviorSubject } from 'rxjs';
 export class NukeDbModalComponent {
   nukeDbConfirmed: BehaviorSubject<boolean>;
   nukeDbLoading: BehaviorSubject<boolean>;
+  nukeResult: BehaviorSubject<LaForgeNukeBackendMutation['nukeBackend'] | null>;
 
   constructor(
     public dialogRef: MatDialogRef<NukeDbModalComponent>,
@@ -23,6 +25,7 @@ export class NukeDbModalComponent {
   ) {
     this.nukeDbConfirmed = new BehaviorSubject(false);
     this.nukeDbLoading = new BehaviorSubject(false);
+    this.nukeResult = new BehaviorSubject(null);
   }
 
   yesIDoChange(value: string) {
@@ -41,12 +44,21 @@ export class NukeDbModalComponent {
     this.nukeDbLoading.next(true);
     this.api
       .nukeBackend()
-      .then(console.log, (err) => {
-        console.error(err);
-        this.snackbar.open('Error while wiping database. See console for more info.', 'Okay.', {
-          panelClass: ['bg-danger', 'text-white']
-        });
-      })
+      .then(
+        (res) => {
+          this.nukeResult.next(res);
+          this.snackbar.open('Successfully wiped the database', null, {
+            panelClass: ['bg-success', 'text-white'],
+            duration: 2000
+          });
+        },
+        (err) => {
+          console.error(err);
+          this.snackbar.open('Error while wiping database. See console for more info.', 'Okay.', {
+            panelClass: ['bg-danger', 'text-white']
+          });
+        }
+      )
       .finally(() => this.nukeDbLoading.next(false));
   }
 }

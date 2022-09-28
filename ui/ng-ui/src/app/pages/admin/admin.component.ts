@@ -10,6 +10,7 @@ import { SubheaderService } from 'src/app/_metronic/partials/layout/subheader/_s
 import { AuthService } from 'src/app/modules/auth/_services/auth.service';
 
 import { EditUserModalComponent } from '@components/edit-user-modal/edit-user-modal.component';
+import { NukeDbModalComponent } from '@components/nuke-db-modal/nuke-db-modal.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -110,6 +111,12 @@ export class AdminComponent implements OnInit {
       this.snackbar.open(err, 'Okay', {
         panelClass: ['bg-danger', 'text-white']
       });
-    })
+    });
+  }
+
+  toggleNukeBackendModal(): void {
+    this.dialog.open(NukeDbModalComponent, {
+      width: '50%'
+    });
   }
 }
