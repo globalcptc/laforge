@@ -101,7 +101,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   getLatestCommitHash(environment: LaForgeListEnvironmentsQuery['environments'][0]): string {
-    return this.getLatestRepoCommit(environment)?.hash.substring(0, 7) ?? 'Unknown';
+    return this.getLatestRepoCommit(environment)?.hash.substring(0, 8) ?? 'Unknown';
   }
 
   getLatestCommitLink(environment: LaForgeListEnvironmentsQuery['environments'][0]): string {
