@@ -28,12 +28,16 @@ type ScheduleStep struct {
 	// Type holds the value of the "type" field.
 	Type schedulestep.Type `json:"type,omitempty"`
 	// Repeated holds the value of the "repeated" field.
+	// If repeated, this step is run on the interval specified. Otherwise, it is executed at the start_time.
 	Repeated bool `json:"repeated,omitempty"`
 	// StartTime holds the value of the "start_time" field.
+	// This is the start time of the run window.
 	StartTime time.Time `json:"start_time,omitempty"`
 	// EndTime holds the value of the "end_time" field.
+	// This is the end time of the run window.
 	EndTime time.Time `json:"end_time,omitempty"`
 	// Interval holds the value of the "interval" field.
+	// This is the time between runs of the step in milliseconds.
 	Interval int `json:"interval,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ScheduleStepQuery when eager-loading is set.

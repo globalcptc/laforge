@@ -27,10 +27,10 @@ func (ScheduleStep) Fields() []ent.Field {
 				"FileExtract",
 				"Ansible",
 			),
-		field.Bool("repeated"),
-		field.Time("start_time"),
-		field.Time("end_time"),
-		field.Int("interval"),
+		field.Bool("repeated").Comment("If repeated, this step is run on the interval specified. Otherwise, it is executed at the start_time."),
+		field.Time("start_time").Comment("This is the start time of the run window."),
+		field.Time("end_time").Comment("This is the end time of the run window."),
+		field.Int("interval").Comment("This is the time between runs of the step in milliseconds."),
 	}
 }
 
