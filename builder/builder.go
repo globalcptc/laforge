@@ -215,5 +215,8 @@ func NewOpenstackBuilder(configFilePath string, env *ent.Environment, logger *lo
 		DeployWorkerPool:   deployWorkerPool,
 		TeardownWorkerPool: teardownWorkerPool,
 	}
+	if err = builder.UpdatehypervisorRunningVmCount(); err != nil {
+		return
+	}
 	return
 }

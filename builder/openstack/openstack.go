@@ -20,6 +20,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/hypervisors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/secgroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
@@ -32,16 +33,17 @@ const (
 	ID          = "openstack"
 	Name        = "Openstack"
 	Description = "Builder that interfaces with Openstack"
-	Author      = "Tenchi Mata <github.com/0xk7>"
+	Author      = "Tenchi Mata <github.com/0xk7>, Bradley Harker <github.com/BradHacker>"
 	Version     = "0.1"
 )
 
 type OpenstackBuilder struct {
-	Config             OpenstackBuilderConfig
-	HttpClient         http.Client
-	Logger             *logging.Logger
-	DeployWorkerPool   *semaphore.Weighted
-	TeardownWorkerPool *semaphore.Weighted
+	Config                    OpenstackBuilderConfig
+	HttpClient                http.Client
+	Logger                    *logging.Logger
+	DeployWorkerPool          *semaphore.Weighted
+	TeardownWorkerPool        *semaphore.Weighted
+	hypervisorRunningVmCounts map[string]int // Maps hypervisor hostnames to running vm counts
 }
 
 type OpenstackBuilderConfig struct {
@@ -119,6 +121,57 @@ func (builder OpenstackBuilder) newAuthProvider() (*gophercloud.ProviderClient, 
 		authOpts.DomainID = builder.Config.DomainId
 	}
 	return openstack.AuthenticatedClient(authOpts)
+}
+
+func (builder OpenstackBuilder) listHypervisorHosts(computeClient *gophercloud.ServiceClient) ([]hypervisors.Hypervisor, error) {
+	hypervisorPages, err := hypervisors.List(computeClient, hypervisors.ListOpts{
+		Limit:                     new(int),
+		Marker:                    new(string),
+		HypervisorHostnamePattern: new(string),
+		WithServers:               gophercloud.Enabled,
+	}).AllPages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list openstack hypervisors: %v", err)
+	}
+	hypervisorList, err := hypervisors.ExtractHypervisors(hypervisorPages)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract openstack hypervisors: %v", err)
+	}
+	return hypervisorList, nil
+}
+
+func (builder OpenstackBuilder) UpdatehypervisorRunningVmCount() error {
+	// #############################
+	// Generate authenticated client
+	// #############################
+	provider, err := builder.newAuthProvider()
+	if err != nil {
+		return fmt.Errorf("failed to authenticate: %v", err)
+	}
+	endpointOpts := gophercloud.EndpointOpts{
+		Region: builder.Config.RegionName,
+	}
+	computeClient, err := openstack.NewComputeV2(provider, endpointOpts)
+	if err != nil {
+		return fmt.Errorf("failed to create compute v2 client: %v", err)
+	}
+
+	// #######################
+	// Get List of hypervisors
+	// #######################
+	hypervisorList, err := builder.listHypervisorHosts(computeClient)
+	if err != nil {
+		return fmt.Errorf("failed to list hypervisors: %v", err)
+	}
+
+	// ######################
+	// Update counts in cache
+	// ######################
+	builder.hypervisorRunningVmCounts = make(map[string]int, len(hypervisorList))
+	for _, hypervisor := range hypervisorList {
+		builder.hypervisorRunningVmCounts[hypervisor.HypervisorHostname] = hypervisor.RunningVMs
+	}
+	return nil
 }
 
 func waitForObjectTeardown(getFunc func() error) {
