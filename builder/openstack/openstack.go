@@ -3,6 +3,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -21,6 +22,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/hypervisors"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/schedulerhints"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/secgroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
@@ -140,6 +142,41 @@ func (builder OpenstackBuilder) listHypervisorHosts(computeClient *gophercloud.S
 	return hypervisorList, nil
 }
 
+func (builder OpenstackBuilder) getOptimalHypervisor() string {
+	optimalHypervisor := ""
+	lowestVmCount := math.MaxInt
+	for hypervisor, vmCount := range builder.hypervisorRunningVmCounts {
+		if vmCount < lowestVmCount {
+			optimalHypervisor = hypervisor
+			lowestVmCount = vmCount
+		}
+	}
+	return optimalHypervisor
+}
+
+func waitForObjectTeardown(getFunc func() error) {
+	for {
+		err := getFunc()
+		if err != nil {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+}
+
+func waitForObject(getFunc func() (bool, error)) error {
+	for {
+		valid, err := getFunc()
+		if valid {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		time.Sleep(3 * time.Second)
+	}
+}
+
 func (builder OpenstackBuilder) UpdatehypervisorRunningVmCount() error {
 	// #############################
 	// Generate authenticated client
@@ -172,29 +209,6 @@ func (builder OpenstackBuilder) UpdatehypervisorRunningVmCount() error {
 		builder.hypervisorRunningVmCounts[hypervisor.HypervisorHostname] = hypervisor.RunningVMs
 	}
 	return nil
-}
-
-func waitForObjectTeardown(getFunc func() error) {
-	for {
-		err := getFunc()
-		if err != nil {
-			break
-		}
-		time.Sleep(3 * time.Second)
-	}
-}
-
-func waitForObject(getFunc func() (bool, error)) error {
-	for {
-		valid, err := getFunc()
-		if valid {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		time.Sleep(3 * time.Second)
-	}
 }
 
 func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHost *ent.ProvisionedHost) (err error) {
@@ -255,6 +269,13 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	computeClient, err := openstack.NewComputeV2(provider, endpointOpts)
 	if err != nil {
 		return fmt.Errorf("failed to create compute v2 client: %v", err)
+	}
+
+	// ####################################
+	// Update the Hypervisor VM Count Cache
+	// ####################################
+	if err = builder.UpdatehypervisorRunningVmCount(); err != nil {
+		return fmt.Errorf("failed to update hypervisor running vm count cache: %v", err)
 	}
 
 	// ###########
@@ -456,9 +477,18 @@ cd /
 		AccessIPv4: hostAddress,
 	}
 
-	createOpts := bootfromvolume.CreateOptsExt{
+	var createOpts servers.CreateOptsBuilder
+
+	createOpts = bootfromvolume.CreateOptsExt{
 		CreateOptsBuilder: hostOps,
 		BlockDevice:       blockOps,
+	}
+
+	createOpts = schedulerhints.CreateOptsExt{
+		CreateOptsBuilder: createOpts,
+		SchedulerHints: schedulerhints.SchedulerHints{
+			Query: []interface{}{"=", "$hypervisor_hostname", builder.getOptimalHypervisor()},
+		},
 	}
 
 	// Create the host
