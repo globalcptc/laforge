@@ -484,12 +484,14 @@ cd /
 		BlockDevice:       blockOps,
 	}
 
+	optimalHypervisor := builder.getOptimalHypervisor()
 	createOpts = schedulerhints.CreateOptsExt{
 		CreateOptsBuilder: createOpts,
 		SchedulerHints: schedulerhints.SchedulerHints{
-			Query: []interface{}{"=", "$hypervisor_hostname", builder.getOptimalHypervisor()},
+			Query: []interface{}{"=", "$hypervisor_hostname", optimalHypervisor},
 		},
 	}
+	builder.Logger.Log.Debugf("Host \"%s\" will deploy on hypervisor \"%s\"", vmName, optimalHypervisor)
 
 	// Create the host
 	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", builder.Config.Images[entHost.OS], builder.Config.Flavors[entHost.InstanceSize])
