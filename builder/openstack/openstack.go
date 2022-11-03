@@ -167,7 +167,7 @@ func (builder OpenstackBuilder) getOptimalAvailabilityZone(computeClient *gopher
 	// ############################################################################################
 	azPages, err := availabilityzones.ListDetail(computeClient).AllPages()
 	if err != nil {
-		builder.Logger.Log.Warn("failed to list availability zones")
+		builder.Logger.Log.Warn("failed to list availability zones: %v", err)
 		return ""
 	}
 	azList, err := availabilityzones.ExtractAvailabilityZones(azPages)
