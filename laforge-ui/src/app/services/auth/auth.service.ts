@@ -4,11 +4,14 @@ import { LaForgeAuthUser } from 'src/generated/graphql';
 @Injectable({
   providedIn: 'root'
 })
-export class ApiService {
+export class AuthService {
   constructor() {}
 
-  public Me(): LaForgeAuthUser | null {
-    // TODO: Return the me graphql query
+  public CurrentUser(): LaForgeAuthUser | null {
     return null;
   }
+
+  public Login(): void {}
+
+  public Logout(): void {}
 }

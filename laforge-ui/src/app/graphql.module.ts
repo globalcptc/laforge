@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { ApolloClientOptions, InMemoryCache, split } from '@apollo/client/core';
-import { WebSocketLink } from '@apollo/client/link/ws';
+import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
+import { createClient } from 'graphql-ws';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { APOLLO_OPTIONS } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
@@ -11,15 +12,13 @@ export function createApollo(httpLink: HttpLink): ApolloClientOptions<any> {
     uri: environment.graphqlUrl,
     withCredentials: true
   });
-  const wsClient = new WebSocketLink({
-    uri: environment.wsUrl,
-    options: {
-      reconnect: true,
-      timeout: 30000,
-      minTimeout: 30000,
-      lazy: true
-    }
-  });
+  const wsClient = new GraphQLWsLink(
+    createClient({
+      url: environment.wsUrl,
+      lazy: true,
+      lazyCloseTimeout: 30000
+    })
+  );
 
   const link = split(
     ({ query }) => {
