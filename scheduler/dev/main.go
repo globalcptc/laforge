@@ -39,12 +39,17 @@ func GenerateProvisionedScheduleStep(client *ent.Client, entScheduleSteps []*ent
 	for _, entScheduleStep := range entScheduleSteps {
 		// Determine RunTime
 		if entScheduleStep.Repeated {
-			delta_time := entScheduleStep.EndTime.Sub(entScheduleStep.StartTime).Milliseconds()
-			delta_time /= int64(entScheduleStep.Interval)
-			// TODO: Calculate all ProvisionedScheuleSteps required for the repeated action
-			// Loop :
-			//   entProvisionedScheduleStep := client.ProvisionedScheduleStep.Create().SetProvisionedScheduleStepToScheduleStep(entScheduleStep)
-			//   entProvisionedScheduleStepCreate = append(entProvisionedScheduleStepCreate, entProvisionedScheduleStep)
+			interval := entScheduleStep.EndTime.Sub(entScheduleStep.StartTime).Milliseconds()
+			interval /= 1000 // convert to milliseconds
+			interval /= int64(entScheduleStep.Interval)
+
+			for i := int64(0); i < interval; i++ {
+				runtime := entScheduleStep.StartTime
+				runtime.Add(time.Duration(i * interval * 1000)) // interval in milliseconds, converts to nanoseconds
+				entProvisionedScheduleStep := client.ProvisionedScheduleStep.Create().SetProvisionedScheduleStepToScheduleStep(entScheduleStep)
+				entProvisionedScheduleStep.SetRunTime(runtime)
+				entProvisionedScheduleStepCreate = append(entProvisionedScheduleStepCreate, entProvisionedScheduleStep)
+			}
 		} else {
 			entProvisionedScheduleStep := client.ProvisionedScheduleStep.Create().SetProvisionedScheduleStepToScheduleStep(entScheduleStep)
 			entProvisionedScheduleStep.SetRunTime(entScheduleStep.StartTime)
