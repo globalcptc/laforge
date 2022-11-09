@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gen0cide/laforge/ent"
+	"github.com/gen0cide/laforge/ent/schedulestep"
 )
 
 func main() {
@@ -13,7 +14,7 @@ func main() {
 			ID:                                       [16]byte{},
 			Type:                                     "",
 			Repeated:                                 false,
-			StartTime:                                time.Time{},
+			StartTime:                                time.Now().Add(1 * time.Minute),
 			EndTime:                                  time.Time{},
 			Interval:                                 0,
 			Edges:                                    ent.ScheduleStepEdges{},
@@ -61,18 +62,31 @@ func GenerateProvisionedScheduleStep(client *ent.Client, entScheduleSteps []*ent
 
 // ScheduleStepWatchdog will be used as a Go routine
 // func ScheduleStepWatchdog(ctx context.Context, client *ent.Client) { <-- THIS IS THE REAL SIGNATURE
-func ScheduleStepWatchdog(ctx context.Context, entProvisionedScheduledSteps []*ent.ProvisionedScheduleStep) {
+func ScheduleStepWatchdog(ctx context.Context, entScheduledSteps []*ent.ScheduleStep) {
 	select {
 	case <-ctx.Done():
 		return
 	default:
-		// Query DB for all provisioned scheduled steps that haven't been run and their run_time is in the past
+		for _, entScheduledStep := range entScheduledSteps {
 
-		// Loop over all queried steps (for now use the func param and filter)
-		// Create AgentTask objects for those (https://github.com/globalcptc/laforge/blob/c865ba5f078f7168982b4bd1197fcb5a366ded43/planner/build.go#L849-L1085)
-		// Mark ProvisionedSchuledStep as Complete (equivalent to run) via status
+			// TODO: Query DB once integrated
+			// entScheduledStep, err := entProvisionedScheduledStep.QueryProvisionedScheduleStepToScheduleStep().Only(ctx)
+			// if err != nil {
+			// 	// TODO: Log error
+			// 	continue
+			// }
+			switch entScheduledStep.Type {
+			case schedulestep.TypeCommand:
 
-		// Sleep and then check again
-		time.Sleep(1 * time.Minute)
+			}
+			// Query DB for all provisioned scheduled steps that haven't been run and their run_time is in the past
+
+			// Loop over all queried steps (for now use the func param and filter)
+			// Create AgentTask objects for those (https://github.com/globalcptc/laforge/blob/c865ba5f078f7168982b4bd1197fcb5a366ded43/planner/build.go#L849-L1085)
+			// Mark ProvisionedSchuledStep as Complete (equivalent to run) via status
+
+			// Sleep and then check again
+			time.Sleep(1 * time.Minute)
+		}
 	}
 }
