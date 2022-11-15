@@ -1,5 +1,5 @@
 @use 'sass:map';
-@import '../../palette.scss';
+@import '../../../palette.scss';
 
 $box1-color: map-get($md-accent, 500);
 $box2-color: map-get($md-primary, 500);

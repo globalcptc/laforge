@@ -5,9 +5,9 @@ import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { GraphQLModule } from './graphql.module';
-import { LayoutComponent } from '@components/layout/layout.component';
 import { PagesModule } from './pages/pages.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { ComponentsModule } from '@components/components.module';
 
 @Injectable({ providedIn: 'root' })
 export class LaForgePageTitleStrategy extends TitleStrategy {
@@ -26,8 +26,8 @@ export class LaForgePageTitleStrategy extends TitleStrategy {
 }
 
 @NgModule({
-  declarations: [AppComponent, LayoutComponent],
-  imports: [BrowserModule, AppRoutingModule, GraphQLModule, PagesModule, BrowserAnimationsModule],
+  declarations: [AppComponent],
+  imports: [BrowserModule, AppRoutingModule, GraphQLModule, ComponentsModule, PagesModule, BrowserAnimationsModule],
   bootstrap: [AppComponent],
   providers: [{ provide: TitleStrategy, useClass: LaForgePageTitleStrategy }]
 })
