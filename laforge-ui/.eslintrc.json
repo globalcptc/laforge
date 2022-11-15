@@ -5,13 +5,7 @@
     "project": ["tsconfig.json", "tsconfig.app.json"],
     "sourceType": "module"
   },
-  "plugins": [
-    "@typescript-eslint",
-    "@angular-eslint",
-    "import",
-    "prettier",
-    "unused-imports"
-  ],
+  "plugins": ["@typescript-eslint", "@angular-eslint", "import", "prettier", "unused-imports"],
   "extends": [
     "plugin:@typescript-eslint/recommended",
     "plugin:@angular-eslint/recommended",
@@ -22,10 +16,7 @@
   ],
   "rules": {
     "@typescript-eslint/no-empty-function": ["warn"],
-    "no-warning-comments": [
-      "warn",
-      { "terms": ["todo", "fixme"], "location": "anywhere" }
-    ],
+    "no-warning-comments": ["warn", { "terms": ["todo", "fixme"], "location": "anywhere" }],
     "no-console": ["warn"],
     "max-len": ["error", { "code": 140 }],
     "@angular-eslint/no-empty-lifecycle-method": ["warn"],
@@ -67,7 +58,8 @@
           "@models": "src/app/models/",
           "@pages": "src/app/pages/",
           "@services": "src/app/services/",
-          "@env": "src/environments/environment"
+          "@env": "src/environments/environment",
+          "@graphql": "src/generated/graphql"
         },
         "extensions": [".ts", ".tsx"]
       }
