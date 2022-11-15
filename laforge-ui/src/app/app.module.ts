@@ -1,14 +1,15 @@
+import { HttpClientModule } from '@angular/common/http';
 import { Injectable, NgModule } from '@angular/core';
 import { BrowserModule, Title } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
+
+import { ComponentsModule } from '@components/components.module';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { GraphQLModule } from './graphql.module';
 import { PagesModule } from './pages/pages.module';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { ComponentsModule } from '@components/components.module';
-import { HttpClientModule } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class LaForgePageTitleStrategy extends TitleStrategy {

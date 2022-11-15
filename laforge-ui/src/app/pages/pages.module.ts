@@ -1,10 +1,11 @@
+import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 
+import { RouterOutlet } from '@angular/router';
+
+import { AuthComponent } from './auth/auth.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { ErrorComponent } from './error/error.component';
-import { AuthComponent } from './auth/auth.component';
-import { RouterOutlet } from '@angular/router';
-import { CommonModule } from '@angular/common';
 
 @NgModule({
   declarations: [DashboardComponent, ErrorComponent, AuthComponent],

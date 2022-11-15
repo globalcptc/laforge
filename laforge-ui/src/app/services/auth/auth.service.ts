@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { LaForgeAuthUser, LaForgeGetCurrentUserGQL, LaForgeGetCurrentUserQuery } from '@graphql';
 import { Router } from '@angular/router';
+import { LaForgeGetCurrentUserGQL, LaForgeGetCurrentUserQuery } from '@graphql';
 import { map, Observable } from 'rxjs';
 
 @Injectable({

@@ -6,7 +6,7 @@ export const environment = {
   production: false,
   graphqlUrl: 'http://localhost:8080/api/query',
   wsUrl: 'ws://localhost:8080/api/query',
-  authBaseUrl: 'http://localhost:8080/auth',
+  authBaseUrl: 'http://localhost:8080/auth'
 };
 
 /*

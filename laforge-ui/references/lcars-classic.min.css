@@ -47,7 +47,7 @@ body {
   margin: 0;
   padding: 5px 0;
   background-color: #000;
-  font-family: "Antonio", "Arial Narrow", "Avenir Next Condensed", sans-serif;
+  font-family: 'Antonio', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
   line-height: 1.5;
   color: #c7f;
 }
@@ -704,7 +704,7 @@ a:hover {
   font-size: 1.3rem;
 }
 .lcars-list li::before {
-  content: "";
+  content: '';
   display: block;
   width: 30px;
   height: 20px;
@@ -854,7 +854,7 @@ a:hover {
   color: #fa4;
 }
 .lcars-text-bar::before {
-  content: "";
+  content: '';
   background-color: #000;
   display: block;
   width: 10px;
@@ -865,7 +865,7 @@ a:hover {
   overflow: hidden;
 }
 .lcars-text-bar::after {
-  content: "";
+  content: '';
   background-color: #000;
   display: block;
   width: 10px;
@@ -1398,7 +1398,7 @@ footer {
   z-index: 1;
 }
 footer::before {
-  content: "";
+  content: '';
   background-color: #000;
   display: block;
   width: 5px;
@@ -1409,7 +1409,7 @@ footer::before {
   overflow: hidden;
 }
 footer::after {
-  content: "";
+  content: '';
   background-color: #000;
   display: block;
   width: 2px;
@@ -1441,7 +1441,7 @@ footer::after {
   z-index: 2;
 }
 .footer-inside::before {
-  content: "";
+  content: '';
   background-color: #78f;
   display: block;
   width: 15%;
@@ -1453,7 +1453,7 @@ footer::after {
   overflow: hidden;
 }
 .footer-inside::after {
-  content: "";
+  content: '';
   background-color: #d44;
   display: block;
   width: 15%;

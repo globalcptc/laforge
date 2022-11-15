@@ -1,8 +1,9 @@
+import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 
-import { LayoutComponent } from './layout/layout.component';
 import { RouterOutlet } from '@angular/router';
-import { CommonModule } from '@angular/common';
+
+import { LayoutComponent } from './layout/layout.component';
 
 @NgModule({
   declarations: [LayoutComponent],
