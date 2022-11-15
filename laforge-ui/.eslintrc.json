@@ -59,7 +59,8 @@
           "@pages": "src/app/pages/",
           "@services": "src/app/services/",
           "@env": "src/environments/environment",
-          "@graphql": "src/generated/graphql"
+          "@graphql": "src/generated/graphql",
+          "@mock-graphql": "src/generated/graphql-mocks"
         },
         "extensions": [".ts", ".tsx"]
       }

@@ -1,14 +1,20 @@
 import { Injectable } from '@angular/core';
-import { LaForgeAuthUser } from '@graphql';
+import { LaForgeAuthUser, LaForgeGetCurrentUserGQL, LaForgeGetCurrentUserQuery } from '@graphql';
+import { Router } from '@angular/router';
+import { map, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  constructor() {}
+  private _currentUser: Observable<LaForgeGetCurrentUserQuery['currentUser']>;
 
-  public CurrentUser(): LaForgeAuthUser | null {
-    return null;
+  constructor(private router: Router, private getCurrentUserGQL: LaForgeGetCurrentUserGQL) {
+    this._currentUser = this.getCurrentUserGQL.watch().valueChanges.pipe(map((result) => result.data.currentUser));
+  }
+
+  public CurrentUser(): Observable<LaForgeGetCurrentUserQuery['currentUser']> {
+    return this._currentUser;
   }
 
   public Login(): void {}

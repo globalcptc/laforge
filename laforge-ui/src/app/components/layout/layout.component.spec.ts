@@ -14,8 +14,7 @@ describe('LayoutComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [RouterTestingModule],
-      declarations: [LayoutComponent],
-      providers: [TitleService]
+      declarations: [LayoutComponent]
     }).compileComponents();
 
     fixture = TestBed.createComponent(LayoutComponent);

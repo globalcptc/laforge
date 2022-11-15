@@ -14,6 +14,11 @@ generates:
       - 'typescript'
       - 'typescript-operations'
       - 'typescript-apollo-angular'
+  src/generated/graphql-mocks.ts:
+    plugins:
+      - typescript-mock-data:
+          typesFile: '../generated-types.ts'
+          prefix: 'Mock'
   ./graphql.schema.json:
     plugins:
       - 'introspection'

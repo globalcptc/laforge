@@ -8,6 +8,7 @@ import { GraphQLModule } from './graphql.module';
 import { PagesModule } from './pages/pages.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ComponentsModule } from '@components/components.module';
+import { HttpClientModule } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class LaForgePageTitleStrategy extends TitleStrategy {
@@ -27,7 +28,7 @@ export class LaForgePageTitleStrategy extends TitleStrategy {
 
 @NgModule({
   declarations: [AppComponent],
-  imports: [BrowserModule, AppRoutingModule, GraphQLModule, ComponentsModule, PagesModule, BrowserAnimationsModule],
+  imports: [BrowserModule, AppRoutingModule, GraphQLModule, ComponentsModule, PagesModule, BrowserAnimationsModule, HttpClientModule],
   bootstrap: [AppComponent],
   providers: [{ provide: TitleStrategy, useClass: LaForgePageTitleStrategy }]
 })

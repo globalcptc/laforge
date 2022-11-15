@@ -3,7 +3,7 @@ import { ApolloClientOptions, InMemoryCache, split } from '@apollo/client/core';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { createClient } from 'graphql-ws';
 import { getMainDefinition } from '@apollo/client/utilities';
-import { APOLLO_OPTIONS } from 'apollo-angular';
+import { ApolloModule, APOLLO_OPTIONS } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { environment } from '@env';
 
@@ -40,6 +40,7 @@ export function createApollo(httpLink: HttpLink): ApolloClientOptions<any> {
 }
 
 @NgModule({
+  exports: [ApolloModule],
   providers: [
     {
       provide: APOLLO_OPTIONS,

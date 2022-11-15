@@ -914,12 +914,17 @@ export type LaForgeVarsMap = {
   value: Scalars['String'];
 };
 
-export type LaForgeAuthUserFieldsFragment = { __typename?: 'AuthUser', id: string, first_name: string, last_name: string, username: string, provider: LaForgeProviderType, role: LaForgeRoleLevel, email: string, phone: string, company: string, occupation: string };
-
 export type LaForgeGetUserListQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type LaForgeGetUserListQuery = { __typename?: 'Query', getUserList?: Array<{ __typename?: 'AuthUser', id: string, first_name: string, last_name: string, username: string, provider: LaForgeProviderType, role: LaForgeRoleLevel, email: string, phone: string, company: string, occupation: string } | null> | null };
+
+export type LaForgeGetCurrentUserQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LaForgeGetCurrentUserQuery = { __typename?: 'Query', currentUser?: { __typename?: 'AuthUser', id: string, first_name: string, last_name: string, username: string, provider: LaForgeProviderType, role: LaForgeRoleLevel, email: string, phone: string, company: string, occupation: string } | null };
+
+export type LaForgeAuthUserFieldsFragment = { __typename?: 'AuthUser', id: string, first_name: string, last_name: string, username: string, provider: LaForgeProviderType, role: LaForgeRoleLevel, email: string, phone: string, company: string, occupation: string };
 
 export const AuthUserFieldsFragmentDoc = gql`
     fragment AuthUserFields on AuthUser {
@@ -948,6 +953,24 @@ export const GetUserListDocument = gql`
   })
   export class LaForgeGetUserListGQL extends Apollo.Query<LaForgeGetUserListQuery, LaForgeGetUserListQueryVariables> {
     document = GetUserListDocument;
+    
+    constructor(apollo: Apollo.Apollo) {
+      super(apollo);
+    }
+  }
+export const GetCurrentUserDocument = gql`
+    query GetCurrentUser {
+  currentUser {
+    ...AuthUserFields
+  }
+}
+    ${AuthUserFieldsFragmentDoc}`;
+
+  @Injectable({
+    providedIn: 'root'
+  })
+  export class LaForgeGetCurrentUserGQL extends Apollo.Query<LaForgeGetCurrentUserQuery, LaForgeGetCurrentUserQueryVariables> {
+    document = GetCurrentUserDocument;
     
     constructor(apollo: Apollo.Apollo) {
       super(apollo);

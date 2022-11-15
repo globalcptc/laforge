@@ -1,16 +1,3 @@
-fragment AuthUserFields on AuthUser {
-  id
-  first_name
-  last_name
-  username
-  provider
-  role
-  email
-  phone
-  company
-  occupation
-}
-
 query GetUserList {
   getUserList {
     ...AuthUserFields
