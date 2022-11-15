@@ -1,4 +1,4 @@
-import { async, TestBed } from '@angular/core/testing';
+import { waitForAsync, TestBed } from '@angular/core/testing';
 
 import { TitleService } from './title.service';
 
@@ -16,7 +16,7 @@ describe('TitleService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should notify subscribers', async(() => {
+  it('should notify subscribers', waitForAsync(() => {
     service.setTitle('new title');
 
     service.getTitle().subscribe((title) => {
