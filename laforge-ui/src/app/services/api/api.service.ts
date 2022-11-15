@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { LaForgeAuthUser } from 'src/generated/graphql';
+import { LaForgeAuthUser } from '@graphql';
 
 @Injectable({
   providedIn: 'root'

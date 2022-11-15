@@ -1,0 +1,194 @@
+@use 'sass:map';
+@import '../../palette.scss';
+
+$box1-color: map-get($md-accent, 500);
+$box2-color: map-get($md-primary, 500);
+$box-width: min(10%, 15rem);
+$header-height: 15rem;
+$header-padding: 1rem;
+
+.laforge-header {
+  // background: red;
+  position: relative;
+  height: $header-height;
+  font-family: url('/assets/fonts/Helvetica Ultra Compressed.otf');
+  box-sizing: border-box;
+
+  .box1 {
+    background: $box1-color;
+    position: absolute;
+    top: 0;
+    left: $header-padding;
+    width: $box-width;
+    height: calc($header-height * 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .logo {
+      width: 90%;
+    }
+  }
+
+  .box2 {
+    background: $box2-color;
+    position: absolute;
+    top: calc($header-height * 0.4);
+    left: $header-padding;
+    width: $box-width;
+    height: calc($header-height * 0.6);
+    border-bottom-left-radius: calc($header-height * 0.3);
+  }
+
+  .bottom {
+    background: $box2-color;
+    position: absolute;
+    top: calc($header-height - max(25px, calc($header-height * 0.1)));
+    left: calc($box-width + $header-padding);
+    width: calc(100% - $box-width - $header-padding);
+    height: max(25px, calc($header-height * 0.1));
+  }
+  .bottom::before {
+    content: '';
+    position: absolute;
+    background-color: transparent;
+    top: -50px;
+    left: 0;
+    height: 50px;
+    width: 25px;
+    border-bottom-left-radius: 25px;
+    box-shadow: 0 25px 0 0 $box2-color;
+  }
+
+  .container {
+    position: absolute;
+    top: 0;
+    left: calc($box-width + $header-padding);
+    height: calc($header-height - max(25px, calc($header-height * 0.1)));
+    width: calc(100% - $box-width);
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+
+    .numbers-flashing {
+      height: 100%;
+      width: 40%;
+
+      .numbers-flashing-row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+
+        .numbers-flashing-cell {
+          width: 3rem;
+          display: flex;
+          justify-content: flex-end;
+          margin: 0.1rem 0.2rem;
+
+          h2 {
+            margin: 0;
+            font-weight: bold;
+            color: #f70;
+            animation: flashing 2s infinite;
+          }
+        }
+      }
+
+      .numbers-flashing-row-1 .numbers-flashing-cell h2 {
+        animation-delay: 0s;
+      }
+
+      .numbers-flashing-row-2 .numbers-flashing-cell h2 {
+        animation-delay: 0.2s;
+      }
+
+      .numbers-flashing-row-3 .numbers-flashing-cell h2 {
+        animation-delay: 0.4s;
+      }
+
+      .numbers-flashing-row-4 .numbers-flashing-cell h2 {
+        animation-delay: 0.6s;
+      }
+
+      .numbers-flashing-row-5 .numbers-flashing-cell h2 {
+        animation-delay: 0.8s;
+      }
+
+      .numbers-flashing-row-2 .numbers-flashing-cell h2 {
+        animation-delay: 1s;
+      }
+    }
+  }
+
+  .navigation {
+    width: 40%;
+
+    .page-title {
+      font-size: 3rem;
+      font-weight: bold;
+      color: map-get($md-primary, 500);
+      text-align: right;
+      line-height: 1.2;
+      margin: 0 0.5rem;
+    }
+
+    .nav-buttons {
+      height: 60%;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+
+      .nav-link {
+        text-decoration: none;
+        width: 40%;
+        margin: 0.5rem;
+        height: 3.5rem;
+        padding: 0.5rem 1rem;
+        box-sizing: border-box;
+        background-color: map-get($md-accent, 500);
+        border-radius: 1.5rem;
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-end;
+        font-size: 1.25rem;
+        font-weight: bold;
+        font-family: inherit;
+        color: black;
+        text-transform: uppercase;
+      }
+    }
+  }
+}
+
+.laforge-light {
+  @keyframes flashing {
+    25% {
+      color: #f70;
+    }
+    75% {
+      color: transparent;
+    }
+    100% {
+      color: black;
+    }
+  }
+}
+
+.laforge-dark {
+  @keyframes flashing {
+    25% {
+      color: #f70;
+    }
+    75% {
+      color: transparent;
+    }
+    100% {
+      color: white;
+    }
+  }
+}
+
+// .laforge-main {
+// }

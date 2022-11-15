@@ -5,7 +5,7 @@ import { createClient } from 'graphql-ws';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { APOLLO_OPTIONS } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
-import { environment } from 'src/environments/environment';
+import { environment } from '@env';
 
 export function createApollo(httpLink: HttpLink): ApolloClientOptions<any> {
   const httpClient = httpLink.create({
