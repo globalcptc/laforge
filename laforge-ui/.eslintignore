@@ -2,6 +2,7 @@ node_modules
 package.json
 package-lock.json
 dist
+.angular
 
 # Ignore some template stuff
 src/app/_helpers
