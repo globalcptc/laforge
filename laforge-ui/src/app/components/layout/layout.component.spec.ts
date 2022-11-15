@@ -1,9 +1,13 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { RouterTestingModule } from '@angular/router/testing';
 import { TitleService } from '@services/title/title.service';
 
 import { LayoutComponent } from './layout.component';
+
+// eslint-disable-next-line @angular-eslint/component-selector
+@Component({ selector: 'router-outlet', template: '' })
+class RouterOutletStubComponent {}
 
 describe('LayoutComponent', () => {
   let component: LayoutComponent;
@@ -13,8 +17,7 @@ describe('LayoutComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [RouterTestingModule],
-      declarations: [LayoutComponent]
+      declarations: [LayoutComponent, RouterOutletStubComponent]
     }).compileComponents();
 
     fixture = TestBed.createComponent(LayoutComponent);
@@ -32,12 +35,12 @@ describe('LayoutComponent', () => {
   it('should render title', waitForAsync(() => {
     titleService.setTitle('LaForge Test');
     fixture.detectChanges();
-    let title = fixture.debugElement.query(By.css('.page-title'));
+    const title = fixture.debugElement.query(By.css('.page-title'));
     expect(title.nativeElement.textContent.trim()).toBe('LaForge Test');
   }));
 
   it('should dynamically render title', waitForAsync(() => {
-    let title = fixture.debugElement.query(By.css('.page-title'));
+    const title = fixture.debugElement.query(By.css('.page-title'));
     titleService.setTitle('LaForge Test 1');
     fixture.detectChanges();
     expect(title.nativeElement.textContent.trim()).toBe('LaForge Test 1');

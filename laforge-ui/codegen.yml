@@ -7,6 +7,7 @@ generates:
       serviceName: 'GraphQL'
       serviceProvidedInRoot: true
       typesPrefix: 'LaForge'
+      enumsPrefix: 'LaForge'
     hooks:
       afterOneFileWrite:
         - eslint ./src/generated --fix
@@ -14,11 +15,9 @@ generates:
       - 'typescript'
       - 'typescript-operations'
       - 'typescript-apollo-angular'
-  src/generated/graphql-mocks.ts:
-    plugins:
-      - typescript-mock-data:
-          typesFile: '../generated-types.ts'
+      - 'typescript-mock-data':
           prefix: 'Mock'
+          addTypename: true
   ./graphql.schema.json:
     plugins:
       - 'introspection'
