@@ -20,10 +20,10 @@
     "module": "es2020",
     "lib": ["es2020", "dom"],
     "paths": {
-      "@components": ["src/app/components/"],
-      "@models": ["src/app/models/"],
-      "@pages": ["src/app/pages/"],
-      "@services": ["src/app/services/"],
+      "@components/*": ["src/app/components/*"],
+      "@models/*": ["src/app/models/*"],
+      "@pages/*": ["src/app/pages/*"],
+      "@services/*": ["src/app/services/*"],
       "@env": ["src/environments/environment"],
       "@graphql": ["src/generated/graphql"]
     }

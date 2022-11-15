@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { TitleService } from '../services/title/title.service';
+import { TitleService } from '@services/title/title.service';
 
 @Component({
-  selector: 'app-layout',
+  selector: 'laforge-layout',
   templateUrl: './layout.component.html',
   styleUrls: ['./layout.component.scss']
 })
