@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/gen0cide/laforge/ent"
@@ -12,10 +14,46 @@ func main() {
 	entScheduleSteps := []*ent.ScheduleStep{
 		{
 			ID:                                       [16]byte{},
-			Type:                                     "",
+			Type:                                     schedulestep.TypeScript,
 			Repeated:                                 false,
 			StartTime:                                time.Now().Add(1 * time.Minute),
-			EndTime:                                  time.Time{},
+			EndTime:                                  time.Now().Add(10 * time.Minute),
+			Interval:                                 0,
+			Edges:                                    ent.ScheduleStepEdges{},
+			HCLScheduleStepToStatus:                  &ent.Status{},
+			HCLScheduleStepToScript:                  &ent.Script{},
+			HCLScheduleStepToCommand:                 &ent.Command{},
+			HCLScheduleStepToFileDelete:              &ent.FileDelete{},
+			HCLScheduleStepToFileDownload:            &ent.FileDownload{},
+			HCLScheduleStepToFileExtract:             &ent.FileExtract{},
+			HCLScheduleStepToAnsible:                 &ent.Ansible{},
+			HCLScheduleStepToProvisionedScheduleStep: []*ent.ProvisionedScheduleStep{},
+			HCLScheduleStepToHost:                    &ent.Host{},
+		},
+		{
+			ID:                                       [16]byte{},
+			Type:                                     schedulestep.TypeCommand,
+			Repeated:                                 true,
+			StartTime:                                time.Now().Add(1 * time.Minute),
+			EndTime:                                  time.Now().Add(30 * time.Minute),
+			Interval:                                 5,
+			Edges:                                    ent.ScheduleStepEdges{},
+			HCLScheduleStepToStatus:                  &ent.Status{},
+			HCLScheduleStepToScript:                  &ent.Script{},
+			HCLScheduleStepToCommand:                 &ent.Command{},
+			HCLScheduleStepToFileDelete:              &ent.FileDelete{},
+			HCLScheduleStepToFileDownload:            &ent.FileDownload{},
+			HCLScheduleStepToFileExtract:             &ent.FileExtract{},
+			HCLScheduleStepToAnsible:                 &ent.Ansible{},
+			HCLScheduleStepToProvisionedScheduleStep: []*ent.ProvisionedScheduleStep{},
+			HCLScheduleStepToHost:                    &ent.Host{},
+		},
+		{
+			ID:                                       [16]byte{},
+			Type:                                     schedulestep.TypeFileDownload,
+			Repeated:                                 false,
+			StartTime:                                time.Now().Add(1 * time.Minute),
+			EndTime:                                  time.Now().Add(5 * time.Minute),
 			Interval:                                 0,
 			Edges:                                    ent.ScheduleStepEdges{},
 			HCLScheduleStepToStatus:                  &ent.Status{},
@@ -30,6 +68,9 @@ func main() {
 		},
 	}
 
+	ctx, _ := context.WithCancel(context.Background())
+
+	ScheduleStepWatchdog(ctx, entScheduleSteps)
 }
 
 // GenerateProvisionedScheduleStep is a skeleton of the scheduling function
@@ -76,8 +117,39 @@ func ScheduleStepWatchdog(ctx context.Context, entScheduledSteps []*ent.Schedule
 			// 	continue
 			// }
 			switch entScheduledStep.Type {
+			case schedulestep.TypeScript:
+				fmt.Println("Starting " + entScheduledStep.Type.String() +
+					" at " + entScheduledStep.StartTime.String() +
+					" Ending at " + entScheduledStep.EndTime.String() +
+					" and is repeated for " + strconv.FormatBool(entScheduledStep.Repeated))
 			case schedulestep.TypeCommand:
-
+				fmt.Println("Starting " + entScheduledStep.Type.String() +
+					" at " + entScheduledStep.StartTime.String() +
+					" Ending at " + entScheduledStep.EndTime.String() +
+					" and is repeated for " + strconv.FormatBool(entScheduledStep.Repeated))
+			case schedulestep.TypeFileDelete:
+				fmt.Println("Starting " + entScheduledStep.Type.String() +
+					" at " + entScheduledStep.StartTime.String() +
+					" Ending at " + entScheduledStep.EndTime.String() +
+					" and is repeated for " + strconv.FormatBool(entScheduledStep.Repeated))
+			case schedulestep.TypeFileDownload:
+				fmt.Println("Starting " + entScheduledStep.Type.String() +
+					" at " + entScheduledStep.StartTime.String() +
+					" Ending at " + entScheduledStep.EndTime.String() +
+					" and is repeated for " + strconv.FormatBool(entScheduledStep.Repeated))
+			case schedulestep.TypeFileExtract:
+				fmt.Println("Starting " + entScheduledStep.Type.String() +
+					" at " + entScheduledStep.StartTime.String() +
+					" Ending at " + entScheduledStep.EndTime.String() +
+					" and is repeated for " + strconv.FormatBool(entScheduledStep.Repeated))
+			case schedulestep.TypeAnsible:
+				fmt.Println("Starting " + entScheduledStep.Type.String() +
+					" at " + entScheduledStep.StartTime.String() +
+					" Ending at " + entScheduledStep.EndTime.String() +
+					" and is repeated for " + strconv.FormatBool(entScheduledStep.Repeated))
+			default:
+				fmt.Println("Should not be here")
+				break
 			}
 			// Query DB for all provisioned scheduled steps that haven't been run and their run_time is in the past
 
@@ -86,7 +158,7 @@ func ScheduleStepWatchdog(ctx context.Context, entScheduledSteps []*ent.Schedule
 			// Mark ProvisionedSchuledStep as Complete (equivalent to run) via status
 
 			// Sleep and then check again
-			time.Sleep(1 * time.Minute)
+			time.Sleep(1 * time.Second)
 		}
 	}
 }
