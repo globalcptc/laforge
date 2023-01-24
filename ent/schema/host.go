@@ -60,6 +60,7 @@ func (Host) Edges() []ent.Edge {
 			}),
 		edge.To("HostToUser", User.Type).
 			StructTag(`hcl:"maintainer,block"`),
+		edge.To("HostToScheduleStep", ScheduleStep.Type),
 		edge.From("HostToEnvironment", Environment.Type).
 			Ref("EnvironmentToHost").
 			Unique(),
