@@ -44,10 +44,10 @@ type ProvisionedHost struct {
 	HCLProvisionedHostToEndStepPlan *Plan `json:"ProvisionedHostToEndStepPlan,omitempty"`
 	// ProvisionedHostToBuild holds the value of the ProvisionedHostToBuild edge.
 	HCLProvisionedHostToBuild *Build `json:"ProvisionedHostToBuild,omitempty"`
-	// ProvisionedHostToProvisionedScheduleStep holds the value of the ProvisionedHostToProvisionedScheduleStep edge.
-	HCLProvisionedHostToProvisionedScheduleStep []*ProvisionedScheduleStep `json:"ProvisionedHostToProvisionedScheduleStep,omitempty"`
 	// ProvisionedHostToProvisioningStep holds the value of the ProvisionedHostToProvisioningStep edge.
 	HCLProvisionedHostToProvisioningStep []*ProvisioningStep `json:"ProvisionedHostToProvisioningStep,omitempty"`
+	// ProvisionedHostToProvisioningScheduleStep holds the value of the ProvisionedHostToProvisioningScheduleStep edge.
+	HCLProvisionedHostToProvisioningScheduleStep []*ProvisioningScheduledStep `json:"ProvisionedHostToProvisioningScheduleStep,omitempty"`
 	// ProvisionedHostToAgentStatus holds the value of the ProvisionedHostToAgentStatus edge.
 	HCLProvisionedHostToAgentStatus []*AgentStatus `json:"ProvisionedHostToAgentStatus,omitempty"`
 	// ProvisionedHostToAgentTask holds the value of the ProvisionedHostToAgentTask edge.
@@ -77,10 +77,10 @@ type ProvisionedHostEdges struct {
 	ProvisionedHostToEndStepPlan *Plan `json:"ProvisionedHostToEndStepPlan,omitempty"`
 	// ProvisionedHostToBuild holds the value of the ProvisionedHostToBuild edge.
 	ProvisionedHostToBuild *Build `json:"ProvisionedHostToBuild,omitempty"`
-	// ProvisionedHostToProvisionedScheduleStep holds the value of the ProvisionedHostToProvisionedScheduleStep edge.
-	ProvisionedHostToProvisionedScheduleStep []*ProvisionedScheduleStep `json:"ProvisionedHostToProvisionedScheduleStep,omitempty"`
 	// ProvisionedHostToProvisioningStep holds the value of the ProvisionedHostToProvisioningStep edge.
 	ProvisionedHostToProvisioningStep []*ProvisioningStep `json:"ProvisionedHostToProvisioningStep,omitempty"`
+	// ProvisionedHostToProvisioningScheduleStep holds the value of the ProvisionedHostToProvisioningScheduleStep edge.
+	ProvisionedHostToProvisioningScheduleStep []*ProvisioningScheduledStep `json:"ProvisionedHostToProvisioningScheduleStep,omitempty"`
 	// ProvisionedHostToAgentStatus holds the value of the ProvisionedHostToAgentStatus edge.
 	ProvisionedHostToAgentStatus []*AgentStatus `json:"ProvisionedHostToAgentStatus,omitempty"`
 	// ProvisionedHostToAgentTask holds the value of the ProvisionedHostToAgentTask edge.
@@ -164,22 +164,22 @@ func (e ProvisionedHostEdges) ProvisionedHostToBuildOrErr() (*Build, error) {
 	return nil, &NotLoadedError{edge: "ProvisionedHostToBuild"}
 }
 
-// ProvisionedHostToProvisionedScheduleStepOrErr returns the ProvisionedHostToProvisionedScheduleStep value or an error if the edge
-// was not loaded in eager-loading.
-func (e ProvisionedHostEdges) ProvisionedHostToProvisionedScheduleStepOrErr() ([]*ProvisionedScheduleStep, error) {
-	if e.loadedTypes[5] {
-		return e.ProvisionedHostToProvisionedScheduleStep, nil
-	}
-	return nil, &NotLoadedError{edge: "ProvisionedHostToProvisionedScheduleStep"}
-}
-
 // ProvisionedHostToProvisioningStepOrErr returns the ProvisionedHostToProvisioningStep value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProvisionedHostEdges) ProvisionedHostToProvisioningStepOrErr() ([]*ProvisioningStep, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[5] {
 		return e.ProvisionedHostToProvisioningStep, nil
 	}
 	return nil, &NotLoadedError{edge: "ProvisionedHostToProvisioningStep"}
+}
+
+// ProvisionedHostToProvisioningScheduleStepOrErr returns the ProvisionedHostToProvisioningScheduleStep value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProvisionedHostEdges) ProvisionedHostToProvisioningScheduleStepOrErr() ([]*ProvisioningScheduledStep, error) {
+	if e.loadedTypes[6] {
+		return e.ProvisionedHostToProvisioningScheduleStep, nil
+	}
+	return nil, &NotLoadedError{edge: "ProvisionedHostToProvisioningScheduleStep"}
 }
 
 // ProvisionedHostToAgentStatusOrErr returns the ProvisionedHostToAgentStatus value or an error if the edge
@@ -365,14 +365,14 @@ func (ph *ProvisionedHost) QueryProvisionedHostToBuild() *BuildQuery {
 	return (&ProvisionedHostClient{config: ph.config}).QueryProvisionedHostToBuild(ph)
 }
 
-// QueryProvisionedHostToProvisionedScheduleStep queries the "ProvisionedHostToProvisionedScheduleStep" edge of the ProvisionedHost entity.
-func (ph *ProvisionedHost) QueryProvisionedHostToProvisionedScheduleStep() *ProvisionedScheduleStepQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryProvisionedHostToProvisionedScheduleStep(ph)
-}
-
 // QueryProvisionedHostToProvisioningStep queries the "ProvisionedHostToProvisioningStep" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryProvisionedHostToProvisioningStep() *ProvisioningStepQuery {
 	return (&ProvisionedHostClient{config: ph.config}).QueryProvisionedHostToProvisioningStep(ph)
+}
+
+// QueryProvisionedHostToProvisioningScheduleStep queries the "ProvisionedHostToProvisioningScheduleStep" edge of the ProvisionedHost entity.
+func (ph *ProvisionedHost) QueryProvisionedHostToProvisioningScheduleStep() *ProvisioningScheduledStepQuery {
+	return (&ProvisionedHostClient{config: ph.config}).QueryProvisionedHostToProvisioningScheduleStep(ph)
 }
 
 // QueryProvisionedHostToAgentStatus queries the "ProvisionedHostToAgentStatus" edge of the ProvisionedHost entity.

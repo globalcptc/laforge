@@ -15,7 +15,7 @@ import (
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/google/uuid"
 )
@@ -23,17 +23,17 @@ import (
 // AgentTaskQuery is the builder for querying AgentTask entities.
 type AgentTaskQuery struct {
 	config
-	limit                                  *int
-	offset                                 *int
-	unique                                 *bool
-	order                                  []OrderFunc
-	fields                                 []string
-	predicates                             []predicate.AgentTask
-	withAgentTaskToProvisioningStep        *ProvisioningStepQuery
-	withAgentTaskToProvisionedHost         *ProvisionedHostQuery
-	withAgentTaskToProvisionedScheduleStep *ProvisionedScheduleStepQuery
-	withAgentTaskToAdhocPlan               *AdhocPlanQuery
-	withFKs                                bool
+	limit                                    *int
+	offset                                   *int
+	unique                                   *bool
+	order                                    []OrderFunc
+	fields                                   []string
+	predicates                               []predicate.AgentTask
+	withAgentTaskToProvisioningStep          *ProvisioningStepQuery
+	withAgentTaskToProvisioningScheduledStep *ProvisioningScheduledStepQuery
+	withAgentTaskToProvisionedHost           *ProvisionedHostQuery
+	withAgentTaskToAdhocPlan                 *AdhocPlanQuery
+	withFKs                                  bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -92,6 +92,28 @@ func (atq *AgentTaskQuery) QueryAgentTaskToProvisioningStep() *ProvisioningStepQ
 	return query
 }
 
+// QueryAgentTaskToProvisioningScheduledStep chains the current query on the "AgentTaskToProvisioningScheduledStep" edge.
+func (atq *AgentTaskQuery) QueryAgentTaskToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+	query := &ProvisioningScheduledStepQuery{config: atq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := atq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := atq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
+			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, agenttask.AgentTaskToProvisioningScheduledStepTable, agenttask.AgentTaskToProvisioningScheduledStepColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryAgentTaskToProvisionedHost chains the current query on the "AgentTaskToProvisionedHost" edge.
 func (atq *AgentTaskQuery) QueryAgentTaskToProvisionedHost() *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: atq.config}
@@ -107,28 +129,6 @@ func (atq *AgentTaskQuery) QueryAgentTaskToProvisionedHost() *ProvisionedHostQue
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.AgentTaskToProvisionedHostTable, agenttask.AgentTaskToProvisionedHostColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryAgentTaskToProvisionedScheduleStep chains the current query on the "AgentTaskToProvisionedScheduleStep" edge.
-func (atq *AgentTaskQuery) QueryAgentTaskToProvisionedScheduleStep() *ProvisionedScheduleStepQuery {
-	query := &ProvisionedScheduleStepQuery{config: atq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := atq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := atq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
-			sqlgraph.To(provisionedschedulestep.Table, provisionedschedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, agenttask.AgentTaskToProvisionedScheduleStepTable, agenttask.AgentTaskToProvisionedScheduleStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
 		return fromU, nil
@@ -334,15 +334,15 @@ func (atq *AgentTaskQuery) Clone() *AgentTaskQuery {
 		return nil
 	}
 	return &AgentTaskQuery{
-		config:                                 atq.config,
-		limit:                                  atq.limit,
-		offset:                                 atq.offset,
-		order:                                  append([]OrderFunc{}, atq.order...),
-		predicates:                             append([]predicate.AgentTask{}, atq.predicates...),
-		withAgentTaskToProvisioningStep:        atq.withAgentTaskToProvisioningStep.Clone(),
-		withAgentTaskToProvisionedHost:         atq.withAgentTaskToProvisionedHost.Clone(),
-		withAgentTaskToProvisionedScheduleStep: atq.withAgentTaskToProvisionedScheduleStep.Clone(),
-		withAgentTaskToAdhocPlan:               atq.withAgentTaskToAdhocPlan.Clone(),
+		config:                                   atq.config,
+		limit:                                    atq.limit,
+		offset:                                   atq.offset,
+		order:                                    append([]OrderFunc{}, atq.order...),
+		predicates:                               append([]predicate.AgentTask{}, atq.predicates...),
+		withAgentTaskToProvisioningStep:          atq.withAgentTaskToProvisioningStep.Clone(),
+		withAgentTaskToProvisioningScheduledStep: atq.withAgentTaskToProvisioningScheduledStep.Clone(),
+		withAgentTaskToProvisionedHost:           atq.withAgentTaskToProvisionedHost.Clone(),
+		withAgentTaskToAdhocPlan:                 atq.withAgentTaskToAdhocPlan.Clone(),
 		// clone intermediate query.
 		sql:    atq.sql.Clone(),
 		path:   atq.path,
@@ -361,6 +361,17 @@ func (atq *AgentTaskQuery) WithAgentTaskToProvisioningStep(opts ...func(*Provisi
 	return atq
 }
 
+// WithAgentTaskToProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
+// the "AgentTaskToProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *AgentTaskQuery) WithAgentTaskToProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *AgentTaskQuery {
+	query := &ProvisioningScheduledStepQuery{config: atq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	atq.withAgentTaskToProvisioningScheduledStep = query
+	return atq
+}
+
 // WithAgentTaskToProvisionedHost tells the query-builder to eager-load the nodes that are connected to
 // the "AgentTaskToProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
 func (atq *AgentTaskQuery) WithAgentTaskToProvisionedHost(opts ...func(*ProvisionedHostQuery)) *AgentTaskQuery {
@@ -369,17 +380,6 @@ func (atq *AgentTaskQuery) WithAgentTaskToProvisionedHost(opts ...func(*Provisio
 		opt(query)
 	}
 	atq.withAgentTaskToProvisionedHost = query
-	return atq
-}
-
-// WithAgentTaskToProvisionedScheduleStep tells the query-builder to eager-load the nodes that are connected to
-// the "AgentTaskToProvisionedScheduleStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (atq *AgentTaskQuery) WithAgentTaskToProvisionedScheduleStep(opts ...func(*ProvisionedScheduleStepQuery)) *AgentTaskQuery {
-	query := &ProvisionedScheduleStepQuery{config: atq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	atq.withAgentTaskToProvisionedScheduleStep = query
 	return atq
 }
 
@@ -465,8 +465,8 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 		_spec       = atq.querySpec()
 		loadedTypes = [4]bool{
 			atq.withAgentTaskToProvisioningStep != nil,
+			atq.withAgentTaskToProvisioningScheduledStep != nil,
 			atq.withAgentTaskToProvisionedHost != nil,
-			atq.withAgentTaskToProvisionedScheduleStep != nil,
 			atq.withAgentTaskToAdhocPlan != nil,
 		}
 	)
@@ -500,15 +500,15 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 			return nil, err
 		}
 	}
-	if query := atq.withAgentTaskToProvisionedHost; query != nil {
-		if err := atq.loadAgentTaskToProvisionedHost(ctx, query, nodes, nil,
-			func(n *AgentTask, e *ProvisionedHost) { n.Edges.AgentTaskToProvisionedHost = e }); err != nil {
+	if query := atq.withAgentTaskToProvisioningScheduledStep; query != nil {
+		if err := atq.loadAgentTaskToProvisioningScheduledStep(ctx, query, nodes, nil,
+			func(n *AgentTask, e *ProvisioningScheduledStep) { n.Edges.AgentTaskToProvisioningScheduledStep = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := atq.withAgentTaskToProvisionedScheduleStep; query != nil {
-		if err := atq.loadAgentTaskToProvisionedScheduleStep(ctx, query, nodes, nil,
-			func(n *AgentTask, e *ProvisionedScheduleStep) { n.Edges.AgentTaskToProvisionedScheduleStep = e }); err != nil {
+	if query := atq.withAgentTaskToProvisionedHost; query != nil {
+		if err := atq.loadAgentTaskToProvisionedHost(ctx, query, nodes, nil,
+			func(n *AgentTask, e *ProvisionedHost) { n.Edges.AgentTaskToProvisionedHost = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -553,6 +553,34 @@ func (atq *AgentTaskQuery) loadAgentTaskToProvisioningStep(ctx context.Context, 
 	}
 	return nil
 }
+func (atq *AgentTaskQuery) loadAgentTaskToProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisioningScheduledStep)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*AgentTask)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.ProvisioningScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.InValues(agenttask.AgentTaskToProvisioningScheduledStepColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.agent_task_agent_task_to_provisioning_scheduled_step
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "agent_task_agent_task_to_provisioning_scheduled_step" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_provisioning_scheduled_step" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
 func (atq *AgentTaskQuery) loadAgentTaskToProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisionedHost)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*AgentTask)
@@ -579,34 +607,6 @@ func (atq *AgentTaskQuery) loadAgentTaskToProvisionedHost(ctx context.Context, q
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
-	}
-	return nil
-}
-func (atq *AgentTaskQuery) loadAgentTaskToProvisionedScheduleStep(ctx context.Context, query *ProvisionedScheduleStepQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisionedScheduleStep)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*AgentTask)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-	}
-	query.withFKs = true
-	query.Where(predicate.ProvisionedScheduleStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(agenttask.AgentTaskToProvisionedScheduleStepColumn, fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.agent_task_agent_task_to_provisioned_schedule_step
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_task_agent_task_to_provisioned_schedule_step" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_provisioned_schedule_step" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
 	}
 	return nil
 }

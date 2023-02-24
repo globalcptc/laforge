@@ -54,11 +54,8 @@ func (Status) Edges() []ent.Edge {
 		edge.From("StatusToAdhocPlan", AdhocPlan.Type).
 			Ref("AdhocPlanToStatus").
 			Unique(),
-		edge.From("StatusToScheduleStep", ScheduleStep.Type).
-			Ref("ScheduleStepToStatus").
-			Unique(),
-		edge.From("StatusToProvisionedScheduleStep", ProvisionedScheduleStep.Type).
-			Ref("ProvisionedScheduleStepToStatus").
+		edge.From("StatusToProvisioningScheduledStep", ProvisioningScheduledStep.Type).
+			Ref("ProvisioningScheduledStepToStatus").
 			Unique(),
 	}
 }

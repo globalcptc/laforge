@@ -45,6 +45,8 @@ type Host struct {
 	UserGroups []string `json:"user_groups,omitempty" hcl:"user_groups,optional"`
 	// ProvisionSteps holds the value of the "provision_steps" field.
 	ProvisionSteps []string `json:"provision_steps,omitempty" hcl:"provision_steps,optional"`
+	// ScheduledSteps holds the value of the "scheduled_steps" field.
+	ScheduledSteps []string `json:"scheduled_steps,omitempty" hcl:"scheduled_steps,optional"`
 	// Tags holds the value of the "tags" field.
 	Tags map[string]string `json:"tags,omitempty" hcl:"tags,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -56,8 +58,6 @@ type Host struct {
 	HCLHostToDisk *Disk `json:"HostToDisk,omitempty" hcl:"disk,block"`
 	// HostToUser holds the value of the HostToUser edge.
 	HCLHostToUser []*User `json:"HostToUser,omitempty" hcl:"maintainer,block"`
-	// HostToScheduleStep holds the value of the HostToScheduleStep edge.
-	HCLHostToScheduleStep []*ScheduleStep `json:"HostToScheduleStep,omitempty"`
 	// HostToEnvironment holds the value of the HostToEnvironment edge.
 	HCLHostToEnvironment *Environment `json:"HostToEnvironment,omitempty"`
 	// HostToIncludedNetwork holds the value of the HostToIncludedNetwork edge.
@@ -76,8 +76,6 @@ type HostEdges struct {
 	HostToDisk *Disk `json:"HostToDisk,omitempty" hcl:"disk,block"`
 	// HostToUser holds the value of the HostToUser edge.
 	HostToUser []*User `json:"HostToUser,omitempty" hcl:"maintainer,block"`
-	// HostToScheduleStep holds the value of the HostToScheduleStep edge.
-	HostToScheduleStep []*ScheduleStep `json:"HostToScheduleStep,omitempty"`
 	// HostToEnvironment holds the value of the HostToEnvironment edge.
 	HostToEnvironment *Environment `json:"HostToEnvironment,omitempty"`
 	// HostToIncludedNetwork holds the value of the HostToIncludedNetwork edge.
@@ -88,7 +86,7 @@ type HostEdges struct {
 	DependByHostToHostDependency []*HostDependency `json:"DependByHostToHostDependency,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [6]bool
 }
 
 // HostToDiskOrErr returns the HostToDisk value or an error if the edge
@@ -114,19 +112,10 @@ func (e HostEdges) HostToUserOrErr() ([]*User, error) {
 	return nil, &NotLoadedError{edge: "HostToUser"}
 }
 
-// HostToScheduleStepOrErr returns the HostToScheduleStep value or an error if the edge
-// was not loaded in eager-loading.
-func (e HostEdges) HostToScheduleStepOrErr() ([]*ScheduleStep, error) {
-	if e.loadedTypes[2] {
-		return e.HostToScheduleStep, nil
-	}
-	return nil, &NotLoadedError{edge: "HostToScheduleStep"}
-}
-
 // HostToEnvironmentOrErr returns the HostToEnvironment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e HostEdges) HostToEnvironmentOrErr() (*Environment, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[2] {
 		if e.HostToEnvironment == nil {
 			// The edge HostToEnvironment was loaded in eager-loading,
 			// but was not found.
@@ -140,7 +129,7 @@ func (e HostEdges) HostToEnvironmentOrErr() (*Environment, error) {
 // HostToIncludedNetworkOrErr returns the HostToIncludedNetwork value or an error if the edge
 // was not loaded in eager-loading.
 func (e HostEdges) HostToIncludedNetworkOrErr() ([]*IncludedNetwork, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[3] {
 		return e.HostToIncludedNetwork, nil
 	}
 	return nil, &NotLoadedError{edge: "HostToIncludedNetwork"}
@@ -149,7 +138,7 @@ func (e HostEdges) HostToIncludedNetworkOrErr() ([]*IncludedNetwork, error) {
 // DependOnHostToHostDependencyOrErr returns the DependOnHostToHostDependency value or an error if the edge
 // was not loaded in eager-loading.
 func (e HostEdges) DependOnHostToHostDependencyOrErr() ([]*HostDependency, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[4] {
 		return e.DependOnHostToHostDependency, nil
 	}
 	return nil, &NotLoadedError{edge: "DependOnHostToHostDependency"}
@@ -158,7 +147,7 @@ func (e HostEdges) DependOnHostToHostDependencyOrErr() ([]*HostDependency, error
 // DependByHostToHostDependencyOrErr returns the DependByHostToHostDependency value or an error if the edge
 // was not loaded in eager-loading.
 func (e HostEdges) DependByHostToHostDependencyOrErr() ([]*HostDependency, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[5] {
 		return e.DependByHostToHostDependency, nil
 	}
 	return nil, &NotLoadedError{edge: "DependByHostToHostDependency"}
@@ -169,7 +158,7 @@ func (*Host) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case host.FieldExposedTCPPorts, host.FieldExposedUDPPorts, host.FieldVars, host.FieldUserGroups, host.FieldProvisionSteps, host.FieldTags:
+		case host.FieldExposedTCPPorts, host.FieldExposedUDPPorts, host.FieldVars, host.FieldUserGroups, host.FieldProvisionSteps, host.FieldScheduledSteps, host.FieldTags:
 			values[i] = new([]byte)
 		case host.FieldAllowMACChanges:
 			values[i] = new(sql.NullBool)
@@ -290,6 +279,14 @@ func (h *Host) assignValues(columns []string, values []interface{}) error {
 					return fmt.Errorf("unmarshal field provision_steps: %w", err)
 				}
 			}
+		case host.FieldScheduledSteps:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field scheduled_steps", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &h.ScheduledSteps); err != nil {
+					return fmt.Errorf("unmarshal field scheduled_steps: %w", err)
+				}
+			}
 		case host.FieldTags:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field tags", values[i])
@@ -318,11 +315,6 @@ func (h *Host) QueryHostToDisk() *DiskQuery {
 // QueryHostToUser queries the "HostToUser" edge of the Host entity.
 func (h *Host) QueryHostToUser() *UserQuery {
 	return (&HostClient{config: h.config}).QueryHostToUser(h)
-}
-
-// QueryHostToScheduleStep queries the "HostToScheduleStep" edge of the Host entity.
-func (h *Host) QueryHostToScheduleStep() *ScheduleStepQuery {
-	return (&HostClient{config: h.config}).QueryHostToScheduleStep(h)
 }
 
 // QueryHostToEnvironment queries the "HostToEnvironment" edge of the Host entity.
@@ -394,6 +386,8 @@ func (h *Host) String() string {
 	builder.WriteString(fmt.Sprintf("%v", h.UserGroups))
 	builder.WriteString(", provision_steps=")
 	builder.WriteString(fmt.Sprintf("%v", h.ProvisionSteps))
+	builder.WriteString(", scheduled_steps=")
+	builder.WriteString(fmt.Sprintf("%v", h.ScheduledSteps))
 	builder.WriteString(", tags=")
 	builder.WriteString(fmt.Sprintf("%v", h.Tags))
 	builder.WriteByte(')')

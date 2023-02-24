@@ -37,11 +37,11 @@ import (
 	"github.com/gen0cide/laforge/ent/plandiff"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
-	"github.com/gen0cide/laforge/ent/schedulestep"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
@@ -69,45 +69,45 @@ type OrderFunc func(*sql.Selector)
 // columnChecker returns a function indicates if the column exists in the given column.
 func columnChecker(table string) func(string) error {
 	checks := map[string]func(string) bool{
-		adhocplan.Table:               adhocplan.ValidColumn,
-		agentstatus.Table:             agentstatus.ValidColumn,
-		agenttask.Table:               agenttask.ValidColumn,
-		ansible.Table:                 ansible.ValidColumn,
-		authuser.Table:                authuser.ValidColumn,
-		build.Table:                   build.ValidColumn,
-		buildcommit.Table:             buildcommit.ValidColumn,
-		command.Table:                 command.ValidColumn,
-		competition.Table:             competition.ValidColumn,
-		dns.Table:                     dns.ValidColumn,
-		dnsrecord.Table:               dnsrecord.ValidColumn,
-		disk.Table:                    disk.ValidColumn,
-		environment.Table:             environment.ValidColumn,
-		filedelete.Table:              filedelete.ValidColumn,
-		filedownload.Table:            filedownload.ValidColumn,
-		fileextract.Table:             fileextract.ValidColumn,
-		finding.Table:                 finding.ValidColumn,
-		ginfilemiddleware.Table:       ginfilemiddleware.ValidColumn,
-		host.Table:                    host.ValidColumn,
-		hostdependency.Table:          hostdependency.ValidColumn,
-		identity.Table:                identity.ValidColumn,
-		includednetwork.Table:         includednetwork.ValidColumn,
-		network.Table:                 network.ValidColumn,
-		plan.Table:                    plan.ValidColumn,
-		plandiff.Table:                plandiff.ValidColumn,
-		provisionedhost.Table:         provisionedhost.ValidColumn,
-		provisionednetwork.Table:      provisionednetwork.ValidColumn,
-		provisionedschedulestep.Table: provisionedschedulestep.ValidColumn,
-		provisioningstep.Table:        provisioningstep.ValidColumn,
-		repocommit.Table:              repocommit.ValidColumn,
-		repository.Table:              repository.ValidColumn,
-		schedulestep.Table:            schedulestep.ValidColumn,
-		script.Table:                  script.ValidColumn,
-		servertask.Table:              servertask.ValidColumn,
-		status.Table:                  status.ValidColumn,
-		tag.Table:                     tag.ValidColumn,
-		team.Table:                    team.ValidColumn,
-		token.Table:                   token.ValidColumn,
-		user.Table:                    user.ValidColumn,
+		adhocplan.Table:                 adhocplan.ValidColumn,
+		agentstatus.Table:               agentstatus.ValidColumn,
+		agenttask.Table:                 agenttask.ValidColumn,
+		ansible.Table:                   ansible.ValidColumn,
+		authuser.Table:                  authuser.ValidColumn,
+		build.Table:                     build.ValidColumn,
+		buildcommit.Table:               buildcommit.ValidColumn,
+		command.Table:                   command.ValidColumn,
+		competition.Table:               competition.ValidColumn,
+		dns.Table:                       dns.ValidColumn,
+		dnsrecord.Table:                 dnsrecord.ValidColumn,
+		disk.Table:                      disk.ValidColumn,
+		environment.Table:               environment.ValidColumn,
+		filedelete.Table:                filedelete.ValidColumn,
+		filedownload.Table:              filedownload.ValidColumn,
+		fileextract.Table:               fileextract.ValidColumn,
+		finding.Table:                   finding.ValidColumn,
+		ginfilemiddleware.Table:         ginfilemiddleware.ValidColumn,
+		host.Table:                      host.ValidColumn,
+		hostdependency.Table:            hostdependency.ValidColumn,
+		identity.Table:                  identity.ValidColumn,
+		includednetwork.Table:           includednetwork.ValidColumn,
+		network.Table:                   network.ValidColumn,
+		plan.Table:                      plan.ValidColumn,
+		plandiff.Table:                  plandiff.ValidColumn,
+		provisionedhost.Table:           provisionedhost.ValidColumn,
+		provisionednetwork.Table:        provisionednetwork.ValidColumn,
+		provisioningscheduledstep.Table: provisioningscheduledstep.ValidColumn,
+		provisioningstep.Table:          provisioningstep.ValidColumn,
+		repocommit.Table:                repocommit.ValidColumn,
+		repository.Table:                repository.ValidColumn,
+		scheduledstep.Table:             scheduledstep.ValidColumn,
+		script.Table:                    script.ValidColumn,
+		servertask.Table:                servertask.ValidColumn,
+		status.Table:                    status.ValidColumn,
+		tag.Table:                       tag.ValidColumn,
+		team.Table:                      team.ValidColumn,
+		token.Table:                     token.ValidColumn,
+		user.Table:                      user.ValidColumn,
 	}
 	check, ok := checks[table]
 	if !ok {

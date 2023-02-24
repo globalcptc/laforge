@@ -518,6 +518,7 @@ var (
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "user_groups", Type: field.TypeJSON},
 		{Name: "provision_steps", Type: field.TypeJSON, Nullable: true},
+		{Name: "scheduled_steps", Type: field.TypeJSON, Nullable: true},
 		{Name: "tags", Type: field.TypeJSON},
 		{Name: "environment_environment_to_host", Type: field.TypeUUID, Nullable: true},
 	}
@@ -529,7 +530,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "hosts_environments_EnvironmentToHost",
-				Columns:    []*schema.Column{HostsColumns[15]},
+				Columns:    []*schema.Column{HostsColumns[16]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -801,37 +802,101 @@ var (
 			},
 		},
 	}
-	// ProvisionedScheduleStepsColumns holds the columns for the "provisioned_schedule_steps" table.
-	ProvisionedScheduleStepsColumns = []*schema.Column{
+	// ProvisioningScheduledStepsColumns holds the columns for the "provisioning_scheduled_steps" table.
+	ProvisioningScheduledStepsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract", "Ansible"}},
 		{Name: "run_time", Type: field.TypeTime},
-		{Name: "agent_task_agent_task_to_provisioned_schedule_step", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "provisioned_host_provisioned_host_to_provisioned_schedule_step", Type: field.TypeUUID},
-		{Name: "schedule_step_schedule_step_to_provisioned_schedule_step", Type: field.TypeUUID},
+		{Name: "agent_task_agent_task_to_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "plan_plan_to_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_scheduled_step", Type: field.TypeUUID},
+		{Name: "provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host", Type: field.TypeUUID},
+		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_script", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_command", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_dns_record", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_file_delete", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_file_download", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_file_extract", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_ansible", Type: field.TypeUUID, Nullable: true},
 	}
-	// ProvisionedScheduleStepsTable holds the schema information for the "provisioned_schedule_steps" table.
-	ProvisionedScheduleStepsTable = &schema.Table{
-		Name:       "provisioned_schedule_steps",
-		Columns:    ProvisionedScheduleStepsColumns,
-		PrimaryKey: []*schema.Column{ProvisionedScheduleStepsColumns[0]},
+	// ProvisioningScheduledStepsTable holds the schema information for the "provisioning_scheduled_steps" table.
+	ProvisioningScheduledStepsTable = &schema.Table{
+		Name:       "provisioning_scheduled_steps",
+		Columns:    ProvisioningScheduledStepsColumns,
+		PrimaryKey: []*schema.Column{ProvisioningScheduledStepsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provisioned_schedule_steps_agent_tasks_AgentTaskToProvisionedScheduleStep",
-				Columns:    []*schema.Column{ProvisionedScheduleStepsColumns[2]},
+				Symbol:     "provisioning_scheduled_steps_agent_tasks_AgentTaskToProvisioningScheduledStep",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[3]},
 				RefColumns: []*schema.Column{AgentTasksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "provisioned_schedule_steps_provisioned_hosts_ProvisionedHostToProvisionedScheduleStep",
-				Columns:    []*schema.Column{ProvisionedScheduleStepsColumns[3]},
+				Symbol:     "provisioning_scheduled_steps_gin_file_middlewares_GinFileMiddlewareToProvisioningScheduledStep",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[4]},
+				RefColumns: []*schema.Column{GinFileMiddlewaresColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provisioning_scheduled_steps_plans_PlanToProvisioningScheduledStep",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[5]},
+				RefColumns: []*schema.Column{PlansColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provisioning_scheduled_steps_scheduled_steps_ProvisioningScheduledStepToScheduledStep",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[6]},
+				RefColumns: []*schema.Column{ScheduledStepsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "provisioning_scheduled_steps_provisioned_hosts_ProvisioningScheduleStepToProvisionedHost",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[7]},
 				RefColumns: []*schema.Column{ProvisionedHostsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "provisioned_schedule_steps_schedule_steps_ScheduleStepToProvisionedScheduleStep",
-				Columns:    []*schema.Column{ProvisionedScheduleStepsColumns[4]},
-				RefColumns: []*schema.Column{ScheduleStepsColumns[0]},
-				OnDelete:   schema.NoAction,
+				Symbol:     "provisioning_scheduled_steps_scripts_ProvisioningScheduledStepToScript",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[8]},
+				RefColumns: []*schema.Column{ScriptsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provisioning_scheduled_steps_commands_ProvisioningScheduledStepToCommand",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[9]},
+				RefColumns: []*schema.Column{CommandsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provisioning_scheduled_steps_dns_records_ProvisioningScheduledStepToDNSRecord",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[10]},
+				RefColumns: []*schema.Column{DNSRecordsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provisioning_scheduled_steps_file_deletes_ProvisioningScheduledStepToFileDelete",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[11]},
+				RefColumns: []*schema.Column{FileDeletesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provisioning_scheduled_steps_file_downloads_ProvisioningScheduledStepToFileDownload",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[12]},
+				RefColumns: []*schema.Column{FileDownloadsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provisioning_scheduled_steps_file_extracts_ProvisioningScheduledStepToFileExtract",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[13]},
+				RefColumns: []*schema.Column{FileExtractsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provisioning_scheduled_steps_ansibles_ProvisioningScheduledStepToAnsible",
+				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[14]},
+				RefColumns: []*schema.Column{AnsiblesColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
 		},
 	}
@@ -960,69 +1025,26 @@ var (
 		Columns:    RepositoriesColumns,
 		PrimaryKey: []*schema.Column{RepositoriesColumns[0]},
 	}
-	// ScheduleStepsColumns holds the columns for the "schedule_steps" table.
-	ScheduleStepsColumns = []*schema.Column{
+	// ScheduledStepsColumns holds the columns for the "scheduled_steps" table.
+	ScheduledStepsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "FileDelete", "FileDownload", "FileExtract", "Ansible"}},
-		{Name: "repeated", Type: field.TypeBool},
-		{Name: "start_time", Type: field.TypeTime},
-		{Name: "end_time", Type: field.TypeTime},
-		{Name: "interval", Type: field.TypeInt},
-		{Name: "host_host_to_schedule_step", Type: field.TypeUUID},
-		{Name: "schedule_step_schedule_step_to_script", Type: field.TypeUUID, Nullable: true},
-		{Name: "schedule_step_schedule_step_to_command", Type: field.TypeUUID, Nullable: true},
-		{Name: "schedule_step_schedule_step_to_file_delete", Type: field.TypeUUID, Nullable: true},
-		{Name: "schedule_step_schedule_step_to_file_download", Type: field.TypeUUID, Nullable: true},
-		{Name: "schedule_step_schedule_step_to_file_extract", Type: field.TypeUUID, Nullable: true},
-		{Name: "schedule_step_schedule_step_to_ansible", Type: field.TypeUUID, Nullable: true},
+		{Name: "hcl_id", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString},
+		{Name: "step", Type: field.TypeString},
+		{Name: "environment_environment_to_scheduled_step", Type: field.TypeUUID, Nullable: true},
 	}
-	// ScheduleStepsTable holds the schema information for the "schedule_steps" table.
-	ScheduleStepsTable = &schema.Table{
-		Name:       "schedule_steps",
-		Columns:    ScheduleStepsColumns,
-		PrimaryKey: []*schema.Column{ScheduleStepsColumns[0]},
+	// ScheduledStepsTable holds the schema information for the "scheduled_steps" table.
+	ScheduledStepsTable = &schema.Table{
+		Name:       "scheduled_steps",
+		Columns:    ScheduledStepsColumns,
+		PrimaryKey: []*schema.Column{ScheduledStepsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "schedule_steps_hosts_HostToScheduleStep",
-				Columns:    []*schema.Column{ScheduleStepsColumns[6]},
-				RefColumns: []*schema.Column{HostsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-			{
-				Symbol:     "schedule_steps_scripts_ScheduleStepToScript",
-				Columns:    []*schema.Column{ScheduleStepsColumns[7]},
-				RefColumns: []*schema.Column{ScriptsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
-				Symbol:     "schedule_steps_commands_ScheduleStepToCommand",
-				Columns:    []*schema.Column{ScheduleStepsColumns[8]},
-				RefColumns: []*schema.Column{CommandsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
-				Symbol:     "schedule_steps_file_deletes_ScheduleStepToFileDelete",
-				Columns:    []*schema.Column{ScheduleStepsColumns[9]},
-				RefColumns: []*schema.Column{FileDeletesColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
-				Symbol:     "schedule_steps_file_downloads_ScheduleStepToFileDownload",
-				Columns:    []*schema.Column{ScheduleStepsColumns[10]},
-				RefColumns: []*schema.Column{FileDownloadsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
-				Symbol:     "schedule_steps_file_extracts_ScheduleStepToFileExtract",
-				Columns:    []*schema.Column{ScheduleStepsColumns[11]},
-				RefColumns: []*schema.Column{FileExtractsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
-				Symbol:     "schedule_steps_ansibles_ScheduleStepToAnsible",
-				Columns:    []*schema.Column{ScheduleStepsColumns[12]},
-				RefColumns: []*schema.Column{AnsiblesColumns[0]},
-				OnDelete:   schema.SetNull,
+				Symbol:     "scheduled_steps_environments_EnvironmentToScheduledStep",
+				Columns:    []*schema.Column{ScheduledStepsColumns[5]},
+				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -1119,9 +1141,8 @@ var (
 		{Name: "plan_plan_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_host_provisioned_host_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_network_provisioned_network_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "provisioned_schedule_step_provisioned_schedule_step_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "schedule_step_schedule_step_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "server_task_server_task_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "team_team_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
@@ -1162,9 +1183,9 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "status_provisioned_schedule_steps_ProvisionedScheduleStepToStatus",
+				Symbol:     "status_provisioning_scheduled_steps_ProvisioningScheduledStepToStatus",
 				Columns:    []*schema.Column{StatusColumns[13]},
-				RefColumns: []*schema.Column{ProvisionedScheduleStepsColumns[0]},
+				RefColumns: []*schema.Column{ProvisioningScheduledStepsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
@@ -1174,20 +1195,14 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "status_schedule_steps_ScheduleStepToStatus",
-				Columns:    []*schema.Column{StatusColumns[15]},
-				RefColumns: []*schema.Column{ScheduleStepsColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
 				Symbol:     "status_server_tasks_ServerTaskToStatus",
-				Columns:    []*schema.Column{StatusColumns[16]},
+				Columns:    []*schema.Column{StatusColumns[15]},
 				RefColumns: []*schema.Column{ServerTasksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "status_teams_TeamToStatus",
-				Columns:    []*schema.Column{StatusColumns[17]},
+				Columns:    []*schema.Column{StatusColumns[16]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1551,11 +1566,11 @@ var (
 		PlanDiffsTable,
 		ProvisionedHostsTable,
 		ProvisionedNetworksTable,
-		ProvisionedScheduleStepsTable,
+		ProvisioningScheduledStepsTable,
 		ProvisioningStepsTable,
 		RepoCommitsTable,
 		RepositoriesTable,
-		ScheduleStepsTable,
+		ScheduledStepsTable,
 		ScriptsTable,
 		ServerTasksTable,
 		StatusTable,
@@ -1620,9 +1635,18 @@ func init() {
 	ProvisionedNetworksTable.ForeignKeys[1].RefTable = NetworksTable
 	ProvisionedNetworksTable.ForeignKeys[2].RefTable = BuildsTable
 	ProvisionedNetworksTable.ForeignKeys[3].RefTable = TeamsTable
-	ProvisionedScheduleStepsTable.ForeignKeys[0].RefTable = AgentTasksTable
-	ProvisionedScheduleStepsTable.ForeignKeys[1].RefTable = ProvisionedHostsTable
-	ProvisionedScheduleStepsTable.ForeignKeys[2].RefTable = ScheduleStepsTable
+	ProvisioningScheduledStepsTable.ForeignKeys[0].RefTable = AgentTasksTable
+	ProvisioningScheduledStepsTable.ForeignKeys[1].RefTable = GinFileMiddlewaresTable
+	ProvisioningScheduledStepsTable.ForeignKeys[2].RefTable = PlansTable
+	ProvisioningScheduledStepsTable.ForeignKeys[3].RefTable = ScheduledStepsTable
+	ProvisioningScheduledStepsTable.ForeignKeys[4].RefTable = ProvisionedHostsTable
+	ProvisioningScheduledStepsTable.ForeignKeys[5].RefTable = ScriptsTable
+	ProvisioningScheduledStepsTable.ForeignKeys[6].RefTable = CommandsTable
+	ProvisioningScheduledStepsTable.ForeignKeys[7].RefTable = DNSRecordsTable
+	ProvisioningScheduledStepsTable.ForeignKeys[8].RefTable = FileDeletesTable
+	ProvisioningScheduledStepsTable.ForeignKeys[9].RefTable = FileDownloadsTable
+	ProvisioningScheduledStepsTable.ForeignKeys[10].RefTable = FileExtractsTable
+	ProvisioningScheduledStepsTable.ForeignKeys[11].RefTable = AnsiblesTable
 	ProvisioningStepsTable.ForeignKeys[0].RefTable = GinFileMiddlewaresTable
 	ProvisioningStepsTable.ForeignKeys[1].RefTable = PlansTable
 	ProvisioningStepsTable.ForeignKeys[2].RefTable = ProvisionedHostsTable
@@ -1634,13 +1658,7 @@ func init() {
 	ProvisioningStepsTable.ForeignKeys[8].RefTable = FileExtractsTable
 	ProvisioningStepsTable.ForeignKeys[9].RefTable = AnsiblesTable
 	RepoCommitsTable.ForeignKeys[0].RefTable = RepositoriesTable
-	ScheduleStepsTable.ForeignKeys[0].RefTable = HostsTable
-	ScheduleStepsTable.ForeignKeys[1].RefTable = ScriptsTable
-	ScheduleStepsTable.ForeignKeys[2].RefTable = CommandsTable
-	ScheduleStepsTable.ForeignKeys[3].RefTable = FileDeletesTable
-	ScheduleStepsTable.ForeignKeys[4].RefTable = FileDownloadsTable
-	ScheduleStepsTable.ForeignKeys[5].RefTable = FileExtractsTable
-	ScheduleStepsTable.ForeignKeys[6].RefTable = AnsiblesTable
+	ScheduledStepsTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	ScriptsTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	ServerTasksTable.ForeignKeys[0].RefTable = AuthUsersTable
 	ServerTasksTable.ForeignKeys[1].RefTable = EnvironmentsTable
@@ -1651,11 +1669,10 @@ func init() {
 	StatusTable.ForeignKeys[2].RefTable = PlansTable
 	StatusTable.ForeignKeys[3].RefTable = ProvisionedHostsTable
 	StatusTable.ForeignKeys[4].RefTable = ProvisionedNetworksTable
-	StatusTable.ForeignKeys[5].RefTable = ProvisionedScheduleStepsTable
+	StatusTable.ForeignKeys[5].RefTable = ProvisioningScheduledStepsTable
 	StatusTable.ForeignKeys[6].RefTable = ProvisioningStepsTable
-	StatusTable.ForeignKeys[7].RefTable = ScheduleStepsTable
-	StatusTable.ForeignKeys[8].RefTable = ServerTasksTable
-	StatusTable.ForeignKeys[9].RefTable = TeamsTable
+	StatusTable.ForeignKeys[7].RefTable = ServerTasksTable
+	StatusTable.ForeignKeys[8].RefTable = TeamsTable
 	TagsTable.ForeignKeys[0].RefTable = IncludedNetworksTable
 	TagsTable.ForeignKeys[1].RefTable = UsersTable
 	TeamsTable.ForeignKeys[0].RefTable = PlansTable

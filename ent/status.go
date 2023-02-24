@@ -13,9 +13,8 @@ import (
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
-	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
@@ -62,21 +61,18 @@ type Status struct {
 	HCLStatusToServerTask *ServerTask `json:"StatusToServerTask,omitempty"`
 	// StatusToAdhocPlan holds the value of the StatusToAdhocPlan edge.
 	HCLStatusToAdhocPlan *AdhocPlan `json:"StatusToAdhocPlan,omitempty"`
-	// StatusToScheduleStep holds the value of the StatusToScheduleStep edge.
-	HCLStatusToScheduleStep *ScheduleStep `json:"StatusToScheduleStep,omitempty"`
-	// StatusToProvisionedScheduleStep holds the value of the StatusToProvisionedScheduleStep edge.
-	HCLStatusToProvisionedScheduleStep *ProvisionedScheduleStep `json:"StatusToProvisionedScheduleStep,omitempty"`
+	// StatusToProvisioningScheduledStep holds the value of the StatusToProvisioningScheduledStep edge.
+	HCLStatusToProvisioningScheduledStep *ProvisioningScheduledStep `json:"StatusToProvisioningScheduledStep,omitempty"`
 	//
-	adhoc_plan_adhoc_plan_to_status                               *uuid.UUID
-	build_build_to_status                                         *uuid.UUID
-	plan_plan_to_status                                           *uuid.UUID
-	provisioned_host_provisioned_host_to_status                   *uuid.UUID
-	provisioned_network_provisioned_network_to_status             *uuid.UUID
-	provisioned_schedule_step_provisioned_schedule_step_to_status *uuid.UUID
-	provisioning_step_provisioning_step_to_status                 *uuid.UUID
-	schedule_step_schedule_step_to_status                         *uuid.UUID
-	server_task_server_task_to_status                             *uuid.UUID
-	team_team_to_status                                           *uuid.UUID
+	adhoc_plan_adhoc_plan_to_status                                   *uuid.UUID
+	build_build_to_status                                             *uuid.UUID
+	plan_plan_to_status                                               *uuid.UUID
+	provisioned_host_provisioned_host_to_status                       *uuid.UUID
+	provisioned_network_provisioned_network_to_status                 *uuid.UUID
+	provisioning_scheduled_step_provisioning_scheduled_step_to_status *uuid.UUID
+	provisioning_step_provisioning_step_to_status                     *uuid.UUID
+	server_task_server_task_to_status                                 *uuid.UUID
+	team_team_to_status                                               *uuid.UUID
 }
 
 // StatusEdges holds the relations/edges for other nodes in the graph.
@@ -97,13 +93,11 @@ type StatusEdges struct {
 	StatusToServerTask *ServerTask `json:"StatusToServerTask,omitempty"`
 	// StatusToAdhocPlan holds the value of the StatusToAdhocPlan edge.
 	StatusToAdhocPlan *AdhocPlan `json:"StatusToAdhocPlan,omitempty"`
-	// StatusToScheduleStep holds the value of the StatusToScheduleStep edge.
-	StatusToScheduleStep *ScheduleStep `json:"StatusToScheduleStep,omitempty"`
-	// StatusToProvisionedScheduleStep holds the value of the StatusToProvisionedScheduleStep edge.
-	StatusToProvisionedScheduleStep *ProvisionedScheduleStep `json:"StatusToProvisionedScheduleStep,omitempty"`
+	// StatusToProvisioningScheduledStep holds the value of the StatusToProvisioningScheduledStep edge.
+	StatusToProvisioningScheduledStep *ProvisioningScheduledStep `json:"StatusToProvisioningScheduledStep,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [10]bool
+	loadedTypes [9]bool
 }
 
 // StatusToBuildOrErr returns the StatusToBuild value or an error if the edge
@@ -218,32 +212,18 @@ func (e StatusEdges) StatusToAdhocPlanOrErr() (*AdhocPlan, error) {
 	return nil, &NotLoadedError{edge: "StatusToAdhocPlan"}
 }
 
-// StatusToScheduleStepOrErr returns the StatusToScheduleStep value or an error if the edge
+// StatusToProvisioningScheduledStepOrErr returns the StatusToProvisioningScheduledStep value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e StatusEdges) StatusToScheduleStepOrErr() (*ScheduleStep, error) {
+func (e StatusEdges) StatusToProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
 	if e.loadedTypes[8] {
-		if e.StatusToScheduleStep == nil {
-			// The edge StatusToScheduleStep was loaded in eager-loading,
+		if e.StatusToProvisioningScheduledStep == nil {
+			// The edge StatusToProvisioningScheduledStep was loaded in eager-loading,
 			// but was not found.
-			return nil, &NotFoundError{label: schedulestep.Label}
+			return nil, &NotFoundError{label: provisioningscheduledstep.Label}
 		}
-		return e.StatusToScheduleStep, nil
+		return e.StatusToProvisioningScheduledStep, nil
 	}
-	return nil, &NotLoadedError{edge: "StatusToScheduleStep"}
-}
-
-// StatusToProvisionedScheduleStepOrErr returns the StatusToProvisionedScheduleStep value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e StatusEdges) StatusToProvisionedScheduleStepOrErr() (*ProvisionedScheduleStep, error) {
-	if e.loadedTypes[9] {
-		if e.StatusToProvisionedScheduleStep == nil {
-			// The edge StatusToProvisionedScheduleStep was loaded in eager-loading,
-			// but was not found.
-			return nil, &NotFoundError{label: provisionedschedulestep.Label}
-		}
-		return e.StatusToProvisionedScheduleStep, nil
-	}
-	return nil, &NotLoadedError{edge: "StatusToProvisionedScheduleStep"}
+	return nil, &NotLoadedError{edge: "StatusToProvisioningScheduledStep"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -269,15 +249,13 @@ func (*Status) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case status.ForeignKeys[4]: // provisioned_network_provisioned_network_to_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case status.ForeignKeys[5]: // provisioned_schedule_step_provisioned_schedule_step_to_status
+		case status.ForeignKeys[5]: // provisioning_scheduled_step_provisioning_scheduled_step_to_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case status.ForeignKeys[6]: // provisioning_step_provisioning_step_to_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case status.ForeignKeys[7]: // schedule_step_schedule_step_to_status
+		case status.ForeignKeys[7]: // server_task_server_task_to_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case status.ForeignKeys[8]: // server_task_server_task_to_status
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case status.ForeignKeys[9]: // team_team_to_status
+		case status.ForeignKeys[8]: // team_team_to_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Status", columns[i])
@@ -379,10 +357,10 @@ func (s *Status) assignValues(columns []string, values []interface{}) error {
 			}
 		case status.ForeignKeys[5]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioned_schedule_step_provisioned_schedule_step_to_status", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_provisioning_scheduled_step_to_status", values[i])
 			} else if value.Valid {
-				s.provisioned_schedule_step_provisioned_schedule_step_to_status = new(uuid.UUID)
-				*s.provisioned_schedule_step_provisioned_schedule_step_to_status = *value.S.(*uuid.UUID)
+				s.provisioning_scheduled_step_provisioning_scheduled_step_to_status = new(uuid.UUID)
+				*s.provisioning_scheduled_step_provisioning_scheduled_step_to_status = *value.S.(*uuid.UUID)
 			}
 		case status.ForeignKeys[6]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -393,19 +371,12 @@ func (s *Status) assignValues(columns []string, values []interface{}) error {
 			}
 		case status.ForeignKeys[7]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field schedule_step_schedule_step_to_status", values[i])
-			} else if value.Valid {
-				s.schedule_step_schedule_step_to_status = new(uuid.UUID)
-				*s.schedule_step_schedule_step_to_status = *value.S.(*uuid.UUID)
-			}
-		case status.ForeignKeys[8]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field server_task_server_task_to_status", values[i])
 			} else if value.Valid {
 				s.server_task_server_task_to_status = new(uuid.UUID)
 				*s.server_task_server_task_to_status = *value.S.(*uuid.UUID)
 			}
-		case status.ForeignKeys[9]:
+		case status.ForeignKeys[8]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field team_team_to_status", values[i])
 			} else if value.Valid {
@@ -457,14 +428,9 @@ func (s *Status) QueryStatusToAdhocPlan() *AdhocPlanQuery {
 	return (&StatusClient{config: s.config}).QueryStatusToAdhocPlan(s)
 }
 
-// QueryStatusToScheduleStep queries the "StatusToScheduleStep" edge of the Status entity.
-func (s *Status) QueryStatusToScheduleStep() *ScheduleStepQuery {
-	return (&StatusClient{config: s.config}).QueryStatusToScheduleStep(s)
-}
-
-// QueryStatusToProvisionedScheduleStep queries the "StatusToProvisionedScheduleStep" edge of the Status entity.
-func (s *Status) QueryStatusToProvisionedScheduleStep() *ProvisionedScheduleStepQuery {
-	return (&StatusClient{config: s.config}).QueryStatusToProvisionedScheduleStep(s)
+// QueryStatusToProvisioningScheduledStep queries the "StatusToProvisioningScheduledStep" edge of the Status entity.
+func (s *Status) QueryStatusToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+	return (&StatusClient{config: s.config}).QueryStatusToProvisioningScheduledStep(s)
 }
 
 // Update returns a builder for updating this Status.

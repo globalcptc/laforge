@@ -26,6 +26,7 @@ import (
 	"github.com/gen0cide/laforge/ent/includednetwork"
 	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/repository"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
@@ -357,6 +358,21 @@ func (ec *EnvironmentCreate) AddEnvironmentToAnsible(a ...*Ansible) *Environment
 		ids[i] = a[i].ID
 	}
 	return ec.AddEnvironmentToAnsibleIDs(ids...)
+}
+
+// AddEnvironmentToScheduledStepIDs adds the "EnvironmentToScheduledStep" edge to the ScheduledStep entity by IDs.
+func (ec *EnvironmentCreate) AddEnvironmentToScheduledStepIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddEnvironmentToScheduledStepIDs(ids...)
+	return ec
+}
+
+// AddEnvironmentToScheduledStep adds the "EnvironmentToScheduledStep" edges to the ScheduledStep entity.
+func (ec *EnvironmentCreate) AddEnvironmentToScheduledStep(s ...*ScheduledStep) *EnvironmentCreate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return ec.AddEnvironmentToScheduledStepIDs(ids...)
 }
 
 // AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
@@ -942,6 +958,25 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ec.mutation.EnvironmentToScheduledStepIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToScheduledStepTable,
+			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: scheduledstep.FieldID,
 				},
 			},
 		}

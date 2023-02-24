@@ -1200,6 +1200,34 @@ func HasEnvironmentToAnsibleWith(preds ...predicate.Ansible) predicate.Environme
 	})
 }
 
+// HasEnvironmentToScheduledStep applies the HasEdge predicate on the "EnvironmentToScheduledStep" edge.
+func HasEnvironmentToScheduledStep() predicate.Environment {
+	return predicate.Environment(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(EnvironmentToScheduledStepTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, EnvironmentToScheduledStepTable, EnvironmentToScheduledStepColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEnvironmentToScheduledStepWith applies the HasEdge predicate on the "EnvironmentToScheduledStep" edge with a given conditions (other predicates).
+func HasEnvironmentToScheduledStepWith(preds ...predicate.ScheduledStep) predicate.Environment {
+	return predicate.Environment(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(EnvironmentToScheduledStepInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, EnvironmentToScheduledStepTable, EnvironmentToScheduledStepColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasEnvironmentToBuild applies the HasEdge predicate on the "EnvironmentToBuild" edge.
 func HasEnvironmentToBuild() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {

@@ -29,6 +29,7 @@ import (
 	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/repository"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
@@ -60,6 +61,7 @@ type EnvironmentQuery struct {
 	withEnvironmentToNetwork         *NetworkQuery
 	withEnvironmentToHostDependency  *HostDependencyQuery
 	withEnvironmentToAnsible         *AnsibleQuery
+	withEnvironmentToScheduledStep   *ScheduledStepQuery
 	withEnvironmentToBuild           *BuildQuery
 	withEnvironmentToRepository      *RepositoryQuery
 	withEnvironmentToServerTask      *ServerTaskQuery
@@ -451,6 +453,28 @@ func (eq *EnvironmentQuery) QueryEnvironmentToAnsible() *AnsibleQuery {
 	return query
 }
 
+// QueryEnvironmentToScheduledStep chains the current query on the "EnvironmentToScheduledStep" edge.
+func (eq *EnvironmentQuery) QueryEnvironmentToScheduledStep() *ScheduledStepQuery {
+	query := &ScheduledStepQuery{config: eq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := eq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := eq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(environment.Table, environment.FieldID, selector),
+			sqlgraph.To(scheduledstep.Table, scheduledstep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToScheduledStepTable, environment.EnvironmentToScheduledStepColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryEnvironmentToBuild chains the current query on the "EnvironmentToBuild" edge.
 func (eq *EnvironmentQuery) QueryEnvironmentToBuild() *BuildQuery {
 	query := &BuildQuery{config: eq.config}
@@ -714,6 +738,7 @@ func (eq *EnvironmentQuery) Clone() *EnvironmentQuery {
 		withEnvironmentToNetwork:         eq.withEnvironmentToNetwork.Clone(),
 		withEnvironmentToHostDependency:  eq.withEnvironmentToHostDependency.Clone(),
 		withEnvironmentToAnsible:         eq.withEnvironmentToAnsible.Clone(),
+		withEnvironmentToScheduledStep:   eq.withEnvironmentToScheduledStep.Clone(),
 		withEnvironmentToBuild:           eq.withEnvironmentToBuild.Clone(),
 		withEnvironmentToRepository:      eq.withEnvironmentToRepository.Clone(),
 		withEnvironmentToServerTask:      eq.withEnvironmentToServerTask.Clone(),
@@ -900,6 +925,17 @@ func (eq *EnvironmentQuery) WithEnvironmentToAnsible(opts ...func(*AnsibleQuery)
 	return eq
 }
 
+// WithEnvironmentToScheduledStep tells the query-builder to eager-load the nodes that are connected to
+// the "EnvironmentToScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithEnvironmentToScheduledStep(opts ...func(*ScheduledStepQuery)) *EnvironmentQuery {
+	query := &ScheduledStepQuery{config: eq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	eq.withEnvironmentToScheduledStep = query
+	return eq
+}
+
 // WithEnvironmentToBuild tells the query-builder to eager-load the nodes that are connected to
 // the "EnvironmentToBuild" edge. The optional arguments are used to configure the query builder of the edge.
 func (eq *EnvironmentQuery) WithEnvironmentToBuild(opts ...func(*BuildQuery)) *EnvironmentQuery {
@@ -1001,7 +1037,7 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	var (
 		nodes       = []*Environment{}
 		_spec       = eq.querySpec()
-		loadedTypes = [19]bool{
+		loadedTypes = [20]bool{
 			eq.withEnvironmentToUser != nil,
 			eq.withEnvironmentToHost != nil,
 			eq.withEnvironmentToCompetition != nil,
@@ -1018,6 +1054,7 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 			eq.withEnvironmentToNetwork != nil,
 			eq.withEnvironmentToHostDependency != nil,
 			eq.withEnvironmentToAnsible != nil,
+			eq.withEnvironmentToScheduledStep != nil,
 			eq.withEnvironmentToBuild != nil,
 			eq.withEnvironmentToRepository != nil,
 			eq.withEnvironmentToServerTask != nil,
@@ -1173,6 +1210,15 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 			func(n *Environment) { n.Edges.EnvironmentToAnsible = []*Ansible{} },
 			func(n *Environment, e *Ansible) {
 				n.Edges.EnvironmentToAnsible = append(n.Edges.EnvironmentToAnsible, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := eq.withEnvironmentToScheduledStep; query != nil {
+		if err := eq.loadEnvironmentToScheduledStep(ctx, query, nodes,
+			func(n *Environment) { n.Edges.EnvironmentToScheduledStep = []*ScheduledStep{} },
+			func(n *Environment, e *ScheduledStep) {
+				n.Edges.EnvironmentToScheduledStep = append(n.Edges.EnvironmentToScheduledStep, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -1777,6 +1823,37 @@ func (eq *EnvironmentQuery) loadEnvironmentToAnsible(ctx context.Context, query 
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_ansible" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (eq *EnvironmentQuery) loadEnvironmentToScheduledStep(ctx context.Context, query *ScheduledStepQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *ScheduledStep)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Environment)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.InValues(environment.EnvironmentToScheduledStepColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.environment_environment_to_scheduled_step
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "environment_environment_to_scheduled_step" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_scheduled_step" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

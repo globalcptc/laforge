@@ -14,7 +14,7 @@ import (
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/google/uuid"
 )
@@ -110,6 +110,25 @@ func (atu *AgentTaskUpdate) SetAgentTaskToProvisioningStep(p *ProvisioningStep) 
 	return atu.SetAgentTaskToProvisioningStepID(p.ID)
 }
 
+// SetAgentTaskToProvisioningScheduledStepID sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (atu *AgentTaskUpdate) SetAgentTaskToProvisioningScheduledStepID(id uuid.UUID) *AgentTaskUpdate {
+	atu.mutation.SetAgentTaskToProvisioningScheduledStepID(id)
+	return atu
+}
+
+// SetNillableAgentTaskToProvisioningScheduledStepID sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (atu *AgentTaskUpdate) SetNillableAgentTaskToProvisioningScheduledStepID(id *uuid.UUID) *AgentTaskUpdate {
+	if id != nil {
+		atu = atu.SetAgentTaskToProvisioningScheduledStepID(*id)
+	}
+	return atu
+}
+
+// SetAgentTaskToProvisioningScheduledStep sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (atu *AgentTaskUpdate) SetAgentTaskToProvisioningScheduledStep(p *ProvisioningScheduledStep) *AgentTaskUpdate {
+	return atu.SetAgentTaskToProvisioningScheduledStepID(p.ID)
+}
+
 // SetAgentTaskToProvisionedHostID sets the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity by ID.
 func (atu *AgentTaskUpdate) SetAgentTaskToProvisionedHostID(id uuid.UUID) *AgentTaskUpdate {
 	atu.mutation.SetAgentTaskToProvisionedHostID(id)
@@ -119,25 +138,6 @@ func (atu *AgentTaskUpdate) SetAgentTaskToProvisionedHostID(id uuid.UUID) *Agent
 // SetAgentTaskToProvisionedHost sets the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity.
 func (atu *AgentTaskUpdate) SetAgentTaskToProvisionedHost(p *ProvisionedHost) *AgentTaskUpdate {
 	return atu.SetAgentTaskToProvisionedHostID(p.ID)
-}
-
-// SetAgentTaskToProvisionedScheduleStepID sets the "AgentTaskToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID.
-func (atu *AgentTaskUpdate) SetAgentTaskToProvisionedScheduleStepID(id uuid.UUID) *AgentTaskUpdate {
-	atu.mutation.SetAgentTaskToProvisionedScheduleStepID(id)
-	return atu
-}
-
-// SetNillableAgentTaskToProvisionedScheduleStepID sets the "AgentTaskToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID if the given value is not nil.
-func (atu *AgentTaskUpdate) SetNillableAgentTaskToProvisionedScheduleStepID(id *uuid.UUID) *AgentTaskUpdate {
-	if id != nil {
-		atu = atu.SetAgentTaskToProvisionedScheduleStepID(*id)
-	}
-	return atu
-}
-
-// SetAgentTaskToProvisionedScheduleStep sets the "AgentTaskToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (atu *AgentTaskUpdate) SetAgentTaskToProvisionedScheduleStep(p *ProvisionedScheduleStep) *AgentTaskUpdate {
-	return atu.SetAgentTaskToProvisionedScheduleStepID(p.ID)
 }
 
 // AddAgentTaskToAdhocPlanIDs adds the "AgentTaskToAdhocPlan" edge to the AdhocPlan entity by IDs.
@@ -166,15 +166,15 @@ func (atu *AgentTaskUpdate) ClearAgentTaskToProvisioningStep() *AgentTaskUpdate 
 	return atu
 }
 
-// ClearAgentTaskToProvisionedHost clears the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity.
-func (atu *AgentTaskUpdate) ClearAgentTaskToProvisionedHost() *AgentTaskUpdate {
-	atu.mutation.ClearAgentTaskToProvisionedHost()
+// ClearAgentTaskToProvisioningScheduledStep clears the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (atu *AgentTaskUpdate) ClearAgentTaskToProvisioningScheduledStep() *AgentTaskUpdate {
+	atu.mutation.ClearAgentTaskToProvisioningScheduledStep()
 	return atu
 }
 
-// ClearAgentTaskToProvisionedScheduleStep clears the "AgentTaskToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (atu *AgentTaskUpdate) ClearAgentTaskToProvisionedScheduleStep() *AgentTaskUpdate {
-	atu.mutation.ClearAgentTaskToProvisionedScheduleStep()
+// ClearAgentTaskToProvisionedHost clears the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity.
+func (atu *AgentTaskUpdate) ClearAgentTaskToProvisionedHost() *AgentTaskUpdate {
+	atu.mutation.ClearAgentTaskToProvisionedHost()
 	return atu
 }
 
@@ -379,6 +379,41 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if atu.mutation.AgentTaskToProvisioningScheduledStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   agenttask.AgentTaskToProvisioningScheduledStepTable,
+			Columns: []string{agenttask.AgentTaskToProvisioningScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisioningscheduledstep.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := atu.mutation.AgentTaskToProvisioningScheduledStepIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   agenttask.AgentTaskToProvisioningScheduledStepTable,
+			Columns: []string{agenttask.AgentTaskToProvisioningScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisioningscheduledstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if atu.mutation.AgentTaskToProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -406,41 +441,6 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: provisionedhost.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if atu.mutation.AgentTaskToProvisionedScheduleStepCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisionedScheduleStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := atu.mutation.AgentTaskToProvisionedScheduleStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisionedScheduleStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
 				},
 			},
 		}
@@ -600,6 +600,25 @@ func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisioningStep(p *ProvisioningSt
 	return atuo.SetAgentTaskToProvisioningStepID(p.ID)
 }
 
+// SetAgentTaskToProvisioningScheduledStepID sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisioningScheduledStepID(id uuid.UUID) *AgentTaskUpdateOne {
+	atuo.mutation.SetAgentTaskToProvisioningScheduledStepID(id)
+	return atuo
+}
+
+// SetNillableAgentTaskToProvisioningScheduledStepID sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (atuo *AgentTaskUpdateOne) SetNillableAgentTaskToProvisioningScheduledStepID(id *uuid.UUID) *AgentTaskUpdateOne {
+	if id != nil {
+		atuo = atuo.SetAgentTaskToProvisioningScheduledStepID(*id)
+	}
+	return atuo
+}
+
+// SetAgentTaskToProvisioningScheduledStep sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisioningScheduledStep(p *ProvisioningScheduledStep) *AgentTaskUpdateOne {
+	return atuo.SetAgentTaskToProvisioningScheduledStepID(p.ID)
+}
+
 // SetAgentTaskToProvisionedHostID sets the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity by ID.
 func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisionedHostID(id uuid.UUID) *AgentTaskUpdateOne {
 	atuo.mutation.SetAgentTaskToProvisionedHostID(id)
@@ -609,25 +628,6 @@ func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisionedHostID(id uuid.UUID) *A
 // SetAgentTaskToProvisionedHost sets the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity.
 func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisionedHost(p *ProvisionedHost) *AgentTaskUpdateOne {
 	return atuo.SetAgentTaskToProvisionedHostID(p.ID)
-}
-
-// SetAgentTaskToProvisionedScheduleStepID sets the "AgentTaskToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID.
-func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisionedScheduleStepID(id uuid.UUID) *AgentTaskUpdateOne {
-	atuo.mutation.SetAgentTaskToProvisionedScheduleStepID(id)
-	return atuo
-}
-
-// SetNillableAgentTaskToProvisionedScheduleStepID sets the "AgentTaskToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID if the given value is not nil.
-func (atuo *AgentTaskUpdateOne) SetNillableAgentTaskToProvisionedScheduleStepID(id *uuid.UUID) *AgentTaskUpdateOne {
-	if id != nil {
-		atuo = atuo.SetAgentTaskToProvisionedScheduleStepID(*id)
-	}
-	return atuo
-}
-
-// SetAgentTaskToProvisionedScheduleStep sets the "AgentTaskToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisionedScheduleStep(p *ProvisionedScheduleStep) *AgentTaskUpdateOne {
-	return atuo.SetAgentTaskToProvisionedScheduleStepID(p.ID)
 }
 
 // AddAgentTaskToAdhocPlanIDs adds the "AgentTaskToAdhocPlan" edge to the AdhocPlan entity by IDs.
@@ -656,15 +656,15 @@ func (atuo *AgentTaskUpdateOne) ClearAgentTaskToProvisioningStep() *AgentTaskUpd
 	return atuo
 }
 
-// ClearAgentTaskToProvisionedHost clears the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity.
-func (atuo *AgentTaskUpdateOne) ClearAgentTaskToProvisionedHost() *AgentTaskUpdateOne {
-	atuo.mutation.ClearAgentTaskToProvisionedHost()
+// ClearAgentTaskToProvisioningScheduledStep clears the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (atuo *AgentTaskUpdateOne) ClearAgentTaskToProvisioningScheduledStep() *AgentTaskUpdateOne {
+	atuo.mutation.ClearAgentTaskToProvisioningScheduledStep()
 	return atuo
 }
 
-// ClearAgentTaskToProvisionedScheduleStep clears the "AgentTaskToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (atuo *AgentTaskUpdateOne) ClearAgentTaskToProvisionedScheduleStep() *AgentTaskUpdateOne {
-	atuo.mutation.ClearAgentTaskToProvisionedScheduleStep()
+// ClearAgentTaskToProvisionedHost clears the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity.
+func (atuo *AgentTaskUpdateOne) ClearAgentTaskToProvisionedHost() *AgentTaskUpdateOne {
+	atuo.mutation.ClearAgentTaskToProvisionedHost()
 	return atuo
 }
 
@@ -899,6 +899,41 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if atuo.mutation.AgentTaskToProvisioningScheduledStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   agenttask.AgentTaskToProvisioningScheduledStepTable,
+			Columns: []string{agenttask.AgentTaskToProvisioningScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisioningscheduledstep.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := atuo.mutation.AgentTaskToProvisioningScheduledStepIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   agenttask.AgentTaskToProvisioningScheduledStepTable,
+			Columns: []string{agenttask.AgentTaskToProvisioningScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisioningscheduledstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if atuo.mutation.AgentTaskToProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -926,41 +961,6 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: provisionedhost.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if atuo.mutation.AgentTaskToProvisionedScheduleStepCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisionedScheduleStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := atuo.mutation.AgentTaskToProvisionedScheduleStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisionedScheduleStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
 				},
 			},
 		}

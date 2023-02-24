@@ -569,6 +569,34 @@ func HasAgentTaskToProvisioningStepWith(preds ...predicate.ProvisioningStep) pre
 	})
 }
 
+// HasAgentTaskToProvisioningScheduledStep applies the HasEdge predicate on the "AgentTaskToProvisioningScheduledStep" edge.
+func HasAgentTaskToProvisioningScheduledStep() predicate.AgentTask {
+	return predicate.AgentTask(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(AgentTaskToProvisioningScheduledStepTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, AgentTaskToProvisioningScheduledStepTable, AgentTaskToProvisioningScheduledStepColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAgentTaskToProvisioningScheduledStepWith applies the HasEdge predicate on the "AgentTaskToProvisioningScheduledStep" edge with a given conditions (other predicates).
+func HasAgentTaskToProvisioningScheduledStepWith(preds ...predicate.ProvisioningScheduledStep) predicate.AgentTask {
+	return predicate.AgentTask(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(AgentTaskToProvisioningScheduledStepInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, AgentTaskToProvisioningScheduledStepTable, AgentTaskToProvisioningScheduledStepColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasAgentTaskToProvisionedHost applies the HasEdge predicate on the "AgentTaskToProvisionedHost" edge.
 func HasAgentTaskToProvisionedHost() predicate.AgentTask {
 	return predicate.AgentTask(func(s *sql.Selector) {
@@ -588,34 +616,6 @@ func HasAgentTaskToProvisionedHostWith(preds ...predicate.ProvisionedHost) predi
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(AgentTaskToProvisionedHostInverseTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, AgentTaskToProvisionedHostTable, AgentTaskToProvisionedHostColumn),
-		)
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasAgentTaskToProvisionedScheduleStep applies the HasEdge predicate on the "AgentTaskToProvisionedScheduleStep" edge.
-func HasAgentTaskToProvisionedScheduleStep() predicate.AgentTask {
-	return predicate.AgentTask(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AgentTaskToProvisionedScheduleStepTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, AgentTaskToProvisionedScheduleStepTable, AgentTaskToProvisionedScheduleStepColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasAgentTaskToProvisionedScheduleStepWith applies the HasEdge predicate on the "AgentTaskToProvisionedScheduleStep" edge with a given conditions (other predicates).
-func HasAgentTaskToProvisionedScheduleStepWith(preds ...predicate.ProvisionedScheduleStep) predicate.AgentTask {
-	return predicate.AgentTask(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AgentTaskToProvisionedScheduleStepInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, AgentTaskToProvisionedScheduleStepTable, AgentTaskToProvisionedScheduleStepColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

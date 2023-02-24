@@ -66,16 +66,16 @@ type Tx struct {
 	ProvisionedHost *ProvisionedHostClient
 	// ProvisionedNetwork is the client for interacting with the ProvisionedNetwork builders.
 	ProvisionedNetwork *ProvisionedNetworkClient
-	// ProvisionedScheduleStep is the client for interacting with the ProvisionedScheduleStep builders.
-	ProvisionedScheduleStep *ProvisionedScheduleStepClient
+	// ProvisioningScheduledStep is the client for interacting with the ProvisioningScheduledStep builders.
+	ProvisioningScheduledStep *ProvisioningScheduledStepClient
 	// ProvisioningStep is the client for interacting with the ProvisioningStep builders.
 	ProvisioningStep *ProvisioningStepClient
 	// RepoCommit is the client for interacting with the RepoCommit builders.
 	RepoCommit *RepoCommitClient
 	// Repository is the client for interacting with the Repository builders.
 	Repository *RepositoryClient
-	// ScheduleStep is the client for interacting with the ScheduleStep builders.
-	ScheduleStep *ScheduleStepClient
+	// ScheduledStep is the client for interacting with the ScheduledStep builders.
+	ScheduledStep *ScheduledStepClient
 	// Script is the client for interacting with the Script builders.
 	Script *ScriptClient
 	// ServerTask is the client for interacting with the ServerTask builders.
@@ -252,11 +252,11 @@ func (tx *Tx) init() {
 	tx.PlanDiff = NewPlanDiffClient(tx.config)
 	tx.ProvisionedHost = NewProvisionedHostClient(tx.config)
 	tx.ProvisionedNetwork = NewProvisionedNetworkClient(tx.config)
-	tx.ProvisionedScheduleStep = NewProvisionedScheduleStepClient(tx.config)
+	tx.ProvisioningScheduledStep = NewProvisioningScheduledStepClient(tx.config)
 	tx.ProvisioningStep = NewProvisioningStepClient(tx.config)
 	tx.RepoCommit = NewRepoCommitClient(tx.config)
 	tx.Repository = NewRepositoryClient(tx.config)
-	tx.ScheduleStep = NewScheduleStepClient(tx.config)
+	tx.ScheduledStep = NewScheduledStepClient(tx.config)
 	tx.Script = NewScriptClient(tx.config)
 	tx.ServerTask = NewServerTaskClient(tx.config)
 	tx.Status = NewStatusClient(tx.config)

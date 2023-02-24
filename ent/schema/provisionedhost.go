@@ -47,9 +47,10 @@ func (ProvisionedHost) Edges() []ent.Edge {
 		edge.To("ProvisionedHostToBuild", Build.Type).
 			Unique().
 			Required(),
-		edge.To("ProvisionedHostToProvisionedScheduleStep", ProvisionedScheduleStep.Type),
 		edge.From("ProvisionedHostToProvisioningStep", ProvisioningStep.Type).
 			Ref("ProvisioningStepToProvisionedHost"),
+		edge.From("ProvisionedHostToProvisioningScheduleStep", ProvisioningScheduledStep.Type).
+			Ref("ProvisioningScheduleStepToProvisionedHost"),
 		edge.From("ProvisionedHostToAgentStatus", AgentStatus.Type).
 			Ref("AgentStatusToProvisionedHost"),
 		edge.From("ProvisionedHostToAgentTask", AgentTask.Type).

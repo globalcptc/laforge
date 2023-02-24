@@ -35,6 +35,8 @@ const (
 	EdgePlanToProvisionedHost = "PlanToProvisionedHost"
 	// EdgePlanToProvisioningStep holds the string denoting the plantoprovisioningstep edge name in mutations.
 	EdgePlanToProvisioningStep = "PlanToProvisioningStep"
+	// EdgePlanToProvisioningScheduledStep holds the string denoting the plantoprovisioningscheduledstep edge name in mutations.
+	EdgePlanToProvisioningScheduledStep = "PlanToProvisioningScheduledStep"
 	// EdgePlanToStatus holds the string denoting the plantostatus edge name in mutations.
 	EdgePlanToStatus = "PlanToStatus"
 	// EdgePlanToPlanDiffs holds the string denoting the plantoplandiffs edge name in mutations.
@@ -80,6 +82,13 @@ const (
 	PlanToProvisioningStepInverseTable = "provisioning_steps"
 	// PlanToProvisioningStepColumn is the table column denoting the PlanToProvisioningStep relation/edge.
 	PlanToProvisioningStepColumn = "plan_plan_to_provisioning_step"
+	// PlanToProvisioningScheduledStepTable is the table that holds the PlanToProvisioningScheduledStep relation/edge.
+	PlanToProvisioningScheduledStepTable = "provisioning_scheduled_steps"
+	// PlanToProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
+	// It exists in this package in order to avoid circular dependency with the "provisioningscheduledstep" package.
+	PlanToProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
+	// PlanToProvisioningScheduledStepColumn is the table column denoting the PlanToProvisioningScheduledStep relation/edge.
+	PlanToProvisioningScheduledStepColumn = "plan_plan_to_provisioning_scheduled_step"
 	// PlanToStatusTable is the table that holds the PlanToStatus relation/edge.
 	PlanToStatusTable = "status"
 	// PlanToStatusInverseTable is the table name for the Status entity.

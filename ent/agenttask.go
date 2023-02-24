@@ -9,7 +9,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/google/uuid"
 )
@@ -38,10 +38,10 @@ type AgentTask struct {
 	// Edges put into the main struct to be loaded via hcl
 	// AgentTaskToProvisioningStep holds the value of the AgentTaskToProvisioningStep edge.
 	HCLAgentTaskToProvisioningStep *ProvisioningStep `json:"AgentTaskToProvisioningStep,omitempty"`
+	// AgentTaskToProvisioningScheduledStep holds the value of the AgentTaskToProvisioningScheduledStep edge.
+	HCLAgentTaskToProvisioningScheduledStep *ProvisioningScheduledStep `json:"AgentTaskToProvisioningScheduledStep,omitempty"`
 	// AgentTaskToProvisionedHost holds the value of the AgentTaskToProvisionedHost edge.
 	HCLAgentTaskToProvisionedHost *ProvisionedHost `json:"AgentTaskToProvisionedHost,omitempty"`
-	// AgentTaskToProvisionedScheduleStep holds the value of the AgentTaskToProvisionedScheduleStep edge.
-	HCLAgentTaskToProvisionedScheduleStep *ProvisionedScheduleStep `json:"AgentTaskToProvisionedScheduleStep,omitempty"`
 	// AgentTaskToAdhocPlan holds the value of the AgentTaskToAdhocPlan edge.
 	HCLAgentTaskToAdhocPlan []*AdhocPlan `json:"AgentTaskToAdhocPlan,omitempty"`
 	//
@@ -53,10 +53,10 @@ type AgentTask struct {
 type AgentTaskEdges struct {
 	// AgentTaskToProvisioningStep holds the value of the AgentTaskToProvisioningStep edge.
 	AgentTaskToProvisioningStep *ProvisioningStep `json:"AgentTaskToProvisioningStep,omitempty"`
+	// AgentTaskToProvisioningScheduledStep holds the value of the AgentTaskToProvisioningScheduledStep edge.
+	AgentTaskToProvisioningScheduledStep *ProvisioningScheduledStep `json:"AgentTaskToProvisioningScheduledStep,omitempty"`
 	// AgentTaskToProvisionedHost holds the value of the AgentTaskToProvisionedHost edge.
 	AgentTaskToProvisionedHost *ProvisionedHost `json:"AgentTaskToProvisionedHost,omitempty"`
-	// AgentTaskToProvisionedScheduleStep holds the value of the AgentTaskToProvisionedScheduleStep edge.
-	AgentTaskToProvisionedScheduleStep *ProvisionedScheduleStep `json:"AgentTaskToProvisionedScheduleStep,omitempty"`
 	// AgentTaskToAdhocPlan holds the value of the AgentTaskToAdhocPlan edge.
 	AgentTaskToAdhocPlan []*AdhocPlan `json:"AgentTaskToAdhocPlan,omitempty"`
 	// loadedTypes holds the information for reporting if a
@@ -78,10 +78,24 @@ func (e AgentTaskEdges) AgentTaskToProvisioningStepOrErr() (*ProvisioningStep, e
 	return nil, &NotLoadedError{edge: "AgentTaskToProvisioningStep"}
 }
 
+// AgentTaskToProvisioningScheduledStepOrErr returns the AgentTaskToProvisioningScheduledStep value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AgentTaskEdges) AgentTaskToProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
+	if e.loadedTypes[1] {
+		if e.AgentTaskToProvisioningScheduledStep == nil {
+			// The edge AgentTaskToProvisioningScheduledStep was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: provisioningscheduledstep.Label}
+		}
+		return e.AgentTaskToProvisioningScheduledStep, nil
+	}
+	return nil, &NotLoadedError{edge: "AgentTaskToProvisioningScheduledStep"}
+}
+
 // AgentTaskToProvisionedHostOrErr returns the AgentTaskToProvisionedHost value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e AgentTaskEdges) AgentTaskToProvisionedHostOrErr() (*ProvisionedHost, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[2] {
 		if e.AgentTaskToProvisionedHost == nil {
 			// The edge AgentTaskToProvisionedHost was loaded in eager-loading,
 			// but was not found.
@@ -90,20 +104,6 @@ func (e AgentTaskEdges) AgentTaskToProvisionedHostOrErr() (*ProvisionedHost, err
 		return e.AgentTaskToProvisionedHost, nil
 	}
 	return nil, &NotLoadedError{edge: "AgentTaskToProvisionedHost"}
-}
-
-// AgentTaskToProvisionedScheduleStepOrErr returns the AgentTaskToProvisionedScheduleStep value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e AgentTaskEdges) AgentTaskToProvisionedScheduleStepOrErr() (*ProvisionedScheduleStep, error) {
-	if e.loadedTypes[2] {
-		if e.AgentTaskToProvisionedScheduleStep == nil {
-			// The edge AgentTaskToProvisionedScheduleStep was loaded in eager-loading,
-			// but was not found.
-			return nil, &NotFoundError{label: provisionedschedulestep.Label}
-		}
-		return e.AgentTaskToProvisionedScheduleStep, nil
-	}
-	return nil, &NotLoadedError{edge: "AgentTaskToProvisionedScheduleStep"}
 }
 
 // AgentTaskToAdhocPlanOrErr returns the AgentTaskToAdhocPlan value or an error if the edge
@@ -211,14 +211,14 @@ func (at *AgentTask) QueryAgentTaskToProvisioningStep() *ProvisioningStepQuery {
 	return (&AgentTaskClient{config: at.config}).QueryAgentTaskToProvisioningStep(at)
 }
 
+// QueryAgentTaskToProvisioningScheduledStep queries the "AgentTaskToProvisioningScheduledStep" edge of the AgentTask entity.
+func (at *AgentTask) QueryAgentTaskToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+	return (&AgentTaskClient{config: at.config}).QueryAgentTaskToProvisioningScheduledStep(at)
+}
+
 // QueryAgentTaskToProvisionedHost queries the "AgentTaskToProvisionedHost" edge of the AgentTask entity.
 func (at *AgentTask) QueryAgentTaskToProvisionedHost() *ProvisionedHostQuery {
 	return (&AgentTaskClient{config: at.config}).QueryAgentTaskToProvisionedHost(at)
-}
-
-// QueryAgentTaskToProvisionedScheduleStep queries the "AgentTaskToProvisionedScheduleStep" edge of the AgentTask entity.
-func (at *AgentTask) QueryAgentTaskToProvisionedScheduleStep() *ProvisionedScheduleStepQuery {
-	return (&AgentTaskClient{config: at.config}).QueryAgentTaskToProvisionedScheduleStep(at)
 }
 
 // QueryAgentTaskToAdhocPlan queries the "AgentTaskToAdhocPlan" edge of the AgentTask entity.

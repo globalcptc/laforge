@@ -44,6 +44,8 @@ func (Host) Fields() []ent.Field {
 			StructTag(`hcl:"user_groups,optional"`),
 		field.JSON("provision_steps", []string{}).Optional().
 			StructTag(`hcl:"provision_steps,optional"`),
+		field.JSON("scheduled_steps", []string{}).Optional().
+			StructTag(`hcl:"scheduled_steps,optional"`),
 		field.JSON("tags", map[string]string{}).
 			StructTag(`hcl:"tags,optional"`),
 	}
@@ -60,7 +62,6 @@ func (Host) Edges() []ent.Edge {
 			}),
 		edge.To("HostToUser", User.Type).
 			StructTag(`hcl:"maintainer,block"`),
-		edge.To("HostToScheduleStep", ScheduleStep.Type),
 		edge.From("HostToEnvironment", Environment.Type).
 			Ref("EnvironmentToHost").
 			Unique(),

@@ -14,6 +14,7 @@ import (
 	"github.com/gen0cide/laforge/ent/plandiff"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
@@ -182,6 +183,25 @@ func (pc *PlanCreate) SetNillablePlanToProvisioningStepID(id *uuid.UUID) *PlanCr
 // SetPlanToProvisioningStep sets the "PlanToProvisioningStep" edge to the ProvisioningStep entity.
 func (pc *PlanCreate) SetPlanToProvisioningStep(p *ProvisioningStep) *PlanCreate {
 	return pc.SetPlanToProvisioningStepID(p.ID)
+}
+
+// SetPlanToProvisioningScheduledStepID sets the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (pc *PlanCreate) SetPlanToProvisioningScheduledStepID(id uuid.UUID) *PlanCreate {
+	pc.mutation.SetPlanToProvisioningScheduledStepID(id)
+	return pc
+}
+
+// SetNillablePlanToProvisioningScheduledStepID sets the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (pc *PlanCreate) SetNillablePlanToProvisioningScheduledStepID(id *uuid.UUID) *PlanCreate {
+	if id != nil {
+		pc = pc.SetPlanToProvisioningScheduledStepID(*id)
+	}
+	return pc
+}
+
+// SetPlanToProvisioningScheduledStep sets the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (pc *PlanCreate) SetPlanToProvisioningScheduledStep(p *ProvisioningScheduledStep) *PlanCreate {
+	return pc.SetPlanToProvisioningScheduledStepID(p.ID)
 }
 
 // SetPlanToStatusID sets the "PlanToStatus" edge to the Status entity by ID.
@@ -498,6 +518,25 @@ func (pc *PlanCreate) createSpec() (*Plan, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: provisioningstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := pc.mutation.PlanToProvisioningScheduledStepIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   plan.PlanToProvisioningScheduledStepTable,
+			Columns: []string{plan.PlanToProvisioningScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}

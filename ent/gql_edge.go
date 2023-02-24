@@ -76,20 +76,20 @@ func (at *AgentTask) AgentTaskToProvisioningStep(ctx context.Context) (*Provisio
 	return result, MaskNotFound(err)
 }
 
+func (at *AgentTask) AgentTaskToProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
+	result, err := at.Edges.AgentTaskToProvisioningScheduledStepOrErr()
+	if IsNotLoaded(err) {
+		result, err = at.QueryAgentTaskToProvisioningScheduledStep().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (at *AgentTask) AgentTaskToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
 	result, err := at.Edges.AgentTaskToProvisionedHostOrErr()
 	if IsNotLoaded(err) {
 		result, err = at.QueryAgentTaskToProvisionedHost().Only(ctx)
 	}
 	return result, err
-}
-
-func (at *AgentTask) AgentTaskToProvisionedScheduleStep(ctx context.Context) (*ProvisionedScheduleStep, error) {
-	result, err := at.Edges.AgentTaskToProvisionedScheduleStepOrErr()
-	if IsNotLoaded(err) {
-		result, err = at.QueryAgentTaskToProvisionedScheduleStep().Only(ctx)
-	}
-	return result, MaskNotFound(err)
 }
 
 func (at *AgentTask) AgentTaskToAdhocPlan(ctx context.Context) ([]*AdhocPlan, error) {
@@ -452,6 +452,14 @@ func (e *Environment) EnvironmentToAnsible(ctx context.Context) ([]*Ansible, err
 	return result, err
 }
 
+func (e *Environment) EnvironmentToScheduledStep(ctx context.Context) ([]*ScheduledStep, error) {
+	result, err := e.Edges.EnvironmentToScheduledStepOrErr()
+	if IsNotLoaded(err) {
+		result, err = e.QueryEnvironmentToScheduledStep().All(ctx)
+	}
+	return result, err
+}
+
 func (e *Environment) EnvironmentToBuild(ctx context.Context) ([]*Build, error) {
 	result, err := e.Edges.EnvironmentToBuildOrErr()
 	if IsNotLoaded(err) {
@@ -548,6 +556,14 @@ func (gfm *GinFileMiddleware) GinFileMiddlewareToProvisioningStep(ctx context.Co
 	return result, MaskNotFound(err)
 }
 
+func (gfm *GinFileMiddleware) GinFileMiddlewareToProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
+	result, err := gfm.Edges.GinFileMiddlewareToProvisioningScheduledStepOrErr()
+	if IsNotLoaded(err) {
+		result, err = gfm.QueryGinFileMiddlewareToProvisioningScheduledStep().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (h *Host) HostToDisk(ctx context.Context) (*Disk, error) {
 	result, err := h.Edges.HostToDiskOrErr()
 	if IsNotLoaded(err) {
@@ -560,14 +576,6 @@ func (h *Host) HostToUser(ctx context.Context) ([]*User, error) {
 	result, err := h.Edges.HostToUserOrErr()
 	if IsNotLoaded(err) {
 		result, err = h.QueryHostToUser().All(ctx)
-	}
-	return result, err
-}
-
-func (h *Host) HostToScheduleStep(ctx context.Context) ([]*ScheduleStep, error) {
-	result, err := h.Edges.HostToScheduleStepOrErr()
-	if IsNotLoaded(err) {
-		result, err = h.QueryHostToScheduleStep().All(ctx)
 	}
 	return result, err
 }
@@ -756,6 +764,14 @@ func (pl *Plan) PlanToProvisioningStep(ctx context.Context) (*ProvisioningStep, 
 	return result, MaskNotFound(err)
 }
 
+func (pl *Plan) PlanToProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
+	result, err := pl.Edges.PlanToProvisioningScheduledStepOrErr()
+	if IsNotLoaded(err) {
+		result, err = pl.QueryPlanToProvisioningScheduledStep().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (pl *Plan) PlanToStatus(ctx context.Context) (*Status, error) {
 	result, err := pl.Edges.PlanToStatusOrErr()
 	if IsNotLoaded(err) {
@@ -828,18 +844,18 @@ func (ph *ProvisionedHost) ProvisionedHostToBuild(ctx context.Context) (*Build, 
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToProvisionedScheduleStep(ctx context.Context) ([]*ProvisionedScheduleStep, error) {
-	result, err := ph.Edges.ProvisionedHostToProvisionedScheduleStepOrErr()
-	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToProvisionedScheduleStep().All(ctx)
-	}
-	return result, err
-}
-
 func (ph *ProvisionedHost) ProvisionedHostToProvisioningStep(ctx context.Context) ([]*ProvisioningStep, error) {
 	result, err := ph.Edges.ProvisionedHostToProvisioningStepOrErr()
 	if IsNotLoaded(err) {
 		result, err = ph.QueryProvisionedHostToProvisioningStep().All(ctx)
+	}
+	return result, err
+}
+
+func (ph *ProvisionedHost) ProvisionedHostToProvisioningScheduleStep(ctx context.Context) ([]*ProvisioningScheduledStep, error) {
+	result, err := ph.Edges.ProvisionedHostToProvisioningScheduleStepOrErr()
+	if IsNotLoaded(err) {
+		result, err = ph.QueryProvisionedHostToProvisioningScheduleStep().All(ctx)
 	}
 	return result, err
 }
@@ -924,34 +940,106 @@ func (pn *ProvisionedNetwork) ProvisionedNetworkToPlan(ctx context.Context) (*Pl
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisionedScheduleStep) ProvisionedScheduleStepToStatus(ctx context.Context) (*Status, error) {
-	result, err := pss.Edges.ProvisionedScheduleStepToStatusOrErr()
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToStatus(ctx context.Context) (*Status, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToStatusOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisionedScheduleStepToStatus().Only(ctx)
+		result, err = pss.QueryProvisioningScheduledStepToStatus().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisionedScheduleStep) ProvisionedScheduleStepToScheduleStep(ctx context.Context) (*ScheduleStep, error) {
-	result, err := pss.Edges.ProvisionedScheduleStepToScheduleStepOrErr()
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToScheduledStep(ctx context.Context) (*ScheduledStep, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToScheduledStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisionedScheduleStepToScheduleStep().Only(ctx)
+		result, err = pss.QueryProvisioningScheduledStepToScheduledStep().Only(ctx)
 	}
 	return result, err
 }
 
-func (pss *ProvisionedScheduleStep) ProvisionedScheduleStepToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
-	result, err := pss.Edges.ProvisionedScheduleStepToProvisionedHostOrErr()
+func (pss *ProvisioningScheduledStep) ProvisioningScheduleStepToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
+	result, err := pss.Edges.ProvisioningScheduleStepToProvisionedHostOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisionedScheduleStepToProvisionedHost().Only(ctx)
+		result, err = pss.QueryProvisioningScheduleStepToProvisionedHost().Only(ctx)
 	}
 	return result, err
 }
 
-func (pss *ProvisionedScheduleStep) ProvisionedScheduleStepToAgentTask(ctx context.Context) (*AgentTask, error) {
-	result, err := pss.Edges.ProvisionedScheduleStepToAgentTaskOrErr()
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToScript(ctx context.Context) (*Script, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToScriptOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisionedScheduleStepToAgentTask().Only(ctx)
+		result, err = pss.QueryProvisioningScheduledStepToScript().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToCommand(ctx context.Context) (*Command, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToCommandOrErr()
+	if IsNotLoaded(err) {
+		result, err = pss.QueryProvisioningScheduledStepToCommand().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToDNSRecord(ctx context.Context) (*DNSRecord, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToDNSRecordOrErr()
+	if IsNotLoaded(err) {
+		result, err = pss.QueryProvisioningScheduledStepToDNSRecord().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToFileDelete(ctx context.Context) (*FileDelete, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToFileDeleteOrErr()
+	if IsNotLoaded(err) {
+		result, err = pss.QueryProvisioningScheduledStepToFileDelete().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToFileDownload(ctx context.Context) (*FileDownload, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToFileDownloadOrErr()
+	if IsNotLoaded(err) {
+		result, err = pss.QueryProvisioningScheduledStepToFileDownload().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToFileExtract(ctx context.Context) (*FileExtract, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToFileExtractOrErr()
+	if IsNotLoaded(err) {
+		result, err = pss.QueryProvisioningScheduledStepToFileExtract().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToAnsible(ctx context.Context) (*Ansible, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToAnsibleOrErr()
+	if IsNotLoaded(err) {
+		result, err = pss.QueryProvisioningScheduledStepToAnsible().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToAgentTask(ctx context.Context) (*AgentTask, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToAgentTaskOrErr()
+	if IsNotLoaded(err) {
+		result, err = pss.QueryProvisioningScheduledStepToAgentTask().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (pss *ProvisioningScheduledStep) ProvisioningStepToPlan(ctx context.Context) (*Plan, error) {
+	result, err := pss.Edges.ProvisioningStepToPlanOrErr()
+	if IsNotLoaded(err) {
+		result, err = pss.QueryProvisioningStepToPlan().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToGinFileMiddleware(ctx context.Context) (*GinFileMiddleware, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToGinFileMiddlewareOrErr()
+	if IsNotLoaded(err) {
+		result, err = pss.QueryProvisioningScheduledStepToGinFileMiddleware().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
@@ -1076,76 +1164,12 @@ func (r *Repository) RepositoryToRepoCommit(ctx context.Context) ([]*RepoCommit,
 	return result, err
 }
 
-func (ss *ScheduleStep) ScheduleStepToStatus(ctx context.Context) (*Status, error) {
-	result, err := ss.Edges.ScheduleStepToStatusOrErr()
+func (ss *ScheduledStep) ScheduledStepToEnvironment(ctx context.Context) (*Environment, error) {
+	result, err := ss.Edges.ScheduledStepToEnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = ss.QueryScheduleStepToStatus().Only(ctx)
+		result, err = ss.QueryScheduledStepToEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
-}
-
-func (ss *ScheduleStep) ScheduleStepToScript(ctx context.Context) (*Script, error) {
-	result, err := ss.Edges.ScheduleStepToScriptOrErr()
-	if IsNotLoaded(err) {
-		result, err = ss.QueryScheduleStepToScript().Only(ctx)
-	}
-	return result, MaskNotFound(err)
-}
-
-func (ss *ScheduleStep) ScheduleStepToCommand(ctx context.Context) (*Command, error) {
-	result, err := ss.Edges.ScheduleStepToCommandOrErr()
-	if IsNotLoaded(err) {
-		result, err = ss.QueryScheduleStepToCommand().Only(ctx)
-	}
-	return result, MaskNotFound(err)
-}
-
-func (ss *ScheduleStep) ScheduleStepToFileDelete(ctx context.Context) (*FileDelete, error) {
-	result, err := ss.Edges.ScheduleStepToFileDeleteOrErr()
-	if IsNotLoaded(err) {
-		result, err = ss.QueryScheduleStepToFileDelete().Only(ctx)
-	}
-	return result, MaskNotFound(err)
-}
-
-func (ss *ScheduleStep) ScheduleStepToFileDownload(ctx context.Context) (*FileDownload, error) {
-	result, err := ss.Edges.ScheduleStepToFileDownloadOrErr()
-	if IsNotLoaded(err) {
-		result, err = ss.QueryScheduleStepToFileDownload().Only(ctx)
-	}
-	return result, MaskNotFound(err)
-}
-
-func (ss *ScheduleStep) ScheduleStepToFileExtract(ctx context.Context) (*FileExtract, error) {
-	result, err := ss.Edges.ScheduleStepToFileExtractOrErr()
-	if IsNotLoaded(err) {
-		result, err = ss.QueryScheduleStepToFileExtract().Only(ctx)
-	}
-	return result, MaskNotFound(err)
-}
-
-func (ss *ScheduleStep) ScheduleStepToAnsible(ctx context.Context) (*Ansible, error) {
-	result, err := ss.Edges.ScheduleStepToAnsibleOrErr()
-	if IsNotLoaded(err) {
-		result, err = ss.QueryScheduleStepToAnsible().Only(ctx)
-	}
-	return result, MaskNotFound(err)
-}
-
-func (ss *ScheduleStep) ScheduleStepToProvisionedScheduleStep(ctx context.Context) ([]*ProvisionedScheduleStep, error) {
-	result, err := ss.Edges.ScheduleStepToProvisionedScheduleStepOrErr()
-	if IsNotLoaded(err) {
-		result, err = ss.QueryScheduleStepToProvisionedScheduleStep().All(ctx)
-	}
-	return result, err
-}
-
-func (ss *ScheduleStep) ScheduleStepToHost(ctx context.Context) (*Host, error) {
-	result, err := ss.Edges.ScheduleStepToHostOrErr()
-	if IsNotLoaded(err) {
-		result, err = ss.QueryScheduleStepToHost().Only(ctx)
-	}
-	return result, err
 }
 
 func (s *Script) ScriptToUser(ctx context.Context) ([]*User, error) {
@@ -1284,18 +1308,10 @@ func (s *Status) StatusToAdhocPlan(ctx context.Context) (*AdhocPlan, error) {
 	return result, MaskNotFound(err)
 }
 
-func (s *Status) StatusToScheduleStep(ctx context.Context) (*ScheduleStep, error) {
-	result, err := s.Edges.StatusToScheduleStepOrErr()
+func (s *Status) StatusToProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
+	result, err := s.Edges.StatusToProvisioningScheduledStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryStatusToScheduleStep().Only(ctx)
-	}
-	return result, MaskNotFound(err)
-}
-
-func (s *Status) StatusToProvisionedScheduleStep(ctx context.Context) (*ProvisionedScheduleStep, error) {
-	result, err := s.Edges.StatusToProvisionedScheduleStepOrErr()
-	if IsNotLoaded(err) {
-		result, err = s.QueryStatusToProvisionedScheduleStep().Only(ctx)
+		result, err = s.QueryStatusToProvisioningScheduledStep().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

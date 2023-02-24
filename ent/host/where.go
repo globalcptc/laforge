@@ -822,6 +822,20 @@ func ProvisionStepsNotNil() predicate.Host {
 	})
 }
 
+// ScheduledStepsIsNil applies the IsNil predicate on the "scheduled_steps" field.
+func ScheduledStepsIsNil() predicate.Host {
+	return predicate.Host(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldScheduledSteps)))
+	})
+}
+
+// ScheduledStepsNotNil applies the NotNil predicate on the "scheduled_steps" field.
+func ScheduledStepsNotNil() predicate.Host {
+	return predicate.Host(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldScheduledSteps)))
+	})
+}
+
 // HasHostToDisk applies the HasEdge predicate on the "HostToDisk" edge.
 func HasHostToDisk() predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
@@ -869,34 +883,6 @@ func HasHostToUserWith(preds ...predicate.User) predicate.Host {
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(HostToUserInverseTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, HostToUserTable, HostToUserColumn),
-		)
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasHostToScheduleStep applies the HasEdge predicate on the "HostToScheduleStep" edge.
-func HasHostToScheduleStep() predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(HostToScheduleStepTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, HostToScheduleStepTable, HostToScheduleStepColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasHostToScheduleStepWith applies the HasEdge predicate on the "HostToScheduleStep" edge with a given conditions (other predicates).
-func HasHostToScheduleStepWith(preds ...predicate.ScheduleStep) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(HostToScheduleStepInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, HostToScheduleStepTable, HostToScheduleStepColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

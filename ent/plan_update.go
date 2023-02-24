@@ -16,6 +16,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
@@ -185,6 +186,25 @@ func (pu *PlanUpdate) SetPlanToProvisioningStep(p *ProvisioningStep) *PlanUpdate
 	return pu.SetPlanToProvisioningStepID(p.ID)
 }
 
+// SetPlanToProvisioningScheduledStepID sets the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (pu *PlanUpdate) SetPlanToProvisioningScheduledStepID(id uuid.UUID) *PlanUpdate {
+	pu.mutation.SetPlanToProvisioningScheduledStepID(id)
+	return pu
+}
+
+// SetNillablePlanToProvisioningScheduledStepID sets the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (pu *PlanUpdate) SetNillablePlanToProvisioningScheduledStepID(id *uuid.UUID) *PlanUpdate {
+	if id != nil {
+		pu = pu.SetPlanToProvisioningScheduledStepID(*id)
+	}
+	return pu
+}
+
+// SetPlanToProvisioningScheduledStep sets the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (pu *PlanUpdate) SetPlanToProvisioningScheduledStep(p *ProvisioningScheduledStep) *PlanUpdate {
+	return pu.SetPlanToProvisioningScheduledStepID(p.ID)
+}
+
 // SetPlanToStatusID sets the "PlanToStatus" edge to the Status entity by ID.
 func (pu *PlanUpdate) SetPlanToStatusID(id uuid.UUID) *PlanUpdate {
 	pu.mutation.SetPlanToStatusID(id)
@@ -285,6 +305,12 @@ func (pu *PlanUpdate) ClearPlanToProvisionedHost() *PlanUpdate {
 // ClearPlanToProvisioningStep clears the "PlanToProvisioningStep" edge to the ProvisioningStep entity.
 func (pu *PlanUpdate) ClearPlanToProvisioningStep() *PlanUpdate {
 	pu.mutation.ClearPlanToProvisioningStep()
+	return pu
+}
+
+// ClearPlanToProvisioningScheduledStep clears the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (pu *PlanUpdate) ClearPlanToProvisioningScheduledStep() *PlanUpdate {
+	pu.mutation.ClearPlanToProvisioningScheduledStep()
 	return pu
 }
 
@@ -717,6 +743,41 @@ func (pu *PlanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if pu.mutation.PlanToProvisioningScheduledStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   plan.PlanToProvisioningScheduledStepTable,
+			Columns: []string{plan.PlanToProvisioningScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisioningscheduledstep.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.PlanToProvisioningScheduledStepIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   plan.PlanToProvisioningScheduledStepTable,
+			Columns: []string{plan.PlanToProvisioningScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisioningscheduledstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if pu.mutation.PlanToStatusCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
@@ -975,6 +1036,25 @@ func (puo *PlanUpdateOne) SetPlanToProvisioningStep(p *ProvisioningStep) *PlanUp
 	return puo.SetPlanToProvisioningStepID(p.ID)
 }
 
+// SetPlanToProvisioningScheduledStepID sets the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (puo *PlanUpdateOne) SetPlanToProvisioningScheduledStepID(id uuid.UUID) *PlanUpdateOne {
+	puo.mutation.SetPlanToProvisioningScheduledStepID(id)
+	return puo
+}
+
+// SetNillablePlanToProvisioningScheduledStepID sets the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (puo *PlanUpdateOne) SetNillablePlanToProvisioningScheduledStepID(id *uuid.UUID) *PlanUpdateOne {
+	if id != nil {
+		puo = puo.SetPlanToProvisioningScheduledStepID(*id)
+	}
+	return puo
+}
+
+// SetPlanToProvisioningScheduledStep sets the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (puo *PlanUpdateOne) SetPlanToProvisioningScheduledStep(p *ProvisioningScheduledStep) *PlanUpdateOne {
+	return puo.SetPlanToProvisioningScheduledStepID(p.ID)
+}
+
 // SetPlanToStatusID sets the "PlanToStatus" edge to the Status entity by ID.
 func (puo *PlanUpdateOne) SetPlanToStatusID(id uuid.UUID) *PlanUpdateOne {
 	puo.mutation.SetPlanToStatusID(id)
@@ -1075,6 +1155,12 @@ func (puo *PlanUpdateOne) ClearPlanToProvisionedHost() *PlanUpdateOne {
 // ClearPlanToProvisioningStep clears the "PlanToProvisioningStep" edge to the ProvisioningStep entity.
 func (puo *PlanUpdateOne) ClearPlanToProvisioningStep() *PlanUpdateOne {
 	puo.mutation.ClearPlanToProvisioningStep()
+	return puo
+}
+
+// ClearPlanToProvisioningScheduledStep clears the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (puo *PlanUpdateOne) ClearPlanToProvisioningScheduledStep() *PlanUpdateOne {
+	puo.mutation.ClearPlanToProvisioningScheduledStep()
 	return puo
 }
 
@@ -1529,6 +1615,41 @@ func (puo *PlanUpdateOne) sqlSave(ctx context.Context) (_node *Plan, err error) 
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: provisioningstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if puo.mutation.PlanToProvisioningScheduledStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   plan.PlanToProvisioningScheduledStepTable,
+			Columns: []string{plan.PlanToProvisioningScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisioningscheduledstep.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.PlanToProvisioningScheduledStepIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   plan.PlanToProvisioningScheduledStepTable,
+			Columns: []string{plan.PlanToProvisioningScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}

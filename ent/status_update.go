@@ -17,9 +17,8 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
-	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
@@ -291,42 +290,23 @@ func (su *StatusUpdate) SetStatusToAdhocPlan(a *AdhocPlan) *StatusUpdate {
 	return su.SetStatusToAdhocPlanID(a.ID)
 }
 
-// SetStatusToScheduleStepID sets the "StatusToScheduleStep" edge to the ScheduleStep entity by ID.
-func (su *StatusUpdate) SetStatusToScheduleStepID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToScheduleStepID(id)
+// SetStatusToProvisioningScheduledStepID sets the "StatusToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (su *StatusUpdate) SetStatusToProvisioningScheduledStepID(id uuid.UUID) *StatusUpdate {
+	su.mutation.SetStatusToProvisioningScheduledStepID(id)
 	return su
 }
 
-// SetNillableStatusToScheduleStepID sets the "StatusToScheduleStep" edge to the ScheduleStep entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToScheduleStepID(id *uuid.UUID) *StatusUpdate {
+// SetNillableStatusToProvisioningScheduledStepID sets the "StatusToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (su *StatusUpdate) SetNillableStatusToProvisioningScheduledStepID(id *uuid.UUID) *StatusUpdate {
 	if id != nil {
-		su = su.SetStatusToScheduleStepID(*id)
+		su = su.SetStatusToProvisioningScheduledStepID(*id)
 	}
 	return su
 }
 
-// SetStatusToScheduleStep sets the "StatusToScheduleStep" edge to the ScheduleStep entity.
-func (su *StatusUpdate) SetStatusToScheduleStep(s *ScheduleStep) *StatusUpdate {
-	return su.SetStatusToScheduleStepID(s.ID)
-}
-
-// SetStatusToProvisionedScheduleStepID sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID.
-func (su *StatusUpdate) SetStatusToProvisionedScheduleStepID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToProvisionedScheduleStepID(id)
-	return su
-}
-
-// SetNillableStatusToProvisionedScheduleStepID sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToProvisionedScheduleStepID(id *uuid.UUID) *StatusUpdate {
-	if id != nil {
-		su = su.SetStatusToProvisionedScheduleStepID(*id)
-	}
-	return su
-}
-
-// SetStatusToProvisionedScheduleStep sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (su *StatusUpdate) SetStatusToProvisionedScheduleStep(p *ProvisionedScheduleStep) *StatusUpdate {
-	return su.SetStatusToProvisionedScheduleStepID(p.ID)
+// SetStatusToProvisioningScheduledStep sets the "StatusToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (su *StatusUpdate) SetStatusToProvisioningScheduledStep(p *ProvisioningScheduledStep) *StatusUpdate {
+	return su.SetStatusToProvisioningScheduledStepID(p.ID)
 }
 
 // Mutation returns the StatusMutation object of the builder.
@@ -382,15 +362,9 @@ func (su *StatusUpdate) ClearStatusToAdhocPlan() *StatusUpdate {
 	return su
 }
 
-// ClearStatusToScheduleStep clears the "StatusToScheduleStep" edge to the ScheduleStep entity.
-func (su *StatusUpdate) ClearStatusToScheduleStep() *StatusUpdate {
-	su.mutation.ClearStatusToScheduleStep()
-	return su
-}
-
-// ClearStatusToProvisionedScheduleStep clears the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (su *StatusUpdate) ClearStatusToProvisionedScheduleStep() *StatusUpdate {
-	su.mutation.ClearStatusToProvisionedScheduleStep()
+// ClearStatusToProvisioningScheduledStep clears the "StatusToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (su *StatusUpdate) ClearStatusToProvisioningScheduledStep() *StatusUpdate {
+	su.mutation.ClearStatusToProvisioningScheduledStep()
 	return su
 }
 
@@ -834,68 +808,33 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if su.mutation.StatusToScheduleStepCleared() {
+	if su.mutation.StatusToProvisioningScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToScheduleStepTable,
-			Columns: []string{status.StatusToScheduleStepColumn},
+			Table:   status.StatusToProvisioningScheduledStepTable,
+			Columns: []string{status.StatusToProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := su.mutation.StatusToScheduleStepIDs(); len(nodes) > 0 {
+	if nodes := su.mutation.StatusToProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToScheduleStepTable,
-			Columns: []string{status.StatusToScheduleStepColumn},
+			Table:   status.StatusToProvisioningScheduledStepTable,
+			Columns: []string{status.StatusToProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if su.mutation.StatusToProvisionedScheduleStepCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   status.StatusToProvisionedScheduleStepTable,
-			Columns: []string{status.StatusToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := su.mutation.StatusToProvisionedScheduleStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   status.StatusToProvisionedScheduleStepTable,
-			Columns: []string{status.StatusToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}
@@ -1175,42 +1114,23 @@ func (suo *StatusUpdateOne) SetStatusToAdhocPlan(a *AdhocPlan) *StatusUpdateOne 
 	return suo.SetStatusToAdhocPlanID(a.ID)
 }
 
-// SetStatusToScheduleStepID sets the "StatusToScheduleStep" edge to the ScheduleStep entity by ID.
-func (suo *StatusUpdateOne) SetStatusToScheduleStepID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToScheduleStepID(id)
+// SetStatusToProvisioningScheduledStepID sets the "StatusToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (suo *StatusUpdateOne) SetStatusToProvisioningScheduledStepID(id uuid.UUID) *StatusUpdateOne {
+	suo.mutation.SetStatusToProvisioningScheduledStepID(id)
 	return suo
 }
 
-// SetNillableStatusToScheduleStepID sets the "StatusToScheduleStep" edge to the ScheduleStep entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToScheduleStepID(id *uuid.UUID) *StatusUpdateOne {
+// SetNillableStatusToProvisioningScheduledStepID sets the "StatusToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (suo *StatusUpdateOne) SetNillableStatusToProvisioningScheduledStepID(id *uuid.UUID) *StatusUpdateOne {
 	if id != nil {
-		suo = suo.SetStatusToScheduleStepID(*id)
+		suo = suo.SetStatusToProvisioningScheduledStepID(*id)
 	}
 	return suo
 }
 
-// SetStatusToScheduleStep sets the "StatusToScheduleStep" edge to the ScheduleStep entity.
-func (suo *StatusUpdateOne) SetStatusToScheduleStep(s *ScheduleStep) *StatusUpdateOne {
-	return suo.SetStatusToScheduleStepID(s.ID)
-}
-
-// SetStatusToProvisionedScheduleStepID sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID.
-func (suo *StatusUpdateOne) SetStatusToProvisionedScheduleStepID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToProvisionedScheduleStepID(id)
-	return suo
-}
-
-// SetNillableStatusToProvisionedScheduleStepID sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToProvisionedScheduleStepID(id *uuid.UUID) *StatusUpdateOne {
-	if id != nil {
-		suo = suo.SetStatusToProvisionedScheduleStepID(*id)
-	}
-	return suo
-}
-
-// SetStatusToProvisionedScheduleStep sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (suo *StatusUpdateOne) SetStatusToProvisionedScheduleStep(p *ProvisionedScheduleStep) *StatusUpdateOne {
-	return suo.SetStatusToProvisionedScheduleStepID(p.ID)
+// SetStatusToProvisioningScheduledStep sets the "StatusToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (suo *StatusUpdateOne) SetStatusToProvisioningScheduledStep(p *ProvisioningScheduledStep) *StatusUpdateOne {
+	return suo.SetStatusToProvisioningScheduledStepID(p.ID)
 }
 
 // Mutation returns the StatusMutation object of the builder.
@@ -1266,15 +1186,9 @@ func (suo *StatusUpdateOne) ClearStatusToAdhocPlan() *StatusUpdateOne {
 	return suo
 }
 
-// ClearStatusToScheduleStep clears the "StatusToScheduleStep" edge to the ScheduleStep entity.
-func (suo *StatusUpdateOne) ClearStatusToScheduleStep() *StatusUpdateOne {
-	suo.mutation.ClearStatusToScheduleStep()
-	return suo
-}
-
-// ClearStatusToProvisionedScheduleStep clears the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (suo *StatusUpdateOne) ClearStatusToProvisionedScheduleStep() *StatusUpdateOne {
-	suo.mutation.ClearStatusToProvisionedScheduleStep()
+// ClearStatusToProvisioningScheduledStep clears the "StatusToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (suo *StatusUpdateOne) ClearStatusToProvisioningScheduledStep() *StatusUpdateOne {
+	suo.mutation.ClearStatusToProvisioningScheduledStep()
 	return suo
 }
 
@@ -1748,68 +1662,33 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if suo.mutation.StatusToScheduleStepCleared() {
+	if suo.mutation.StatusToProvisioningScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToScheduleStepTable,
-			Columns: []string{status.StatusToScheduleStepColumn},
+			Table:   status.StatusToProvisioningScheduledStepTable,
+			Columns: []string{status.StatusToProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := suo.mutation.StatusToScheduleStepIDs(); len(nodes) > 0 {
+	if nodes := suo.mutation.StatusToProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToScheduleStepTable,
-			Columns: []string{status.StatusToScheduleStepColumn},
+			Table:   status.StatusToProvisioningScheduledStepTable,
+			Columns: []string{status.StatusToProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if suo.mutation.StatusToProvisionedScheduleStepCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   status.StatusToProvisionedScheduleStepTable,
-			Columns: []string{status.StatusToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := suo.mutation.StatusToProvisionedScheduleStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   status.StatusToProvisionedScheduleStepTable,
-			Columns: []string{status.StatusToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}

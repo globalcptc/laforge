@@ -32,11 +32,11 @@ import (
 	"github.com/gen0cide/laforge/ent/plandiff"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
-	"github.com/gen0cide/laforge/ent/schedulestep"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/schema"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
@@ -278,12 +278,12 @@ func init() {
 	provisionednetworkDescID := provisionednetworkFields[0].Descriptor()
 	// provisionednetwork.DefaultID holds the default value on creation for the id field.
 	provisionednetwork.DefaultID = provisionednetworkDescID.Default.(func() uuid.UUID)
-	provisionedschedulestepFields := schema.ProvisionedScheduleStep{}.Fields()
-	_ = provisionedschedulestepFields
-	// provisionedschedulestepDescID is the schema descriptor for id field.
-	provisionedschedulestepDescID := provisionedschedulestepFields[0].Descriptor()
-	// provisionedschedulestep.DefaultID holds the default value on creation for the id field.
-	provisionedschedulestep.DefaultID = provisionedschedulestepDescID.Default.(func() uuid.UUID)
+	provisioningscheduledstepFields := schema.ProvisioningScheduledStep{}.Fields()
+	_ = provisioningscheduledstepFields
+	// provisioningscheduledstepDescID is the schema descriptor for id field.
+	provisioningscheduledstepDescID := provisioningscheduledstepFields[0].Descriptor()
+	// provisioningscheduledstep.DefaultID holds the default value on creation for the id field.
+	provisioningscheduledstep.DefaultID = provisioningscheduledstepDescID.Default.(func() uuid.UUID)
 	provisioningstepFields := schema.ProvisioningStep{}.Fields()
 	_ = provisioningstepFields
 	// provisioningstepDescID is the schema descriptor for id field.
@@ -310,12 +310,12 @@ func init() {
 	repositoryDescID := repositoryFields[0].Descriptor()
 	// repository.DefaultID holds the default value on creation for the id field.
 	repository.DefaultID = repositoryDescID.Default.(func() uuid.UUID)
-	schedulestepFields := schema.ScheduleStep{}.Fields()
-	_ = schedulestepFields
-	// schedulestepDescID is the schema descriptor for id field.
-	schedulestepDescID := schedulestepFields[0].Descriptor()
-	// schedulestep.DefaultID holds the default value on creation for the id field.
-	schedulestep.DefaultID = schedulestepDescID.Default.(func() uuid.UUID)
+	scheduledstepFields := schema.ScheduledStep{}.Fields()
+	_ = scheduledstepFields
+	// scheduledstepDescID is the schema descriptor for id field.
+	scheduledstepDescID := scheduledstepFields[0].Descriptor()
+	// scheduledstep.DefaultID holds the default value on creation for the id field.
+	scheduledstep.DefaultID = scheduledstepDescID.Default.(func() uuid.UUID)
 	scriptFields := schema.Script{}.Fields()
 	_ = scriptFields
 	// scriptDescID is the schema descriptor for id field.

@@ -489,6 +489,34 @@ func HasPlanToProvisioningStepWith(preds ...predicate.ProvisioningStep) predicat
 	})
 }
 
+// HasPlanToProvisioningScheduledStep applies the HasEdge predicate on the "PlanToProvisioningScheduledStep" edge.
+func HasPlanToProvisioningScheduledStep() predicate.Plan {
+	return predicate.Plan(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(PlanToProvisioningScheduledStepTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, PlanToProvisioningScheduledStepTable, PlanToProvisioningScheduledStepColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPlanToProvisioningScheduledStepWith applies the HasEdge predicate on the "PlanToProvisioningScheduledStep" edge with a given conditions (other predicates).
+func HasPlanToProvisioningScheduledStepWith(preds ...predicate.ProvisioningScheduledStep) predicate.Plan {
+	return predicate.Plan(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(PlanToProvisioningScheduledStepInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, PlanToProvisioningScheduledStepTable, PlanToProvisioningScheduledStepColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasPlanToStatus applies the HasEdge predicate on the "PlanToStatus" edge.
 func HasPlanToStatus() predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {

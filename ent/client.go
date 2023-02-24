@@ -38,11 +38,11 @@ import (
 	"github.com/gen0cide/laforge/ent/plandiff"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
-	"github.com/gen0cide/laforge/ent/schedulestep"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
@@ -115,16 +115,16 @@ type Client struct {
 	ProvisionedHost *ProvisionedHostClient
 	// ProvisionedNetwork is the client for interacting with the ProvisionedNetwork builders.
 	ProvisionedNetwork *ProvisionedNetworkClient
-	// ProvisionedScheduleStep is the client for interacting with the ProvisionedScheduleStep builders.
-	ProvisionedScheduleStep *ProvisionedScheduleStepClient
+	// ProvisioningScheduledStep is the client for interacting with the ProvisioningScheduledStep builders.
+	ProvisioningScheduledStep *ProvisioningScheduledStepClient
 	// ProvisioningStep is the client for interacting with the ProvisioningStep builders.
 	ProvisioningStep *ProvisioningStepClient
 	// RepoCommit is the client for interacting with the RepoCommit builders.
 	RepoCommit *RepoCommitClient
 	// Repository is the client for interacting with the Repository builders.
 	Repository *RepositoryClient
-	// ScheduleStep is the client for interacting with the ScheduleStep builders.
-	ScheduleStep *ScheduleStepClient
+	// ScheduledStep is the client for interacting with the ScheduledStep builders.
+	ScheduledStep *ScheduledStepClient
 	// Script is the client for interacting with the Script builders.
 	Script *ScriptClient
 	// ServerTask is the client for interacting with the ServerTask builders.
@@ -179,11 +179,11 @@ func (c *Client) init() {
 	c.PlanDiff = NewPlanDiffClient(c.config)
 	c.ProvisionedHost = NewProvisionedHostClient(c.config)
 	c.ProvisionedNetwork = NewProvisionedNetworkClient(c.config)
-	c.ProvisionedScheduleStep = NewProvisionedScheduleStepClient(c.config)
+	c.ProvisioningScheduledStep = NewProvisioningScheduledStepClient(c.config)
 	c.ProvisioningStep = NewProvisioningStepClient(c.config)
 	c.RepoCommit = NewRepoCommitClient(c.config)
 	c.Repository = NewRepositoryClient(c.config)
-	c.ScheduleStep = NewScheduleStepClient(c.config)
+	c.ScheduledStep = NewScheduledStepClient(c.config)
 	c.Script = NewScriptClient(c.config)
 	c.ServerTask = NewServerTaskClient(c.config)
 	c.Status = NewStatusClient(c.config)
@@ -222,47 +222,47 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                     ctx,
-		config:                  cfg,
-		AdhocPlan:               NewAdhocPlanClient(cfg),
-		AgentStatus:             NewAgentStatusClient(cfg),
-		AgentTask:               NewAgentTaskClient(cfg),
-		Ansible:                 NewAnsibleClient(cfg),
-		AuthUser:                NewAuthUserClient(cfg),
-		Build:                   NewBuildClient(cfg),
-		BuildCommit:             NewBuildCommitClient(cfg),
-		Command:                 NewCommandClient(cfg),
-		Competition:             NewCompetitionClient(cfg),
-		DNS:                     NewDNSClient(cfg),
-		DNSRecord:               NewDNSRecordClient(cfg),
-		Disk:                    NewDiskClient(cfg),
-		Environment:             NewEnvironmentClient(cfg),
-		FileDelete:              NewFileDeleteClient(cfg),
-		FileDownload:            NewFileDownloadClient(cfg),
-		FileExtract:             NewFileExtractClient(cfg),
-		Finding:                 NewFindingClient(cfg),
-		GinFileMiddleware:       NewGinFileMiddlewareClient(cfg),
-		Host:                    NewHostClient(cfg),
-		HostDependency:          NewHostDependencyClient(cfg),
-		Identity:                NewIdentityClient(cfg),
-		IncludedNetwork:         NewIncludedNetworkClient(cfg),
-		Network:                 NewNetworkClient(cfg),
-		Plan:                    NewPlanClient(cfg),
-		PlanDiff:                NewPlanDiffClient(cfg),
-		ProvisionedHost:         NewProvisionedHostClient(cfg),
-		ProvisionedNetwork:      NewProvisionedNetworkClient(cfg),
-		ProvisionedScheduleStep: NewProvisionedScheduleStepClient(cfg),
-		ProvisioningStep:        NewProvisioningStepClient(cfg),
-		RepoCommit:              NewRepoCommitClient(cfg),
-		Repository:              NewRepositoryClient(cfg),
-		ScheduleStep:            NewScheduleStepClient(cfg),
-		Script:                  NewScriptClient(cfg),
-		ServerTask:              NewServerTaskClient(cfg),
-		Status:                  NewStatusClient(cfg),
-		Tag:                     NewTagClient(cfg),
-		Team:                    NewTeamClient(cfg),
-		Token:                   NewTokenClient(cfg),
-		User:                    NewUserClient(cfg),
+		ctx:                       ctx,
+		config:                    cfg,
+		AdhocPlan:                 NewAdhocPlanClient(cfg),
+		AgentStatus:               NewAgentStatusClient(cfg),
+		AgentTask:                 NewAgentTaskClient(cfg),
+		Ansible:                   NewAnsibleClient(cfg),
+		AuthUser:                  NewAuthUserClient(cfg),
+		Build:                     NewBuildClient(cfg),
+		BuildCommit:               NewBuildCommitClient(cfg),
+		Command:                   NewCommandClient(cfg),
+		Competition:               NewCompetitionClient(cfg),
+		DNS:                       NewDNSClient(cfg),
+		DNSRecord:                 NewDNSRecordClient(cfg),
+		Disk:                      NewDiskClient(cfg),
+		Environment:               NewEnvironmentClient(cfg),
+		FileDelete:                NewFileDeleteClient(cfg),
+		FileDownload:              NewFileDownloadClient(cfg),
+		FileExtract:               NewFileExtractClient(cfg),
+		Finding:                   NewFindingClient(cfg),
+		GinFileMiddleware:         NewGinFileMiddlewareClient(cfg),
+		Host:                      NewHostClient(cfg),
+		HostDependency:            NewHostDependencyClient(cfg),
+		Identity:                  NewIdentityClient(cfg),
+		IncludedNetwork:           NewIncludedNetworkClient(cfg),
+		Network:                   NewNetworkClient(cfg),
+		Plan:                      NewPlanClient(cfg),
+		PlanDiff:                  NewPlanDiffClient(cfg),
+		ProvisionedHost:           NewProvisionedHostClient(cfg),
+		ProvisionedNetwork:        NewProvisionedNetworkClient(cfg),
+		ProvisioningScheduledStep: NewProvisioningScheduledStepClient(cfg),
+		ProvisioningStep:          NewProvisioningStepClient(cfg),
+		RepoCommit:                NewRepoCommitClient(cfg),
+		Repository:                NewRepositoryClient(cfg),
+		ScheduledStep:             NewScheduledStepClient(cfg),
+		Script:                    NewScriptClient(cfg),
+		ServerTask:                NewServerTaskClient(cfg),
+		Status:                    NewStatusClient(cfg),
+		Tag:                       NewTagClient(cfg),
+		Team:                      NewTeamClient(cfg),
+		Token:                     NewTokenClient(cfg),
+		User:                      NewUserClient(cfg),
 	}, nil
 }
 
@@ -280,47 +280,47 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                     ctx,
-		config:                  cfg,
-		AdhocPlan:               NewAdhocPlanClient(cfg),
-		AgentStatus:             NewAgentStatusClient(cfg),
-		AgentTask:               NewAgentTaskClient(cfg),
-		Ansible:                 NewAnsibleClient(cfg),
-		AuthUser:                NewAuthUserClient(cfg),
-		Build:                   NewBuildClient(cfg),
-		BuildCommit:             NewBuildCommitClient(cfg),
-		Command:                 NewCommandClient(cfg),
-		Competition:             NewCompetitionClient(cfg),
-		DNS:                     NewDNSClient(cfg),
-		DNSRecord:               NewDNSRecordClient(cfg),
-		Disk:                    NewDiskClient(cfg),
-		Environment:             NewEnvironmentClient(cfg),
-		FileDelete:              NewFileDeleteClient(cfg),
-		FileDownload:            NewFileDownloadClient(cfg),
-		FileExtract:             NewFileExtractClient(cfg),
-		Finding:                 NewFindingClient(cfg),
-		GinFileMiddleware:       NewGinFileMiddlewareClient(cfg),
-		Host:                    NewHostClient(cfg),
-		HostDependency:          NewHostDependencyClient(cfg),
-		Identity:                NewIdentityClient(cfg),
-		IncludedNetwork:         NewIncludedNetworkClient(cfg),
-		Network:                 NewNetworkClient(cfg),
-		Plan:                    NewPlanClient(cfg),
-		PlanDiff:                NewPlanDiffClient(cfg),
-		ProvisionedHost:         NewProvisionedHostClient(cfg),
-		ProvisionedNetwork:      NewProvisionedNetworkClient(cfg),
-		ProvisionedScheduleStep: NewProvisionedScheduleStepClient(cfg),
-		ProvisioningStep:        NewProvisioningStepClient(cfg),
-		RepoCommit:              NewRepoCommitClient(cfg),
-		Repository:              NewRepositoryClient(cfg),
-		ScheduleStep:            NewScheduleStepClient(cfg),
-		Script:                  NewScriptClient(cfg),
-		ServerTask:              NewServerTaskClient(cfg),
-		Status:                  NewStatusClient(cfg),
-		Tag:                     NewTagClient(cfg),
-		Team:                    NewTeamClient(cfg),
-		Token:                   NewTokenClient(cfg),
-		User:                    NewUserClient(cfg),
+		ctx:                       ctx,
+		config:                    cfg,
+		AdhocPlan:                 NewAdhocPlanClient(cfg),
+		AgentStatus:               NewAgentStatusClient(cfg),
+		AgentTask:                 NewAgentTaskClient(cfg),
+		Ansible:                   NewAnsibleClient(cfg),
+		AuthUser:                  NewAuthUserClient(cfg),
+		Build:                     NewBuildClient(cfg),
+		BuildCommit:               NewBuildCommitClient(cfg),
+		Command:                   NewCommandClient(cfg),
+		Competition:               NewCompetitionClient(cfg),
+		DNS:                       NewDNSClient(cfg),
+		DNSRecord:                 NewDNSRecordClient(cfg),
+		Disk:                      NewDiskClient(cfg),
+		Environment:               NewEnvironmentClient(cfg),
+		FileDelete:                NewFileDeleteClient(cfg),
+		FileDownload:              NewFileDownloadClient(cfg),
+		FileExtract:               NewFileExtractClient(cfg),
+		Finding:                   NewFindingClient(cfg),
+		GinFileMiddleware:         NewGinFileMiddlewareClient(cfg),
+		Host:                      NewHostClient(cfg),
+		HostDependency:            NewHostDependencyClient(cfg),
+		Identity:                  NewIdentityClient(cfg),
+		IncludedNetwork:           NewIncludedNetworkClient(cfg),
+		Network:                   NewNetworkClient(cfg),
+		Plan:                      NewPlanClient(cfg),
+		PlanDiff:                  NewPlanDiffClient(cfg),
+		ProvisionedHost:           NewProvisionedHostClient(cfg),
+		ProvisionedNetwork:        NewProvisionedNetworkClient(cfg),
+		ProvisioningScheduledStep: NewProvisioningScheduledStepClient(cfg),
+		ProvisioningStep:          NewProvisioningStepClient(cfg),
+		RepoCommit:                NewRepoCommitClient(cfg),
+		Repository:                NewRepositoryClient(cfg),
+		ScheduledStep:             NewScheduledStepClient(cfg),
+		Script:                    NewScriptClient(cfg),
+		ServerTask:                NewServerTaskClient(cfg),
+		Status:                    NewStatusClient(cfg),
+		Tag:                       NewTagClient(cfg),
+		Team:                      NewTeamClient(cfg),
+		Token:                     NewTokenClient(cfg),
+		User:                      NewUserClient(cfg),
 	}, nil
 }
 
@@ -376,11 +376,11 @@ func (c *Client) Use(hooks ...Hook) {
 	c.PlanDiff.Use(hooks...)
 	c.ProvisionedHost.Use(hooks...)
 	c.ProvisionedNetwork.Use(hooks...)
-	c.ProvisionedScheduleStep.Use(hooks...)
+	c.ProvisioningScheduledStep.Use(hooks...)
 	c.ProvisioningStep.Use(hooks...)
 	c.RepoCommit.Use(hooks...)
 	c.Repository.Use(hooks...)
-	c.ScheduleStep.Use(hooks...)
+	c.ScheduledStep.Use(hooks...)
 	c.Script.Use(hooks...)
 	c.ServerTask.Use(hooks...)
 	c.Status.Use(hooks...)
@@ -799,6 +799,22 @@ func (c *AgentTaskClient) QueryAgentTaskToProvisioningStep(at *AgentTask) *Provi
 	return query
 }
 
+// QueryAgentTaskToProvisioningScheduledStep queries the AgentTaskToProvisioningScheduledStep edge of a AgentTask.
+func (c *AgentTaskClient) QueryAgentTaskToProvisioningScheduledStep(at *AgentTask) *ProvisioningScheduledStepQuery {
+	query := &ProvisioningScheduledStepQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := at.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttask.Table, agenttask.FieldID, id),
+			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, agenttask.AgentTaskToProvisioningScheduledStepTable, agenttask.AgentTaskToProvisioningScheduledStepColumn),
+		)
+		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryAgentTaskToProvisionedHost queries the AgentTaskToProvisionedHost edge of a AgentTask.
 func (c *AgentTaskClient) QueryAgentTaskToProvisionedHost(at *AgentTask) *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: c.config}
@@ -808,22 +824,6 @@ func (c *AgentTaskClient) QueryAgentTaskToProvisionedHost(at *AgentTask) *Provis
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, id),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.AgentTaskToProvisionedHostTable, agenttask.AgentTaskToProvisionedHostColumn),
-		)
-		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryAgentTaskToProvisionedScheduleStep queries the AgentTaskToProvisionedScheduleStep edge of a AgentTask.
-func (c *AgentTaskClient) QueryAgentTaskToProvisionedScheduleStep(at *AgentTask) *ProvisionedScheduleStepQuery {
-	query := &ProvisionedScheduleStepQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := at.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(agenttask.Table, agenttask.FieldID, id),
-			sqlgraph.To(provisionedschedulestep.Table, provisionedschedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, agenttask.AgentTaskToProvisionedScheduleStepTable, agenttask.AgentTaskToProvisionedScheduleStepColumn),
 		)
 		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
 		return fromV, nil
@@ -2451,6 +2451,22 @@ func (c *EnvironmentClient) QueryEnvironmentToAnsible(e *Environment) *AnsibleQu
 	return query
 }
 
+// QueryEnvironmentToScheduledStep queries the EnvironmentToScheduledStep edge of a Environment.
+func (c *EnvironmentClient) QueryEnvironmentToScheduledStep(e *Environment) *ScheduledStepQuery {
+	query := &ScheduledStepQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(environment.Table, environment.FieldID, id),
+			sqlgraph.To(scheduledstep.Table, scheduledstep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToScheduledStepTable, environment.EnvironmentToScheduledStepColumn),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryEnvironmentToBuild queries the EnvironmentToBuild edge of a Environment.
 func (c *EnvironmentClient) QueryEnvironmentToBuild(e *Environment) *BuildQuery {
 	query := &BuildQuery{config: c.config}
@@ -3093,6 +3109,22 @@ func (c *GinFileMiddlewareClient) QueryGinFileMiddlewareToProvisioningStep(gfm *
 	return query
 }
 
+// QueryGinFileMiddlewareToProvisioningScheduledStep queries the GinFileMiddlewareToProvisioningScheduledStep edge of a GinFileMiddleware.
+func (c *GinFileMiddlewareClient) QueryGinFileMiddlewareToProvisioningScheduledStep(gfm *GinFileMiddleware) *ProvisioningScheduledStepQuery {
+	query := &ProvisioningScheduledStepQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := gfm.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(ginfilemiddleware.Table, ginfilemiddleware.FieldID, id),
+			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepTable, ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepColumn),
+		)
+		fromV = sqlgraph.Neighbors(gfm.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *GinFileMiddlewareClient) Hooks() []Hook {
 	return c.hooks.GinFileMiddleware
@@ -3208,22 +3240,6 @@ func (c *HostClient) QueryHostToUser(h *Host) *UserQuery {
 			sqlgraph.From(host.Table, host.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, host.HostToUserTable, host.HostToUserColumn),
-		)
-		fromV = sqlgraph.Neighbors(h.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryHostToScheduleStep queries the HostToScheduleStep edge of a Host.
-func (c *HostClient) QueryHostToScheduleStep(h *Host) *ScheduleStepQuery {
-	query := &ScheduleStepQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := h.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(host.Table, host.FieldID, id),
-			sqlgraph.To(schedulestep.Table, schedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, host.HostToScheduleStepTable, host.HostToScheduleStepColumn),
 		)
 		fromV = sqlgraph.Neighbors(h.driver.Dialect(), step)
 		return fromV, nil
@@ -4049,6 +4065,22 @@ func (c *PlanClient) QueryPlanToProvisioningStep(pl *Plan) *ProvisioningStepQuer
 	return query
 }
 
+// QueryPlanToProvisioningScheduledStep queries the PlanToProvisioningScheduledStep edge of a Plan.
+func (c *PlanClient) QueryPlanToProvisioningScheduledStep(pl *Plan) *ProvisioningScheduledStepQuery {
+	query := &ProvisioningScheduledStepQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pl.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(plan.Table, plan.FieldID, id),
+			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, plan.PlanToProvisioningScheduledStepTable, plan.PlanToProvisioningScheduledStepColumn),
+		)
+		fromV = sqlgraph.Neighbors(pl.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryPlanToStatus queries the PlanToStatus edge of a Plan.
 func (c *PlanClient) QueryPlanToStatus(pl *Plan) *StatusQuery {
 	query := &StatusQuery{config: c.config}
@@ -4373,22 +4405,6 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToBuild(ph *ProvisionedHost)
 	return query
 }
 
-// QueryProvisionedHostToProvisionedScheduleStep queries the ProvisionedHostToProvisionedScheduleStep edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToProvisionedScheduleStep(ph *ProvisionedHost) *ProvisionedScheduleStepQuery {
-	query := &ProvisionedScheduleStepQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := ph.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
-			sqlgraph.To(provisionedschedulestep.Table, provisionedschedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, provisionedhost.ProvisionedHostToProvisionedScheduleStepTable, provisionedhost.ProvisionedHostToProvisionedScheduleStepColumn),
-		)
-		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryProvisionedHostToProvisioningStep queries the ProvisionedHostToProvisioningStep edge of a ProvisionedHost.
 func (c *ProvisionedHostClient) QueryProvisionedHostToProvisioningStep(ph *ProvisionedHost) *ProvisioningStepQuery {
 	query := &ProvisioningStepQuery{config: c.config}
@@ -4398,6 +4414,22 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToProvisioningStep(ph *Provi
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(provisioningstep.Table, provisioningstep.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToProvisioningStepTable, provisionedhost.ProvisionedHostToProvisioningStepColumn),
+		)
+		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisionedHostToProvisioningScheduleStep queries the ProvisionedHostToProvisioningScheduleStep edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryProvisionedHostToProvisioningScheduleStep(ph *ProvisionedHost) *ProvisioningScheduledStepQuery {
+	query := &ProvisioningScheduledStepQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := ph.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
+			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToProvisioningScheduleStepTable, provisionedhost.ProvisionedHostToProvisioningScheduleStepColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4660,84 +4692,84 @@ func (c *ProvisionedNetworkClient) Hooks() []Hook {
 	return c.hooks.ProvisionedNetwork
 }
 
-// ProvisionedScheduleStepClient is a client for the ProvisionedScheduleStep schema.
-type ProvisionedScheduleStepClient struct {
+// ProvisioningScheduledStepClient is a client for the ProvisioningScheduledStep schema.
+type ProvisioningScheduledStepClient struct {
 	config
 }
 
-// NewProvisionedScheduleStepClient returns a client for the ProvisionedScheduleStep from the given config.
-func NewProvisionedScheduleStepClient(c config) *ProvisionedScheduleStepClient {
-	return &ProvisionedScheduleStepClient{config: c}
+// NewProvisioningScheduledStepClient returns a client for the ProvisioningScheduledStep from the given config.
+func NewProvisioningScheduledStepClient(c config) *ProvisioningScheduledStepClient {
+	return &ProvisioningScheduledStepClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `provisionedschedulestep.Hooks(f(g(h())))`.
-func (c *ProvisionedScheduleStepClient) Use(hooks ...Hook) {
-	c.hooks.ProvisionedScheduleStep = append(c.hooks.ProvisionedScheduleStep, hooks...)
+// A call to `Use(f, g, h)` equals to `provisioningscheduledstep.Hooks(f(g(h())))`.
+func (c *ProvisioningScheduledStepClient) Use(hooks ...Hook) {
+	c.hooks.ProvisioningScheduledStep = append(c.hooks.ProvisioningScheduledStep, hooks...)
 }
 
-// Create returns a builder for creating a ProvisionedScheduleStep entity.
-func (c *ProvisionedScheduleStepClient) Create() *ProvisionedScheduleStepCreate {
-	mutation := newProvisionedScheduleStepMutation(c.config, OpCreate)
-	return &ProvisionedScheduleStepCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a ProvisioningScheduledStep entity.
+func (c *ProvisioningScheduledStepClient) Create() *ProvisioningScheduledStepCreate {
+	mutation := newProvisioningScheduledStepMutation(c.config, OpCreate)
+	return &ProvisioningScheduledStepCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of ProvisionedScheduleStep entities.
-func (c *ProvisionedScheduleStepClient) CreateBulk(builders ...*ProvisionedScheduleStepCreate) *ProvisionedScheduleStepCreateBulk {
-	return &ProvisionedScheduleStepCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of ProvisioningScheduledStep entities.
+func (c *ProvisioningScheduledStepClient) CreateBulk(builders ...*ProvisioningScheduledStepCreate) *ProvisioningScheduledStepCreateBulk {
+	return &ProvisioningScheduledStepCreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for ProvisionedScheduleStep.
-func (c *ProvisionedScheduleStepClient) Update() *ProvisionedScheduleStepUpdate {
-	mutation := newProvisionedScheduleStepMutation(c.config, OpUpdate)
-	return &ProvisionedScheduleStepUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) Update() *ProvisioningScheduledStepUpdate {
+	mutation := newProvisioningScheduledStepMutation(c.config, OpUpdate)
+	return &ProvisioningScheduledStepUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *ProvisionedScheduleStepClient) UpdateOne(pss *ProvisionedScheduleStep) *ProvisionedScheduleStepUpdateOne {
-	mutation := newProvisionedScheduleStepMutation(c.config, OpUpdateOne, withProvisionedScheduleStep(pss))
-	return &ProvisionedScheduleStepUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *ProvisioningScheduledStepClient) UpdateOne(pss *ProvisioningScheduledStep) *ProvisioningScheduledStepUpdateOne {
+	mutation := newProvisioningScheduledStepMutation(c.config, OpUpdateOne, withProvisioningScheduledStep(pss))
+	return &ProvisioningScheduledStepUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *ProvisionedScheduleStepClient) UpdateOneID(id uuid.UUID) *ProvisionedScheduleStepUpdateOne {
-	mutation := newProvisionedScheduleStepMutation(c.config, OpUpdateOne, withProvisionedScheduleStepID(id))
-	return &ProvisionedScheduleStepUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *ProvisioningScheduledStepClient) UpdateOneID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	mutation := newProvisioningScheduledStepMutation(c.config, OpUpdateOne, withProvisioningScheduledStepID(id))
+	return &ProvisioningScheduledStepUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for ProvisionedScheduleStep.
-func (c *ProvisionedScheduleStepClient) Delete() *ProvisionedScheduleStepDelete {
-	mutation := newProvisionedScheduleStepMutation(c.config, OpDelete)
-	return &ProvisionedScheduleStepDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) Delete() *ProvisioningScheduledStepDelete {
+	mutation := newProvisioningScheduledStepMutation(c.config, OpDelete)
+	return &ProvisioningScheduledStepDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *ProvisionedScheduleStepClient) DeleteOne(pss *ProvisionedScheduleStep) *ProvisionedScheduleStepDeleteOne {
+func (c *ProvisioningScheduledStepClient) DeleteOne(pss *ProvisioningScheduledStep) *ProvisioningScheduledStepDeleteOne {
 	return c.DeleteOneID(pss.ID)
 }
 
 // DeleteOne returns a builder for deleting the given entity by its id.
-func (c *ProvisionedScheduleStepClient) DeleteOneID(id uuid.UUID) *ProvisionedScheduleStepDeleteOne {
-	builder := c.Delete().Where(provisionedschedulestep.ID(id))
+func (c *ProvisioningScheduledStepClient) DeleteOneID(id uuid.UUID) *ProvisioningScheduledStepDeleteOne {
+	builder := c.Delete().Where(provisioningscheduledstep.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &ProvisionedScheduleStepDeleteOne{builder}
+	return &ProvisioningScheduledStepDeleteOne{builder}
 }
 
-// Query returns a query builder for ProvisionedScheduleStep.
-func (c *ProvisionedScheduleStepClient) Query() *ProvisionedScheduleStepQuery {
-	return &ProvisionedScheduleStepQuery{
+// Query returns a query builder for ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) Query() *ProvisioningScheduledStepQuery {
+	return &ProvisioningScheduledStepQuery{
 		config: c.config,
 	}
 }
 
-// Get returns a ProvisionedScheduleStep entity by its id.
-func (c *ProvisionedScheduleStepClient) Get(ctx context.Context, id uuid.UUID) (*ProvisionedScheduleStep, error) {
-	return c.Query().Where(provisionedschedulestep.ID(id)).Only(ctx)
+// Get returns a ProvisioningScheduledStep entity by its id.
+func (c *ProvisioningScheduledStepClient) Get(ctx context.Context, id uuid.UUID) (*ProvisioningScheduledStep, error) {
+	return c.Query().Where(provisioningscheduledstep.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *ProvisionedScheduleStepClient) GetX(ctx context.Context, id uuid.UUID) *ProvisionedScheduleStep {
+func (c *ProvisioningScheduledStepClient) GetX(ctx context.Context, id uuid.UUID) *ProvisioningScheduledStep {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -4745,15 +4777,15 @@ func (c *ProvisionedScheduleStepClient) GetX(ctx context.Context, id uuid.UUID) 
 	return obj
 }
 
-// QueryProvisionedScheduleStepToStatus queries the ProvisionedScheduleStepToStatus edge of a ProvisionedScheduleStep.
-func (c *ProvisionedScheduleStepClient) QueryProvisionedScheduleStepToStatus(pss *ProvisionedScheduleStep) *StatusQuery {
+// QueryProvisioningScheduledStepToStatus queries the ProvisioningScheduledStepToStatus edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToStatus(pss *ProvisioningScheduledStep) *StatusQuery {
 	query := &StatusQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(provisionedschedulestep.Table, provisionedschedulestep.FieldID, id),
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, provisionedschedulestep.ProvisionedScheduleStepToStatusTable, provisionedschedulestep.ProvisionedScheduleStepToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, provisioningscheduledstep.ProvisioningScheduledStepToStatusTable, provisioningscheduledstep.ProvisioningScheduledStepToStatusColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4761,15 +4793,15 @@ func (c *ProvisionedScheduleStepClient) QueryProvisionedScheduleStepToStatus(pss
 	return query
 }
 
-// QueryProvisionedScheduleStepToScheduleStep queries the ProvisionedScheduleStepToScheduleStep edge of a ProvisionedScheduleStep.
-func (c *ProvisionedScheduleStepClient) QueryProvisionedScheduleStepToScheduleStep(pss *ProvisionedScheduleStep) *ScheduleStepQuery {
-	query := &ScheduleStepQuery{config: c.config}
+// QueryProvisioningScheduledStepToScheduledStep queries the ProvisioningScheduledStepToScheduledStep edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToScheduledStep(pss *ProvisioningScheduledStep) *ScheduledStepQuery {
+	query := &ScheduledStepQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(provisionedschedulestep.Table, provisionedschedulestep.FieldID, id),
-			sqlgraph.To(schedulestep.Table, schedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, provisionedschedulestep.ProvisionedScheduleStepToScheduleStepTable, provisionedschedulestep.ProvisionedScheduleStepToScheduleStepColumn),
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
+			sqlgraph.To(scheduledstep.Table, scheduledstep.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepTable, provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4777,15 +4809,15 @@ func (c *ProvisionedScheduleStepClient) QueryProvisionedScheduleStepToScheduleSt
 	return query
 }
 
-// QueryProvisionedScheduleStepToProvisionedHost queries the ProvisionedScheduleStepToProvisionedHost edge of a ProvisionedScheduleStep.
-func (c *ProvisionedScheduleStepClient) QueryProvisionedScheduleStepToProvisionedHost(pss *ProvisionedScheduleStep) *ProvisionedHostQuery {
+// QueryProvisioningScheduleStepToProvisionedHost queries the ProvisioningScheduleStepToProvisionedHost edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduleStepToProvisionedHost(pss *ProvisioningScheduledStep) *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(provisionedschedulestep.Table, provisionedschedulestep.FieldID, id),
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, provisionedschedulestep.ProvisionedScheduleStepToProvisionedHostTable, provisionedschedulestep.ProvisionedScheduleStepToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostTable, provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4793,15 +4825,159 @@ func (c *ProvisionedScheduleStepClient) QueryProvisionedScheduleStepToProvisione
 	return query
 }
 
-// QueryProvisionedScheduleStepToAgentTask queries the ProvisionedScheduleStepToAgentTask edge of a ProvisionedScheduleStep.
-func (c *ProvisionedScheduleStepClient) QueryProvisionedScheduleStepToAgentTask(pss *ProvisionedScheduleStep) *AgentTaskQuery {
+// QueryProvisioningScheduledStepToScript queries the ProvisioningScheduledStepToScript edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToScript(pss *ProvisioningScheduledStep) *ScriptQuery {
+	query := &ScriptQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pss.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
+			sqlgraph.To(script.Table, script.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToScriptTable, provisioningscheduledstep.ProvisioningScheduledStepToScriptColumn),
+		)
+		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisioningScheduledStepToCommand queries the ProvisioningScheduledStepToCommand edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToCommand(pss *ProvisioningScheduledStep) *CommandQuery {
+	query := &CommandQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pss.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
+			sqlgraph.To(command.Table, command.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToCommandTable, provisioningscheduledstep.ProvisioningScheduledStepToCommandColumn),
+		)
+		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisioningScheduledStepToDNSRecord queries the ProvisioningScheduledStepToDNSRecord edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToDNSRecord(pss *ProvisioningScheduledStep) *DNSRecordQuery {
+	query := &DNSRecordQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pss.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
+			sqlgraph.To(dnsrecord.Table, dnsrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordTable, provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordColumn),
+		)
+		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisioningScheduledStepToFileDelete queries the ProvisioningScheduledStepToFileDelete edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToFileDelete(pss *ProvisioningScheduledStep) *FileDeleteQuery {
+	query := &FileDeleteQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pss.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
+			sqlgraph.To(filedelete.Table, filedelete.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteTable, provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteColumn),
+		)
+		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisioningScheduledStepToFileDownload queries the ProvisioningScheduledStepToFileDownload edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToFileDownload(pss *ProvisioningScheduledStep) *FileDownloadQuery {
+	query := &FileDownloadQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pss.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
+			sqlgraph.To(filedownload.Table, filedownload.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadTable, provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadColumn),
+		)
+		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisioningScheduledStepToFileExtract queries the ProvisioningScheduledStepToFileExtract edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToFileExtract(pss *ProvisioningScheduledStep) *FileExtractQuery {
+	query := &FileExtractQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pss.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
+			sqlgraph.To(fileextract.Table, fileextract.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToFileExtractTable, provisioningscheduledstep.ProvisioningScheduledStepToFileExtractColumn),
+		)
+		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisioningScheduledStepToAnsible queries the ProvisioningScheduledStepToAnsible edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToAnsible(pss *ProvisioningScheduledStep) *AnsibleQuery {
+	query := &AnsibleQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pss.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
+			sqlgraph.To(ansible.Table, ansible.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToAnsibleTable, provisioningscheduledstep.ProvisioningScheduledStepToAnsibleColumn),
+		)
+		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisioningScheduledStepToAgentTask queries the ProvisioningScheduledStepToAgentTask edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToAgentTask(pss *ProvisioningScheduledStep) *AgentTaskQuery {
 	query := &AgentTaskQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(provisionedschedulestep.Table, provisionedschedulestep.FieldID, id),
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(agenttask.Table, agenttask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisionedschedulestep.ProvisionedScheduleStepToAgentTaskTable, provisionedschedulestep.ProvisionedScheduleStepToAgentTaskColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskTable, provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisioningStepToPlan queries the ProvisioningStepToPlan edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningStepToPlan(pss *ProvisioningScheduledStep) *PlanQuery {
+	query := &PlanQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pss.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
+			sqlgraph.To(plan.Table, plan.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisioningscheduledstep.ProvisioningStepToPlanTable, provisioningscheduledstep.ProvisioningStepToPlanColumn),
+		)
+		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisioningScheduledStepToGinFileMiddleware queries the ProvisioningScheduledStepToGinFileMiddleware edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToGinFileMiddleware(pss *ProvisioningScheduledStep) *GinFileMiddlewareQuery {
+	query := &GinFileMiddlewareQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pss.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
+			sqlgraph.To(ginfilemiddleware.Table, ginfilemiddleware.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareTable, provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4810,8 +4986,8 @@ func (c *ProvisionedScheduleStepClient) QueryProvisionedScheduleStepToAgentTask(
 }
 
 // Hooks returns the client hooks.
-func (c *ProvisionedScheduleStepClient) Hooks() []Hook {
-	return c.hooks.ProvisionedScheduleStep
+func (c *ProvisioningScheduledStepClient) Hooks() []Hook {
+	return c.hooks.ProvisioningScheduledStep
 }
 
 // ProvisioningStepClient is a client for the ProvisioningStep schema.
@@ -5324,84 +5500,84 @@ func (c *RepositoryClient) Hooks() []Hook {
 	return c.hooks.Repository
 }
 
-// ScheduleStepClient is a client for the ScheduleStep schema.
-type ScheduleStepClient struct {
+// ScheduledStepClient is a client for the ScheduledStep schema.
+type ScheduledStepClient struct {
 	config
 }
 
-// NewScheduleStepClient returns a client for the ScheduleStep from the given config.
-func NewScheduleStepClient(c config) *ScheduleStepClient {
-	return &ScheduleStepClient{config: c}
+// NewScheduledStepClient returns a client for the ScheduledStep from the given config.
+func NewScheduledStepClient(c config) *ScheduledStepClient {
+	return &ScheduledStepClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `schedulestep.Hooks(f(g(h())))`.
-func (c *ScheduleStepClient) Use(hooks ...Hook) {
-	c.hooks.ScheduleStep = append(c.hooks.ScheduleStep, hooks...)
+// A call to `Use(f, g, h)` equals to `scheduledstep.Hooks(f(g(h())))`.
+func (c *ScheduledStepClient) Use(hooks ...Hook) {
+	c.hooks.ScheduledStep = append(c.hooks.ScheduledStep, hooks...)
 }
 
-// Create returns a builder for creating a ScheduleStep entity.
-func (c *ScheduleStepClient) Create() *ScheduleStepCreate {
-	mutation := newScheduleStepMutation(c.config, OpCreate)
-	return &ScheduleStepCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a ScheduledStep entity.
+func (c *ScheduledStepClient) Create() *ScheduledStepCreate {
+	mutation := newScheduledStepMutation(c.config, OpCreate)
+	return &ScheduledStepCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of ScheduleStep entities.
-func (c *ScheduleStepClient) CreateBulk(builders ...*ScheduleStepCreate) *ScheduleStepCreateBulk {
-	return &ScheduleStepCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of ScheduledStep entities.
+func (c *ScheduledStepClient) CreateBulk(builders ...*ScheduledStepCreate) *ScheduledStepCreateBulk {
+	return &ScheduledStepCreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for ScheduleStep.
-func (c *ScheduleStepClient) Update() *ScheduleStepUpdate {
-	mutation := newScheduleStepMutation(c.config, OpUpdate)
-	return &ScheduleStepUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for ScheduledStep.
+func (c *ScheduledStepClient) Update() *ScheduledStepUpdate {
+	mutation := newScheduledStepMutation(c.config, OpUpdate)
+	return &ScheduledStepUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *ScheduleStepClient) UpdateOne(ss *ScheduleStep) *ScheduleStepUpdateOne {
-	mutation := newScheduleStepMutation(c.config, OpUpdateOne, withScheduleStep(ss))
-	return &ScheduleStepUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *ScheduledStepClient) UpdateOne(ss *ScheduledStep) *ScheduledStepUpdateOne {
+	mutation := newScheduledStepMutation(c.config, OpUpdateOne, withScheduledStep(ss))
+	return &ScheduledStepUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *ScheduleStepClient) UpdateOneID(id uuid.UUID) *ScheduleStepUpdateOne {
-	mutation := newScheduleStepMutation(c.config, OpUpdateOne, withScheduleStepID(id))
-	return &ScheduleStepUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *ScheduledStepClient) UpdateOneID(id uuid.UUID) *ScheduledStepUpdateOne {
+	mutation := newScheduledStepMutation(c.config, OpUpdateOne, withScheduledStepID(id))
+	return &ScheduledStepUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for ScheduleStep.
-func (c *ScheduleStepClient) Delete() *ScheduleStepDelete {
-	mutation := newScheduleStepMutation(c.config, OpDelete)
-	return &ScheduleStepDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for ScheduledStep.
+func (c *ScheduledStepClient) Delete() *ScheduledStepDelete {
+	mutation := newScheduledStepMutation(c.config, OpDelete)
+	return &ScheduledStepDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *ScheduleStepClient) DeleteOne(ss *ScheduleStep) *ScheduleStepDeleteOne {
+func (c *ScheduledStepClient) DeleteOne(ss *ScheduledStep) *ScheduledStepDeleteOne {
 	return c.DeleteOneID(ss.ID)
 }
 
 // DeleteOne returns a builder for deleting the given entity by its id.
-func (c *ScheduleStepClient) DeleteOneID(id uuid.UUID) *ScheduleStepDeleteOne {
-	builder := c.Delete().Where(schedulestep.ID(id))
+func (c *ScheduledStepClient) DeleteOneID(id uuid.UUID) *ScheduledStepDeleteOne {
+	builder := c.Delete().Where(scheduledstep.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &ScheduleStepDeleteOne{builder}
+	return &ScheduledStepDeleteOne{builder}
 }
 
-// Query returns a query builder for ScheduleStep.
-func (c *ScheduleStepClient) Query() *ScheduleStepQuery {
-	return &ScheduleStepQuery{
+// Query returns a query builder for ScheduledStep.
+func (c *ScheduledStepClient) Query() *ScheduledStepQuery {
+	return &ScheduledStepQuery{
 		config: c.config,
 	}
 }
 
-// Get returns a ScheduleStep entity by its id.
-func (c *ScheduleStepClient) Get(ctx context.Context, id uuid.UUID) (*ScheduleStep, error) {
-	return c.Query().Where(schedulestep.ID(id)).Only(ctx)
+// Get returns a ScheduledStep entity by its id.
+func (c *ScheduledStepClient) Get(ctx context.Context, id uuid.UUID) (*ScheduledStep, error) {
+	return c.Query().Where(scheduledstep.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *ScheduleStepClient) GetX(ctx context.Context, id uuid.UUID) *ScheduleStep {
+func (c *ScheduledStepClient) GetX(ctx context.Context, id uuid.UUID) *ScheduledStep {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -5409,143 +5585,15 @@ func (c *ScheduleStepClient) GetX(ctx context.Context, id uuid.UUID) *ScheduleSt
 	return obj
 }
 
-// QueryScheduleStepToStatus queries the ScheduleStepToStatus edge of a ScheduleStep.
-func (c *ScheduleStepClient) QueryScheduleStepToStatus(ss *ScheduleStep) *StatusQuery {
-	query := &StatusQuery{config: c.config}
+// QueryScheduledStepToEnvironment queries the ScheduledStepToEnvironment edge of a ScheduledStep.
+func (c *ScheduledStepClient) QueryScheduledStepToEnvironment(ss *ScheduledStep) *EnvironmentQuery {
+	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ss.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
-			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, schedulestep.ScheduleStepToStatusTable, schedulestep.ScheduleStepToStatusColumn),
-		)
-		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryScheduleStepToScript queries the ScheduleStepToScript edge of a ScheduleStep.
-func (c *ScheduleStepClient) QueryScheduleStepToScript(ss *ScheduleStep) *ScriptQuery {
-	query := &ScriptQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := ss.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
-			sqlgraph.To(script.Table, script.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, schedulestep.ScheduleStepToScriptTable, schedulestep.ScheduleStepToScriptColumn),
-		)
-		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryScheduleStepToCommand queries the ScheduleStepToCommand edge of a ScheduleStep.
-func (c *ScheduleStepClient) QueryScheduleStepToCommand(ss *ScheduleStep) *CommandQuery {
-	query := &CommandQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := ss.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
-			sqlgraph.To(command.Table, command.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, schedulestep.ScheduleStepToCommandTable, schedulestep.ScheduleStepToCommandColumn),
-		)
-		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryScheduleStepToFileDelete queries the ScheduleStepToFileDelete edge of a ScheduleStep.
-func (c *ScheduleStepClient) QueryScheduleStepToFileDelete(ss *ScheduleStep) *FileDeleteQuery {
-	query := &FileDeleteQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := ss.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
-			sqlgraph.To(filedelete.Table, filedelete.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, schedulestep.ScheduleStepToFileDeleteTable, schedulestep.ScheduleStepToFileDeleteColumn),
-		)
-		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryScheduleStepToFileDownload queries the ScheduleStepToFileDownload edge of a ScheduleStep.
-func (c *ScheduleStepClient) QueryScheduleStepToFileDownload(ss *ScheduleStep) *FileDownloadQuery {
-	query := &FileDownloadQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := ss.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
-			sqlgraph.To(filedownload.Table, filedownload.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, schedulestep.ScheduleStepToFileDownloadTable, schedulestep.ScheduleStepToFileDownloadColumn),
-		)
-		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryScheduleStepToFileExtract queries the ScheduleStepToFileExtract edge of a ScheduleStep.
-func (c *ScheduleStepClient) QueryScheduleStepToFileExtract(ss *ScheduleStep) *FileExtractQuery {
-	query := &FileExtractQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := ss.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
-			sqlgraph.To(fileextract.Table, fileextract.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, schedulestep.ScheduleStepToFileExtractTable, schedulestep.ScheduleStepToFileExtractColumn),
-		)
-		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryScheduleStepToAnsible queries the ScheduleStepToAnsible edge of a ScheduleStep.
-func (c *ScheduleStepClient) QueryScheduleStepToAnsible(ss *ScheduleStep) *AnsibleQuery {
-	query := &AnsibleQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := ss.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
-			sqlgraph.To(ansible.Table, ansible.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, schedulestep.ScheduleStepToAnsibleTable, schedulestep.ScheduleStepToAnsibleColumn),
-		)
-		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryScheduleStepToProvisionedScheduleStep queries the ScheduleStepToProvisionedScheduleStep edge of a ScheduleStep.
-func (c *ScheduleStepClient) QueryScheduleStepToProvisionedScheduleStep(ss *ScheduleStep) *ProvisionedScheduleStepQuery {
-	query := &ProvisionedScheduleStepQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := ss.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
-			sqlgraph.To(provisionedschedulestep.Table, provisionedschedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, schedulestep.ScheduleStepToProvisionedScheduleStepTable, schedulestep.ScheduleStepToProvisionedScheduleStepColumn),
-		)
-		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryScheduleStepToHost queries the ScheduleStepToHost edge of a ScheduleStep.
-func (c *ScheduleStepClient) QueryScheduleStepToHost(ss *ScheduleStep) *HostQuery {
-	query := &HostQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := ss.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(schedulestep.Table, schedulestep.FieldID, id),
-			sqlgraph.To(host.Table, host.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, schedulestep.ScheduleStepToHostTable, schedulestep.ScheduleStepToHostColumn),
+			sqlgraph.From(scheduledstep.Table, scheduledstep.FieldID, id),
+			sqlgraph.To(environment.Table, environment.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, scheduledstep.ScheduledStepToEnvironmentTable, scheduledstep.ScheduledStepToEnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
 		return fromV, nil
@@ -5554,8 +5602,8 @@ func (c *ScheduleStepClient) QueryScheduleStepToHost(ss *ScheduleStep) *HostQuer
 }
 
 // Hooks returns the client hooks.
-func (c *ScheduleStepClient) Hooks() []Hook {
-	return c.hooks.ScheduleStep
+func (c *ScheduledStepClient) Hooks() []Hook {
+	return c.hooks.ScheduledStep
 }
 
 // ScriptClient is a client for the Script schema.
@@ -6095,31 +6143,15 @@ func (c *StatusClient) QueryStatusToAdhocPlan(s *Status) *AdhocPlanQuery {
 	return query
 }
 
-// QueryStatusToScheduleStep queries the StatusToScheduleStep edge of a Status.
-func (c *StatusClient) QueryStatusToScheduleStep(s *Status) *ScheduleStepQuery {
-	query := &ScheduleStepQuery{config: c.config}
+// QueryStatusToProvisioningScheduledStep queries the StatusToProvisioningScheduledStep edge of a Status.
+func (c *StatusClient) QueryStatusToProvisioningScheduledStep(s *Status) *ProvisioningScheduledStepQuery {
+	query := &ProvisioningScheduledStepQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := s.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(status.Table, status.FieldID, id),
-			sqlgraph.To(schedulestep.Table, schedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToScheduleStepTable, status.StatusToScheduleStepColumn),
-		)
-		fromV = sqlgraph.Neighbors(s.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryStatusToProvisionedScheduleStep queries the StatusToProvisionedScheduleStep edge of a Status.
-func (c *StatusClient) QueryStatusToProvisionedScheduleStep(s *Status) *ProvisionedScheduleStepQuery {
-	query := &ProvisionedScheduleStepQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := s.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(status.Table, status.FieldID, id),
-			sqlgraph.To(provisionedschedulestep.Table, provisionedschedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToProvisionedScheduleStepTable, status.StatusToProvisionedScheduleStepColumn),
+			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToProvisioningScheduledStepTable, status.StatusToProvisioningScheduledStepColumn),
 		)
 		fromV = sqlgraph.Neighbors(s.driver.Dialect(), step)
 		return fromV, nil

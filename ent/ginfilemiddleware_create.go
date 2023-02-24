@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/google/uuid"
 )
@@ -98,6 +99,25 @@ func (gfmc *GinFileMiddlewareCreate) SetNillableGinFileMiddlewareToProvisioningS
 // SetGinFileMiddlewareToProvisioningStep sets the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity.
 func (gfmc *GinFileMiddlewareCreate) SetGinFileMiddlewareToProvisioningStep(p *ProvisioningStep) *GinFileMiddlewareCreate {
 	return gfmc.SetGinFileMiddlewareToProvisioningStepID(p.ID)
+}
+
+// SetGinFileMiddlewareToProvisioningScheduledStepID sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (gfmc *GinFileMiddlewareCreate) SetGinFileMiddlewareToProvisioningScheduledStepID(id uuid.UUID) *GinFileMiddlewareCreate {
+	gfmc.mutation.SetGinFileMiddlewareToProvisioningScheduledStepID(id)
+	return gfmc
+}
+
+// SetNillableGinFileMiddlewareToProvisioningScheduledStepID sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (gfmc *GinFileMiddlewareCreate) SetNillableGinFileMiddlewareToProvisioningScheduledStepID(id *uuid.UUID) *GinFileMiddlewareCreate {
+	if id != nil {
+		gfmc = gfmc.SetGinFileMiddlewareToProvisioningScheduledStepID(*id)
+	}
+	return gfmc
+}
+
+// SetGinFileMiddlewareToProvisioningScheduledStep sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (gfmc *GinFileMiddlewareCreate) SetGinFileMiddlewareToProvisioningScheduledStep(p *ProvisioningScheduledStep) *GinFileMiddlewareCreate {
+	return gfmc.SetGinFileMiddlewareToProvisioningScheduledStepID(p.ID)
 }
 
 // Mutation returns the GinFileMiddlewareMutation object of the builder.
@@ -288,6 +308,25 @@ func (gfmc *GinFileMiddlewareCreate) createSpec() (*GinFileMiddleware, *sqlgraph
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: provisioningstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := gfmc.mutation.GinFileMiddlewareToProvisioningScheduledStepIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepTable,
+			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}

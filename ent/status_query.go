@@ -16,9 +16,8 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
-	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
@@ -28,23 +27,22 @@ import (
 // StatusQuery is the builder for querying Status entities.
 type StatusQuery struct {
 	config
-	limit                               *int
-	offset                              *int
-	unique                              *bool
-	order                               []OrderFunc
-	fields                              []string
-	predicates                          []predicate.Status
-	withStatusToBuild                   *BuildQuery
-	withStatusToProvisionedNetwork      *ProvisionedNetworkQuery
-	withStatusToProvisionedHost         *ProvisionedHostQuery
-	withStatusToProvisioningStep        *ProvisioningStepQuery
-	withStatusToTeam                    *TeamQuery
-	withStatusToPlan                    *PlanQuery
-	withStatusToServerTask              *ServerTaskQuery
-	withStatusToAdhocPlan               *AdhocPlanQuery
-	withStatusToScheduleStep            *ScheduleStepQuery
-	withStatusToProvisionedScheduleStep *ProvisionedScheduleStepQuery
-	withFKs                             bool
+	limit                                 *int
+	offset                                *int
+	unique                                *bool
+	order                                 []OrderFunc
+	fields                                []string
+	predicates                            []predicate.Status
+	withStatusToBuild                     *BuildQuery
+	withStatusToProvisionedNetwork        *ProvisionedNetworkQuery
+	withStatusToProvisionedHost           *ProvisionedHostQuery
+	withStatusToProvisioningStep          *ProvisioningStepQuery
+	withStatusToTeam                      *TeamQuery
+	withStatusToPlan                      *PlanQuery
+	withStatusToServerTask                *ServerTaskQuery
+	withStatusToAdhocPlan                 *AdhocPlanQuery
+	withStatusToProvisioningScheduledStep *ProvisioningScheduledStepQuery
+	withFKs                               bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -257,9 +255,9 @@ func (sq *StatusQuery) QueryStatusToAdhocPlan() *AdhocPlanQuery {
 	return query
 }
 
-// QueryStatusToScheduleStep chains the current query on the "StatusToScheduleStep" edge.
-func (sq *StatusQuery) QueryStatusToScheduleStep() *ScheduleStepQuery {
-	query := &ScheduleStepQuery{config: sq.config}
+// QueryStatusToProvisioningScheduledStep chains the current query on the "StatusToProvisioningScheduledStep" edge.
+func (sq *StatusQuery) QueryStatusToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+	query := &ProvisioningScheduledStepQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -270,30 +268,8 @@ func (sq *StatusQuery) QueryStatusToScheduleStep() *ScheduleStepQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(status.Table, status.FieldID, selector),
-			sqlgraph.To(schedulestep.Table, schedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToScheduleStepTable, status.StatusToScheduleStepColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryStatusToProvisionedScheduleStep chains the current query on the "StatusToProvisionedScheduleStep" edge.
-func (sq *StatusQuery) QueryStatusToProvisionedScheduleStep() *ProvisionedScheduleStepQuery {
-	query := &ProvisionedScheduleStepQuery{config: sq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := sq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := sq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(status.Table, status.FieldID, selector),
-			sqlgraph.To(provisionedschedulestep.Table, provisionedschedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToProvisionedScheduleStepTable, status.StatusToProvisionedScheduleStepColumn),
+			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToProvisioningScheduledStepTable, status.StatusToProvisioningScheduledStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -477,21 +453,20 @@ func (sq *StatusQuery) Clone() *StatusQuery {
 		return nil
 	}
 	return &StatusQuery{
-		config:                              sq.config,
-		limit:                               sq.limit,
-		offset:                              sq.offset,
-		order:                               append([]OrderFunc{}, sq.order...),
-		predicates:                          append([]predicate.Status{}, sq.predicates...),
-		withStatusToBuild:                   sq.withStatusToBuild.Clone(),
-		withStatusToProvisionedNetwork:      sq.withStatusToProvisionedNetwork.Clone(),
-		withStatusToProvisionedHost:         sq.withStatusToProvisionedHost.Clone(),
-		withStatusToProvisioningStep:        sq.withStatusToProvisioningStep.Clone(),
-		withStatusToTeam:                    sq.withStatusToTeam.Clone(),
-		withStatusToPlan:                    sq.withStatusToPlan.Clone(),
-		withStatusToServerTask:              sq.withStatusToServerTask.Clone(),
-		withStatusToAdhocPlan:               sq.withStatusToAdhocPlan.Clone(),
-		withStatusToScheduleStep:            sq.withStatusToScheduleStep.Clone(),
-		withStatusToProvisionedScheduleStep: sq.withStatusToProvisionedScheduleStep.Clone(),
+		config:                                sq.config,
+		limit:                                 sq.limit,
+		offset:                                sq.offset,
+		order:                                 append([]OrderFunc{}, sq.order...),
+		predicates:                            append([]predicate.Status{}, sq.predicates...),
+		withStatusToBuild:                     sq.withStatusToBuild.Clone(),
+		withStatusToProvisionedNetwork:        sq.withStatusToProvisionedNetwork.Clone(),
+		withStatusToProvisionedHost:           sq.withStatusToProvisionedHost.Clone(),
+		withStatusToProvisioningStep:          sq.withStatusToProvisioningStep.Clone(),
+		withStatusToTeam:                      sq.withStatusToTeam.Clone(),
+		withStatusToPlan:                      sq.withStatusToPlan.Clone(),
+		withStatusToServerTask:                sq.withStatusToServerTask.Clone(),
+		withStatusToAdhocPlan:                 sq.withStatusToAdhocPlan.Clone(),
+		withStatusToProvisioningScheduledStep: sq.withStatusToProvisioningScheduledStep.Clone(),
 		// clone intermediate query.
 		sql:    sq.sql.Clone(),
 		path:   sq.path,
@@ -587,25 +562,14 @@ func (sq *StatusQuery) WithStatusToAdhocPlan(opts ...func(*AdhocPlanQuery)) *Sta
 	return sq
 }
 
-// WithStatusToScheduleStep tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToScheduleStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToScheduleStep(opts ...func(*ScheduleStepQuery)) *StatusQuery {
-	query := &ScheduleStepQuery{config: sq.config}
+// WithStatusToProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
+// the "StatusToProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StatusQuery) WithStatusToProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *StatusQuery {
+	query := &ProvisioningScheduledStepQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withStatusToScheduleStep = query
-	return sq
-}
-
-// WithStatusToProvisionedScheduleStep tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToProvisionedScheduleStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToProvisionedScheduleStep(opts ...func(*ProvisionedScheduleStepQuery)) *StatusQuery {
-	query := &ProvisionedScheduleStepQuery{config: sq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	sq.withStatusToProvisionedScheduleStep = query
+	sq.withStatusToProvisioningScheduledStep = query
 	return sq
 }
 
@@ -678,7 +642,7 @@ func (sq *StatusQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Statu
 		nodes       = []*Status{}
 		withFKs     = sq.withFKs
 		_spec       = sq.querySpec()
-		loadedTypes = [10]bool{
+		loadedTypes = [9]bool{
 			sq.withStatusToBuild != nil,
 			sq.withStatusToProvisionedNetwork != nil,
 			sq.withStatusToProvisionedHost != nil,
@@ -687,11 +651,10 @@ func (sq *StatusQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Statu
 			sq.withStatusToPlan != nil,
 			sq.withStatusToServerTask != nil,
 			sq.withStatusToAdhocPlan != nil,
-			sq.withStatusToScheduleStep != nil,
-			sq.withStatusToProvisionedScheduleStep != nil,
+			sq.withStatusToProvisioningScheduledStep != nil,
 		}
 	)
-	if sq.withStatusToBuild != nil || sq.withStatusToProvisionedNetwork != nil || sq.withStatusToProvisionedHost != nil || sq.withStatusToProvisioningStep != nil || sq.withStatusToTeam != nil || sq.withStatusToPlan != nil || sq.withStatusToServerTask != nil || sq.withStatusToAdhocPlan != nil || sq.withStatusToScheduleStep != nil || sq.withStatusToProvisionedScheduleStep != nil {
+	if sq.withStatusToBuild != nil || sq.withStatusToProvisionedNetwork != nil || sq.withStatusToProvisionedHost != nil || sq.withStatusToProvisioningStep != nil || sq.withStatusToTeam != nil || sq.withStatusToPlan != nil || sq.withStatusToServerTask != nil || sq.withStatusToAdhocPlan != nil || sq.withStatusToProvisioningScheduledStep != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -763,15 +726,9 @@ func (sq *StatusQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Statu
 			return nil, err
 		}
 	}
-	if query := sq.withStatusToScheduleStep; query != nil {
-		if err := sq.loadStatusToScheduleStep(ctx, query, nodes, nil,
-			func(n *Status, e *ScheduleStep) { n.Edges.StatusToScheduleStep = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := sq.withStatusToProvisionedScheduleStep; query != nil {
-		if err := sq.loadStatusToProvisionedScheduleStep(ctx, query, nodes, nil,
-			func(n *Status, e *ProvisionedScheduleStep) { n.Edges.StatusToProvisionedScheduleStep = e }); err != nil {
+	if query := sq.withStatusToProvisioningScheduledStep; query != nil {
+		if err := sq.loadStatusToProvisioningScheduledStep(ctx, query, nodes, nil,
+			func(n *Status, e *ProvisioningScheduledStep) { n.Edges.StatusToProvisioningScheduledStep = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -1010,20 +967,20 @@ func (sq *StatusQuery) loadStatusToAdhocPlan(ctx context.Context, query *AdhocPl
 	}
 	return nil
 }
-func (sq *StatusQuery) loadStatusToScheduleStep(ctx context.Context, query *ScheduleStepQuery, nodes []*Status, init func(*Status), assign func(*Status, *ScheduleStep)) error {
+func (sq *StatusQuery) loadStatusToProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*Status, init func(*Status), assign func(*Status, *ProvisioningScheduledStep)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].schedule_step_schedule_step_to_status == nil {
+		if nodes[i].provisioning_scheduled_step_provisioning_scheduled_step_to_status == nil {
 			continue
 		}
-		fk := *nodes[i].schedule_step_schedule_step_to_status
+		fk := *nodes[i].provisioning_scheduled_step_provisioning_scheduled_step_to_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.Where(schedulestep.IDIn(ids...))
+	query.Where(provisioningscheduledstep.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -1031,36 +988,7 @@ func (sq *StatusQuery) loadStatusToScheduleStep(ctx context.Context, query *Sche
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "schedule_step_schedule_step_to_status" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
-func (sq *StatusQuery) loadStatusToProvisionedScheduleStep(ctx context.Context, query *ProvisionedScheduleStepQuery, nodes []*Status, init func(*Status), assign func(*Status, *ProvisionedScheduleStep)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Status)
-	for i := range nodes {
-		if nodes[i].provisioned_schedule_step_provisioned_schedule_step_to_status == nil {
-			continue
-		}
-		fk := *nodes[i].provisioned_schedule_step_provisioned_schedule_step_to_status
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	query.Where(provisionedschedulestep.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_schedule_step_provisioned_schedule_step_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_scheduled_step_provisioning_scheduled_step_to_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

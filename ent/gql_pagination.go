@@ -41,11 +41,11 @@ import (
 	"github.com/gen0cide/laforge/ent/plandiff"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
-	"github.com/gen0cide/laforge/ent/schedulestep"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
@@ -6400,111 +6400,111 @@ func (pn *ProvisionedNetwork) ToEdge(order *ProvisionedNetworkOrder) *Provisione
 	}
 }
 
-// ProvisionedScheduleStepEdge is the edge representation of ProvisionedScheduleStep.
-type ProvisionedScheduleStepEdge struct {
-	Node   *ProvisionedScheduleStep `json:"node"`
-	Cursor Cursor                   `json:"cursor"`
+// ProvisioningScheduledStepEdge is the edge representation of ProvisioningScheduledStep.
+type ProvisioningScheduledStepEdge struct {
+	Node   *ProvisioningScheduledStep `json:"node"`
+	Cursor Cursor                     `json:"cursor"`
 }
 
-// ProvisionedScheduleStepConnection is the connection containing edges to ProvisionedScheduleStep.
-type ProvisionedScheduleStepConnection struct {
-	Edges      []*ProvisionedScheduleStepEdge `json:"edges"`
-	PageInfo   PageInfo                       `json:"pageInfo"`
-	TotalCount int                            `json:"totalCount"`
+// ProvisioningScheduledStepConnection is the connection containing edges to ProvisioningScheduledStep.
+type ProvisioningScheduledStepConnection struct {
+	Edges      []*ProvisioningScheduledStepEdge `json:"edges"`
+	PageInfo   PageInfo                         `json:"pageInfo"`
+	TotalCount int                              `json:"totalCount"`
 }
 
-// ProvisionedScheduleStepPaginateOption enables pagination customization.
-type ProvisionedScheduleStepPaginateOption func(*provisionedScheduleStepPager) error
+// ProvisioningScheduledStepPaginateOption enables pagination customization.
+type ProvisioningScheduledStepPaginateOption func(*provisioningScheduledStepPager) error
 
-// WithProvisionedScheduleStepOrder configures pagination ordering.
-func WithProvisionedScheduleStepOrder(order *ProvisionedScheduleStepOrder) ProvisionedScheduleStepPaginateOption {
+// WithProvisioningScheduledStepOrder configures pagination ordering.
+func WithProvisioningScheduledStepOrder(order *ProvisioningScheduledStepOrder) ProvisioningScheduledStepPaginateOption {
 	if order == nil {
-		order = DefaultProvisionedScheduleStepOrder
+		order = DefaultProvisioningScheduledStepOrder
 	}
 	o := *order
-	return func(pager *provisionedScheduleStepPager) error {
+	return func(pager *provisioningScheduledStepPager) error {
 		if err := o.Direction.Validate(); err != nil {
 			return err
 		}
 		if o.Field == nil {
-			o.Field = DefaultProvisionedScheduleStepOrder.Field
+			o.Field = DefaultProvisioningScheduledStepOrder.Field
 		}
 		pager.order = &o
 		return nil
 	}
 }
 
-// WithProvisionedScheduleStepFilter configures pagination filter.
-func WithProvisionedScheduleStepFilter(filter func(*ProvisionedScheduleStepQuery) (*ProvisionedScheduleStepQuery, error)) ProvisionedScheduleStepPaginateOption {
-	return func(pager *provisionedScheduleStepPager) error {
+// WithProvisioningScheduledStepFilter configures pagination filter.
+func WithProvisioningScheduledStepFilter(filter func(*ProvisioningScheduledStepQuery) (*ProvisioningScheduledStepQuery, error)) ProvisioningScheduledStepPaginateOption {
+	return func(pager *provisioningScheduledStepPager) error {
 		if filter == nil {
-			return errors.New("ProvisionedScheduleStepQuery filter cannot be nil")
+			return errors.New("ProvisioningScheduledStepQuery filter cannot be nil")
 		}
 		pager.filter = filter
 		return nil
 	}
 }
 
-type provisionedScheduleStepPager struct {
-	order  *ProvisionedScheduleStepOrder
-	filter func(*ProvisionedScheduleStepQuery) (*ProvisionedScheduleStepQuery, error)
+type provisioningScheduledStepPager struct {
+	order  *ProvisioningScheduledStepOrder
+	filter func(*ProvisioningScheduledStepQuery) (*ProvisioningScheduledStepQuery, error)
 }
 
-func newProvisionedScheduleStepPager(opts []ProvisionedScheduleStepPaginateOption) (*provisionedScheduleStepPager, error) {
-	pager := &provisionedScheduleStepPager{}
+func newProvisioningScheduledStepPager(opts []ProvisioningScheduledStepPaginateOption) (*provisioningScheduledStepPager, error) {
+	pager := &provisioningScheduledStepPager{}
 	for _, opt := range opts {
 		if err := opt(pager); err != nil {
 			return nil, err
 		}
 	}
 	if pager.order == nil {
-		pager.order = DefaultProvisionedScheduleStepOrder
+		pager.order = DefaultProvisioningScheduledStepOrder
 	}
 	return pager, nil
 }
 
-func (p *provisionedScheduleStepPager) applyFilter(query *ProvisionedScheduleStepQuery) (*ProvisionedScheduleStepQuery, error) {
+func (p *provisioningScheduledStepPager) applyFilter(query *ProvisioningScheduledStepQuery) (*ProvisioningScheduledStepQuery, error) {
 	if p.filter != nil {
 		return p.filter(query)
 	}
 	return query, nil
 }
 
-func (p *provisionedScheduleStepPager) toCursor(pss *ProvisionedScheduleStep) Cursor {
+func (p *provisioningScheduledStepPager) toCursor(pss *ProvisioningScheduledStep) Cursor {
 	return p.order.Field.toCursor(pss)
 }
 
-func (p *provisionedScheduleStepPager) applyCursors(query *ProvisionedScheduleStepQuery, after, before *Cursor) *ProvisionedScheduleStepQuery {
+func (p *provisioningScheduledStepPager) applyCursors(query *ProvisioningScheduledStepQuery, after, before *Cursor) *ProvisioningScheduledStepQuery {
 	for _, predicate := range cursorsToPredicates(
 		p.order.Direction, after, before,
-		p.order.Field.field, DefaultProvisionedScheduleStepOrder.Field.field,
+		p.order.Field.field, DefaultProvisioningScheduledStepOrder.Field.field,
 	) {
 		query = query.Where(predicate)
 	}
 	return query
 }
 
-func (p *provisionedScheduleStepPager) applyOrder(query *ProvisionedScheduleStepQuery, reverse bool) *ProvisionedScheduleStepQuery {
+func (p *provisioningScheduledStepPager) applyOrder(query *ProvisioningScheduledStepQuery, reverse bool) *ProvisioningScheduledStepQuery {
 	direction := p.order.Direction
 	if reverse {
 		direction = direction.reverse()
 	}
 	query = query.Order(direction.orderFunc(p.order.Field.field))
-	if p.order.Field != DefaultProvisionedScheduleStepOrder.Field {
-		query = query.Order(direction.orderFunc(DefaultProvisionedScheduleStepOrder.Field.field))
+	if p.order.Field != DefaultProvisioningScheduledStepOrder.Field {
+		query = query.Order(direction.orderFunc(DefaultProvisioningScheduledStepOrder.Field.field))
 	}
 	return query
 }
 
-// Paginate executes the query and returns a relay based cursor connection to ProvisionedScheduleStep.
-func (pss *ProvisionedScheduleStepQuery) Paginate(
+// Paginate executes the query and returns a relay based cursor connection to ProvisioningScheduledStep.
+func (pss *ProvisioningScheduledStepQuery) Paginate(
 	ctx context.Context, after *Cursor, first *int,
-	before *Cursor, last *int, opts ...ProvisionedScheduleStepPaginateOption,
-) (*ProvisionedScheduleStepConnection, error) {
+	before *Cursor, last *int, opts ...ProvisioningScheduledStepPaginateOption,
+) (*ProvisioningScheduledStepConnection, error) {
 	if err := validateFirstLast(first, last); err != nil {
 		return nil, err
 	}
-	pager, err := newProvisionedScheduleStepPager(opts)
+	pager, err := newProvisioningScheduledStepPager(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -6513,7 +6513,7 @@ func (pss *ProvisionedScheduleStepQuery) Paginate(
 		return nil, err
 	}
 
-	conn := &ProvisionedScheduleStepConnection{Edges: []*ProvisionedScheduleStepEdge{}}
+	conn := &ProvisioningScheduledStepConnection{Edges: []*ProvisioningScheduledStepEdge{}}
 	if !hasCollectedField(ctx, edgesField) || first != nil && *first == 0 || last != nil && *last == 0 {
 		if hasCollectedField(ctx, totalCountField) ||
 			hasCollectedField(ctx, pageInfoField) {
@@ -6563,22 +6563,22 @@ func (pss *ProvisionedScheduleStepQuery) Paginate(
 		nodes = nodes[:len(nodes)-1]
 	}
 
-	var nodeAt func(int) *ProvisionedScheduleStep
+	var nodeAt func(int) *ProvisioningScheduledStep
 	if last != nil {
 		n := len(nodes) - 1
-		nodeAt = func(i int) *ProvisionedScheduleStep {
+		nodeAt = func(i int) *ProvisioningScheduledStep {
 			return nodes[n-i]
 		}
 	} else {
-		nodeAt = func(i int) *ProvisionedScheduleStep {
+		nodeAt = func(i int) *ProvisioningScheduledStep {
 			return nodes[i]
 		}
 	}
 
-	conn.Edges = make([]*ProvisionedScheduleStepEdge, len(nodes))
+	conn.Edges = make([]*ProvisioningScheduledStepEdge, len(nodes))
 	for i := range nodes {
 		node := nodeAt(i)
-		conn.Edges[i] = &ProvisionedScheduleStepEdge{
+		conn.Edges[i] = &ProvisioningScheduledStepEdge{
 			Node:   node,
 			Cursor: pager.toCursor(node),
 		}
@@ -6593,35 +6593,35 @@ func (pss *ProvisionedScheduleStepQuery) Paginate(
 	return conn, nil
 }
 
-// ProvisionedScheduleStepOrderField defines the ordering field of ProvisionedScheduleStep.
-type ProvisionedScheduleStepOrderField struct {
+// ProvisioningScheduledStepOrderField defines the ordering field of ProvisioningScheduledStep.
+type ProvisioningScheduledStepOrderField struct {
 	field    string
-	toCursor func(*ProvisionedScheduleStep) Cursor
+	toCursor func(*ProvisioningScheduledStep) Cursor
 }
 
-// ProvisionedScheduleStepOrder defines the ordering of ProvisionedScheduleStep.
-type ProvisionedScheduleStepOrder struct {
-	Direction OrderDirection                     `json:"direction"`
-	Field     *ProvisionedScheduleStepOrderField `json:"field"`
+// ProvisioningScheduledStepOrder defines the ordering of ProvisioningScheduledStep.
+type ProvisioningScheduledStepOrder struct {
+	Direction OrderDirection                       `json:"direction"`
+	Field     *ProvisioningScheduledStepOrderField `json:"field"`
 }
 
-// DefaultProvisionedScheduleStepOrder is the default ordering of ProvisionedScheduleStep.
-var DefaultProvisionedScheduleStepOrder = &ProvisionedScheduleStepOrder{
+// DefaultProvisioningScheduledStepOrder is the default ordering of ProvisioningScheduledStep.
+var DefaultProvisioningScheduledStepOrder = &ProvisioningScheduledStepOrder{
 	Direction: OrderDirectionAsc,
-	Field: &ProvisionedScheduleStepOrderField{
-		field: provisionedschedulestep.FieldID,
-		toCursor: func(pss *ProvisionedScheduleStep) Cursor {
+	Field: &ProvisioningScheduledStepOrderField{
+		field: provisioningscheduledstep.FieldID,
+		toCursor: func(pss *ProvisioningScheduledStep) Cursor {
 			return Cursor{ID: pss.ID}
 		},
 	},
 }
 
-// ToEdge converts ProvisionedScheduleStep into ProvisionedScheduleStepEdge.
-func (pss *ProvisionedScheduleStep) ToEdge(order *ProvisionedScheduleStepOrder) *ProvisionedScheduleStepEdge {
+// ToEdge converts ProvisioningScheduledStep into ProvisioningScheduledStepEdge.
+func (pss *ProvisioningScheduledStep) ToEdge(order *ProvisioningScheduledStepOrder) *ProvisioningScheduledStepEdge {
 	if order == nil {
-		order = DefaultProvisionedScheduleStepOrder
+		order = DefaultProvisioningScheduledStepOrder
 	}
-	return &ProvisionedScheduleStepEdge{
+	return &ProvisioningScheduledStepEdge{
 		Node:   pss,
 		Cursor: order.Field.toCursor(pss),
 	}
@@ -7308,111 +7308,111 @@ func (r *Repository) ToEdge(order *RepositoryOrder) *RepositoryEdge {
 	}
 }
 
-// ScheduleStepEdge is the edge representation of ScheduleStep.
-type ScheduleStepEdge struct {
-	Node   *ScheduleStep `json:"node"`
-	Cursor Cursor        `json:"cursor"`
+// ScheduledStepEdge is the edge representation of ScheduledStep.
+type ScheduledStepEdge struct {
+	Node   *ScheduledStep `json:"node"`
+	Cursor Cursor         `json:"cursor"`
 }
 
-// ScheduleStepConnection is the connection containing edges to ScheduleStep.
-type ScheduleStepConnection struct {
-	Edges      []*ScheduleStepEdge `json:"edges"`
-	PageInfo   PageInfo            `json:"pageInfo"`
-	TotalCount int                 `json:"totalCount"`
+// ScheduledStepConnection is the connection containing edges to ScheduledStep.
+type ScheduledStepConnection struct {
+	Edges      []*ScheduledStepEdge `json:"edges"`
+	PageInfo   PageInfo             `json:"pageInfo"`
+	TotalCount int                  `json:"totalCount"`
 }
 
-// ScheduleStepPaginateOption enables pagination customization.
-type ScheduleStepPaginateOption func(*scheduleStepPager) error
+// ScheduledStepPaginateOption enables pagination customization.
+type ScheduledStepPaginateOption func(*scheduledStepPager) error
 
-// WithScheduleStepOrder configures pagination ordering.
-func WithScheduleStepOrder(order *ScheduleStepOrder) ScheduleStepPaginateOption {
+// WithScheduledStepOrder configures pagination ordering.
+func WithScheduledStepOrder(order *ScheduledStepOrder) ScheduledStepPaginateOption {
 	if order == nil {
-		order = DefaultScheduleStepOrder
+		order = DefaultScheduledStepOrder
 	}
 	o := *order
-	return func(pager *scheduleStepPager) error {
+	return func(pager *scheduledStepPager) error {
 		if err := o.Direction.Validate(); err != nil {
 			return err
 		}
 		if o.Field == nil {
-			o.Field = DefaultScheduleStepOrder.Field
+			o.Field = DefaultScheduledStepOrder.Field
 		}
 		pager.order = &o
 		return nil
 	}
 }
 
-// WithScheduleStepFilter configures pagination filter.
-func WithScheduleStepFilter(filter func(*ScheduleStepQuery) (*ScheduleStepQuery, error)) ScheduleStepPaginateOption {
-	return func(pager *scheduleStepPager) error {
+// WithScheduledStepFilter configures pagination filter.
+func WithScheduledStepFilter(filter func(*ScheduledStepQuery) (*ScheduledStepQuery, error)) ScheduledStepPaginateOption {
+	return func(pager *scheduledStepPager) error {
 		if filter == nil {
-			return errors.New("ScheduleStepQuery filter cannot be nil")
+			return errors.New("ScheduledStepQuery filter cannot be nil")
 		}
 		pager.filter = filter
 		return nil
 	}
 }
 
-type scheduleStepPager struct {
-	order  *ScheduleStepOrder
-	filter func(*ScheduleStepQuery) (*ScheduleStepQuery, error)
+type scheduledStepPager struct {
+	order  *ScheduledStepOrder
+	filter func(*ScheduledStepQuery) (*ScheduledStepQuery, error)
 }
 
-func newScheduleStepPager(opts []ScheduleStepPaginateOption) (*scheduleStepPager, error) {
-	pager := &scheduleStepPager{}
+func newScheduledStepPager(opts []ScheduledStepPaginateOption) (*scheduledStepPager, error) {
+	pager := &scheduledStepPager{}
 	for _, opt := range opts {
 		if err := opt(pager); err != nil {
 			return nil, err
 		}
 	}
 	if pager.order == nil {
-		pager.order = DefaultScheduleStepOrder
+		pager.order = DefaultScheduledStepOrder
 	}
 	return pager, nil
 }
 
-func (p *scheduleStepPager) applyFilter(query *ScheduleStepQuery) (*ScheduleStepQuery, error) {
+func (p *scheduledStepPager) applyFilter(query *ScheduledStepQuery) (*ScheduledStepQuery, error) {
 	if p.filter != nil {
 		return p.filter(query)
 	}
 	return query, nil
 }
 
-func (p *scheduleStepPager) toCursor(ss *ScheduleStep) Cursor {
+func (p *scheduledStepPager) toCursor(ss *ScheduledStep) Cursor {
 	return p.order.Field.toCursor(ss)
 }
 
-func (p *scheduleStepPager) applyCursors(query *ScheduleStepQuery, after, before *Cursor) *ScheduleStepQuery {
+func (p *scheduledStepPager) applyCursors(query *ScheduledStepQuery, after, before *Cursor) *ScheduledStepQuery {
 	for _, predicate := range cursorsToPredicates(
 		p.order.Direction, after, before,
-		p.order.Field.field, DefaultScheduleStepOrder.Field.field,
+		p.order.Field.field, DefaultScheduledStepOrder.Field.field,
 	) {
 		query = query.Where(predicate)
 	}
 	return query
 }
 
-func (p *scheduleStepPager) applyOrder(query *ScheduleStepQuery, reverse bool) *ScheduleStepQuery {
+func (p *scheduledStepPager) applyOrder(query *ScheduledStepQuery, reverse bool) *ScheduledStepQuery {
 	direction := p.order.Direction
 	if reverse {
 		direction = direction.reverse()
 	}
 	query = query.Order(direction.orderFunc(p.order.Field.field))
-	if p.order.Field != DefaultScheduleStepOrder.Field {
-		query = query.Order(direction.orderFunc(DefaultScheduleStepOrder.Field.field))
+	if p.order.Field != DefaultScheduledStepOrder.Field {
+		query = query.Order(direction.orderFunc(DefaultScheduledStepOrder.Field.field))
 	}
 	return query
 }
 
-// Paginate executes the query and returns a relay based cursor connection to ScheduleStep.
-func (ss *ScheduleStepQuery) Paginate(
+// Paginate executes the query and returns a relay based cursor connection to ScheduledStep.
+func (ss *ScheduledStepQuery) Paginate(
 	ctx context.Context, after *Cursor, first *int,
-	before *Cursor, last *int, opts ...ScheduleStepPaginateOption,
-) (*ScheduleStepConnection, error) {
+	before *Cursor, last *int, opts ...ScheduledStepPaginateOption,
+) (*ScheduledStepConnection, error) {
 	if err := validateFirstLast(first, last); err != nil {
 		return nil, err
 	}
-	pager, err := newScheduleStepPager(opts)
+	pager, err := newScheduledStepPager(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -7421,7 +7421,7 @@ func (ss *ScheduleStepQuery) Paginate(
 		return nil, err
 	}
 
-	conn := &ScheduleStepConnection{Edges: []*ScheduleStepEdge{}}
+	conn := &ScheduledStepConnection{Edges: []*ScheduledStepEdge{}}
 	if !hasCollectedField(ctx, edgesField) || first != nil && *first == 0 || last != nil && *last == 0 {
 		if hasCollectedField(ctx, totalCountField) ||
 			hasCollectedField(ctx, pageInfoField) {
@@ -7471,22 +7471,22 @@ func (ss *ScheduleStepQuery) Paginate(
 		nodes = nodes[:len(nodes)-1]
 	}
 
-	var nodeAt func(int) *ScheduleStep
+	var nodeAt func(int) *ScheduledStep
 	if last != nil {
 		n := len(nodes) - 1
-		nodeAt = func(i int) *ScheduleStep {
+		nodeAt = func(i int) *ScheduledStep {
 			return nodes[n-i]
 		}
 	} else {
-		nodeAt = func(i int) *ScheduleStep {
+		nodeAt = func(i int) *ScheduledStep {
 			return nodes[i]
 		}
 	}
 
-	conn.Edges = make([]*ScheduleStepEdge, len(nodes))
+	conn.Edges = make([]*ScheduledStepEdge, len(nodes))
 	for i := range nodes {
 		node := nodeAt(i)
-		conn.Edges[i] = &ScheduleStepEdge{
+		conn.Edges[i] = &ScheduledStepEdge{
 			Node:   node,
 			Cursor: pager.toCursor(node),
 		}
@@ -7501,35 +7501,35 @@ func (ss *ScheduleStepQuery) Paginate(
 	return conn, nil
 }
 
-// ScheduleStepOrderField defines the ordering field of ScheduleStep.
-type ScheduleStepOrderField struct {
+// ScheduledStepOrderField defines the ordering field of ScheduledStep.
+type ScheduledStepOrderField struct {
 	field    string
-	toCursor func(*ScheduleStep) Cursor
+	toCursor func(*ScheduledStep) Cursor
 }
 
-// ScheduleStepOrder defines the ordering of ScheduleStep.
-type ScheduleStepOrder struct {
-	Direction OrderDirection          `json:"direction"`
-	Field     *ScheduleStepOrderField `json:"field"`
+// ScheduledStepOrder defines the ordering of ScheduledStep.
+type ScheduledStepOrder struct {
+	Direction OrderDirection           `json:"direction"`
+	Field     *ScheduledStepOrderField `json:"field"`
 }
 
-// DefaultScheduleStepOrder is the default ordering of ScheduleStep.
-var DefaultScheduleStepOrder = &ScheduleStepOrder{
+// DefaultScheduledStepOrder is the default ordering of ScheduledStep.
+var DefaultScheduledStepOrder = &ScheduledStepOrder{
 	Direction: OrderDirectionAsc,
-	Field: &ScheduleStepOrderField{
-		field: schedulestep.FieldID,
-		toCursor: func(ss *ScheduleStep) Cursor {
+	Field: &ScheduledStepOrderField{
+		field: scheduledstep.FieldID,
+		toCursor: func(ss *ScheduledStep) Cursor {
 			return Cursor{ID: ss.ID}
 		},
 	},
 }
 
-// ToEdge converts ScheduleStep into ScheduleStepEdge.
-func (ss *ScheduleStep) ToEdge(order *ScheduleStepOrder) *ScheduleStepEdge {
+// ToEdge converts ScheduledStep into ScheduledStepEdge.
+func (ss *ScheduledStep) ToEdge(order *ScheduledStepOrder) *ScheduledStepEdge {
 	if order == nil {
-		order = DefaultScheduleStepOrder
+		order = DefaultScheduledStepOrder
 	}
-	return &ScheduleStepEdge{
+	return &ScheduledStepEdge{
 		Node:   ss,
 		Cursor: order.Field.toCursor(ss),
 	}

@@ -76,6 +76,8 @@ type Environment struct {
 	HCLEnvironmentToHostDependency []*HostDependency `json:"EnvironmentToHostDependency,omitempty"`
 	// EnvironmentToAnsible holds the value of the EnvironmentToAnsible edge.
 	HCLEnvironmentToAnsible []*Ansible `json:"EnvironmentToAnsible,omitempty"`
+	// EnvironmentToScheduledStep holds the value of the EnvironmentToScheduledStep edge.
+	HCLEnvironmentToScheduledStep []*ScheduledStep `json:"EnvironmentToScheduledStep,omitempty"`
 	// EnvironmentToBuild holds the value of the EnvironmentToBuild edge.
 	HCLEnvironmentToBuild []*Build `json:"EnvironmentToBuild,omitempty"`
 	// EnvironmentToRepository holds the value of the EnvironmentToRepository edge.
@@ -120,6 +122,8 @@ type EnvironmentEdges struct {
 	EnvironmentToHostDependency []*HostDependency `json:"EnvironmentToHostDependency,omitempty"`
 	// EnvironmentToAnsible holds the value of the EnvironmentToAnsible edge.
 	EnvironmentToAnsible []*Ansible `json:"EnvironmentToAnsible,omitempty"`
+	// EnvironmentToScheduledStep holds the value of the EnvironmentToScheduledStep edge.
+	EnvironmentToScheduledStep []*ScheduledStep `json:"EnvironmentToScheduledStep,omitempty"`
 	// EnvironmentToBuild holds the value of the EnvironmentToBuild edge.
 	EnvironmentToBuild []*Build `json:"EnvironmentToBuild,omitempty"`
 	// EnvironmentToRepository holds the value of the EnvironmentToRepository edge.
@@ -128,7 +132,7 @@ type EnvironmentEdges struct {
 	EnvironmentToServerTask []*ServerTask `json:"EnvironmentToServerTask,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [19]bool
+	loadedTypes [20]bool
 }
 
 // EnvironmentToUserOrErr returns the EnvironmentToUser value or an error if the edge
@@ -275,10 +279,19 @@ func (e EnvironmentEdges) EnvironmentToAnsibleOrErr() ([]*Ansible, error) {
 	return nil, &NotLoadedError{edge: "EnvironmentToAnsible"}
 }
 
+// EnvironmentToScheduledStepOrErr returns the EnvironmentToScheduledStep value or an error if the edge
+// was not loaded in eager-loading.
+func (e EnvironmentEdges) EnvironmentToScheduledStepOrErr() ([]*ScheduledStep, error) {
+	if e.loadedTypes[16] {
+		return e.EnvironmentToScheduledStep, nil
+	}
+	return nil, &NotLoadedError{edge: "EnvironmentToScheduledStep"}
+}
+
 // EnvironmentToBuildOrErr returns the EnvironmentToBuild value or an error if the edge
 // was not loaded in eager-loading.
 func (e EnvironmentEdges) EnvironmentToBuildOrErr() ([]*Build, error) {
-	if e.loadedTypes[16] {
+	if e.loadedTypes[17] {
 		return e.EnvironmentToBuild, nil
 	}
 	return nil, &NotLoadedError{edge: "EnvironmentToBuild"}
@@ -287,7 +300,7 @@ func (e EnvironmentEdges) EnvironmentToBuildOrErr() ([]*Build, error) {
 // EnvironmentToRepositoryOrErr returns the EnvironmentToRepository value or an error if the edge
 // was not loaded in eager-loading.
 func (e EnvironmentEdges) EnvironmentToRepositoryOrErr() ([]*Repository, error) {
-	if e.loadedTypes[17] {
+	if e.loadedTypes[18] {
 		return e.EnvironmentToRepository, nil
 	}
 	return nil, &NotLoadedError{edge: "EnvironmentToRepository"}
@@ -296,7 +309,7 @@ func (e EnvironmentEdges) EnvironmentToRepositoryOrErr() ([]*Repository, error) 
 // EnvironmentToServerTaskOrErr returns the EnvironmentToServerTask value or an error if the edge
 // was not loaded in eager-loading.
 func (e EnvironmentEdges) EnvironmentToServerTaskOrErr() ([]*ServerTask, error) {
-	if e.loadedTypes[18] {
+	if e.loadedTypes[19] {
 		return e.EnvironmentToServerTask, nil
 	}
 	return nil, &NotLoadedError{edge: "EnvironmentToServerTask"}
@@ -493,6 +506,11 @@ func (e *Environment) QueryEnvironmentToHostDependency() *HostDependencyQuery {
 // QueryEnvironmentToAnsible queries the "EnvironmentToAnsible" edge of the Environment entity.
 func (e *Environment) QueryEnvironmentToAnsible() *AnsibleQuery {
 	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToAnsible(e)
+}
+
+// QueryEnvironmentToScheduledStep queries the "EnvironmentToScheduledStep" edge of the Environment entity.
+func (e *Environment) QueryEnvironmentToScheduledStep() *ScheduledStepQuery {
+	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToScheduledStep(e)
 }
 
 // QueryEnvironmentToBuild queries the "EnvironmentToBuild" edge of the Environment entity.

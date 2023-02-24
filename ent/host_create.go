@@ -14,7 +14,6 @@ import (
 	"github.com/gen0cide/laforge/ent/host"
 	"github.com/gen0cide/laforge/ent/hostdependency"
 	"github.com/gen0cide/laforge/ent/includednetwork"
-	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
@@ -104,6 +103,12 @@ func (hc *HostCreate) SetProvisionSteps(s []string) *HostCreate {
 	return hc
 }
 
+// SetScheduledSteps sets the "scheduled_steps" field.
+func (hc *HostCreate) SetScheduledSteps(s []string) *HostCreate {
+	hc.mutation.SetScheduledSteps(s)
+	return hc
+}
+
 // SetTags sets the "tags" field.
 func (hc *HostCreate) SetTags(m map[string]string) *HostCreate {
 	hc.mutation.SetTags(m)
@@ -156,21 +161,6 @@ func (hc *HostCreate) AddHostToUser(u ...*User) *HostCreate {
 		ids[i] = u[i].ID
 	}
 	return hc.AddHostToUserIDs(ids...)
-}
-
-// AddHostToScheduleStepIDs adds the "HostToScheduleStep" edge to the ScheduleStep entity by IDs.
-func (hc *HostCreate) AddHostToScheduleStepIDs(ids ...uuid.UUID) *HostCreate {
-	hc.mutation.AddHostToScheduleStepIDs(ids...)
-	return hc
-}
-
-// AddHostToScheduleStep adds the "HostToScheduleStep" edges to the ScheduleStep entity.
-func (hc *HostCreate) AddHostToScheduleStep(s ...*ScheduleStep) *HostCreate {
-	ids := make([]uuid.UUID, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
-	}
-	return hc.AddHostToScheduleStepIDs(ids...)
 }
 
 // SetHostToEnvironmentID sets the "HostToEnvironment" edge to the Environment entity by ID.
@@ -501,6 +491,14 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 		})
 		_node.ProvisionSteps = value
 	}
+	if value, ok := hc.mutation.ScheduledSteps(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: host.FieldScheduledSteps,
+		})
+		_node.ScheduledSteps = value
+	}
 	if value, ok := hc.mutation.Tags(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeJSON,
@@ -539,25 +537,6 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := hc.mutation.HostToScheduleStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   host.HostToScheduleStepTable,
-			Columns: []string{host.HostToScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
 				},
 			},
 		}

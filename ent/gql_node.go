@@ -36,11 +36,11 @@ import (
 	"github.com/gen0cide/laforge/ent/plandiff"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
-	"github.com/gen0cide/laforge/ent/schedulestep"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
@@ -359,21 +359,21 @@ func (at *AgentTask) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[1] = &Edge{
-		Type: "ProvisionedHost",
-		Name: "AgentTaskToProvisionedHost",
+		Type: "ProvisioningScheduledStep",
+		Name: "AgentTaskToProvisioningScheduledStep",
 	}
-	err = at.QueryAgentTaskToProvisionedHost().
-		Select(provisionedhost.FieldID).
+	err = at.QueryAgentTaskToProvisioningScheduledStep().
+		Select(provisioningscheduledstep.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[2] = &Edge{
-		Type: "ProvisionedScheduleStep",
-		Name: "AgentTaskToProvisionedScheduleStep",
+		Type: "ProvisionedHost",
+		Name: "AgentTaskToProvisionedHost",
 	}
-	err = at.QueryAgentTaskToProvisionedScheduleStep().
-		Select(provisionedschedulestep.FieldID).
+	err = at.QueryAgentTaskToProvisionedHost().
+		Select(provisionedhost.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
 		return nil, err
@@ -1239,7 +1239,7 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 		ID:     e.ID,
 		Type:   "Environment",
 		Fields: make([]*Field, 11),
-		Edges:  make([]*Edge, 19),
+		Edges:  make([]*Edge, 20),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(e.HclID); err != nil {
@@ -1491,32 +1491,42 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[16] = &Edge{
-		Type: "Build",
-		Name: "EnvironmentToBuild",
+		Type: "ScheduledStep",
+		Name: "EnvironmentToScheduledStep",
 	}
-	err = e.QueryEnvironmentToBuild().
-		Select(build.FieldID).
+	err = e.QueryEnvironmentToScheduledStep().
+		Select(scheduledstep.FieldID).
 		Scan(ctx, &node.Edges[16].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[17] = &Edge{
-		Type: "Repository",
-		Name: "EnvironmentToRepository",
+		Type: "Build",
+		Name: "EnvironmentToBuild",
 	}
-	err = e.QueryEnvironmentToRepository().
-		Select(repository.FieldID).
+	err = e.QueryEnvironmentToBuild().
+		Select(build.FieldID).
 		Scan(ctx, &node.Edges[17].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[18] = &Edge{
+		Type: "Repository",
+		Name: "EnvironmentToRepository",
+	}
+	err = e.QueryEnvironmentToRepository().
+		Select(repository.FieldID).
+		Scan(ctx, &node.Edges[18].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[19] = &Edge{
 		Type: "ServerTask",
 		Name: "EnvironmentToServerTask",
 	}
 	err = e.QueryEnvironmentToServerTask().
 		Select(servertask.FieldID).
-		Scan(ctx, &node.Edges[18].IDs)
+		Scan(ctx, &node.Edges[19].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -1834,7 +1844,7 @@ func (gfm *GinFileMiddleware) Node(ctx context.Context) (node *Node, err error) 
 		ID:     gfm.ID,
 		Type:   "GinFileMiddleware",
 		Fields: make([]*Field, 3),
-		Edges:  make([]*Edge, 2),
+		Edges:  make([]*Edge, 3),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(gfm.URLID); err != nil {
@@ -1881,6 +1891,16 @@ func (gfm *GinFileMiddleware) Node(ctx context.Context) (node *Node, err error) 
 	if err != nil {
 		return nil, err
 	}
+	node.Edges[2] = &Edge{
+		Type: "ProvisioningScheduledStep",
+		Name: "GinFileMiddlewareToProvisioningScheduledStep",
+	}
+	err = gfm.QueryGinFileMiddlewareToProvisioningScheduledStep().
+		Select(provisioningscheduledstep.FieldID).
+		Scan(ctx, &node.Edges[2].IDs)
+	if err != nil {
+		return nil, err
+	}
 	return node, nil
 }
 
@@ -1888,8 +1908,8 @@ func (h *Host) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     h.ID,
 		Type:   "Host",
-		Fields: make([]*Field, 14),
-		Edges:  make([]*Edge, 7),
+		Fields: make([]*Field, 15),
+		Edges:  make([]*Edge, 6),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(h.HclID); err != nil {
@@ -1996,10 +2016,18 @@ func (h *Host) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "provision_steps",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(h.Tags); err != nil {
+	if buf, err = json.Marshal(h.ScheduledSteps); err != nil {
 		return nil, err
 	}
 	node.Fields[13] = &Field{
+		Type:  "[]string",
+		Name:  "scheduled_steps",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(h.Tags); err != nil {
+		return nil, err
+	}
+	node.Fields[14] = &Field{
 		Type:  "map[string]string",
 		Name:  "tags",
 		Value: string(buf),
@@ -2025,52 +2053,42 @@ func (h *Host) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[2] = &Edge{
-		Type: "ScheduleStep",
-		Name: "HostToScheduleStep",
-	}
-	err = h.QueryHostToScheduleStep().
-		Select(schedulestep.FieldID).
-		Scan(ctx, &node.Edges[2].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[3] = &Edge{
 		Type: "Environment",
 		Name: "HostToEnvironment",
 	}
 	err = h.QueryHostToEnvironment().
 		Select(environment.FieldID).
-		Scan(ctx, &node.Edges[3].IDs)
+		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
 		return nil, err
 	}
-	node.Edges[4] = &Edge{
+	node.Edges[3] = &Edge{
 		Type: "IncludedNetwork",
 		Name: "HostToIncludedNetwork",
 	}
 	err = h.QueryHostToIncludedNetwork().
 		Select(includednetwork.FieldID).
+		Scan(ctx, &node.Edges[3].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[4] = &Edge{
+		Type: "HostDependency",
+		Name: "DependOnHostToHostDependency",
+	}
+	err = h.QueryDependOnHostToHostDependency().
+		Select(hostdependency.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[5] = &Edge{
 		Type: "HostDependency",
-		Name: "DependOnHostToHostDependency",
-	}
-	err = h.QueryDependOnHostToHostDependency().
-		Select(hostdependency.FieldID).
-		Scan(ctx, &node.Edges[5].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[6] = &Edge{
-		Type: "HostDependency",
 		Name: "DependByHostToHostDependency",
 	}
 	err = h.QueryDependByHostToHostDependency().
 		Select(hostdependency.FieldID).
-		Scan(ctx, &node.Edges[6].IDs)
+		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -2398,7 +2416,7 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 		ID:     pl.ID,
 		Type:   "Plan",
 		Fields: make([]*Field, 3),
-		Edges:  make([]*Edge, 9),
+		Edges:  make([]*Edge, 10),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(pl.StepNumber); err != nil {
@@ -2496,22 +2514,32 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[7] = &Edge{
-		Type: "Status",
-		Name: "PlanToStatus",
+		Type: "ProvisioningScheduledStep",
+		Name: "PlanToProvisioningScheduledStep",
 	}
-	err = pl.QueryPlanToStatus().
-		Select(status.FieldID).
+	err = pl.QueryPlanToProvisioningScheduledStep().
+		Select(provisioningscheduledstep.FieldID).
 		Scan(ctx, &node.Edges[7].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[8] = &Edge{
+		Type: "Status",
+		Name: "PlanToStatus",
+	}
+	err = pl.QueryPlanToStatus().
+		Select(status.FieldID).
+		Scan(ctx, &node.Edges[8].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[9] = &Edge{
 		Type: "PlanDiff",
 		Name: "PlanToPlanDiffs",
 	}
 	err = pl.QueryPlanToPlanDiffs().
 		Select(plandiff.FieldID).
-		Scan(ctx, &node.Edges[8].IDs)
+		Scan(ctx, &node.Edges[9].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -2648,21 +2676,21 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[5] = &Edge{
-		Type: "ProvisionedScheduleStep",
-		Name: "ProvisionedHostToProvisionedScheduleStep",
-	}
-	err = ph.QueryProvisionedHostToProvisionedScheduleStep().
-		Select(provisionedschedulestep.FieldID).
-		Scan(ctx, &node.Edges[5].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[6] = &Edge{
 		Type: "ProvisioningStep",
 		Name: "ProvisionedHostToProvisioningStep",
 	}
 	err = ph.QueryProvisionedHostToProvisioningStep().
 		Select(provisioningstep.FieldID).
+		Scan(ctx, &node.Edges[5].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[6] = &Edge{
+		Type: "ProvisioningScheduledStep",
+		Name: "ProvisionedHostToProvisioningScheduleStep",
+	}
+	err = ph.QueryProvisionedHostToProvisioningScheduleStep().
+		Select(provisioningscheduledstep.FieldID).
 		Scan(ctx, &node.Edges[6].IDs)
 	if err != nil {
 		return nil, err
@@ -2805,59 +2833,157 @@ func (pn *ProvisionedNetwork) Node(ctx context.Context) (node *Node, err error) 
 	return node, nil
 }
 
-func (pss *ProvisionedScheduleStep) Node(ctx context.Context) (node *Node, err error) {
+func (pss *ProvisioningScheduledStep) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     pss.ID,
-		Type:   "ProvisionedScheduleStep",
-		Fields: make([]*Field, 1),
-		Edges:  make([]*Edge, 4),
+		Type:   "ProvisioningScheduledStep",
+		Fields: make([]*Field, 2),
+		Edges:  make([]*Edge, 13),
 	}
 	var buf []byte
-	if buf, err = json.Marshal(pss.RunTime); err != nil {
+	if buf, err = json.Marshal(pss.Type); err != nil {
 		return nil, err
 	}
 	node.Fields[0] = &Field{
+		Type:  "provisioningscheduledstep.Type",
+		Name:  "type",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(pss.RunTime); err != nil {
+		return nil, err
+	}
+	node.Fields[1] = &Field{
 		Type:  "time.Time",
 		Name:  "run_time",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{
 		Type: "Status",
-		Name: "ProvisionedScheduleStepToStatus",
+		Name: "ProvisioningScheduledStepToStatus",
 	}
-	err = pss.QueryProvisionedScheduleStepToStatus().
+	err = pss.QueryProvisioningScheduledStepToStatus().
 		Select(status.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[1] = &Edge{
-		Type: "ScheduleStep",
-		Name: "ProvisionedScheduleStepToScheduleStep",
+		Type: "ScheduledStep",
+		Name: "ProvisioningScheduledStepToScheduledStep",
 	}
-	err = pss.QueryProvisionedScheduleStepToScheduleStep().
-		Select(schedulestep.FieldID).
+	err = pss.QueryProvisioningScheduledStepToScheduledStep().
+		Select(scheduledstep.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[2] = &Edge{
 		Type: "ProvisionedHost",
-		Name: "ProvisionedScheduleStepToProvisionedHost",
+		Name: "ProvisioningScheduleStepToProvisionedHost",
 	}
-	err = pss.QueryProvisionedScheduleStepToProvisionedHost().
+	err = pss.QueryProvisioningScheduleStepToProvisionedHost().
 		Select(provisionedhost.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
 		return nil, err
 	}
 	node.Edges[3] = &Edge{
-		Type: "AgentTask",
-		Name: "ProvisionedScheduleStepToAgentTask",
+		Type: "Script",
+		Name: "ProvisioningScheduledStepToScript",
 	}
-	err = pss.QueryProvisionedScheduleStepToAgentTask().
-		Select(agenttask.FieldID).
+	err = pss.QueryProvisioningScheduledStepToScript().
+		Select(script.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[4] = &Edge{
+		Type: "Command",
+		Name: "ProvisioningScheduledStepToCommand",
+	}
+	err = pss.QueryProvisioningScheduledStepToCommand().
+		Select(command.FieldID).
+		Scan(ctx, &node.Edges[4].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[5] = &Edge{
+		Type: "DNSRecord",
+		Name: "ProvisioningScheduledStepToDNSRecord",
+	}
+	err = pss.QueryProvisioningScheduledStepToDNSRecord().
+		Select(dnsrecord.FieldID).
+		Scan(ctx, &node.Edges[5].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[6] = &Edge{
+		Type: "FileDelete",
+		Name: "ProvisioningScheduledStepToFileDelete",
+	}
+	err = pss.QueryProvisioningScheduledStepToFileDelete().
+		Select(filedelete.FieldID).
+		Scan(ctx, &node.Edges[6].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[7] = &Edge{
+		Type: "FileDownload",
+		Name: "ProvisioningScheduledStepToFileDownload",
+	}
+	err = pss.QueryProvisioningScheduledStepToFileDownload().
+		Select(filedownload.FieldID).
+		Scan(ctx, &node.Edges[7].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[8] = &Edge{
+		Type: "FileExtract",
+		Name: "ProvisioningScheduledStepToFileExtract",
+	}
+	err = pss.QueryProvisioningScheduledStepToFileExtract().
+		Select(fileextract.FieldID).
+		Scan(ctx, &node.Edges[8].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[9] = &Edge{
+		Type: "Ansible",
+		Name: "ProvisioningScheduledStepToAnsible",
+	}
+	err = pss.QueryProvisioningScheduledStepToAnsible().
+		Select(ansible.FieldID).
+		Scan(ctx, &node.Edges[9].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[10] = &Edge{
+		Type: "AgentTask",
+		Name: "ProvisioningScheduledStepToAgentTask",
+	}
+	err = pss.QueryProvisioningScheduledStepToAgentTask().
+		Select(agenttask.FieldID).
+		Scan(ctx, &node.Edges[10].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[11] = &Edge{
+		Type: "Plan",
+		Name: "ProvisioningStepToPlan",
+	}
+	err = pss.QueryProvisioningStepToPlan().
+		Select(plan.FieldID).
+		Scan(ctx, &node.Edges[11].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[12] = &Edge{
+		Type: "GinFileMiddleware",
+		Name: "ProvisioningScheduledStepToGinFileMiddleware",
+	}
+	err = pss.QueryProvisioningScheduledStepToGinFileMiddleware().
+		Select(ginfilemiddleware.FieldID).
+		Scan(ctx, &node.Edges[12].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -3159,141 +3285,53 @@ func (r *Repository) Node(ctx context.Context) (node *Node, err error) {
 	return node, nil
 }
 
-func (ss *ScheduleStep) Node(ctx context.Context) (node *Node, err error) {
+func (ss *ScheduledStep) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     ss.ID,
-		Type:   "ScheduleStep",
-		Fields: make([]*Field, 5),
-		Edges:  make([]*Edge, 9),
+		Type:   "ScheduledStep",
+		Fields: make([]*Field, 4),
+		Edges:  make([]*Edge, 1),
 	}
 	var buf []byte
-	if buf, err = json.Marshal(ss.Type); err != nil {
+	if buf, err = json.Marshal(ss.HclID); err != nil {
 		return nil, err
 	}
 	node.Fields[0] = &Field{
-		Type:  "schedulestep.Type",
-		Name:  "type",
+		Type:  "string",
+		Name:  "hcl_id",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(ss.Repeated); err != nil {
+	if buf, err = json.Marshal(ss.Name); err != nil {
 		return nil, err
 	}
 	node.Fields[1] = &Field{
-		Type:  "bool",
-		Name:  "repeated",
+		Type:  "string",
+		Name:  "name",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(ss.StartTime); err != nil {
+	if buf, err = json.Marshal(ss.Description); err != nil {
 		return nil, err
 	}
 	node.Fields[2] = &Field{
-		Type:  "time.Time",
-		Name:  "start_time",
+		Type:  "string",
+		Name:  "description",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(ss.EndTime); err != nil {
+	if buf, err = json.Marshal(ss.Step); err != nil {
 		return nil, err
 	}
 	node.Fields[3] = &Field{
-		Type:  "time.Time",
-		Name:  "end_time",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(ss.Interval); err != nil {
-		return nil, err
-	}
-	node.Fields[4] = &Field{
-		Type:  "int",
-		Name:  "interval",
+		Type:  "string",
+		Name:  "step",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{
-		Type: "Status",
-		Name: "ScheduleStepToStatus",
+		Type: "Environment",
+		Name: "ScheduledStepToEnvironment",
 	}
-	err = ss.QueryScheduleStepToStatus().
-		Select(status.FieldID).
+	err = ss.QueryScheduledStepToEnvironment().
+		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[1] = &Edge{
-		Type: "Script",
-		Name: "ScheduleStepToScript",
-	}
-	err = ss.QueryScheduleStepToScript().
-		Select(script.FieldID).
-		Scan(ctx, &node.Edges[1].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[2] = &Edge{
-		Type: "Command",
-		Name: "ScheduleStepToCommand",
-	}
-	err = ss.QueryScheduleStepToCommand().
-		Select(command.FieldID).
-		Scan(ctx, &node.Edges[2].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[3] = &Edge{
-		Type: "FileDelete",
-		Name: "ScheduleStepToFileDelete",
-	}
-	err = ss.QueryScheduleStepToFileDelete().
-		Select(filedelete.FieldID).
-		Scan(ctx, &node.Edges[3].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[4] = &Edge{
-		Type: "FileDownload",
-		Name: "ScheduleStepToFileDownload",
-	}
-	err = ss.QueryScheduleStepToFileDownload().
-		Select(filedownload.FieldID).
-		Scan(ctx, &node.Edges[4].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[5] = &Edge{
-		Type: "FileExtract",
-		Name: "ScheduleStepToFileExtract",
-	}
-	err = ss.QueryScheduleStepToFileExtract().
-		Select(fileextract.FieldID).
-		Scan(ctx, &node.Edges[5].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[6] = &Edge{
-		Type: "Ansible",
-		Name: "ScheduleStepToAnsible",
-	}
-	err = ss.QueryScheduleStepToAnsible().
-		Select(ansible.FieldID).
-		Scan(ctx, &node.Edges[6].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[7] = &Edge{
-		Type: "ProvisionedScheduleStep",
-		Name: "ScheduleStepToProvisionedScheduleStep",
-	}
-	err = ss.QueryScheduleStepToProvisionedScheduleStep().
-		Select(provisionedschedulestep.FieldID).
-		Scan(ctx, &node.Edges[7].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[8] = &Edge{
-		Type: "Host",
-		Name: "ScheduleStepToHost",
-	}
-	err = ss.QueryScheduleStepToHost().
-		Select(host.FieldID).
-		Scan(ctx, &node.Edges[8].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -3569,7 +3607,7 @@ func (s *Status) Node(ctx context.Context) (node *Node, err error) {
 		ID:     s.ID,
 		Type:   "Status",
 		Fields: make([]*Field, 7),
-		Edges:  make([]*Edge, 10),
+		Edges:  make([]*Edge, 9),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(s.State); err != nil {
@@ -3709,22 +3747,12 @@ func (s *Status) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[8] = &Edge{
-		Type: "ScheduleStep",
-		Name: "StatusToScheduleStep",
+		Type: "ProvisioningScheduledStep",
+		Name: "StatusToProvisioningScheduledStep",
 	}
-	err = s.QueryStatusToScheduleStep().
-		Select(schedulestep.FieldID).
+	err = s.QueryStatusToProvisioningScheduledStep().
+		Select(provisioningscheduledstep.FieldID).
 		Scan(ctx, &node.Edges[8].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[9] = &Edge{
-		Type: "ProvisionedScheduleStep",
-		Name: "StatusToProvisionedScheduleStep",
-	}
-	err = s.QueryStatusToProvisionedScheduleStep().
-		Select(provisionedschedulestep.FieldID).
-		Scan(ctx, &node.Edges[9].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -4242,10 +4270,10 @@ func (c *Client) noder(ctx context.Context, table string, id uuid.UUID) (Noder, 
 			return nil, err
 		}
 		return n, nil
-	case provisionedschedulestep.Table:
-		n, err := c.ProvisionedScheduleStep.Query().
-			Where(provisionedschedulestep.ID(id)).
-			CollectFields(ctx, "ProvisionedScheduleStep").
+	case provisioningscheduledstep.Table:
+		n, err := c.ProvisioningScheduledStep.Query().
+			Where(provisioningscheduledstep.ID(id)).
+			CollectFields(ctx, "ProvisioningScheduledStep").
 			Only(ctx)
 		if err != nil {
 			return nil, err
@@ -4278,10 +4306,10 @@ func (c *Client) noder(ctx context.Context, table string, id uuid.UUID) (Noder, 
 			return nil, err
 		}
 		return n, nil
-	case schedulestep.Table:
-		n, err := c.ScheduleStep.Query().
-			Where(schedulestep.ID(id)).
-			CollectFields(ctx, "ScheduleStep").
+	case scheduledstep.Table:
+		n, err := c.ScheduledStep.Query().
+			Where(scheduledstep.ID(id)).
+			CollectFields(ctx, "ScheduledStep").
 			Only(ctx)
 		if err != nil {
 			return nil, err
@@ -4774,10 +4802,10 @@ func (c *Client) noders(ctx context.Context, table string, ids []uuid.UUID) ([]N
 				*noder = node
 			}
 		}
-	case provisionedschedulestep.Table:
-		nodes, err := c.ProvisionedScheduleStep.Query().
-			Where(provisionedschedulestep.IDIn(ids...)).
-			CollectFields(ctx, "ProvisionedScheduleStep").
+	case provisioningscheduledstep.Table:
+		nodes, err := c.ProvisioningScheduledStep.Query().
+			Where(provisioningscheduledstep.IDIn(ids...)).
+			CollectFields(ctx, "ProvisioningScheduledStep").
 			All(ctx)
 		if err != nil {
 			return nil, err
@@ -4826,10 +4854,10 @@ func (c *Client) noders(ctx context.Context, table string, ids []uuid.UUID) ([]N
 				*noder = node
 			}
 		}
-	case schedulestep.Table:
-		nodes, err := c.ScheduleStep.Query().
-			Where(schedulestep.IDIn(ids...)).
-			CollectFields(ctx, "ScheduleStep").
+	case scheduledstep.Table:
+		nodes, err := c.ScheduledStep.Query().
+			Where(scheduledstep.IDIn(ids...)).
+			CollectFields(ctx, "ScheduledStep").
 			All(ctx)
 		if err != nil {
 			return nil, err

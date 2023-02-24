@@ -28,6 +28,7 @@ import (
 	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/repository"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
@@ -365,6 +366,21 @@ func (eu *EnvironmentUpdate) AddEnvironmentToAnsible(a ...*Ansible) *Environment
 		ids[i] = a[i].ID
 	}
 	return eu.AddEnvironmentToAnsibleIDs(ids...)
+}
+
+// AddEnvironmentToScheduledStepIDs adds the "EnvironmentToScheduledStep" edge to the ScheduledStep entity by IDs.
+func (eu *EnvironmentUpdate) AddEnvironmentToScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddEnvironmentToScheduledStepIDs(ids...)
+	return eu
+}
+
+// AddEnvironmentToScheduledStep adds the "EnvironmentToScheduledStep" edges to the ScheduledStep entity.
+func (eu *EnvironmentUpdate) AddEnvironmentToScheduledStep(s ...*ScheduledStep) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return eu.AddEnvironmentToScheduledStepIDs(ids...)
 }
 
 // AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
@@ -751,6 +767,27 @@ func (eu *EnvironmentUpdate) RemoveEnvironmentToAnsible(a ...*Ansible) *Environm
 		ids[i] = a[i].ID
 	}
 	return eu.RemoveEnvironmentToAnsibleIDs(ids...)
+}
+
+// ClearEnvironmentToScheduledStep clears all "EnvironmentToScheduledStep" edges to the ScheduledStep entity.
+func (eu *EnvironmentUpdate) ClearEnvironmentToScheduledStep() *EnvironmentUpdate {
+	eu.mutation.ClearEnvironmentToScheduledStep()
+	return eu
+}
+
+// RemoveEnvironmentToScheduledStepIDs removes the "EnvironmentToScheduledStep" edge to ScheduledStep entities by IDs.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveEnvironmentToScheduledStepIDs(ids...)
+	return eu
+}
+
+// RemoveEnvironmentToScheduledStep removes "EnvironmentToScheduledStep" edges to ScheduledStep entities.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToScheduledStep(s ...*ScheduledStep) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return eu.RemoveEnvironmentToScheduledStepIDs(ids...)
 }
 
 // ClearEnvironmentToBuild clears all "EnvironmentToBuild" edges to the Build entity.
@@ -1843,6 +1880,60 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if eu.mutation.EnvironmentToScheduledStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToScheduledStepTable,
+			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: scheduledstep.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedEnvironmentToScheduledStepIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToScheduledStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToScheduledStepTable,
+			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: scheduledstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.EnvironmentToScheduledStepIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToScheduledStepTable,
+			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: scheduledstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if eu.mutation.EnvironmentToBuildCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -2344,6 +2435,21 @@ func (euo *EnvironmentUpdateOne) AddEnvironmentToAnsible(a ...*Ansible) *Environ
 	return euo.AddEnvironmentToAnsibleIDs(ids...)
 }
 
+// AddEnvironmentToScheduledStepIDs adds the "EnvironmentToScheduledStep" edge to the ScheduledStep entity by IDs.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddEnvironmentToScheduledStepIDs(ids...)
+	return euo
+}
+
+// AddEnvironmentToScheduledStep adds the "EnvironmentToScheduledStep" edges to the ScheduledStep entity.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToScheduledStep(s ...*ScheduledStep) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return euo.AddEnvironmentToScheduledStepIDs(ids...)
+}
+
 // AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
 func (euo *EnvironmentUpdateOne) AddEnvironmentToBuildIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
 	euo.mutation.AddEnvironmentToBuildIDs(ids...)
@@ -2728,6 +2834,27 @@ func (euo *EnvironmentUpdateOne) RemoveEnvironmentToAnsible(a ...*Ansible) *Envi
 		ids[i] = a[i].ID
 	}
 	return euo.RemoveEnvironmentToAnsibleIDs(ids...)
+}
+
+// ClearEnvironmentToScheduledStep clears all "EnvironmentToScheduledStep" edges to the ScheduledStep entity.
+func (euo *EnvironmentUpdateOne) ClearEnvironmentToScheduledStep() *EnvironmentUpdateOne {
+	euo.mutation.ClearEnvironmentToScheduledStep()
+	return euo
+}
+
+// RemoveEnvironmentToScheduledStepIDs removes the "EnvironmentToScheduledStep" edge to ScheduledStep entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveEnvironmentToScheduledStepIDs(ids...)
+	return euo
+}
+
+// RemoveEnvironmentToScheduledStep removes "EnvironmentToScheduledStep" edges to ScheduledStep entities.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToScheduledStep(s ...*ScheduledStep) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return euo.RemoveEnvironmentToScheduledStepIDs(ids...)
 }
 
 // ClearEnvironmentToBuild clears all "EnvironmentToBuild" edges to the Build entity.
@@ -3842,6 +3969,60 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.EnvironmentToScheduledStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToScheduledStepTable,
+			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: scheduledstep.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedEnvironmentToScheduledStepIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToScheduledStepCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToScheduledStepTable,
+			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: scheduledstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.EnvironmentToScheduledStepIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToScheduledStepTable,
+			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: scheduledstep.FieldID,
 				},
 			},
 		}

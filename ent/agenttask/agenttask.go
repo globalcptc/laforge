@@ -29,10 +29,10 @@ const (
 	FieldErrorMessage = "error_message"
 	// EdgeAgentTaskToProvisioningStep holds the string denoting the agenttasktoprovisioningstep edge name in mutations.
 	EdgeAgentTaskToProvisioningStep = "AgentTaskToProvisioningStep"
+	// EdgeAgentTaskToProvisioningScheduledStep holds the string denoting the agenttasktoprovisioningscheduledstep edge name in mutations.
+	EdgeAgentTaskToProvisioningScheduledStep = "AgentTaskToProvisioningScheduledStep"
 	// EdgeAgentTaskToProvisionedHost holds the string denoting the agenttasktoprovisionedhost edge name in mutations.
 	EdgeAgentTaskToProvisionedHost = "AgentTaskToProvisionedHost"
-	// EdgeAgentTaskToProvisionedScheduleStep holds the string denoting the agenttasktoprovisionedschedulestep edge name in mutations.
-	EdgeAgentTaskToProvisionedScheduleStep = "AgentTaskToProvisionedScheduleStep"
 	// EdgeAgentTaskToAdhocPlan holds the string denoting the agenttasktoadhocplan edge name in mutations.
 	EdgeAgentTaskToAdhocPlan = "AgentTaskToAdhocPlan"
 	// Table holds the table name of the agenttask in the database.
@@ -44,6 +44,13 @@ const (
 	AgentTaskToProvisioningStepInverseTable = "provisioning_steps"
 	// AgentTaskToProvisioningStepColumn is the table column denoting the AgentTaskToProvisioningStep relation/edge.
 	AgentTaskToProvisioningStepColumn = "agent_task_agent_task_to_provisioning_step"
+	// AgentTaskToProvisioningScheduledStepTable is the table that holds the AgentTaskToProvisioningScheduledStep relation/edge.
+	AgentTaskToProvisioningScheduledStepTable = "provisioning_scheduled_steps"
+	// AgentTaskToProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
+	// It exists in this package in order to avoid circular dependency with the "provisioningscheduledstep" package.
+	AgentTaskToProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
+	// AgentTaskToProvisioningScheduledStepColumn is the table column denoting the AgentTaskToProvisioningScheduledStep relation/edge.
+	AgentTaskToProvisioningScheduledStepColumn = "agent_task_agent_task_to_provisioning_scheduled_step"
 	// AgentTaskToProvisionedHostTable is the table that holds the AgentTaskToProvisionedHost relation/edge.
 	AgentTaskToProvisionedHostTable = "agent_tasks"
 	// AgentTaskToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
@@ -51,13 +58,6 @@ const (
 	AgentTaskToProvisionedHostInverseTable = "provisioned_hosts"
 	// AgentTaskToProvisionedHostColumn is the table column denoting the AgentTaskToProvisionedHost relation/edge.
 	AgentTaskToProvisionedHostColumn = "agent_task_agent_task_to_provisioned_host"
-	// AgentTaskToProvisionedScheduleStepTable is the table that holds the AgentTaskToProvisionedScheduleStep relation/edge.
-	AgentTaskToProvisionedScheduleStepTable = "provisioned_schedule_steps"
-	// AgentTaskToProvisionedScheduleStepInverseTable is the table name for the ProvisionedScheduleStep entity.
-	// It exists in this package in order to avoid circular dependency with the "provisionedschedulestep" package.
-	AgentTaskToProvisionedScheduleStepInverseTable = "provisioned_schedule_steps"
-	// AgentTaskToProvisionedScheduleStepColumn is the table column denoting the AgentTaskToProvisionedScheduleStep relation/edge.
-	AgentTaskToProvisionedScheduleStepColumn = "agent_task_agent_task_to_provisioned_schedule_step"
 	// AgentTaskToAdhocPlanTable is the table that holds the AgentTaskToAdhocPlan relation/edge.
 	AgentTaskToAdhocPlanTable = "adhoc_plans"
 	// AgentTaskToAdhocPlanInverseTable is the table name for the AdhocPlan entity.

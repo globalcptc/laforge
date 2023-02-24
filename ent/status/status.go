@@ -45,10 +45,8 @@ const (
 	EdgeStatusToServerTask = "StatusToServerTask"
 	// EdgeStatusToAdhocPlan holds the string denoting the statustoadhocplan edge name in mutations.
 	EdgeStatusToAdhocPlan = "StatusToAdhocPlan"
-	// EdgeStatusToScheduleStep holds the string denoting the statustoschedulestep edge name in mutations.
-	EdgeStatusToScheduleStep = "StatusToScheduleStep"
-	// EdgeStatusToProvisionedScheduleStep holds the string denoting the statustoprovisionedschedulestep edge name in mutations.
-	EdgeStatusToProvisionedScheduleStep = "StatusToProvisionedScheduleStep"
+	// EdgeStatusToProvisioningScheduledStep holds the string denoting the statustoprovisioningscheduledstep edge name in mutations.
+	EdgeStatusToProvisioningScheduledStep = "StatusToProvisioningScheduledStep"
 	// Table holds the table name of the status in the database.
 	Table = "status"
 	// StatusToBuildTable is the table that holds the StatusToBuild relation/edge.
@@ -107,20 +105,13 @@ const (
 	StatusToAdhocPlanInverseTable = "adhoc_plans"
 	// StatusToAdhocPlanColumn is the table column denoting the StatusToAdhocPlan relation/edge.
 	StatusToAdhocPlanColumn = "adhoc_plan_adhoc_plan_to_status"
-	// StatusToScheduleStepTable is the table that holds the StatusToScheduleStep relation/edge.
-	StatusToScheduleStepTable = "status"
-	// StatusToScheduleStepInverseTable is the table name for the ScheduleStep entity.
-	// It exists in this package in order to avoid circular dependency with the "schedulestep" package.
-	StatusToScheduleStepInverseTable = "schedule_steps"
-	// StatusToScheduleStepColumn is the table column denoting the StatusToScheduleStep relation/edge.
-	StatusToScheduleStepColumn = "schedule_step_schedule_step_to_status"
-	// StatusToProvisionedScheduleStepTable is the table that holds the StatusToProvisionedScheduleStep relation/edge.
-	StatusToProvisionedScheduleStepTable = "status"
-	// StatusToProvisionedScheduleStepInverseTable is the table name for the ProvisionedScheduleStep entity.
-	// It exists in this package in order to avoid circular dependency with the "provisionedschedulestep" package.
-	StatusToProvisionedScheduleStepInverseTable = "provisioned_schedule_steps"
-	// StatusToProvisionedScheduleStepColumn is the table column denoting the StatusToProvisionedScheduleStep relation/edge.
-	StatusToProvisionedScheduleStepColumn = "provisioned_schedule_step_provisioned_schedule_step_to_status"
+	// StatusToProvisioningScheduledStepTable is the table that holds the StatusToProvisioningScheduledStep relation/edge.
+	StatusToProvisioningScheduledStepTable = "status"
+	// StatusToProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
+	// It exists in this package in order to avoid circular dependency with the "provisioningscheduledstep" package.
+	StatusToProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
+	// StatusToProvisioningScheduledStepColumn is the table column denoting the StatusToProvisioningScheduledStep relation/edge.
+	StatusToProvisioningScheduledStepColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_status"
 )
 
 // Columns holds all SQL columns for status fields.
@@ -143,9 +134,8 @@ var ForeignKeys = []string{
 	"plan_plan_to_status",
 	"provisioned_host_provisioned_host_to_status",
 	"provisioned_network_provisioned_network_to_status",
-	"provisioned_schedule_step_provisioned_schedule_step_to_status",
+	"provisioning_scheduled_step_provisioning_scheduled_step_to_status",
 	"provisioning_step_provisioning_step_to_status",
-	"schedule_step_schedule_step_to_status",
 	"server_task_server_task_to_status",
 	"team_team_to_status",
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
@@ -47,6 +48,8 @@ type Plan struct {
 	HCLPlanToProvisionedHost *ProvisionedHost `json:"PlanToProvisionedHost,omitempty"`
 	// PlanToProvisioningStep holds the value of the PlanToProvisioningStep edge.
 	HCLPlanToProvisioningStep *ProvisioningStep `json:"PlanToProvisioningStep,omitempty"`
+	// PlanToProvisioningScheduledStep holds the value of the PlanToProvisioningScheduledStep edge.
+	HCLPlanToProvisioningScheduledStep *ProvisioningScheduledStep `json:"PlanToProvisioningScheduledStep,omitempty"`
 	// PlanToStatus holds the value of the PlanToStatus edge.
 	HCLPlanToStatus *Status `json:"PlanToStatus,omitempty"`
 	// PlanToPlanDiffs holds the value of the PlanToPlanDiffs edge.
@@ -71,13 +74,15 @@ type PlanEdges struct {
 	PlanToProvisionedHost *ProvisionedHost `json:"PlanToProvisionedHost,omitempty"`
 	// PlanToProvisioningStep holds the value of the PlanToProvisioningStep edge.
 	PlanToProvisioningStep *ProvisioningStep `json:"PlanToProvisioningStep,omitempty"`
+	// PlanToProvisioningScheduledStep holds the value of the PlanToProvisioningScheduledStep edge.
+	PlanToProvisioningScheduledStep *ProvisioningScheduledStep `json:"PlanToProvisioningScheduledStep,omitempty"`
 	// PlanToStatus holds the value of the PlanToStatus edge.
 	PlanToStatus *Status `json:"PlanToStatus,omitempty"`
 	// PlanToPlanDiffs holds the value of the PlanToPlanDiffs edge.
 	PlanToPlanDiffs []*PlanDiff `json:"PlanToPlanDiffs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [9]bool
+	loadedTypes [10]bool
 }
 
 // PrevPlanOrErr returns the PrevPlan value or an error if the edge
@@ -168,10 +173,24 @@ func (e PlanEdges) PlanToProvisioningStepOrErr() (*ProvisioningStep, error) {
 	return nil, &NotLoadedError{edge: "PlanToProvisioningStep"}
 }
 
+// PlanToProvisioningScheduledStepOrErr returns the PlanToProvisioningScheduledStep value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e PlanEdges) PlanToProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
+	if e.loadedTypes[7] {
+		if e.PlanToProvisioningScheduledStep == nil {
+			// The edge PlanToProvisioningScheduledStep was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: provisioningscheduledstep.Label}
+		}
+		return e.PlanToProvisioningScheduledStep, nil
+	}
+	return nil, &NotLoadedError{edge: "PlanToProvisioningScheduledStep"}
+}
+
 // PlanToStatusOrErr returns the PlanToStatus value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e PlanEdges) PlanToStatusOrErr() (*Status, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[8] {
 		if e.PlanToStatus == nil {
 			// The edge PlanToStatus was loaded in eager-loading,
 			// but was not found.
@@ -185,7 +204,7 @@ func (e PlanEdges) PlanToStatusOrErr() (*Status, error) {
 // PlanToPlanDiffsOrErr returns the PlanToPlanDiffs value or an error if the edge
 // was not loaded in eager-loading.
 func (e PlanEdges) PlanToPlanDiffsOrErr() ([]*PlanDiff, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[9] {
 		return e.PlanToPlanDiffs, nil
 	}
 	return nil, &NotLoadedError{edge: "PlanToPlanDiffs"}
@@ -288,6 +307,11 @@ func (pl *Plan) QueryPlanToProvisionedHost() *ProvisionedHostQuery {
 // QueryPlanToProvisioningStep queries the "PlanToProvisioningStep" edge of the Plan entity.
 func (pl *Plan) QueryPlanToProvisioningStep() *ProvisioningStepQuery {
 	return (&PlanClient{config: pl.config}).QueryPlanToProvisioningStep(pl)
+}
+
+// QueryPlanToProvisioningScheduledStep queries the "PlanToProvisioningScheduledStep" edge of the Plan entity.
+func (pl *Plan) QueryPlanToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+	return (&PlanClient{config: pl.config}).QueryPlanToProvisioningScheduledStep(pl)
 }
 
 // QueryPlanToStatus queries the "PlanToStatus" edge of the Plan entity.

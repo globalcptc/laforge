@@ -16,7 +16,6 @@ import (
 	"github.com/gen0cide/laforge/ent/hostdependency"
 	"github.com/gen0cide/laforge/ent/includednetwork"
 	"github.com/gen0cide/laforge/ent/predicate"
-	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
@@ -125,6 +124,18 @@ func (hu *HostUpdate) ClearProvisionSteps() *HostUpdate {
 	return hu
 }
 
+// SetScheduledSteps sets the "scheduled_steps" field.
+func (hu *HostUpdate) SetScheduledSteps(s []string) *HostUpdate {
+	hu.mutation.SetScheduledSteps(s)
+	return hu
+}
+
+// ClearScheduledSteps clears the value of the "scheduled_steps" field.
+func (hu *HostUpdate) ClearScheduledSteps() *HostUpdate {
+	hu.mutation.ClearScheduledSteps()
+	return hu
+}
+
 // SetTags sets the "tags" field.
 func (hu *HostUpdate) SetTags(m map[string]string) *HostUpdate {
 	hu.mutation.SetTags(m)
@@ -163,21 +174,6 @@ func (hu *HostUpdate) AddHostToUser(u ...*User) *HostUpdate {
 		ids[i] = u[i].ID
 	}
 	return hu.AddHostToUserIDs(ids...)
-}
-
-// AddHostToScheduleStepIDs adds the "HostToScheduleStep" edge to the ScheduleStep entity by IDs.
-func (hu *HostUpdate) AddHostToScheduleStepIDs(ids ...uuid.UUID) *HostUpdate {
-	hu.mutation.AddHostToScheduleStepIDs(ids...)
-	return hu
-}
-
-// AddHostToScheduleStep adds the "HostToScheduleStep" edges to the ScheduleStep entity.
-func (hu *HostUpdate) AddHostToScheduleStep(s ...*ScheduleStep) *HostUpdate {
-	ids := make([]uuid.UUID, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
-	}
-	return hu.AddHostToScheduleStepIDs(ids...)
 }
 
 // SetHostToEnvironmentID sets the "HostToEnvironment" edge to the Environment entity by ID.
@@ -274,27 +270,6 @@ func (hu *HostUpdate) RemoveHostToUser(u ...*User) *HostUpdate {
 		ids[i] = u[i].ID
 	}
 	return hu.RemoveHostToUserIDs(ids...)
-}
-
-// ClearHostToScheduleStep clears all "HostToScheduleStep" edges to the ScheduleStep entity.
-func (hu *HostUpdate) ClearHostToScheduleStep() *HostUpdate {
-	hu.mutation.ClearHostToScheduleStep()
-	return hu
-}
-
-// RemoveHostToScheduleStepIDs removes the "HostToScheduleStep" edge to ScheduleStep entities by IDs.
-func (hu *HostUpdate) RemoveHostToScheduleStepIDs(ids ...uuid.UUID) *HostUpdate {
-	hu.mutation.RemoveHostToScheduleStepIDs(ids...)
-	return hu
-}
-
-// RemoveHostToScheduleStep removes "HostToScheduleStep" edges to ScheduleStep entities.
-func (hu *HostUpdate) RemoveHostToScheduleStep(s ...*ScheduleStep) *HostUpdate {
-	ids := make([]uuid.UUID, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
-	}
-	return hu.RemoveHostToScheduleStepIDs(ids...)
 }
 
 // ClearHostToEnvironment clears the "HostToEnvironment" edge to the Environment entity.
@@ -542,6 +517,19 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: host.FieldProvisionSteps,
 		})
 	}
+	if value, ok := hu.mutation.ScheduledSteps(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: host.FieldScheduledSteps,
+		})
+	}
+	if hu.mutation.ScheduledStepsCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Column: host.FieldScheduledSteps,
+		})
+	}
 	if value, ok := hu.mutation.Tags(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeJSON,
@@ -630,60 +618,6 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if hu.mutation.HostToScheduleStepCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   host.HostToScheduleStepTable,
-			Columns: []string{host.HostToScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := hu.mutation.RemovedHostToScheduleStepIDs(); len(nodes) > 0 && !hu.mutation.HostToScheduleStepCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   host.HostToScheduleStepTable,
-			Columns: []string{host.HostToScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := hu.mutation.HostToScheduleStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   host.HostToScheduleStepTable,
-			Columns: []string{host.HostToScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
 				},
 			},
 		}
@@ -999,6 +933,18 @@ func (huo *HostUpdateOne) ClearProvisionSteps() *HostUpdateOne {
 	return huo
 }
 
+// SetScheduledSteps sets the "scheduled_steps" field.
+func (huo *HostUpdateOne) SetScheduledSteps(s []string) *HostUpdateOne {
+	huo.mutation.SetScheduledSteps(s)
+	return huo
+}
+
+// ClearScheduledSteps clears the value of the "scheduled_steps" field.
+func (huo *HostUpdateOne) ClearScheduledSteps() *HostUpdateOne {
+	huo.mutation.ClearScheduledSteps()
+	return huo
+}
+
 // SetTags sets the "tags" field.
 func (huo *HostUpdateOne) SetTags(m map[string]string) *HostUpdateOne {
 	huo.mutation.SetTags(m)
@@ -1037,21 +983,6 @@ func (huo *HostUpdateOne) AddHostToUser(u ...*User) *HostUpdateOne {
 		ids[i] = u[i].ID
 	}
 	return huo.AddHostToUserIDs(ids...)
-}
-
-// AddHostToScheduleStepIDs adds the "HostToScheduleStep" edge to the ScheduleStep entity by IDs.
-func (huo *HostUpdateOne) AddHostToScheduleStepIDs(ids ...uuid.UUID) *HostUpdateOne {
-	huo.mutation.AddHostToScheduleStepIDs(ids...)
-	return huo
-}
-
-// AddHostToScheduleStep adds the "HostToScheduleStep" edges to the ScheduleStep entity.
-func (huo *HostUpdateOne) AddHostToScheduleStep(s ...*ScheduleStep) *HostUpdateOne {
-	ids := make([]uuid.UUID, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
-	}
-	return huo.AddHostToScheduleStepIDs(ids...)
 }
 
 // SetHostToEnvironmentID sets the "HostToEnvironment" edge to the Environment entity by ID.
@@ -1148,27 +1079,6 @@ func (huo *HostUpdateOne) RemoveHostToUser(u ...*User) *HostUpdateOne {
 		ids[i] = u[i].ID
 	}
 	return huo.RemoveHostToUserIDs(ids...)
-}
-
-// ClearHostToScheduleStep clears all "HostToScheduleStep" edges to the ScheduleStep entity.
-func (huo *HostUpdateOne) ClearHostToScheduleStep() *HostUpdateOne {
-	huo.mutation.ClearHostToScheduleStep()
-	return huo
-}
-
-// RemoveHostToScheduleStepIDs removes the "HostToScheduleStep" edge to ScheduleStep entities by IDs.
-func (huo *HostUpdateOne) RemoveHostToScheduleStepIDs(ids ...uuid.UUID) *HostUpdateOne {
-	huo.mutation.RemoveHostToScheduleStepIDs(ids...)
-	return huo
-}
-
-// RemoveHostToScheduleStep removes "HostToScheduleStep" edges to ScheduleStep entities.
-func (huo *HostUpdateOne) RemoveHostToScheduleStep(s ...*ScheduleStep) *HostUpdateOne {
-	ids := make([]uuid.UUID, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
-	}
-	return huo.RemoveHostToScheduleStepIDs(ids...)
 }
 
 // ClearHostToEnvironment clears the "HostToEnvironment" edge to the Environment entity.
@@ -1446,6 +1356,19 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Column: host.FieldProvisionSteps,
 		})
 	}
+	if value, ok := huo.mutation.ScheduledSteps(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: host.FieldScheduledSteps,
+		})
+	}
+	if huo.mutation.ScheduledStepsCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Column: host.FieldScheduledSteps,
+		})
+	}
 	if value, ok := huo.mutation.Tags(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeJSON,
@@ -1534,60 +1457,6 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if huo.mutation.HostToScheduleStepCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   host.HostToScheduleStepTable,
-			Columns: []string{host.HostToScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := huo.mutation.RemovedHostToScheduleStepIDs(); len(nodes) > 0 && !huo.mutation.HostToScheduleStepCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   host.HostToScheduleStepTable,
-			Columns: []string{host.HostToScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := huo.mutation.HostToScheduleStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   host.HostToScheduleStepTable,
-			Columns: []string{host.HostToScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
 				},
 			},
 		}
