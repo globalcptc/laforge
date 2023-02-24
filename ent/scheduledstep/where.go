@@ -108,6 +108,34 @@ func Step(v string) predicate.ScheduledStep {
 	})
 }
 
+// StartTime applies equality check predicate on the "start_time" field. It's identical to StartTimeEQ.
+func StartTime(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldStartTime), v))
+	})
+}
+
+// EndTime applies equality check predicate on the "end_time" field. It's identical to EndTimeEQ.
+func EndTime(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldEndTime), v))
+	})
+}
+
+// Interval applies equality check predicate on the "interval" field. It's identical to IntervalEQ.
+func Interval(v int) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldInterval), v))
+	})
+}
+
+// Repeated applies equality check predicate on the "repeated" field. It's identical to RepeatedEQ.
+func Repeated(v bool) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldRepeated), v))
+	})
+}
+
 // HclIDEQ applies the EQ predicate on the "hcl_id" field.
 func HclIDEQ(v string) predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
@@ -501,6 +529,212 @@ func StepEqualFold(v string) predicate.ScheduledStep {
 func StepContainsFold(v string) predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldStep), v))
+	})
+}
+
+// StartTimeEQ applies the EQ predicate on the "start_time" field.
+func StartTimeEQ(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldStartTime), v))
+	})
+}
+
+// StartTimeNEQ applies the NEQ predicate on the "start_time" field.
+func StartTimeNEQ(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldStartTime), v))
+	})
+}
+
+// StartTimeIn applies the In predicate on the "start_time" field.
+func StartTimeIn(vs ...int64) predicate.ScheduledStep {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldStartTime), v...))
+	})
+}
+
+// StartTimeNotIn applies the NotIn predicate on the "start_time" field.
+func StartTimeNotIn(vs ...int64) predicate.ScheduledStep {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldStartTime), v...))
+	})
+}
+
+// StartTimeGT applies the GT predicate on the "start_time" field.
+func StartTimeGT(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldStartTime), v))
+	})
+}
+
+// StartTimeGTE applies the GTE predicate on the "start_time" field.
+func StartTimeGTE(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldStartTime), v))
+	})
+}
+
+// StartTimeLT applies the LT predicate on the "start_time" field.
+func StartTimeLT(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldStartTime), v))
+	})
+}
+
+// StartTimeLTE applies the LTE predicate on the "start_time" field.
+func StartTimeLTE(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldStartTime), v))
+	})
+}
+
+// EndTimeEQ applies the EQ predicate on the "end_time" field.
+func EndTimeEQ(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldEndTime), v))
+	})
+}
+
+// EndTimeNEQ applies the NEQ predicate on the "end_time" field.
+func EndTimeNEQ(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldEndTime), v))
+	})
+}
+
+// EndTimeIn applies the In predicate on the "end_time" field.
+func EndTimeIn(vs ...int64) predicate.ScheduledStep {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldEndTime), v...))
+	})
+}
+
+// EndTimeNotIn applies the NotIn predicate on the "end_time" field.
+func EndTimeNotIn(vs ...int64) predicate.ScheduledStep {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldEndTime), v...))
+	})
+}
+
+// EndTimeGT applies the GT predicate on the "end_time" field.
+func EndTimeGT(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldEndTime), v))
+	})
+}
+
+// EndTimeGTE applies the GTE predicate on the "end_time" field.
+func EndTimeGTE(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldEndTime), v))
+	})
+}
+
+// EndTimeLT applies the LT predicate on the "end_time" field.
+func EndTimeLT(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldEndTime), v))
+	})
+}
+
+// EndTimeLTE applies the LTE predicate on the "end_time" field.
+func EndTimeLTE(v int64) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldEndTime), v))
+	})
+}
+
+// IntervalEQ applies the EQ predicate on the "interval" field.
+func IntervalEQ(v int) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldInterval), v))
+	})
+}
+
+// IntervalNEQ applies the NEQ predicate on the "interval" field.
+func IntervalNEQ(v int) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldInterval), v))
+	})
+}
+
+// IntervalIn applies the In predicate on the "interval" field.
+func IntervalIn(vs ...int) predicate.ScheduledStep {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldInterval), v...))
+	})
+}
+
+// IntervalNotIn applies the NotIn predicate on the "interval" field.
+func IntervalNotIn(vs ...int) predicate.ScheduledStep {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldInterval), v...))
+	})
+}
+
+// IntervalGT applies the GT predicate on the "interval" field.
+func IntervalGT(v int) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldInterval), v))
+	})
+}
+
+// IntervalGTE applies the GTE predicate on the "interval" field.
+func IntervalGTE(v int) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldInterval), v))
+	})
+}
+
+// IntervalLT applies the LT predicate on the "interval" field.
+func IntervalLT(v int) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldInterval), v))
+	})
+}
+
+// IntervalLTE applies the LTE predicate on the "interval" field.
+func IntervalLTE(v int) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldInterval), v))
+	})
+}
+
+// RepeatedEQ applies the EQ predicate on the "repeated" field.
+func RepeatedEQ(v bool) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldRepeated), v))
+	})
+}
+
+// RepeatedNEQ applies the NEQ predicate on the "repeated" field.
+func RepeatedNEQ(v bool) predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldRepeated), v))
 	})
 }
 

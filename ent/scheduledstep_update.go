@@ -53,6 +53,51 @@ func (ssu *ScheduledStepUpdate) SetStep(s string) *ScheduledStepUpdate {
 	return ssu
 }
 
+// SetStartTime sets the "start_time" field.
+func (ssu *ScheduledStepUpdate) SetStartTime(i int64) *ScheduledStepUpdate {
+	ssu.mutation.ResetStartTime()
+	ssu.mutation.SetStartTime(i)
+	return ssu
+}
+
+// AddStartTime adds i to the "start_time" field.
+func (ssu *ScheduledStepUpdate) AddStartTime(i int64) *ScheduledStepUpdate {
+	ssu.mutation.AddStartTime(i)
+	return ssu
+}
+
+// SetEndTime sets the "end_time" field.
+func (ssu *ScheduledStepUpdate) SetEndTime(i int64) *ScheduledStepUpdate {
+	ssu.mutation.ResetEndTime()
+	ssu.mutation.SetEndTime(i)
+	return ssu
+}
+
+// AddEndTime adds i to the "end_time" field.
+func (ssu *ScheduledStepUpdate) AddEndTime(i int64) *ScheduledStepUpdate {
+	ssu.mutation.AddEndTime(i)
+	return ssu
+}
+
+// SetInterval sets the "interval" field.
+func (ssu *ScheduledStepUpdate) SetInterval(i int) *ScheduledStepUpdate {
+	ssu.mutation.ResetInterval()
+	ssu.mutation.SetInterval(i)
+	return ssu
+}
+
+// AddInterval adds i to the "interval" field.
+func (ssu *ScheduledStepUpdate) AddInterval(i int) *ScheduledStepUpdate {
+	ssu.mutation.AddInterval(i)
+	return ssu
+}
+
+// SetRepeated sets the "repeated" field.
+func (ssu *ScheduledStepUpdate) SetRepeated(b bool) *ScheduledStepUpdate {
+	ssu.mutation.SetRepeated(b)
+	return ssu
+}
+
 // SetScheduledStepToEnvironmentID sets the "ScheduledStepToEnvironment" edge to the Environment entity by ID.
 func (ssu *ScheduledStepUpdate) SetScheduledStepToEnvironmentID(id uuid.UUID) *ScheduledStepUpdate {
 	ssu.mutation.SetScheduledStepToEnvironmentID(id)
@@ -183,6 +228,55 @@ func (ssu *ScheduledStepUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Column: scheduledstep.FieldStep,
 		})
 	}
+	if value, ok := ssu.mutation.StartTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: scheduledstep.FieldStartTime,
+		})
+	}
+	if value, ok := ssu.mutation.AddedStartTime(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: scheduledstep.FieldStartTime,
+		})
+	}
+	if value, ok := ssu.mutation.EndTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: scheduledstep.FieldEndTime,
+		})
+	}
+	if value, ok := ssu.mutation.AddedEndTime(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: scheduledstep.FieldEndTime,
+		})
+	}
+	if value, ok := ssu.mutation.Interval(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt,
+			Value:  value,
+			Column: scheduledstep.FieldInterval,
+		})
+	}
+	if value, ok := ssu.mutation.AddedInterval(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt,
+			Value:  value,
+			Column: scheduledstep.FieldInterval,
+		})
+	}
+	if value, ok := ssu.mutation.Repeated(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeBool,
+			Value:  value,
+			Column: scheduledstep.FieldRepeated,
+		})
+	}
 	if ssu.mutation.ScheduledStepToEnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -258,6 +352,51 @@ func (ssuo *ScheduledStepUpdateOne) SetDescription(s string) *ScheduledStepUpdat
 // SetStep sets the "step" field.
 func (ssuo *ScheduledStepUpdateOne) SetStep(s string) *ScheduledStepUpdateOne {
 	ssuo.mutation.SetStep(s)
+	return ssuo
+}
+
+// SetStartTime sets the "start_time" field.
+func (ssuo *ScheduledStepUpdateOne) SetStartTime(i int64) *ScheduledStepUpdateOne {
+	ssuo.mutation.ResetStartTime()
+	ssuo.mutation.SetStartTime(i)
+	return ssuo
+}
+
+// AddStartTime adds i to the "start_time" field.
+func (ssuo *ScheduledStepUpdateOne) AddStartTime(i int64) *ScheduledStepUpdateOne {
+	ssuo.mutation.AddStartTime(i)
+	return ssuo
+}
+
+// SetEndTime sets the "end_time" field.
+func (ssuo *ScheduledStepUpdateOne) SetEndTime(i int64) *ScheduledStepUpdateOne {
+	ssuo.mutation.ResetEndTime()
+	ssuo.mutation.SetEndTime(i)
+	return ssuo
+}
+
+// AddEndTime adds i to the "end_time" field.
+func (ssuo *ScheduledStepUpdateOne) AddEndTime(i int64) *ScheduledStepUpdateOne {
+	ssuo.mutation.AddEndTime(i)
+	return ssuo
+}
+
+// SetInterval sets the "interval" field.
+func (ssuo *ScheduledStepUpdateOne) SetInterval(i int) *ScheduledStepUpdateOne {
+	ssuo.mutation.ResetInterval()
+	ssuo.mutation.SetInterval(i)
+	return ssuo
+}
+
+// AddInterval adds i to the "interval" field.
+func (ssuo *ScheduledStepUpdateOne) AddInterval(i int) *ScheduledStepUpdateOne {
+	ssuo.mutation.AddInterval(i)
+	return ssuo
+}
+
+// SetRepeated sets the "repeated" field.
+func (ssuo *ScheduledStepUpdateOne) SetRepeated(b bool) *ScheduledStepUpdateOne {
+	ssuo.mutation.SetRepeated(b)
 	return ssuo
 }
 
@@ -419,6 +558,55 @@ func (ssuo *ScheduledStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedul
 			Type:   field.TypeString,
 			Value:  value,
 			Column: scheduledstep.FieldStep,
+		})
+	}
+	if value, ok := ssuo.mutation.StartTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: scheduledstep.FieldStartTime,
+		})
+	}
+	if value, ok := ssuo.mutation.AddedStartTime(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: scheduledstep.FieldStartTime,
+		})
+	}
+	if value, ok := ssuo.mutation.EndTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: scheduledstep.FieldEndTime,
+		})
+	}
+	if value, ok := ssuo.mutation.AddedEndTime(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: scheduledstep.FieldEndTime,
+		})
+	}
+	if value, ok := ssuo.mutation.Interval(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt,
+			Value:  value,
+			Column: scheduledstep.FieldInterval,
+		})
+	}
+	if value, ok := ssuo.mutation.AddedInterval(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt,
+			Value:  value,
+			Column: scheduledstep.FieldInterval,
+		})
+	}
+	if value, ok := ssuo.mutation.Repeated(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeBool,
+			Value:  value,
+			Column: scheduledstep.FieldRepeated,
 		})
 	}
 	if ssuo.mutation.ScheduledStepToEnvironmentCleared() {

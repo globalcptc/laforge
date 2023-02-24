@@ -23,8 +23,8 @@ const (
 	EdgeProvisioningScheduledStepToStatus = "ProvisioningScheduledStepToStatus"
 	// EdgeProvisioningScheduledStepToScheduledStep holds the string denoting the provisioningscheduledsteptoscheduledstep edge name in mutations.
 	EdgeProvisioningScheduledStepToScheduledStep = "ProvisioningScheduledStepToScheduledStep"
-	// EdgeProvisioningScheduleStepToProvisionedHost holds the string denoting the provisioningschedulesteptoprovisionedhost edge name in mutations.
-	EdgeProvisioningScheduleStepToProvisionedHost = "ProvisioningScheduleStepToProvisionedHost"
+	// EdgeProvisioningScheduledStepToProvisionedHost holds the string denoting the provisioningscheduledsteptoprovisionedhost edge name in mutations.
+	EdgeProvisioningScheduledStepToProvisionedHost = "ProvisioningScheduledStepToProvisionedHost"
 	// EdgeProvisioningScheduledStepToScript holds the string denoting the provisioningscheduledsteptoscript edge name in mutations.
 	EdgeProvisioningScheduledStepToScript = "ProvisioningScheduledStepToScript"
 	// EdgeProvisioningScheduledStepToCommand holds the string denoting the provisioningscheduledsteptocommand edge name in mutations.
@@ -61,13 +61,13 @@ const (
 	ProvisioningScheduledStepToScheduledStepInverseTable = "scheduled_steps"
 	// ProvisioningScheduledStepToScheduledStepColumn is the table column denoting the ProvisioningScheduledStepToScheduledStep relation/edge.
 	ProvisioningScheduledStepToScheduledStepColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_scheduled_step"
-	// ProvisioningScheduleStepToProvisionedHostTable is the table that holds the ProvisioningScheduleStepToProvisionedHost relation/edge.
-	ProvisioningScheduleStepToProvisionedHostTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduleStepToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
+	// ProvisioningScheduledStepToProvisionedHostTable is the table that holds the ProvisioningScheduledStepToProvisionedHost relation/edge.
+	ProvisioningScheduledStepToProvisionedHostTable = "provisioning_scheduled_steps"
+	// ProvisioningScheduledStepToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
-	ProvisioningScheduleStepToProvisionedHostInverseTable = "provisioned_hosts"
-	// ProvisioningScheduleStepToProvisionedHostColumn is the table column denoting the ProvisioningScheduleStepToProvisionedHost relation/edge.
-	ProvisioningScheduleStepToProvisionedHostColumn = "provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host"
+	ProvisioningScheduledStepToProvisionedHostInverseTable = "provisioned_hosts"
+	// ProvisioningScheduledStepToProvisionedHostColumn is the table column denoting the ProvisioningScheduledStepToProvisionedHost relation/edge.
+	ProvisioningScheduledStepToProvisionedHostColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host"
 	// ProvisioningScheduledStepToScriptTable is the table that holds the ProvisioningScheduledStepToScript relation/edge.
 	ProvisioningScheduledStepToScriptTable = "provisioning_scheduled_steps"
 	// ProvisioningScheduledStepToScriptInverseTable is the table name for the Script entity.
@@ -154,7 +154,7 @@ var ForeignKeys = []string{
 	"gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step",
 	"plan_plan_to_provisioning_scheduled_step",
 	"provisioning_scheduled_step_provisioning_scheduled_step_to_scheduled_step",
-	"provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host",
+	"provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host",
 	"provisioning_scheduled_step_provisioning_scheduled_step_to_script",
 	"provisioning_scheduled_step_provisioning_scheduled_step_to_command",
 	"provisioning_scheduled_step_provisioning_scheduled_step_to_dns_record",

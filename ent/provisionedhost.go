@@ -46,8 +46,8 @@ type ProvisionedHost struct {
 	HCLProvisionedHostToBuild *Build `json:"ProvisionedHostToBuild,omitempty"`
 	// ProvisionedHostToProvisioningStep holds the value of the ProvisionedHostToProvisioningStep edge.
 	HCLProvisionedHostToProvisioningStep []*ProvisioningStep `json:"ProvisionedHostToProvisioningStep,omitempty"`
-	// ProvisionedHostToProvisioningScheduleStep holds the value of the ProvisionedHostToProvisioningScheduleStep edge.
-	HCLProvisionedHostToProvisioningScheduleStep []*ProvisioningScheduledStep `json:"ProvisionedHostToProvisioningScheduleStep,omitempty"`
+	// ProvisionedHostToProvisioningScheduledStep holds the value of the ProvisionedHostToProvisioningScheduledStep edge.
+	HCLProvisionedHostToProvisioningScheduledStep []*ProvisioningScheduledStep `json:"ProvisionedHostToProvisioningScheduledStep,omitempty"`
 	// ProvisionedHostToAgentStatus holds the value of the ProvisionedHostToAgentStatus edge.
 	HCLProvisionedHostToAgentStatus []*AgentStatus `json:"ProvisionedHostToAgentStatus,omitempty"`
 	// ProvisionedHostToAgentTask holds the value of the ProvisionedHostToAgentTask edge.
@@ -79,8 +79,8 @@ type ProvisionedHostEdges struct {
 	ProvisionedHostToBuild *Build `json:"ProvisionedHostToBuild,omitempty"`
 	// ProvisionedHostToProvisioningStep holds the value of the ProvisionedHostToProvisioningStep edge.
 	ProvisionedHostToProvisioningStep []*ProvisioningStep `json:"ProvisionedHostToProvisioningStep,omitempty"`
-	// ProvisionedHostToProvisioningScheduleStep holds the value of the ProvisionedHostToProvisioningScheduleStep edge.
-	ProvisionedHostToProvisioningScheduleStep []*ProvisioningScheduledStep `json:"ProvisionedHostToProvisioningScheduleStep,omitempty"`
+	// ProvisionedHostToProvisioningScheduledStep holds the value of the ProvisionedHostToProvisioningScheduledStep edge.
+	ProvisionedHostToProvisioningScheduledStep []*ProvisioningScheduledStep `json:"ProvisionedHostToProvisioningScheduledStep,omitempty"`
 	// ProvisionedHostToAgentStatus holds the value of the ProvisionedHostToAgentStatus edge.
 	ProvisionedHostToAgentStatus []*AgentStatus `json:"ProvisionedHostToAgentStatus,omitempty"`
 	// ProvisionedHostToAgentTask holds the value of the ProvisionedHostToAgentTask edge.
@@ -173,13 +173,13 @@ func (e ProvisionedHostEdges) ProvisionedHostToProvisioningStepOrErr() ([]*Provi
 	return nil, &NotLoadedError{edge: "ProvisionedHostToProvisioningStep"}
 }
 
-// ProvisionedHostToProvisioningScheduleStepOrErr returns the ProvisionedHostToProvisioningScheduleStep value or an error if the edge
+// ProvisionedHostToProvisioningScheduledStepOrErr returns the ProvisionedHostToProvisioningScheduledStep value or an error if the edge
 // was not loaded in eager-loading.
-func (e ProvisionedHostEdges) ProvisionedHostToProvisioningScheduleStepOrErr() ([]*ProvisioningScheduledStep, error) {
+func (e ProvisionedHostEdges) ProvisionedHostToProvisioningScheduledStepOrErr() ([]*ProvisioningScheduledStep, error) {
 	if e.loadedTypes[6] {
-		return e.ProvisionedHostToProvisioningScheduleStep, nil
+		return e.ProvisionedHostToProvisioningScheduledStep, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisionedHostToProvisioningScheduleStep"}
+	return nil, &NotLoadedError{edge: "ProvisionedHostToProvisioningScheduledStep"}
 }
 
 // ProvisionedHostToAgentStatusOrErr returns the ProvisionedHostToAgentStatus value or an error if the edge
@@ -370,9 +370,9 @@ func (ph *ProvisionedHost) QueryProvisionedHostToProvisioningStep() *Provisionin
 	return (&ProvisionedHostClient{config: ph.config}).QueryProvisionedHostToProvisioningStep(ph)
 }
 
-// QueryProvisionedHostToProvisioningScheduleStep queries the "ProvisionedHostToProvisioningScheduleStep" edge of the ProvisionedHost entity.
-func (ph *ProvisionedHost) QueryProvisionedHostToProvisioningScheduleStep() *ProvisioningScheduledStepQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryProvisionedHostToProvisioningScheduleStep(ph)
+// QueryProvisionedHostToProvisioningScheduledStep queries the "ProvisionedHostToProvisioningScheduledStep" edge of the ProvisionedHost entity.
+func (ph *ProvisionedHost) QueryProvisionedHostToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+	return (&ProvisionedHostClient{config: ph.config}).QueryProvisionedHostToProvisioningScheduledStep(ph)
 }
 
 // QueryProvisionedHostToAgentStatus queries the "ProvisionedHostToAgentStatus" edge of the ProvisionedHost entity.

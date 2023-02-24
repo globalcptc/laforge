@@ -19,6 +19,14 @@ const (
 	FieldDescription = "description"
 	// FieldStep holds the string denoting the step field in the database.
 	FieldStep = "step"
+	// FieldStartTime holds the string denoting the start_time field in the database.
+	FieldStartTime = "start_time"
+	// FieldEndTime holds the string denoting the end_time field in the database.
+	FieldEndTime = "end_time"
+	// FieldInterval holds the string denoting the interval field in the database.
+	FieldInterval = "interval"
+	// FieldRepeated holds the string denoting the repeated field in the database.
+	FieldRepeated = "repeated"
 	// EdgeScheduledStepToEnvironment holds the string denoting the scheduledsteptoenvironment edge name in mutations.
 	EdgeScheduledStepToEnvironment = "ScheduledStepToEnvironment"
 	// Table holds the table name of the scheduledstep in the database.
@@ -39,6 +47,10 @@ var Columns = []string{
 	FieldName,
 	FieldDescription,
 	FieldStep,
+	FieldStartTime,
+	FieldEndTime,
+	FieldInterval,
+	FieldRepeated,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "scheduled_steps"

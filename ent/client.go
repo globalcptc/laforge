@@ -4421,15 +4421,15 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToProvisioningStep(ph *Provi
 	return query
 }
 
-// QueryProvisionedHostToProvisioningScheduleStep queries the ProvisionedHostToProvisioningScheduleStep edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToProvisioningScheduleStep(ph *ProvisionedHost) *ProvisioningScheduledStepQuery {
+// QueryProvisionedHostToProvisioningScheduledStep queries the ProvisionedHostToProvisioningScheduledStep edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryProvisionedHostToProvisioningScheduledStep(ph *ProvisionedHost) *ProvisioningScheduledStepQuery {
 	query := &ProvisioningScheduledStepQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToProvisioningScheduleStepTable, provisionedhost.ProvisionedHostToProvisioningScheduleStepColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToProvisioningScheduledStepTable, provisionedhost.ProvisionedHostToProvisioningScheduledStepColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4809,15 +4809,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToSchedu
 	return query
 }
 
-// QueryProvisioningScheduleStepToProvisionedHost queries the ProvisioningScheduleStepToProvisionedHost edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduleStepToProvisionedHost(pss *ProvisioningScheduledStep) *ProvisionedHostQuery {
+// QueryProvisioningScheduledStepToProvisionedHost queries the ProvisioningScheduledStepToProvisionedHost edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToProvisionedHost(pss *ProvisioningScheduledStep) *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostTable, provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable, provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil

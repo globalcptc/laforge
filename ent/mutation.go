@@ -23264,42 +23264,42 @@ func (m *PlanDiffMutation) ResetEdge(name string) error {
 // ProvisionedHostMutation represents an operation that mutates the ProvisionedHost nodes in the graph.
 type ProvisionedHostMutation struct {
 	config
-	op                                                Op
-	typ                                               string
-	id                                                *uuid.UUID
-	subnet_ip                                         *string
-	addon_type                                        *provisionedhost.AddonType
-	vars                                              *map[string]string
-	clearedFields                                     map[string]struct{}
-	_ProvisionedHostToStatus                          *uuid.UUID
-	cleared_ProvisionedHostToStatus                   bool
-	_ProvisionedHostToProvisionedNetwork              *uuid.UUID
-	cleared_ProvisionedHostToProvisionedNetwork       bool
-	_ProvisionedHostToHost                            *uuid.UUID
-	cleared_ProvisionedHostToHost                     bool
-	_ProvisionedHostToEndStepPlan                     *uuid.UUID
-	cleared_ProvisionedHostToEndStepPlan              bool
-	_ProvisionedHostToBuild                           *uuid.UUID
-	cleared_ProvisionedHostToBuild                    bool
-	_ProvisionedHostToProvisioningStep                map[uuid.UUID]struct{}
-	removed_ProvisionedHostToProvisioningStep         map[uuid.UUID]struct{}
-	cleared_ProvisionedHostToProvisioningStep         bool
-	_ProvisionedHostToProvisioningScheduleStep        map[uuid.UUID]struct{}
-	removed_ProvisionedHostToProvisioningScheduleStep map[uuid.UUID]struct{}
-	cleared_ProvisionedHostToProvisioningScheduleStep bool
-	_ProvisionedHostToAgentStatus                     map[uuid.UUID]struct{}
-	removed_ProvisionedHostToAgentStatus              map[uuid.UUID]struct{}
-	cleared_ProvisionedHostToAgentStatus              bool
-	_ProvisionedHostToAgentTask                       map[uuid.UUID]struct{}
-	removed_ProvisionedHostToAgentTask                map[uuid.UUID]struct{}
-	cleared_ProvisionedHostToAgentTask                bool
-	_ProvisionedHostToPlan                            *uuid.UUID
-	cleared_ProvisionedHostToPlan                     bool
-	_ProvisionedHostToGinFileMiddleware               *uuid.UUID
-	cleared_ProvisionedHostToGinFileMiddleware        bool
-	done                                              bool
-	oldValue                                          func(context.Context) (*ProvisionedHost, error)
-	predicates                                        []predicate.ProvisionedHost
+	op                                                 Op
+	typ                                                string
+	id                                                 *uuid.UUID
+	subnet_ip                                          *string
+	addon_type                                         *provisionedhost.AddonType
+	vars                                               *map[string]string
+	clearedFields                                      map[string]struct{}
+	_ProvisionedHostToStatus                           *uuid.UUID
+	cleared_ProvisionedHostToStatus                    bool
+	_ProvisionedHostToProvisionedNetwork               *uuid.UUID
+	cleared_ProvisionedHostToProvisionedNetwork        bool
+	_ProvisionedHostToHost                             *uuid.UUID
+	cleared_ProvisionedHostToHost                      bool
+	_ProvisionedHostToEndStepPlan                      *uuid.UUID
+	cleared_ProvisionedHostToEndStepPlan               bool
+	_ProvisionedHostToBuild                            *uuid.UUID
+	cleared_ProvisionedHostToBuild                     bool
+	_ProvisionedHostToProvisioningStep                 map[uuid.UUID]struct{}
+	removed_ProvisionedHostToProvisioningStep          map[uuid.UUID]struct{}
+	cleared_ProvisionedHostToProvisioningStep          bool
+	_ProvisionedHostToProvisioningScheduledStep        map[uuid.UUID]struct{}
+	removed_ProvisionedHostToProvisioningScheduledStep map[uuid.UUID]struct{}
+	cleared_ProvisionedHostToProvisioningScheduledStep bool
+	_ProvisionedHostToAgentStatus                      map[uuid.UUID]struct{}
+	removed_ProvisionedHostToAgentStatus               map[uuid.UUID]struct{}
+	cleared_ProvisionedHostToAgentStatus               bool
+	_ProvisionedHostToAgentTask                        map[uuid.UUID]struct{}
+	removed_ProvisionedHostToAgentTask                 map[uuid.UUID]struct{}
+	cleared_ProvisionedHostToAgentTask                 bool
+	_ProvisionedHostToPlan                             *uuid.UUID
+	cleared_ProvisionedHostToPlan                      bool
+	_ProvisionedHostToGinFileMiddleware                *uuid.UUID
+	cleared_ProvisionedHostToGinFileMiddleware         bool
+	done                                               bool
+	oldValue                                           func(context.Context) (*ProvisionedHost, error)
+	predicates                                         []predicate.ProvisionedHost
 }
 
 var _ ent.Mutation = (*ProvisionedHostMutation)(nil)
@@ -23776,58 +23776,58 @@ func (m *ProvisionedHostMutation) ResetProvisionedHostToProvisioningStep() {
 	m.removed_ProvisionedHostToProvisioningStep = nil
 }
 
-// AddProvisionedHostToProvisioningScheduleStepIDs adds the "ProvisionedHostToProvisioningScheduleStep" edge to the ProvisioningScheduledStep entity by ids.
-func (m *ProvisionedHostMutation) AddProvisionedHostToProvisioningScheduleStepIDs(ids ...uuid.UUID) {
-	if m._ProvisionedHostToProvisioningScheduleStep == nil {
-		m._ProvisionedHostToProvisioningScheduleStep = make(map[uuid.UUID]struct{})
+// AddProvisionedHostToProvisioningScheduledStepIDs adds the "ProvisionedHostToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ids.
+func (m *ProvisionedHostMutation) AddProvisionedHostToProvisioningScheduledStepIDs(ids ...uuid.UUID) {
+	if m._ProvisionedHostToProvisioningScheduledStep == nil {
+		m._ProvisionedHostToProvisioningScheduledStep = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._ProvisionedHostToProvisioningScheduleStep[ids[i]] = struct{}{}
+		m._ProvisionedHostToProvisioningScheduledStep[ids[i]] = struct{}{}
 	}
 }
 
-// ClearProvisionedHostToProvisioningScheduleStep clears the "ProvisionedHostToProvisioningScheduleStep" edge to the ProvisioningScheduledStep entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToProvisioningScheduleStep() {
-	m.cleared_ProvisionedHostToProvisioningScheduleStep = true
+// ClearProvisionedHostToProvisioningScheduledStep clears the "ProvisionedHostToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (m *ProvisionedHostMutation) ClearProvisionedHostToProvisioningScheduledStep() {
+	m.cleared_ProvisionedHostToProvisioningScheduledStep = true
 }
 
-// ProvisionedHostToProvisioningScheduleStepCleared reports if the "ProvisionedHostToProvisioningScheduleStep" edge to the ProvisioningScheduledStep entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToProvisioningScheduleStepCleared() bool {
-	return m.cleared_ProvisionedHostToProvisioningScheduleStep
+// ProvisionedHostToProvisioningScheduledStepCleared reports if the "ProvisionedHostToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity was cleared.
+func (m *ProvisionedHostMutation) ProvisionedHostToProvisioningScheduledStepCleared() bool {
+	return m.cleared_ProvisionedHostToProvisioningScheduledStep
 }
 
-// RemoveProvisionedHostToProvisioningScheduleStepIDs removes the "ProvisionedHostToProvisioningScheduleStep" edge to the ProvisioningScheduledStep entity by IDs.
-func (m *ProvisionedHostMutation) RemoveProvisionedHostToProvisioningScheduleStepIDs(ids ...uuid.UUID) {
-	if m.removed_ProvisionedHostToProvisioningScheduleStep == nil {
-		m.removed_ProvisionedHostToProvisioningScheduleStep = make(map[uuid.UUID]struct{})
+// RemoveProvisionedHostToProvisioningScheduledStepIDs removes the "ProvisionedHostToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by IDs.
+func (m *ProvisionedHostMutation) RemoveProvisionedHostToProvisioningScheduledStepIDs(ids ...uuid.UUID) {
+	if m.removed_ProvisionedHostToProvisioningScheduledStep == nil {
+		m.removed_ProvisionedHostToProvisioningScheduledStep = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._ProvisionedHostToProvisioningScheduleStep, ids[i])
-		m.removed_ProvisionedHostToProvisioningScheduleStep[ids[i]] = struct{}{}
+		delete(m._ProvisionedHostToProvisioningScheduledStep, ids[i])
+		m.removed_ProvisionedHostToProvisioningScheduledStep[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedProvisionedHostToProvisioningScheduleStep returns the removed IDs of the "ProvisionedHostToProvisioningScheduleStep" edge to the ProvisioningScheduledStep entity.
-func (m *ProvisionedHostMutation) RemovedProvisionedHostToProvisioningScheduleStepIDs() (ids []uuid.UUID) {
-	for id := range m.removed_ProvisionedHostToProvisioningScheduleStep {
+// RemovedProvisionedHostToProvisioningScheduledStep returns the removed IDs of the "ProvisionedHostToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (m *ProvisionedHostMutation) RemovedProvisionedHostToProvisioningScheduledStepIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ProvisionedHostToProvisioningScheduledStep {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ProvisionedHostToProvisioningScheduleStepIDs returns the "ProvisionedHostToProvisioningScheduleStep" edge IDs in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToProvisioningScheduleStepIDs() (ids []uuid.UUID) {
-	for id := range m._ProvisionedHostToProvisioningScheduleStep {
+// ProvisionedHostToProvisioningScheduledStepIDs returns the "ProvisionedHostToProvisioningScheduledStep" edge IDs in the mutation.
+func (m *ProvisionedHostMutation) ProvisionedHostToProvisioningScheduledStepIDs() (ids []uuid.UUID) {
+	for id := range m._ProvisionedHostToProvisioningScheduledStep {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetProvisionedHostToProvisioningScheduleStep resets all changes to the "ProvisionedHostToProvisioningScheduleStep" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToProvisioningScheduleStep() {
-	m._ProvisionedHostToProvisioningScheduleStep = nil
-	m.cleared_ProvisionedHostToProvisioningScheduleStep = false
-	m.removed_ProvisionedHostToProvisioningScheduleStep = nil
+// ResetProvisionedHostToProvisioningScheduledStep resets all changes to the "ProvisionedHostToProvisioningScheduledStep" edge.
+func (m *ProvisionedHostMutation) ResetProvisionedHostToProvisioningScheduledStep() {
+	m._ProvisionedHostToProvisioningScheduledStep = nil
+	m.cleared_ProvisionedHostToProvisioningScheduledStep = false
+	m.removed_ProvisionedHostToProvisioningScheduledStep = nil
 }
 
 // AddProvisionedHostToAgentStatuIDs adds the "ProvisionedHostToAgentStatus" edge to the AgentStatus entity by ids.
@@ -24196,8 +24196,8 @@ func (m *ProvisionedHostMutation) AddedEdges() []string {
 	if m._ProvisionedHostToProvisioningStep != nil {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningStep)
 	}
-	if m._ProvisionedHostToProvisioningScheduleStep != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningScheduleStep)
+	if m._ProvisionedHostToProvisioningScheduledStep != nil {
+		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep)
 	}
 	if m._ProvisionedHostToAgentStatus != nil {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToAgentStatus)
@@ -24244,9 +24244,9 @@ func (m *ProvisionedHostMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case provisionedhost.EdgeProvisionedHostToProvisioningScheduleStep:
-		ids := make([]ent.Value, 0, len(m._ProvisionedHostToProvisioningScheduleStep))
-		for id := range m._ProvisionedHostToProvisioningScheduleStep {
+	case provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep:
+		ids := make([]ent.Value, 0, len(m._ProvisionedHostToProvisioningScheduledStep))
+		for id := range m._ProvisionedHostToProvisioningScheduledStep {
 			ids = append(ids, id)
 		}
 		return ids
@@ -24280,8 +24280,8 @@ func (m *ProvisionedHostMutation) RemovedEdges() []string {
 	if m.removed_ProvisionedHostToProvisioningStep != nil {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningStep)
 	}
-	if m.removed_ProvisionedHostToProvisioningScheduleStep != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningScheduleStep)
+	if m.removed_ProvisionedHostToProvisioningScheduledStep != nil {
+		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep)
 	}
 	if m.removed_ProvisionedHostToAgentStatus != nil {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToAgentStatus)
@@ -24302,9 +24302,9 @@ func (m *ProvisionedHostMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case provisionedhost.EdgeProvisionedHostToProvisioningScheduleStep:
-		ids := make([]ent.Value, 0, len(m.removed_ProvisionedHostToProvisioningScheduleStep))
-		for id := range m.removed_ProvisionedHostToProvisioningScheduleStep {
+	case provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep:
+		ids := make([]ent.Value, 0, len(m.removed_ProvisionedHostToProvisioningScheduledStep))
+		for id := range m.removed_ProvisionedHostToProvisioningScheduledStep {
 			ids = append(ids, id)
 		}
 		return ids
@@ -24345,8 +24345,8 @@ func (m *ProvisionedHostMutation) ClearedEdges() []string {
 	if m.cleared_ProvisionedHostToProvisioningStep {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningStep)
 	}
-	if m.cleared_ProvisionedHostToProvisioningScheduleStep {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningScheduleStep)
+	if m.cleared_ProvisionedHostToProvisioningScheduledStep {
+		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep)
 	}
 	if m.cleared_ProvisionedHostToAgentStatus {
 		edges = append(edges, provisionedhost.EdgeProvisionedHostToAgentStatus)
@@ -24379,8 +24379,8 @@ func (m *ProvisionedHostMutation) EdgeCleared(name string) bool {
 		return m.cleared_ProvisionedHostToBuild
 	case provisionedhost.EdgeProvisionedHostToProvisioningStep:
 		return m.cleared_ProvisionedHostToProvisioningStep
-	case provisionedhost.EdgeProvisionedHostToProvisioningScheduleStep:
-		return m.cleared_ProvisionedHostToProvisioningScheduleStep
+	case provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep:
+		return m.cleared_ProvisionedHostToProvisioningScheduledStep
 	case provisionedhost.EdgeProvisionedHostToAgentStatus:
 		return m.cleared_ProvisionedHostToAgentStatus
 	case provisionedhost.EdgeProvisionedHostToAgentTask:
@@ -24444,8 +24444,8 @@ func (m *ProvisionedHostMutation) ResetEdge(name string) error {
 	case provisionedhost.EdgeProvisionedHostToProvisioningStep:
 		m.ResetProvisionedHostToProvisioningStep()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToProvisioningScheduleStep:
-		m.ResetProvisionedHostToProvisioningScheduleStep()
+	case provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep:
+		m.ResetProvisionedHostToProvisioningScheduledStep()
 		return nil
 	case provisionedhost.EdgeProvisionedHostToAgentStatus:
 		m.ResetProvisionedHostToAgentStatus()
@@ -25289,8 +25289,8 @@ type ProvisioningScheduledStepMutation struct {
 	cleared_ProvisioningScheduledStepToStatus            bool
 	_ProvisioningScheduledStepToScheduledStep            *uuid.UUID
 	cleared_ProvisioningScheduledStepToScheduledStep     bool
-	_ProvisioningScheduleStepToProvisionedHost           *uuid.UUID
-	cleared_ProvisioningScheduleStepToProvisionedHost    bool
+	_ProvisioningScheduledStepToProvisionedHost          *uuid.UUID
+	cleared_ProvisioningScheduledStepToProvisionedHost   bool
 	_ProvisioningScheduledStepToScript                   *uuid.UUID
 	cleared_ProvisioningScheduledStepToScript            bool
 	_ProvisioningScheduledStepToCommand                  *uuid.UUID
@@ -25570,43 +25570,43 @@ func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToSche
 	m.cleared_ProvisioningScheduledStepToScheduledStep = false
 }
 
-// SetProvisioningScheduleStepToProvisionedHostID sets the "ProvisioningScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduleStepToProvisionedHostID(id uuid.UUID) {
-	m._ProvisioningScheduleStepToProvisionedHost = &id
+// SetProvisioningScheduledStepToProvisionedHostID sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity by id.
+func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToProvisionedHostID(id uuid.UUID) {
+	m._ProvisioningScheduledStepToProvisionedHost = &id
 }
 
-// ClearProvisioningScheduleStepToProvisionedHost clears the "ProvisioningScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduleStepToProvisionedHost() {
-	m.cleared_ProvisioningScheduleStepToProvisionedHost = true
+// ClearProvisioningScheduledStepToProvisionedHost clears the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
+func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToProvisionedHost() {
+	m.cleared_ProvisioningScheduledStepToProvisionedHost = true
 }
 
-// ProvisioningScheduleStepToProvisionedHostCleared reports if the "ProvisioningScheduleStepToProvisionedHost" edge to the ProvisionedHost entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduleStepToProvisionedHostCleared() bool {
-	return m.cleared_ProvisioningScheduleStepToProvisionedHost
+// ProvisioningScheduledStepToProvisionedHostCleared reports if the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity was cleared.
+func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToProvisionedHostCleared() bool {
+	return m.cleared_ProvisioningScheduledStepToProvisionedHost
 }
 
-// ProvisioningScheduleStepToProvisionedHostID returns the "ProvisioningScheduleStepToProvisionedHost" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduleStepToProvisionedHostID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduleStepToProvisionedHost != nil {
-		return *m._ProvisioningScheduleStepToProvisionedHost, true
+// ProvisioningScheduledStepToProvisionedHostID returns the "ProvisioningScheduledStepToProvisionedHost" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToProvisionedHostID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningScheduledStepToProvisionedHost != nil {
+		return *m._ProvisioningScheduledStepToProvisionedHost, true
 	}
 	return
 }
 
-// ProvisioningScheduleStepToProvisionedHostIDs returns the "ProvisioningScheduleStepToProvisionedHost" edge IDs in the mutation.
+// ProvisioningScheduledStepToProvisionedHostIDs returns the "ProvisioningScheduledStepToProvisionedHost" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduleStepToProvisionedHostID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduleStepToProvisionedHostIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduleStepToProvisionedHost; id != nil {
+// ProvisioningScheduledStepToProvisionedHostID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToProvisionedHostIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningScheduledStepToProvisionedHost; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduleStepToProvisionedHost resets all changes to the "ProvisioningScheduleStepToProvisionedHost" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduleStepToProvisionedHost() {
-	m._ProvisioningScheduleStepToProvisionedHost = nil
-	m.cleared_ProvisioningScheduleStepToProvisionedHost = false
+// ResetProvisioningScheduledStepToProvisionedHost resets all changes to the "ProvisioningScheduledStepToProvisionedHost" edge.
+func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToProvisionedHost() {
+	m._ProvisioningScheduledStepToProvisionedHost = nil
+	m.cleared_ProvisioningScheduledStepToProvisionedHost = false
 }
 
 // SetProvisioningScheduledStepToScriptID sets the "ProvisioningScheduledStepToScript" edge to the Script entity by id.
@@ -26141,8 +26141,8 @@ func (m *ProvisioningScheduledStepMutation) AddedEdges() []string {
 	if m._ProvisioningScheduledStepToScheduledStep != nil {
 		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToScheduledStep)
 	}
-	if m._ProvisioningScheduleStepToProvisionedHost != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduleStepToProvisionedHost)
+	if m._ProvisioningScheduledStepToProvisionedHost != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost)
 	}
 	if m._ProvisioningScheduledStepToScript != nil {
 		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToScript)
@@ -26189,8 +26189,8 @@ func (m *ProvisioningScheduledStepMutation) AddedIDs(name string) []ent.Value {
 		if id := m._ProvisioningScheduledStepToScheduledStep; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduleStepToProvisionedHost:
-		if id := m._ProvisioningScheduleStepToProvisionedHost; id != nil {
+	case provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost:
+		if id := m._ProvisioningScheduledStepToProvisionedHost; id != nil {
 			return []ent.Value{*id}
 		}
 	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScript:
@@ -26260,8 +26260,8 @@ func (m *ProvisioningScheduledStepMutation) ClearedEdges() []string {
 	if m.cleared_ProvisioningScheduledStepToScheduledStep {
 		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToScheduledStep)
 	}
-	if m.cleared_ProvisioningScheduleStepToProvisionedHost {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduleStepToProvisionedHost)
+	if m.cleared_ProvisioningScheduledStepToProvisionedHost {
+		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost)
 	}
 	if m.cleared_ProvisioningScheduledStepToScript {
 		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToScript)
@@ -26304,8 +26304,8 @@ func (m *ProvisioningScheduledStepMutation) EdgeCleared(name string) bool {
 		return m.cleared_ProvisioningScheduledStepToStatus
 	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScheduledStep:
 		return m.cleared_ProvisioningScheduledStepToScheduledStep
-	case provisioningscheduledstep.EdgeProvisioningScheduleStepToProvisionedHost:
-		return m.cleared_ProvisioningScheduleStepToProvisionedHost
+	case provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost:
+		return m.cleared_ProvisioningScheduledStepToProvisionedHost
 	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScript:
 		return m.cleared_ProvisioningScheduledStepToScript
 	case provisioningscheduledstep.EdgeProvisioningScheduledStepToCommand:
@@ -26340,8 +26340,8 @@ func (m *ProvisioningScheduledStepMutation) ClearEdge(name string) error {
 	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScheduledStep:
 		m.ClearProvisioningScheduledStepToScheduledStep()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduleStepToProvisionedHost:
-		m.ClearProvisioningScheduleStepToProvisionedHost()
+	case provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost:
+		m.ClearProvisioningScheduledStepToProvisionedHost()
 		return nil
 	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScript:
 		m.ClearProvisioningScheduledStepToScript()
@@ -26387,8 +26387,8 @@ func (m *ProvisioningScheduledStepMutation) ResetEdge(name string) error {
 	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScheduledStep:
 		m.ResetProvisioningScheduledStepToScheduledStep()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduleStepToProvisionedHost:
-		m.ResetProvisioningScheduleStepToProvisionedHost()
+	case provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost:
+		m.ResetProvisioningScheduledStepToProvisionedHost()
 		return nil
 	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScript:
 		m.ResetProvisioningScheduledStepToScript()
@@ -29038,6 +29038,13 @@ type ScheduledStepMutation struct {
 	name                               *string
 	description                        *string
 	step                               *string
+	start_time                         *int64
+	addstart_time                      *int64
+	end_time                           *int64
+	addend_time                        *int64
+	interval                           *int
+	addinterval                        *int
+	repeated                           *bool
 	clearedFields                      map[string]struct{}
 	_ScheduledStepToEnvironment        *uuid.UUID
 	cleared_ScheduledStepToEnvironment bool
@@ -29294,6 +29301,210 @@ func (m *ScheduledStepMutation) ResetStep() {
 	m.step = nil
 }
 
+// SetStartTime sets the "start_time" field.
+func (m *ScheduledStepMutation) SetStartTime(i int64) {
+	m.start_time = &i
+	m.addstart_time = nil
+}
+
+// StartTime returns the value of the "start_time" field in the mutation.
+func (m *ScheduledStepMutation) StartTime() (r int64, exists bool) {
+	v := m.start_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartTime returns the old "start_time" field's value of the ScheduledStep entity.
+// If the ScheduledStep object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScheduledStepMutation) OldStartTime(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartTime: %w", err)
+	}
+	return oldValue.StartTime, nil
+}
+
+// AddStartTime adds i to the "start_time" field.
+func (m *ScheduledStepMutation) AddStartTime(i int64) {
+	if m.addstart_time != nil {
+		*m.addstart_time += i
+	} else {
+		m.addstart_time = &i
+	}
+}
+
+// AddedStartTime returns the value that was added to the "start_time" field in this mutation.
+func (m *ScheduledStepMutation) AddedStartTime() (r int64, exists bool) {
+	v := m.addstart_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetStartTime resets all changes to the "start_time" field.
+func (m *ScheduledStepMutation) ResetStartTime() {
+	m.start_time = nil
+	m.addstart_time = nil
+}
+
+// SetEndTime sets the "end_time" field.
+func (m *ScheduledStepMutation) SetEndTime(i int64) {
+	m.end_time = &i
+	m.addend_time = nil
+}
+
+// EndTime returns the value of the "end_time" field in the mutation.
+func (m *ScheduledStepMutation) EndTime() (r int64, exists bool) {
+	v := m.end_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndTime returns the old "end_time" field's value of the ScheduledStep entity.
+// If the ScheduledStep object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScheduledStepMutation) OldEndTime(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndTime: %w", err)
+	}
+	return oldValue.EndTime, nil
+}
+
+// AddEndTime adds i to the "end_time" field.
+func (m *ScheduledStepMutation) AddEndTime(i int64) {
+	if m.addend_time != nil {
+		*m.addend_time += i
+	} else {
+		m.addend_time = &i
+	}
+}
+
+// AddedEndTime returns the value that was added to the "end_time" field in this mutation.
+func (m *ScheduledStepMutation) AddedEndTime() (r int64, exists bool) {
+	v := m.addend_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetEndTime resets all changes to the "end_time" field.
+func (m *ScheduledStepMutation) ResetEndTime() {
+	m.end_time = nil
+	m.addend_time = nil
+}
+
+// SetInterval sets the "interval" field.
+func (m *ScheduledStepMutation) SetInterval(i int) {
+	m.interval = &i
+	m.addinterval = nil
+}
+
+// Interval returns the value of the "interval" field in the mutation.
+func (m *ScheduledStepMutation) Interval() (r int, exists bool) {
+	v := m.interval
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInterval returns the old "interval" field's value of the ScheduledStep entity.
+// If the ScheduledStep object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScheduledStepMutation) OldInterval(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInterval is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInterval requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInterval: %w", err)
+	}
+	return oldValue.Interval, nil
+}
+
+// AddInterval adds i to the "interval" field.
+func (m *ScheduledStepMutation) AddInterval(i int) {
+	if m.addinterval != nil {
+		*m.addinterval += i
+	} else {
+		m.addinterval = &i
+	}
+}
+
+// AddedInterval returns the value that was added to the "interval" field in this mutation.
+func (m *ScheduledStepMutation) AddedInterval() (r int, exists bool) {
+	v := m.addinterval
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetInterval resets all changes to the "interval" field.
+func (m *ScheduledStepMutation) ResetInterval() {
+	m.interval = nil
+	m.addinterval = nil
+}
+
+// SetRepeated sets the "repeated" field.
+func (m *ScheduledStepMutation) SetRepeated(b bool) {
+	m.repeated = &b
+}
+
+// Repeated returns the value of the "repeated" field in the mutation.
+func (m *ScheduledStepMutation) Repeated() (r bool, exists bool) {
+	v := m.repeated
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRepeated returns the old "repeated" field's value of the ScheduledStep entity.
+// If the ScheduledStep object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScheduledStepMutation) OldRepeated(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRepeated is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRepeated requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRepeated: %w", err)
+	}
+	return oldValue.Repeated, nil
+}
+
+// ResetRepeated resets all changes to the "repeated" field.
+func (m *ScheduledStepMutation) ResetRepeated() {
+	m.repeated = nil
+}
+
 // SetScheduledStepToEnvironmentID sets the "ScheduledStepToEnvironment" edge to the Environment entity by id.
 func (m *ScheduledStepMutation) SetScheduledStepToEnvironmentID(id uuid.UUID) {
 	m._ScheduledStepToEnvironment = &id
@@ -29352,7 +29563,7 @@ func (m *ScheduledStepMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ScheduledStepMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 8)
 	if m.hcl_id != nil {
 		fields = append(fields, scheduledstep.FieldHclID)
 	}
@@ -29364,6 +29575,18 @@ func (m *ScheduledStepMutation) Fields() []string {
 	}
 	if m.step != nil {
 		fields = append(fields, scheduledstep.FieldStep)
+	}
+	if m.start_time != nil {
+		fields = append(fields, scheduledstep.FieldStartTime)
+	}
+	if m.end_time != nil {
+		fields = append(fields, scheduledstep.FieldEndTime)
+	}
+	if m.interval != nil {
+		fields = append(fields, scheduledstep.FieldInterval)
+	}
+	if m.repeated != nil {
+		fields = append(fields, scheduledstep.FieldRepeated)
 	}
 	return fields
 }
@@ -29381,6 +29604,14 @@ func (m *ScheduledStepMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case scheduledstep.FieldStep:
 		return m.Step()
+	case scheduledstep.FieldStartTime:
+		return m.StartTime()
+	case scheduledstep.FieldEndTime:
+		return m.EndTime()
+	case scheduledstep.FieldInterval:
+		return m.Interval()
+	case scheduledstep.FieldRepeated:
+		return m.Repeated()
 	}
 	return nil, false
 }
@@ -29398,6 +29629,14 @@ func (m *ScheduledStepMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldDescription(ctx)
 	case scheduledstep.FieldStep:
 		return m.OldStep(ctx)
+	case scheduledstep.FieldStartTime:
+		return m.OldStartTime(ctx)
+	case scheduledstep.FieldEndTime:
+		return m.OldEndTime(ctx)
+	case scheduledstep.FieldInterval:
+		return m.OldInterval(ctx)
+	case scheduledstep.FieldRepeated:
+		return m.OldRepeated(ctx)
 	}
 	return nil, fmt.Errorf("unknown ScheduledStep field %s", name)
 }
@@ -29435,6 +29674,34 @@ func (m *ScheduledStepMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetStep(v)
 		return nil
+	case scheduledstep.FieldStartTime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartTime(v)
+		return nil
+	case scheduledstep.FieldEndTime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndTime(v)
+		return nil
+	case scheduledstep.FieldInterval:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInterval(v)
+		return nil
+	case scheduledstep.FieldRepeated:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRepeated(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ScheduledStep field %s", name)
 }
@@ -29442,13 +29709,31 @@ func (m *ScheduledStepMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ScheduledStepMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addstart_time != nil {
+		fields = append(fields, scheduledstep.FieldStartTime)
+	}
+	if m.addend_time != nil {
+		fields = append(fields, scheduledstep.FieldEndTime)
+	}
+	if m.addinterval != nil {
+		fields = append(fields, scheduledstep.FieldInterval)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ScheduledStepMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case scheduledstep.FieldStartTime:
+		return m.AddedStartTime()
+	case scheduledstep.FieldEndTime:
+		return m.AddedEndTime()
+	case scheduledstep.FieldInterval:
+		return m.AddedInterval()
+	}
 	return nil, false
 }
 
@@ -29457,6 +29742,27 @@ func (m *ScheduledStepMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ScheduledStepMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case scheduledstep.FieldStartTime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddStartTime(v)
+		return nil
+	case scheduledstep.FieldEndTime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddEndTime(v)
+		return nil
+	case scheduledstep.FieldInterval:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddInterval(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ScheduledStep numeric field %s", name)
 }
@@ -29495,6 +29801,18 @@ func (m *ScheduledStepMutation) ResetField(name string) error {
 		return nil
 	case scheduledstep.FieldStep:
 		m.ResetStep()
+		return nil
+	case scheduledstep.FieldStartTime:
+		m.ResetStartTime()
+		return nil
+	case scheduledstep.FieldEndTime:
+		m.ResetEndTime()
+		return nil
+	case scheduledstep.FieldInterval:
+		m.ResetInterval()
+		return nil
+	case scheduledstep.FieldRepeated:
+		m.ResetRepeated()
 		return nil
 	}
 	return fmt.Errorf("unknown ScheduledStep field %s", name)

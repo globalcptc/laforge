@@ -852,10 +852,10 @@ func (ph *ProvisionedHost) ProvisionedHostToProvisioningStep(ctx context.Context
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToProvisioningScheduleStep(ctx context.Context) ([]*ProvisioningScheduledStep, error) {
-	result, err := ph.Edges.ProvisionedHostToProvisioningScheduleStepOrErr()
+func (ph *ProvisionedHost) ProvisionedHostToProvisioningScheduledStep(ctx context.Context) ([]*ProvisioningScheduledStep, error) {
+	result, err := ph.Edges.ProvisionedHostToProvisioningScheduledStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToProvisioningScheduleStep().All(ctx)
+		result, err = ph.QueryProvisionedHostToProvisioningScheduledStep().All(ctx)
 	}
 	return result, err
 }
@@ -956,10 +956,10 @@ func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToScheduledStep(c
 	return result, err
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduleStepToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
-	result, err := pss.Edges.ProvisioningScheduleStepToProvisionedHostOrErr()
+func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
+	result, err := pss.Edges.ProvisioningScheduledStepToProvisionedHostOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduleStepToProvisionedHost().Only(ctx)
+		result, err = pss.QueryProvisioningScheduledStepToProvisionedHost().Only(ctx)
 	}
 	return result, err
 }

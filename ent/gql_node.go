@@ -2687,9 +2687,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[6] = &Edge{
 		Type: "ProvisioningScheduledStep",
-		Name: "ProvisionedHostToProvisioningScheduleStep",
+		Name: "ProvisionedHostToProvisioningScheduledStep",
 	}
-	err = ph.QueryProvisionedHostToProvisioningScheduleStep().
+	err = ph.QueryProvisionedHostToProvisioningScheduledStep().
 		Select(provisioningscheduledstep.FieldID).
 		Scan(ctx, &node.Edges[6].IDs)
 	if err != nil {
@@ -2879,9 +2879,9 @@ func (pss *ProvisioningScheduledStep) Node(ctx context.Context) (node *Node, err
 	}
 	node.Edges[2] = &Edge{
 		Type: "ProvisionedHost",
-		Name: "ProvisioningScheduleStepToProvisionedHost",
+		Name: "ProvisioningScheduledStepToProvisionedHost",
 	}
-	err = pss.QueryProvisioningScheduleStepToProvisionedHost().
+	err = pss.QueryProvisioningScheduledStepToProvisionedHost().
 		Select(provisionedhost.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -3289,7 +3289,7 @@ func (ss *ScheduledStep) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     ss.ID,
 		Type:   "ScheduledStep",
-		Fields: make([]*Field, 4),
+		Fields: make([]*Field, 8),
 		Edges:  make([]*Edge, 1),
 	}
 	var buf []byte
@@ -3323,6 +3323,38 @@ func (ss *ScheduledStep) Node(ctx context.Context) (node *Node, err error) {
 	node.Fields[3] = &Field{
 		Type:  "string",
 		Name:  "step",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(ss.StartTime); err != nil {
+		return nil, err
+	}
+	node.Fields[4] = &Field{
+		Type:  "int64",
+		Name:  "start_time",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(ss.EndTime); err != nil {
+		return nil, err
+	}
+	node.Fields[5] = &Field{
+		Type:  "int64",
+		Name:  "end_time",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(ss.Interval); err != nil {
+		return nil, err
+	}
+	node.Fields[6] = &Field{
+		Type:  "int",
+		Name:  "interval",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(ss.Repeated); err != nil {
+		return nil, err
+	}
+	node.Fields[7] = &Field{
+		Type:  "bool",
+		Name:  "repeated",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{

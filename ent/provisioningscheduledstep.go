@@ -43,8 +43,8 @@ type ProvisioningScheduledStep struct {
 	HCLProvisioningScheduledStepToStatus *Status `json:"ProvisioningScheduledStepToStatus,omitempty"`
 	// ProvisioningScheduledStepToScheduledStep holds the value of the ProvisioningScheduledStepToScheduledStep edge.
 	HCLProvisioningScheduledStepToScheduledStep *ScheduledStep `json:"ProvisioningScheduledStepToScheduledStep,omitempty"`
-	// ProvisioningScheduleStepToProvisionedHost holds the value of the ProvisioningScheduleStepToProvisionedHost edge.
-	HCLProvisioningScheduleStepToProvisionedHost *ProvisionedHost `json:"ProvisioningScheduleStepToProvisionedHost,omitempty"`
+	// ProvisioningScheduledStepToProvisionedHost holds the value of the ProvisioningScheduledStepToProvisionedHost edge.
+	HCLProvisioningScheduledStepToProvisionedHost *ProvisionedHost `json:"ProvisioningScheduledStepToProvisionedHost,omitempty"`
 	// ProvisioningScheduledStepToScript holds the value of the ProvisioningScheduledStepToScript edge.
 	HCLProvisioningScheduledStepToScript *Script `json:"ProvisioningScheduledStepToScript,omitempty"`
 	// ProvisioningScheduledStepToCommand holds the value of the ProvisioningScheduledStepToCommand edge.
@@ -66,18 +66,18 @@ type ProvisioningScheduledStep struct {
 	// ProvisioningScheduledStepToGinFileMiddleware holds the value of the ProvisioningScheduledStepToGinFileMiddleware edge.
 	HCLProvisioningScheduledStepToGinFileMiddleware *GinFileMiddleware `json:"ProvisioningScheduledStepToGinFileMiddleware,omitempty"`
 	//
-	agent_task_agent_task_to_provisioning_scheduled_step                       *uuid.UUID
-	gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step     *uuid.UUID
-	plan_plan_to_provisioning_scheduled_step                                   *uuid.UUID
-	provisioning_scheduled_step_provisioning_scheduled_step_to_scheduled_step  *uuid.UUID
-	provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host *uuid.UUID
-	provisioning_scheduled_step_provisioning_scheduled_step_to_script          *uuid.UUID
-	provisioning_scheduled_step_provisioning_scheduled_step_to_command         *uuid.UUID
-	provisioning_scheduled_step_provisioning_scheduled_step_to_dns_record      *uuid.UUID
-	provisioning_scheduled_step_provisioning_scheduled_step_to_file_delete     *uuid.UUID
-	provisioning_scheduled_step_provisioning_scheduled_step_to_file_download   *uuid.UUID
-	provisioning_scheduled_step_provisioning_scheduled_step_to_file_extract    *uuid.UUID
-	provisioning_scheduled_step_provisioning_scheduled_step_to_ansible         *uuid.UUID
+	agent_task_agent_task_to_provisioning_scheduled_step                        *uuid.UUID
+	gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step      *uuid.UUID
+	plan_plan_to_provisioning_scheduled_step                                    *uuid.UUID
+	provisioning_scheduled_step_provisioning_scheduled_step_to_scheduled_step   *uuid.UUID
+	provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host *uuid.UUID
+	provisioning_scheduled_step_provisioning_scheduled_step_to_script           *uuid.UUID
+	provisioning_scheduled_step_provisioning_scheduled_step_to_command          *uuid.UUID
+	provisioning_scheduled_step_provisioning_scheduled_step_to_dns_record       *uuid.UUID
+	provisioning_scheduled_step_provisioning_scheduled_step_to_file_delete      *uuid.UUID
+	provisioning_scheduled_step_provisioning_scheduled_step_to_file_download    *uuid.UUID
+	provisioning_scheduled_step_provisioning_scheduled_step_to_file_extract     *uuid.UUID
+	provisioning_scheduled_step_provisioning_scheduled_step_to_ansible          *uuid.UUID
 }
 
 // ProvisioningScheduledStepEdges holds the relations/edges for other nodes in the graph.
@@ -86,8 +86,8 @@ type ProvisioningScheduledStepEdges struct {
 	ProvisioningScheduledStepToStatus *Status `json:"ProvisioningScheduledStepToStatus,omitempty"`
 	// ProvisioningScheduledStepToScheduledStep holds the value of the ProvisioningScheduledStepToScheduledStep edge.
 	ProvisioningScheduledStepToScheduledStep *ScheduledStep `json:"ProvisioningScheduledStepToScheduledStep,omitempty"`
-	// ProvisioningScheduleStepToProvisionedHost holds the value of the ProvisioningScheduleStepToProvisionedHost edge.
-	ProvisioningScheduleStepToProvisionedHost *ProvisionedHost `json:"ProvisioningScheduleStepToProvisionedHost,omitempty"`
+	// ProvisioningScheduledStepToProvisionedHost holds the value of the ProvisioningScheduledStepToProvisionedHost edge.
+	ProvisioningScheduledStepToProvisionedHost *ProvisionedHost `json:"ProvisioningScheduledStepToProvisionedHost,omitempty"`
 	// ProvisioningScheduledStepToScript holds the value of the ProvisioningScheduledStepToScript edge.
 	ProvisioningScheduledStepToScript *Script `json:"ProvisioningScheduledStepToScript,omitempty"`
 	// ProvisioningScheduledStepToCommand holds the value of the ProvisioningScheduledStepToCommand edge.
@@ -141,18 +141,18 @@ func (e ProvisioningScheduledStepEdges) ProvisioningScheduledStepToScheduledStep
 	return nil, &NotLoadedError{edge: "ProvisioningScheduledStepToScheduledStep"}
 }
 
-// ProvisioningScheduleStepToProvisionedHostOrErr returns the ProvisioningScheduleStepToProvisionedHost value or an error if the edge
+// ProvisioningScheduledStepToProvisionedHostOrErr returns the ProvisioningScheduledStepToProvisionedHost value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningScheduledStepEdges) ProvisioningScheduleStepToProvisionedHostOrErr() (*ProvisionedHost, error) {
+func (e ProvisioningScheduledStepEdges) ProvisioningScheduledStepToProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[2] {
-		if e.ProvisioningScheduleStepToProvisionedHost == nil {
-			// The edge ProvisioningScheduleStepToProvisionedHost was loaded in eager-loading,
+		if e.ProvisioningScheduledStepToProvisionedHost == nil {
+			// The edge ProvisioningScheduledStepToProvisionedHost was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
-		return e.ProvisioningScheduleStepToProvisionedHost, nil
+		return e.ProvisioningScheduledStepToProvisionedHost, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningScheduleStepToProvisionedHost"}
+	return nil, &NotLoadedError{edge: "ProvisioningScheduledStepToProvisionedHost"}
 }
 
 // ProvisioningScheduledStepToScriptOrErr returns the ProvisioningScheduledStepToScript value or an error if the edge
@@ -314,7 +314,7 @@ func (*ProvisioningScheduledStep) scanValues(columns []string) ([]interface{}, e
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisioningscheduledstep.ForeignKeys[3]: // provisioning_scheduled_step_provisioning_scheduled_step_to_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[4]: // provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host
+		case provisioningscheduledstep.ForeignKeys[4]: // provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisioningscheduledstep.ForeignKeys[5]: // provisioning_scheduled_step_provisioning_scheduled_step_to_script
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -393,10 +393,10 @@ func (pss *ProvisioningScheduledStep) assignValues(columns []string, values []in
 			}
 		case provisioningscheduledstep.ForeignKeys[4]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host", values[i])
 			} else if value.Valid {
-				pss.provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host = new(uuid.UUID)
-				*pss.provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host = *value.S.(*uuid.UUID)
+				pss.provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host = new(uuid.UUID)
+				*pss.provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host = *value.S.(*uuid.UUID)
 			}
 		case provisioningscheduledstep.ForeignKeys[5]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -462,9 +462,9 @@ func (pss *ProvisioningScheduledStep) QueryProvisioningScheduledStepToScheduledS
 	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryProvisioningScheduledStepToScheduledStep(pss)
 }
 
-// QueryProvisioningScheduleStepToProvisionedHost queries the "ProvisioningScheduleStepToProvisionedHost" edge of the ProvisioningScheduledStep entity.
-func (pss *ProvisioningScheduledStep) QueryProvisioningScheduleStepToProvisionedHost() *ProvisionedHostQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryProvisioningScheduleStepToProvisionedHost(pss)
+// QueryProvisioningScheduledStepToProvisionedHost queries the "ProvisioningScheduledStepToProvisionedHost" edge of the ProvisioningScheduledStep entity.
+func (pss *ProvisioningScheduledStep) QueryProvisioningScheduledStepToProvisionedHost() *ProvisionedHostQuery {
+	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryProvisioningScheduledStepToProvisionedHost(pss)
 }
 
 // QueryProvisioningScheduledStepToScript queries the "ProvisioningScheduledStepToScript" edge of the ProvisioningScheduledStep entity.

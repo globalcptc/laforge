@@ -84,15 +84,15 @@ func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToSched
 	return pssu.SetProvisioningScheduledStepToScheduledStepID(s.ID)
 }
 
-// SetProvisioningScheduleStepToProvisionedHostID sets the "ProvisioningScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduleStepToProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduleStepToProvisionedHostID(id)
+// SetProvisioningScheduledStepToProvisionedHostID sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetProvisioningScheduledStepToProvisionedHostID(id)
 	return pssu
 }
 
-// SetProvisioningScheduleStepToProvisionedHost sets the "ProvisioningScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduleStepToProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduleStepToProvisionedHostID(p.ID)
+// SetProvisioningScheduledStepToProvisionedHost sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepUpdate {
+	return pssu.SetProvisioningScheduledStepToProvisionedHostID(p.ID)
 }
 
 // SetProvisioningScheduledStepToScriptID sets the "ProvisioningScheduledStepToScript" edge to the Script entity by ID.
@@ -302,9 +302,9 @@ func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToSch
 	return pssu
 }
 
-// ClearProvisioningScheduleStepToProvisionedHost clears the "ProvisioningScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduleStepToProvisionedHost() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduleStepToProvisionedHost()
+// ClearProvisioningScheduledStepToProvisionedHost clears the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToProvisionedHost() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearProvisioningScheduledStepToProvisionedHost()
 	return pssu
 }
 
@@ -438,8 +438,8 @@ func (pssu *ProvisioningScheduledStepUpdate) check() error {
 	if _, ok := pssu.mutation.ProvisioningScheduledStepToScheduledStepID(); pssu.mutation.ProvisioningScheduledStepToScheduledStepCleared() && !ok {
 		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisioningScheduledStepToScheduledStep"`)
 	}
-	if _, ok := pssu.mutation.ProvisioningScheduleStepToProvisionedHostID(); pssu.mutation.ProvisioningScheduleStepToProvisionedHostCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisioningScheduleStepToProvisionedHost"`)
+	if _, ok := pssu.mutation.ProvisioningScheduledStepToProvisionedHostID(); pssu.mutation.ProvisioningScheduledStepToProvisionedHostCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisioningScheduledStepToProvisionedHost"`)
 	}
 	return nil
 }
@@ -546,12 +546,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduleStepToProvisionedHostCleared() {
+	if pssu.mutation.ProvisioningScheduledStepToProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostColumn},
+			Table:   provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable,
+			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -562,12 +562,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduleStepToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.ProvisioningScheduledStepToProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostColumn},
+			Table:   provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable,
+			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -992,15 +992,15 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToS
 	return pssuo.SetProvisioningScheduledStepToScheduledStepID(s.ID)
 }
 
-// SetProvisioningScheduleStepToProvisionedHostID sets the "ProvisioningScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduleStepToProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduleStepToProvisionedHostID(id)
+// SetProvisioningScheduledStepToProvisionedHostID sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetProvisioningScheduledStepToProvisionedHostID(id)
 	return pssuo
 }
 
-// SetProvisioningScheduleStepToProvisionedHost sets the "ProvisioningScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduleStepToProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduleStepToProvisionedHostID(p.ID)
+// SetProvisioningScheduledStepToProvisionedHost sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetProvisioningScheduledStepToProvisionedHostID(p.ID)
 }
 
 // SetProvisioningScheduledStepToScriptID sets the "ProvisioningScheduledStepToScript" edge to the Script entity by ID.
@@ -1210,9 +1210,9 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepT
 	return pssuo
 }
 
-// ClearProvisioningScheduleStepToProvisionedHost clears the "ProvisioningScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduleStepToProvisionedHost() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduleStepToProvisionedHost()
+// ClearProvisioningScheduledStepToProvisionedHost clears the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToProvisionedHost() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearProvisioningScheduledStepToProvisionedHost()
 	return pssuo
 }
 
@@ -1359,8 +1359,8 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) check() error {
 	if _, ok := pssuo.mutation.ProvisioningScheduledStepToScheduledStepID(); pssuo.mutation.ProvisioningScheduledStepToScheduledStepCleared() && !ok {
 		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisioningScheduledStepToScheduledStep"`)
 	}
-	if _, ok := pssuo.mutation.ProvisioningScheduleStepToProvisionedHostID(); pssuo.mutation.ProvisioningScheduleStepToProvisionedHostCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisioningScheduleStepToProvisionedHost"`)
+	if _, ok := pssuo.mutation.ProvisioningScheduledStepToProvisionedHostID(); pssuo.mutation.ProvisioningScheduledStepToProvisionedHostCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisioningScheduledStepToProvisionedHost"`)
 	}
 	return nil
 }
@@ -1484,12 +1484,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduleStepToProvisionedHostCleared() {
+	if pssuo.mutation.ProvisioningScheduledStepToProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostColumn},
+			Table:   provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable,
+			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1500,12 +1500,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduleStepToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.ProvisioningScheduledStepToProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostColumn},
+			Table:   provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable,
+			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

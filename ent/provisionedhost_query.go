@@ -29,24 +29,24 @@ import (
 // ProvisionedHostQuery is the builder for querying ProvisionedHost entities.
 type ProvisionedHostQuery struct {
 	config
-	limit                                         *int
-	offset                                        *int
-	unique                                        *bool
-	order                                         []OrderFunc
-	fields                                        []string
-	predicates                                    []predicate.ProvisionedHost
-	withProvisionedHostToStatus                   *StatusQuery
-	withProvisionedHostToProvisionedNetwork       *ProvisionedNetworkQuery
-	withProvisionedHostToHost                     *HostQuery
-	withProvisionedHostToEndStepPlan              *PlanQuery
-	withProvisionedHostToBuild                    *BuildQuery
-	withProvisionedHostToProvisioningStep         *ProvisioningStepQuery
-	withProvisionedHostToProvisioningScheduleStep *ProvisioningScheduledStepQuery
-	withProvisionedHostToAgentStatus              *AgentStatusQuery
-	withProvisionedHostToAgentTask                *AgentTaskQuery
-	withProvisionedHostToPlan                     *PlanQuery
-	withProvisionedHostToGinFileMiddleware        *GinFileMiddlewareQuery
-	withFKs                                       bool
+	limit                                          *int
+	offset                                         *int
+	unique                                         *bool
+	order                                          []OrderFunc
+	fields                                         []string
+	predicates                                     []predicate.ProvisionedHost
+	withProvisionedHostToStatus                    *StatusQuery
+	withProvisionedHostToProvisionedNetwork        *ProvisionedNetworkQuery
+	withProvisionedHostToHost                      *HostQuery
+	withProvisionedHostToEndStepPlan               *PlanQuery
+	withProvisionedHostToBuild                     *BuildQuery
+	withProvisionedHostToProvisioningStep          *ProvisioningStepQuery
+	withProvisionedHostToProvisioningScheduledStep *ProvisioningScheduledStepQuery
+	withProvisionedHostToAgentStatus               *AgentStatusQuery
+	withProvisionedHostToAgentTask                 *AgentTaskQuery
+	withProvisionedHostToPlan                      *PlanQuery
+	withProvisionedHostToGinFileMiddleware         *GinFileMiddlewareQuery
+	withFKs                                        bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -215,8 +215,8 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisioningStep() *Provi
 	return query
 }
 
-// QueryProvisionedHostToProvisioningScheduleStep chains the current query on the "ProvisionedHostToProvisioningScheduleStep" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisioningScheduleStep() *ProvisioningScheduledStepQuery {
+// QueryProvisionedHostToProvisioningScheduledStep chains the current query on the "ProvisionedHostToProvisioningScheduledStep" edge.
+func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
 	query := &ProvisioningScheduledStepQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -229,7 +229,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisioningScheduleStep(
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToProvisioningScheduleStepTable, provisionedhost.ProvisionedHostToProvisioningScheduleStepColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToProvisioningScheduledStepTable, provisionedhost.ProvisionedHostToProvisioningScheduledStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -512,11 +512,11 @@ func (phq *ProvisionedHostQuery) Clone() *ProvisionedHostQuery {
 		withProvisionedHostToEndStepPlan:        phq.withProvisionedHostToEndStepPlan.Clone(),
 		withProvisionedHostToBuild:              phq.withProvisionedHostToBuild.Clone(),
 		withProvisionedHostToProvisioningStep:   phq.withProvisionedHostToProvisioningStep.Clone(),
-		withProvisionedHostToProvisioningScheduleStep: phq.withProvisionedHostToProvisioningScheduleStep.Clone(),
-		withProvisionedHostToAgentStatus:              phq.withProvisionedHostToAgentStatus.Clone(),
-		withProvisionedHostToAgentTask:                phq.withProvisionedHostToAgentTask.Clone(),
-		withProvisionedHostToPlan:                     phq.withProvisionedHostToPlan.Clone(),
-		withProvisionedHostToGinFileMiddleware:        phq.withProvisionedHostToGinFileMiddleware.Clone(),
+		withProvisionedHostToProvisioningScheduledStep: phq.withProvisionedHostToProvisioningScheduledStep.Clone(),
+		withProvisionedHostToAgentStatus:               phq.withProvisionedHostToAgentStatus.Clone(),
+		withProvisionedHostToAgentTask:                 phq.withProvisionedHostToAgentTask.Clone(),
+		withProvisionedHostToPlan:                      phq.withProvisionedHostToPlan.Clone(),
+		withProvisionedHostToGinFileMiddleware:         phq.withProvisionedHostToGinFileMiddleware.Clone(),
 		// clone intermediate query.
 		sql:    phq.sql.Clone(),
 		path:   phq.path,
@@ -590,14 +590,14 @@ func (phq *ProvisionedHostQuery) WithProvisionedHostToProvisioningStep(opts ...f
 	return phq
 }
 
-// WithProvisionedHostToProvisioningScheduleStep tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToProvisioningScheduleStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToProvisioningScheduleStep(opts ...func(*ProvisioningScheduledStepQuery)) *ProvisionedHostQuery {
+// WithProvisionedHostToProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedHostToProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithProvisionedHostToProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *ProvisionedHostQuery {
 	query := &ProvisioningScheduledStepQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToProvisioningScheduleStep = query
+	phq.withProvisionedHostToProvisioningScheduledStep = query
 	return phq
 }
 
@@ -721,7 +721,7 @@ func (phq *ProvisionedHostQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			phq.withProvisionedHostToEndStepPlan != nil,
 			phq.withProvisionedHostToBuild != nil,
 			phq.withProvisionedHostToProvisioningStep != nil,
-			phq.withProvisionedHostToProvisioningScheduleStep != nil,
+			phq.withProvisionedHostToProvisioningScheduledStep != nil,
 			phq.withProvisionedHostToAgentStatus != nil,
 			phq.withProvisionedHostToAgentTask != nil,
 			phq.withProvisionedHostToPlan != nil,
@@ -791,13 +791,13 @@ func (phq *ProvisionedHostQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			return nil, err
 		}
 	}
-	if query := phq.withProvisionedHostToProvisioningScheduleStep; query != nil {
-		if err := phq.loadProvisionedHostToProvisioningScheduleStep(ctx, query, nodes,
+	if query := phq.withProvisionedHostToProvisioningScheduledStep; query != nil {
+		if err := phq.loadProvisionedHostToProvisioningScheduledStep(ctx, query, nodes,
 			func(n *ProvisionedHost) {
-				n.Edges.ProvisionedHostToProvisioningScheduleStep = []*ProvisioningScheduledStep{}
+				n.Edges.ProvisionedHostToProvisioningScheduledStep = []*ProvisioningScheduledStep{}
 			},
 			func(n *ProvisionedHost, e *ProvisioningScheduledStep) {
-				n.Edges.ProvisionedHostToProvisioningScheduleStep = append(n.Edges.ProvisionedHostToProvisioningScheduleStep, e)
+				n.Edges.ProvisionedHostToProvisioningScheduledStep = append(n.Edges.ProvisionedHostToProvisioningScheduledStep, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -1010,7 +1010,7 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisioningStep(ctx conte
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisioningScheduleStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *ProvisioningScheduledStep)) error {
+func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *ProvisioningScheduledStep)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*ProvisionedHost)
 	for i := range nodes {
@@ -1022,20 +1022,20 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisioningScheduleStep(c
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisioningScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisionedhost.ProvisionedHostToProvisioningScheduleStepColumn, fks...))
+		s.Where(sql.InValues(provisionedhost.ProvisionedHostToProvisioningScheduledStepColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host
+		fk := n.provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

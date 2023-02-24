@@ -202,13 +202,14 @@ type StatusFor string
 
 // StatusFor values.
 const (
-	StatusForBuild              StatusFor = "Build"
-	StatusForTeam               StatusFor = "Team"
-	StatusForPlan               StatusFor = "Plan"
-	StatusForProvisionedNetwork StatusFor = "ProvisionedNetwork"
-	StatusForProvisionedHost    StatusFor = "ProvisionedHost"
-	StatusForProvisioningStep   StatusFor = "ProvisioningStep"
-	StatusForServerTask         StatusFor = "ServerTask"
+	StatusForBuild                     StatusFor = "Build"
+	StatusForTeam                      StatusFor = "Team"
+	StatusForPlan                      StatusFor = "Plan"
+	StatusForProvisionedNetwork        StatusFor = "ProvisionedNetwork"
+	StatusForProvisionedHost           StatusFor = "ProvisionedHost"
+	StatusForProvisioningStep          StatusFor = "ProvisioningStep"
+	StatusForProvisioningScheduledStep StatusFor = "ProvisioningScheduledStep"
+	StatusForServerTask                StatusFor = "ServerTask"
 )
 
 func (sf StatusFor) String() string {
@@ -218,7 +219,7 @@ func (sf StatusFor) String() string {
 // StatusForValidator is a validator for the "status_for" field enum values. It is called by the builders before save.
 func StatusForValidator(sf StatusFor) error {
 	switch sf {
-	case StatusForBuild, StatusForTeam, StatusForPlan, StatusForProvisionedNetwork, StatusForProvisionedHost, StatusForProvisioningStep, StatusForServerTask:
+	case StatusForBuild, StatusForTeam, StatusForPlan, StatusForProvisionedNetwork, StatusForProvisionedHost, StatusForProvisioningStep, StatusForProvisioningScheduledStep, StatusForServerTask:
 		return nil
 	default:
 		return fmt.Errorf("status: invalid enum value for status_for field: %q", sf)

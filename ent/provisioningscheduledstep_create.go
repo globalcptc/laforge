@@ -90,15 +90,15 @@ func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToSched
 	return pssc.SetProvisioningScheduledStepToScheduledStepID(s.ID)
 }
 
-// SetProvisioningScheduleStepToProvisionedHostID sets the "ProvisioningScheduleStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduleStepToProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduleStepToProvisionedHostID(id)
+// SetProvisioningScheduledStepToProvisionedHostID sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetProvisioningScheduledStepToProvisionedHostID(id)
 	return pssc
 }
 
-// SetProvisioningScheduleStepToProvisionedHost sets the "ProvisioningScheduleStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduleStepToProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduleStepToProvisionedHostID(p.ID)
+// SetProvisioningScheduledStepToProvisionedHost sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
+func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepCreate {
+	return pssc.SetProvisioningScheduledStepToProvisionedHostID(p.ID)
 }
 
 // SetProvisioningScheduledStepToScriptID sets the "ProvisioningScheduledStepToScript" edge to the Script entity by ID.
@@ -390,8 +390,8 @@ func (pssc *ProvisioningScheduledStepCreate) check() error {
 	if _, ok := pssc.mutation.ProvisioningScheduledStepToScheduledStepID(); !ok {
 		return &ValidationError{Name: "ProvisioningScheduledStepToScheduledStep", err: errors.New(`ent: missing required edge "ProvisioningScheduledStep.ProvisioningScheduledStepToScheduledStep"`)}
 	}
-	if _, ok := pssc.mutation.ProvisioningScheduleStepToProvisionedHostID(); !ok {
-		return &ValidationError{Name: "ProvisioningScheduleStepToProvisionedHost", err: errors.New(`ent: missing required edge "ProvisioningScheduledStep.ProvisioningScheduleStepToProvisionedHost"`)}
+	if _, ok := pssc.mutation.ProvisioningScheduledStepToProvisionedHostID(); !ok {
+		return &ValidationError{Name: "ProvisioningScheduledStepToProvisionedHost", err: errors.New(`ent: missing required edge "ProvisioningScheduledStep.ProvisioningScheduledStepToProvisionedHost"`)}
 	}
 	return nil
 }
@@ -484,12 +484,12 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		_node.provisioning_scheduled_step_provisioning_scheduled_step_to_scheduled_step = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduleStepToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.ProvisioningScheduledStepToProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduleStepToProvisionedHostColumn},
+			Table:   provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable,
+			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -501,7 +501,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host = &nodes[0]
+		_node.provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := pssc.mutation.ProvisioningScheduledStepToScriptIDs(); len(nodes) > 0 {

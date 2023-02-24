@@ -13,7 +13,7 @@ type ProvisioningScheduledStep struct {
 	ent.Schema
 }
 
-// Fields of the ProvisionedScheduleStep.
+// Fields of the ProvisioningScheduledStep.
 func (ProvisioningScheduledStep) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).
@@ -32,7 +32,7 @@ func (ProvisioningScheduledStep) Fields() []ent.Field {
 	}
 }
 
-// Edges of the ProvisionedScheduleStep.
+// Edges of the ProvisioningScheduledStep.
 func (ProvisioningScheduledStep) Edges() []ent.Edge {
 	return []ent.Edge{
 		// Status
@@ -46,7 +46,7 @@ func (ProvisioningScheduledStep) Edges() []ent.Edge {
 			Unique().
 			Required(),
 		// ProvisionedHost
-		edge.To("ProvisioningScheduleStepToProvisionedHost", ProvisionedHost.Type).
+		edge.To("ProvisioningScheduledStepToProvisionedHost", ProvisionedHost.Type).
 			Required().
 			Unique(),
 		edge.To("ProvisioningScheduledStepToScript", Script.Type).

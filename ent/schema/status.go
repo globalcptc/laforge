@@ -18,7 +18,7 @@ func (Status) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).
 			Default(uuid.New),
 		field.Enum("state").Values("PLANNING", "AWAITING", "PARENTAWAITING", "INPROGRESS", "FAILED", "COMPLETE", "TAINTED", "TODELETE", "DELETEINPROGRESS", "DELETED", "TOREBUILD", "CANCELLED"),
-		field.Enum("status_for").Values("Build", "Team", "Plan", "ProvisionedNetwork", "ProvisionedHost", "ProvisioningStep", "ServerTask"),
+		field.Enum("status_for").Values("Build", "Team", "Plan", "ProvisionedNetwork", "ProvisionedHost", "ProvisioningStep", "ProvisioningScheduledStep", "ServerTask"),
 		field.Time("started_at").Optional(),
 		field.Time("ended_at").Optional(),
 		field.Bool("failed").Default(false),

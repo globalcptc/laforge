@@ -811,7 +811,7 @@ var (
 		{Name: "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_scheduled_step", Type: field.TypeUUID},
-		{Name: "provisioning_scheduled_step_provisioning_schedule_step_to_provisioned_host", Type: field.TypeUUID},
+		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host", Type: field.TypeUUID},
 		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_script", Type: field.TypeUUID, Nullable: true},
 		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_command", Type: field.TypeUUID, Nullable: true},
 		{Name: "provisioning_scheduled_step_provisioning_scheduled_step_to_dns_record", Type: field.TypeUUID, Nullable: true},
@@ -851,7 +851,7 @@ var (
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "provisioning_scheduled_steps_provisioned_hosts_ProvisioningScheduleStepToProvisionedHost",
+				Symbol:     "provisioning_scheduled_steps_provisioned_hosts_ProvisioningScheduledStepToProvisionedHost",
 				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[7]},
 				RefColumns: []*schema.Column{ProvisionedHostsColumns[0]},
 				OnDelete:   schema.NoAction,
@@ -1032,6 +1032,10 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString},
 		{Name: "step", Type: field.TypeString},
+		{Name: "start_time", Type: field.TypeInt64},
+		{Name: "end_time", Type: field.TypeInt64},
+		{Name: "interval", Type: field.TypeInt},
+		{Name: "repeated", Type: field.TypeBool},
 		{Name: "environment_environment_to_scheduled_step", Type: field.TypeUUID, Nullable: true},
 	}
 	// ScheduledStepsTable holds the schema information for the "scheduled_steps" table.
@@ -1042,7 +1046,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "scheduled_steps_environments_EnvironmentToScheduledStep",
-				Columns:    []*schema.Column{ScheduledStepsColumns[5]},
+				Columns:    []*schema.Column{ScheduledStepsColumns[9]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1130,7 +1134,7 @@ var (
 	StatusColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "state", Type: field.TypeEnum, Enums: []string{"PLANNING", "AWAITING", "PARENTAWAITING", "INPROGRESS", "FAILED", "COMPLETE", "TAINTED", "TODELETE", "DELETEINPROGRESS", "DELETED", "TOREBUILD", "CANCELLED"}},
-		{Name: "status_for", Type: field.TypeEnum, Enums: []string{"Build", "Team", "Plan", "ProvisionedNetwork", "ProvisionedHost", "ProvisioningStep", "ServerTask"}},
+		{Name: "status_for", Type: field.TypeEnum, Enums: []string{"Build", "Team", "Plan", "ProvisionedNetwork", "ProvisionedHost", "ProvisioningStep", "ProvisioningScheduledStep", "ServerTask"}},
 		{Name: "started_at", Type: field.TypeTime, Nullable: true},
 		{Name: "ended_at", Type: field.TypeTime, Nullable: true},
 		{Name: "failed", Type: field.TypeBool, Default: false},
