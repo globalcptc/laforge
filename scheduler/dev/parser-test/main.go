@@ -9,20 +9,20 @@ import (
 )
 
 var TEST_SCHEDULED_STEP = []byte(`
-scheduled_step "/schedule/linux/ping" {
-	name = "Ping Google"
-	description = "Ping Google every 5 minutes"
+scheduled "/scheduled/windows/reboot" {
+	name = "Periodic Reboot"
+	description = "Reboot windows every 3 hours"
 
-	step = "/scripts/linux/ping"
+	step = "/commands/windows/ping"
 
 	start_time = 1677216701
 	end_time = 1677217701
-	interval = 5
+	interval = 3 * 60 * 60 // every 5 minutes
 	repeated = true
 }`)
 
 type DefinedConfigs struct {
-	ScheduledSteps []*ent.ScheduledStep `hcl:"scheduled_step,block"`
+	ScheduledSteps []*ent.ScheduledStep `hcl:"scheduled,block"`
 }
 
 func main() {
