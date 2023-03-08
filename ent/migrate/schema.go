@@ -264,6 +264,8 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "hcl_id", Type: field.TypeString},
 		{Name: "root_password", Type: field.TypeString},
+		{Name: "start_time", Type: field.TypeInt64},
+		{Name: "stop_time", Type: field.TypeInt64},
 		{Name: "config", Type: field.TypeJSON},
 		{Name: "tags", Type: field.TypeJSON},
 		{Name: "environment_environment_to_competition", Type: field.TypeUUID, Nullable: true},
@@ -276,7 +278,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "competitions_environments_EnvironmentToCompetition",
-				Columns:    []*schema.Column{CompetitionsColumns[5]},
+				Columns:    []*schema.Column{CompetitionsColumns[7]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1032,10 +1034,9 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString},
 		{Name: "step", Type: field.TypeString},
-		{Name: "start_time", Type: field.TypeInt64},
-		{Name: "end_time", Type: field.TypeInt64},
-		{Name: "interval", Type: field.TypeInt},
-		{Name: "repeated", Type: field.TypeBool},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"CRON", "RUNONCE"}},
+		{Name: "schedule", Type: field.TypeString},
+		{Name: "run_at", Type: field.TypeString},
 		{Name: "environment_environment_to_scheduled_step", Type: field.TypeUUID, Nullable: true},
 	}
 	// ScheduledStepsTable holds the schema information for the "scheduled_steps" table.
@@ -1046,7 +1047,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "scheduled_steps_environments_EnvironmentToScheduledStep",
-				Columns:    []*schema.Column{ScheduledStepsColumns[9]},
+				Columns:    []*schema.Column{ScheduledStepsColumns[8]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

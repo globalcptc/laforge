@@ -53,48 +53,21 @@ func (ssu *ScheduledStepUpdate) SetStep(s string) *ScheduledStepUpdate {
 	return ssu
 }
 
-// SetStartTime sets the "start_time" field.
-func (ssu *ScheduledStepUpdate) SetStartTime(i int64) *ScheduledStepUpdate {
-	ssu.mutation.ResetStartTime()
-	ssu.mutation.SetStartTime(i)
+// SetType sets the "type" field.
+func (ssu *ScheduledStepUpdate) SetType(s scheduledstep.Type) *ScheduledStepUpdate {
+	ssu.mutation.SetType(s)
 	return ssu
 }
 
-// AddStartTime adds i to the "start_time" field.
-func (ssu *ScheduledStepUpdate) AddStartTime(i int64) *ScheduledStepUpdate {
-	ssu.mutation.AddStartTime(i)
+// SetSchedule sets the "schedule" field.
+func (ssu *ScheduledStepUpdate) SetSchedule(s string) *ScheduledStepUpdate {
+	ssu.mutation.SetSchedule(s)
 	return ssu
 }
 
-// SetEndTime sets the "end_time" field.
-func (ssu *ScheduledStepUpdate) SetEndTime(i int64) *ScheduledStepUpdate {
-	ssu.mutation.ResetEndTime()
-	ssu.mutation.SetEndTime(i)
-	return ssu
-}
-
-// AddEndTime adds i to the "end_time" field.
-func (ssu *ScheduledStepUpdate) AddEndTime(i int64) *ScheduledStepUpdate {
-	ssu.mutation.AddEndTime(i)
-	return ssu
-}
-
-// SetInterval sets the "interval" field.
-func (ssu *ScheduledStepUpdate) SetInterval(i int) *ScheduledStepUpdate {
-	ssu.mutation.ResetInterval()
-	ssu.mutation.SetInterval(i)
-	return ssu
-}
-
-// AddInterval adds i to the "interval" field.
-func (ssu *ScheduledStepUpdate) AddInterval(i int) *ScheduledStepUpdate {
-	ssu.mutation.AddInterval(i)
-	return ssu
-}
-
-// SetRepeated sets the "repeated" field.
-func (ssu *ScheduledStepUpdate) SetRepeated(b bool) *ScheduledStepUpdate {
-	ssu.mutation.SetRepeated(b)
+// SetRunAt sets the "run_at" field.
+func (ssu *ScheduledStepUpdate) SetRunAt(s string) *ScheduledStepUpdate {
+	ssu.mutation.SetRunAt(s)
 	return ssu
 }
 
@@ -135,12 +108,18 @@ func (ssu *ScheduledStepUpdate) Save(ctx context.Context) (int, error) {
 		affected int
 	)
 	if len(ssu.hooks) == 0 {
+		if err = ssu.check(); err != nil {
+			return 0, err
+		}
 		affected, err = ssu.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*ScheduledStepMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = ssu.check(); err != nil {
+				return 0, err
 			}
 			ssu.mutation = mutation
 			affected, err = ssu.sqlSave(ctx)
@@ -180,6 +159,16 @@ func (ssu *ScheduledStepUpdate) ExecX(ctx context.Context) {
 	if err := ssu.Exec(ctx); err != nil {
 		panic(err)
 	}
+}
+
+// check runs all checks and user-defined validators on the builder.
+func (ssu *ScheduledStepUpdate) check() error {
+	if v, ok := ssu.mutation.GetType(); ok {
+		if err := scheduledstep.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ScheduledStep.type": %w`, err)}
+		}
+	}
+	return nil
 }
 
 func (ssu *ScheduledStepUpdate) sqlSave(ctx context.Context) (n int, err error) {
@@ -228,53 +217,25 @@ func (ssu *ScheduledStepUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Column: scheduledstep.FieldStep,
 		})
 	}
-	if value, ok := ssu.mutation.StartTime(); ok {
+	if value, ok := ssu.mutation.GetType(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
+			Type:   field.TypeEnum,
 			Value:  value,
-			Column: scheduledstep.FieldStartTime,
+			Column: scheduledstep.FieldType,
 		})
 	}
-	if value, ok := ssu.mutation.AddedStartTime(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: scheduledstep.FieldStartTime,
-		})
-	}
-	if value, ok := ssu.mutation.EndTime(); ok {
+	if value, ok := ssu.mutation.Schedule(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
+			Type:   field.TypeString,
 			Value:  value,
-			Column: scheduledstep.FieldEndTime,
+			Column: scheduledstep.FieldSchedule,
 		})
 	}
-	if value, ok := ssu.mutation.AddedEndTime(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: scheduledstep.FieldEndTime,
-		})
-	}
-	if value, ok := ssu.mutation.Interval(); ok {
+	if value, ok := ssu.mutation.RunAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
+			Type:   field.TypeString,
 			Value:  value,
-			Column: scheduledstep.FieldInterval,
-		})
-	}
-	if value, ok := ssu.mutation.AddedInterval(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: scheduledstep.FieldInterval,
-		})
-	}
-	if value, ok := ssu.mutation.Repeated(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: scheduledstep.FieldRepeated,
+			Column: scheduledstep.FieldRunAt,
 		})
 	}
 	if ssu.mutation.ScheduledStepToEnvironmentCleared() {
@@ -355,48 +316,21 @@ func (ssuo *ScheduledStepUpdateOne) SetStep(s string) *ScheduledStepUpdateOne {
 	return ssuo
 }
 
-// SetStartTime sets the "start_time" field.
-func (ssuo *ScheduledStepUpdateOne) SetStartTime(i int64) *ScheduledStepUpdateOne {
-	ssuo.mutation.ResetStartTime()
-	ssuo.mutation.SetStartTime(i)
+// SetType sets the "type" field.
+func (ssuo *ScheduledStepUpdateOne) SetType(s scheduledstep.Type) *ScheduledStepUpdateOne {
+	ssuo.mutation.SetType(s)
 	return ssuo
 }
 
-// AddStartTime adds i to the "start_time" field.
-func (ssuo *ScheduledStepUpdateOne) AddStartTime(i int64) *ScheduledStepUpdateOne {
-	ssuo.mutation.AddStartTime(i)
+// SetSchedule sets the "schedule" field.
+func (ssuo *ScheduledStepUpdateOne) SetSchedule(s string) *ScheduledStepUpdateOne {
+	ssuo.mutation.SetSchedule(s)
 	return ssuo
 }
 
-// SetEndTime sets the "end_time" field.
-func (ssuo *ScheduledStepUpdateOne) SetEndTime(i int64) *ScheduledStepUpdateOne {
-	ssuo.mutation.ResetEndTime()
-	ssuo.mutation.SetEndTime(i)
-	return ssuo
-}
-
-// AddEndTime adds i to the "end_time" field.
-func (ssuo *ScheduledStepUpdateOne) AddEndTime(i int64) *ScheduledStepUpdateOne {
-	ssuo.mutation.AddEndTime(i)
-	return ssuo
-}
-
-// SetInterval sets the "interval" field.
-func (ssuo *ScheduledStepUpdateOne) SetInterval(i int) *ScheduledStepUpdateOne {
-	ssuo.mutation.ResetInterval()
-	ssuo.mutation.SetInterval(i)
-	return ssuo
-}
-
-// AddInterval adds i to the "interval" field.
-func (ssuo *ScheduledStepUpdateOne) AddInterval(i int) *ScheduledStepUpdateOne {
-	ssuo.mutation.AddInterval(i)
-	return ssuo
-}
-
-// SetRepeated sets the "repeated" field.
-func (ssuo *ScheduledStepUpdateOne) SetRepeated(b bool) *ScheduledStepUpdateOne {
-	ssuo.mutation.SetRepeated(b)
+// SetRunAt sets the "run_at" field.
+func (ssuo *ScheduledStepUpdateOne) SetRunAt(s string) *ScheduledStepUpdateOne {
+	ssuo.mutation.SetRunAt(s)
 	return ssuo
 }
 
@@ -444,12 +378,18 @@ func (ssuo *ScheduledStepUpdateOne) Save(ctx context.Context) (*ScheduledStep, e
 		node *ScheduledStep
 	)
 	if len(ssuo.hooks) == 0 {
+		if err = ssuo.check(); err != nil {
+			return nil, err
+		}
 		node, err = ssuo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*ScheduledStepMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = ssuo.check(); err != nil {
+				return nil, err
 			}
 			ssuo.mutation = mutation
 			node, err = ssuo.sqlSave(ctx)
@@ -495,6 +435,16 @@ func (ssuo *ScheduledStepUpdateOne) ExecX(ctx context.Context) {
 	if err := ssuo.Exec(ctx); err != nil {
 		panic(err)
 	}
+}
+
+// check runs all checks and user-defined validators on the builder.
+func (ssuo *ScheduledStepUpdateOne) check() error {
+	if v, ok := ssuo.mutation.GetType(); ok {
+		if err := scheduledstep.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ScheduledStep.type": %w`, err)}
+		}
+	}
+	return nil
 }
 
 func (ssuo *ScheduledStepUpdateOne) sqlSave(ctx context.Context) (_node *ScheduledStep, err error) {
@@ -560,53 +510,25 @@ func (ssuo *ScheduledStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedul
 			Column: scheduledstep.FieldStep,
 		})
 	}
-	if value, ok := ssuo.mutation.StartTime(); ok {
+	if value, ok := ssuo.mutation.GetType(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
+			Type:   field.TypeEnum,
 			Value:  value,
-			Column: scheduledstep.FieldStartTime,
+			Column: scheduledstep.FieldType,
 		})
 	}
-	if value, ok := ssuo.mutation.AddedStartTime(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: scheduledstep.FieldStartTime,
-		})
-	}
-	if value, ok := ssuo.mutation.EndTime(); ok {
+	if value, ok := ssuo.mutation.Schedule(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
+			Type:   field.TypeString,
 			Value:  value,
-			Column: scheduledstep.FieldEndTime,
+			Column: scheduledstep.FieldSchedule,
 		})
 	}
-	if value, ok := ssuo.mutation.AddedEndTime(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: scheduledstep.FieldEndTime,
-		})
-	}
-	if value, ok := ssuo.mutation.Interval(); ok {
+	if value, ok := ssuo.mutation.RunAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
+			Type:   field.TypeString,
 			Value:  value,
-			Column: scheduledstep.FieldInterval,
-		})
-	}
-	if value, ok := ssuo.mutation.AddedInterval(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: scheduledstep.FieldInterval,
-		})
-	}
-	if value, ok := ssuo.mutation.Repeated(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: scheduledstep.FieldRepeated,
+			Column: scheduledstep.FieldRunAt,
 		})
 	}
 	if ssuo.mutation.ScheduledStepToEnvironmentCleared() {

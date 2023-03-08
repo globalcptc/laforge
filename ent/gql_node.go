@@ -972,7 +972,7 @@ func (c *Competition) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     c.ID,
 		Type:   "Competition",
-		Fields: make([]*Field, 4),
+		Fields: make([]*Field, 6),
 		Edges:  make([]*Edge, 3),
 	}
 	var buf []byte
@@ -992,10 +992,26 @@ func (c *Competition) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "root_password",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(c.Config); err != nil {
+	if buf, err = json.Marshal(c.StartTime); err != nil {
 		return nil, err
 	}
 	node.Fields[2] = &Field{
+		Type:  "int64",
+		Name:  "start_time",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(c.StopTime); err != nil {
+		return nil, err
+	}
+	node.Fields[3] = &Field{
+		Type:  "int64",
+		Name:  "stop_time",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(c.Config); err != nil {
+		return nil, err
+	}
+	node.Fields[4] = &Field{
 		Type:  "map[string]string",
 		Name:  "config",
 		Value: string(buf),
@@ -1003,7 +1019,7 @@ func (c *Competition) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(c.Tags); err != nil {
 		return nil, err
 	}
-	node.Fields[3] = &Field{
+	node.Fields[5] = &Field{
 		Type:  "map[string]string",
 		Name:  "tags",
 		Value: string(buf),
@@ -3289,7 +3305,7 @@ func (ss *ScheduledStep) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     ss.ID,
 		Type:   "ScheduledStep",
-		Fields: make([]*Field, 8),
+		Fields: make([]*Field, 7),
 		Edges:  make([]*Edge, 1),
 	}
 	var buf []byte
@@ -3325,36 +3341,28 @@ func (ss *ScheduledStep) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "step",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(ss.StartTime); err != nil {
+	if buf, err = json.Marshal(ss.Type); err != nil {
 		return nil, err
 	}
 	node.Fields[4] = &Field{
-		Type:  "int64",
-		Name:  "start_time",
+		Type:  "scheduledstep.Type",
+		Name:  "type",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(ss.EndTime); err != nil {
+	if buf, err = json.Marshal(ss.Schedule); err != nil {
 		return nil, err
 	}
 	node.Fields[5] = &Field{
-		Type:  "int64",
-		Name:  "end_time",
+		Type:  "string",
+		Name:  "schedule",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(ss.Interval); err != nil {
+	if buf, err = json.Marshal(ss.RunAt); err != nil {
 		return nil, err
 	}
 	node.Fields[6] = &Field{
-		Type:  "int",
-		Name:  "interval",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(ss.Repeated); err != nil {
-		return nil, err
-	}
-	node.Fields[7] = &Field{
-		Type:  "bool",
-		Name:  "repeated",
+		Type:  "string",
+		Name:  "run_at",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{

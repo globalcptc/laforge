@@ -25,14 +25,12 @@ type ScheduledStep struct {
 	Description string `json:"description,omitempty" hcl:"description,optional"`
 	// Step holds the value of the "step" field.
 	Step string `json:"step,omitempty" hcl:"step,attr"`
-	// StartTime holds the value of the "start_time" field.
-	StartTime int64 `json:"start_time,omitempty" hcl:"start_time,attr"`
-	// EndTime holds the value of the "end_time" field.
-	EndTime int64 `json:"end_time,omitempty" hcl:"end_time,attr"`
-	// Interval holds the value of the "interval" field.
-	Interval int `json:"interval,omitempty" hcl:"interval,optional"`
-	// Repeated holds the value of the "repeated" field.
-	Repeated bool `json:"repeated,omitempty" hcl:"repeated,optional"`
+	// Type holds the value of the "type" field.
+	Type scheduledstep.Type `json:"type,omitempty" hcl:"type,attr"`
+	// Schedule holds the value of the "schedule" field.
+	Schedule string `json:"schedule,omitempty" hcl:"schedule,optional"`
+	// RunAt holds the value of the "run_at" field.
+	RunAt string `json:"run_at,omitempty" hcl:"run_at,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ScheduledStepQuery when eager-loading is set.
 	Edges ScheduledStepEdges `json:"edges"`
@@ -72,11 +70,7 @@ func (*ScheduledStep) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case scheduledstep.FieldRepeated:
-			values[i] = new(sql.NullBool)
-		case scheduledstep.FieldStartTime, scheduledstep.FieldEndTime, scheduledstep.FieldInterval:
-			values[i] = new(sql.NullInt64)
-		case scheduledstep.FieldHclID, scheduledstep.FieldName, scheduledstep.FieldDescription, scheduledstep.FieldStep:
+		case scheduledstep.FieldHclID, scheduledstep.FieldName, scheduledstep.FieldDescription, scheduledstep.FieldStep, scheduledstep.FieldType, scheduledstep.FieldSchedule, scheduledstep.FieldRunAt:
 			values[i] = new(sql.NullString)
 		case scheduledstep.FieldID:
 			values[i] = new(uuid.UUID)
@@ -127,29 +121,23 @@ func (ss *ScheduledStep) assignValues(columns []string, values []interface{}) er
 			} else if value.Valid {
 				ss.Step = value.String
 			}
-		case scheduledstep.FieldStartTime:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field start_time", values[i])
+		case scheduledstep.FieldType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
-				ss.StartTime = value.Int64
+				ss.Type = scheduledstep.Type(value.String)
 			}
-		case scheduledstep.FieldEndTime:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field end_time", values[i])
+		case scheduledstep.FieldSchedule:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field schedule", values[i])
 			} else if value.Valid {
-				ss.EndTime = value.Int64
+				ss.Schedule = value.String
 			}
-		case scheduledstep.FieldInterval:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field interval", values[i])
+		case scheduledstep.FieldRunAt:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field run_at", values[i])
 			} else if value.Valid {
-				ss.Interval = int(value.Int64)
-			}
-		case scheduledstep.FieldRepeated:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field repeated", values[i])
-			} else if value.Valid {
-				ss.Repeated = value.Bool
+				ss.RunAt = value.String
 			}
 		case scheduledstep.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -199,14 +187,12 @@ func (ss *ScheduledStep) String() string {
 	builder.WriteString(ss.Description)
 	builder.WriteString(", step=")
 	builder.WriteString(ss.Step)
-	builder.WriteString(", start_time=")
-	builder.WriteString(fmt.Sprintf("%v", ss.StartTime))
-	builder.WriteString(", end_time=")
-	builder.WriteString(fmt.Sprintf("%v", ss.EndTime))
-	builder.WriteString(", interval=")
-	builder.WriteString(fmt.Sprintf("%v", ss.Interval))
-	builder.WriteString(", repeated=")
-	builder.WriteString(fmt.Sprintf("%v", ss.Repeated))
+	builder.WriteString(", type=")
+	builder.WriteString(fmt.Sprintf("%v", ss.Type))
+	builder.WriteString(", schedule=")
+	builder.WriteString(ss.Schedule)
+	builder.WriteString(", run_at=")
+	builder.WriteString(ss.RunAt)
 	builder.WriteByte(')')
 	return builder.String()
 }

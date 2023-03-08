@@ -8349,6 +8349,10 @@ type CompetitionMutation struct {
 	id                               *uuid.UUID
 	hcl_id                           *string
 	root_password                    *string
+	start_time                       *int64
+	addstart_time                    *int64
+	stop_time                        *int64
+	addstop_time                     *int64
 	_config                          *map[string]string
 	tags                             *map[string]string
 	clearedFields                    map[string]struct{}
@@ -8539,6 +8543,118 @@ func (m *CompetitionMutation) OldRootPassword(ctx context.Context) (v string, er
 // ResetRootPassword resets all changes to the "root_password" field.
 func (m *CompetitionMutation) ResetRootPassword() {
 	m.root_password = nil
+}
+
+// SetStartTime sets the "start_time" field.
+func (m *CompetitionMutation) SetStartTime(i int64) {
+	m.start_time = &i
+	m.addstart_time = nil
+}
+
+// StartTime returns the value of the "start_time" field in the mutation.
+func (m *CompetitionMutation) StartTime() (r int64, exists bool) {
+	v := m.start_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartTime returns the old "start_time" field's value of the Competition entity.
+// If the Competition object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CompetitionMutation) OldStartTime(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartTime: %w", err)
+	}
+	return oldValue.StartTime, nil
+}
+
+// AddStartTime adds i to the "start_time" field.
+func (m *CompetitionMutation) AddStartTime(i int64) {
+	if m.addstart_time != nil {
+		*m.addstart_time += i
+	} else {
+		m.addstart_time = &i
+	}
+}
+
+// AddedStartTime returns the value that was added to the "start_time" field in this mutation.
+func (m *CompetitionMutation) AddedStartTime() (r int64, exists bool) {
+	v := m.addstart_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetStartTime resets all changes to the "start_time" field.
+func (m *CompetitionMutation) ResetStartTime() {
+	m.start_time = nil
+	m.addstart_time = nil
+}
+
+// SetStopTime sets the "stop_time" field.
+func (m *CompetitionMutation) SetStopTime(i int64) {
+	m.stop_time = &i
+	m.addstop_time = nil
+}
+
+// StopTime returns the value of the "stop_time" field in the mutation.
+func (m *CompetitionMutation) StopTime() (r int64, exists bool) {
+	v := m.stop_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStopTime returns the old "stop_time" field's value of the Competition entity.
+// If the Competition object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CompetitionMutation) OldStopTime(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStopTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStopTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStopTime: %w", err)
+	}
+	return oldValue.StopTime, nil
+}
+
+// AddStopTime adds i to the "stop_time" field.
+func (m *CompetitionMutation) AddStopTime(i int64) {
+	if m.addstop_time != nil {
+		*m.addstop_time += i
+	} else {
+		m.addstop_time = &i
+	}
+}
+
+// AddedStopTime returns the value that was added to the "stop_time" field in this mutation.
+func (m *CompetitionMutation) AddedStopTime() (r int64, exists bool) {
+	v := m.addstop_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetStopTime resets all changes to the "stop_time" field.
+func (m *CompetitionMutation) ResetStopTime() {
+	m.stop_time = nil
+	m.addstop_time = nil
 }
 
 // SetConfig sets the "config" field.
@@ -8779,12 +8895,18 @@ func (m *CompetitionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CompetitionMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 6)
 	if m.hcl_id != nil {
 		fields = append(fields, competition.FieldHclID)
 	}
 	if m.root_password != nil {
 		fields = append(fields, competition.FieldRootPassword)
+	}
+	if m.start_time != nil {
+		fields = append(fields, competition.FieldStartTime)
+	}
+	if m.stop_time != nil {
+		fields = append(fields, competition.FieldStopTime)
 	}
 	if m._config != nil {
 		fields = append(fields, competition.FieldConfig)
@@ -8804,6 +8926,10 @@ func (m *CompetitionMutation) Field(name string) (ent.Value, bool) {
 		return m.HclID()
 	case competition.FieldRootPassword:
 		return m.RootPassword()
+	case competition.FieldStartTime:
+		return m.StartTime()
+	case competition.FieldStopTime:
+		return m.StopTime()
 	case competition.FieldConfig:
 		return m.Config()
 	case competition.FieldTags:
@@ -8821,6 +8947,10 @@ func (m *CompetitionMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldHclID(ctx)
 	case competition.FieldRootPassword:
 		return m.OldRootPassword(ctx)
+	case competition.FieldStartTime:
+		return m.OldStartTime(ctx)
+	case competition.FieldStopTime:
+		return m.OldStopTime(ctx)
 	case competition.FieldConfig:
 		return m.OldConfig(ctx)
 	case competition.FieldTags:
@@ -8848,6 +8978,20 @@ func (m *CompetitionMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRootPassword(v)
 		return nil
+	case competition.FieldStartTime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartTime(v)
+		return nil
+	case competition.FieldStopTime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStopTime(v)
+		return nil
 	case competition.FieldConfig:
 		v, ok := value.(map[string]string)
 		if !ok {
@@ -8869,13 +9013,26 @@ func (m *CompetitionMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *CompetitionMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addstart_time != nil {
+		fields = append(fields, competition.FieldStartTime)
+	}
+	if m.addstop_time != nil {
+		fields = append(fields, competition.FieldStopTime)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *CompetitionMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case competition.FieldStartTime:
+		return m.AddedStartTime()
+	case competition.FieldStopTime:
+		return m.AddedStopTime()
+	}
 	return nil, false
 }
 
@@ -8884,6 +9041,20 @@ func (m *CompetitionMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *CompetitionMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case competition.FieldStartTime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddStartTime(v)
+		return nil
+	case competition.FieldStopTime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddStopTime(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Competition numeric field %s", name)
 }
@@ -8916,6 +9087,12 @@ func (m *CompetitionMutation) ResetField(name string) error {
 		return nil
 	case competition.FieldRootPassword:
 		m.ResetRootPassword()
+		return nil
+	case competition.FieldStartTime:
+		m.ResetStartTime()
+		return nil
+	case competition.FieldStopTime:
+		m.ResetStopTime()
 		return nil
 	case competition.FieldConfig:
 		m.ResetConfig()
@@ -29038,13 +29215,9 @@ type ScheduledStepMutation struct {
 	name                               *string
 	description                        *string
 	step                               *string
-	start_time                         *int64
-	addstart_time                      *int64
-	end_time                           *int64
-	addend_time                        *int64
-	interval                           *int
-	addinterval                        *int
-	repeated                           *bool
+	_type                              *scheduledstep.Type
+	schedule                           *string
+	run_at                             *string
 	clearedFields                      map[string]struct{}
 	_ScheduledStepToEnvironment        *uuid.UUID
 	cleared_ScheduledStepToEnvironment bool
@@ -29301,208 +29474,112 @@ func (m *ScheduledStepMutation) ResetStep() {
 	m.step = nil
 }
 
-// SetStartTime sets the "start_time" field.
-func (m *ScheduledStepMutation) SetStartTime(i int64) {
-	m.start_time = &i
-	m.addstart_time = nil
+// SetType sets the "type" field.
+func (m *ScheduledStepMutation) SetType(s scheduledstep.Type) {
+	m._type = &s
 }
 
-// StartTime returns the value of the "start_time" field in the mutation.
-func (m *ScheduledStepMutation) StartTime() (r int64, exists bool) {
-	v := m.start_time
+// GetType returns the value of the "type" field in the mutation.
+func (m *ScheduledStepMutation) GetType() (r scheduledstep.Type, exists bool) {
+	v := m._type
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldStartTime returns the old "start_time" field's value of the ScheduledStep entity.
+// OldType returns the old "type" field's value of the ScheduledStep entity.
 // If the ScheduledStep object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ScheduledStepMutation) OldStartTime(ctx context.Context) (v int64, err error) {
+func (m *ScheduledStepMutation) OldType(ctx context.Context) (v scheduledstep.Type, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStartTime is only allowed on UpdateOne operations")
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStartTime requires an ID field in the mutation")
+		return v, errors.New("OldType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStartTime: %w", err)
+		return v, fmt.Errorf("querying old value for OldType: %w", err)
 	}
-	return oldValue.StartTime, nil
+	return oldValue.Type, nil
 }
 
-// AddStartTime adds i to the "start_time" field.
-func (m *ScheduledStepMutation) AddStartTime(i int64) {
-	if m.addstart_time != nil {
-		*m.addstart_time += i
-	} else {
-		m.addstart_time = &i
-	}
+// ResetType resets all changes to the "type" field.
+func (m *ScheduledStepMutation) ResetType() {
+	m._type = nil
 }
 
-// AddedStartTime returns the value that was added to the "start_time" field in this mutation.
-func (m *ScheduledStepMutation) AddedStartTime() (r int64, exists bool) {
-	v := m.addstart_time
+// SetSchedule sets the "schedule" field.
+func (m *ScheduledStepMutation) SetSchedule(s string) {
+	m.schedule = &s
+}
+
+// Schedule returns the value of the "schedule" field in the mutation.
+func (m *ScheduledStepMutation) Schedule() (r string, exists bool) {
+	v := m.schedule
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// ResetStartTime resets all changes to the "start_time" field.
-func (m *ScheduledStepMutation) ResetStartTime() {
-	m.start_time = nil
-	m.addstart_time = nil
-}
-
-// SetEndTime sets the "end_time" field.
-func (m *ScheduledStepMutation) SetEndTime(i int64) {
-	m.end_time = &i
-	m.addend_time = nil
-}
-
-// EndTime returns the value of the "end_time" field in the mutation.
-func (m *ScheduledStepMutation) EndTime() (r int64, exists bool) {
-	v := m.end_time
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldEndTime returns the old "end_time" field's value of the ScheduledStep entity.
+// OldSchedule returns the old "schedule" field's value of the ScheduledStep entity.
 // If the ScheduledStep object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ScheduledStepMutation) OldEndTime(ctx context.Context) (v int64, err error) {
+func (m *ScheduledStepMutation) OldSchedule(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldEndTime is only allowed on UpdateOne operations")
+		return v, errors.New("OldSchedule is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldEndTime requires an ID field in the mutation")
+		return v, errors.New("OldSchedule requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldEndTime: %w", err)
+		return v, fmt.Errorf("querying old value for OldSchedule: %w", err)
 	}
-	return oldValue.EndTime, nil
+	return oldValue.Schedule, nil
 }
 
-// AddEndTime adds i to the "end_time" field.
-func (m *ScheduledStepMutation) AddEndTime(i int64) {
-	if m.addend_time != nil {
-		*m.addend_time += i
-	} else {
-		m.addend_time = &i
-	}
+// ResetSchedule resets all changes to the "schedule" field.
+func (m *ScheduledStepMutation) ResetSchedule() {
+	m.schedule = nil
 }
 
-// AddedEndTime returns the value that was added to the "end_time" field in this mutation.
-func (m *ScheduledStepMutation) AddedEndTime() (r int64, exists bool) {
-	v := m.addend_time
+// SetRunAt sets the "run_at" field.
+func (m *ScheduledStepMutation) SetRunAt(s string) {
+	m.run_at = &s
+}
+
+// RunAt returns the value of the "run_at" field in the mutation.
+func (m *ScheduledStepMutation) RunAt() (r string, exists bool) {
+	v := m.run_at
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// ResetEndTime resets all changes to the "end_time" field.
-func (m *ScheduledStepMutation) ResetEndTime() {
-	m.end_time = nil
-	m.addend_time = nil
-}
-
-// SetInterval sets the "interval" field.
-func (m *ScheduledStepMutation) SetInterval(i int) {
-	m.interval = &i
-	m.addinterval = nil
-}
-
-// Interval returns the value of the "interval" field in the mutation.
-func (m *ScheduledStepMutation) Interval() (r int, exists bool) {
-	v := m.interval
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldInterval returns the old "interval" field's value of the ScheduledStep entity.
+// OldRunAt returns the old "run_at" field's value of the ScheduledStep entity.
 // If the ScheduledStep object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ScheduledStepMutation) OldInterval(ctx context.Context) (v int, err error) {
+func (m *ScheduledStepMutation) OldRunAt(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldInterval is only allowed on UpdateOne operations")
+		return v, errors.New("OldRunAt is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldInterval requires an ID field in the mutation")
+		return v, errors.New("OldRunAt requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldInterval: %w", err)
+		return v, fmt.Errorf("querying old value for OldRunAt: %w", err)
 	}
-	return oldValue.Interval, nil
+	return oldValue.RunAt, nil
 }
 
-// AddInterval adds i to the "interval" field.
-func (m *ScheduledStepMutation) AddInterval(i int) {
-	if m.addinterval != nil {
-		*m.addinterval += i
-	} else {
-		m.addinterval = &i
-	}
-}
-
-// AddedInterval returns the value that was added to the "interval" field in this mutation.
-func (m *ScheduledStepMutation) AddedInterval() (r int, exists bool) {
-	v := m.addinterval
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetInterval resets all changes to the "interval" field.
-func (m *ScheduledStepMutation) ResetInterval() {
-	m.interval = nil
-	m.addinterval = nil
-}
-
-// SetRepeated sets the "repeated" field.
-func (m *ScheduledStepMutation) SetRepeated(b bool) {
-	m.repeated = &b
-}
-
-// Repeated returns the value of the "repeated" field in the mutation.
-func (m *ScheduledStepMutation) Repeated() (r bool, exists bool) {
-	v := m.repeated
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldRepeated returns the old "repeated" field's value of the ScheduledStep entity.
-// If the ScheduledStep object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ScheduledStepMutation) OldRepeated(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldRepeated is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldRepeated requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldRepeated: %w", err)
-	}
-	return oldValue.Repeated, nil
-}
-
-// ResetRepeated resets all changes to the "repeated" field.
-func (m *ScheduledStepMutation) ResetRepeated() {
-	m.repeated = nil
+// ResetRunAt resets all changes to the "run_at" field.
+func (m *ScheduledStepMutation) ResetRunAt() {
+	m.run_at = nil
 }
 
 // SetScheduledStepToEnvironmentID sets the "ScheduledStepToEnvironment" edge to the Environment entity by id.
@@ -29563,7 +29640,7 @@ func (m *ScheduledStepMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ScheduledStepMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 7)
 	if m.hcl_id != nil {
 		fields = append(fields, scheduledstep.FieldHclID)
 	}
@@ -29576,17 +29653,14 @@ func (m *ScheduledStepMutation) Fields() []string {
 	if m.step != nil {
 		fields = append(fields, scheduledstep.FieldStep)
 	}
-	if m.start_time != nil {
-		fields = append(fields, scheduledstep.FieldStartTime)
+	if m._type != nil {
+		fields = append(fields, scheduledstep.FieldType)
 	}
-	if m.end_time != nil {
-		fields = append(fields, scheduledstep.FieldEndTime)
+	if m.schedule != nil {
+		fields = append(fields, scheduledstep.FieldSchedule)
 	}
-	if m.interval != nil {
-		fields = append(fields, scheduledstep.FieldInterval)
-	}
-	if m.repeated != nil {
-		fields = append(fields, scheduledstep.FieldRepeated)
+	if m.run_at != nil {
+		fields = append(fields, scheduledstep.FieldRunAt)
 	}
 	return fields
 }
@@ -29604,14 +29678,12 @@ func (m *ScheduledStepMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case scheduledstep.FieldStep:
 		return m.Step()
-	case scheduledstep.FieldStartTime:
-		return m.StartTime()
-	case scheduledstep.FieldEndTime:
-		return m.EndTime()
-	case scheduledstep.FieldInterval:
-		return m.Interval()
-	case scheduledstep.FieldRepeated:
-		return m.Repeated()
+	case scheduledstep.FieldType:
+		return m.GetType()
+	case scheduledstep.FieldSchedule:
+		return m.Schedule()
+	case scheduledstep.FieldRunAt:
+		return m.RunAt()
 	}
 	return nil, false
 }
@@ -29629,14 +29701,12 @@ func (m *ScheduledStepMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldDescription(ctx)
 	case scheduledstep.FieldStep:
 		return m.OldStep(ctx)
-	case scheduledstep.FieldStartTime:
-		return m.OldStartTime(ctx)
-	case scheduledstep.FieldEndTime:
-		return m.OldEndTime(ctx)
-	case scheduledstep.FieldInterval:
-		return m.OldInterval(ctx)
-	case scheduledstep.FieldRepeated:
-		return m.OldRepeated(ctx)
+	case scheduledstep.FieldType:
+		return m.OldType(ctx)
+	case scheduledstep.FieldSchedule:
+		return m.OldSchedule(ctx)
+	case scheduledstep.FieldRunAt:
+		return m.OldRunAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown ScheduledStep field %s", name)
 }
@@ -29674,33 +29744,26 @@ func (m *ScheduledStepMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetStep(v)
 		return nil
-	case scheduledstep.FieldStartTime:
-		v, ok := value.(int64)
+	case scheduledstep.FieldType:
+		v, ok := value.(scheduledstep.Type)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetStartTime(v)
+		m.SetType(v)
 		return nil
-	case scheduledstep.FieldEndTime:
-		v, ok := value.(int64)
+	case scheduledstep.FieldSchedule:
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetEndTime(v)
+		m.SetSchedule(v)
 		return nil
-	case scheduledstep.FieldInterval:
-		v, ok := value.(int)
+	case scheduledstep.FieldRunAt:
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetInterval(v)
-		return nil
-	case scheduledstep.FieldRepeated:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetRepeated(v)
+		m.SetRunAt(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ScheduledStep field %s", name)
@@ -29709,31 +29772,13 @@ func (m *ScheduledStepMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ScheduledStepMutation) AddedFields() []string {
-	var fields []string
-	if m.addstart_time != nil {
-		fields = append(fields, scheduledstep.FieldStartTime)
-	}
-	if m.addend_time != nil {
-		fields = append(fields, scheduledstep.FieldEndTime)
-	}
-	if m.addinterval != nil {
-		fields = append(fields, scheduledstep.FieldInterval)
-	}
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ScheduledStepMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case scheduledstep.FieldStartTime:
-		return m.AddedStartTime()
-	case scheduledstep.FieldEndTime:
-		return m.AddedEndTime()
-	case scheduledstep.FieldInterval:
-		return m.AddedInterval()
-	}
 	return nil, false
 }
 
@@ -29742,27 +29787,6 @@ func (m *ScheduledStepMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ScheduledStepMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case scheduledstep.FieldStartTime:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddStartTime(v)
-		return nil
-	case scheduledstep.FieldEndTime:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddEndTime(v)
-		return nil
-	case scheduledstep.FieldInterval:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddInterval(v)
-		return nil
 	}
 	return fmt.Errorf("unknown ScheduledStep numeric field %s", name)
 }
@@ -29802,17 +29826,14 @@ func (m *ScheduledStepMutation) ResetField(name string) error {
 	case scheduledstep.FieldStep:
 		m.ResetStep()
 		return nil
-	case scheduledstep.FieldStartTime:
-		m.ResetStartTime()
+	case scheduledstep.FieldType:
+		m.ResetType()
 		return nil
-	case scheduledstep.FieldEndTime:
-		m.ResetEndTime()
+	case scheduledstep.FieldSchedule:
+		m.ResetSchedule()
 		return nil
-	case scheduledstep.FieldInterval:
-		m.ResetInterval()
-		return nil
-	case scheduledstep.FieldRepeated:
-		m.ResetRepeated()
+	case scheduledstep.FieldRunAt:
+		m.ResetRunAt()
 		return nil
 	}
 	return fmt.Errorf("unknown ScheduledStep field %s", name)

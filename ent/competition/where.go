@@ -94,6 +94,20 @@ func RootPassword(v string) predicate.Competition {
 	})
 }
 
+// StartTime applies equality check predicate on the "start_time" field. It's identical to StartTimeEQ.
+func StartTime(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldStartTime), v))
+	})
+}
+
+// StopTime applies equality check predicate on the "stop_time" field. It's identical to StopTimeEQ.
+func StopTime(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldStopTime), v))
+	})
+}
+
 // HclIDEQ applies the EQ predicate on the "hcl_id" field.
 func HclIDEQ(v string) predicate.Competition {
 	return predicate.Competition(func(s *sql.Selector) {
@@ -289,6 +303,134 @@ func RootPasswordEqualFold(v string) predicate.Competition {
 func RootPasswordContainsFold(v string) predicate.Competition {
 	return predicate.Competition(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldRootPassword), v))
+	})
+}
+
+// StartTimeEQ applies the EQ predicate on the "start_time" field.
+func StartTimeEQ(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldStartTime), v))
+	})
+}
+
+// StartTimeNEQ applies the NEQ predicate on the "start_time" field.
+func StartTimeNEQ(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldStartTime), v))
+	})
+}
+
+// StartTimeIn applies the In predicate on the "start_time" field.
+func StartTimeIn(vs ...int64) predicate.Competition {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldStartTime), v...))
+	})
+}
+
+// StartTimeNotIn applies the NotIn predicate on the "start_time" field.
+func StartTimeNotIn(vs ...int64) predicate.Competition {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldStartTime), v...))
+	})
+}
+
+// StartTimeGT applies the GT predicate on the "start_time" field.
+func StartTimeGT(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldStartTime), v))
+	})
+}
+
+// StartTimeGTE applies the GTE predicate on the "start_time" field.
+func StartTimeGTE(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldStartTime), v))
+	})
+}
+
+// StartTimeLT applies the LT predicate on the "start_time" field.
+func StartTimeLT(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldStartTime), v))
+	})
+}
+
+// StartTimeLTE applies the LTE predicate on the "start_time" field.
+func StartTimeLTE(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldStartTime), v))
+	})
+}
+
+// StopTimeEQ applies the EQ predicate on the "stop_time" field.
+func StopTimeEQ(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldStopTime), v))
+	})
+}
+
+// StopTimeNEQ applies the NEQ predicate on the "stop_time" field.
+func StopTimeNEQ(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldStopTime), v))
+	})
+}
+
+// StopTimeIn applies the In predicate on the "stop_time" field.
+func StopTimeIn(vs ...int64) predicate.Competition {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldStopTime), v...))
+	})
+}
+
+// StopTimeNotIn applies the NotIn predicate on the "stop_time" field.
+func StopTimeNotIn(vs ...int64) predicate.Competition {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldStopTime), v...))
+	})
+}
+
+// StopTimeGT applies the GT predicate on the "stop_time" field.
+func StopTimeGT(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldStopTime), v))
+	})
+}
+
+// StopTimeGTE applies the GTE predicate on the "stop_time" field.
+func StopTimeGTE(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldStopTime), v))
+	})
+}
+
+// StopTimeLT applies the LT predicate on the "stop_time" field.
+func StopTimeLT(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldStopTime), v))
+	})
+}
+
+// StopTimeLTE applies the LTE predicate on the "stop_time" field.
+func StopTimeLTE(v int64) predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldStopTime), v))
 	})
 }
 

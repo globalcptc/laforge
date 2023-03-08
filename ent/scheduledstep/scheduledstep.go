@@ -3,6 +3,10 @@
 package scheduledstep
 
 import (
+	"fmt"
+	"io"
+	"strconv"
+
 	"github.com/google/uuid"
 )
 
@@ -19,14 +23,12 @@ const (
 	FieldDescription = "description"
 	// FieldStep holds the string denoting the step field in the database.
 	FieldStep = "step"
-	// FieldStartTime holds the string denoting the start_time field in the database.
-	FieldStartTime = "start_time"
-	// FieldEndTime holds the string denoting the end_time field in the database.
-	FieldEndTime = "end_time"
-	// FieldInterval holds the string denoting the interval field in the database.
-	FieldInterval = "interval"
-	// FieldRepeated holds the string denoting the repeated field in the database.
-	FieldRepeated = "repeated"
+	// FieldType holds the string denoting the type field in the database.
+	FieldType = "type"
+	// FieldSchedule holds the string denoting the schedule field in the database.
+	FieldSchedule = "schedule"
+	// FieldRunAt holds the string denoting the run_at field in the database.
+	FieldRunAt = "run_at"
 	// EdgeScheduledStepToEnvironment holds the string denoting the scheduledsteptoenvironment edge name in mutations.
 	EdgeScheduledStepToEnvironment = "ScheduledStepToEnvironment"
 	// Table holds the table name of the scheduledstep in the database.
@@ -47,10 +49,9 @@ var Columns = []string{
 	FieldName,
 	FieldDescription,
 	FieldStep,
-	FieldStartTime,
-	FieldEndTime,
-	FieldInterval,
-	FieldRepeated,
+	FieldType,
+	FieldSchedule,
+	FieldRunAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "scheduled_steps"
@@ -78,3 +79,44 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Type defines the type for the "type" enum field.
+type Type string
+
+// Type values.
+const (
+	TypeCRON    Type = "CRON"
+	TypeRUNONCE Type = "RUNONCE"
+)
+
+func (_type Type) String() string {
+	return string(_type)
+}
+
+// TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
+func TypeValidator(_type Type) error {
+	switch _type {
+	case TypeCRON, TypeRUNONCE:
+		return nil
+	default:
+		return fmt.Errorf("scheduledstep: invalid enum value for type field: %q", _type)
+	}
+}
+
+// MarshalGQL implements graphql.Marshaler interface.
+func (_type Type) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(_type.String()))
+}
+
+// UnmarshalGQL implements graphql.Unmarshaler interface.
+func (_type *Type) UnmarshalGQL(val interface{}) error {
+	str, ok := val.(string)
+	if !ok {
+		return fmt.Errorf("enum %T must be a string", val)
+	}
+	*_type = Type(str)
+	if err := TypeValidator(*_type); err != nil {
+		return fmt.Errorf("%s is not a valid Type", str)
+	}
+	return nil
+}

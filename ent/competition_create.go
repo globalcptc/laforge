@@ -35,6 +35,18 @@ func (cc *CompetitionCreate) SetRootPassword(s string) *CompetitionCreate {
 	return cc
 }
 
+// SetStartTime sets the "start_time" field.
+func (cc *CompetitionCreate) SetStartTime(i int64) *CompetitionCreate {
+	cc.mutation.SetStartTime(i)
+	return cc
+}
+
+// SetStopTime sets the "stop_time" field.
+func (cc *CompetitionCreate) SetStopTime(i int64) *CompetitionCreate {
+	cc.mutation.SetStopTime(i)
+	return cc
+}
+
 // SetConfig sets the "config" field.
 func (cc *CompetitionCreate) SetConfig(m map[string]string) *CompetitionCreate {
 	cc.mutation.SetConfig(m)
@@ -201,6 +213,12 @@ func (cc *CompetitionCreate) check() error {
 	if _, ok := cc.mutation.RootPassword(); !ok {
 		return &ValidationError{Name: "root_password", err: errors.New(`ent: missing required field "Competition.root_password"`)}
 	}
+	if _, ok := cc.mutation.StartTime(); !ok {
+		return &ValidationError{Name: "start_time", err: errors.New(`ent: missing required field "Competition.start_time"`)}
+	}
+	if _, ok := cc.mutation.StopTime(); !ok {
+		return &ValidationError{Name: "stop_time", err: errors.New(`ent: missing required field "Competition.stop_time"`)}
+	}
 	if _, ok := cc.mutation.Config(); !ok {
 		return &ValidationError{Name: "config", err: errors.New(`ent: missing required field "Competition.config"`)}
 	}
@@ -258,6 +276,22 @@ func (cc *CompetitionCreate) createSpec() (*Competition, *sqlgraph.CreateSpec) {
 			Column: competition.FieldRootPassword,
 		})
 		_node.RootPassword = value
+	}
+	if value, ok := cc.mutation.StartTime(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: competition.FieldStartTime,
+		})
+		_node.StartTime = value
+	}
+	if value, ok := cc.mutation.StopTime(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: competition.FieldStopTime,
+		})
+		_node.StopTime = value
 	}
 	if value, ok := cc.mutation.Config(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

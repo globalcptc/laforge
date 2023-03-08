@@ -25,14 +25,12 @@ func (ScheduledStep) Fields() []ent.Field {
 			StructTag(`hcl:"description,optional"`),
 		field.String("step").
 			StructTag(`hcl:"step,attr"`),
-		field.Int64("start_time").
-			StructTag(`hcl:"start_time,attr"`),
-		field.Int64("end_time").
-			StructTag(`hcl:"end_time,attr"`),
-		field.Int("interval").
-			StructTag(`hcl:"interval,optional"`),
-		field.Bool("repeated").
-			StructTag(`hcl:"repeated,optional"`),
+		field.Enum("type").Values("CRON", "RUNONCE").
+			StructTag(`hcl:"type,attr"`),
+		field.String("schedule").
+			StructTag(`hcl:"schedule,optional"`),
+		field.String("run_at").
+			StructTag(`hcl:"run_at,optional"`),
 	}
 }
 

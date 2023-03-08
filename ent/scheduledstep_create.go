@@ -45,27 +45,21 @@ func (ssc *ScheduledStepCreate) SetStep(s string) *ScheduledStepCreate {
 	return ssc
 }
 
-// SetStartTime sets the "start_time" field.
-func (ssc *ScheduledStepCreate) SetStartTime(i int64) *ScheduledStepCreate {
-	ssc.mutation.SetStartTime(i)
+// SetType sets the "type" field.
+func (ssc *ScheduledStepCreate) SetType(s scheduledstep.Type) *ScheduledStepCreate {
+	ssc.mutation.SetType(s)
 	return ssc
 }
 
-// SetEndTime sets the "end_time" field.
-func (ssc *ScheduledStepCreate) SetEndTime(i int64) *ScheduledStepCreate {
-	ssc.mutation.SetEndTime(i)
+// SetSchedule sets the "schedule" field.
+func (ssc *ScheduledStepCreate) SetSchedule(s string) *ScheduledStepCreate {
+	ssc.mutation.SetSchedule(s)
 	return ssc
 }
 
-// SetInterval sets the "interval" field.
-func (ssc *ScheduledStepCreate) SetInterval(i int) *ScheduledStepCreate {
-	ssc.mutation.SetInterval(i)
-	return ssc
-}
-
-// SetRepeated sets the "repeated" field.
-func (ssc *ScheduledStepCreate) SetRepeated(b bool) *ScheduledStepCreate {
-	ssc.mutation.SetRepeated(b)
+// SetRunAt sets the "run_at" field.
+func (ssc *ScheduledStepCreate) SetRunAt(s string) *ScheduledStepCreate {
+	ssc.mutation.SetRunAt(s)
 	return ssc
 }
 
@@ -199,17 +193,19 @@ func (ssc *ScheduledStepCreate) check() error {
 	if _, ok := ssc.mutation.Step(); !ok {
 		return &ValidationError{Name: "step", err: errors.New(`ent: missing required field "ScheduledStep.step"`)}
 	}
-	if _, ok := ssc.mutation.StartTime(); !ok {
-		return &ValidationError{Name: "start_time", err: errors.New(`ent: missing required field "ScheduledStep.start_time"`)}
+	if _, ok := ssc.mutation.GetType(); !ok {
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "ScheduledStep.type"`)}
 	}
-	if _, ok := ssc.mutation.EndTime(); !ok {
-		return &ValidationError{Name: "end_time", err: errors.New(`ent: missing required field "ScheduledStep.end_time"`)}
+	if v, ok := ssc.mutation.GetType(); ok {
+		if err := scheduledstep.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ScheduledStep.type": %w`, err)}
+		}
 	}
-	if _, ok := ssc.mutation.Interval(); !ok {
-		return &ValidationError{Name: "interval", err: errors.New(`ent: missing required field "ScheduledStep.interval"`)}
+	if _, ok := ssc.mutation.Schedule(); !ok {
+		return &ValidationError{Name: "schedule", err: errors.New(`ent: missing required field "ScheduledStep.schedule"`)}
 	}
-	if _, ok := ssc.mutation.Repeated(); !ok {
-		return &ValidationError{Name: "repeated", err: errors.New(`ent: missing required field "ScheduledStep.repeated"`)}
+	if _, ok := ssc.mutation.RunAt(); !ok {
+		return &ValidationError{Name: "run_at", err: errors.New(`ent: missing required field "ScheduledStep.run_at"`)}
 	}
 	return nil
 }
@@ -279,37 +275,29 @@ func (ssc *ScheduledStepCreate) createSpec() (*ScheduledStep, *sqlgraph.CreateSp
 		})
 		_node.Step = value
 	}
-	if value, ok := ssc.mutation.StartTime(); ok {
+	if value, ok := ssc.mutation.GetType(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
+			Type:   field.TypeEnum,
 			Value:  value,
-			Column: scheduledstep.FieldStartTime,
+			Column: scheduledstep.FieldType,
 		})
-		_node.StartTime = value
+		_node.Type = value
 	}
-	if value, ok := ssc.mutation.EndTime(); ok {
+	if value, ok := ssc.mutation.Schedule(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
+			Type:   field.TypeString,
 			Value:  value,
-			Column: scheduledstep.FieldEndTime,
+			Column: scheduledstep.FieldSchedule,
 		})
-		_node.EndTime = value
+		_node.Schedule = value
 	}
-	if value, ok := ssc.mutation.Interval(); ok {
+	if value, ok := ssc.mutation.RunAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
+			Type:   field.TypeString,
 			Value:  value,
-			Column: scheduledstep.FieldInterval,
+			Column: scheduledstep.FieldRunAt,
 		})
-		_node.Interval = value
-	}
-	if value, ok := ssc.mutation.Repeated(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: scheduledstep.FieldRepeated,
-		})
-		_node.Repeated = value
+		_node.RunAt = value
 	}
 	if nodes := ssc.mutation.ScheduledStepToEnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

@@ -15,6 +15,10 @@ const (
 	FieldHclID = "hcl_id"
 	// FieldRootPassword holds the string denoting the root_password field in the database.
 	FieldRootPassword = "root_password"
+	// FieldStartTime holds the string denoting the start_time field in the database.
+	FieldStartTime = "start_time"
+	// FieldStopTime holds the string denoting the stop_time field in the database.
+	FieldStopTime = "stop_time"
 	// FieldConfig holds the string denoting the config field in the database.
 	FieldConfig = "config"
 	// FieldTags holds the string denoting the tags field in the database.
@@ -53,6 +57,8 @@ var Columns = []string{
 	FieldID,
 	FieldHclID,
 	FieldRootPassword,
+	FieldStartTime,
+	FieldStopTime,
 	FieldConfig,
 	FieldTags,
 }

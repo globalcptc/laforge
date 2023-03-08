@@ -43,6 +43,32 @@ func (cu *CompetitionUpdate) SetRootPassword(s string) *CompetitionUpdate {
 	return cu
 }
 
+// SetStartTime sets the "start_time" field.
+func (cu *CompetitionUpdate) SetStartTime(i int64) *CompetitionUpdate {
+	cu.mutation.ResetStartTime()
+	cu.mutation.SetStartTime(i)
+	return cu
+}
+
+// AddStartTime adds i to the "start_time" field.
+func (cu *CompetitionUpdate) AddStartTime(i int64) *CompetitionUpdate {
+	cu.mutation.AddStartTime(i)
+	return cu
+}
+
+// SetStopTime sets the "stop_time" field.
+func (cu *CompetitionUpdate) SetStopTime(i int64) *CompetitionUpdate {
+	cu.mutation.ResetStopTime()
+	cu.mutation.SetStopTime(i)
+	return cu
+}
+
+// AddStopTime adds i to the "stop_time" field.
+func (cu *CompetitionUpdate) AddStopTime(i int64) *CompetitionUpdate {
+	cu.mutation.AddStopTime(i)
+	return cu
+}
+
 // SetConfig sets the "config" field.
 func (cu *CompetitionUpdate) SetConfig(m map[string]string) *CompetitionUpdate {
 	cu.mutation.SetConfig(m)
@@ -243,6 +269,34 @@ func (cu *CompetitionUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: competition.FieldRootPassword,
 		})
 	}
+	if value, ok := cu.mutation.StartTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: competition.FieldStartTime,
+		})
+	}
+	if value, ok := cu.mutation.AddedStartTime(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: competition.FieldStartTime,
+		})
+	}
+	if value, ok := cu.mutation.StopTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: competition.FieldStopTime,
+		})
+	}
+	if value, ok := cu.mutation.AddedStopTime(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: competition.FieldStopTime,
+		})
+	}
 	if value, ok := cu.mutation.Config(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeJSON,
@@ -428,6 +482,32 @@ func (cuo *CompetitionUpdateOne) SetHclID(s string) *CompetitionUpdateOne {
 // SetRootPassword sets the "root_password" field.
 func (cuo *CompetitionUpdateOne) SetRootPassword(s string) *CompetitionUpdateOne {
 	cuo.mutation.SetRootPassword(s)
+	return cuo
+}
+
+// SetStartTime sets the "start_time" field.
+func (cuo *CompetitionUpdateOne) SetStartTime(i int64) *CompetitionUpdateOne {
+	cuo.mutation.ResetStartTime()
+	cuo.mutation.SetStartTime(i)
+	return cuo
+}
+
+// AddStartTime adds i to the "start_time" field.
+func (cuo *CompetitionUpdateOne) AddStartTime(i int64) *CompetitionUpdateOne {
+	cuo.mutation.AddStartTime(i)
+	return cuo
+}
+
+// SetStopTime sets the "stop_time" field.
+func (cuo *CompetitionUpdateOne) SetStopTime(i int64) *CompetitionUpdateOne {
+	cuo.mutation.ResetStopTime()
+	cuo.mutation.SetStopTime(i)
+	return cuo
+}
+
+// AddStopTime adds i to the "stop_time" field.
+func (cuo *CompetitionUpdateOne) AddStopTime(i int64) *CompetitionUpdateOne {
+	cuo.mutation.AddStopTime(i)
 	return cuo
 }
 
@@ -659,6 +739,34 @@ func (cuo *CompetitionUpdateOne) sqlSave(ctx context.Context) (_node *Competitio
 			Type:   field.TypeString,
 			Value:  value,
 			Column: competition.FieldRootPassword,
+		})
+	}
+	if value, ok := cuo.mutation.StartTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: competition.FieldStartTime,
+		})
+	}
+	if value, ok := cuo.mutation.AddedStartTime(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: competition.FieldStartTime,
+		})
+	}
+	if value, ok := cuo.mutation.StopTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: competition.FieldStopTime,
+		})
+	}
+	if value, ok := cuo.mutation.AddedStopTime(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: competition.FieldStopTime,
 		})
 	}
 	if value, ok := cuo.mutation.Config(); ok {
