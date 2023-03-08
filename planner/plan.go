@@ -31,6 +31,7 @@ import (
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/script"
@@ -665,27 +666,10 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 			logger.Log.Errorf("Failed to Create Provisioning Step for Script %v. Err: %v", userDataScriptID, err)
 			return nil, err
 		}
-		if RenderFiles {
-			filePath, err := renderScript(ctx, client, logger, entUserDataProvisioningStep)
-			if err != nil {
-				return nil, err
-			}
-			entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
-			if err != nil {
-				return nil, err
-			}
-			_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entUserDataProvisioningStep).Save(ctx)
-			if err != nil {
-				return nil, err
-			}
-			if RenderFilesTask != nil {
-				RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
-				if err != nil {
-					return nil, err
-				}
-			}
+		err = provisioningStepRenderFiles(ctx, client, logger, entUserDataProvisioningStep)
+		if err != nil {
+			return nil, fmt.Errorf("failed to render files for provisioning step: %v", err)
 		}
-
 	}
 
 	for stepNumber, pStep := range entHost.ProvisionSteps {
@@ -765,26 +749,9 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			}).Errorf("Failed to Create Provisioning Step for Script %v. Err: %v", hclID, err)
 			return nil, err
 		}
-		// Check if we're supposed to render the script from a template
-		if RenderFiles {
-			filePath, err := renderScript(ctx, client, logger, entProvisioningStep)
-			if err != nil {
-				return entProvisioningStep, err
-			}
-			entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
-			if err != nil {
-				return entProvisioningStep, err
-			}
-			_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
-			if err != nil {
-				return entProvisioningStep, err
-			}
-			if RenderFilesTask != nil {
-				RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
-				if err != nil {
-					return entProvisioningStep, err
-				}
-			}
+		err = provisioningStepRenderFiles(ctx, client, logger, entProvisioningStep)
+		if err != nil {
+			return entProvisioningStep, fmt.Errorf("failed to render files for provisioning step: %v", err)
 		}
 		err = createStepPlan(ctx, client, logger, hclID, stepNumber, pHost, prevPlan, currentBuild, entProvisioningStep)
 		if err != nil {
@@ -878,25 +845,9 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			}).Errorf("Failed to Create Provisioning Step for FileDownload %v. Err: %v", hclID, err)
 			return nil, err
 		}
-		if RenderFiles {
-			filePath, err := renderFileDownload(ctx, logger, entProvisioningStep)
-			if err != nil {
-				return entProvisioningStep, err
-			}
-			entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
-			if err != nil {
-				return entProvisioningStep, err
-			}
-			_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
-			if err != nil {
-				return entProvisioningStep, err
-			}
-			if RenderFilesTask != nil {
-				RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
-				if err != nil {
-					return entProvisioningStep, err
-				}
-			}
+		err = provisioningStepRenderFiles(ctx, client, logger, entProvisioningStep)
+		if err != nil {
+			return entProvisioningStep, fmt.Errorf("failed to render files for provisioning step: %v", err)
 		}
 		err = createStepPlan(ctx, client, logger, hclID, stepNumber, pHost, prevPlan, currentBuild, entProvisioningStep)
 		if err != nil {
@@ -1080,25 +1031,9 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			}).Errorf("Failed to Create Provisioning Step for Ansible %v. Err: %v", hclID, err)
 			return nil, err
 		}
-		if RenderFiles {
-			filePath, err := renderAnsible(ctx, client, logger, entProvisioningStep)
-			if err != nil {
-				return nil, err
-			}
-			entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
-			if err != nil {
-				return nil, err
-			}
-			_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
-			if err != nil {
-				return nil, err
-			}
-			if RenderFilesTask != nil {
-				RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
-				if err != nil {
-					return nil, err
-				}
-			}
+		err = provisioningStepRenderFiles(ctx, client, logger, entProvisioningStep)
+		if err != nil {
+			return entProvisioningStep, fmt.Errorf("failed to render files for provisioning step: %v", err)
 		}
 		err = createStepPlan(ctx, client, logger, hclID, stepNumber, pHost, prevPlan, currentBuild, entProvisioningStep)
 		if err != nil {
@@ -1129,22 +1064,91 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	return nil, fmt.Errorf("failed to create provisioning step: unknown step type")
 }
 
-func createStepPlan(ctx context.Context, client *ent.Client, logger *logging.Logger, hclID string, stepNumber int, pHost *ent.ProvisionedHost, prevPlan *ent.Plan, entBuild *ent.Build, entProvisioningStep *ent.ProvisioningStep) error {
+func provisioningStepRenderFiles(ctx context.Context, client *ent.Client, logger *logging.Logger, entStep interface{}) error {
+	// Check if we're supposed to render the script from a template
+	if RenderFiles {
+		var entProvisioningStep *ent.ProvisioningStep
+		var entProvisioningScheduledStep *ent.ProvisioningScheduledStep
+		var ok bool
+		if entProvisioningStep, ok = entStep.(*ent.ProvisioningStep); !ok {
+			if entProvisioningScheduledStep, ok = entStep.(*ent.ProvisioningScheduledStep); !ok {
+				return fmt.Errorf("failed to determine step type (provisioning | provisioning scheduled)")
+			}
+		}
+		var filePath string
+		var err error
+		if entProvisioningStep != nil {
+			switch entProvisioningStep.Type {
+			case provisioningstep.TypeScript:
+				filePath, err = renderScript(ctx, client, logger, entProvisioningStep)
+			case provisioningstep.TypeFileDownload:
+				filePath, err = renderFileDownload(ctx, logger, entProvisioningStep)
+			case provisioningstep.TypeAnsible:
+				filePath, err = renderAnsible(ctx, client, logger, entProvisioningStep)
+			default:
+				err = fmt.Errorf("failed to render provisioning step files: unknown step type")
+			}
+		} else if entProvisioningScheduledStep != nil {
+			switch entProvisioningScheduledStep.Type {
+			case provisioningscheduledstep.TypeScript:
+				filePath, err = renderScript(ctx, client, logger, entProvisioningScheduledStep)
+			case provisioningscheduledstep.TypeFileDownload:
+				filePath, err = renderFileDownload(ctx, logger, entProvisioningScheduledStep)
+			case provisioningscheduledstep.TypeAnsible:
+				filePath, err = renderAnsible(ctx, client, logger, entProvisioningScheduledStep)
+			default:
+				err = fmt.Errorf("failed to render provisioning scheduled step files: unknown step type")
+			}
+		}
+		if err != nil {
+			return err
+		}
+		entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
+		if err != nil {
+			return err
+		}
+		_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
+		if err != nil {
+			return err
+		}
+		if RenderFilesTask != nil {
+			RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func createStepPlan(ctx context.Context, client *ent.Client, logger *logging.Logger, hclID string, stepNumber int, pHost *ent.ProvisionedHost, prevPlan *ent.Plan, entBuild *ent.Build, entStep interface{}) error {
+	var entProvisioningStep *ent.ProvisioningStep
+	var entProvisioningScheduledStep *ent.ProvisioningScheduledStep
+	var ok bool
+	if entProvisioningStep, ok = entStep.(*ent.ProvisioningStep); !ok {
+		if entProvisioningScheduledStep, ok = entStep.(*ent.ProvisioningScheduledStep); !ok {
+			return fmt.Errorf("failed to determine step type")
+		}
+	}
 	entPlanStatus, err := createPlanningStatus(ctx, client, logger, status.StatusForPlan)
 	if err != nil {
 		return err
 	}
-
-	_, err = client.Plan.Create().
+	entPlanCreate := client.Plan.Create().
 		AddPrevPlan(prevPlan).
 		SetType(plan.TypeExecuteStep).
 		SetBuildID(prevPlan.BuildID).
-		SetPlanToProvisioningStep(entProvisioningStep).
-		SetStepNumber(prevPlan.StepNumber + 1).
 		SetPlanToBuild(entBuild).
-		SetPlanToStatus(entPlanStatus).
-		Save(ctx)
-
+		SetStepNumber(prevPlan.StepNumber + 1).
+		SetPlanToStatus(entPlanStatus)
+	if entProvisioningStep != nil {
+		entPlanCreate = entPlanCreate.
+			SetPlanToProvisioningStep(entProvisioningStep)
+	} else if entProvisioningScheduledStep != nil {
+		entPlanCreate = entPlanCreate.
+			SetPlanToProvisioningScheduledStep(entProvisioningScheduledStep)
+	}
+	_, err = entPlanCreate.Save(ctx)
 	if err != nil {
 		logger.Log.WithFields(logrus.Fields{
 			"pHost":               pHost.ID,
@@ -1159,14 +1163,34 @@ func createStepPlan(ctx context.Context, client *ent.Client, logger *logging.Log
 	return nil
 }
 
-func renderScript(ctx context.Context, client *ent.Client, logger *logging.Logger, pStep *ent.ProvisioningStep) (string, error) {
-	logger.Log.WithFields(logrus.Fields{
-		"pStep":            pStep.ID,
-		"pStep.StepNumber": pStep.StepNumber,
-		"pStep.Type":       pStep.Type,
-	}).Debug("render script")
-	currentProvisionedHost := pStep.QueryProvisioningStepToProvisionedHost().OnlyX(ctx)
-	currentScript := pStep.QueryProvisioningStepToScript().OnlyX(ctx)
+func renderScript(ctx context.Context, client *ent.Client, logger *logging.Logger, entStep interface{}) (string, error) {
+	var entProvisioningStep *ent.ProvisioningStep
+	var entProvisioningScheduledStep *ent.ProvisioningScheduledStep
+	var ok bool
+	if entProvisioningStep, ok = entStep.(*ent.ProvisioningStep); !ok {
+		if entProvisioningScheduledStep, ok = entStep.(*ent.ProvisioningScheduledStep); !ok {
+			return "", fmt.Errorf("failed to determine step type")
+		}
+	}
+	var currentProvisionedHost *ent.ProvisionedHost
+	var currentScript *ent.Script
+	if entProvisioningStep != nil {
+		logger.Log.WithFields(logrus.Fields{
+			"pStep":            entProvisioningStep.ID,
+			"pStep.StepNumber": entProvisioningStep.StepNumber,
+			"pStep.Type":       entProvisioningStep.Type,
+		}).Debug("render script")
+		currentProvisionedHost = entProvisioningStep.QueryProvisioningStepToProvisionedHost().OnlyX(ctx)
+		currentScript = entProvisioningStep.QueryProvisioningStepToScript().OnlyX(ctx)
+	}
+	if entProvisioningScheduledStep != nil {
+		logger.Log.WithFields(logrus.Fields{
+			"pScheduledStep":      entProvisioningScheduledStep.ID,
+			"pScheduledStep.Type": entProvisioningScheduledStep.Type,
+		}).Debug("render script")
+		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisioningScheduledStepToProvisionedHost().OnlyX(ctx)
+		currentScript = entProvisioningScheduledStep.QueryProvisioningScheduledStepToScript().OnlyX(ctx)
+	}
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
@@ -1180,20 +1204,21 @@ func renderScript(ctx context.Context, client *ent.Client, logger *logging.Logge
 	// Need to Make Unique and change how it's loaded in
 	currentDNS := currentCompetition.QueryCompetitionToDNS().FirstX(ctx)
 	templateData := TempleteContext{
-		Build:              currentBuild,
-		Competition:        currentCompetition,
-		Environment:        currentEnvironment,
-		Host:               currentHost,
-		DNS:                currentDNS,
-		IncludedNetworks:   currentIncludedNetwork,
-		Network:            currentNetwork,
-		Script:             currentScript,
-		Team:               currentTeam,
-		Identities:         currentIdentities,
-		ProvisionedNetwork: currentProvisionedNetwork,
-		ProvisionedHost:    currentProvisionedHost,
-		ProvisioningStep:   pStep,
-		AgentSlug:          agentScriptFile.URLID,
+		Build:                     currentBuild,
+		Competition:               currentCompetition,
+		Environment:               currentEnvironment,
+		Host:                      currentHost,
+		DNS:                       currentDNS,
+		IncludedNetworks:          currentIncludedNetwork,
+		Network:                   currentNetwork,
+		Script:                    currentScript,
+		Team:                      currentTeam,
+		Identities:                currentIdentities,
+		ProvisionedNetwork:        currentProvisionedNetwork,
+		ProvisionedHost:           currentProvisionedHost,
+		ProvisioningStep:          entProvisioningStep,
+		ProvisioningScheduledStep: entProvisioningScheduledStep,
+		AgentSlug:                 agentScriptFile.URLID,
 	}
 	t, err := template.New(strings.Replace(currentScript.Source, "./", "", -1)).Funcs(TemplateFuncLib).ParseFiles(currentScript.AbsPath)
 	if err != nil {
@@ -1224,14 +1249,34 @@ func renderScript(ctx context.Context, client *ent.Client, logger *logging.Logge
 	return fileName, nil
 }
 
-func renderFileDownload(ctx context.Context, logger *logging.Logger, pStep *ent.ProvisioningStep) (string, error) {
-	logger.Log.WithFields(logrus.Fields{
-		"pStep":            pStep.ID,
-		"pStep.StepNumber": pStep.StepNumber,
-		"pStep.Type":       pStep.Type,
-	}).Debug("render file download")
-	currentFileDownload := pStep.QueryProvisioningStepToFileDownload().OnlyX(ctx)
-	currentProvisionedHost := pStep.QueryProvisioningStepToProvisionedHost().OnlyX(ctx)
+func renderFileDownload(ctx context.Context, logger *logging.Logger, entStep interface{}) (string, error) {
+	var entProvisioningStep *ent.ProvisioningStep
+	var entProvisioningScheduledStep *ent.ProvisioningScheduledStep
+	var ok bool
+	if entProvisioningStep, ok = entStep.(*ent.ProvisioningStep); !ok {
+		if entProvisioningScheduledStep, ok = entStep.(*ent.ProvisioningScheduledStep); !ok {
+			return "", fmt.Errorf("failed to determine step type")
+		}
+	}
+	var currentProvisionedHost *ent.ProvisionedHost
+	var currentFileDownload *ent.FileDownload
+	if entProvisioningStep != nil {
+		logger.Log.WithFields(logrus.Fields{
+			"pStep":            entProvisioningStep.ID,
+			"pStep.StepNumber": entProvisioningStep.StepNumber,
+			"pStep.Type":       entProvisioningStep.Type,
+		}).Debug("render file download")
+		currentProvisionedHost = entProvisioningStep.QueryProvisioningStepToProvisionedHost().OnlyX(ctx)
+		currentFileDownload = entProvisioningStep.QueryProvisioningStepToFileDownload().OnlyX(ctx)
+	}
+	if entProvisioningScheduledStep != nil {
+		logger.Log.WithFields(logrus.Fields{
+			"pScheduledStep":      entProvisioningScheduledStep.ID,
+			"pScheduledStep.Type": entProvisioningScheduledStep.Type,
+		}).Debug("render file download")
+		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisioningScheduledStepToProvisionedHost().OnlyX(ctx)
+		currentFileDownload = entProvisioningScheduledStep.QueryProvisioningScheduledStepToFileDownload().OnlyX(ctx)
+	}
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
@@ -1270,14 +1315,34 @@ func renderFileDownload(ctx context.Context, logger *logging.Logger, pStep *ent.
 	return fileName, nil
 }
 
-func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logger, pStep *ent.ProvisioningStep) (string, error) {
-	logger.Log.WithFields(logrus.Fields{
-		"pStep":            pStep.ID,
-		"pStep.StepNumber": pStep.StepNumber,
-		"pStep.Type":       pStep.Type,
-	}).Debug("render ansible")
-	currentProvisionedHost := pStep.QueryProvisioningStepToProvisionedHost().OnlyX(ctx)
-	currentAnsible := pStep.QueryProvisioningStepToAnsible().OnlyX(ctx)
+func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logger, entStep interface{}) (string, error) {
+	var entProvisioningStep *ent.ProvisioningStep
+	var entProvisioningScheduledStep *ent.ProvisioningScheduledStep
+	var ok bool
+	if entProvisioningStep, ok = entStep.(*ent.ProvisioningStep); !ok {
+		if entProvisioningScheduledStep, ok = entStep.(*ent.ProvisioningScheduledStep); !ok {
+			return "", fmt.Errorf("failed to determine step type")
+		}
+	}
+	var currentProvisionedHost *ent.ProvisionedHost
+	var currentAnsible *ent.Ansible
+	if entProvisioningStep != nil {
+		logger.Log.WithFields(logrus.Fields{
+			"pStep":            entProvisioningStep.ID,
+			"pStep.StepNumber": entProvisioningStep.StepNumber,
+			"pStep.Type":       entProvisioningStep.Type,
+		}).Debug("render ansible")
+		currentProvisionedHost = entProvisioningStep.QueryProvisioningStepToProvisionedHost().OnlyX(ctx)
+		currentAnsible = entProvisioningStep.QueryProvisioningStepToAnsible().OnlyX(ctx)
+	}
+	if entProvisioningScheduledStep != nil {
+		logger.Log.WithFields(logrus.Fields{
+			"pScheduledStep":      entProvisioningScheduledStep.ID,
+			"pScheduledStep.Type": entProvisioningScheduledStep.Type,
+		}).Debug("render ansible")
+		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisioningScheduledStepToProvisionedHost().OnlyX(ctx)
+		currentAnsible = entProvisioningScheduledStep.QueryProvisioningScheduledStepToAnsible().OnlyX(ctx)
+	}
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
@@ -1291,20 +1356,21 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 	// Need to Make Unique and change how it's loaded in
 	currentDNS := currentCompetition.QueryCompetitionToDNS().FirstX(ctx)
 	templateData := TempleteContext{
-		Build:              currentBuild,
-		Competition:        currentCompetition,
-		Environment:        currentEnvironment,
-		Host:               currentHost,
-		DNS:                currentDNS,
-		IncludedNetworks:   currentIncludedNetwork,
-		Network:            currentNetwork,
-		Ansible:            currentAnsible,
-		Team:               currentTeam,
-		Identities:         currentIdentities,
-		ProvisionedNetwork: currentProvisionedNetwork,
-		ProvisionedHost:    currentProvisionedHost,
-		ProvisioningStep:   pStep,
-		AgentSlug:          agentScriptFile.URLID,
+		Build:                     currentBuild,
+		Competition:               currentCompetition,
+		Environment:               currentEnvironment,
+		Host:                      currentHost,
+		DNS:                       currentDNS,
+		IncludedNetworks:          currentIncludedNetwork,
+		Network:                   currentNetwork,
+		Ansible:                   currentAnsible,
+		Team:                      currentTeam,
+		Identities:                currentIdentities,
+		ProvisionedNetwork:        currentProvisionedNetwork,
+		ProvisionedHost:           currentProvisionedHost,
+		ProvisioningStep:          entProvisioningStep,
+		ProvisioningScheduledStep: entProvisioningScheduledStep,
+		AgentSlug:                 agentScriptFile.URLID,
 	}
 
 	dirRelativePath := path.Join("builds", currentEnvironment.Name, fmt.Sprint(currentBuild.Revision), fmt.Sprint(currentTeam.TeamNumber), currentProvisionedNetwork.Name, currentHost.Hostname)
