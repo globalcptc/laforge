@@ -734,6 +734,8 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	if err != nil {
 		return nil, err
 	}
+
+	// Check if step is script
 	entScript, err := client.Script.Query().Where(
 		script.And(
 			script.HasScriptToEnvironmentWith(
@@ -742,321 +744,8 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			script.HclIDEQ(hclID),
 		),
 	).Only(ctx)
-	if err != nil {
-		if err != err.(*ent.NotFoundError) {
-			logger.Log.WithFields(logrus.Fields{
-				"pHost":               pHost.ID,
-				"pHost.HCLID":         entHost.HclID,
-				"pHost.SubnetIP":      pHost.SubnetIP,
-				"stepNumber":          stepNumber,
-				"prevPlan":            prevPlan.ID,
-				"prevPlan.Type":       prevPlan.Type,
-				"prevPlan.StepNumber": prevPlan.StepNumber,
-			}).Errorf("Failed to Query Script %v. Err: %v", hclID, err)
-			return nil, err
-		} else {
-			entCommand, err := client.Command.Query().Where(
-				command.And(
-					command.HasCommandToEnvironmentWith(
-						environment.IDEQ(currentEnvironment.ID),
-					),
-					command.HclIDEQ(hclID),
-				)).Only(ctx)
-			if err != nil {
-				if err != err.(*ent.NotFoundError) {
-					logger.Log.WithFields(logrus.Fields{
-						"pHost":               pHost.ID,
-						"pHost.HCLID":         entHost.HclID,
-						"pHost.SubnetIP":      pHost.SubnetIP,
-						"stepNumber":          stepNumber,
-						"prevPlan":            prevPlan.ID,
-						"prevPlan.Type":       prevPlan.Type,
-						"prevPlan.StepNumber": prevPlan.StepNumber,
-					}).Errorf("Failed to Query Command %v. Err: %v", hclID, err)
-					return nil, err
-				} else {
-					entFileDownload, err := client.FileDownload.Query().Where(
-						filedownload.And(
-							filedownload.HasFileDownloadToEnvironmentWith(
-								environment.IDEQ(currentEnvironment.ID),
-							),
-							filedownload.HclIDEQ(hclID),
-						)).Only(ctx)
-					if err != nil {
-						if err != err.(*ent.NotFoundError) {
-							logger.Log.WithFields(logrus.Fields{
-								"pHost":               pHost.ID,
-								"pHost.HCLID":         entHost.HclID,
-								"pHost.SubnetIP":      pHost.SubnetIP,
-								"stepNumber":          stepNumber,
-								"prevPlan":            prevPlan.ID,
-								"prevPlan.Type":       prevPlan.Type,
-								"prevPlan.StepNumber": prevPlan.StepNumber,
-							}).Errorf("Failed to Query FileDownload %v. Err: %v", hclID, err)
-							return nil, err
-						} else {
-							entFileExtract, err := client.FileExtract.Query().Where(
-								fileextract.And(
-									fileextract.HasFileExtractToEnvironmentWith(
-										environment.IDEQ(currentEnvironment.ID),
-									),
-									fileextract.HclIDEQ(hclID),
-								)).Only(ctx)
-							if err != nil {
-								if err != err.(*ent.NotFoundError) {
-									logger.Log.WithFields(logrus.Fields{
-										"pHost":               pHost.ID,
-										"pHost.HCLID":         entHost.HclID,
-										"pHost.SubnetIP":      pHost.SubnetIP,
-										"stepNumber":          stepNumber,
-										"prevPlan":            prevPlan.ID,
-										"prevPlan.Type":       prevPlan.Type,
-										"prevPlan.StepNumber": prevPlan.StepNumber,
-									}).Errorf("Failed to Query FileExtract %v. Err: %v", hclID, err)
-									return nil, err
-								} else {
-									entFileDelete, err := client.FileDelete.Query().Where(
-										filedelete.And(
-											filedelete.HasFileDeleteToEnvironmentWith(
-												environment.IDEQ(currentEnvironment.ID),
-											),
-											filedelete.HclIDEQ(hclID),
-										)).Only(ctx)
-									if err != nil {
-										if err != err.(*ent.NotFoundError) {
-											logger.Log.WithFields(logrus.Fields{
-												"pHost":               pHost.ID,
-												"pHost.HCLID":         entHost.HclID,
-												"pHost.SubnetIP":      pHost.SubnetIP,
-												"stepNumber":          stepNumber,
-												"prevPlan":            prevPlan.ID,
-												"prevPlan.Type":       prevPlan.Type,
-												"prevPlan.StepNumber": prevPlan.StepNumber,
-											}).Errorf("Failed to Query FileDelete %v. Err: %v", hclID, err)
-											return nil, err
-										} else {
-											entDNSRecord, err := client.DNSRecord.Query().Where(
-												dnsrecord.And(
-													dnsrecord.HasDNSRecordToEnvironmentWith(
-														environment.IDEQ(currentEnvironment.ID),
-													),
-													dnsrecord.HclIDEQ(hclID),
-												)).Only(ctx)
-											if err != nil {
-												if err != err.(*ent.NotFoundError) {
-													logger.Log.WithFields(logrus.Fields{
-														"pHost":               pHost.ID,
-														"pHost.HCLID":         entHost.HclID,
-														"pHost.SubnetIP":      pHost.SubnetIP,
-														"stepNumber":          stepNumber,
-														"prevPlan":            prevPlan.ID,
-														"prevPlan.Type":       prevPlan.Type,
-														"prevPlan.StepNumber": prevPlan.StepNumber,
-													}).Errorf("Failed to Query FileDelete %v. Err: %v", hclID, err)
-													return nil, err
-												} else {
-													entAnsible, err := client.Ansible.Query().Where(
-														ansible.And(
-															ansible.HasAnsibleFromEnvironmentWith(
-																environment.IDEQ(currentEnvironment.ID),
-															),
-															ansible.HclIDEQ(hclID),
-														)).Only(ctx)
-													if err != nil {
-														if err != err.(*ent.NotFoundError) {
-															logger.Log.WithFields(logrus.Fields{
-																"pHost":               pHost.ID,
-																"pHost.HCLID":         entHost.HclID,
-																"pHost.SubnetIP":      pHost.SubnetIP,
-																"stepNumber":          stepNumber,
-																"prevPlan":            prevPlan.ID,
-																"prevPlan.Type":       prevPlan.Type,
-																"prevPlan.StepNumber": prevPlan.StepNumber,
-															}).Errorf("Failed to Query Ansible %v. Err: %v", hclID, err)
-															return nil, err
-														} else {
-															logger.Log.WithFields(logrus.Fields{
-																"pHost":               pHost.ID,
-																"pHost.HCLID":         entHost.HclID,
-																"pHost.SubnetIP":      pHost.SubnetIP,
-																"stepNumber":          stepNumber,
-																"prevPlan":            prevPlan.ID,
-																"prevPlan.Type":       prevPlan.Type,
-																"prevPlan.StepNumber": prevPlan.StepNumber,
-															}).Errorf("No Provisioning Steps found for %v. Err: %v", hclID, err)
-															return nil, err
-														}
-													} else {
-														entProvisioningStep, err = client.ProvisioningStep.Create().
-															SetStepNumber(stepNumber).
-															SetType(provisioningstep.TypeAnsible).
-															SetProvisioningStepToAnsible(entAnsible).
-															SetProvisioningStepToStatus(entStatus).
-															SetProvisioningStepToProvisionedHost(pHost).
-															Save(ctx)
-														if err != nil {
-															logger.Log.WithFields(logrus.Fields{
-																"pHost":               pHost.ID,
-																"pHost.HCLID":         entHost.HclID,
-																"pHost.SubnetIP":      pHost.SubnetIP,
-																"stepNumber":          stepNumber,
-																"prevPlan":            prevPlan.ID,
-																"prevPlan.Type":       prevPlan.Type,
-																"prevPlan.StepNumber": prevPlan.StepNumber,
-															}).Errorf("Failed to Create Provisioning Step for Ansible %v. Err: %v", hclID, err)
-															return nil, err
-														}
-														if RenderFiles {
-															filePath, err := renderAnsible(ctx, client, logger, entProvisioningStep)
-															if err != nil {
-																return nil, err
-															}
-															entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
-															if err != nil {
-																return nil, err
-															}
-															_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
-															if err != nil {
-																return nil, err
-															}
-															if RenderFilesTask != nil {
-																RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
-																if err != nil {
-																	return nil, err
-																}
-															}
-														}
-													}
-												}
-											} else {
-												entProvisioningStep, err = client.ProvisioningStep.Create().
-													SetStepNumber(stepNumber).
-													SetType(provisioningstep.TypeDNSRecord).SetProvisioningStepToDNSRecord(entDNSRecord).
-													SetProvisioningStepToStatus(entStatus).
-													SetProvisioningStepToProvisionedHost(pHost).
-													Save(ctx)
-												if err != nil {
-													logger.Log.WithFields(logrus.Fields{
-														"pHost":               pHost.ID,
-														"pHost.HCLID":         entHost.HclID,
-														"pHost.SubnetIP":      pHost.SubnetIP,
-														"stepNumber":          stepNumber,
-														"prevPlan":            prevPlan.ID,
-														"prevPlan.Type":       prevPlan.Type,
-														"prevPlan.StepNumber": prevPlan.StepNumber,
-													}).Errorf("Failed to Create Provisioning Step for FileDelete %v. Err: %v", hclID, err)
-													return nil, err
-												}
-											}
-										}
-									} else {
-										entProvisioningStep, err = client.ProvisioningStep.Create().
-											SetStepNumber(stepNumber).
-											SetType(provisioningstep.TypeFileDelete).SetProvisioningStepToFileDelete(entFileDelete).
-											SetProvisioningStepToStatus(entStatus).
-											SetProvisioningStepToProvisionedHost(pHost).
-											Save(ctx)
-										if err != nil {
-											logger.Log.WithFields(logrus.Fields{
-												"pHost":               pHost.ID,
-												"pHost.HCLID":         entHost.HclID,
-												"pHost.SubnetIP":      pHost.SubnetIP,
-												"stepNumber":          stepNumber,
-												"prevPlan":            prevPlan.ID,
-												"prevPlan.Type":       prevPlan.Type,
-												"prevPlan.StepNumber": prevPlan.StepNumber,
-											}).Errorf("Failed to Create Provisioning Step for FileDelete %v. Err: %v", hclID, err)
-											return nil, err
-										}
-									}
-								}
-							} else {
-								entProvisioningStep, err = client.ProvisioningStep.Create().
-									SetStepNumber(stepNumber).
-									SetType(provisioningstep.TypeFileExtract).
-									SetProvisioningStepToFileExtract(entFileExtract).
-									SetProvisioningStepToStatus(entStatus).
-									SetProvisioningStepToProvisionedHost(pHost).
-									Save(ctx)
-								if err != nil {
-									logger.Log.WithFields(logrus.Fields{
-										"pHost":               pHost.ID,
-										"pHost.HCLID":         entHost.HclID,
-										"pHost.SubnetIP":      pHost.SubnetIP,
-										"stepNumber":          stepNumber,
-										"prevPlan":            prevPlan.ID,
-										"prevPlan.Type":       prevPlan.Type,
-										"prevPlan.StepNumber": prevPlan.StepNumber,
-									}).Errorf("Failed to Create Provisioning Step for FileExtract %v. Err: %v", hclID, err)
-									return nil, err
-								}
-							}
-						}
-					} else {
-						entProvisioningStep, err = client.ProvisioningStep.Create().
-							SetStepNumber(stepNumber).
-							SetType(provisioningstep.TypeFileDownload).
-							SetProvisioningStepToFileDownload(entFileDownload).
-							SetProvisioningStepToStatus(entStatus).
-							SetProvisioningStepToProvisionedHost(pHost).
-							Save(ctx)
-						if err != nil {
-							logger.Log.WithFields(logrus.Fields{
-								"pHost":               pHost.ID,
-								"pHost.HCLID":         entHost.HclID,
-								"pHost.SubnetIP":      pHost.SubnetIP,
-								"stepNumber":          stepNumber,
-								"prevPlan":            prevPlan.ID,
-								"prevPlan.Type":       prevPlan.Type,
-								"prevPlan.StepNumber": prevPlan.StepNumber,
-							}).Errorf("Failed to Create Provisioning Step for FileDownload %v. Err: %v", hclID, err)
-							return nil, err
-						}
-						if RenderFiles {
-							filePath, err := renderFileDownload(ctx, logger, entProvisioningStep)
-							if err != nil {
-								return nil, err
-							}
-							entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
-							if err != nil {
-								return nil, err
-							}
-							_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
-							if err != nil {
-								return nil, err
-							}
-							if RenderFilesTask != nil {
-								RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
-								if err != nil {
-									return nil, err
-								}
-							}
-						}
-					}
-				}
-			} else {
-				entProvisioningStep, err = client.ProvisioningStep.Create().
-					SetStepNumber(stepNumber).
-					SetType(provisioningstep.TypeCommand).
-					SetProvisioningStepToCommand(entCommand).
-					SetProvisioningStepToStatus(entStatus).
-					SetProvisioningStepToProvisionedHost(pHost).
-					Save(ctx)
-				if err != nil {
-					logger.Log.WithFields(logrus.Fields{
-						"pHost":               pHost.ID,
-						"pHost.HCLID":         entHost.HclID,
-						"pHost.SubnetIP":      pHost.SubnetIP,
-						"stepNumber":          stepNumber,
-						"prevPlan":            prevPlan.ID,
-						"prevPlan.Type":       prevPlan.Type,
-						"prevPlan.StepNumber": prevPlan.StepNumber,
-					}).Errorf("Failed to Create Provisioning Step for Command %v. Err: %v", hclID, err)
-					return nil, err
-				}
-			}
-		}
-	} else {
+	if err == nil {
+		// Step is a script
 		entProvisioningStep, err = client.ProvisioningStep.Create().
 			SetStepNumber(stepNumber).
 			SetType(provisioningstep.TypeScript).
@@ -1076,8 +765,323 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			}).Errorf("Failed to Create Provisioning Step for Script %v. Err: %v", hclID, err)
 			return nil, err
 		}
+		// Check if we're supposed to render the script from a template
 		if RenderFiles {
 			filePath, err := renderScript(ctx, client, logger, entProvisioningStep)
+			if err != nil {
+				return entProvisioningStep, err
+			}
+			entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
+			if err != nil {
+				return entProvisioningStep, err
+			}
+			_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
+			if err != nil {
+				return entProvisioningStep, err
+			}
+			if RenderFilesTask != nil {
+				RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
+				if err != nil {
+					return entProvisioningStep, err
+				}
+			}
+		}
+		err = createStepPlan(ctx, client, logger, hclID, stepNumber, pHost, prevPlan, currentBuild, entProvisioningStep)
+		if err != nil {
+			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
+		}
+		return entProvisioningStep, nil
+	} else if err != nil && !ent.IsNotFound(err) {
+		logger.Log.WithFields(logrus.Fields{
+			"pHost":               pHost.ID,
+			"pHost.HCLID":         entHost.HclID,
+			"pHost.SubnetIP":      pHost.SubnetIP,
+			"stepNumber":          stepNumber,
+			"prevPlan":            prevPlan.ID,
+			"prevPlan.Type":       prevPlan.Type,
+			"prevPlan.StepNumber": prevPlan.StepNumber,
+		}).Errorf("Failed to Query Script %v. Err: %v", hclID, err)
+		return nil, err
+	}
+	// Check if step is command
+	entCommand, err := client.Command.Query().Where(
+		command.And(
+			command.HasCommandToEnvironmentWith(
+				environment.IDEQ(currentEnvironment.ID),
+			),
+			command.HclIDEQ(hclID),
+		)).Only(ctx)
+	if err == nil {
+		// Step is a command
+		entProvisioningStep, err = client.ProvisioningStep.Create().
+			SetStepNumber(stepNumber).
+			SetType(provisioningstep.TypeCommand).
+			SetProvisioningStepToCommand(entCommand).
+			SetProvisioningStepToStatus(entStatus).
+			SetProvisioningStepToProvisionedHost(pHost).
+			Save(ctx)
+		if err != nil {
+			logger.Log.WithFields(logrus.Fields{
+				"pHost":               pHost.ID,
+				"pHost.HCLID":         entHost.HclID,
+				"pHost.SubnetIP":      pHost.SubnetIP,
+				"stepNumber":          stepNumber,
+				"prevPlan":            prevPlan.ID,
+				"prevPlan.Type":       prevPlan.Type,
+				"prevPlan.StepNumber": prevPlan.StepNumber,
+			}).Errorf("Failed to Create Provisioning Step for Command %v. Err: %v", hclID, err)
+			return nil, err
+		}
+		err = createStepPlan(ctx, client, logger, hclID, stepNumber, pHost, prevPlan, currentBuild, entProvisioningStep)
+		if err != nil {
+			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
+		}
+		return entProvisioningStep, nil
+	} else if err != nil && !ent.IsNotFound(err) {
+		logger.Log.WithFields(logrus.Fields{
+			"pHost":               pHost.ID,
+			"pHost.HCLID":         entHost.HclID,
+			"pHost.SubnetIP":      pHost.SubnetIP,
+			"stepNumber":          stepNumber,
+			"prevPlan":            prevPlan.ID,
+			"prevPlan.Type":       prevPlan.Type,
+			"prevPlan.StepNumber": prevPlan.StepNumber,
+		}).Errorf("Failed to Query Command %v. Err: %v", hclID, err)
+		return nil, err
+	}
+	// Check if step is file download
+	entFileDownload, err := client.FileDownload.Query().Where(
+		filedownload.And(
+			filedownload.HasFileDownloadToEnvironmentWith(
+				environment.IDEQ(currentEnvironment.ID),
+			),
+			filedownload.HclIDEQ(hclID),
+		)).Only(ctx)
+	if err == nil {
+		// Step is a file download
+		entProvisioningStep, err = client.ProvisioningStep.Create().
+			SetStepNumber(stepNumber).
+			SetType(provisioningstep.TypeFileDownload).
+			SetProvisioningStepToFileDownload(entFileDownload).
+			SetProvisioningStepToStatus(entStatus).
+			SetProvisioningStepToProvisionedHost(pHost).
+			Save(ctx)
+		if err != nil {
+			logger.Log.WithFields(logrus.Fields{
+				"pHost":               pHost.ID,
+				"pHost.HCLID":         entHost.HclID,
+				"pHost.SubnetIP":      pHost.SubnetIP,
+				"stepNumber":          stepNumber,
+				"prevPlan":            prevPlan.ID,
+				"prevPlan.Type":       prevPlan.Type,
+				"prevPlan.StepNumber": prevPlan.StepNumber,
+			}).Errorf("Failed to Create Provisioning Step for FileDownload %v. Err: %v", hclID, err)
+			return nil, err
+		}
+		if RenderFiles {
+			filePath, err := renderFileDownload(ctx, logger, entProvisioningStep)
+			if err != nil {
+				return entProvisioningStep, err
+			}
+			entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
+			if err != nil {
+				return entProvisioningStep, err
+			}
+			_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
+			if err != nil {
+				return entProvisioningStep, err
+			}
+			if RenderFilesTask != nil {
+				RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
+				if err != nil {
+					return entProvisioningStep, err
+				}
+			}
+		}
+		err = createStepPlan(ctx, client, logger, hclID, stepNumber, pHost, prevPlan, currentBuild, entProvisioningStep)
+		if err != nil {
+			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
+		}
+		return entProvisioningStep, nil
+	} else if err != nil && !ent.IsNotFound(err) {
+		logger.Log.WithFields(logrus.Fields{
+			"pHost":               pHost.ID,
+			"pHost.HCLID":         entHost.HclID,
+			"pHost.SubnetIP":      pHost.SubnetIP,
+			"stepNumber":          stepNumber,
+			"prevPlan":            prevPlan.ID,
+			"prevPlan.Type":       prevPlan.Type,
+			"prevPlan.StepNumber": prevPlan.StepNumber,
+		}).Errorf("Failed to Query FileDownload %v. Err: %v", hclID, err)
+		return nil, err
+	}
+	// Check if step is file extract
+	entFileExtract, err := client.FileExtract.Query().Where(
+		fileextract.And(
+			fileextract.HasFileExtractToEnvironmentWith(
+				environment.IDEQ(currentEnvironment.ID),
+			),
+			fileextract.HclIDEQ(hclID),
+		)).Only(ctx)
+	if err == nil {
+		// Step is a file extract
+		entProvisioningStep, err = client.ProvisioningStep.Create().
+			SetStepNumber(stepNumber).
+			SetType(provisioningstep.TypeFileExtract).
+			SetProvisioningStepToFileExtract(entFileExtract).
+			SetProvisioningStepToStatus(entStatus).
+			SetProvisioningStepToProvisionedHost(pHost).
+			Save(ctx)
+		if err != nil {
+			logger.Log.WithFields(logrus.Fields{
+				"pHost":               pHost.ID,
+				"pHost.HCLID":         entHost.HclID,
+				"pHost.SubnetIP":      pHost.SubnetIP,
+				"stepNumber":          stepNumber,
+				"prevPlan":            prevPlan.ID,
+				"prevPlan.Type":       prevPlan.Type,
+				"prevPlan.StepNumber": prevPlan.StepNumber,
+			}).Errorf("Failed to Create Provisioning Step for FileExtract %v. Err: %v", hclID, err)
+			return nil, err
+		}
+		err = createStepPlan(ctx, client, logger, hclID, stepNumber, pHost, prevPlan, currentBuild, entProvisioningStep)
+		if err != nil {
+			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
+		}
+		return entProvisioningStep, nil
+	} else if err != nil && !ent.IsNotFound(err) {
+		logger.Log.WithFields(logrus.Fields{
+			"pHost":               pHost.ID,
+			"pHost.HCLID":         entHost.HclID,
+			"pHost.SubnetIP":      pHost.SubnetIP,
+			"stepNumber":          stepNumber,
+			"prevPlan":            prevPlan.ID,
+			"prevPlan.Type":       prevPlan.Type,
+			"prevPlan.StepNumber": prevPlan.StepNumber,
+		}).Errorf("Failed to Query FileExtract %v. Err: %v", hclID, err)
+		return nil, err
+	}
+	// Check if step is file delete
+	entFileDelete, err := client.FileDelete.Query().Where(
+		filedelete.And(
+			filedelete.HasFileDeleteToEnvironmentWith(
+				environment.IDEQ(currentEnvironment.ID),
+			),
+			filedelete.HclIDEQ(hclID),
+		)).Only(ctx)
+	if err == nil {
+		// Step is a file delete
+		entProvisioningStep, err = client.ProvisioningStep.Create().
+			SetStepNumber(stepNumber).
+			SetType(provisioningstep.TypeFileDelete).SetProvisioningStepToFileDelete(entFileDelete).
+			SetProvisioningStepToStatus(entStatus).
+			SetProvisioningStepToProvisionedHost(pHost).
+			Save(ctx)
+		if err != nil {
+			logger.Log.WithFields(logrus.Fields{
+				"pHost":               pHost.ID,
+				"pHost.HCLID":         entHost.HclID,
+				"pHost.SubnetIP":      pHost.SubnetIP,
+				"stepNumber":          stepNumber,
+				"prevPlan":            prevPlan.ID,
+				"prevPlan.Type":       prevPlan.Type,
+				"prevPlan.StepNumber": prevPlan.StepNumber,
+			}).Errorf("Failed to Create Provisioning Step for FileDelete %v. Err: %v", hclID, err)
+			return nil, err
+		}
+		err = createStepPlan(ctx, client, logger, hclID, stepNumber, pHost, prevPlan, currentBuild, entProvisioningStep)
+		if err != nil {
+			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
+		}
+		return entProvisioningStep, nil
+	} else if err != nil && !ent.IsNotFound(err) {
+		logger.Log.WithFields(logrus.Fields{
+			"pHost":               pHost.ID,
+			"pHost.HCLID":         entHost.HclID,
+			"pHost.SubnetIP":      pHost.SubnetIP,
+			"stepNumber":          stepNumber,
+			"prevPlan":            prevPlan.ID,
+			"prevPlan.Type":       prevPlan.Type,
+			"prevPlan.StepNumber": prevPlan.StepNumber,
+		}).Errorf("Failed to Query FileDelete %v. Err: %v", hclID, err)
+		return nil, err
+	}
+	// Check if step is dns record
+	entDNSRecord, err := client.DNSRecord.Query().Where(
+		dnsrecord.And(
+			dnsrecord.HasDNSRecordToEnvironmentWith(
+				environment.IDEQ(currentEnvironment.ID),
+			),
+			dnsrecord.HclIDEQ(hclID),
+		)).Only(ctx)
+	if err == nil {
+		// Step is a dns record
+		entProvisioningStep, err = client.ProvisioningStep.Create().
+			SetStepNumber(stepNumber).
+			SetType(provisioningstep.TypeDNSRecord).SetProvisioningStepToDNSRecord(entDNSRecord).
+			SetProvisioningStepToStatus(entStatus).
+			SetProvisioningStepToProvisionedHost(pHost).
+			Save(ctx)
+		if err != nil {
+			logger.Log.WithFields(logrus.Fields{
+				"pHost":               pHost.ID,
+				"pHost.HCLID":         entHost.HclID,
+				"pHost.SubnetIP":      pHost.SubnetIP,
+				"stepNumber":          stepNumber,
+				"prevPlan":            prevPlan.ID,
+				"prevPlan.Type":       prevPlan.Type,
+				"prevPlan.StepNumber": prevPlan.StepNumber,
+			}).Errorf("Failed to Create Provisioning Step for FileDelete %v. Err: %v", hclID, err)
+			return nil, err
+		}
+		err = createStepPlan(ctx, client, logger, hclID, stepNumber, pHost, prevPlan, currentBuild, entProvisioningStep)
+		if err != nil {
+			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
+		}
+		return entProvisioningStep, nil
+	} else if err != nil && !ent.IsNotFound(err) {
+		logger.Log.WithFields(logrus.Fields{
+			"pHost":               pHost.ID,
+			"pHost.HCLID":         entHost.HclID,
+			"pHost.SubnetIP":      pHost.SubnetIP,
+			"stepNumber":          stepNumber,
+			"prevPlan":            prevPlan.ID,
+			"prevPlan.Type":       prevPlan.Type,
+			"prevPlan.StepNumber": prevPlan.StepNumber,
+		}).Errorf("Failed to Query FileDelete %v. Err: %v", hclID, err)
+		return nil, err
+	}
+	// Check if step is ansible
+	entAnsible, err := client.Ansible.Query().Where(
+		ansible.And(
+			ansible.HasAnsibleFromEnvironmentWith(
+				environment.IDEQ(currentEnvironment.ID),
+			),
+			ansible.HclIDEQ(hclID),
+		)).Only(ctx)
+	if err == nil {
+		// Step is an ansible
+		entProvisioningStep, err = client.ProvisioningStep.Create().
+			SetStepNumber(stepNumber).
+			SetType(provisioningstep.TypeAnsible).
+			SetProvisioningStepToAnsible(entAnsible).
+			SetProvisioningStepToStatus(entStatus).
+			SetProvisioningStepToProvisionedHost(pHost).
+			Save(ctx)
+		if err != nil {
+			logger.Log.WithFields(logrus.Fields{
+				"pHost":               pHost.ID,
+				"pHost.HCLID":         entHost.HclID,
+				"pHost.SubnetIP":      pHost.SubnetIP,
+				"stepNumber":          stepNumber,
+				"prevPlan":            prevPlan.ID,
+				"prevPlan.Type":       prevPlan.Type,
+				"prevPlan.StepNumber": prevPlan.StepNumber,
+			}).Errorf("Failed to Create Provisioning Step for Ansible %v. Err: %v", hclID, err)
+			return nil, err
+		}
+		if RenderFiles {
+			filePath, err := renderAnsible(ctx, client, logger, entProvisioningStep)
 			if err != nil {
 				return nil, err
 			}
@@ -1096,24 +1100,12 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 				}
 			}
 		}
-	}
-
-	entPlanStatus, err := createPlanningStatus(ctx, client, logger, status.StatusForPlan)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = client.Plan.Create().
-		AddPrevPlan(prevPlan).
-		SetType(plan.TypeExecuteStep).
-		SetBuildID(prevPlan.BuildID).
-		SetPlanToProvisioningStep(entProvisioningStep).
-		SetStepNumber(prevPlan.StepNumber + 1).
-		SetPlanToBuild(currentBuild).
-		SetPlanToStatus(entPlanStatus).
-		Save(ctx)
-
-	if err != nil {
+		err = createStepPlan(ctx, client, logger, hclID, stepNumber, pHost, prevPlan, currentBuild, entProvisioningStep)
+		if err != nil {
+			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
+		}
+		return entProvisioningStep, nil
+	} else if err != nil && !ent.IsNotFound(err) {
 		logger.Log.WithFields(logrus.Fields{
 			"pHost":               pHost.ID,
 			"pHost.HCLID":         entHost.HclID,
@@ -1122,12 +1114,49 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			"prevPlan":            prevPlan.ID,
 			"prevPlan.Type":       prevPlan.Type,
 			"prevPlan.StepNumber": prevPlan.StepNumber,
-		}).Errorf("Failed to Create Plan Node for Provisioning Step %v. Err: %v", entProvisioningStep.ID, err)
+		}).Errorf("Failed to Query Ansible %v. Err: %v", hclID, err)
 		return nil, err
 	}
+	logger.Log.WithFields(logrus.Fields{
+		"pHost":               pHost.ID,
+		"pHost.HCLID":         entHost.HclID,
+		"pHost.SubnetIP":      pHost.SubnetIP,
+		"stepNumber":          stepNumber,
+		"prevPlan":            prevPlan.ID,
+		"prevPlan.Type":       prevPlan.Type,
+		"prevPlan.StepNumber": prevPlan.StepNumber,
+	}).Errorf("No Provisioning Steps found for %v. Err: %v", hclID, err)
+	return nil, fmt.Errorf("failed to create provisioning step: unknown step type")
+}
 
-	return entProvisioningStep, nil
+func createStepPlan(ctx context.Context, client *ent.Client, logger *logging.Logger, hclID string, stepNumber int, pHost *ent.ProvisionedHost, prevPlan *ent.Plan, entBuild *ent.Build, entProvisioningStep *ent.ProvisioningStep) error {
+	entPlanStatus, err := createPlanningStatus(ctx, client, logger, status.StatusForPlan)
+	if err != nil {
+		return err
+	}
 
+	_, err = client.Plan.Create().
+		AddPrevPlan(prevPlan).
+		SetType(plan.TypeExecuteStep).
+		SetBuildID(prevPlan.BuildID).
+		SetPlanToProvisioningStep(entProvisioningStep).
+		SetStepNumber(prevPlan.StepNumber + 1).
+		SetPlanToBuild(entBuild).
+		SetPlanToStatus(entPlanStatus).
+		Save(ctx)
+
+	if err != nil {
+		logger.Log.WithFields(logrus.Fields{
+			"pHost":               pHost.ID,
+			"pHost.SubnetIP":      pHost.SubnetIP,
+			"stepNumber":          stepNumber,
+			"prevPlan":            prevPlan.ID,
+			"prevPlan.Type":       prevPlan.Type,
+			"prevPlan.StepNumber": prevPlan.StepNumber,
+		}).Errorf("Failed to Create Plan Node for Provisioning Step %v. Err: %v", entProvisioningStep.ID, err)
+		return err
+	}
+	return nil
 }
 
 func renderScript(ctx context.Context, client *ent.Client, logger *logging.Logger, pStep *ent.ProvisioningStep) (string, error) {
