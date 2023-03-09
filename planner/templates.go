@@ -13,6 +13,7 @@ import (
 	"github.com/gen0cide/laforge/ent"
 	"github.com/iancoleman/strcase"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/text/cases"
 )
 
 type TempleteContext struct {
@@ -49,7 +50,7 @@ var TemplateFuncLib = template.FuncMap{
 	"Replace":              strings.Replace,
 	"Repeat":               strings.Repeat,
 	"Split":                strings.Split,
-	"Title":                strings.Title,
+	"Title":                cases.Title,
 	"ToLower":              strings.ToLower,
 	"ToSnake":              strcase.ToSnake,
 	"ToScreamingSnake":     strcase.ToScreamingSnake,

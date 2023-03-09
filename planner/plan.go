@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -1393,7 +1392,7 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 		return "", err
 	}
 	varFileName := path.Join(ansibleFolder, "laforge_vars.yml")
-	err = ioutil.WriteFile(varFileName, data, 0755)
+	err = os.WriteFile(varFileName, data, 0755)
 	if err != nil {
 		logger.Log.Errorf("Failed to create vars file for ansible %v. Err: %v", currentAnsible.HclID, err)
 		return "", err
@@ -1456,7 +1455,7 @@ func CopyDir(src string, dest string) error {
 		return err
 	}
 
-	files, err := ioutil.ReadDir(src)
+	files, err := os.ReadDir(src)
 	if err != nil {
 		return err
 	}
@@ -1474,13 +1473,13 @@ func CopyDir(src string, dest string) error {
 
 		if !f.IsDir() {
 
-			content, err := ioutil.ReadFile(src + "/" + f.Name())
+			content, err := os.ReadFile(src + "/" + f.Name())
 			if err != nil {
 				return err
 
 			}
 
-			err = ioutil.WriteFile(dest+"/"+f.Name(), content, 0755)
+			err = os.WriteFile(dest+"/"+f.Name(), content, 0755)
 			if err != nil {
 				return err
 
