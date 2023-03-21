@@ -30,7 +30,7 @@ type ScheduledStep struct {
 	// Schedule holds the value of the "schedule" field.
 	Schedule string `json:"schedule,omitempty" hcl:"schedule,optional"`
 	// RunAt holds the value of the "run_at" field.
-	RunAt string `json:"run_at,omitempty" hcl:"run_at,optional"`
+	RunAt int64 `json:"run_at,omitempty" hcl:"run_at,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ScheduledStepQuery when eager-loading is set.
 	Edges ScheduledStepEdges `json:"edges"`
@@ -70,7 +70,9 @@ func (*ScheduledStep) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case scheduledstep.FieldHclID, scheduledstep.FieldName, scheduledstep.FieldDescription, scheduledstep.FieldStep, scheduledstep.FieldType, scheduledstep.FieldSchedule, scheduledstep.FieldRunAt:
+		case scheduledstep.FieldRunAt:
+			values[i] = new(sql.NullInt64)
+		case scheduledstep.FieldHclID, scheduledstep.FieldName, scheduledstep.FieldDescription, scheduledstep.FieldStep, scheduledstep.FieldType, scheduledstep.FieldSchedule:
 			values[i] = new(sql.NullString)
 		case scheduledstep.FieldID:
 			values[i] = new(uuid.UUID)
@@ -134,10 +136,10 @@ func (ss *ScheduledStep) assignValues(columns []string, values []interface{}) er
 				ss.Schedule = value.String
 			}
 		case scheduledstep.FieldRunAt:
-			if value, ok := values[i].(*sql.NullString); !ok {
+			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field run_at", values[i])
 			} else if value.Valid {
-				ss.RunAt = value.String
+				ss.RunAt = value.Int64
 			}
 		case scheduledstep.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -192,7 +194,7 @@ func (ss *ScheduledStep) String() string {
 	builder.WriteString(", schedule=")
 	builder.WriteString(ss.Schedule)
 	builder.WriteString(", run_at=")
-	builder.WriteString(ss.RunAt)
+	builder.WriteString(fmt.Sprintf("%v", ss.RunAt))
 	builder.WriteByte(')')
 	return builder.String()
 }

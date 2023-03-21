@@ -41,9 +41,25 @@ func (cc *CompetitionCreate) SetStartTime(i int64) *CompetitionCreate {
 	return cc
 }
 
+// SetNillableStartTime sets the "start_time" field if the given value is not nil.
+func (cc *CompetitionCreate) SetNillableStartTime(i *int64) *CompetitionCreate {
+	if i != nil {
+		cc.SetStartTime(*i)
+	}
+	return cc
+}
+
 // SetStopTime sets the "stop_time" field.
 func (cc *CompetitionCreate) SetStopTime(i int64) *CompetitionCreate {
 	cc.mutation.SetStopTime(i)
+	return cc
+}
+
+// SetNillableStopTime sets the "stop_time" field if the given value is not nil.
+func (cc *CompetitionCreate) SetNillableStopTime(i *int64) *CompetitionCreate {
+	if i != nil {
+		cc.SetStopTime(*i)
+	}
 	return cc
 }
 
@@ -212,12 +228,6 @@ func (cc *CompetitionCreate) check() error {
 	}
 	if _, ok := cc.mutation.RootPassword(); !ok {
 		return &ValidationError{Name: "root_password", err: errors.New(`ent: missing required field "Competition.root_password"`)}
-	}
-	if _, ok := cc.mutation.StartTime(); !ok {
-		return &ValidationError{Name: "start_time", err: errors.New(`ent: missing required field "Competition.start_time"`)}
-	}
-	if _, ok := cc.mutation.StopTime(); !ok {
-		return &ValidationError{Name: "stop_time", err: errors.New(`ent: missing required field "Competition.stop_time"`)}
 	}
 	if _, ok := cc.mutation.Config(); !ok {
 		return &ValidationError{Name: "config", err: errors.New(`ent: missing required field "Competition.config"`)}

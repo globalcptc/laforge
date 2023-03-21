@@ -370,6 +370,20 @@ func StartTimeLTE(v int64) predicate.Competition {
 	})
 }
 
+// StartTimeIsNil applies the IsNil predicate on the "start_time" field.
+func StartTimeIsNil() predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldStartTime)))
+	})
+}
+
+// StartTimeNotNil applies the NotNil predicate on the "start_time" field.
+func StartTimeNotNil() predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldStartTime)))
+	})
+}
+
 // StopTimeEQ applies the EQ predicate on the "stop_time" field.
 func StopTimeEQ(v int64) predicate.Competition {
 	return predicate.Competition(func(s *sql.Selector) {
@@ -431,6 +445,20 @@ func StopTimeLT(v int64) predicate.Competition {
 func StopTimeLTE(v int64) predicate.Competition {
 	return predicate.Competition(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldStopTime), v))
+	})
+}
+
+// StopTimeIsNil applies the IsNil predicate on the "stop_time" field.
+func StopTimeIsNil() predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldStopTime)))
+	})
+}
+
+// StopTimeNotNil applies the NotNil predicate on the "stop_time" field.
+func StopTimeNotNil() predicate.Competition {
+	return predicate.Competition(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldStopTime)))
 	})
 }
 

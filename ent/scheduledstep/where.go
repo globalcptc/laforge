@@ -116,7 +116,7 @@ func Schedule(v string) predicate.ScheduledStep {
 }
 
 // RunAt applies equality check predicate on the "run_at" field. It's identical to RunAtEQ.
-func RunAt(v string) predicate.ScheduledStep {
+func RunAt(v int64) predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldRunAt), v))
 	})
@@ -639,6 +639,20 @@ func ScheduleHasSuffix(v string) predicate.ScheduledStep {
 	})
 }
 
+// ScheduleIsNil applies the IsNil predicate on the "schedule" field.
+func ScheduleIsNil() predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldSchedule)))
+	})
+}
+
+// ScheduleNotNil applies the NotNil predicate on the "schedule" field.
+func ScheduleNotNil() predicate.ScheduledStep {
+	return predicate.ScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldSchedule)))
+	})
+}
+
 // ScheduleEqualFold applies the EqualFold predicate on the "schedule" field.
 func ScheduleEqualFold(v string) predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
@@ -654,21 +668,21 @@ func ScheduleContainsFold(v string) predicate.ScheduledStep {
 }
 
 // RunAtEQ applies the EQ predicate on the "run_at" field.
-func RunAtEQ(v string) predicate.ScheduledStep {
+func RunAtEQ(v int64) predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldRunAt), v))
 	})
 }
 
 // RunAtNEQ applies the NEQ predicate on the "run_at" field.
-func RunAtNEQ(v string) predicate.ScheduledStep {
+func RunAtNEQ(v int64) predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldRunAt), v))
 	})
 }
 
 // RunAtIn applies the In predicate on the "run_at" field.
-func RunAtIn(vs ...string) predicate.ScheduledStep {
+func RunAtIn(vs ...int64) predicate.ScheduledStep {
 	v := make([]interface{}, len(vs))
 	for i := range v {
 		v[i] = vs[i]
@@ -679,7 +693,7 @@ func RunAtIn(vs ...string) predicate.ScheduledStep {
 }
 
 // RunAtNotIn applies the NotIn predicate on the "run_at" field.
-func RunAtNotIn(vs ...string) predicate.ScheduledStep {
+func RunAtNotIn(vs ...int64) predicate.ScheduledStep {
 	v := make([]interface{}, len(vs))
 	for i := range v {
 		v[i] = vs[i]
@@ -690,65 +704,44 @@ func RunAtNotIn(vs ...string) predicate.ScheduledStep {
 }
 
 // RunAtGT applies the GT predicate on the "run_at" field.
-func RunAtGT(v string) predicate.ScheduledStep {
+func RunAtGT(v int64) predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldRunAt), v))
 	})
 }
 
 // RunAtGTE applies the GTE predicate on the "run_at" field.
-func RunAtGTE(v string) predicate.ScheduledStep {
+func RunAtGTE(v int64) predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldRunAt), v))
 	})
 }
 
 // RunAtLT applies the LT predicate on the "run_at" field.
-func RunAtLT(v string) predicate.ScheduledStep {
+func RunAtLT(v int64) predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldRunAt), v))
 	})
 }
 
 // RunAtLTE applies the LTE predicate on the "run_at" field.
-func RunAtLTE(v string) predicate.ScheduledStep {
+func RunAtLTE(v int64) predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldRunAt), v))
 	})
 }
 
-// RunAtContains applies the Contains predicate on the "run_at" field.
-func RunAtContains(v string) predicate.ScheduledStep {
+// RunAtIsNil applies the IsNil predicate on the "run_at" field.
+func RunAtIsNil() predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldRunAt), v))
+		s.Where(sql.IsNull(s.C(FieldRunAt)))
 	})
 }
 
-// RunAtHasPrefix applies the HasPrefix predicate on the "run_at" field.
-func RunAtHasPrefix(v string) predicate.ScheduledStep {
+// RunAtNotNil applies the NotNil predicate on the "run_at" field.
+func RunAtNotNil() predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldRunAt), v))
-	})
-}
-
-// RunAtHasSuffix applies the HasSuffix predicate on the "run_at" field.
-func RunAtHasSuffix(v string) predicate.ScheduledStep {
-	return predicate.ScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldRunAt), v))
-	})
-}
-
-// RunAtEqualFold applies the EqualFold predicate on the "run_at" field.
-func RunAtEqualFold(v string) predicate.ScheduledStep {
-	return predicate.ScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldRunAt), v))
-	})
-}
-
-// RunAtContainsFold applies the ContainsFold predicate on the "run_at" field.
-func RunAtContainsFold(v string) predicate.ScheduledStep {
-	return predicate.ScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldRunAt), v))
+		s.Where(sql.NotNull(s.C(FieldRunAt)))
 	})
 }
 

@@ -264,8 +264,8 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "hcl_id", Type: field.TypeString},
 		{Name: "root_password", Type: field.TypeString},
-		{Name: "start_time", Type: field.TypeInt64},
-		{Name: "stop_time", Type: field.TypeInt64},
+		{Name: "start_time", Type: field.TypeInt64, Nullable: true},
+		{Name: "stop_time", Type: field.TypeInt64, Nullable: true},
 		{Name: "config", Type: field.TypeJSON},
 		{Name: "tags", Type: field.TypeJSON},
 		{Name: "environment_environment_to_competition", Type: field.TypeUUID, Nullable: true},
@@ -1035,8 +1035,8 @@ var (
 		{Name: "description", Type: field.TypeString},
 		{Name: "step", Type: field.TypeString},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"CRON", "RUNONCE"}},
-		{Name: "schedule", Type: field.TypeString},
-		{Name: "run_at", Type: field.TypeString},
+		{Name: "schedule", Type: field.TypeString, Nullable: true},
+		{Name: "run_at", Type: field.TypeInt64, Nullable: true},
 		{Name: "environment_environment_to_scheduled_step", Type: field.TypeUUID, Nullable: true},
 	}
 	// ScheduledStepsTable holds the schema information for the "scheduled_steps" table.

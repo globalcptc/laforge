@@ -50,9 +50,23 @@ func (cu *CompetitionUpdate) SetStartTime(i int64) *CompetitionUpdate {
 	return cu
 }
 
+// SetNillableStartTime sets the "start_time" field if the given value is not nil.
+func (cu *CompetitionUpdate) SetNillableStartTime(i *int64) *CompetitionUpdate {
+	if i != nil {
+		cu.SetStartTime(*i)
+	}
+	return cu
+}
+
 // AddStartTime adds i to the "start_time" field.
 func (cu *CompetitionUpdate) AddStartTime(i int64) *CompetitionUpdate {
 	cu.mutation.AddStartTime(i)
+	return cu
+}
+
+// ClearStartTime clears the value of the "start_time" field.
+func (cu *CompetitionUpdate) ClearStartTime() *CompetitionUpdate {
+	cu.mutation.ClearStartTime()
 	return cu
 }
 
@@ -63,9 +77,23 @@ func (cu *CompetitionUpdate) SetStopTime(i int64) *CompetitionUpdate {
 	return cu
 }
 
+// SetNillableStopTime sets the "stop_time" field if the given value is not nil.
+func (cu *CompetitionUpdate) SetNillableStopTime(i *int64) *CompetitionUpdate {
+	if i != nil {
+		cu.SetStopTime(*i)
+	}
+	return cu
+}
+
 // AddStopTime adds i to the "stop_time" field.
 func (cu *CompetitionUpdate) AddStopTime(i int64) *CompetitionUpdate {
 	cu.mutation.AddStopTime(i)
+	return cu
+}
+
+// ClearStopTime clears the value of the "stop_time" field.
+func (cu *CompetitionUpdate) ClearStopTime() *CompetitionUpdate {
+	cu.mutation.ClearStopTime()
 	return cu
 }
 
@@ -283,6 +311,12 @@ func (cu *CompetitionUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: competition.FieldStartTime,
 		})
 	}
+	if cu.mutation.StartTimeCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Column: competition.FieldStartTime,
+		})
+	}
 	if value, ok := cu.mutation.StopTime(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeInt64,
@@ -294,6 +328,12 @@ func (cu *CompetitionUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
 			Type:   field.TypeInt64,
 			Value:  value,
+			Column: competition.FieldStopTime,
+		})
+	}
+	if cu.mutation.StopTimeCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
 			Column: competition.FieldStopTime,
 		})
 	}
@@ -492,9 +532,23 @@ func (cuo *CompetitionUpdateOne) SetStartTime(i int64) *CompetitionUpdateOne {
 	return cuo
 }
 
+// SetNillableStartTime sets the "start_time" field if the given value is not nil.
+func (cuo *CompetitionUpdateOne) SetNillableStartTime(i *int64) *CompetitionUpdateOne {
+	if i != nil {
+		cuo.SetStartTime(*i)
+	}
+	return cuo
+}
+
 // AddStartTime adds i to the "start_time" field.
 func (cuo *CompetitionUpdateOne) AddStartTime(i int64) *CompetitionUpdateOne {
 	cuo.mutation.AddStartTime(i)
+	return cuo
+}
+
+// ClearStartTime clears the value of the "start_time" field.
+func (cuo *CompetitionUpdateOne) ClearStartTime() *CompetitionUpdateOne {
+	cuo.mutation.ClearStartTime()
 	return cuo
 }
 
@@ -505,9 +559,23 @@ func (cuo *CompetitionUpdateOne) SetStopTime(i int64) *CompetitionUpdateOne {
 	return cuo
 }
 
+// SetNillableStopTime sets the "stop_time" field if the given value is not nil.
+func (cuo *CompetitionUpdateOne) SetNillableStopTime(i *int64) *CompetitionUpdateOne {
+	if i != nil {
+		cuo.SetStopTime(*i)
+	}
+	return cuo
+}
+
 // AddStopTime adds i to the "stop_time" field.
 func (cuo *CompetitionUpdateOne) AddStopTime(i int64) *CompetitionUpdateOne {
 	cuo.mutation.AddStopTime(i)
+	return cuo
+}
+
+// ClearStopTime clears the value of the "stop_time" field.
+func (cuo *CompetitionUpdateOne) ClearStopTime() *CompetitionUpdateOne {
+	cuo.mutation.ClearStopTime()
 	return cuo
 }
 
@@ -755,6 +823,12 @@ func (cuo *CompetitionUpdateOne) sqlSave(ctx context.Context) (_node *Competitio
 			Column: competition.FieldStartTime,
 		})
 	}
+	if cuo.mutation.StartTimeCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Column: competition.FieldStartTime,
+		})
+	}
 	if value, ok := cuo.mutation.StopTime(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeInt64,
@@ -766,6 +840,12 @@ func (cuo *CompetitionUpdateOne) sqlSave(ctx context.Context) (_node *Competitio
 		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
 			Type:   field.TypeInt64,
 			Value:  value,
+			Column: competition.FieldStopTime,
+		})
+	}
+	if cuo.mutation.StopTimeCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
 			Column: competition.FieldStopTime,
 		})
 	}

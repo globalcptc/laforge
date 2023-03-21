@@ -28,8 +28,10 @@ func (ScheduledStep) Fields() []ent.Field {
 		field.Enum("type").Values("CRON", "RUNONCE").
 			StructTag(`hcl:"type,attr"`),
 		field.String("schedule").
+			Optional().
 			StructTag(`hcl:"schedule,optional"`),
-		field.String("run_at").
+		field.Int64("run_at").
+			Optional().
 			StructTag(`hcl:"run_at,optional"`),
 	}
 }

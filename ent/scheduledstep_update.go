@@ -65,9 +65,44 @@ func (ssu *ScheduledStepUpdate) SetSchedule(s string) *ScheduledStepUpdate {
 	return ssu
 }
 
+// SetNillableSchedule sets the "schedule" field if the given value is not nil.
+func (ssu *ScheduledStepUpdate) SetNillableSchedule(s *string) *ScheduledStepUpdate {
+	if s != nil {
+		ssu.SetSchedule(*s)
+	}
+	return ssu
+}
+
+// ClearSchedule clears the value of the "schedule" field.
+func (ssu *ScheduledStepUpdate) ClearSchedule() *ScheduledStepUpdate {
+	ssu.mutation.ClearSchedule()
+	return ssu
+}
+
 // SetRunAt sets the "run_at" field.
-func (ssu *ScheduledStepUpdate) SetRunAt(s string) *ScheduledStepUpdate {
-	ssu.mutation.SetRunAt(s)
+func (ssu *ScheduledStepUpdate) SetRunAt(i int64) *ScheduledStepUpdate {
+	ssu.mutation.ResetRunAt()
+	ssu.mutation.SetRunAt(i)
+	return ssu
+}
+
+// SetNillableRunAt sets the "run_at" field if the given value is not nil.
+func (ssu *ScheduledStepUpdate) SetNillableRunAt(i *int64) *ScheduledStepUpdate {
+	if i != nil {
+		ssu.SetRunAt(*i)
+	}
+	return ssu
+}
+
+// AddRunAt adds i to the "run_at" field.
+func (ssu *ScheduledStepUpdate) AddRunAt(i int64) *ScheduledStepUpdate {
+	ssu.mutation.AddRunAt(i)
+	return ssu
+}
+
+// ClearRunAt clears the value of the "run_at" field.
+func (ssu *ScheduledStepUpdate) ClearRunAt() *ScheduledStepUpdate {
+	ssu.mutation.ClearRunAt()
 	return ssu
 }
 
@@ -231,10 +266,29 @@ func (ssu *ScheduledStepUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Column: scheduledstep.FieldSchedule,
 		})
 	}
+	if ssu.mutation.ScheduleCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Column: scheduledstep.FieldSchedule,
+		})
+	}
 	if value, ok := ssu.mutation.RunAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
+			Type:   field.TypeInt64,
 			Value:  value,
+			Column: scheduledstep.FieldRunAt,
+		})
+	}
+	if value, ok := ssu.mutation.AddedRunAt(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: scheduledstep.FieldRunAt,
+		})
+	}
+	if ssu.mutation.RunAtCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
 			Column: scheduledstep.FieldRunAt,
 		})
 	}
@@ -328,9 +382,44 @@ func (ssuo *ScheduledStepUpdateOne) SetSchedule(s string) *ScheduledStepUpdateOn
 	return ssuo
 }
 
+// SetNillableSchedule sets the "schedule" field if the given value is not nil.
+func (ssuo *ScheduledStepUpdateOne) SetNillableSchedule(s *string) *ScheduledStepUpdateOne {
+	if s != nil {
+		ssuo.SetSchedule(*s)
+	}
+	return ssuo
+}
+
+// ClearSchedule clears the value of the "schedule" field.
+func (ssuo *ScheduledStepUpdateOne) ClearSchedule() *ScheduledStepUpdateOne {
+	ssuo.mutation.ClearSchedule()
+	return ssuo
+}
+
 // SetRunAt sets the "run_at" field.
-func (ssuo *ScheduledStepUpdateOne) SetRunAt(s string) *ScheduledStepUpdateOne {
-	ssuo.mutation.SetRunAt(s)
+func (ssuo *ScheduledStepUpdateOne) SetRunAt(i int64) *ScheduledStepUpdateOne {
+	ssuo.mutation.ResetRunAt()
+	ssuo.mutation.SetRunAt(i)
+	return ssuo
+}
+
+// SetNillableRunAt sets the "run_at" field if the given value is not nil.
+func (ssuo *ScheduledStepUpdateOne) SetNillableRunAt(i *int64) *ScheduledStepUpdateOne {
+	if i != nil {
+		ssuo.SetRunAt(*i)
+	}
+	return ssuo
+}
+
+// AddRunAt adds i to the "run_at" field.
+func (ssuo *ScheduledStepUpdateOne) AddRunAt(i int64) *ScheduledStepUpdateOne {
+	ssuo.mutation.AddRunAt(i)
+	return ssuo
+}
+
+// ClearRunAt clears the value of the "run_at" field.
+func (ssuo *ScheduledStepUpdateOne) ClearRunAt() *ScheduledStepUpdateOne {
+	ssuo.mutation.ClearRunAt()
 	return ssuo
 }
 
@@ -524,10 +613,29 @@ func (ssuo *ScheduledStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedul
 			Column: scheduledstep.FieldSchedule,
 		})
 	}
+	if ssuo.mutation.ScheduleCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Column: scheduledstep.FieldSchedule,
+		})
+	}
 	if value, ok := ssuo.mutation.RunAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
+			Type:   field.TypeInt64,
 			Value:  value,
+			Column: scheduledstep.FieldRunAt,
+		})
+	}
+	if value, ok := ssuo.mutation.AddedRunAt(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
+			Value:  value,
+			Column: scheduledstep.FieldRunAt,
+		})
+	}
+	if ssuo.mutation.RunAtCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt64,
 			Column: scheduledstep.FieldRunAt,
 		})
 	}

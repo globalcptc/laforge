@@ -8595,10 +8595,24 @@ func (m *CompetitionMutation) AddedStartTime() (r int64, exists bool) {
 	return *v, true
 }
 
+// ClearStartTime clears the value of the "start_time" field.
+func (m *CompetitionMutation) ClearStartTime() {
+	m.start_time = nil
+	m.addstart_time = nil
+	m.clearedFields[competition.FieldStartTime] = struct{}{}
+}
+
+// StartTimeCleared returns if the "start_time" field was cleared in this mutation.
+func (m *CompetitionMutation) StartTimeCleared() bool {
+	_, ok := m.clearedFields[competition.FieldStartTime]
+	return ok
+}
+
 // ResetStartTime resets all changes to the "start_time" field.
 func (m *CompetitionMutation) ResetStartTime() {
 	m.start_time = nil
 	m.addstart_time = nil
+	delete(m.clearedFields, competition.FieldStartTime)
 }
 
 // SetStopTime sets the "stop_time" field.
@@ -8651,10 +8665,24 @@ func (m *CompetitionMutation) AddedStopTime() (r int64, exists bool) {
 	return *v, true
 }
 
+// ClearStopTime clears the value of the "stop_time" field.
+func (m *CompetitionMutation) ClearStopTime() {
+	m.stop_time = nil
+	m.addstop_time = nil
+	m.clearedFields[competition.FieldStopTime] = struct{}{}
+}
+
+// StopTimeCleared returns if the "stop_time" field was cleared in this mutation.
+func (m *CompetitionMutation) StopTimeCleared() bool {
+	_, ok := m.clearedFields[competition.FieldStopTime]
+	return ok
+}
+
 // ResetStopTime resets all changes to the "stop_time" field.
 func (m *CompetitionMutation) ResetStopTime() {
 	m.stop_time = nil
 	m.addstop_time = nil
+	delete(m.clearedFields, competition.FieldStopTime)
 }
 
 // SetConfig sets the "config" field.
@@ -9062,7 +9090,14 @@ func (m *CompetitionMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *CompetitionMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(competition.FieldStartTime) {
+		fields = append(fields, competition.FieldStartTime)
+	}
+	if m.FieldCleared(competition.FieldStopTime) {
+		fields = append(fields, competition.FieldStopTime)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -9075,6 +9110,14 @@ func (m *CompetitionMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *CompetitionMutation) ClearField(name string) error {
+	switch name {
+	case competition.FieldStartTime:
+		m.ClearStartTime()
+		return nil
+	case competition.FieldStopTime:
+		m.ClearStopTime()
+		return nil
+	}
 	return fmt.Errorf("unknown Competition nullable field %s", name)
 }
 
@@ -29217,7 +29260,8 @@ type ScheduledStepMutation struct {
 	step                               *string
 	_type                              *scheduledstep.Type
 	schedule                           *string
-	run_at                             *string
+	run_at                             *int64
+	addrun_at                          *int64
 	clearedFields                      map[string]struct{}
 	_ScheduledStepToEnvironment        *uuid.UUID
 	cleared_ScheduledStepToEnvironment bool
@@ -29541,18 +29585,32 @@ func (m *ScheduledStepMutation) OldSchedule(ctx context.Context) (v string, err 
 	return oldValue.Schedule, nil
 }
 
+// ClearSchedule clears the value of the "schedule" field.
+func (m *ScheduledStepMutation) ClearSchedule() {
+	m.schedule = nil
+	m.clearedFields[scheduledstep.FieldSchedule] = struct{}{}
+}
+
+// ScheduleCleared returns if the "schedule" field was cleared in this mutation.
+func (m *ScheduledStepMutation) ScheduleCleared() bool {
+	_, ok := m.clearedFields[scheduledstep.FieldSchedule]
+	return ok
+}
+
 // ResetSchedule resets all changes to the "schedule" field.
 func (m *ScheduledStepMutation) ResetSchedule() {
 	m.schedule = nil
+	delete(m.clearedFields, scheduledstep.FieldSchedule)
 }
 
 // SetRunAt sets the "run_at" field.
-func (m *ScheduledStepMutation) SetRunAt(s string) {
-	m.run_at = &s
+func (m *ScheduledStepMutation) SetRunAt(i int64) {
+	m.run_at = &i
+	m.addrun_at = nil
 }
 
 // RunAt returns the value of the "run_at" field in the mutation.
-func (m *ScheduledStepMutation) RunAt() (r string, exists bool) {
+func (m *ScheduledStepMutation) RunAt() (r int64, exists bool) {
 	v := m.run_at
 	if v == nil {
 		return
@@ -29563,7 +29621,7 @@ func (m *ScheduledStepMutation) RunAt() (r string, exists bool) {
 // OldRunAt returns the old "run_at" field's value of the ScheduledStep entity.
 // If the ScheduledStep object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ScheduledStepMutation) OldRunAt(ctx context.Context) (v string, err error) {
+func (m *ScheduledStepMutation) OldRunAt(ctx context.Context) (v int64, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldRunAt is only allowed on UpdateOne operations")
 	}
@@ -29577,9 +29635,42 @@ func (m *ScheduledStepMutation) OldRunAt(ctx context.Context) (v string, err err
 	return oldValue.RunAt, nil
 }
 
+// AddRunAt adds i to the "run_at" field.
+func (m *ScheduledStepMutation) AddRunAt(i int64) {
+	if m.addrun_at != nil {
+		*m.addrun_at += i
+	} else {
+		m.addrun_at = &i
+	}
+}
+
+// AddedRunAt returns the value that was added to the "run_at" field in this mutation.
+func (m *ScheduledStepMutation) AddedRunAt() (r int64, exists bool) {
+	v := m.addrun_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearRunAt clears the value of the "run_at" field.
+func (m *ScheduledStepMutation) ClearRunAt() {
+	m.run_at = nil
+	m.addrun_at = nil
+	m.clearedFields[scheduledstep.FieldRunAt] = struct{}{}
+}
+
+// RunAtCleared returns if the "run_at" field was cleared in this mutation.
+func (m *ScheduledStepMutation) RunAtCleared() bool {
+	_, ok := m.clearedFields[scheduledstep.FieldRunAt]
+	return ok
+}
+
 // ResetRunAt resets all changes to the "run_at" field.
 func (m *ScheduledStepMutation) ResetRunAt() {
 	m.run_at = nil
+	m.addrun_at = nil
+	delete(m.clearedFields, scheduledstep.FieldRunAt)
 }
 
 // SetScheduledStepToEnvironmentID sets the "ScheduledStepToEnvironment" edge to the Environment entity by id.
@@ -29759,7 +29850,7 @@ func (m *ScheduledStepMutation) SetField(name string, value ent.Value) error {
 		m.SetSchedule(v)
 		return nil
 	case scheduledstep.FieldRunAt:
-		v, ok := value.(string)
+		v, ok := value.(int64)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -29772,13 +29863,21 @@ func (m *ScheduledStepMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ScheduledStepMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addrun_at != nil {
+		fields = append(fields, scheduledstep.FieldRunAt)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ScheduledStepMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case scheduledstep.FieldRunAt:
+		return m.AddedRunAt()
+	}
 	return nil, false
 }
 
@@ -29787,6 +29886,13 @@ func (m *ScheduledStepMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ScheduledStepMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case scheduledstep.FieldRunAt:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRunAt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ScheduledStep numeric field %s", name)
 }
@@ -29794,7 +29900,14 @@ func (m *ScheduledStepMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *ScheduledStepMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(scheduledstep.FieldSchedule) {
+		fields = append(fields, scheduledstep.FieldSchedule)
+	}
+	if m.FieldCleared(scheduledstep.FieldRunAt) {
+		fields = append(fields, scheduledstep.FieldRunAt)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -29807,6 +29920,14 @@ func (m *ScheduledStepMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *ScheduledStepMutation) ClearField(name string) error {
+	switch name {
+	case scheduledstep.FieldSchedule:
+		m.ClearSchedule()
+		return nil
+	case scheduledstep.FieldRunAt:
+		m.ClearRunAt()
+		return nil
+	}
 	return fmt.Errorf("unknown ScheduledStep nullable field %s", name)
 }
 

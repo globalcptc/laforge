@@ -57,9 +57,25 @@ func (ssc *ScheduledStepCreate) SetSchedule(s string) *ScheduledStepCreate {
 	return ssc
 }
 
+// SetNillableSchedule sets the "schedule" field if the given value is not nil.
+func (ssc *ScheduledStepCreate) SetNillableSchedule(s *string) *ScheduledStepCreate {
+	if s != nil {
+		ssc.SetSchedule(*s)
+	}
+	return ssc
+}
+
 // SetRunAt sets the "run_at" field.
-func (ssc *ScheduledStepCreate) SetRunAt(s string) *ScheduledStepCreate {
-	ssc.mutation.SetRunAt(s)
+func (ssc *ScheduledStepCreate) SetRunAt(i int64) *ScheduledStepCreate {
+	ssc.mutation.SetRunAt(i)
+	return ssc
+}
+
+// SetNillableRunAt sets the "run_at" field if the given value is not nil.
+func (ssc *ScheduledStepCreate) SetNillableRunAt(i *int64) *ScheduledStepCreate {
+	if i != nil {
+		ssc.SetRunAt(*i)
+	}
 	return ssc
 }
 
@@ -201,12 +217,6 @@ func (ssc *ScheduledStepCreate) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ScheduledStep.type": %w`, err)}
 		}
 	}
-	if _, ok := ssc.mutation.Schedule(); !ok {
-		return &ValidationError{Name: "schedule", err: errors.New(`ent: missing required field "ScheduledStep.schedule"`)}
-	}
-	if _, ok := ssc.mutation.RunAt(); !ok {
-		return &ValidationError{Name: "run_at", err: errors.New(`ent: missing required field "ScheduledStep.run_at"`)}
-	}
 	return nil
 }
 
@@ -293,7 +303,7 @@ func (ssc *ScheduledStepCreate) createSpec() (*ScheduledStep, *sqlgraph.CreateSp
 	}
 	if value, ok := ssc.mutation.RunAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
+			Type:   field.TypeInt64,
 			Value:  value,
 			Column: scheduledstep.FieldRunAt,
 		})

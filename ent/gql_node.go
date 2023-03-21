@@ -3361,7 +3361,7 @@ func (ss *ScheduledStep) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Fields[6] = &Field{
-		Type:  "string",
+		Type:  "int64",
 		Name:  "run_at",
 		Value: string(buf),
 	}
