@@ -25,6 +25,7 @@ import (
 	"github.com/gen0cide/laforge/ent/identity"
 	"github.com/gen0cide/laforge/ent/includednetwork"
 	"github.com/gen0cide/laforge/ent/network"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/loader/include"
 	"github.com/gen0cide/laforge/logging"
@@ -50,33 +51,35 @@ type fileGlobResolver struct {
 
 // DefinedConfigs is the stuct to hold in all the loading for hcl
 type DefinedConfigs struct {
-	Filename            string
-	BaseDir             string                       `hcl:"base_dir,optional" json:"base_dir,omitempty"`
-	IncludePaths        []*Include                   `hcl:"include,block" json:"include_paths,omitempty"`
-	DefinedCompetitions []*ent.Competition           `hcl:"competition,block" json:"competitions,omitempty"`
-	DefinedHosts        []*ent.Host                  `hcl:"host,block" json:"hosts,omitempty"`
-	DefinedNetworks     []*ent.Network               `hcl:"network,block" json:"networks,omitempty"`
-	DefinedScripts      []*ent.Script                `hcl:"script,block" json:"scripts,omitempty"`
-	DefinedCommands     []*ent.Command               `hcl:"command,block" json:"defined_commands,omitempty"`
-	DefinedDNSRecords   []*ent.DNSRecord             `hcl:"dns_record,block" json:"defined_dns_records,omitempty"`
-	DefinedEnvironments []*ent.Environment           `hcl:"environment,block" json:"environments,omitempty"`
-	DefinedFileDownload []*ent.FileDownload          `hcl:"file_download,block" json:"file_download,omitempty"`
-	DefinedFileDelete   []*ent.FileDelete            `hcl:"file_delete,block" json:"file_delete,omitempty"`
-	DefinedFileExtract  []*ent.FileExtract           `hcl:"file_extract,block" json:"file_extract,omitempty"`
-	DefinedIdentities   []*ent.Identity              `hcl:"identity,block" json:"identities,omitempty"`
-	DefinedAnsible      []*ent.Ansible               `hcl:"ansible,block" json:"ansible,omitempty"`
-	Competitions        map[string]*ent.Competition  `json:"-"`
-	Hosts               map[string]*ent.Host         `json:"-"`
-	Networks            map[string]*ent.Network      `json:"-"`
-	Scripts             map[string]*ent.Script       `json:"-"`
-	Commands            map[string]*ent.Command      `json:"-"`
-	DNSRecords          map[string]*ent.DNSRecord    `json:"-"`
-	Environments        map[string]*ent.Environment  `json:"-"`
-	FileDownload        map[string]*ent.FileDownload `json:"-"`
-	FileDelete          map[string]*ent.FileDelete   `json:"-"`
-	FileExtract         map[string]*ent.FileExtract  `json:"-"`
-	Identities          map[string]*ent.Identity     `json:"-"`
-	Ansible             map[string]*ent.Ansible      `json:"-"`
+	Filename              string
+	BaseDir               string                        `hcl:"base_dir,optional" json:"base_dir,omitempty"`
+	IncludePaths          []*Include                    `hcl:"include,block" json:"include_paths,omitempty"`
+	DefinedCompetitions   []*ent.Competition            `hcl:"competition,block" json:"competitions,omitempty"`
+	DefinedHosts          []*ent.Host                   `hcl:"host,block" json:"hosts,omitempty"`
+	DefinedNetworks       []*ent.Network                `hcl:"network,block" json:"networks,omitempty"`
+	DefinedScripts        []*ent.Script                 `hcl:"script,block" json:"scripts,omitempty"`
+	DefinedCommands       []*ent.Command                `hcl:"command,block" json:"defined_commands,omitempty"`
+	DefinedDNSRecords     []*ent.DNSRecord              `hcl:"dns_record,block" json:"defined_dns_records,omitempty"`
+	DefinedEnvironments   []*ent.Environment            `hcl:"environment,block" json:"environments,omitempty"`
+	DefinedFileDownload   []*ent.FileDownload           `hcl:"file_download,block" json:"file_download,omitempty"`
+	DefinedFileDelete     []*ent.FileDelete             `hcl:"file_delete,block" json:"file_delete,omitempty"`
+	DefinedFileExtract    []*ent.FileExtract            `hcl:"file_extract,block" json:"file_extract,omitempty"`
+	DefinedIdentities     []*ent.Identity               `hcl:"identity,block" json:"identities,omitempty"`
+	DefinedAnsible        []*ent.Ansible                `hcl:"ansible,block" json:"ansible,omitempty"`
+	DefinedScheduledSteps []*ent.ScheduledStep          `hcl:"schedule_step,block" json:"schedule_step,omitempty"`
+	Competitions          map[string]*ent.Competition   `json:"-"`
+	Hosts                 map[string]*ent.Host          `json:"-"`
+	Networks              map[string]*ent.Network       `json:"-"`
+	Scripts               map[string]*ent.Script        `json:"-"`
+	Commands              map[string]*ent.Command       `json:"-"`
+	DNSRecords            map[string]*ent.DNSRecord     `json:"-"`
+	Environments          map[string]*ent.Environment   `json:"-"`
+	FileDownload          map[string]*ent.FileDownload  `json:"-"`
+	FileDelete            map[string]*ent.FileDelete    `json:"-"`
+	FileExtract           map[string]*ent.FileExtract   `json:"-"`
+	Identities            map[string]*ent.Identity      `json:"-"`
+	Ansible               map[string]*ent.Ansible       `json:"-"`
+	ScheduledSteps        map[string]*ent.ScheduledStep `json:"-"`
 }
 
 // Loader defines the Laforge configuration loader object
@@ -93,6 +96,7 @@ type Loader struct {
 
 // FileGlobResolver is a modified FileResolver in the HCLv2 include extension that accounts for globbed
 // includes:
+//
 //	include {
 //		path = "./foo/*.laforge"
 //	}
@@ -246,19 +250,20 @@ func NewLoader() *Loader {
 
 func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 	combinedConfigs := &DefinedConfigs{
-		Filename:     l.SourceFile,
-		Competitions: map[string]*ent.Competition{},
-		Hosts:        map[string]*ent.Host{},
-		Networks:     map[string]*ent.Network{},
-		Scripts:      map[string]*ent.Script{},
-		Commands:     map[string]*ent.Command{},
-		DNSRecords:   map[string]*ent.DNSRecord{},
-		Environments: map[string]*ent.Environment{},
-		FileDownload: map[string]*ent.FileDownload{},
-		FileDelete:   map[string]*ent.FileDelete{},
-		FileExtract:  map[string]*ent.FileExtract{},
-		Identities:   map[string]*ent.Identity{},
-		Ansible:      map[string]*ent.Ansible{},
+		Filename:       l.SourceFile,
+		Competitions:   map[string]*ent.Competition{},
+		Hosts:          map[string]*ent.Host{},
+		Networks:       map[string]*ent.Network{},
+		Scripts:        map[string]*ent.Script{},
+		Commands:       map[string]*ent.Command{},
+		DNSRecords:     map[string]*ent.DNSRecord{},
+		Environments:   map[string]*ent.Environment{},
+		FileDownload:   map[string]*ent.FileDownload{},
+		FileDelete:     map[string]*ent.FileDelete{},
+		FileExtract:    map[string]*ent.FileExtract{},
+		Identities:     map[string]*ent.Identity{},
+		Ansible:        map[string]*ent.Ansible{},
+		ScheduledSteps: map[string]*ent.ScheduledStep{},
 	}
 	for _, filename := range filenames {
 		element := l.ConfigMap[filename]
@@ -359,6 +364,13 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 			_, found := combinedConfigs.Ansible[x.HclID]
 			if !found {
 				combinedConfigs.Ansible[x.HclID] = x
+				continue
+			}
+		}
+		for _, x := range element.DefinedScheduledSteps {
+			_, found := combinedConfigs.ScheduledSteps[x.HclID]
+			if !found {
+				combinedConfigs.ScheduledSteps[x.HclID] = x
 				continue
 			}
 		}
@@ -481,6 +493,12 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			log.Log.Errorf("Error loading in Ansible into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
+		returnedScheduledSteps, err := createScheduledStep(txClient, ctx, log, loadedConfig.ScheduledSteps, cEnviroment.HclID)
+		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in Scheduled Step into env: %v, Err: %v", cEnviroment.HclID, err)
+			return nil, err
+		}
 		// returnedHostDependencies is empty if ran once but ok when ran multiple times
 		returnedHosts, returnedHostDependencies, err := createHosts(txClient, ctx, log, loadedConfig.Hosts, cEnviroment.HclID, environmentHosts)
 		if err != nil {
@@ -528,6 +546,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 					AddEnvironmentToIncludedNetwork(returnedIncludedNetworks...).
 					AddEnvironmentToDNS(returnedDNS...).
 					AddEnvironmentToAnsible(returnedAnsible...).
+					AddEnvironmentToScheduledStep(returnedScheduledSteps...).
 					Save(ctx)
 				if err != nil {
 					err = rollback(txClient, err)
@@ -571,6 +590,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			ClearEnvironmentToDNS().
 			ClearEnvironmentToHost().
 			ClearEnvironmentToAnsible().
+			ClearEnvironmentToScheduledStep().
 			Save(ctx)
 		if err != nil {
 			err = rollback(txClient, err)
@@ -592,6 +612,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			AddEnvironmentToHostDependency(returnedHostDependencies...).
 			AddEnvironmentToIncludedNetwork(returnedIncludedNetworks...).
 			AddEnvironmentToDNS(returnedDNS...).
+			AddEnvironmentToAnsible(returnedAnsible...).
 			AddEnvironmentToAnsible(returnedAnsible...).
 			Save(ctx)
 		if err != nil {
@@ -732,6 +753,7 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 					SetOS(cHost.OS).
 					SetOverridePassword(cHost.OverridePassword).
 					SetProvisionSteps(cHost.ProvisionSteps).
+					SetScheduledSteps(cHost.ScheduledSteps).
 					SetTags(cHost.Tags).
 					SetUserGroups(cHost.UserGroups).
 					SetVars(cHost.Vars).
@@ -757,6 +779,7 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 				SetOS(cHost.OS).
 				SetOverridePassword(cHost.OverridePassword).
 				SetProvisionSteps(cHost.ProvisionSteps).
+				SetScheduledSteps(cHost.ScheduledSteps).
 				SetTags(cHost.Tags).
 				SetUserGroups(cHost.UserGroups).
 				SetVars(cHost.Vars).
@@ -982,6 +1005,60 @@ func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 		returnedAnsible = append(returnedAnsible, dbAnsible...)
 	}
 	return returnedAnsible, nil
+}
+
+func createScheduledStep(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configScheduledSteps map[string]*ent.ScheduledStep, envHclID string) ([]*ent.ScheduledStep, error) {
+	bulk := []*ent.ScheduledStepCreate{}
+	returnedScheduledSteps := []*ent.ScheduledStep{}
+	for _, cScheduledStep := range configScheduledSteps {
+		log.Log.Debugf("Creating Scheduled Step: %v for Env: %v", cScheduledStep.HclID, envHclID)
+		entScheduledStep, err := txClient.ScheduledStep.
+			Query().
+			Where(
+				scheduledstep.And(
+					scheduledstep.HclIDEQ(cScheduledStep.HclID),
+					scheduledstep.HasScheduledStepToEnvironmentWith(environment.HclIDEQ(envHclID)),
+				),
+			).
+			Only(ctx)
+		if err != nil {
+			if err == err.(*ent.NotFoundError) {
+				createdQuery := txClient.ScheduledStep.Create().
+					SetName(cScheduledStep.Name).
+					SetHclID(cScheduledStep.HclID).
+					SetDescription(cScheduledStep.Description).
+					SetStep(cScheduledStep.Step).
+					SetType(cScheduledStep.Type).
+					SetSchedule(cScheduledStep.Schedule).
+					SetRunAt(cScheduledStep.RunAt)
+				bulk = append(bulk, createdQuery)
+				continue
+			}
+		}
+		entScheduledStep, err = entScheduledStep.Update().
+			SetName(cScheduledStep.Name).
+			SetHclID(cScheduledStep.HclID).
+			SetDescription(cScheduledStep.Description).
+			SetStep(cScheduledStep.Step).
+			SetType(cScheduledStep.Type).
+			SetSchedule(cScheduledStep.Schedule).
+			SetRunAt(cScheduledStep.RunAt).
+			Save(ctx)
+		if err != nil {
+			log.Log.Errorf("Failed to Update Scheduled Step %v. Err: %v", cScheduledStep.HclID, err)
+			return nil, err
+		}
+		returnedScheduledSteps = append(returnedScheduledSteps, entScheduledStep)
+	}
+	if len(bulk) > 0 {
+		dbAnsible, err := txClient.ScheduledStep.CreateBulk(bulk...).Save(ctx)
+		if err != nil {
+			log.Log.Errorf("Failed to create bulk Scheduled Step. Err: %v", err)
+			return nil, err
+		}
+		returnedScheduledSteps = append(returnedScheduledSteps, dbAnsible...)
+	}
+	return returnedScheduledSteps, nil
 }
 
 func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configCommands map[string]*ent.Command, envHclID string) ([]*ent.Command, error) {
