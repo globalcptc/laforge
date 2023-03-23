@@ -71,6 +71,8 @@ const (
 	EdgeEnvironmentToRepository = "EnvironmentToRepository"
 	// EdgeEnvironmentToServerTask holds the string denoting the environmenttoservertask edge name in mutations.
 	EdgeEnvironmentToServerTask = "EnvironmentToServerTask"
+	// EdgeEnvironmentToValidation holds the string denoting the environmenttovalidation edge name in mutations.
+	EdgeEnvironmentToValidation = "EnvironmentToValidation"
 	// Table holds the table name of the environment in the database.
 	Table = "environments"
 	// EnvironmentToUserTable is the table that holds the EnvironmentToUser relation/edge. The primary key declared below.
@@ -198,6 +200,11 @@ const (
 	EnvironmentToServerTaskInverseTable = "server_tasks"
 	// EnvironmentToServerTaskColumn is the table column denoting the EnvironmentToServerTask relation/edge.
 	EnvironmentToServerTaskColumn = "server_task_server_task_to_environment"
+	// EnvironmentToValidationTable is the table that holds the EnvironmentToValidation relation/edge. The primary key declared below.
+	EnvironmentToValidationTable = "environment_EnvironmentToValidation"
+	// EnvironmentToValidationInverseTable is the table name for the Validation entity.
+	// It exists in this package in order to avoid circular dependency with the "validation" package.
+	EnvironmentToValidationInverseTable = "validations"
 )
 
 // Columns holds all SQL columns for environment fields.
@@ -229,6 +236,9 @@ var (
 	// EnvironmentToRepositoryPrimaryKey and EnvironmentToRepositoryColumn2 are the table columns denoting the
 	// primary key for the EnvironmentToRepository relation (M2M).
 	EnvironmentToRepositoryPrimaryKey = []string{"repository_id", "environment_id"}
+	// EnvironmentToValidationPrimaryKey and EnvironmentToValidationColumn2 are the table columns denoting the
+	// primary key for the EnvironmentToValidation relation (M2M).
+	EnvironmentToValidationPrimaryKey = []string{"environment_id", "validation_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).

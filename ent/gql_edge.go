@@ -476,6 +476,14 @@ func (e *Environment) EnvironmentToServerTask(ctx context.Context) ([]*ServerTas
 	return result, err
 }
 
+func (e *Environment) EnvironmentToValidation(ctx context.Context) ([]*Validation, error) {
+	result, err := e.Edges.EnvironmentToValidationOrErr()
+	if IsNotLoaded(err) {
+		result, err = e.QueryEnvironmentToValidation().All(ctx)
+	}
+	return result, err
+}
+
 func (fd *FileDelete) FileDeleteToEnvironment(ctx context.Context) (*Environment, error) {
 	result, err := fd.Edges.FileDeleteToEnvironmentOrErr()
 	if IsNotLoaded(err) {
@@ -1240,6 +1248,14 @@ func (v *Validation) ValidationToScript(ctx context.Context) ([]*Script, error) 
 	result, err := v.Edges.ValidationToScriptOrErr()
 	if IsNotLoaded(err) {
 		result, err = v.QueryValidationToScript().All(ctx)
+	}
+	return result, err
+}
+
+func (v *Validation) ValidationToEnvironment(ctx context.Context) ([]*Environment, error) {
+	result, err := v.Edges.ValidationToEnvironmentOrErr()
+	if IsNotLoaded(err) {
+		result, err = v.QueryValidationToEnvironment().All(ctx)
 	}
 	return result, err
 }

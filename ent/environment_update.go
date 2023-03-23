@@ -31,6 +31,7 @@ import (
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -410,6 +411,21 @@ func (eu *EnvironmentUpdate) AddEnvironmentToServerTask(s ...*ServerTask) *Envir
 		ids[i] = s[i].ID
 	}
 	return eu.AddEnvironmentToServerTaskIDs(ids...)
+}
+
+// AddEnvironmentToValidationIDs adds the "EnvironmentToValidation" edge to the Validation entity by IDs.
+func (eu *EnvironmentUpdate) AddEnvironmentToValidationIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddEnvironmentToValidationIDs(ids...)
+	return eu
+}
+
+// AddEnvironmentToValidation adds the "EnvironmentToValidation" edges to the Validation entity.
+func (eu *EnvironmentUpdate) AddEnvironmentToValidation(v ...*Validation) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return eu.AddEnvironmentToValidationIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -814,6 +830,27 @@ func (eu *EnvironmentUpdate) RemoveEnvironmentToServerTask(s ...*ServerTask) *En
 		ids[i] = s[i].ID
 	}
 	return eu.RemoveEnvironmentToServerTaskIDs(ids...)
+}
+
+// ClearEnvironmentToValidation clears all "EnvironmentToValidation" edges to the Validation entity.
+func (eu *EnvironmentUpdate) ClearEnvironmentToValidation() *EnvironmentUpdate {
+	eu.mutation.ClearEnvironmentToValidation()
+	return eu
+}
+
+// RemoveEnvironmentToValidationIDs removes the "EnvironmentToValidation" edge to Validation entities by IDs.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToValidationIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveEnvironmentToValidationIDs(ids...)
+	return eu
+}
+
+// RemoveEnvironmentToValidation removes "EnvironmentToValidation" edges to Validation entities.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToValidation(v ...*Validation) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return eu.RemoveEnvironmentToValidationIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -2005,6 +2042,60 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if eu.mutation.EnvironmentToValidationCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToValidationTable,
+			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedEnvironmentToValidationIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToValidationCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToValidationTable,
+			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.EnvironmentToValidationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToValidationTable,
+			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, eu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{environment.Label}
@@ -2387,6 +2478,21 @@ func (euo *EnvironmentUpdateOne) AddEnvironmentToServerTask(s ...*ServerTask) *E
 		ids[i] = s[i].ID
 	}
 	return euo.AddEnvironmentToServerTaskIDs(ids...)
+}
+
+// AddEnvironmentToValidationIDs adds the "EnvironmentToValidation" edge to the Validation entity by IDs.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToValidationIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddEnvironmentToValidationIDs(ids...)
+	return euo
+}
+
+// AddEnvironmentToValidation adds the "EnvironmentToValidation" edges to the Validation entity.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToValidation(v ...*Validation) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return euo.AddEnvironmentToValidationIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -2791,6 +2897,27 @@ func (euo *EnvironmentUpdateOne) RemoveEnvironmentToServerTask(s ...*ServerTask)
 		ids[i] = s[i].ID
 	}
 	return euo.RemoveEnvironmentToServerTaskIDs(ids...)
+}
+
+// ClearEnvironmentToValidation clears all "EnvironmentToValidation" edges to the Validation entity.
+func (euo *EnvironmentUpdateOne) ClearEnvironmentToValidation() *EnvironmentUpdateOne {
+	euo.mutation.ClearEnvironmentToValidation()
+	return euo
+}
+
+// RemoveEnvironmentToValidationIDs removes the "EnvironmentToValidation" edge to Validation entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToValidationIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveEnvironmentToValidationIDs(ids...)
+	return euo
+}
+
+// RemoveEnvironmentToValidation removes "EnvironmentToValidation" edges to Validation entities.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToValidation(v ...*Validation) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return euo.RemoveEnvironmentToValidationIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -3998,6 +4125,60 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.EnvironmentToValidationCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToValidationTable,
+			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedEnvironmentToValidationIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToValidationCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToValidationTable,
+			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.EnvironmentToValidationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToValidationTable,
+			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
 				},
 			},
 		}

@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/validation"
@@ -29,9 +30,10 @@ type ValidationQuery struct {
 	fields     []string
 	predicates []predicate.Validation
 	// eager-loading edges.
-	withValidationToAgentTask *AgentTaskQuery
-	withValidationToScript    *ScriptQuery
-	withFKs                   bool
+	withValidationToAgentTask   *AgentTaskQuery
+	withValidationToScript      *ScriptQuery
+	withValidationToEnvironment *EnvironmentQuery
+	withFKs                     bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -105,6 +107,28 @@ func (vq *ValidationQuery) QueryValidationToScript() *ScriptQuery {
 			sqlgraph.From(validation.Table, validation.FieldID, selector),
 			sqlgraph.To(script.Table, script.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, validation.ValidationToScriptTable, validation.ValidationToScriptColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(vq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryValidationToEnvironment chains the current query on the "ValidationToEnvironment" edge.
+func (vq *ValidationQuery) QueryValidationToEnvironment() *EnvironmentQuery {
+	query := &EnvironmentQuery{config: vq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := vq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := vq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(validation.Table, validation.FieldID, selector),
+			sqlgraph.To(environment.Table, environment.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, validation.ValidationToEnvironmentTable, validation.ValidationToEnvironmentPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(vq.driver.Dialect(), step)
 		return fromU, nil
@@ -288,13 +312,14 @@ func (vq *ValidationQuery) Clone() *ValidationQuery {
 		return nil
 	}
 	return &ValidationQuery{
-		config:                    vq.config,
-		limit:                     vq.limit,
-		offset:                    vq.offset,
-		order:                     append([]OrderFunc{}, vq.order...),
-		predicates:                append([]predicate.Validation{}, vq.predicates...),
-		withValidationToAgentTask: vq.withValidationToAgentTask.Clone(),
-		withValidationToScript:    vq.withValidationToScript.Clone(),
+		config:                      vq.config,
+		limit:                       vq.limit,
+		offset:                      vq.offset,
+		order:                       append([]OrderFunc{}, vq.order...),
+		predicates:                  append([]predicate.Validation{}, vq.predicates...),
+		withValidationToAgentTask:   vq.withValidationToAgentTask.Clone(),
+		withValidationToScript:      vq.withValidationToScript.Clone(),
+		withValidationToEnvironment: vq.withValidationToEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    vq.sql.Clone(),
 		path:   vq.path,
@@ -321,6 +346,17 @@ func (vq *ValidationQuery) WithValidationToScript(opts ...func(*ScriptQuery)) *V
 		opt(query)
 	}
 	vq.withValidationToScript = query
+	return vq
+}
+
+// WithValidationToEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "ValidationToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
+func (vq *ValidationQuery) WithValidationToEnvironment(opts ...func(*EnvironmentQuery)) *ValidationQuery {
+	query := &EnvironmentQuery{config: vq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	vq.withValidationToEnvironment = query
 	return vq
 }
 
@@ -388,9 +424,10 @@ func (vq *ValidationQuery) sqlAll(ctx context.Context) ([]*Validation, error) {
 		nodes       = []*Validation{}
 		withFKs     = vq.withFKs
 		_spec       = vq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			vq.withValidationToAgentTask != nil,
 			vq.withValidationToScript != nil,
+			vq.withValidationToEnvironment != nil,
 		}
 	)
 	if vq.withValidationToAgentTask != nil {
@@ -474,6 +511,71 @@ func (vq *ValidationQuery) sqlAll(ctx context.Context) ([]*Validation, error) {
 				return nil, fmt.Errorf(`unexpected foreign-key "script_script_to_validation" returned %v for node %v`, *fk, n.ID)
 			}
 			node.Edges.ValidationToScript = append(node.Edges.ValidationToScript, n)
+		}
+	}
+
+	if query := vq.withValidationToEnvironment; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		ids := make(map[uuid.UUID]*Validation, len(nodes))
+		for _, node := range nodes {
+			ids[node.ID] = node
+			fks = append(fks, node.ID)
+			node.Edges.ValidationToEnvironment = []*Environment{}
+		}
+		var (
+			edgeids []uuid.UUID
+			edges   = make(map[uuid.UUID][]*Validation)
+		)
+		_spec := &sqlgraph.EdgeQuerySpec{
+			Edge: &sqlgraph.EdgeSpec{
+				Inverse: true,
+				Table:   validation.ValidationToEnvironmentTable,
+				Columns: validation.ValidationToEnvironmentPrimaryKey,
+			},
+			Predicate: func(s *sql.Selector) {
+				s.Where(sql.InValues(validation.ValidationToEnvironmentPrimaryKey[1], fks...))
+			},
+			ScanValues: func() [2]interface{} {
+				return [2]interface{}{new(uuid.UUID), new(uuid.UUID)}
+			},
+			Assign: func(out, in interface{}) error {
+				eout, ok := out.(*uuid.UUID)
+				if !ok || eout == nil {
+					return fmt.Errorf("unexpected id value for edge-out")
+				}
+				ein, ok := in.(*uuid.UUID)
+				if !ok || ein == nil {
+					return fmt.Errorf("unexpected id value for edge-in")
+				}
+				outValue := *eout
+				inValue := *ein
+				node, ok := ids[outValue]
+				if !ok {
+					return fmt.Errorf("unexpected node id in edges: %v", outValue)
+				}
+				if _, ok := edges[inValue]; !ok {
+					edgeids = append(edgeids, inValue)
+				}
+				edges[inValue] = append(edges[inValue], node)
+				return nil
+			},
+		}
+		if err := sqlgraph.QueryEdges(ctx, vq.driver, _spec); err != nil {
+			return nil, fmt.Errorf(`query edges "ValidationToEnvironment": %w`, err)
+		}
+		query.Where(environment.IDIn(edgeids...))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			nodes, ok := edges[n.ID]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected "ValidationToEnvironment" node returned %v`, n.ID)
+			}
+			for i := range nodes {
+				nodes[i].Edges.ValidationToEnvironment = append(nodes[i].Edges.ValidationToEnvironment, n)
+			}
 		}
 	}
 

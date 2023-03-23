@@ -29,6 +29,7 @@ import (
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -402,6 +403,21 @@ func (ec *EnvironmentCreate) AddEnvironmentToServerTask(s ...*ServerTask) *Envir
 		ids[i] = s[i].ID
 	}
 	return ec.AddEnvironmentToServerTaskIDs(ids...)
+}
+
+// AddEnvironmentToValidationIDs adds the "EnvironmentToValidation" edge to the Validation entity by IDs.
+func (ec *EnvironmentCreate) AddEnvironmentToValidationIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddEnvironmentToValidationIDs(ids...)
+	return ec
+}
+
+// AddEnvironmentToValidation adds the "EnvironmentToValidation" edges to the Validation entity.
+func (ec *EnvironmentCreate) AddEnvironmentToValidation(v ...*Validation) *EnvironmentCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return ec.AddEnvironmentToValidationIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -993,6 +1009,25 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ec.mutation.EnvironmentToValidationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToValidationTable,
+			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: validation.FieldID,
 				},
 			},
 		}

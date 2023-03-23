@@ -57,6 +57,8 @@ const (
 	EdgeValidationToAgentTask = "ValidationToAgentTask"
 	// EdgeValidationToScript holds the string denoting the validationtoscript edge name in mutations.
 	EdgeValidationToScript = "ValidationToScript"
+	// EdgeValidationToEnvironment holds the string denoting the validationtoenvironment edge name in mutations.
+	EdgeValidationToEnvironment = "ValidationToEnvironment"
 	// Table holds the table name of the validation in the database.
 	Table = "validations"
 	// ValidationToAgentTaskTable is the table that holds the ValidationToAgentTask relation/edge.
@@ -73,6 +75,11 @@ const (
 	ValidationToScriptInverseTable = "scripts"
 	// ValidationToScriptColumn is the table column denoting the ValidationToScript relation/edge.
 	ValidationToScriptColumn = "script_script_to_validation"
+	// ValidationToEnvironmentTable is the table that holds the ValidationToEnvironment relation/edge. The primary key declared below.
+	ValidationToEnvironmentTable = "environment_EnvironmentToValidation"
+	// ValidationToEnvironmentInverseTable is the table name for the Environment entity.
+	// It exists in this package in order to avoid circular dependency with the "environment" package.
+	ValidationToEnvironmentInverseTable = "environments"
 )
 
 // Columns holds all SQL columns for validation fields.
@@ -104,6 +111,12 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"agent_task_agent_task_to_validation",
 }
+
+var (
+	// ValidationToEnvironmentPrimaryKey and ValidationToEnvironmentColumn2 are the table columns denoting the
+	// primary key for the ValidationToEnvironment relation (M2M).
+	ValidationToEnvironmentPrimaryKey = []string{"environment_id", "validation_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {

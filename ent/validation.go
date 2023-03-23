@@ -65,6 +65,8 @@ type Validation struct {
 	HCLValidationToAgentTask *AgentTask `json:"ValidationToAgentTask,omitempty"`
 	// ValidationToScript holds the value of the ValidationToScript edge.
 	HCLValidationToScript []*Script `json:"ValidationToScript,omitempty"`
+	// ValidationToEnvironment holds the value of the ValidationToEnvironment edge.
+	HCLValidationToEnvironment []*Environment `json:"ValidationToEnvironment,omitempty"`
 	//
 	agent_task_agent_task_to_validation *uuid.UUID
 }
@@ -75,9 +77,11 @@ type ValidationEdges struct {
 	ValidationToAgentTask *AgentTask `json:"ValidationToAgentTask,omitempty"`
 	// ValidationToScript holds the value of the ValidationToScript edge.
 	ValidationToScript []*Script `json:"ValidationToScript,omitempty"`
+	// ValidationToEnvironment holds the value of the ValidationToEnvironment edge.
+	ValidationToEnvironment []*Environment `json:"ValidationToEnvironment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // ValidationToAgentTaskOrErr returns the ValidationToAgentTask value or an error if the edge
@@ -101,6 +105,15 @@ func (e ValidationEdges) ValidationToScriptOrErr() ([]*Script, error) {
 		return e.ValidationToScript, nil
 	}
 	return nil, &NotLoadedError{edge: "ValidationToScript"}
+}
+
+// ValidationToEnvironmentOrErr returns the ValidationToEnvironment value or an error if the edge
+// was not loaded in eager-loading.
+func (e ValidationEdges) ValidationToEnvironmentOrErr() ([]*Environment, error) {
+	if e.loadedTypes[2] {
+		return e.ValidationToEnvironment, nil
+	}
+	return nil, &NotLoadedError{edge: "ValidationToEnvironment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -275,6 +288,11 @@ func (v *Validation) QueryValidationToAgentTask() *AgentTaskQuery {
 // QueryValidationToScript queries the "ValidationToScript" edge of the Validation entity.
 func (v *Validation) QueryValidationToScript() *ScriptQuery {
 	return (&ValidationClient{config: v.config}).QueryValidationToScript(v)
+}
+
+// QueryValidationToEnvironment queries the "ValidationToEnvironment" edge of the Validation entity.
+func (v *Validation) QueryValidationToEnvironment() *EnvironmentQuery {
+	return (&ValidationClient{config: v.config}).QueryValidationToEnvironment(v)
 }
 
 // Update returns a builder for updating this Validation.

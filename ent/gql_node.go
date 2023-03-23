@@ -1238,7 +1238,7 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 		ID:     e.ID,
 		Type:   "Environment",
 		Fields: make([]*Field, 11),
-		Edges:  make([]*Edge, 19),
+		Edges:  make([]*Edge, 20),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(e.HclID); err != nil {
@@ -1516,6 +1516,16 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	err = e.QueryEnvironmentToServerTask().
 		Select(servertask.FieldID).
 		Scan(ctx, &node.Edges[18].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[19] = &Edge{
+		Type: "Validation",
+		Name: "EnvironmentToValidation",
+	}
+	err = e.QueryEnvironmentToValidation().
+		Select(validation.FieldID).
+		Scan(ctx, &node.Edges[19].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -3707,7 +3717,7 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 		ID:     v.ID,
 		Type:   "Validation",
 		Fields: make([]*Field, 19),
-		Edges:  make([]*Edge, 2),
+		Edges:  make([]*Edge, 3),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(v.HclID); err != nil {
@@ -3879,6 +3889,16 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 	err = v.QueryValidationToScript().
 		Select(script.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[2] = &Edge{
+		Type: "Environment",
+		Name: "ValidationToEnvironment",
+	}
+	err = v.QueryValidationToEnvironment().
+		Select(environment.FieldID).
+		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
 		return nil, err
 	}

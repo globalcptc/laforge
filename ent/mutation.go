@@ -11079,6 +11079,9 @@ type EnvironmentMutation struct {
 	_EnvironmentToServerTask             map[uuid.UUID]struct{}
 	removed_EnvironmentToServerTask      map[uuid.UUID]struct{}
 	cleared_EnvironmentToServerTask      bool
+	_EnvironmentToValidation             map[uuid.UUID]struct{}
+	removed_EnvironmentToValidation      map[uuid.UUID]struct{}
+	cleared_EnvironmentToValidation      bool
 	done                                 bool
 	oldValue                             func(context.Context) (*Environment, error)
 	predicates                           []predicate.Environment
@@ -12650,6 +12653,60 @@ func (m *EnvironmentMutation) ResetEnvironmentToServerTask() {
 	m.removed_EnvironmentToServerTask = nil
 }
 
+// AddEnvironmentToValidationIDs adds the "EnvironmentToValidation" edge to the Validation entity by ids.
+func (m *EnvironmentMutation) AddEnvironmentToValidationIDs(ids ...uuid.UUID) {
+	if m._EnvironmentToValidation == nil {
+		m._EnvironmentToValidation = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._EnvironmentToValidation[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEnvironmentToValidation clears the "EnvironmentToValidation" edge to the Validation entity.
+func (m *EnvironmentMutation) ClearEnvironmentToValidation() {
+	m.cleared_EnvironmentToValidation = true
+}
+
+// EnvironmentToValidationCleared reports if the "EnvironmentToValidation" edge to the Validation entity was cleared.
+func (m *EnvironmentMutation) EnvironmentToValidationCleared() bool {
+	return m.cleared_EnvironmentToValidation
+}
+
+// RemoveEnvironmentToValidationIDs removes the "EnvironmentToValidation" edge to the Validation entity by IDs.
+func (m *EnvironmentMutation) RemoveEnvironmentToValidationIDs(ids ...uuid.UUID) {
+	if m.removed_EnvironmentToValidation == nil {
+		m.removed_EnvironmentToValidation = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._EnvironmentToValidation, ids[i])
+		m.removed_EnvironmentToValidation[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEnvironmentToValidation returns the removed IDs of the "EnvironmentToValidation" edge to the Validation entity.
+func (m *EnvironmentMutation) RemovedEnvironmentToValidationIDs() (ids []uuid.UUID) {
+	for id := range m.removed_EnvironmentToValidation {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EnvironmentToValidationIDs returns the "EnvironmentToValidation" edge IDs in the mutation.
+func (m *EnvironmentMutation) EnvironmentToValidationIDs() (ids []uuid.UUID) {
+	for id := range m._EnvironmentToValidation {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEnvironmentToValidation resets all changes to the "EnvironmentToValidation" edge.
+func (m *EnvironmentMutation) ResetEnvironmentToValidation() {
+	m._EnvironmentToValidation = nil
+	m.cleared_EnvironmentToValidation = false
+	m.removed_EnvironmentToValidation = nil
+}
+
 // Where appends a list predicates to the EnvironmentMutation builder.
 func (m *EnvironmentMutation) Where(ps ...predicate.Environment) {
 	m.predicates = append(m.predicates, ps...)
@@ -12965,7 +13022,7 @@ func (m *EnvironmentMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EnvironmentMutation) AddedEdges() []string {
-	edges := make([]string, 0, 19)
+	edges := make([]string, 0, 20)
 	if m._EnvironmentToUser != nil {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -13022,6 +13079,9 @@ func (m *EnvironmentMutation) AddedEdges() []string {
 	}
 	if m._EnvironmentToServerTask != nil {
 		edges = append(edges, environment.EdgeEnvironmentToServerTask)
+	}
+	if m._EnvironmentToValidation != nil {
+		edges = append(edges, environment.EdgeEnvironmentToValidation)
 	}
 	return edges
 }
@@ -13144,13 +13204,19 @@ func (m *EnvironmentMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case environment.EdgeEnvironmentToValidation:
+		ids := make([]ent.Value, 0, len(m._EnvironmentToValidation))
+		for id := range m._EnvironmentToValidation {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EnvironmentMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 19)
+	edges := make([]string, 0, 20)
 	if m.removed_EnvironmentToUser != nil {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -13207,6 +13273,9 @@ func (m *EnvironmentMutation) RemovedEdges() []string {
 	}
 	if m.removed_EnvironmentToServerTask != nil {
 		edges = append(edges, environment.EdgeEnvironmentToServerTask)
+	}
+	if m.removed_EnvironmentToValidation != nil {
+		edges = append(edges, environment.EdgeEnvironmentToValidation)
 	}
 	return edges
 }
@@ -13329,13 +13398,19 @@ func (m *EnvironmentMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case environment.EdgeEnvironmentToValidation:
+		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToValidation))
+		for id := range m.removed_EnvironmentToValidation {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EnvironmentMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 19)
+	edges := make([]string, 0, 20)
 	if m.cleared_EnvironmentToUser {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -13393,6 +13468,9 @@ func (m *EnvironmentMutation) ClearedEdges() []string {
 	if m.cleared_EnvironmentToServerTask {
 		edges = append(edges, environment.EdgeEnvironmentToServerTask)
 	}
+	if m.cleared_EnvironmentToValidation {
+		edges = append(edges, environment.EdgeEnvironmentToValidation)
+	}
 	return edges
 }
 
@@ -13438,6 +13516,8 @@ func (m *EnvironmentMutation) EdgeCleared(name string) bool {
 		return m.cleared_EnvironmentToRepository
 	case environment.EdgeEnvironmentToServerTask:
 		return m.cleared_EnvironmentToServerTask
+	case environment.EdgeEnvironmentToValidation:
+		return m.cleared_EnvironmentToValidation
 	}
 	return false
 }
@@ -13510,6 +13590,9 @@ func (m *EnvironmentMutation) ResetEdge(name string) error {
 		return nil
 	case environment.EdgeEnvironmentToServerTask:
 		m.ResetEnvironmentToServerTask()
+		return nil
+	case environment.EdgeEnvironmentToValidation:
+		m.ResetEnvironmentToValidation()
 		return nil
 	}
 	return fmt.Errorf("unknown Environment edge %s", name)
@@ -33322,38 +33405,41 @@ func (m *UserMutation) ResetEdge(name string) error {
 // ValidationMutation represents an operation that mutates the Validation nodes in the graph.
 type ValidationMutation struct {
 	config
-	op                            Op
-	typ                           string
-	id                            *uuid.UUID
-	hcl_id                        *string
-	validation_type               *string
-	output                        *string
-	state                         *validation.State
-	error_message                 *string
-	hash                          *string
-	regex                         *string
-	ip                            *string
-	port                          *int
-	addport                       *int
-	hostname                      *string
-	nameservers                   *[]string
-	package_name                  *string
-	username                      *string
-	group_name                    *string
-	file_path                     *string
-	search_string                 *string
-	service_name                  *string
-	service_status                *string
-	process_name                  *string
-	clearedFields                 map[string]struct{}
-	_ValidationToAgentTask        *uuid.UUID
-	cleared_ValidationToAgentTask bool
-	_ValidationToScript           map[uuid.UUID]struct{}
-	removed_ValidationToScript    map[uuid.UUID]struct{}
-	cleared_ValidationToScript    bool
-	done                          bool
-	oldValue                      func(context.Context) (*Validation, error)
-	predicates                    []predicate.Validation
+	op                              Op
+	typ                             string
+	id                              *uuid.UUID
+	hcl_id                          *string
+	validation_type                 *string
+	output                          *string
+	state                           *validation.State
+	error_message                   *string
+	hash                            *string
+	regex                           *string
+	ip                              *string
+	port                            *int
+	addport                         *int
+	hostname                        *string
+	nameservers                     *[]string
+	package_name                    *string
+	username                        *string
+	group_name                      *string
+	file_path                       *string
+	search_string                   *string
+	service_name                    *string
+	service_status                  *string
+	process_name                    *string
+	clearedFields                   map[string]struct{}
+	_ValidationToAgentTask          *uuid.UUID
+	cleared_ValidationToAgentTask   bool
+	_ValidationToScript             map[uuid.UUID]struct{}
+	removed_ValidationToScript      map[uuid.UUID]struct{}
+	cleared_ValidationToScript      bool
+	_ValidationToEnvironment        map[uuid.UUID]struct{}
+	removed_ValidationToEnvironment map[uuid.UUID]struct{}
+	cleared_ValidationToEnvironment bool
+	done                            bool
+	oldValue                        func(context.Context) (*Validation, error)
+	predicates                      []predicate.Validation
 }
 
 var _ ent.Mutation = (*ValidationMutation)(nil)
@@ -34257,6 +34343,60 @@ func (m *ValidationMutation) ResetValidationToScript() {
 	m.removed_ValidationToScript = nil
 }
 
+// AddValidationToEnvironmentIDs adds the "ValidationToEnvironment" edge to the Environment entity by ids.
+func (m *ValidationMutation) AddValidationToEnvironmentIDs(ids ...uuid.UUID) {
+	if m._ValidationToEnvironment == nil {
+		m._ValidationToEnvironment = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._ValidationToEnvironment[ids[i]] = struct{}{}
+	}
+}
+
+// ClearValidationToEnvironment clears the "ValidationToEnvironment" edge to the Environment entity.
+func (m *ValidationMutation) ClearValidationToEnvironment() {
+	m.cleared_ValidationToEnvironment = true
+}
+
+// ValidationToEnvironmentCleared reports if the "ValidationToEnvironment" edge to the Environment entity was cleared.
+func (m *ValidationMutation) ValidationToEnvironmentCleared() bool {
+	return m.cleared_ValidationToEnvironment
+}
+
+// RemoveValidationToEnvironmentIDs removes the "ValidationToEnvironment" edge to the Environment entity by IDs.
+func (m *ValidationMutation) RemoveValidationToEnvironmentIDs(ids ...uuid.UUID) {
+	if m.removed_ValidationToEnvironment == nil {
+		m.removed_ValidationToEnvironment = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._ValidationToEnvironment, ids[i])
+		m.removed_ValidationToEnvironment[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedValidationToEnvironment returns the removed IDs of the "ValidationToEnvironment" edge to the Environment entity.
+func (m *ValidationMutation) RemovedValidationToEnvironmentIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ValidationToEnvironment {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ValidationToEnvironmentIDs returns the "ValidationToEnvironment" edge IDs in the mutation.
+func (m *ValidationMutation) ValidationToEnvironmentIDs() (ids []uuid.UUID) {
+	for id := range m._ValidationToEnvironment {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetValidationToEnvironment resets all changes to the "ValidationToEnvironment" edge.
+func (m *ValidationMutation) ResetValidationToEnvironment() {
+	m._ValidationToEnvironment = nil
+	m.cleared_ValidationToEnvironment = false
+	m.removed_ValidationToEnvironment = nil
+}
+
 // Where appends a list predicates to the ValidationMutation builder.
 func (m *ValidationMutation) Where(ps ...predicate.Validation) {
 	m.predicates = append(m.predicates, ps...)
@@ -34696,12 +34836,15 @@ func (m *ValidationMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ValidationMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m._ValidationToAgentTask != nil {
 		edges = append(edges, validation.EdgeValidationToAgentTask)
 	}
 	if m._ValidationToScript != nil {
 		edges = append(edges, validation.EdgeValidationToScript)
+	}
+	if m._ValidationToEnvironment != nil {
+		edges = append(edges, validation.EdgeValidationToEnvironment)
 	}
 	return edges
 }
@@ -34720,15 +34863,24 @@ func (m *ValidationMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case validation.EdgeValidationToEnvironment:
+		ids := make([]ent.Value, 0, len(m._ValidationToEnvironment))
+		for id := range m._ValidationToEnvironment {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ValidationMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removed_ValidationToScript != nil {
 		edges = append(edges, validation.EdgeValidationToScript)
+	}
+	if m.removed_ValidationToEnvironment != nil {
+		edges = append(edges, validation.EdgeValidationToEnvironment)
 	}
 	return edges
 }
@@ -34743,18 +34895,27 @@ func (m *ValidationMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case validation.EdgeValidationToEnvironment:
+		ids := make([]ent.Value, 0, len(m.removed_ValidationToEnvironment))
+		for id := range m.removed_ValidationToEnvironment {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ValidationMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.cleared_ValidationToAgentTask {
 		edges = append(edges, validation.EdgeValidationToAgentTask)
 	}
 	if m.cleared_ValidationToScript {
 		edges = append(edges, validation.EdgeValidationToScript)
+	}
+	if m.cleared_ValidationToEnvironment {
+		edges = append(edges, validation.EdgeValidationToEnvironment)
 	}
 	return edges
 }
@@ -34767,6 +34928,8 @@ func (m *ValidationMutation) EdgeCleared(name string) bool {
 		return m.cleared_ValidationToAgentTask
 	case validation.EdgeValidationToScript:
 		return m.cleared_ValidationToScript
+	case validation.EdgeValidationToEnvironment:
+		return m.cleared_ValidationToEnvironment
 	}
 	return false
 }
@@ -34791,6 +34954,9 @@ func (m *ValidationMutation) ResetEdge(name string) error {
 		return nil
 	case validation.EdgeValidationToScript:
 		m.ResetValidationToScript()
+		return nil
+	case validation.EdgeValidationToEnvironment:
+		m.ResetValidationToEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Validation edge %s", name)

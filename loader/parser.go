@@ -26,6 +26,7 @@ import (
 	"github.com/gen0cide/laforge/ent/includednetwork"
 	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/script"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/gen0cide/laforge/loader/include"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/google/uuid"
@@ -60,7 +61,7 @@ type DefinedConfigs struct {
 	DefinedCommands     []*ent.Command     `hcl:"command,block" json:"defined_commands,omitempty"`
 	DefinedDNSRecords   []*ent.DNSRecord   `hcl:"dns_record,block" json:"defined_dns_records,omitempty"`
 	// specifically for validations
-	DefinedValidations  []*ent.ValidatorConfigBlock  `hcl:"validator,block" json:"defined_validators,omitempty"`
+	// DefinedValidations  []*ent.ValidatorConfigBlock  `hcl:"validator,block" json:"defined_validators,omitempty"`
 	DefinedEnvironments []*ent.Environment           `hcl:"environment,block" json:"environments,omitempty"`
 	DefinedFileDownload []*ent.FileDownload          `hcl:"file_download,block" json:"file_download,omitempty"`
 	DefinedFileDelete   []*ent.FileDelete            `hcl:"file_delete,block" json:"file_delete,omitempty"`
@@ -95,6 +96,7 @@ type Loader struct {
 
 // FileGlobResolver is a modified FileResolver in the HCLv2 include extension that accounts for globbed
 // includes:
+//
 //	include {
 //		path = "./foo/*.laforge"
 //	}
@@ -1692,19 +1694,19 @@ func createValidations(ctx context.Context, client *ent.Client, log *logging.Log
 					SetHclID(cValidation.HclID).
 					SetValidationType(cValidation.ValidationType).
 					SetOutput(cValidation.Output).
-					SetState(cValidation.StateSetState).
+					SetState(cValidation.State).
 					SetErrorMessage(cValidation.ErrorMessage).
 					SetRegex(cValidation.Regex).
 					SetIP(cValidation.IP).
 					SetPort(cValidation.Port).
 					SetHostname(cValidation.Hostname).
 					SetNameservers(cValidation.Nameservers).
-					SetPackagename(cValidation.PackageName).
+					SetPackageName(cValidation.PackageName).
 					SetUsername(cValidation.Username).
-					SetGroupName(cValidation.GroupName.)
-					SetFieldPath(cValidation.FieldPath).
-					SetServicename(cValidation.ServiceName).
-					SetProcessName(cValidation.ProcessName).
+					SetGroupName(cValidation.GroupName).
+					SetFilePath(cValidation.FilePath).
+					SetServiceName(cValidation.ServiceName).
+					SetProcessName(cValidation.ProcessName)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
@@ -1713,18 +1715,18 @@ func createValidations(ctx context.Context, client *ent.Client, log *logging.Log
 			SetHclID(cValidation.HclID).
 			SetValidationType(cValidation.ValidationType).
 			SetOutput(cValidation.Output).
-			SetState(cValidation.StateSetState).
+			SetState(cValidation.State).
 			SetErrorMessage(cValidation.ErrorMessage).
 			SetRegex(cValidation.Regex).
 			SetIP(cValidation.IP).
 			SetPort(cValidation.Port).
 			SetHostname(cValidation.Hostname).
 			SetNameservers(cValidation.Nameservers).
-			SetPackagename(cValidation.PackageName).
+			SetPackageName(cValidation.PackageName).
 			SetUsername(cValidation.Username).
-			SetGroupName(cValidation.GroupName.)
-			SetFieldPath(cValidation.FieldPath).
-			SetServicename(cValidation.ServiceName).
+			SetGroupName(cValidation.GroupName).
+			SetFilePath(cValidation.FilePath).
+			SetServiceName(cValidation.ServiceName).
 			SetProcessName(cValidation.ProcessName).
 			Save(ctx)
 		if err != nil {

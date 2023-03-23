@@ -2491,6 +2491,22 @@ func (c *EnvironmentClient) QueryEnvironmentToServerTask(e *Environment) *Server
 	return query
 }
 
+// QueryEnvironmentToValidation queries the EnvironmentToValidation edge of a Environment.
+func (c *EnvironmentClient) QueryEnvironmentToValidation(e *Environment) *ValidationQuery {
+	query := &ValidationQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(environment.Table, environment.FieldID, id),
+			sqlgraph.To(validation.Table, validation.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, environment.EnvironmentToValidationTable, environment.EnvironmentToValidationPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *EnvironmentClient) Hooks() []Hook {
 	return c.hooks.Environment
@@ -6270,6 +6286,22 @@ func (c *ValidationClient) QueryValidationToScript(v *Validation) *ScriptQuery {
 			sqlgraph.From(validation.Table, validation.FieldID, id),
 			sqlgraph.To(script.Table, script.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, validation.ValidationToScriptTable, validation.ValidationToScriptColumn),
+		)
+		fromV = sqlgraph.Neighbors(v.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryValidationToEnvironment queries the ValidationToEnvironment edge of a Validation.
+func (c *ValidationClient) QueryValidationToEnvironment(v *Validation) *EnvironmentQuery {
+	query := &EnvironmentQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := v.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(validation.Table, validation.FieldID, id),
+			sqlgraph.To(environment.Table, environment.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, validation.ValidationToEnvironmentTable, validation.ValidationToEnvironmentPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(v.driver.Dialect(), step)
 		return fromV, nil

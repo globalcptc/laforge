@@ -54,5 +54,6 @@ func (Validation) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("ValidationToAgentTask", AgentTask.Type).Ref("AgentTaskToValidation").Unique(),
 		edge.From("ValidationToScript", Script.Type).Ref("ScriptToValidation"),
+		edge.From("ValidationToEnvironment", Environment.Type).Ref("EnvironmentToValidation"),
 	}
 }

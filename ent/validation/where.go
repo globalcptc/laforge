@@ -2167,6 +2167,34 @@ func HasValidationToScriptWith(preds ...predicate.Script) predicate.Validation {
 	})
 }
 
+// HasValidationToEnvironment applies the HasEdge predicate on the "ValidationToEnvironment" edge.
+func HasValidationToEnvironment() predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ValidationToEnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, ValidationToEnvironmentTable, ValidationToEnvironmentPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasValidationToEnvironmentWith applies the HasEdge predicate on the "ValidationToEnvironment" edge with a given conditions (other predicates).
+func HasValidationToEnvironmentWith(preds ...predicate.Environment) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ValidationToEnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, ValidationToEnvironmentTable, ValidationToEnvironmentPrimaryKey...),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Validation) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {

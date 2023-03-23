@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
@@ -206,6 +207,21 @@ func (vc *ValidationCreate) AddValidationToScript(s ...*Script) *ValidationCreat
 		ids[i] = s[i].ID
 	}
 	return vc.AddValidationToScriptIDs(ids...)
+}
+
+// AddValidationToEnvironmentIDs adds the "ValidationToEnvironment" edge to the Environment entity by IDs.
+func (vc *ValidationCreate) AddValidationToEnvironmentIDs(ids ...uuid.UUID) *ValidationCreate {
+	vc.mutation.AddValidationToEnvironmentIDs(ids...)
+	return vc
+}
+
+// AddValidationToEnvironment adds the "ValidationToEnvironment" edges to the Environment entity.
+func (vc *ValidationCreate) AddValidationToEnvironment(e ...*Environment) *ValidationCreate {
+	ids := make([]uuid.UUID, len(e))
+	for i := range e {
+		ids[i] = e[i].ID
+	}
+	return vc.AddValidationToEnvironmentIDs(ids...)
 }
 
 // Mutation returns the ValidationMutation object of the builder.
@@ -580,6 +596,25 @@ func (vc *ValidationCreate) createSpec() (*Validation, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: script.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := vc.mutation.ValidationToEnvironmentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   validation.ValidationToEnvironmentTable,
+			Columns: validation.ValidationToEnvironmentPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: environment.FieldID,
 				},
 			},
 		}

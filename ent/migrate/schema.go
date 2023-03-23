@@ -1378,6 +1378,31 @@ var (
 			},
 		},
 	}
+	// EnvironmentEnvironmentToValidationColumns holds the columns for the "environment_EnvironmentToValidation" table.
+	EnvironmentEnvironmentToValidationColumns = []*schema.Column{
+		{Name: "environment_id", Type: field.TypeUUID},
+		{Name: "validation_id", Type: field.TypeUUID},
+	}
+	// EnvironmentEnvironmentToValidationTable holds the schema information for the "environment_EnvironmentToValidation" table.
+	EnvironmentEnvironmentToValidationTable = &schema.Table{
+		Name:       "environment_EnvironmentToValidation",
+		Columns:    EnvironmentEnvironmentToValidationColumns,
+		PrimaryKey: []*schema.Column{EnvironmentEnvironmentToValidationColumns[0], EnvironmentEnvironmentToValidationColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "environment_EnvironmentToValidation_environment_id",
+				Columns:    []*schema.Column{EnvironmentEnvironmentToValidationColumns[0]},
+				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "environment_EnvironmentToValidation_validation_id",
+				Columns:    []*schema.Column{EnvironmentEnvironmentToValidationColumns[1]},
+				RefColumns: []*schema.Column{ValidationsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// IncludedNetworkIncludedNetworkToHostColumns holds the columns for the "included_network_IncludedNetworkToHost" table.
 	IncludedNetworkIncludedNetworkToHostColumns = []*schema.Column{
 		{Name: "included_network_id", Type: field.TypeUUID},
@@ -1498,6 +1523,7 @@ var (
 		EnvironmentEnvironmentToUserTable,
 		EnvironmentEnvironmentToIncludedNetworkTable,
 		EnvironmentEnvironmentToDNSTable,
+		EnvironmentEnvironmentToValidationTable,
 		IncludedNetworkIncludedNetworkToHostTable,
 		PlanNextPlanTable,
 		RepositoryRepositoryToEnvironmentTable,
@@ -1596,6 +1622,8 @@ func init() {
 	EnvironmentEnvironmentToIncludedNetworkTable.ForeignKeys[1].RefTable = IncludedNetworksTable
 	EnvironmentEnvironmentToDNSTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	EnvironmentEnvironmentToDNSTable.ForeignKeys[1].RefTable = DnSsTable
+	EnvironmentEnvironmentToValidationTable.ForeignKeys[0].RefTable = EnvironmentsTable
+	EnvironmentEnvironmentToValidationTable.ForeignKeys[1].RefTable = ValidationsTable
 	IncludedNetworkIncludedNetworkToHostTable.ForeignKeys[0].RefTable = IncludedNetworksTable
 	IncludedNetworkIncludedNetworkToHostTable.ForeignKeys[1].RefTable = HostsTable
 	PlanNextPlanTable.ForeignKeys[0].RefTable = PlansTable

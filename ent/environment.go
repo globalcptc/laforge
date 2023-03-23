@@ -82,6 +82,8 @@ type Environment struct {
 	HCLEnvironmentToRepository []*Repository `json:"EnvironmentToRepository,omitempty"`
 	// EnvironmentToServerTask holds the value of the EnvironmentToServerTask edge.
 	HCLEnvironmentToServerTask []*ServerTask `json:"EnvironmentToServerTask,omitempty"`
+	// EnvironmentToValidation holds the value of the EnvironmentToValidation edge.
+	HCLEnvironmentToValidation []*Validation `json:"EnvironmentToValidation,omitempty"`
 	//
 
 }
@@ -126,9 +128,11 @@ type EnvironmentEdges struct {
 	EnvironmentToRepository []*Repository `json:"EnvironmentToRepository,omitempty"`
 	// EnvironmentToServerTask holds the value of the EnvironmentToServerTask edge.
 	EnvironmentToServerTask []*ServerTask `json:"EnvironmentToServerTask,omitempty"`
+	// EnvironmentToValidation holds the value of the EnvironmentToValidation edge.
+	EnvironmentToValidation []*Validation `json:"EnvironmentToValidation,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [19]bool
+	loadedTypes [20]bool
 }
 
 // EnvironmentToUserOrErr returns the EnvironmentToUser value or an error if the edge
@@ -300,6 +304,15 @@ func (e EnvironmentEdges) EnvironmentToServerTaskOrErr() ([]*ServerTask, error) 
 		return e.EnvironmentToServerTask, nil
 	}
 	return nil, &NotLoadedError{edge: "EnvironmentToServerTask"}
+}
+
+// EnvironmentToValidationOrErr returns the EnvironmentToValidation value or an error if the edge
+// was not loaded in eager-loading.
+func (e EnvironmentEdges) EnvironmentToValidationOrErr() ([]*Validation, error) {
+	if e.loadedTypes[19] {
+		return e.EnvironmentToValidation, nil
+	}
+	return nil, &NotLoadedError{edge: "EnvironmentToValidation"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -508,6 +521,11 @@ func (e *Environment) QueryEnvironmentToRepository() *RepositoryQuery {
 // QueryEnvironmentToServerTask queries the "EnvironmentToServerTask" edge of the Environment entity.
 func (e *Environment) QueryEnvironmentToServerTask() *ServerTaskQuery {
 	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToServerTask(e)
+}
+
+// QueryEnvironmentToValidation queries the "EnvironmentToValidation" edge of the Environment entity.
+func (e *Environment) QueryEnvironmentToValidation() *ValidationQuery {
+	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToValidation(e)
 }
 
 // Update returns a builder for updating this Environment.

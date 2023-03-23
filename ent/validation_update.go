@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/validation"
@@ -209,6 +210,21 @@ func (vu *ValidationUpdate) AddValidationToScript(s ...*Script) *ValidationUpdat
 	return vu.AddValidationToScriptIDs(ids...)
 }
 
+// AddValidationToEnvironmentIDs adds the "ValidationToEnvironment" edge to the Environment entity by IDs.
+func (vu *ValidationUpdate) AddValidationToEnvironmentIDs(ids ...uuid.UUID) *ValidationUpdate {
+	vu.mutation.AddValidationToEnvironmentIDs(ids...)
+	return vu
+}
+
+// AddValidationToEnvironment adds the "ValidationToEnvironment" edges to the Environment entity.
+func (vu *ValidationUpdate) AddValidationToEnvironment(e ...*Environment) *ValidationUpdate {
+	ids := make([]uuid.UUID, len(e))
+	for i := range e {
+		ids[i] = e[i].ID
+	}
+	return vu.AddValidationToEnvironmentIDs(ids...)
+}
+
 // Mutation returns the ValidationMutation object of the builder.
 func (vu *ValidationUpdate) Mutation() *ValidationMutation {
 	return vu.mutation
@@ -239,6 +255,27 @@ func (vu *ValidationUpdate) RemoveValidationToScript(s ...*Script) *ValidationUp
 		ids[i] = s[i].ID
 	}
 	return vu.RemoveValidationToScriptIDs(ids...)
+}
+
+// ClearValidationToEnvironment clears all "ValidationToEnvironment" edges to the Environment entity.
+func (vu *ValidationUpdate) ClearValidationToEnvironment() *ValidationUpdate {
+	vu.mutation.ClearValidationToEnvironment()
+	return vu
+}
+
+// RemoveValidationToEnvironmentIDs removes the "ValidationToEnvironment" edge to Environment entities by IDs.
+func (vu *ValidationUpdate) RemoveValidationToEnvironmentIDs(ids ...uuid.UUID) *ValidationUpdate {
+	vu.mutation.RemoveValidationToEnvironmentIDs(ids...)
+	return vu
+}
+
+// RemoveValidationToEnvironment removes "ValidationToEnvironment" edges to Environment entities.
+func (vu *ValidationUpdate) RemoveValidationToEnvironment(e ...*Environment) *ValidationUpdate {
+	ids := make([]uuid.UUID, len(e))
+	for i := range e {
+		ids[i] = e[i].ID
+	}
+	return vu.RemoveValidationToEnvironmentIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -558,6 +595,60 @@ func (vu *ValidationUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if vu.mutation.ValidationToEnvironmentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   validation.ValidationToEnvironmentTable,
+			Columns: validation.ValidationToEnvironmentPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: environment.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := vu.mutation.RemovedValidationToEnvironmentIDs(); len(nodes) > 0 && !vu.mutation.ValidationToEnvironmentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   validation.ValidationToEnvironmentTable,
+			Columns: validation.ValidationToEnvironmentPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: environment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := vu.mutation.ValidationToEnvironmentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   validation.ValidationToEnvironmentTable,
+			Columns: validation.ValidationToEnvironmentPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: environment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, vu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{validation.Label}
@@ -756,6 +847,21 @@ func (vuo *ValidationUpdateOne) AddValidationToScript(s ...*Script) *ValidationU
 	return vuo.AddValidationToScriptIDs(ids...)
 }
 
+// AddValidationToEnvironmentIDs adds the "ValidationToEnvironment" edge to the Environment entity by IDs.
+func (vuo *ValidationUpdateOne) AddValidationToEnvironmentIDs(ids ...uuid.UUID) *ValidationUpdateOne {
+	vuo.mutation.AddValidationToEnvironmentIDs(ids...)
+	return vuo
+}
+
+// AddValidationToEnvironment adds the "ValidationToEnvironment" edges to the Environment entity.
+func (vuo *ValidationUpdateOne) AddValidationToEnvironment(e ...*Environment) *ValidationUpdateOne {
+	ids := make([]uuid.UUID, len(e))
+	for i := range e {
+		ids[i] = e[i].ID
+	}
+	return vuo.AddValidationToEnvironmentIDs(ids...)
+}
+
 // Mutation returns the ValidationMutation object of the builder.
 func (vuo *ValidationUpdateOne) Mutation() *ValidationMutation {
 	return vuo.mutation
@@ -786,6 +892,27 @@ func (vuo *ValidationUpdateOne) RemoveValidationToScript(s ...*Script) *Validati
 		ids[i] = s[i].ID
 	}
 	return vuo.RemoveValidationToScriptIDs(ids...)
+}
+
+// ClearValidationToEnvironment clears all "ValidationToEnvironment" edges to the Environment entity.
+func (vuo *ValidationUpdateOne) ClearValidationToEnvironment() *ValidationUpdateOne {
+	vuo.mutation.ClearValidationToEnvironment()
+	return vuo
+}
+
+// RemoveValidationToEnvironmentIDs removes the "ValidationToEnvironment" edge to Environment entities by IDs.
+func (vuo *ValidationUpdateOne) RemoveValidationToEnvironmentIDs(ids ...uuid.UUID) *ValidationUpdateOne {
+	vuo.mutation.RemoveValidationToEnvironmentIDs(ids...)
+	return vuo
+}
+
+// RemoveValidationToEnvironment removes "ValidationToEnvironment" edges to Environment entities.
+func (vuo *ValidationUpdateOne) RemoveValidationToEnvironment(e ...*Environment) *ValidationUpdateOne {
+	ids := make([]uuid.UUID, len(e))
+	for i := range e {
+		ids[i] = e[i].ID
+	}
+	return vuo.RemoveValidationToEnvironmentIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -1121,6 +1248,60 @@ func (vuo *ValidationUpdateOne) sqlSave(ctx context.Context) (_node *Validation,
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: script.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if vuo.mutation.ValidationToEnvironmentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   validation.ValidationToEnvironmentTable,
+			Columns: validation.ValidationToEnvironmentPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: environment.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := vuo.mutation.RemovedValidationToEnvironmentIDs(); len(nodes) > 0 && !vuo.mutation.ValidationToEnvironmentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   validation.ValidationToEnvironmentTable,
+			Columns: validation.ValidationToEnvironmentPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: environment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := vuo.mutation.ValidationToEnvironmentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   validation.ValidationToEnvironmentTable,
+			Columns: validation.ValidationToEnvironmentPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: environment.FieldID,
 				},
 			},
 		}

@@ -33,6 +33,7 @@ import (
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -65,6 +66,7 @@ type EnvironmentQuery struct {
 	withEnvironmentToBuild           *BuildQuery
 	withEnvironmentToRepository      *RepositoryQuery
 	withEnvironmentToServerTask      *ServerTaskQuery
+	withEnvironmentToValidation      *ValidationQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -519,6 +521,28 @@ func (eq *EnvironmentQuery) QueryEnvironmentToServerTask() *ServerTaskQuery {
 	return query
 }
 
+// QueryEnvironmentToValidation chains the current query on the "EnvironmentToValidation" edge.
+func (eq *EnvironmentQuery) QueryEnvironmentToValidation() *ValidationQuery {
+	query := &ValidationQuery{config: eq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := eq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := eq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(environment.Table, environment.FieldID, selector),
+			sqlgraph.To(validation.Table, validation.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, environment.EnvironmentToValidationTable, environment.EnvironmentToValidationPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Environment entity from the query.
 // Returns a *NotFoundError when no Environment was found.
 func (eq *EnvironmentQuery) First(ctx context.Context) (*Environment, error) {
@@ -719,6 +743,7 @@ func (eq *EnvironmentQuery) Clone() *EnvironmentQuery {
 		withEnvironmentToBuild:           eq.withEnvironmentToBuild.Clone(),
 		withEnvironmentToRepository:      eq.withEnvironmentToRepository.Clone(),
 		withEnvironmentToServerTask:      eq.withEnvironmentToServerTask.Clone(),
+		withEnvironmentToValidation:      eq.withEnvironmentToValidation.Clone(),
 		// clone intermediate query.
 		sql:    eq.sql.Clone(),
 		path:   eq.path,
@@ -935,6 +960,17 @@ func (eq *EnvironmentQuery) WithEnvironmentToServerTask(opts ...func(*ServerTask
 	return eq
 }
 
+// WithEnvironmentToValidation tells the query-builder to eager-load the nodes that are connected to
+// the "EnvironmentToValidation" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithEnvironmentToValidation(opts ...func(*ValidationQuery)) *EnvironmentQuery {
+	query := &ValidationQuery{config: eq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	eq.withEnvironmentToValidation = query
+	return eq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -998,7 +1034,7 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context) ([]*Environment, error) 
 	var (
 		nodes       = []*Environment{}
 		_spec       = eq.querySpec()
-		loadedTypes = [19]bool{
+		loadedTypes = [20]bool{
 			eq.withEnvironmentToUser != nil,
 			eq.withEnvironmentToHost != nil,
 			eq.withEnvironmentToCompetition != nil,
@@ -1018,6 +1054,7 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context) ([]*Environment, error) 
 			eq.withEnvironmentToBuild != nil,
 			eq.withEnvironmentToRepository != nil,
 			eq.withEnvironmentToServerTask != nil,
+			eq.withEnvironmentToValidation != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -1732,6 +1769,71 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context) ([]*Environment, error) 
 				return nil, fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_environment" returned %v for node %v`, *fk, n.ID)
 			}
 			node.Edges.EnvironmentToServerTask = append(node.Edges.EnvironmentToServerTask, n)
+		}
+	}
+
+	if query := eq.withEnvironmentToValidation; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		ids := make(map[uuid.UUID]*Environment, len(nodes))
+		for _, node := range nodes {
+			ids[node.ID] = node
+			fks = append(fks, node.ID)
+			node.Edges.EnvironmentToValidation = []*Validation{}
+		}
+		var (
+			edgeids []uuid.UUID
+			edges   = make(map[uuid.UUID][]*Environment)
+		)
+		_spec := &sqlgraph.EdgeQuerySpec{
+			Edge: &sqlgraph.EdgeSpec{
+				Inverse: false,
+				Table:   environment.EnvironmentToValidationTable,
+				Columns: environment.EnvironmentToValidationPrimaryKey,
+			},
+			Predicate: func(s *sql.Selector) {
+				s.Where(sql.InValues(environment.EnvironmentToValidationPrimaryKey[0], fks...))
+			},
+			ScanValues: func() [2]interface{} {
+				return [2]interface{}{new(uuid.UUID), new(uuid.UUID)}
+			},
+			Assign: func(out, in interface{}) error {
+				eout, ok := out.(*uuid.UUID)
+				if !ok || eout == nil {
+					return fmt.Errorf("unexpected id value for edge-out")
+				}
+				ein, ok := in.(*uuid.UUID)
+				if !ok || ein == nil {
+					return fmt.Errorf("unexpected id value for edge-in")
+				}
+				outValue := *eout
+				inValue := *ein
+				node, ok := ids[outValue]
+				if !ok {
+					return fmt.Errorf("unexpected node id in edges: %v", outValue)
+				}
+				if _, ok := edges[inValue]; !ok {
+					edgeids = append(edgeids, inValue)
+				}
+				edges[inValue] = append(edges[inValue], node)
+				return nil
+			},
+		}
+		if err := sqlgraph.QueryEdges(ctx, eq.driver, _spec); err != nil {
+			return nil, fmt.Errorf(`query edges "EnvironmentToValidation": %w`, err)
+		}
+		query.Where(validation.IDIn(edgeids...))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			nodes, ok := edges[n.ID]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected "EnvironmentToValidation" node returned %v`, n.ID)
+			}
+			for i := range nodes {
+				nodes[i].Edges.EnvironmentToValidation = append(nodes[i].Edges.EnvironmentToValidation, n)
+			}
 		}
 	}
 
