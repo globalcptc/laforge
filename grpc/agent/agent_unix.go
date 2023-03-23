@@ -1,7 +1,7 @@
 //go:build unix || linux
 // +build unix linux
 
-package main
+package agent
 
 import (
 	"bytes"
@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -247,17 +248,18 @@ func FileHash(file_location string) (string, error) { // hash of the file (strin
 	return fmt.Sprintf("%x", file_hash.Sum(nil)), nil
 }
 
-func FileContentRegex(file_location string) (string, error) { // page content to be returned and checked serverside (string)
-	file_read, read_err := s.Open(file_location)
-	if read_err != nil {
-		return "", read_err
-	}
-	file_hash := md5.New()
-	_, err := io.Copy(file_hash, file_read)
+func FileContentRegex(file_location string, pattern string) (bool, error) { // page content to be returned and checked serverside (string)
+	content, err := ioutil.ReadFile(file_location)
 	if err != nil {
-		log.Fatal(err)
+		return false, err
 	}
-	return fmt.Sprintf("%x", file_hash.Sum(nil)), nil
+
+	regex, err := regexp.Compile(pattern)
+	if err != nil {
+		return false, err
+	}
+
+	return regex.Match(content), nil
 }
 
 func DirectoryExists(directory string) (bool, error) { // exists (boolean)

@@ -1,4 +1,4 @@
-package main
+package agent
 
 //go:generate fileb0x assets.toml
 import (
@@ -296,7 +296,7 @@ func RequestTask(c pb.LaforgeClient) {
 				if err != nil {
 					RequestTaskStatusRequest(strconv.FormatBool(false), err, r.Id, c)
 				}
-				open, err := NetUDPOpen(ip, port, "hello world")
+				open, err := NetUDPOpen(ip, port)
 				RequestTaskStatusRequest(strconv.FormatBool(open), err, r.Id, c)
 			case "net-http-content-regex":
 				ip := taskArgs[1]
@@ -313,7 +313,7 @@ func RequestTask(c pb.LaforgeClient) {
 			case "file-content-regex":
 				filepath := taskArgs[1]
 				regex := taskArgs[2]
-				regexMatched, err := FileContentRegex(filepath, regex) // TODO: make filecontentregex take a regex to test
+				regexMatched, err := FileContentRegex(filepath, regex)
 				RequestTaskStatusRequest(strconv.FormatBool(regexMatched), err, r.Id, c)
 			case "dir-exists":
 				dirpath := taskArgs[1]
@@ -333,7 +333,7 @@ func RequestTask(c pb.LaforgeClient) {
 				if err != nil {
 					RequestTaskStatusRequest("false", err, r.Id, c)
 				}
-				open, err := HostPortOpen(int64(port))
+				open, err := HostPortOpen(port)
 				RequestTaskStatusRequest(strconv.FormatBool(open), err, r.Id, c)
 			case "host-process-running":
 				processname := taskArgs[1]
