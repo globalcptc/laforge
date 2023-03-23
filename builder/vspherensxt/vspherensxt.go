@@ -12,6 +12,8 @@ import (
 	"github.com/gen0cide/laforge/builder/vspherensxt/nsxt"
 	"github.com/gen0cide/laforge/builder/vspherensxt/vsphere"
 	"github.com/gen0cide/laforge/ent"
+	"github.com/gen0cide/laforge/ent/network"
+	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/types"
@@ -27,20 +29,43 @@ const (
 )
 
 type VSphereNSXTBuilder struct {
-	HttpClient                http.Client
-	Username                  string
-	Password                  string
-	NsxtClient                nsxt.NSXTClient
-	VSphereClient             vsphere.VSphere
-	TemplatePrefix            string
-	VSphereContentLibraryName string
-	VSphereDatastore          *types.DatastoreSummary
-	VSphereResourcePool       *object.ResourcePool
-	VSphereFolder             *object.Folder
-	Logger                    *logging.Logger
-	MaxWorkers                int
-	DeployWorkerPool          *semaphore.Weighted
-	TeardownWorkerPool        *semaphore.Weighted
+	Config              VSphereNSXTBuilderConfig
+	HttpClient          http.Client
+	NsxtClient          nsxt.NSXTClient
+	VSphereClient       vsphere.VSphere
+	VSphereDatastore    *types.DatastoreSummary
+	VSphereResourcePool *object.ResourcePool
+	VSphereFolder       *object.Folder
+	Logger              *logging.Logger
+	DeployWorkerPool    *semaphore.Weighted
+	TeardownWorkerPool  *semaphore.Weighted
+}
+
+type VSphereNSXTBuilderConfig struct {
+	LaForgeServerUrl   string               `json:"laforge_server_url"`
+	MaxBuildWorkers    int                  `json:"max_build_workers"`
+	MaxTeardownWorkers int                  `json:"max_teardown_workers"`
+	Vsphere            VSphereBuilderConfig `json:"vsphere"`
+	Nsxt               NSXTBuilderConfig    `json:"nsxt"`
+}
+
+type VSphereBuilderConfig struct {
+	BaseUrl        string `json:"base_url"`
+	Username       string `json:"username"`
+	Password       string `json:"password"`
+	Datastore      string `json:"datastore"`
+	ResourcePool   string `json:"resource_pool"`
+	Folder         string `json:"folder"`
+	TemplatePrefix string `json:"template_prefix"`
+}
+
+type NSXTBuilderConfig struct {
+	BaseUrl         string `json:"base_url"`
+	CertPath        string `json:"cert_path"`
+	CaCertPath      string `json:"ca_cert_path"`
+	KeyPath         string `json:"key_path"`
+	IpPoolName      string `json:"ip_pool_name"`
+	EdgeClusterPath string `json:"edge_cluster_path"`
 }
 
 func (builder VSphereNSXTBuilder) ID() string {
@@ -142,7 +167,7 @@ func (builder VSphereNSXTBuilder) DeployHost(ctx context.Context, provisionedHos
 	}
 	defer builder.DeployWorkerPool.Release(int64(1))
 
-	templateName := (builder.TemplatePrefix + host.OS)
+	templateName := (builder.Config.Vsphere.TemplatePrefix + host.OS)
 	vmName := builder.generateVmName(competition, team, host, build)
 	guestCustomizationName := (vmName + "-Customization-Spec")
 
@@ -174,7 +199,7 @@ func (builder VSphereNSXTBuilder) DeployNetwork(ctx context.Context, provisioned
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
-	entCompetition, err := entEnvironment.EnvironmentToCompetition(ctx)
+	entCompetition, err := entEnvironment.QueryEnvironmentToCompetition().All(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
 	}
@@ -345,6 +370,27 @@ func (builder VSphereNSXTBuilder) DeployNetwork(ctx context.Context, provisioned
 	if nsxtError != nil {
 		return fmt.Errorf("nsx-t error %s (%d): %s", nsxtError.HttpStatus, nsxtError.ErrorCode, nsxtError.Message)
 	}
+
+	// Give some time for NSX-T to sync to VSphere
+	time.Sleep(1 * time.Minute)
+	return
+}
+
+func (builder VSphereNSXTBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
+	entProNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(
+		provisionednetwork.HasProvisionedNetworkToNetworkWith(
+			network.NameEQ("vdi"),
+		),
+	).First(ctx)
+
+	if err != nil {
+		return fmt.Errorf("failed to query vdi provisioned network from entTeam: %v", err)
+
+	}
+	err = builder.DeployNetwork(ctx, entProNetwork)
+	if err != nil {
+		return fmt.Errorf("failed to pre-create Tier-1 network: %v", err)
+	}
 	return
 }
 
@@ -411,7 +457,7 @@ func (builder VSphereNSXTBuilder) TeardownNetwork(ctx context.Context, provision
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
-	entCompetition, err := entEnvironment.EnvironmentToCompetition(ctx)
+	entCompetition, err := entEnvironment.QueryEnvironmentToCompetition().All(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
 	}
@@ -491,5 +537,9 @@ func (builder VSphereNSXTBuilder) TeardownNetwork(ctx context.Context, provision
 	if nsxtError != nil && nsxtError.ErrorCode != nsxt.NSXTERROR_Tier1_Has_Children {
 		return fmt.Errorf("nsx-t error %s (%d): %s", nsxtError.HttpStatus, nsxtError.ErrorCode, nsxtError.Message)
 	}
+	return
+}
+
+func (builder VSphereNSXTBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	return
 }

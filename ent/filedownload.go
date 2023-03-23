@@ -36,6 +36,8 @@ type FileDownload struct {
 	Md5 string `json:"md5,omitempty" hcl:"md5,optional"`
 	// AbsPath holds the value of the "abs_path" field.
 	AbsPath string `json:"abs_path,omitempty" hcl:"abs_path,optional"`
+	// IsTxt holds the value of the "is_txt" field.
+	IsTxt bool `json:"is_txt,omitempty" hcl:"is_txt,optional"`
 	// Tags holds the value of the "tags" field.
 	Tags map[string]string `json:"tags,omitempty" hcl:"tags,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -79,7 +81,7 @@ func (*FileDownload) scanValues(columns []string) ([]interface{}, error) {
 		switch columns[i] {
 		case filedownload.FieldTags:
 			values[i] = new([]byte)
-		case filedownload.FieldTemplate, filedownload.FieldDisabled:
+		case filedownload.FieldTemplate, filedownload.FieldDisabled, filedownload.FieldIsTxt:
 			values[i] = new(sql.NullBool)
 		case filedownload.FieldHclID, filedownload.FieldSourceType, filedownload.FieldSource, filedownload.FieldDestination, filedownload.FieldPerms, filedownload.FieldMd5, filedownload.FieldAbsPath:
 			values[i] = new(sql.NullString)
@@ -162,6 +164,12 @@ func (fd *FileDownload) assignValues(columns []string, values []interface{}) err
 			} else if value.Valid {
 				fd.AbsPath = value.String
 			}
+		case filedownload.FieldIsTxt:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_txt", values[i])
+			} else if value.Valid {
+				fd.IsTxt = value.Bool
+			}
 		case filedownload.FieldTags:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field tags", values[i])
@@ -228,6 +236,8 @@ func (fd *FileDownload) String() string {
 	builder.WriteString(fd.Md5)
 	builder.WriteString(", abs_path=")
 	builder.WriteString(fd.AbsPath)
+	builder.WriteString(", is_txt=")
+	builder.WriteString(fmt.Sprintf("%v", fd.IsTxt))
 	builder.WriteString(", tags=")
 	builder.WriteString(fmt.Sprintf("%v", fd.Tags))
 	builder.WriteByte(')')

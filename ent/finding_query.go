@@ -206,7 +206,7 @@ func (fq *FindingQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single Finding entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one Finding entity is not found.
+// Returns a *NotSingularError when more than one Finding entity is found.
 // Returns a *NotFoundError when no Finding entities are found.
 func (fq *FindingQuery) Only(ctx context.Context) (*Finding, error) {
 	nodes, err := fq.Limit(2).All(ctx)
@@ -233,7 +233,7 @@ func (fq *FindingQuery) OnlyX(ctx context.Context) *Finding {
 }
 
 // OnlyID is like Only, but returns the only Finding ID in the query.
-// Returns a *NotSingularError when exactly one Finding ID is not found.
+// Returns a *NotSingularError when more than one Finding ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (fq *FindingQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -346,8 +346,9 @@ func (fq *FindingQuery) Clone() *FindingQuery {
 		withFindingToScript:      fq.withFindingToScript.Clone(),
 		withFindingToEnvironment: fq.withFindingToEnvironment.Clone(),
 		// clone intermediate query.
-		sql:  fq.sql.Clone(),
-		path: fq.path,
+		sql:    fq.sql.Clone(),
+		path:   fq.path,
+		unique: fq.unique,
 	}
 }
 
@@ -615,6 +616,10 @@ func (fq *FindingQuery) sqlAll(ctx context.Context) ([]*Finding, error) {
 
 func (fq *FindingQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := fq.querySpec()
+	_spec.Node.Columns = fq.fields
+	if len(fq.fields) > 0 {
+		_spec.Unique = fq.unique != nil && *fq.unique
+	}
 	return sqlgraph.CountNodes(ctx, fq.driver, _spec)
 }
 
@@ -685,6 +690,9 @@ func (fq *FindingQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if fq.sql != nil {
 		selector = fq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if fq.unique != nil && *fq.unique {
+		selector.Distinct()
 	}
 	for _, p := range fq.predicates {
 		p(selector)
@@ -964,9 +972,7 @@ func (fgb *FindingGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range fgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(fgb.fields...)...)

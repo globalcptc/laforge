@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/competition"
@@ -30,6 +31,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
@@ -59,8 +61,10 @@ type EnvironmentQuery struct {
 	withEnvironmentToDNS             *DNSQuery
 	withEnvironmentToNetwork         *NetworkQuery
 	withEnvironmentToHostDependency  *HostDependencyQuery
+	withEnvironmentToAnsible         *AnsibleQuery
 	withEnvironmentToBuild           *BuildQuery
 	withEnvironmentToRepository      *RepositoryQuery
+	withEnvironmentToServerTask      *ServerTaskQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -427,6 +431,28 @@ func (eq *EnvironmentQuery) QueryEnvironmentToHostDependency() *HostDependencyQu
 	return query
 }
 
+// QueryEnvironmentToAnsible chains the current query on the "EnvironmentToAnsible" edge.
+func (eq *EnvironmentQuery) QueryEnvironmentToAnsible() *AnsibleQuery {
+	query := &AnsibleQuery{config: eq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := eq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := eq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(environment.Table, environment.FieldID, selector),
+			sqlgraph.To(ansible.Table, ansible.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToAnsibleTable, environment.EnvironmentToAnsibleColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryEnvironmentToBuild chains the current query on the "EnvironmentToBuild" edge.
 func (eq *EnvironmentQuery) QueryEnvironmentToBuild() *BuildQuery {
 	query := &BuildQuery{config: eq.config}
@@ -464,6 +490,28 @@ func (eq *EnvironmentQuery) QueryEnvironmentToRepository() *RepositoryQuery {
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(repository.Table, repository.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, environment.EnvironmentToRepositoryTable, environment.EnvironmentToRepositoryPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEnvironmentToServerTask chains the current query on the "EnvironmentToServerTask" edge.
+func (eq *EnvironmentQuery) QueryEnvironmentToServerTask() *ServerTaskQuery {
+	query := &ServerTaskQuery{config: eq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := eq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := eq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(environment.Table, environment.FieldID, selector),
+			sqlgraph.To(servertask.Table, servertask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, environment.EnvironmentToServerTaskTable, environment.EnvironmentToServerTaskColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -517,7 +565,7 @@ func (eq *EnvironmentQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single Environment entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one Environment entity is not found.
+// Returns a *NotSingularError when more than one Environment entity is found.
 // Returns a *NotFoundError when no Environment entities are found.
 func (eq *EnvironmentQuery) Only(ctx context.Context) (*Environment, error) {
 	nodes, err := eq.Limit(2).All(ctx)
@@ -544,7 +592,7 @@ func (eq *EnvironmentQuery) OnlyX(ctx context.Context) *Environment {
 }
 
 // OnlyID is like Only, but returns the only Environment ID in the query.
-// Returns a *NotSingularError when exactly one Environment ID is not found.
+// Returns a *NotSingularError when more than one Environment ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (eq *EnvironmentQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -667,11 +715,14 @@ func (eq *EnvironmentQuery) Clone() *EnvironmentQuery {
 		withEnvironmentToDNS:             eq.withEnvironmentToDNS.Clone(),
 		withEnvironmentToNetwork:         eq.withEnvironmentToNetwork.Clone(),
 		withEnvironmentToHostDependency:  eq.withEnvironmentToHostDependency.Clone(),
+		withEnvironmentToAnsible:         eq.withEnvironmentToAnsible.Clone(),
 		withEnvironmentToBuild:           eq.withEnvironmentToBuild.Clone(),
 		withEnvironmentToRepository:      eq.withEnvironmentToRepository.Clone(),
+		withEnvironmentToServerTask:      eq.withEnvironmentToServerTask.Clone(),
 		// clone intermediate query.
-		sql:  eq.sql.Clone(),
-		path: eq.path,
+		sql:    eq.sql.Clone(),
+		path:   eq.path,
+		unique: eq.unique,
 	}
 }
 
@@ -840,6 +891,17 @@ func (eq *EnvironmentQuery) WithEnvironmentToHostDependency(opts ...func(*HostDe
 	return eq
 }
 
+// WithEnvironmentToAnsible tells the query-builder to eager-load the nodes that are connected to
+// the "EnvironmentToAnsible" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithEnvironmentToAnsible(opts ...func(*AnsibleQuery)) *EnvironmentQuery {
+	query := &AnsibleQuery{config: eq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	eq.withEnvironmentToAnsible = query
+	return eq
+}
+
 // WithEnvironmentToBuild tells the query-builder to eager-load the nodes that are connected to
 // the "EnvironmentToBuild" edge. The optional arguments are used to configure the query builder of the edge.
 func (eq *EnvironmentQuery) WithEnvironmentToBuild(opts ...func(*BuildQuery)) *EnvironmentQuery {
@@ -859,6 +921,17 @@ func (eq *EnvironmentQuery) WithEnvironmentToRepository(opts ...func(*Repository
 		opt(query)
 	}
 	eq.withEnvironmentToRepository = query
+	return eq
+}
+
+// WithEnvironmentToServerTask tells the query-builder to eager-load the nodes that are connected to
+// the "EnvironmentToServerTask" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithEnvironmentToServerTask(opts ...func(*ServerTaskQuery)) *EnvironmentQuery {
+	query := &ServerTaskQuery{config: eq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	eq.withEnvironmentToServerTask = query
 	return eq
 }
 
@@ -927,7 +1000,7 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context) ([]*Environment, error) 
 	var (
 		nodes       = []*Environment{}
 		_spec       = eq.querySpec()
-		loadedTypes = [17]bool{
+		loadedTypes = [19]bool{
 			eq.withEnvironmentToUser != nil,
 			eq.withEnvironmentToHost != nil,
 			eq.withEnvironmentToCompetition != nil,
@@ -943,8 +1016,10 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context) ([]*Environment, error) 
 			eq.withEnvironmentToDNS != nil,
 			eq.withEnvironmentToNetwork != nil,
 			eq.withEnvironmentToHostDependency != nil,
+			eq.withEnvironmentToAnsible != nil,
 			eq.withEnvironmentToBuild != nil,
 			eq.withEnvironmentToRepository != nil,
+			eq.withEnvironmentToServerTask != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -1510,6 +1585,35 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context) ([]*Environment, error) 
 		}
 	}
 
+	if query := eq.withEnvironmentToAnsible; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*Environment)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.EnvironmentToAnsible = []*Ansible{}
+		}
+		query.withFKs = true
+		query.Where(predicate.Ansible(func(s *sql.Selector) {
+			s.Where(sql.InValues(environment.EnvironmentToAnsibleColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.environment_environment_to_ansible
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "environment_environment_to_ansible" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "environment_environment_to_ansible" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.EnvironmentToAnsible = append(node.Edges.EnvironmentToAnsible, n)
+		}
+	}
+
 	if query := eq.withEnvironmentToBuild; query != nil {
 		fks := make([]driver.Value, 0, len(nodes))
 		nodeids := make(map[uuid.UUID]*Environment)
@@ -1604,11 +1708,44 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context) ([]*Environment, error) 
 		}
 	}
 
+	if query := eq.withEnvironmentToServerTask; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*Environment)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.EnvironmentToServerTask = []*ServerTask{}
+		}
+		query.withFKs = true
+		query.Where(predicate.ServerTask(func(s *sql.Selector) {
+			s.Where(sql.InValues(environment.EnvironmentToServerTaskColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.server_task_server_task_to_environment
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "server_task_server_task_to_environment" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_environment" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.EnvironmentToServerTask = append(node.Edges.EnvironmentToServerTask, n)
+		}
+	}
+
 	return nodes, nil
 }
 
 func (eq *EnvironmentQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := eq.querySpec()
+	_spec.Node.Columns = eq.fields
+	if len(eq.fields) > 0 {
+		_spec.Unique = eq.unique != nil && *eq.unique
+	}
 	return sqlgraph.CountNodes(ctx, eq.driver, _spec)
 }
 
@@ -1679,6 +1816,9 @@ func (eq *EnvironmentQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if eq.sql != nil {
 		selector = eq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if eq.unique != nil && *eq.unique {
+		selector.Distinct()
 	}
 	for _, p := range eq.predicates {
 		p(selector)
@@ -1958,9 +2098,7 @@ func (egb *EnvironmentGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range egb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(egb.fields...)...)

@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -936,7 +937,7 @@ func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStat
 	}
 	id, ok := asuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing AgentStatus.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "AgentStatus.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := asuo.fields; len(fields) > 0 {

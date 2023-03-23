@@ -35,3 +35,10 @@ mutation CreateUser($username: String!, $password: String!, $provider: ProviderT
     ...UserListFields
   }
 }
+
+mutation NukeBackend {
+  nukeBackend {
+    key
+    value
+  }
+}

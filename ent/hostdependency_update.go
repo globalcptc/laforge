@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -583,7 +584,7 @@ func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDe
 	}
 	id, ok := hduo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing HostDependency.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "HostDependency.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := hduo.fields; len(fields) > 0 {

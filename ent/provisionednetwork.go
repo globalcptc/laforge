@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -25,6 +26,8 @@ type ProvisionedNetwork struct {
 	Name string `json:"name,omitempty"`
 	// Cidr holds the value of the "cidr" field.
 	Cidr string `json:"cidr,omitempty"`
+	// Vars holds the value of the "vars" field.
+	Vars map[string]string `json:"vars,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProvisionedNetworkQuery when eager-loading is set.
 	Edges ProvisionedNetworkEdges `json:"edges"`
@@ -152,6 +155,8 @@ func (*ProvisionedNetwork) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case provisionednetwork.FieldVars:
+			values[i] = new([]byte)
 		case provisionednetwork.FieldName, provisionednetwork.FieldCidr:
 			values[i] = new(sql.NullString)
 		case provisionednetwork.FieldID:
@@ -196,6 +201,14 @@ func (pn *ProvisionedNetwork) assignValues(columns []string, values []interface{
 				return fmt.Errorf("unexpected type %T for field cidr", values[i])
 			} else if value.Valid {
 				pn.Cidr = value.String
+			}
+		case provisionednetwork.FieldVars:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field vars", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &pn.Vars); err != nil {
+					return fmt.Errorf("unmarshal field vars: %w", err)
+				}
 			}
 		case provisionednetwork.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -287,6 +300,8 @@ func (pn *ProvisionedNetwork) String() string {
 	builder.WriteString(pn.Name)
 	builder.WriteString(", cidr=")
 	builder.WriteString(pn.Cidr)
+	builder.WriteString(", vars=")
+	builder.WriteString(fmt.Sprintf("%v", pn.Vars))
 	builder.WriteByte(')')
 	return builder.String()
 }

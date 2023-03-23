@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/predicate"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/google/uuid"
 )
@@ -29,6 +30,7 @@ type RepositoryQuery struct {
 	predicates []predicate.Repository
 	// eager-loading edges.
 	withRepositoryToEnvironment *EnvironmentQuery
+	withRepositoryToRepoCommit  *RepoCommitQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -87,6 +89,28 @@ func (rq *RepositoryQuery) QueryRepositoryToEnvironment() *EnvironmentQuery {
 	return query
 }
 
+// QueryRepositoryToRepoCommit chains the current query on the "RepositoryToRepoCommit" edge.
+func (rq *RepositoryQuery) QueryRepositoryToRepoCommit() *RepoCommitQuery {
+	query := &RepoCommitQuery{config: rq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := rq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := rq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(repository.Table, repository.FieldID, selector),
+			sqlgraph.To(repocommit.Table, repocommit.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, repository.RepositoryToRepoCommitTable, repository.RepositoryToRepoCommitColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Repository entity from the query.
 // Returns a *NotFoundError when no Repository was found.
 func (rq *RepositoryQuery) First(ctx context.Context) (*Repository, error) {
@@ -133,7 +157,7 @@ func (rq *RepositoryQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single Repository entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one Repository entity is not found.
+// Returns a *NotSingularError when more than one Repository entity is found.
 // Returns a *NotFoundError when no Repository entities are found.
 func (rq *RepositoryQuery) Only(ctx context.Context) (*Repository, error) {
 	nodes, err := rq.Limit(2).All(ctx)
@@ -160,7 +184,7 @@ func (rq *RepositoryQuery) OnlyX(ctx context.Context) *Repository {
 }
 
 // OnlyID is like Only, but returns the only Repository ID in the query.
-// Returns a *NotSingularError when exactly one Repository ID is not found.
+// Returns a *NotSingularError when more than one Repository ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (rq *RepositoryQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -269,9 +293,11 @@ func (rq *RepositoryQuery) Clone() *RepositoryQuery {
 		order:                       append([]OrderFunc{}, rq.order...),
 		predicates:                  append([]predicate.Repository{}, rq.predicates...),
 		withRepositoryToEnvironment: rq.withRepositoryToEnvironment.Clone(),
+		withRepositoryToRepoCommit:  rq.withRepositoryToRepoCommit.Clone(),
 		// clone intermediate query.
-		sql:  rq.sql.Clone(),
-		path: rq.path,
+		sql:    rq.sql.Clone(),
+		path:   rq.path,
+		unique: rq.unique,
 	}
 }
 
@@ -283,6 +309,17 @@ func (rq *RepositoryQuery) WithRepositoryToEnvironment(opts ...func(*Environment
 		opt(query)
 	}
 	rq.withRepositoryToEnvironment = query
+	return rq
+}
+
+// WithRepositoryToRepoCommit tells the query-builder to eager-load the nodes that are connected to
+// the "RepositoryToRepoCommit" edge. The optional arguments are used to configure the query builder of the edge.
+func (rq *RepositoryQuery) WithRepositoryToRepoCommit(opts ...func(*RepoCommitQuery)) *RepositoryQuery {
+	query := &RepoCommitQuery{config: rq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	rq.withRepositoryToRepoCommit = query
 	return rq
 }
 
@@ -351,8 +388,9 @@ func (rq *RepositoryQuery) sqlAll(ctx context.Context) ([]*Repository, error) {
 	var (
 		nodes       = []*Repository{}
 		_spec       = rq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			rq.withRepositoryToEnvironment != nil,
+			rq.withRepositoryToRepoCommit != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -440,11 +478,44 @@ func (rq *RepositoryQuery) sqlAll(ctx context.Context) ([]*Repository, error) {
 		}
 	}
 
+	if query := rq.withRepositoryToRepoCommit; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*Repository)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.RepositoryToRepoCommit = []*RepoCommit{}
+		}
+		query.withFKs = true
+		query.Where(predicate.RepoCommit(func(s *sql.Selector) {
+			s.Where(sql.InValues(repository.RepositoryToRepoCommitColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.repository_repository_to_repo_commit
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "repository_repository_to_repo_commit" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "repository_repository_to_repo_commit" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.RepositoryToRepoCommit = append(node.Edges.RepositoryToRepoCommit, n)
+		}
+	}
+
 	return nodes, nil
 }
 
 func (rq *RepositoryQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := rq.querySpec()
+	_spec.Node.Columns = rq.fields
+	if len(rq.fields) > 0 {
+		_spec.Unique = rq.unique != nil && *rq.unique
+	}
 	return sqlgraph.CountNodes(ctx, rq.driver, _spec)
 }
 
@@ -515,6 +586,9 @@ func (rq *RepositoryQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if rq.sql != nil {
 		selector = rq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if rq.unique != nil && *rq.unique {
+		selector.Distinct()
 	}
 	for _, p := range rq.predicates {
 		p(selector)
@@ -794,9 +868,7 @@ func (rgb *RepositoryGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range rgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(rgb.fields...)...)

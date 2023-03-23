@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/competition"
@@ -26,6 +27,7 @@ import (
 	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
@@ -106,6 +108,14 @@ func (ec *EnvironmentCreate) SetTags(m map[string]string) *EnvironmentCreate {
 // SetID sets the "id" field.
 func (ec *EnvironmentCreate) SetID(u uuid.UUID) *EnvironmentCreate {
 	ec.mutation.SetID(u)
+	return ec
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (ec *EnvironmentCreate) SetNillableID(u *uuid.UUID) *EnvironmentCreate {
+	if u != nil {
+		ec.SetID(*u)
+	}
 	return ec
 }
 
@@ -334,6 +344,21 @@ func (ec *EnvironmentCreate) AddEnvironmentToHostDependency(h ...*HostDependency
 	return ec.AddEnvironmentToHostDependencyIDs(ids...)
 }
 
+// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
+func (ec *EnvironmentCreate) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddEnvironmentToAnsibleIDs(ids...)
+	return ec
+}
+
+// AddEnvironmentToAnsible adds the "EnvironmentToAnsible" edges to the Ansible entity.
+func (ec *EnvironmentCreate) AddEnvironmentToAnsible(a ...*Ansible) *EnvironmentCreate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return ec.AddEnvironmentToAnsibleIDs(ids...)
+}
+
 // AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
 func (ec *EnvironmentCreate) AddEnvironmentToBuildIDs(ids ...uuid.UUID) *EnvironmentCreate {
 	ec.mutation.AddEnvironmentToBuildIDs(ids...)
@@ -362,6 +387,21 @@ func (ec *EnvironmentCreate) AddEnvironmentToRepository(r ...*Repository) *Envir
 		ids[i] = r[i].ID
 	}
 	return ec.AddEnvironmentToRepositoryIDs(ids...)
+}
+
+// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
+func (ec *EnvironmentCreate) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddEnvironmentToServerTaskIDs(ids...)
+	return ec
+}
+
+// AddEnvironmentToServerTask adds the "EnvironmentToServerTask" edges to the ServerTask entity.
+func (ec *EnvironmentCreate) AddEnvironmentToServerTask(s ...*ServerTask) *EnvironmentCreate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return ec.AddEnvironmentToServerTaskIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -444,37 +484,37 @@ func (ec *EnvironmentCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (ec *EnvironmentCreate) check() error {
 	if _, ok := ec.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Environment.hcl_id"`)}
 	}
 	if _, ok := ec.mutation.CompetitionID(); !ok {
-		return &ValidationError{Name: "competition_id", err: errors.New(`ent: missing required field "competition_id"`)}
+		return &ValidationError{Name: "competition_id", err: errors.New(`ent: missing required field "Environment.competition_id"`)}
 	}
 	if _, ok := ec.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Environment.name"`)}
 	}
 	if _, ok := ec.mutation.Description(); !ok {
-		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "description"`)}
+		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Environment.description"`)}
 	}
 	if _, ok := ec.mutation.Builder(); !ok {
-		return &ValidationError{Name: "builder", err: errors.New(`ent: missing required field "builder"`)}
+		return &ValidationError{Name: "builder", err: errors.New(`ent: missing required field "Environment.builder"`)}
 	}
 	if _, ok := ec.mutation.TeamCount(); !ok {
-		return &ValidationError{Name: "team_count", err: errors.New(`ent: missing required field "team_count"`)}
+		return &ValidationError{Name: "team_count", err: errors.New(`ent: missing required field "Environment.team_count"`)}
 	}
 	if _, ok := ec.mutation.Revision(); !ok {
-		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "revision"`)}
+		return &ValidationError{Name: "revision", err: errors.New(`ent: missing required field "Environment.revision"`)}
 	}
 	if _, ok := ec.mutation.AdminCidrs(); !ok {
-		return &ValidationError{Name: "admin_cidrs", err: errors.New(`ent: missing required field "admin_cidrs"`)}
+		return &ValidationError{Name: "admin_cidrs", err: errors.New(`ent: missing required field "Environment.admin_cidrs"`)}
 	}
 	if _, ok := ec.mutation.ExposedVdiPorts(); !ok {
-		return &ValidationError{Name: "exposed_vdi_ports", err: errors.New(`ent: missing required field "exposed_vdi_ports"`)}
+		return &ValidationError{Name: "exposed_vdi_ports", err: errors.New(`ent: missing required field "Environment.exposed_vdi_ports"`)}
 	}
 	if _, ok := ec.mutation.Config(); !ok {
-		return &ValidationError{Name: "config", err: errors.New(`ent: missing required field "config"`)}
+		return &ValidationError{Name: "config", err: errors.New(`ent: missing required field "Environment.config"`)}
 	}
 	if _, ok := ec.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Environment.tags"`)}
 	}
 	return nil
 }
@@ -488,7 +528,11 @@ func (ec *EnvironmentCreate) sqlSave(ctx context.Context) (*Environment, error) 
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -506,7 +550,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := ec.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := ec.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -881,6 +925,25 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
+	if nodes := ec.mutation.EnvironmentToAnsibleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	if nodes := ec.mutation.EnvironmentToBuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -911,6 +974,25 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: repository.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ec.mutation.EnvironmentToServerTaskIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
 				},
 			},
 		}

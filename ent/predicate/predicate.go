@@ -15,6 +15,9 @@ type AgentStatus func(*sql.Selector)
 // AgentTask is the predicate function for agenttask builders.
 type AgentTask func(*sql.Selector)
 
+// Ansible is the predicate function for ansible builders.
+type Ansible func(*sql.Selector)
+
 // AuthUser is the predicate function for authuser builders.
 type AuthUser func(*sql.Selector)
 
@@ -86,6 +89,9 @@ type ProvisionedNetwork func(*sql.Selector)
 
 // ProvisioningStep is the predicate function for provisioningstep builders.
 type ProvisioningStep func(*sql.Selector)
+
+// RepoCommit is the predicate function for repocommit builders.
+type RepoCommit func(*sql.Selector)
 
 // Repository is the predicate function for repository builders.
 type Repository func(*sql.Selector)

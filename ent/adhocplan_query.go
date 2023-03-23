@@ -228,7 +228,7 @@ func (apq *AdhocPlanQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single AdhocPlan entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one AdhocPlan entity is not found.
+// Returns a *NotSingularError when more than one AdhocPlan entity is found.
 // Returns a *NotFoundError when no AdhocPlan entities are found.
 func (apq *AdhocPlanQuery) Only(ctx context.Context) (*AdhocPlan, error) {
 	nodes, err := apq.Limit(2).All(ctx)
@@ -255,7 +255,7 @@ func (apq *AdhocPlanQuery) OnlyX(ctx context.Context) *AdhocPlan {
 }
 
 // OnlyID is like Only, but returns the only AdhocPlan ID in the query.
-// Returns a *NotSingularError when exactly one AdhocPlan ID is not found.
+// Returns a *NotSingularError when more than one AdhocPlan ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (apq *AdhocPlanQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -369,8 +369,9 @@ func (apq *AdhocPlanQuery) Clone() *AdhocPlanQuery {
 		withAdhocPlanToStatus:    apq.withAdhocPlanToStatus.Clone(),
 		withAdhocPlanToAgentTask: apq.withAdhocPlanToAgentTask.Clone(),
 		// clone intermediate query.
-		sql:  apq.sql.Clone(),
-		path: apq.path,
+		sql:    apq.sql.Clone(),
+		path:   apq.path,
+		unique: apq.unique,
 	}
 }
 
@@ -726,6 +727,10 @@ func (apq *AdhocPlanQuery) sqlAll(ctx context.Context) ([]*AdhocPlan, error) {
 
 func (apq *AdhocPlanQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := apq.querySpec()
+	_spec.Node.Columns = apq.fields
+	if len(apq.fields) > 0 {
+		_spec.Unique = apq.unique != nil && *apq.unique
+	}
 	return sqlgraph.CountNodes(ctx, apq.driver, _spec)
 }
 
@@ -796,6 +801,9 @@ func (apq *AdhocPlanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if apq.sql != nil {
 		selector = apq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if apq.unique != nil && *apq.unique {
+		selector.Distinct()
 	}
 	for _, p := range apq.predicates {
 		p(selector)
@@ -1075,9 +1083,7 @@ func (apgb *AdhocPlanGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range apgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(apgb.fields...)...)

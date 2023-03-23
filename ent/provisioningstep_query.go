@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/dnsrecord"
 	"github.com/gen0cide/laforge/ent/filedelete"
@@ -46,6 +47,7 @@ type ProvisioningStepQuery struct {
 	withProvisioningStepToFileDelete        *FileDeleteQuery
 	withProvisioningStepToFileDownload      *FileDownloadQuery
 	withProvisioningStepToFileExtract       *FileExtractQuery
+	withProvisioningStepToAnsible           *AnsibleQuery
 	withProvisioningStepToPlan              *PlanQuery
 	withProvisioningStepToAgentTask         *AgentTaskQuery
 	withProvisioningStepToGinFileMiddleware *GinFileMiddlewareQuery
@@ -262,6 +264,28 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToFileExtract() *FileExtr
 	return query
 }
 
+// QueryProvisioningStepToAnsible chains the current query on the "ProvisioningStepToAnsible" edge.
+func (psq *ProvisioningStepQuery) QueryProvisioningStepToAnsible() *AnsibleQuery {
+	query := &AnsibleQuery{config: psq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := psq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := psq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
+			sqlgraph.To(ansible.Table, ansible.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToAnsibleTable, provisioningstep.ProvisioningStepToAnsibleColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryProvisioningStepToPlan chains the current query on the "ProvisioningStepToPlan" edge.
 func (psq *ProvisioningStepQuery) QueryProvisioningStepToPlan() *PlanQuery {
 	query := &PlanQuery{config: psq.config}
@@ -374,7 +398,7 @@ func (psq *ProvisioningStepQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single ProvisioningStep entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one ProvisioningStep entity is not found.
+// Returns a *NotSingularError when more than one ProvisioningStep entity is found.
 // Returns a *NotFoundError when no ProvisioningStep entities are found.
 func (psq *ProvisioningStepQuery) Only(ctx context.Context) (*ProvisioningStep, error) {
 	nodes, err := psq.Limit(2).All(ctx)
@@ -401,7 +425,7 @@ func (psq *ProvisioningStepQuery) OnlyX(ctx context.Context) *ProvisioningStep {
 }
 
 // OnlyID is like Only, but returns the only ProvisioningStep ID in the query.
-// Returns a *NotSingularError when exactly one ProvisioningStep ID is not found.
+// Returns a *NotSingularError when more than one ProvisioningStep ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (psq *ProvisioningStepQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -517,12 +541,14 @@ func (psq *ProvisioningStepQuery) Clone() *ProvisioningStepQuery {
 		withProvisioningStepToFileDelete:        psq.withProvisioningStepToFileDelete.Clone(),
 		withProvisioningStepToFileDownload:      psq.withProvisioningStepToFileDownload.Clone(),
 		withProvisioningStepToFileExtract:       psq.withProvisioningStepToFileExtract.Clone(),
+		withProvisioningStepToAnsible:           psq.withProvisioningStepToAnsible.Clone(),
 		withProvisioningStepToPlan:              psq.withProvisioningStepToPlan.Clone(),
 		withProvisioningStepToAgentTask:         psq.withProvisioningStepToAgentTask.Clone(),
 		withProvisioningStepToGinFileMiddleware: psq.withProvisioningStepToGinFileMiddleware.Clone(),
 		// clone intermediate query.
-		sql:  psq.sql.Clone(),
-		path: psq.path,
+		sql:    psq.sql.Clone(),
+		path:   psq.path,
+		unique: psq.unique,
 	}
 }
 
@@ -611,6 +637,17 @@ func (psq *ProvisioningStepQuery) WithProvisioningStepToFileExtract(opts ...func
 		opt(query)
 	}
 	psq.withProvisioningStepToFileExtract = query
+	return psq
+}
+
+// WithProvisioningStepToAnsible tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningStepToAnsible" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithProvisioningStepToAnsible(opts ...func(*AnsibleQuery)) *ProvisioningStepQuery {
+	query := &AnsibleQuery{config: psq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	psq.withProvisioningStepToAnsible = query
 	return psq
 }
 
@@ -713,7 +750,7 @@ func (psq *ProvisioningStepQuery) sqlAll(ctx context.Context) ([]*ProvisioningSt
 		nodes       = []*ProvisioningStep{}
 		withFKs     = psq.withFKs
 		_spec       = psq.querySpec()
-		loadedTypes = [11]bool{
+		loadedTypes = [12]bool{
 			psq.withProvisioningStepToStatus != nil,
 			psq.withProvisioningStepToProvisionedHost != nil,
 			psq.withProvisioningStepToScript != nil,
@@ -722,12 +759,13 @@ func (psq *ProvisioningStepQuery) sqlAll(ctx context.Context) ([]*ProvisioningSt
 			psq.withProvisioningStepToFileDelete != nil,
 			psq.withProvisioningStepToFileDownload != nil,
 			psq.withProvisioningStepToFileExtract != nil,
+			psq.withProvisioningStepToAnsible != nil,
 			psq.withProvisioningStepToPlan != nil,
 			psq.withProvisioningStepToAgentTask != nil,
 			psq.withProvisioningStepToGinFileMiddleware != nil,
 		}
 	)
-	if psq.withProvisioningStepToProvisionedHost != nil || psq.withProvisioningStepToScript != nil || psq.withProvisioningStepToCommand != nil || psq.withProvisioningStepToDNSRecord != nil || psq.withProvisioningStepToFileDelete != nil || psq.withProvisioningStepToFileDownload != nil || psq.withProvisioningStepToFileExtract != nil || psq.withProvisioningStepToPlan != nil || psq.withProvisioningStepToGinFileMiddleware != nil {
+	if psq.withProvisioningStepToProvisionedHost != nil || psq.withProvisioningStepToScript != nil || psq.withProvisioningStepToCommand != nil || psq.withProvisioningStepToDNSRecord != nil || psq.withProvisioningStepToFileDelete != nil || psq.withProvisioningStepToFileDownload != nil || psq.withProvisioningStepToFileExtract != nil || psq.withProvisioningStepToAnsible != nil || psq.withProvisioningStepToPlan != nil || psq.withProvisioningStepToGinFileMiddleware != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -984,6 +1022,35 @@ func (psq *ProvisioningStepQuery) sqlAll(ctx context.Context) ([]*ProvisioningSt
 		}
 	}
 
+	if query := psq.withProvisioningStepToAnsible; query != nil {
+		ids := make([]uuid.UUID, 0, len(nodes))
+		nodeids := make(map[uuid.UUID][]*ProvisioningStep)
+		for i := range nodes {
+			if nodes[i].provisioning_step_provisioning_step_to_ansible == nil {
+				continue
+			}
+			fk := *nodes[i].provisioning_step_provisioning_step_to_ansible
+			if _, ok := nodeids[fk]; !ok {
+				ids = append(ids, fk)
+			}
+			nodeids[fk] = append(nodeids[fk], nodes[i])
+		}
+		query.Where(ansible.IDIn(ids...))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			nodes, ok := nodeids[n.ID]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_ansible" returned %v`, n.ID)
+			}
+			for i := range nodes {
+				nodes[i].Edges.ProvisioningStepToAnsible = n
+			}
+		}
+	}
+
 	if query := psq.withProvisioningStepToPlan; query != nil {
 		ids := make([]uuid.UUID, 0, len(nodes))
 		nodeids := make(map[uuid.UUID][]*ProvisioningStep)
@@ -1076,6 +1143,10 @@ func (psq *ProvisioningStepQuery) sqlAll(ctx context.Context) ([]*ProvisioningSt
 
 func (psq *ProvisioningStepQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := psq.querySpec()
+	_spec.Node.Columns = psq.fields
+	if len(psq.fields) > 0 {
+		_spec.Unique = psq.unique != nil && *psq.unique
+	}
 	return sqlgraph.CountNodes(ctx, psq.driver, _spec)
 }
 
@@ -1146,6 +1217,9 @@ func (psq *ProvisioningStepQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if psq.sql != nil {
 		selector = psq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if psq.unique != nil && *psq.unique {
+		selector.Distinct()
 	}
 	for _, p := range psq.predicates {
 		p(selector)
@@ -1425,9 +1499,7 @@ func (psgb *ProvisioningStepGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range psgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(psgb.fields...)...)

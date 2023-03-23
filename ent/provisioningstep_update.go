@@ -4,12 +4,14 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/dnsrecord"
 	"github.com/gen0cide/laforge/ent/filedelete"
@@ -209,6 +211,25 @@ func (psu *ProvisioningStepUpdate) SetProvisioningStepToFileExtract(f *FileExtra
 	return psu.SetProvisioningStepToFileExtractID(f.ID)
 }
 
+// SetProvisioningStepToAnsibleID sets the "ProvisioningStepToAnsible" edge to the Ansible entity by ID.
+func (psu *ProvisioningStepUpdate) SetProvisioningStepToAnsibleID(id uuid.UUID) *ProvisioningStepUpdate {
+	psu.mutation.SetProvisioningStepToAnsibleID(id)
+	return psu
+}
+
+// SetNillableProvisioningStepToAnsibleID sets the "ProvisioningStepToAnsible" edge to the Ansible entity by ID if the given value is not nil.
+func (psu *ProvisioningStepUpdate) SetNillableProvisioningStepToAnsibleID(id *uuid.UUID) *ProvisioningStepUpdate {
+	if id != nil {
+		psu = psu.SetProvisioningStepToAnsibleID(*id)
+	}
+	return psu
+}
+
+// SetProvisioningStepToAnsible sets the "ProvisioningStepToAnsible" edge to the Ansible entity.
+func (psu *ProvisioningStepUpdate) SetProvisioningStepToAnsible(a *Ansible) *ProvisioningStepUpdate {
+	return psu.SetProvisioningStepToAnsibleID(a.ID)
+}
+
 // SetProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by ID.
 func (psu *ProvisioningStepUpdate) SetProvisioningStepToPlanID(id uuid.UUID) *ProvisioningStepUpdate {
 	psu.mutation.SetProvisioningStepToPlanID(id)
@@ -315,6 +336,12 @@ func (psu *ProvisioningStepUpdate) ClearProvisioningStepToFileExtract() *Provisi
 	return psu
 }
 
+// ClearProvisioningStepToAnsible clears the "ProvisioningStepToAnsible" edge to the Ansible entity.
+func (psu *ProvisioningStepUpdate) ClearProvisioningStepToAnsible() *ProvisioningStepUpdate {
+	psu.mutation.ClearProvisioningStepToAnsible()
+	return psu
+}
+
 // ClearProvisioningStepToPlan clears the "ProvisioningStepToPlan" edge to the Plan entity.
 func (psu *ProvisioningStepUpdate) ClearProvisioningStepToPlan() *ProvisioningStepUpdate {
 	psu.mutation.ClearProvisioningStepToPlan()
@@ -412,7 +439,7 @@ func (psu *ProvisioningStepUpdate) ExecX(ctx context.Context) {
 func (psu *ProvisioningStepUpdate) check() error {
 	if v, ok := psu.mutation.GetType(); ok {
 		if err := provisioningstep.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf("ent: validator failed for field \"type\": %w", err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ProvisioningStep.type": %w`, err)}
 		}
 	}
 	return nil
@@ -737,6 +764,41 @@ func (psu *ProvisioningStepUpdate) sqlSave(ctx context.Context) (n int, err erro
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if psu.mutation.ProvisioningStepToAnsibleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   provisioningstep.ProvisioningStepToAnsibleTable,
+			Columns: []string{provisioningstep.ProvisioningStepToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := psu.mutation.ProvisioningStepToAnsibleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   provisioningstep.ProvisioningStepToAnsibleTable,
+			Columns: []string{provisioningstep.ProvisioningStepToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if psu.mutation.ProvisioningStepToPlanCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
@@ -1051,6 +1113,25 @@ func (psuo *ProvisioningStepUpdateOne) SetProvisioningStepToFileExtract(f *FileE
 	return psuo.SetProvisioningStepToFileExtractID(f.ID)
 }
 
+// SetProvisioningStepToAnsibleID sets the "ProvisioningStepToAnsible" edge to the Ansible entity by ID.
+func (psuo *ProvisioningStepUpdateOne) SetProvisioningStepToAnsibleID(id uuid.UUID) *ProvisioningStepUpdateOne {
+	psuo.mutation.SetProvisioningStepToAnsibleID(id)
+	return psuo
+}
+
+// SetNillableProvisioningStepToAnsibleID sets the "ProvisioningStepToAnsible" edge to the Ansible entity by ID if the given value is not nil.
+func (psuo *ProvisioningStepUpdateOne) SetNillableProvisioningStepToAnsibleID(id *uuid.UUID) *ProvisioningStepUpdateOne {
+	if id != nil {
+		psuo = psuo.SetProvisioningStepToAnsibleID(*id)
+	}
+	return psuo
+}
+
+// SetProvisioningStepToAnsible sets the "ProvisioningStepToAnsible" edge to the Ansible entity.
+func (psuo *ProvisioningStepUpdateOne) SetProvisioningStepToAnsible(a *Ansible) *ProvisioningStepUpdateOne {
+	return psuo.SetProvisioningStepToAnsibleID(a.ID)
+}
+
 // SetProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by ID.
 func (psuo *ProvisioningStepUpdateOne) SetProvisioningStepToPlanID(id uuid.UUID) *ProvisioningStepUpdateOne {
 	psuo.mutation.SetProvisioningStepToPlanID(id)
@@ -1154,6 +1235,12 @@ func (psuo *ProvisioningStepUpdateOne) ClearProvisioningStepToFileDownload() *Pr
 // ClearProvisioningStepToFileExtract clears the "ProvisioningStepToFileExtract" edge to the FileExtract entity.
 func (psuo *ProvisioningStepUpdateOne) ClearProvisioningStepToFileExtract() *ProvisioningStepUpdateOne {
 	psuo.mutation.ClearProvisioningStepToFileExtract()
+	return psuo
+}
+
+// ClearProvisioningStepToAnsible clears the "ProvisioningStepToAnsible" edge to the Ansible entity.
+func (psuo *ProvisioningStepUpdateOne) ClearProvisioningStepToAnsible() *ProvisioningStepUpdateOne {
+	psuo.mutation.ClearProvisioningStepToAnsible()
 	return psuo
 }
 
@@ -1261,7 +1348,7 @@ func (psuo *ProvisioningStepUpdateOne) ExecX(ctx context.Context) {
 func (psuo *ProvisioningStepUpdateOne) check() error {
 	if v, ok := psuo.mutation.GetType(); ok {
 		if err := provisioningstep.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf("ent: validator failed for field \"type\": %w", err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ProvisioningStep.type": %w`, err)}
 		}
 	}
 	return nil
@@ -1280,7 +1367,7 @@ func (psuo *ProvisioningStepUpdateOne) sqlSave(ctx context.Context) (_node *Prov
 	}
 	id, ok := psuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing ProvisioningStep.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProvisioningStep.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := psuo.fields; len(fields) > 0 {
@@ -1595,6 +1682,41 @@ func (psuo *ProvisioningStepUpdateOne) sqlSave(ctx context.Context) (_node *Prov
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: fileextract.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if psuo.mutation.ProvisioningStepToAnsibleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   provisioningstep.ProvisioningStepToAnsibleTable,
+			Columns: []string{provisioningstep.ProvisioningStepToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := psuo.mutation.ProvisioningStepToAnsibleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   provisioningstep.ProvisioningStepToAnsibleTable,
+			Columns: []string{provisioningstep.ProvisioningStepToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
 				},
 			},
 		}

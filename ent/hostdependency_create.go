@@ -41,6 +41,14 @@ func (hdc *HostDependencyCreate) SetID(u uuid.UUID) *HostDependencyCreate {
 	return hdc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (hdc *HostDependencyCreate) SetNillableID(u *uuid.UUID) *HostDependencyCreate {
+	if u != nil {
+		hdc.SetID(*u)
+	}
+	return hdc
+}
+
 // SetHostDependencyToDependOnHostID sets the "HostDependencyToDependOnHost" edge to the Host entity by ID.
 func (hdc *HostDependencyCreate) SetHostDependencyToDependOnHostID(id uuid.UUID) *HostDependencyCreate {
 	hdc.mutation.SetHostDependencyToDependOnHostID(id)
@@ -197,10 +205,10 @@ func (hdc *HostDependencyCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (hdc *HostDependencyCreate) check() error {
 	if _, ok := hdc.mutation.HostID(); !ok {
-		return &ValidationError{Name: "host_id", err: errors.New(`ent: missing required field "host_id"`)}
+		return &ValidationError{Name: "host_id", err: errors.New(`ent: missing required field "HostDependency.host_id"`)}
 	}
 	if _, ok := hdc.mutation.NetworkID(); !ok {
-		return &ValidationError{Name: "network_id", err: errors.New(`ent: missing required field "network_id"`)}
+		return &ValidationError{Name: "network_id", err: errors.New(`ent: missing required field "HostDependency.network_id"`)}
 	}
 	return nil
 }
@@ -214,7 +222,11 @@ func (hdc *HostDependencyCreate) sqlSave(ctx context.Context) (*HostDependency, 
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -232,7 +244,7 @@ func (hdc *HostDependencyCreate) createSpec() (*HostDependency, *sqlgraph.Create
 	)
 	if id, ok := hdc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := hdc.mutation.HostID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

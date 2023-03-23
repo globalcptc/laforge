@@ -13,6 +13,7 @@ import (
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -37,6 +38,7 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
@@ -63,6 +65,8 @@ type Client struct {
 	AgentStatus *AgentStatusClient
 	// AgentTask is the client for interacting with the AgentTask builders.
 	AgentTask *AgentTaskClient
+	// Ansible is the client for interacting with the Ansible builders.
+	Ansible *AnsibleClient
 	// AuthUser is the client for interacting with the AuthUser builders.
 	AuthUser *AuthUserClient
 	// Build is the client for interacting with the Build builders.
@@ -111,6 +115,8 @@ type Client struct {
 	ProvisionedNetwork *ProvisionedNetworkClient
 	// ProvisioningStep is the client for interacting with the ProvisioningStep builders.
 	ProvisioningStep *ProvisioningStepClient
+	// RepoCommit is the client for interacting with the RepoCommit builders.
+	RepoCommit *RepoCommitClient
 	// Repository is the client for interacting with the Repository builders.
 	Repository *RepositoryClient
 	// Script is the client for interacting with the Script builders.
@@ -145,6 +151,7 @@ func (c *Client) init() {
 	c.AdhocPlan = NewAdhocPlanClient(c.config)
 	c.AgentStatus = NewAgentStatusClient(c.config)
 	c.AgentTask = NewAgentTaskClient(c.config)
+	c.Ansible = NewAnsibleClient(c.config)
 	c.AuthUser = NewAuthUserClient(c.config)
 	c.Build = NewBuildClient(c.config)
 	c.BuildCommit = NewBuildCommitClient(c.config)
@@ -169,6 +176,7 @@ func (c *Client) init() {
 	c.ProvisionedHost = NewProvisionedHostClient(c.config)
 	c.ProvisionedNetwork = NewProvisionedNetworkClient(c.config)
 	c.ProvisioningStep = NewProvisioningStepClient(c.config)
+	c.RepoCommit = NewRepoCommitClient(c.config)
 	c.Repository = NewRepositoryClient(c.config)
 	c.Script = NewScriptClient(c.config)
 	c.ServerTask = NewServerTaskClient(c.config)
@@ -214,6 +222,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		AdhocPlan:          NewAdhocPlanClient(cfg),
 		AgentStatus:        NewAgentStatusClient(cfg),
 		AgentTask:          NewAgentTaskClient(cfg),
+		Ansible:            NewAnsibleClient(cfg),
 		AuthUser:           NewAuthUserClient(cfg),
 		Build:              NewBuildClient(cfg),
 		BuildCommit:        NewBuildCommitClient(cfg),
@@ -238,6 +247,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ProvisionedHost:    NewProvisionedHostClient(cfg),
 		ProvisionedNetwork: NewProvisionedNetworkClient(cfg),
 		ProvisioningStep:   NewProvisioningStepClient(cfg),
+		RepoCommit:         NewRepoCommitClient(cfg),
 		Repository:         NewRepositoryClient(cfg),
 		Script:             NewScriptClient(cfg),
 		ServerTask:         NewServerTaskClient(cfg),
@@ -264,10 +274,12 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
+		ctx:                ctx,
 		config:             cfg,
 		AdhocPlan:          NewAdhocPlanClient(cfg),
 		AgentStatus:        NewAgentStatusClient(cfg),
 		AgentTask:          NewAgentTaskClient(cfg),
+		Ansible:            NewAnsibleClient(cfg),
 		AuthUser:           NewAuthUserClient(cfg),
 		Build:              NewBuildClient(cfg),
 		BuildCommit:        NewBuildCommitClient(cfg),
@@ -292,6 +304,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ProvisionedHost:    NewProvisionedHostClient(cfg),
 		ProvisionedNetwork: NewProvisionedNetworkClient(cfg),
 		ProvisioningStep:   NewProvisioningStepClient(cfg),
+		RepoCommit:         NewRepoCommitClient(cfg),
 		Repository:         NewRepositoryClient(cfg),
 		Script:             NewScriptClient(cfg),
 		ServerTask:         NewServerTaskClient(cfg),
@@ -333,6 +346,7 @@ func (c *Client) Use(hooks ...Hook) {
 	c.AdhocPlan.Use(hooks...)
 	c.AgentStatus.Use(hooks...)
 	c.AgentTask.Use(hooks...)
+	c.Ansible.Use(hooks...)
 	c.AuthUser.Use(hooks...)
 	c.Build.Use(hooks...)
 	c.BuildCommit.Use(hooks...)
@@ -357,6 +371,7 @@ func (c *Client) Use(hooks ...Hook) {
 	c.ProvisionedHost.Use(hooks...)
 	c.ProvisionedNetwork.Use(hooks...)
 	c.ProvisioningStep.Use(hooks...)
+	c.RepoCommit.Use(hooks...)
 	c.Repository.Use(hooks...)
 	c.Script.Use(hooks...)
 	c.ServerTask.Use(hooks...)
@@ -830,6 +845,128 @@ func (c *AgentTaskClient) Hooks() []Hook {
 	return c.hooks.AgentTask
 }
 
+// AnsibleClient is a client for the Ansible schema.
+type AnsibleClient struct {
+	config
+}
+
+// NewAnsibleClient returns a client for the Ansible from the given config.
+func NewAnsibleClient(c config) *AnsibleClient {
+	return &AnsibleClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `ansible.Hooks(f(g(h())))`.
+func (c *AnsibleClient) Use(hooks ...Hook) {
+	c.hooks.Ansible = append(c.hooks.Ansible, hooks...)
+}
+
+// Create returns a create builder for Ansible.
+func (c *AnsibleClient) Create() *AnsibleCreate {
+	mutation := newAnsibleMutation(c.config, OpCreate)
+	return &AnsibleCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Ansible entities.
+func (c *AnsibleClient) CreateBulk(builders ...*AnsibleCreate) *AnsibleCreateBulk {
+	return &AnsibleCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Ansible.
+func (c *AnsibleClient) Update() *AnsibleUpdate {
+	mutation := newAnsibleMutation(c.config, OpUpdate)
+	return &AnsibleUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AnsibleClient) UpdateOne(a *Ansible) *AnsibleUpdateOne {
+	mutation := newAnsibleMutation(c.config, OpUpdateOne, withAnsible(a))
+	return &AnsibleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AnsibleClient) UpdateOneID(id uuid.UUID) *AnsibleUpdateOne {
+	mutation := newAnsibleMutation(c.config, OpUpdateOne, withAnsibleID(id))
+	return &AnsibleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Ansible.
+func (c *AnsibleClient) Delete() *AnsibleDelete {
+	mutation := newAnsibleMutation(c.config, OpDelete)
+	return &AnsibleDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *AnsibleClient) DeleteOne(a *Ansible) *AnsibleDeleteOne {
+	return c.DeleteOneID(a.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *AnsibleClient) DeleteOneID(id uuid.UUID) *AnsibleDeleteOne {
+	builder := c.Delete().Where(ansible.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AnsibleDeleteOne{builder}
+}
+
+// Query returns a query builder for Ansible.
+func (c *AnsibleClient) Query() *AnsibleQuery {
+	return &AnsibleQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Ansible entity by its id.
+func (c *AnsibleClient) Get(ctx context.Context, id uuid.UUID) (*Ansible, error) {
+	return c.Query().Where(ansible.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AnsibleClient) GetX(ctx context.Context, id uuid.UUID) *Ansible {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAnsibleToUser queries the AnsibleToUser edge of a Ansible.
+func (c *AnsibleClient) QueryAnsibleToUser(a *Ansible) *UserQuery {
+	query := &UserQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(ansible.Table, ansible.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ansible.AnsibleToUserTable, ansible.AnsibleToUserColumn),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAnsibleFromEnvironment queries the AnsibleFromEnvironment edge of a Ansible.
+func (c *AnsibleClient) QueryAnsibleFromEnvironment(a *Ansible) *EnvironmentQuery {
+	query := &EnvironmentQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(ansible.Table, ansible.FieldID, id),
+			sqlgraph.To(environment.Table, environment.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ansible.AnsibleFromEnvironmentTable, ansible.AnsibleFromEnvironmentColumn),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AnsibleClient) Hooks() []Hook {
+	return c.hooks.Ansible
+}
+
 // AuthUserClient is a client for the AuthUser schema.
 type AuthUserClient struct {
 	config
@@ -1101,6 +1238,22 @@ func (c *BuildClient) QueryBuildToLatestBuildCommit(b *Build) *BuildCommitQuery 
 	return query
 }
 
+// QueryBuildToRepoCommit queries the BuildToRepoCommit edge of a Build.
+func (c *BuildClient) QueryBuildToRepoCommit(b *Build) *RepoCommitQuery {
+	query := &RepoCommitQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := b.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(build.Table, build.FieldID, id),
+			sqlgraph.To(repocommit.Table, repocommit.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, build.BuildToRepoCommitTable, build.BuildToRepoCommitColumn),
+		)
+		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryBuildToProvisionedNetwork queries the BuildToProvisionedNetwork edge of a Build.
 func (c *BuildClient) QueryBuildToProvisionedNetwork(b *Build) *ProvisionedNetworkQuery {
 	query := &ProvisionedNetworkQuery{config: c.config}
@@ -1174,6 +1327,38 @@ func (c *BuildClient) QueryBuildToAdhocPlans(b *Build) *AdhocPlanQuery {
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToAdhocPlansTable, build.BuildToAdhocPlansColumn),
+		)
+		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBuildToAgentStatuses queries the BuildToAgentStatuses edge of a Build.
+func (c *BuildClient) QueryBuildToAgentStatuses(b *Build) *AgentStatusQuery {
+	query := &AgentStatusQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := b.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(build.Table, build.FieldID, id),
+			sqlgraph.To(agentstatus.Table, agentstatus.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToAgentStatusesTable, build.BuildToAgentStatusesColumn),
+		)
+		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBuildToServerTasks queries the BuildToServerTasks edge of a Build.
+func (c *BuildClient) QueryBuildToServerTasks(b *Build) *ServerTaskQuery {
+	query := &ServerTaskQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := b.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(build.Table, build.FieldID, id),
+			sqlgraph.To(servertask.Table, servertask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToServerTasksTable, build.BuildToServerTasksColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1280,6 +1465,22 @@ func (c *BuildCommitClient) QueryBuildCommitToBuild(bc *BuildCommit) *BuildQuery
 			sqlgraph.From(buildcommit.Table, buildcommit.FieldID, id),
 			sqlgraph.To(build.Table, build.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, buildcommit.BuildCommitToBuildTable, buildcommit.BuildCommitToBuildColumn),
+		)
+		fromV = sqlgraph.Neighbors(bc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBuildCommitToServerTask queries the BuildCommitToServerTask edge of a BuildCommit.
+func (c *BuildCommitClient) QueryBuildCommitToServerTask(bc *BuildCommit) *ServerTaskQuery {
+	query := &ServerTaskQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := bc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(buildcommit.Table, buildcommit.FieldID, id),
+			sqlgraph.To(servertask.Table, servertask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, buildcommit.BuildCommitToServerTaskTable, buildcommit.BuildCommitToServerTaskColumn),
 		)
 		fromV = sqlgraph.Neighbors(bc.driver.Dialect(), step)
 		return fromV, nil
@@ -2227,6 +2428,22 @@ func (c *EnvironmentClient) QueryEnvironmentToHostDependency(e *Environment) *Ho
 	return query
 }
 
+// QueryEnvironmentToAnsible queries the EnvironmentToAnsible edge of a Environment.
+func (c *EnvironmentClient) QueryEnvironmentToAnsible(e *Environment) *AnsibleQuery {
+	query := &AnsibleQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(environment.Table, environment.FieldID, id),
+			sqlgraph.To(ansible.Table, ansible.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToAnsibleTable, environment.EnvironmentToAnsibleColumn),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryEnvironmentToBuild queries the EnvironmentToBuild edge of a Environment.
 func (c *EnvironmentClient) QueryEnvironmentToBuild(e *Environment) *BuildQuery {
 	query := &BuildQuery{config: c.config}
@@ -2252,6 +2469,22 @@ func (c *EnvironmentClient) QueryEnvironmentToRepository(e *Environment) *Reposi
 			sqlgraph.From(environment.Table, environment.FieldID, id),
 			sqlgraph.To(repository.Table, repository.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, environment.EnvironmentToRepositoryTable, environment.EnvironmentToRepositoryPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEnvironmentToServerTask queries the EnvironmentToServerTask edge of a Environment.
+func (c *EnvironmentClient) QueryEnvironmentToServerTask(e *Environment) *ServerTaskQuery {
+	query := &ServerTaskQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(environment.Table, environment.FieldID, id),
+			sqlgraph.To(servertask.Table, servertask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, environment.EnvironmentToServerTaskTable, environment.EnvironmentToServerTaskColumn),
 		)
 		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
 		return fromV, nil
@@ -4601,6 +4834,22 @@ func (c *ProvisioningStepClient) QueryProvisioningStepToFileExtract(ps *Provisio
 	return query
 }
 
+// QueryProvisioningStepToAnsible queries the ProvisioningStepToAnsible edge of a ProvisioningStep.
+func (c *ProvisioningStepClient) QueryProvisioningStepToAnsible(ps *ProvisioningStep) *AnsibleQuery {
+	query := &AnsibleQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := ps.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, id),
+			sqlgraph.To(ansible.Table, ansible.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToAnsibleTable, provisioningstep.ProvisioningStepToAnsibleColumn),
+		)
+		fromV = sqlgraph.Neighbors(ps.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryProvisioningStepToPlan queries the ProvisioningStepToPlan edge of a ProvisioningStep.
 func (c *ProvisioningStepClient) QueryProvisioningStepToPlan(ps *ProvisioningStep) *PlanQuery {
 	query := &PlanQuery{config: c.config}
@@ -4652,6 +4901,112 @@ func (c *ProvisioningStepClient) QueryProvisioningStepToGinFileMiddleware(ps *Pr
 // Hooks returns the client hooks.
 func (c *ProvisioningStepClient) Hooks() []Hook {
 	return c.hooks.ProvisioningStep
+}
+
+// RepoCommitClient is a client for the RepoCommit schema.
+type RepoCommitClient struct {
+	config
+}
+
+// NewRepoCommitClient returns a client for the RepoCommit from the given config.
+func NewRepoCommitClient(c config) *RepoCommitClient {
+	return &RepoCommitClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `repocommit.Hooks(f(g(h())))`.
+func (c *RepoCommitClient) Use(hooks ...Hook) {
+	c.hooks.RepoCommit = append(c.hooks.RepoCommit, hooks...)
+}
+
+// Create returns a create builder for RepoCommit.
+func (c *RepoCommitClient) Create() *RepoCommitCreate {
+	mutation := newRepoCommitMutation(c.config, OpCreate)
+	return &RepoCommitCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RepoCommit entities.
+func (c *RepoCommitClient) CreateBulk(builders ...*RepoCommitCreate) *RepoCommitCreateBulk {
+	return &RepoCommitCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RepoCommit.
+func (c *RepoCommitClient) Update() *RepoCommitUpdate {
+	mutation := newRepoCommitMutation(c.config, OpUpdate)
+	return &RepoCommitUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RepoCommitClient) UpdateOne(rc *RepoCommit) *RepoCommitUpdateOne {
+	mutation := newRepoCommitMutation(c.config, OpUpdateOne, withRepoCommit(rc))
+	return &RepoCommitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RepoCommitClient) UpdateOneID(id uuid.UUID) *RepoCommitUpdateOne {
+	mutation := newRepoCommitMutation(c.config, OpUpdateOne, withRepoCommitID(id))
+	return &RepoCommitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RepoCommit.
+func (c *RepoCommitClient) Delete() *RepoCommitDelete {
+	mutation := newRepoCommitMutation(c.config, OpDelete)
+	return &RepoCommitDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *RepoCommitClient) DeleteOne(rc *RepoCommit) *RepoCommitDeleteOne {
+	return c.DeleteOneID(rc.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *RepoCommitClient) DeleteOneID(id uuid.UUID) *RepoCommitDeleteOne {
+	builder := c.Delete().Where(repocommit.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RepoCommitDeleteOne{builder}
+}
+
+// Query returns a query builder for RepoCommit.
+func (c *RepoCommitClient) Query() *RepoCommitQuery {
+	return &RepoCommitQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a RepoCommit entity by its id.
+func (c *RepoCommitClient) Get(ctx context.Context, id uuid.UUID) (*RepoCommit, error) {
+	return c.Query().Where(repocommit.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RepoCommitClient) GetX(ctx context.Context, id uuid.UUID) *RepoCommit {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryRepoCommitToRepository queries the RepoCommitToRepository edge of a RepoCommit.
+func (c *RepoCommitClient) QueryRepoCommitToRepository(rc *RepoCommit) *RepositoryQuery {
+	query := &RepositoryQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := rc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(repocommit.Table, repocommit.FieldID, id),
+			sqlgraph.To(repository.Table, repository.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, repocommit.RepoCommitToRepositoryTable, repocommit.RepoCommitToRepositoryColumn),
+		)
+		fromV = sqlgraph.Neighbors(rc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *RepoCommitClient) Hooks() []Hook {
+	return c.hooks.RepoCommit
 }
 
 // RepositoryClient is a client for the Repository schema.
@@ -4748,6 +5103,22 @@ func (c *RepositoryClient) QueryRepositoryToEnvironment(r *Repository) *Environm
 			sqlgraph.From(repository.Table, repository.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, repository.RepositoryToEnvironmentTable, repository.RepositoryToEnvironmentPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryRepositoryToRepoCommit queries the RepositoryToRepoCommit edge of a Repository.
+func (c *RepositoryClient) QueryRepositoryToRepoCommit(r *Repository) *RepoCommitQuery {
+	query := &RepoCommitQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(repository.Table, repository.FieldID, id),
+			sqlgraph.To(repocommit.Table, repocommit.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, repository.RepositoryToRepoCommitTable, repository.RepositoryToRepoCommitColumn),
 		)
 		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
 		return fromV, nil
@@ -5056,6 +5427,22 @@ func (c *ServerTaskClient) QueryServerTaskToBuild(st *ServerTask) *BuildQuery {
 			sqlgraph.From(servertask.Table, servertask.FieldID, id),
 			sqlgraph.To(build.Table, build.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToBuildTable, servertask.ServerTaskToBuildColumn),
+		)
+		fromV = sqlgraph.Neighbors(st.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryServerTaskToBuildCommit queries the ServerTaskToBuildCommit edge of a ServerTask.
+func (c *ServerTaskClient) QueryServerTaskToBuildCommit(st *ServerTask) *BuildCommitQuery {
+	query := &BuildCommitQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := st.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(servertask.Table, servertask.FieldID, id),
+			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToBuildCommitTable, servertask.ServerTaskToBuildCommitColumn),
 		)
 		fromV = sqlgraph.Neighbors(st.driver.Dialect(), step)
 		return fromV, nil

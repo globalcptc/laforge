@@ -24,8 +24,6 @@ type Repository struct {
 	EnviromentFilepath string `json:"enviroment_filepath,omitempty"`
 	// FolderPath holds the value of the "folder_path" field.
 	FolderPath string `json:"folder_path,omitempty"`
-	// CommitInfo holds the value of the "commit_info" field.
-	CommitInfo string `json:"commit_info,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the RepositoryQuery when eager-loading is set.
 	Edges RepositoryEdges `json:"edges"`
@@ -33,6 +31,8 @@ type Repository struct {
 	// Edges put into the main struct to be loaded via hcl
 	// RepositoryToEnvironment holds the value of the RepositoryToEnvironment edge.
 	HCLRepositoryToEnvironment []*Environment `json:"RepositoryToEnvironment,omitempty"`
+	// RepositoryToRepoCommit holds the value of the RepositoryToRepoCommit edge.
+	HCLRepositoryToRepoCommit []*RepoCommit `json:"RepositoryToRepoCommit,omitempty"`
 	//
 
 }
@@ -41,9 +41,11 @@ type Repository struct {
 type RepositoryEdges struct {
 	// RepositoryToEnvironment holds the value of the RepositoryToEnvironment edge.
 	RepositoryToEnvironment []*Environment `json:"RepositoryToEnvironment,omitempty"`
+	// RepositoryToRepoCommit holds the value of the RepositoryToRepoCommit edge.
+	RepositoryToRepoCommit []*RepoCommit `json:"RepositoryToRepoCommit,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // RepositoryToEnvironmentOrErr returns the RepositoryToEnvironment value or an error if the edge
@@ -55,12 +57,21 @@ func (e RepositoryEdges) RepositoryToEnvironmentOrErr() ([]*Environment, error) 
 	return nil, &NotLoadedError{edge: "RepositoryToEnvironment"}
 }
 
+// RepositoryToRepoCommitOrErr returns the RepositoryToRepoCommit value or an error if the edge
+// was not loaded in eager-loading.
+func (e RepositoryEdges) RepositoryToRepoCommitOrErr() ([]*RepoCommit, error) {
+	if e.loadedTypes[1] {
+		return e.RepositoryToRepoCommit, nil
+	}
+	return nil, &NotLoadedError{edge: "RepositoryToRepoCommit"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Repository) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case repository.FieldRepoURL, repository.FieldBranchName, repository.FieldEnviromentFilepath, repository.FieldFolderPath, repository.FieldCommitInfo:
+		case repository.FieldRepoURL, repository.FieldBranchName, repository.FieldEnviromentFilepath, repository.FieldFolderPath:
 			values[i] = new(sql.NullString)
 		case repository.FieldID:
 			values[i] = new(uuid.UUID)
@@ -109,12 +120,6 @@ func (r *Repository) assignValues(columns []string, values []interface{}) error 
 			} else if value.Valid {
 				r.FolderPath = value.String
 			}
-		case repository.FieldCommitInfo:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field commit_info", values[i])
-			} else if value.Valid {
-				r.CommitInfo = value.String
-			}
 		}
 	}
 	return nil
@@ -123,6 +128,11 @@ func (r *Repository) assignValues(columns []string, values []interface{}) error 
 // QueryRepositoryToEnvironment queries the "RepositoryToEnvironment" edge of the Repository entity.
 func (r *Repository) QueryRepositoryToEnvironment() *EnvironmentQuery {
 	return (&RepositoryClient{config: r.config}).QueryRepositoryToEnvironment(r)
+}
+
+// QueryRepositoryToRepoCommit queries the "RepositoryToRepoCommit" edge of the Repository entity.
+func (r *Repository) QueryRepositoryToRepoCommit() *RepoCommitQuery {
+	return (&RepositoryClient{config: r.config}).QueryRepositoryToRepoCommit(r)
 }
 
 // Update returns a builder for updating this Repository.
@@ -156,8 +166,6 @@ func (r *Repository) String() string {
 	builder.WriteString(r.EnviromentFilepath)
 	builder.WriteString(", folder_path=")
 	builder.WriteString(r.FolderPath)
-	builder.WriteString(", commit_info=")
-	builder.WriteString(r.CommitInfo)
 	builder.WriteByte(')')
 	return builder.String()
 }

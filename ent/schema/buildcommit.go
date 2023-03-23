@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"time"
+
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
@@ -21,6 +23,7 @@ func (BuildCommit) Fields() []ent.Field {
 		field.Enum("type").Values("ROOT", "REBUILD", "DELETE"),
 		field.Int("revision"),
 		field.Enum("state").Values("PLANNING", "INPROGRESS", "APPLIED", "CANCELLED", "APPROVED"),
+		field.Time("created_at").Default(time.Now),
 	}
 }
 
@@ -30,6 +33,7 @@ func (BuildCommit) Edges() []ent.Edge {
 		edge.To("BuildCommitToBuild", Build.Type).
 			Unique().
 			Required(),
+		edge.From("BuildCommitToServerTask", ServerTask.Type).Ref("ServerTaskToBuildCommit"),
 		edge.From("BuildCommitToPlanDiffs", PlanDiff.Type).
 			Ref("PlanDiffToBuildCommit").
 			Annotations(entsql.Annotation{

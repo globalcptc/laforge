@@ -15,6 +15,8 @@ const (
 	FieldName = "name"
 	// FieldCidr holds the string denoting the cidr field in the database.
 	FieldCidr = "cidr"
+	// FieldVars holds the string denoting the vars field in the database.
+	FieldVars = "vars"
 	// EdgeProvisionedNetworkToStatus holds the string denoting the provisionednetworktostatus edge name in mutations.
 	EdgeProvisionedNetworkToStatus = "ProvisionedNetworkToStatus"
 	// EdgeProvisionedNetworkToNetwork holds the string denoting the provisionednetworktonetwork edge name in mutations.
@@ -78,6 +80,7 @@ var Columns = []string{
 	FieldID,
 	FieldName,
 	FieldCidr,
+	FieldVars,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provisioned_networks"

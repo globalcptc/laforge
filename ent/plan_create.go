@@ -51,6 +51,14 @@ func (pc *PlanCreate) SetID(u uuid.UUID) *PlanCreate {
 	return pc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (pc *PlanCreate) SetNillableID(u *uuid.UUID) *PlanCreate {
+	if u != nil {
+		pc.SetID(*u)
+	}
+	return pc
+}
+
 // AddPrevPlanIDs adds the "PrevPlan" edge to the Plan entity by IDs.
 func (pc *PlanCreate) AddPrevPlanIDs(ids ...uuid.UUID) *PlanCreate {
 	pc.mutation.AddPrevPlanIDs(ids...)
@@ -282,21 +290,21 @@ func (pc *PlanCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (pc *PlanCreate) check() error {
 	if _, ok := pc.mutation.StepNumber(); !ok {
-		return &ValidationError{Name: "step_number", err: errors.New(`ent: missing required field "step_number"`)}
+		return &ValidationError{Name: "step_number", err: errors.New(`ent: missing required field "Plan.step_number"`)}
 	}
 	if _, ok := pc.mutation.GetType(); !ok {
-		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "type"`)}
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "Plan.type"`)}
 	}
 	if v, ok := pc.mutation.GetType(); ok {
 		if err := plan.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "type": %w`, err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Plan.type": %w`, err)}
 		}
 	}
 	if _, ok := pc.mutation.BuildID(); !ok {
-		return &ValidationError{Name: "build_id", err: errors.New(`ent: missing required field "build_id"`)}
+		return &ValidationError{Name: "build_id", err: errors.New(`ent: missing required field "Plan.build_id"`)}
 	}
 	if _, ok := pc.mutation.PlanToStatusID(); !ok {
-		return &ValidationError{Name: "PlanToStatus", err: errors.New("ent: missing required edge \"PlanToStatus\"")}
+		return &ValidationError{Name: "PlanToStatus", err: errors.New(`ent: missing required edge "Plan.PlanToStatus"`)}
 	}
 	return nil
 }
@@ -310,7 +318,11 @@ func (pc *PlanCreate) sqlSave(ctx context.Context) (*Plan, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -328,7 +340,7 @@ func (pc *PlanCreate) createSpec() (*Plan, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := pc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := pc.mutation.StepNumber(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

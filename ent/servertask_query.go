@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
+	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
 	"github.com/gen0cide/laforge/ent/predicate"
@@ -36,6 +37,7 @@ type ServerTaskQuery struct {
 	withServerTaskToStatus            *StatusQuery
 	withServerTaskToEnvironment       *EnvironmentQuery
 	withServerTaskToBuild             *BuildQuery
+	withServerTaskToBuildCommit       *BuildCommitQuery
 	withServerTaskToGinFileMiddleware *GinFileMiddlewareQuery
 	withFKs                           bool
 	// intermediate query (i.e. traversal path).
@@ -162,6 +164,28 @@ func (stq *ServerTaskQuery) QueryServerTaskToBuild() *BuildQuery {
 	return query
 }
 
+// QueryServerTaskToBuildCommit chains the current query on the "ServerTaskToBuildCommit" edge.
+func (stq *ServerTaskQuery) QueryServerTaskToBuildCommit() *BuildCommitQuery {
+	query := &BuildCommitQuery{config: stq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := stq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := stq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(servertask.Table, servertask.FieldID, selector),
+			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToBuildCommitTable, servertask.ServerTaskToBuildCommitColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(stq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryServerTaskToGinFileMiddleware chains the current query on the "ServerTaskToGinFileMiddleware" edge.
 func (stq *ServerTaskQuery) QueryServerTaskToGinFileMiddleware() *GinFileMiddlewareQuery {
 	query := &GinFileMiddlewareQuery{config: stq.config}
@@ -230,7 +254,7 @@ func (stq *ServerTaskQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single ServerTask entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one ServerTask entity is not found.
+// Returns a *NotSingularError when more than one ServerTask entity is found.
 // Returns a *NotFoundError when no ServerTask entities are found.
 func (stq *ServerTaskQuery) Only(ctx context.Context) (*ServerTask, error) {
 	nodes, err := stq.Limit(2).All(ctx)
@@ -257,7 +281,7 @@ func (stq *ServerTaskQuery) OnlyX(ctx context.Context) *ServerTask {
 }
 
 // OnlyID is like Only, but returns the only ServerTask ID in the query.
-// Returns a *NotSingularError when exactly one ServerTask ID is not found.
+// Returns a *NotSingularError when more than one ServerTask ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (stq *ServerTaskQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -369,10 +393,12 @@ func (stq *ServerTaskQuery) Clone() *ServerTaskQuery {
 		withServerTaskToStatus:            stq.withServerTaskToStatus.Clone(),
 		withServerTaskToEnvironment:       stq.withServerTaskToEnvironment.Clone(),
 		withServerTaskToBuild:             stq.withServerTaskToBuild.Clone(),
+		withServerTaskToBuildCommit:       stq.withServerTaskToBuildCommit.Clone(),
 		withServerTaskToGinFileMiddleware: stq.withServerTaskToGinFileMiddleware.Clone(),
 		// clone intermediate query.
-		sql:  stq.sql.Clone(),
-		path: stq.path,
+		sql:    stq.sql.Clone(),
+		path:   stq.path,
+		unique: stq.unique,
 	}
 }
 
@@ -417,6 +443,17 @@ func (stq *ServerTaskQuery) WithServerTaskToBuild(opts ...func(*BuildQuery)) *Se
 		opt(query)
 	}
 	stq.withServerTaskToBuild = query
+	return stq
+}
+
+// WithServerTaskToBuildCommit tells the query-builder to eager-load the nodes that are connected to
+// the "ServerTaskToBuildCommit" edge. The optional arguments are used to configure the query builder of the edge.
+func (stq *ServerTaskQuery) WithServerTaskToBuildCommit(opts ...func(*BuildCommitQuery)) *ServerTaskQuery {
+	query := &BuildCommitQuery{config: stq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	stq.withServerTaskToBuildCommit = query
 	return stq
 }
 
@@ -497,15 +534,16 @@ func (stq *ServerTaskQuery) sqlAll(ctx context.Context) ([]*ServerTask, error) {
 		nodes       = []*ServerTask{}
 		withFKs     = stq.withFKs
 		_spec       = stq.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [6]bool{
 			stq.withServerTaskToAuthUser != nil,
 			stq.withServerTaskToStatus != nil,
 			stq.withServerTaskToEnvironment != nil,
 			stq.withServerTaskToBuild != nil,
+			stq.withServerTaskToBuildCommit != nil,
 			stq.withServerTaskToGinFileMiddleware != nil,
 		}
 	)
-	if stq.withServerTaskToAuthUser != nil || stq.withServerTaskToEnvironment != nil || stq.withServerTaskToBuild != nil {
+	if stq.withServerTaskToAuthUser != nil || stq.withServerTaskToEnvironment != nil || stq.withServerTaskToBuild != nil || stq.withServerTaskToBuildCommit != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -646,6 +684,35 @@ func (stq *ServerTaskQuery) sqlAll(ctx context.Context) ([]*ServerTask, error) {
 		}
 	}
 
+	if query := stq.withServerTaskToBuildCommit; query != nil {
+		ids := make([]uuid.UUID, 0, len(nodes))
+		nodeids := make(map[uuid.UUID][]*ServerTask)
+		for i := range nodes {
+			if nodes[i].server_task_server_task_to_build_commit == nil {
+				continue
+			}
+			fk := *nodes[i].server_task_server_task_to_build_commit
+			if _, ok := nodeids[fk]; !ok {
+				ids = append(ids, fk)
+			}
+			nodeids[fk] = append(nodeids[fk], nodes[i])
+		}
+		query.Where(buildcommit.IDIn(ids...))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			nodes, ok := nodeids[n.ID]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_build_commit" returned %v`, n.ID)
+			}
+			for i := range nodes {
+				nodes[i].Edges.ServerTaskToBuildCommit = n
+			}
+		}
+	}
+
 	if query := stq.withServerTaskToGinFileMiddleware; query != nil {
 		fks := make([]driver.Value, 0, len(nodes))
 		nodeids := make(map[uuid.UUID]*ServerTask)
@@ -680,6 +747,10 @@ func (stq *ServerTaskQuery) sqlAll(ctx context.Context) ([]*ServerTask, error) {
 
 func (stq *ServerTaskQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := stq.querySpec()
+	_spec.Node.Columns = stq.fields
+	if len(stq.fields) > 0 {
+		_spec.Unique = stq.unique != nil && *stq.unique
+	}
 	return sqlgraph.CountNodes(ctx, stq.driver, _spec)
 }
 
@@ -750,6 +821,9 @@ func (stq *ServerTaskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if stq.sql != nil {
 		selector = stq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if stq.unique != nil && *stq.unique {
+		selector.Distinct()
 	}
 	for _, p := range stq.predicates {
 		p(selector)
@@ -1029,9 +1103,7 @@ func (stgb *ServerTaskGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range stgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(stgb.fields...)...)

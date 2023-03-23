@@ -10,6 +10,7 @@ import (
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/plan"
+	"github.com/gen0cide/laforge/server/utils"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
@@ -22,14 +23,19 @@ type wgconf struct {
 
 func main() {
 	logrus.SetLevel(logrus.DebugLevel)
-	pgHost, ok := os.LookupEnv("PG_URI")
-	client := &ent.Client{}
 
-	if !ok {
-		client = ent.PGOpen("postgresql://laforger:laforge@127.0.0.1/laforge")
-	} else {
-		client = ent.PGOpen(pgHost)
+	laforgeConfig, err := utils.LoadServerConfig()
+	if err != nil {
+		logrus.Errorf("failed to load LaForge config: %v", err)
+		return
 	}
+
+	if laforgeConfig.Database.PostgresUri == "" {
+		logrus.Errorf("Database.PostgresUri not set in LaForge config")
+		os.Exit(1)
+	}
+
+	client := ent.PGOpen(laforgeConfig.Database.PostgresUri)
 
 	ctx := context.Background()
 	defer ctx.Done()
@@ -125,31 +131,32 @@ func Traverse(ctx context.Context, planPath string, entPlan *ent.Plan, wg *sync.
 
 	switch entPlan.Type {
 	case plan.TypeStartBuild:
-		build, err := entPlan.PlanToBuild(ctx)
+		entPlan.QueryPlanToBuild()
+		entBuild, err := entPlan.QueryPlanToBuild().Only(ctx)
 		if err != nil {
 			return
 		}
-		planPath += fmt.Sprintf("/%s", build.ID)
+		planPath += fmt.Sprintf("/%s", entBuild.ID)
 	case plan.TypeStartTeam:
-		team, err := entPlan.PlanToTeam(ctx)
+		team, err := entPlan.QueryPlanToTeam().Only(ctx)
 		if err != nil {
 			return
 		}
 		planPath += fmt.Sprintf("/Team%d", team.TeamNumber)
 	case plan.TypeProvisionNetwork:
-		pnet, err := entPlan.PlanToProvisionedNetwork(ctx)
+		pnet, err := entPlan.QueryPlanToProvisionedNetwork().Only(ctx)
 		if err != nil {
 			return
 		}
 		planPath += fmt.Sprintf("/%s", pnet.Name)
 	case plan.TypeProvisionHost:
-		phost, err := entPlan.PlanToProvisionedHost(ctx)
+		phost, err := entPlan.QueryPlanToProvisionedHost().Only(ctx)
 		if err != nil {
 			return
 		}
 		planPath += fmt.Sprintf("/%s", phost.SubnetIP)
 	case plan.TypeExecuteStep:
-		step, err := entPlan.PlanToProvisioningStep(ctx)
+		step, err := entPlan.QueryPlanToProvisioningStep().Only(ctx)
 		if err != nil {
 			return
 		}

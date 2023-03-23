@@ -133,7 +133,7 @@ func (iq *IdentityQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single Identity entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one Identity entity is not found.
+// Returns a *NotSingularError when more than one Identity entity is found.
 // Returns a *NotFoundError when no Identity entities are found.
 func (iq *IdentityQuery) Only(ctx context.Context) (*Identity, error) {
 	nodes, err := iq.Limit(2).All(ctx)
@@ -160,7 +160,7 @@ func (iq *IdentityQuery) OnlyX(ctx context.Context) *Identity {
 }
 
 // OnlyID is like Only, but returns the only Identity ID in the query.
-// Returns a *NotSingularError when exactly one Identity ID is not found.
+// Returns a *NotSingularError when more than one Identity ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (iq *IdentityQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -270,8 +270,9 @@ func (iq *IdentityQuery) Clone() *IdentityQuery {
 		predicates:                append([]predicate.Identity{}, iq.predicates...),
 		withIdentityToEnvironment: iq.withIdentityToEnvironment.Clone(),
 		// clone intermediate query.
-		sql:  iq.sql.Clone(),
-		path: iq.path,
+		sql:    iq.sql.Clone(),
+		path:   iq.path,
+		unique: iq.unique,
 	}
 }
 
@@ -416,6 +417,10 @@ func (iq *IdentityQuery) sqlAll(ctx context.Context) ([]*Identity, error) {
 
 func (iq *IdentityQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := iq.querySpec()
+	_spec.Node.Columns = iq.fields
+	if len(iq.fields) > 0 {
+		_spec.Unique = iq.unique != nil && *iq.unique
+	}
 	return sqlgraph.CountNodes(ctx, iq.driver, _spec)
 }
 
@@ -486,6 +491,9 @@ func (iq *IdentityQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if iq.sql != nil {
 		selector = iq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if iq.unique != nil && *iq.unique {
+		selector.Distinct()
 	}
 	for _, p := range iq.predicates {
 		p(selector)
@@ -765,9 +773,7 @@ func (igb *IdentityGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range igb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(igb.fields...)...)

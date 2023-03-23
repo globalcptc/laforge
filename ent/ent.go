@@ -11,6 +11,7 @@ import (
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -35,6 +36,7 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
@@ -67,6 +69,7 @@ func columnChecker(table string) func(string) error {
 		adhocplan.Table:          adhocplan.ValidColumn,
 		agentstatus.Table:        agentstatus.ValidColumn,
 		agenttask.Table:          agenttask.ValidColumn,
+		ansible.Table:            ansible.ValidColumn,
 		authuser.Table:           authuser.ValidColumn,
 		build.Table:              build.ValidColumn,
 		buildcommit.Table:        buildcommit.ValidColumn,
@@ -91,6 +94,7 @@ func columnChecker(table string) func(string) error {
 		provisionedhost.Table:    provisionedhost.ValidColumn,
 		provisionednetwork.Table: provisionednetwork.ValidColumn,
 		provisioningstep.Table:   provisioningstep.ValidColumn,
+		repocommit.Table:         repocommit.ValidColumn,
 		repository.Table:         repository.ValidColumn,
 		script.Table:             script.ValidColumn,
 		servertask.Table:         servertask.ValidColumn,
@@ -211,7 +215,7 @@ func Sum(field string) AggregateFunc {
 	}
 }
 
-// ValidationError returns when validating a field fails.
+// ValidationError returns when validating a field or edge fails.
 type ValidationError struct {
 	Name string // Field or edge name.
 	err  error

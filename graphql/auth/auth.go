@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/token"
+	"github.com/gen0cide/laforge/server/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,26 +29,20 @@ type Claims struct {
 }
 
 // Middleware decodes the share session cookie and packs the session into context
-func Middleware(client *ent.Client) gin.HandlerFunc {
+func Middleware(client *ent.Client, laforgeConfig *utils.ServerConfig) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
-		hostname, ok := os.LookupEnv("GRAPHQL_HOSTNAME")
-		if !ok {
-			hostname = "localhost"
-		}
 		secure_cookie := false
-		if env_value, exists := os.LookupEnv("HTTPS_ENABLED"); exists {
-			if env_value == "true" {
-				secure_cookie = true
-			}
+		if laforgeConfig.UI.HttpsEnabled {
+			secure_cookie = true
 		}
 
 		authCookie, err := ctx.Cookie("auth-cookie")
 		if err != nil || authCookie == "" {
 			if secure_cookie {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, true, true)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)
 			} else {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, false, false)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, false, false)
 			}
 			return
 		}
@@ -69,9 +63,9 @@ func Middleware(client *ent.Client) gin.HandlerFunc {
 
 		if err != nil {
 			if secure_cookie {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, true, true)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)
 			} else {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, false, false)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, false, false)
 			}
 			if err == jwt.ErrSignatureInvalid {
 				ctx.AbortWithStatus(http.StatusUnauthorized)
@@ -82,9 +76,9 @@ func Middleware(client *ent.Client) gin.HandlerFunc {
 		}
 		if !tkn.Valid {
 			if secure_cookie {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, true, true)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)
 			} else {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, false, false)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, false, false)
 			}
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
@@ -93,9 +87,9 @@ func Middleware(client *ent.Client) gin.HandlerFunc {
 		entToken, err := client.Token.Query().Where(token.TokenEQ(authCookie)).Only(ctx)
 		if err != nil {
 			if secure_cookie {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, true, true)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)
 			} else {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, false, false)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, false, false)
 			}
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err})
 			return
@@ -104,9 +98,9 @@ func Middleware(client *ent.Client) gin.HandlerFunc {
 		entAuthUser, err := entToken.QueryTokenToAuthUser().Only(ctx)
 		if err != nil {
 			if secure_cookie {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, true, true)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)
 			} else {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, false, false)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, false, false)
 			}
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err})
 			return
@@ -120,17 +114,11 @@ func Middleware(client *ent.Client) gin.HandlerFunc {
 }
 
 // Logout decodes the share session cookie and packs the session into context
-func Logout(client *ent.Client) gin.HandlerFunc {
+func Logout(client *ent.Client, laforgeConfig *utils.ServerConfig) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		hostname, ok := os.LookupEnv("GRAPHQL_HOSTNAME")
-		if !ok {
-			hostname = "localhost"
-		}
 		secure_cookie := false
-		if env_value, exists := os.LookupEnv("HTTPS_ENABLED"); exists {
-			if env_value == "true" {
-				secure_cookie = true
-			}
+		if laforgeConfig.UI.HttpsEnabled {
+			secure_cookie = true
 		}
 
 		authCookie, err := ctx.Cookie("auth-cookie")
@@ -138,9 +126,9 @@ func Logout(client *ent.Client) gin.HandlerFunc {
 		// Allow unauthenticated users in
 		if err != nil || authCookie == "" {
 			if secure_cookie {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, true, true)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)
 			} else {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, false, false)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, false, false)
 			}
 			return
 		}
@@ -161,9 +149,9 @@ func Logout(client *ent.Client) gin.HandlerFunc {
 
 		if err != nil {
 			if secure_cookie {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, true, true)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)
 			} else {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, false, false)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, false, false)
 			}
 			if err == jwt.ErrSignatureInvalid {
 				ctx.AbortWithStatus(http.StatusUnauthorized)
@@ -174,9 +162,9 @@ func Logout(client *ent.Client) gin.HandlerFunc {
 		}
 		if !tkn.Valid {
 			if secure_cookie {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, true, true)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)
 			} else {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, false, false)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, false, false)
 			}
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
@@ -185,9 +173,9 @@ func Logout(client *ent.Client) gin.HandlerFunc {
 		_, err = client.Token.Delete().Where(token.TokenEQ(authCookie)).Exec(ctx)
 		if err != nil {
 			if secure_cookie {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, true, true)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)
 			} else {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, false, false)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, false, false)
 			}
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err})
 			return
@@ -195,18 +183,18 @@ func Logout(client *ent.Client) gin.HandlerFunc {
 
 		if err != nil {
 			if secure_cookie {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, true, true)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)
 			} else {
-				ctx.SetCookie("auth-cookie", "", 0, "/", hostname, false, false)
+				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, false, false)
 			}
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Error updating token"})
 			return
 		}
 
 		if secure_cookie {
-			ctx.SetCookie("auth-cookie", "", 0, "/", hostname, true, true)
+			ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)
 		} else {
-			ctx.SetCookie("auth-cookie", "", 0, "/", hostname, false, false)
+			ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, false, false)
 		}
 
 		ctx.Next()

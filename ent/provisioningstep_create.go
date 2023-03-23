@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/dnsrecord"
 	"github.com/gen0cide/laforge/ent/filedelete"
@@ -46,6 +47,14 @@ func (psc *ProvisioningStepCreate) SetStepNumber(i int) *ProvisioningStepCreate 
 // SetID sets the "id" field.
 func (psc *ProvisioningStepCreate) SetID(u uuid.UUID) *ProvisioningStepCreate {
 	psc.mutation.SetID(u)
+	return psc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (psc *ProvisioningStepCreate) SetNillableID(u *uuid.UUID) *ProvisioningStepCreate {
+	if u != nil {
+		psc.SetID(*u)
+	}
 	return psc
 }
 
@@ -201,6 +210,25 @@ func (psc *ProvisioningStepCreate) SetProvisioningStepToFileExtract(f *FileExtra
 	return psc.SetProvisioningStepToFileExtractID(f.ID)
 }
 
+// SetProvisioningStepToAnsibleID sets the "ProvisioningStepToAnsible" edge to the Ansible entity by ID.
+func (psc *ProvisioningStepCreate) SetProvisioningStepToAnsibleID(id uuid.UUID) *ProvisioningStepCreate {
+	psc.mutation.SetProvisioningStepToAnsibleID(id)
+	return psc
+}
+
+// SetNillableProvisioningStepToAnsibleID sets the "ProvisioningStepToAnsible" edge to the Ansible entity by ID if the given value is not nil.
+func (psc *ProvisioningStepCreate) SetNillableProvisioningStepToAnsibleID(id *uuid.UUID) *ProvisioningStepCreate {
+	if id != nil {
+		psc = psc.SetProvisioningStepToAnsibleID(*id)
+	}
+	return psc
+}
+
+// SetProvisioningStepToAnsible sets the "ProvisioningStepToAnsible" edge to the Ansible entity.
+func (psc *ProvisioningStepCreate) SetProvisioningStepToAnsible(a *Ansible) *ProvisioningStepCreate {
+	return psc.SetProvisioningStepToAnsibleID(a.ID)
+}
+
 // SetProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by ID.
 func (psc *ProvisioningStepCreate) SetProvisioningStepToPlanID(id uuid.UUID) *ProvisioningStepCreate {
 	psc.mutation.SetProvisioningStepToPlanID(id)
@@ -334,15 +362,15 @@ func (psc *ProvisioningStepCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (psc *ProvisioningStepCreate) check() error {
 	if _, ok := psc.mutation.GetType(); !ok {
-		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "type"`)}
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "ProvisioningStep.type"`)}
 	}
 	if v, ok := psc.mutation.GetType(); ok {
 		if err := provisioningstep.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "type": %w`, err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ProvisioningStep.type": %w`, err)}
 		}
 	}
 	if _, ok := psc.mutation.StepNumber(); !ok {
-		return &ValidationError{Name: "step_number", err: errors.New(`ent: missing required field "step_number"`)}
+		return &ValidationError{Name: "step_number", err: errors.New(`ent: missing required field "ProvisioningStep.step_number"`)}
 	}
 	return nil
 }
@@ -356,7 +384,11 @@ func (psc *ProvisioningStepCreate) sqlSave(ctx context.Context) (*ProvisioningSt
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -374,7 +406,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 	)
 	if id, ok := psc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := psc.mutation.GetType(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -549,6 +581,26 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.provisioning_step_provisioning_step_to_file_extract = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := psc.mutation.ProvisioningStepToAnsibleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   provisioningstep.ProvisioningStepToAnsibleTable,
+			Columns: []string{provisioningstep.ProvisioningStepToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.provisioning_step_provisioning_step_to_ansible = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := psc.mutation.ProvisioningStepToPlanIDs(); len(nodes) > 0 {

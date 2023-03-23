@@ -157,7 +157,7 @@ func (pdq *PlanDiffQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single PlanDiff entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one PlanDiff entity is not found.
+// Returns a *NotSingularError when more than one PlanDiff entity is found.
 // Returns a *NotFoundError when no PlanDiff entities are found.
 func (pdq *PlanDiffQuery) Only(ctx context.Context) (*PlanDiff, error) {
 	nodes, err := pdq.Limit(2).All(ctx)
@@ -184,7 +184,7 @@ func (pdq *PlanDiffQuery) OnlyX(ctx context.Context) *PlanDiff {
 }
 
 // OnlyID is like Only, but returns the only PlanDiff ID in the query.
-// Returns a *NotSingularError when exactly one PlanDiff ID is not found.
+// Returns a *NotSingularError when more than one PlanDiff ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (pdq *PlanDiffQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -295,8 +295,9 @@ func (pdq *PlanDiffQuery) Clone() *PlanDiffQuery {
 		withPlanDiffToBuildCommit: pdq.withPlanDiffToBuildCommit.Clone(),
 		withPlanDiffToPlan:        pdq.withPlanDiffToPlan.Clone(),
 		// clone intermediate query.
-		sql:  pdq.sql.Clone(),
-		path: pdq.path,
+		sql:    pdq.sql.Clone(),
+		path:   pdq.path,
+		unique: pdq.unique,
 	}
 }
 
@@ -482,6 +483,10 @@ func (pdq *PlanDiffQuery) sqlAll(ctx context.Context) ([]*PlanDiff, error) {
 
 func (pdq *PlanDiffQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := pdq.querySpec()
+	_spec.Node.Columns = pdq.fields
+	if len(pdq.fields) > 0 {
+		_spec.Unique = pdq.unique != nil && *pdq.unique
+	}
 	return sqlgraph.CountNodes(ctx, pdq.driver, _spec)
 }
 
@@ -552,6 +557,9 @@ func (pdq *PlanDiffQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if pdq.sql != nil {
 		selector = pdq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if pdq.unique != nil && *pdq.unique {
+		selector.Distinct()
 	}
 	for _, p := range pdq.predicates {
 		p(selector)
@@ -831,9 +839,7 @@ func (pdgb *PlanDiffGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range pdgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(pdgb.fields...)...)

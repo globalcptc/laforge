@@ -133,7 +133,7 @@ func (feq *FileExtractQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single FileExtract entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one FileExtract entity is not found.
+// Returns a *NotSingularError when more than one FileExtract entity is found.
 // Returns a *NotFoundError when no FileExtract entities are found.
 func (feq *FileExtractQuery) Only(ctx context.Context) (*FileExtract, error) {
 	nodes, err := feq.Limit(2).All(ctx)
@@ -160,7 +160,7 @@ func (feq *FileExtractQuery) OnlyX(ctx context.Context) *FileExtract {
 }
 
 // OnlyID is like Only, but returns the only FileExtract ID in the query.
-// Returns a *NotSingularError when exactly one FileExtract ID is not found.
+// Returns a *NotSingularError when more than one FileExtract ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (feq *FileExtractQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -270,8 +270,9 @@ func (feq *FileExtractQuery) Clone() *FileExtractQuery {
 		predicates:                   append([]predicate.FileExtract{}, feq.predicates...),
 		withFileExtractToEnvironment: feq.withFileExtractToEnvironment.Clone(),
 		// clone intermediate query.
-		sql:  feq.sql.Clone(),
-		path: feq.path,
+		sql:    feq.sql.Clone(),
+		path:   feq.path,
+		unique: feq.unique,
 	}
 }
 
@@ -416,6 +417,10 @@ func (feq *FileExtractQuery) sqlAll(ctx context.Context) ([]*FileExtract, error)
 
 func (feq *FileExtractQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := feq.querySpec()
+	_spec.Node.Columns = feq.fields
+	if len(feq.fields) > 0 {
+		_spec.Unique = feq.unique != nil && *feq.unique
+	}
 	return sqlgraph.CountNodes(ctx, feq.driver, _spec)
 }
 
@@ -486,6 +491,9 @@ func (feq *FileExtractQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if feq.sql != nil {
 		selector = feq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if feq.unique != nil && *feq.unique {
+		selector.Distinct()
 	}
 	for _, p := range feq.predicates {
 		p(selector)
@@ -765,9 +773,7 @@ func (fegb *FileExtractGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range fegb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(fegb.fields...)...)

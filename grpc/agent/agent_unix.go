@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/md5"
 	"fmt"
@@ -21,6 +22,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/apenella/go-ansible/pkg/execute"
+	"github.com/apenella/go-ansible/pkg/options"
+	"github.com/apenella/go-ansible/pkg/playbook"
 
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
@@ -77,7 +82,7 @@ func AddSystemUserGroup(groupname string, username string) error {
 }
 
 // SystemDownloadFile Download a file with OS specific file endings
-func SystemDownloadFile(path, url string) error {
+func SystemDownloadFile(path, url, is_txt string) error {
 	retryCount := 5
 	var resp *http.Response
 	var err error
@@ -166,6 +171,34 @@ func SystemExecuteCommand(command string, args ...string) (string, error) {
 	// }
 	// return string(output)
 	// return output, nil
+}
+
+// SystemExecuteAnsible Runs Ansible Playbook
+func SystemExecuteAnsible(playbookPath, connectionMethod, inventoryList string) (string, error) {
+
+	buff := new(bytes.Buffer)
+
+	ansiblePlaybookConnectionOptions := &options.AnsibleConnectionOptions{
+		Connection: connectionMethod,
+	}
+
+	ansiblePlaybookOptions := &playbook.AnsiblePlaybookOptions{
+		Inventory: inventoryList,
+	}
+
+	executePlaybook := execute.NewDefaultExecute(
+		execute.WithWrite(io.Writer(buff)),
+	)
+
+	playbook := &playbook.AnsiblePlaybookCmd{
+		Playbooks:         []string{playbookPath},
+		ConnectionOptions: ansiblePlaybookConnectionOptions,
+		Options:           ansiblePlaybookOptions,
+		Exec:              executePlaybook,
+	}
+
+	err := playbook.Run(context.TODO())
+	return buff.String(), err
 }
 
 func GetSystemDependencies() []string {

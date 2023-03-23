@@ -42,6 +42,14 @@ func (tc *TeamCreate) SetID(u uuid.UUID) *TeamCreate {
 	return tc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (tc *TeamCreate) SetNillableID(u *uuid.UUID) *TeamCreate {
+	if u != nil {
+		tc.SetID(*u)
+	}
+	return tc
+}
+
 // SetTeamToBuildID sets the "TeamToBuild" edge to the Build entity by ID.
 func (tc *TeamCreate) SetTeamToBuildID(id uuid.UUID) *TeamCreate {
 	tc.mutation.SetTeamToBuildID(id)
@@ -186,13 +194,13 @@ func (tc *TeamCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (tc *TeamCreate) check() error {
 	if _, ok := tc.mutation.TeamNumber(); !ok {
-		return &ValidationError{Name: "team_number", err: errors.New(`ent: missing required field "team_number"`)}
+		return &ValidationError{Name: "team_number", err: errors.New(`ent: missing required field "Team.team_number"`)}
 	}
 	if _, ok := tc.mutation.Vars(); !ok {
-		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "vars"`)}
+		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "Team.vars"`)}
 	}
 	if _, ok := tc.mutation.TeamToBuildID(); !ok {
-		return &ValidationError{Name: "TeamToBuild", err: errors.New("ent: missing required edge \"TeamToBuild\"")}
+		return &ValidationError{Name: "TeamToBuild", err: errors.New(`ent: missing required edge "Team.TeamToBuild"`)}
 	}
 	return nil
 }
@@ -206,7 +214,11 @@ func (tc *TeamCreate) sqlSave(ctx context.Context) (*Team, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -224,7 +236,7 @@ func (tc *TeamCreate) createSpec() (*Team, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := tc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := tc.mutation.TeamNumber(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

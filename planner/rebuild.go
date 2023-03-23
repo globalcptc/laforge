@@ -18,7 +18,7 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-func Rebuild(client *ent.Client, rdb *redis.Client, logger *logging.Logger, currentUser *ent.AuthUser, serverTask *ent.ServerTask, taskStatus *ent.Status, entPlans []*ent.Plan, spawnedRebuildSuccessfully chan bool) (bool, error) {
+func Rebuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, currentUser *ent.AuthUser, serverTask *ent.ServerTask, taskStatus *ent.Status, entPlans []*ent.Plan, spawnedRebuildSuccessfully chan bool) (bool, error) {
 	ctx := context.Background()
 	defer ctx.Done()
 
@@ -41,6 +41,7 @@ func Rebuild(client *ent.Client, rdb *redis.Client, logger *logging.Logger, curr
 		SetType(buildcommit.TypeREBUILD).
 		SetState(buildcommit.StatePLANNING).
 		SetBuildCommitToBuild(entBuild).
+		AddBuildCommitToServerTask(serverTask).
 		Save(ctx)
 	if err != nil {
 		spawnedRebuildSuccessfully <- false
@@ -117,7 +118,7 @@ func Rebuild(client *ent.Client, rdb *redis.Client, logger *logging.Logger, curr
 	}
 	rdb.Publish(ctx, "updatedBuildCommit", entRebuildCommit.ID.String())
 
-	genericBuilder, err := builder.BuilderFromEnvironment(env, logger)
+	genericBuilder, err := builder.BuilderFromEnvironment(laforgeConfig.Builders, env, logger)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
 		if err != nil {
@@ -172,7 +173,7 @@ func Rebuild(client *ent.Client, rdb *redis.Client, logger *logging.Logger, curr
 	var wg2 sync.WaitGroup
 	for _, entPlan := range entPlans {
 		wg2.Add(1)
-		go buildRoutine(client, logger, &genericBuilder, buildContext, entPlan, &wg2)
+		go buildRoutine(client, laforgeConfig, logger, &genericBuilder, buildContext, entPlan, &wg2)
 	}
 	wg2.Wait()
 

@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   LaForgeAgentStatusFieldsFragment,
   LaForgeAgentTaskFieldsFragment,
@@ -19,7 +20,8 @@ import {
   LaForgeSubscribeUpdatedStatusSubscription
 } from '@graphql';
 import { ApiService } from '@services/api/api.service';
-import { BehaviorSubject, Subscription } from 'rxjs';
+import { SubscriptionResult } from 'apollo-angular/types';
+import { BehaviorSubject, Subscription, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -36,7 +38,7 @@ export class EnvironmentService {
   // Status
   private statusMap: { [key: string]: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] };
   public statusUpdate: BehaviorSubject<boolean>;
-  private statusSubscription: Subscription;
+  private statusSubscription: Observable<SubscriptionResult<LaForgeSubscribeUpdatedStatusSubscription>>;
   // Agent Status
   private agentStatusMap: { [key: string]: LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus'] };
   public agentStatusUpdate: BehaviorSubject<boolean>;
@@ -57,6 +59,7 @@ export class EnvironmentService {
 
   constructor(
     private api: ApiService,
+    private snackbar: MatSnackBar,
     private getEnvironmentInfoGQL: LaForgeGetEnvironmentGQL,
     private getBuildTreeGQL: LaForgeGetBuildTreeGQL,
     private subscribeUpdatedStatus: LaForgeSubscribeUpdatedStatusGQL,
@@ -123,7 +126,8 @@ export class EnvironmentService {
 
   public getLatestCommit(): LaForgeBuildCommitFieldsFragment | null {
     if (!this.buildTree.getValue()) return null;
-    return this.buildCommitMap[this.buildTree.getValue().BuildToLatestBuildCommit.id];
+    // return this.buildCommitMap[this.buildTree.getValue().BuildToLatestBuildCommit.id];
+    return null;
   }
 
   public getAgentTask(agentTaskId: string): LaForgeAgentTaskFieldsFragment {
@@ -131,13 +135,25 @@ export class EnvironmentService {
   }
 
   public initEnvironments() {
-    this.api.pullEnvironments().then((envs) => {
-      this.environments.next(envs);
-      if (localStorage.getItem('selected_env') && localStorage.getItem('selected_build')) {
-        console.log(`currently selected build: ${localStorage.getItem('selected_build')}`);
-        this.setCurrentEnv(localStorage.getItem('selected_env'), localStorage.getItem('selected_build'));
-      }
-    });
+    this.envIsLoading.next(true);
+    this.api
+      .pullEnvironments()
+      .then(
+        (envs) => {
+          this.environments.next(envs);
+          if (localStorage.getItem('selected_env') && localStorage.getItem('selected_build')) {
+            console.log(`currently selected build: ${localStorage.getItem('selected_build')}`);
+            this.setCurrentEnv(localStorage.getItem('selected_env'), localStorage.getItem('selected_build'));
+          }
+        },
+        (err) => {
+          console.error(err);
+          this.snackbar.open('Error loading environments. See debug console for more info.', 'Okay', {
+            panelClass: ['bg-danger', 'text-white']
+          });
+        }
+      )
+      .finally(() => this.envIsLoading.next(false));
   }
 
   public initPlanStatuses(): Promise<boolean> {
@@ -263,12 +279,12 @@ export class EnvironmentService {
   public pullBuildTree(buildId: string) {
     this.buildIsLoading.next(true);
     this.api
-      .pullBuildTree(buildId)
+      .getBuildTree(buildId)
       .then(
         (build) => {
           if (build?.id) {
-            this.statusMap[build.buildToStatus.id] = { ...build.buildToStatus };
-            this.statusUpdate.next(!this.statusUpdate.getValue());
+            // this.statusMap[build.buildToStatus.id] = { ...build.buildToStatus };
+            // this.statusUpdate.next(!this.statusUpdate.getValue());
             return this.buildTree.next(build);
           }
           this.buildTree.error(Error('Unable to retrieve build tree. Unknown error.'));
@@ -281,22 +297,12 @@ export class EnvironmentService {
       .finally(() => this.buildIsLoading.next(false));
   }
 
-  public startStatusSubscription() {
-    this.statusSubscription = this.subscribeUpdatedStatus.subscribe().subscribe(({ data: { updatedStatus }, errors }) => {
-      // console.log('status subscribe');
-      if (errors) {
-        console.error(errors);
-      } else if (updatedStatus) {
-        this.statusMap[updatedStatus.id] = {
-          ...updatedStatus
-        };
-        this.statusUpdate.next(!this.statusUpdate.getValue());
-      }
-    });
+  public getStatusSubscription(): Observable<SubscriptionResult<LaForgeSubscribeUpdatedStatusSubscription>> {
+    return this.subscribeUpdatedStatus.subscribe();
   }
 
-  public stopStatusSubscription(): void {
-    if (this.statusSubscription) this.statusSubscription.unsubscribe();
+  public getAgentStatusSubscription(): Observable<SubscriptionResult<LaForgeSubscribeUpdatedAgentStatusSubscription>> {
+    return this.subscribeUpdatedAgentStatus.subscribe();
   }
 
   public startAgentStatusSubscription() {

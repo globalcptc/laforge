@@ -152,14 +152,14 @@ func (pdu *PlanDiffUpdate) ExecX(ctx context.Context) {
 func (pdu *PlanDiffUpdate) check() error {
 	if v, ok := pdu.mutation.NewState(); ok {
 		if err := plandiff.NewStateValidator(v); err != nil {
-			return &ValidationError{Name: "new_state", err: fmt.Errorf("ent: validator failed for field \"new_state\": %w", err)}
+			return &ValidationError{Name: "new_state", err: fmt.Errorf(`ent: validator failed for field "PlanDiff.new_state": %w`, err)}
 		}
 	}
 	if _, ok := pdu.mutation.PlanDiffToBuildCommitID(); pdu.mutation.PlanDiffToBuildCommitCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"PlanDiffToBuildCommit\"")
+		return errors.New(`ent: clearing a required unique edge "PlanDiff.PlanDiffToBuildCommit"`)
 	}
 	if _, ok := pdu.mutation.PlanDiffToPlanID(); pdu.mutation.PlanDiffToPlanCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"PlanDiffToPlan\"")
+		return errors.New(`ent: clearing a required unique edge "PlanDiff.PlanDiffToPlan"`)
 	}
 	return nil
 }
@@ -421,14 +421,14 @@ func (pduo *PlanDiffUpdateOne) ExecX(ctx context.Context) {
 func (pduo *PlanDiffUpdateOne) check() error {
 	if v, ok := pduo.mutation.NewState(); ok {
 		if err := plandiff.NewStateValidator(v); err != nil {
-			return &ValidationError{Name: "new_state", err: fmt.Errorf("ent: validator failed for field \"new_state\": %w", err)}
+			return &ValidationError{Name: "new_state", err: fmt.Errorf(`ent: validator failed for field "PlanDiff.new_state": %w`, err)}
 		}
 	}
 	if _, ok := pduo.mutation.PlanDiffToBuildCommitID(); pduo.mutation.PlanDiffToBuildCommitCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"PlanDiffToBuildCommit\"")
+		return errors.New(`ent: clearing a required unique edge "PlanDiff.PlanDiffToBuildCommit"`)
 	}
 	if _, ok := pduo.mutation.PlanDiffToPlanID(); pduo.mutation.PlanDiffToPlanCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"PlanDiffToPlan\"")
+		return errors.New(`ent: clearing a required unique edge "PlanDiff.PlanDiffToPlan"`)
 	}
 	return nil
 }
@@ -446,7 +446,7 @@ func (pduo *PlanDiffUpdateOne) sqlSave(ctx context.Context) (_node *PlanDiff, er
 	}
 	id, ok := pduo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing PlanDiff.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "PlanDiff.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := pduo.fields; len(fields) > 0 {

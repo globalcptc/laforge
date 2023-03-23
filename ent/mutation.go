@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -36,6 +38,7 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
@@ -44,6 +47,7 @@ import (
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/gen0cide/laforge/ent/token"
 	"github.com/gen0cide/laforge/ent/user"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 
@@ -62,6 +66,7 @@ const (
 	TypeAdhocPlan          = "AdhocPlan"
 	TypeAgentStatus        = "AgentStatus"
 	TypeAgentTask          = "AgentTask"
+	TypeAnsible            = "Ansible"
 	TypeAuthUser           = "AuthUser"
 	TypeBuild              = "Build"
 	TypeBuildCommit        = "BuildCommit"
@@ -86,6 +91,7 @@ const (
 	TypeProvisionedHost    = "ProvisionedHost"
 	TypeProvisionedNetwork = "ProvisionedNetwork"
 	TypeProvisioningStep   = "ProvisioningStep"
+	TypeRepoCommit         = "RepoCommit"
 	TypeRepository         = "Repository"
 	TypeScript             = "Script"
 	TypeServerTask         = "ServerTask"
@@ -151,7 +157,7 @@ func withAdhocPlanID(id uuid.UUID) adhocplanOption {
 		m.oldValue = func(ctx context.Context) (*AdhocPlan, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().AdhocPlan.Get(ctx, id)
 				}
@@ -184,7 +190,7 @@ func (m AdhocPlanMutation) Client() *Client {
 // it returns an error otherwise.
 func (m AdhocPlanMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -204,6 +210,25 @@ func (m *AdhocPlanMutation) ID() (id uuid.UUID, exists bool) {
 		return
 	}
 	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AdhocPlanMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AdhocPlan.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
 }
 
 // AddPrevAdhocPlanIDs adds the "PrevAdhocPlan" edge to the AdhocPlan entity by ids.
@@ -758,7 +783,7 @@ func withAgentStatusID(id uuid.UUID) agentstatusOption {
 		m.oldValue = func(ctx context.Context) (*AgentStatus, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().AgentStatus.Get(ctx, id)
 				}
@@ -791,7 +816,7 @@ func (m AgentStatusMutation) Client() *Client {
 // it returns an error otherwise.
 func (m AgentStatusMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -813,6 +838,25 @@ func (m *AgentStatusMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AgentStatusMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AgentStatus.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetClientID sets the "ClientID" field.
 func (m *AgentStatusMutation) SetClientID(s string) {
 	m._ClientID = &s
@@ -832,10 +876,10 @@ func (m *AgentStatusMutation) ClientID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldClientID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldClientID is only allowed on UpdateOne operations")
+		return v, errors.New("OldClientID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldClientID requires an ID field in the mutation")
+		return v, errors.New("OldClientID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -868,10 +912,10 @@ func (m *AgentStatusMutation) Hostname() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldHostname(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHostname is only allowed on UpdateOne operations")
+		return v, errors.New("OldHostname is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHostname requires an ID field in the mutation")
+		return v, errors.New("OldHostname requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -905,10 +949,10 @@ func (m *AgentStatusMutation) UpTime() (r int64, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldUpTime(ctx context.Context) (v int64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldUpTime is only allowed on UpdateOne operations")
+		return v, errors.New("OldUpTime is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldUpTime requires an ID field in the mutation")
+		return v, errors.New("OldUpTime requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -961,10 +1005,10 @@ func (m *AgentStatusMutation) BootTime() (r int64, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldBootTime(ctx context.Context) (v int64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldBootTime is only allowed on UpdateOne operations")
+		return v, errors.New("OldBootTime is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldBootTime requires an ID field in the mutation")
+		return v, errors.New("OldBootTime requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -1017,10 +1061,10 @@ func (m *AgentStatusMutation) NumProcs() (r int64, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldNumProcs(ctx context.Context) (v int64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldNumProcs is only allowed on UpdateOne operations")
+		return v, errors.New("OldNumProcs is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldNumProcs requires an ID field in the mutation")
+		return v, errors.New("OldNumProcs requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -1072,10 +1116,10 @@ func (m *AgentStatusMutation) Os() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldOs(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldOs is only allowed on UpdateOne operations")
+		return v, errors.New("OldOs is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldOs requires an ID field in the mutation")
+		return v, errors.New("OldOs requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -1108,10 +1152,10 @@ func (m *AgentStatusMutation) HostID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldHostID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHostID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHostID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHostID requires an ID field in the mutation")
+		return v, errors.New("OldHostID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -1145,10 +1189,10 @@ func (m *AgentStatusMutation) Load1() (r float64, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldLoad1(ctx context.Context) (v float64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldLoad1 is only allowed on UpdateOne operations")
+		return v, errors.New("OldLoad1 is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldLoad1 requires an ID field in the mutation")
+		return v, errors.New("OldLoad1 requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -1201,10 +1245,10 @@ func (m *AgentStatusMutation) Load5() (r float64, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldLoad5(ctx context.Context) (v float64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldLoad5 is only allowed on UpdateOne operations")
+		return v, errors.New("OldLoad5 is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldLoad5 requires an ID field in the mutation")
+		return v, errors.New("OldLoad5 requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -1257,10 +1301,10 @@ func (m *AgentStatusMutation) Load15() (r float64, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldLoad15(ctx context.Context) (v float64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldLoad15 is only allowed on UpdateOne operations")
+		return v, errors.New("OldLoad15 is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldLoad15 requires an ID field in the mutation")
+		return v, errors.New("OldLoad15 requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -1313,10 +1357,10 @@ func (m *AgentStatusMutation) TotalMem() (r int64, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldTotalMem(ctx context.Context) (v int64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTotalMem is only allowed on UpdateOne operations")
+		return v, errors.New("OldTotalMem is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTotalMem requires an ID field in the mutation")
+		return v, errors.New("OldTotalMem requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -1369,10 +1413,10 @@ func (m *AgentStatusMutation) FreeMem() (r int64, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldFreeMem(ctx context.Context) (v int64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldFreeMem is only allowed on UpdateOne operations")
+		return v, errors.New("OldFreeMem is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldFreeMem requires an ID field in the mutation")
+		return v, errors.New("OldFreeMem requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -1425,10 +1469,10 @@ func (m *AgentStatusMutation) UsedMem() (r int64, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldUsedMem(ctx context.Context) (v int64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldUsedMem is only allowed on UpdateOne operations")
+		return v, errors.New("OldUsedMem is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldUsedMem requires an ID field in the mutation")
+		return v, errors.New("OldUsedMem requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -1481,10 +1525,10 @@ func (m *AgentStatusMutation) Timestamp() (r int64, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentStatusMutation) OldTimestamp(ctx context.Context) (v int64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTimestamp is only allowed on UpdateOne operations")
+		return v, errors.New("OldTimestamp is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTimestamp requires an ID field in the mutation")
+		return v, errors.New("OldTimestamp requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -2264,7 +2308,7 @@ func withAgentTaskID(id uuid.UUID) agenttaskOption {
 		m.oldValue = func(ctx context.Context) (*AgentTask, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().AgentTask.Get(ctx, id)
 				}
@@ -2297,7 +2341,7 @@ func (m AgentTaskMutation) Client() *Client {
 // it returns an error otherwise.
 func (m AgentTaskMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -2319,6 +2363,25 @@ func (m *AgentTaskMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AgentTaskMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AgentTask.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetCommand sets the "command" field.
 func (m *AgentTaskMutation) SetCommand(a agenttask.Command) {
 	m.command = &a
@@ -2338,10 +2401,10 @@ func (m *AgentTaskMutation) Command() (r agenttask.Command, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentTaskMutation) OldCommand(ctx context.Context) (v agenttask.Command, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldCommand is only allowed on UpdateOne operations")
+		return v, errors.New("OldCommand is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldCommand requires an ID field in the mutation")
+		return v, errors.New("OldCommand requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -2374,10 +2437,10 @@ func (m *AgentTaskMutation) Args() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentTaskMutation) OldArgs(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldArgs is only allowed on UpdateOne operations")
+		return v, errors.New("OldArgs is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldArgs requires an ID field in the mutation")
+		return v, errors.New("OldArgs requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -2411,10 +2474,10 @@ func (m *AgentTaskMutation) Number() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentTaskMutation) OldNumber(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldNumber is only allowed on UpdateOne operations")
+		return v, errors.New("OldNumber is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldNumber requires an ID field in the mutation")
+		return v, errors.New("OldNumber requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -2466,10 +2529,10 @@ func (m *AgentTaskMutation) Output() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentTaskMutation) OldOutput(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldOutput is only allowed on UpdateOne operations")
+		return v, errors.New("OldOutput is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldOutput requires an ID field in the mutation")
+		return v, errors.New("OldOutput requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -2502,10 +2565,10 @@ func (m *AgentTaskMutation) State() (r agenttask.State, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentTaskMutation) OldState(ctx context.Context) (v agenttask.State, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldState is only allowed on UpdateOne operations")
+		return v, errors.New("OldState is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldState requires an ID field in the mutation")
+		return v, errors.New("OldState requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -2538,10 +2601,10 @@ func (m *AgentTaskMutation) ErrorMessage() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AgentTaskMutation) OldErrorMessage(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldErrorMessage is only allowed on UpdateOne operations")
+		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldErrorMessage requires an ID field in the mutation")
+		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -3080,6 +3143,907 @@ func (m *AgentTaskMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown AgentTask edge %s", name)
 }
 
+// AnsibleMutation represents an operation that mutates the Ansible nodes in the graph.
+type AnsibleMutation struct {
+	config
+	op                             Op
+	typ                            string
+	id                             *uuid.UUID
+	name                           *string
+	hcl_id                         *string
+	description                    *string
+	source                         *string
+	playbook_name                  *string
+	method                         *ansible.Method
+	inventory                      *string
+	abs_path                       *string
+	tags                           *map[string]string
+	clearedFields                  map[string]struct{}
+	_AnsibleToUser                 map[uuid.UUID]struct{}
+	removed_AnsibleToUser          map[uuid.UUID]struct{}
+	cleared_AnsibleToUser          bool
+	_AnsibleFromEnvironment        *uuid.UUID
+	cleared_AnsibleFromEnvironment bool
+	done                           bool
+	oldValue                       func(context.Context) (*Ansible, error)
+	predicates                     []predicate.Ansible
+}
+
+var _ ent.Mutation = (*AnsibleMutation)(nil)
+
+// ansibleOption allows management of the mutation configuration using functional options.
+type ansibleOption func(*AnsibleMutation)
+
+// newAnsibleMutation creates new mutation for the Ansible entity.
+func newAnsibleMutation(c config, op Op, opts ...ansibleOption) *AnsibleMutation {
+	m := &AnsibleMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAnsible,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAnsibleID sets the ID field of the mutation.
+func withAnsibleID(id uuid.UUID) ansibleOption {
+	return func(m *AnsibleMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Ansible
+		)
+		m.oldValue = func(ctx context.Context) (*Ansible, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Ansible.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAnsible sets the old Ansible of the mutation.
+func withAnsible(node *Ansible) ansibleOption {
+	return func(m *AnsibleMutation) {
+		m.oldValue = func(context.Context) (*Ansible, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AnsibleMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AnsibleMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Ansible entities.
+func (m *AnsibleMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AnsibleMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AnsibleMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Ansible.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetName sets the "name" field.
+func (m *AnsibleMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *AnsibleMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *AnsibleMutation) ResetName() {
+	m.name = nil
+}
+
+// SetHclID sets the "hcl_id" field.
+func (m *AnsibleMutation) SetHclID(s string) {
+	m.hcl_id = &s
+}
+
+// HclID returns the value of the "hcl_id" field in the mutation.
+func (m *AnsibleMutation) HclID() (r string, exists bool) {
+	v := m.hcl_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHclID returns the old "hcl_id" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldHclID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHclID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+	}
+	return oldValue.HclID, nil
+}
+
+// ResetHclID resets all changes to the "hcl_id" field.
+func (m *AnsibleMutation) ResetHclID() {
+	m.hcl_id = nil
+}
+
+// SetDescription sets the "description" field.
+func (m *AnsibleMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *AnsibleMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *AnsibleMutation) ResetDescription() {
+	m.description = nil
+}
+
+// SetSource sets the "source" field.
+func (m *AnsibleMutation) SetSource(s string) {
+	m.source = &s
+}
+
+// Source returns the value of the "source" field in the mutation.
+func (m *AnsibleMutation) Source() (r string, exists bool) {
+	v := m.source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSource returns the old "source" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldSource(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSource: %w", err)
+	}
+	return oldValue.Source, nil
+}
+
+// ResetSource resets all changes to the "source" field.
+func (m *AnsibleMutation) ResetSource() {
+	m.source = nil
+}
+
+// SetPlaybookName sets the "playbook_name" field.
+func (m *AnsibleMutation) SetPlaybookName(s string) {
+	m.playbook_name = &s
+}
+
+// PlaybookName returns the value of the "playbook_name" field in the mutation.
+func (m *AnsibleMutation) PlaybookName() (r string, exists bool) {
+	v := m.playbook_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPlaybookName returns the old "playbook_name" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldPlaybookName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPlaybookName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPlaybookName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPlaybookName: %w", err)
+	}
+	return oldValue.PlaybookName, nil
+}
+
+// ResetPlaybookName resets all changes to the "playbook_name" field.
+func (m *AnsibleMutation) ResetPlaybookName() {
+	m.playbook_name = nil
+}
+
+// SetMethod sets the "method" field.
+func (m *AnsibleMutation) SetMethod(a ansible.Method) {
+	m.method = &a
+}
+
+// Method returns the value of the "method" field in the mutation.
+func (m *AnsibleMutation) Method() (r ansible.Method, exists bool) {
+	v := m.method
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMethod returns the old "method" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldMethod(ctx context.Context) (v ansible.Method, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMethod is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMethod requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMethod: %w", err)
+	}
+	return oldValue.Method, nil
+}
+
+// ResetMethod resets all changes to the "method" field.
+func (m *AnsibleMutation) ResetMethod() {
+	m.method = nil
+}
+
+// SetInventory sets the "inventory" field.
+func (m *AnsibleMutation) SetInventory(s string) {
+	m.inventory = &s
+}
+
+// Inventory returns the value of the "inventory" field in the mutation.
+func (m *AnsibleMutation) Inventory() (r string, exists bool) {
+	v := m.inventory
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInventory returns the old "inventory" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldInventory(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInventory is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInventory requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInventory: %w", err)
+	}
+	return oldValue.Inventory, nil
+}
+
+// ResetInventory resets all changes to the "inventory" field.
+func (m *AnsibleMutation) ResetInventory() {
+	m.inventory = nil
+}
+
+// SetAbsPath sets the "abs_path" field.
+func (m *AnsibleMutation) SetAbsPath(s string) {
+	m.abs_path = &s
+}
+
+// AbsPath returns the value of the "abs_path" field in the mutation.
+func (m *AnsibleMutation) AbsPath() (r string, exists bool) {
+	v := m.abs_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAbsPath returns the old "abs_path" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldAbsPath(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAbsPath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAbsPath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAbsPath: %w", err)
+	}
+	return oldValue.AbsPath, nil
+}
+
+// ResetAbsPath resets all changes to the "abs_path" field.
+func (m *AnsibleMutation) ResetAbsPath() {
+	m.abs_path = nil
+}
+
+// SetTags sets the "tags" field.
+func (m *AnsibleMutation) SetTags(value map[string]string) {
+	m.tags = &value
+}
+
+// Tags returns the value of the "tags" field in the mutation.
+func (m *AnsibleMutation) Tags() (r map[string]string, exists bool) {
+	v := m.tags
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTags returns the old "tags" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTags requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTags: %w", err)
+	}
+	return oldValue.Tags, nil
+}
+
+// ResetTags resets all changes to the "tags" field.
+func (m *AnsibleMutation) ResetTags() {
+	m.tags = nil
+}
+
+// AddAnsibleToUserIDs adds the "AnsibleToUser" edge to the User entity by ids.
+func (m *AnsibleMutation) AddAnsibleToUserIDs(ids ...uuid.UUID) {
+	if m._AnsibleToUser == nil {
+		m._AnsibleToUser = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._AnsibleToUser[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAnsibleToUser clears the "AnsibleToUser" edge to the User entity.
+func (m *AnsibleMutation) ClearAnsibleToUser() {
+	m.cleared_AnsibleToUser = true
+}
+
+// AnsibleToUserCleared reports if the "AnsibleToUser" edge to the User entity was cleared.
+func (m *AnsibleMutation) AnsibleToUserCleared() bool {
+	return m.cleared_AnsibleToUser
+}
+
+// RemoveAnsibleToUserIDs removes the "AnsibleToUser" edge to the User entity by IDs.
+func (m *AnsibleMutation) RemoveAnsibleToUserIDs(ids ...uuid.UUID) {
+	if m.removed_AnsibleToUser == nil {
+		m.removed_AnsibleToUser = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._AnsibleToUser, ids[i])
+		m.removed_AnsibleToUser[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAnsibleToUser returns the removed IDs of the "AnsibleToUser" edge to the User entity.
+func (m *AnsibleMutation) RemovedAnsibleToUserIDs() (ids []uuid.UUID) {
+	for id := range m.removed_AnsibleToUser {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AnsibleToUserIDs returns the "AnsibleToUser" edge IDs in the mutation.
+func (m *AnsibleMutation) AnsibleToUserIDs() (ids []uuid.UUID) {
+	for id := range m._AnsibleToUser {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAnsibleToUser resets all changes to the "AnsibleToUser" edge.
+func (m *AnsibleMutation) ResetAnsibleToUser() {
+	m._AnsibleToUser = nil
+	m.cleared_AnsibleToUser = false
+	m.removed_AnsibleToUser = nil
+}
+
+// SetAnsibleFromEnvironmentID sets the "AnsibleFromEnvironment" edge to the Environment entity by id.
+func (m *AnsibleMutation) SetAnsibleFromEnvironmentID(id uuid.UUID) {
+	m._AnsibleFromEnvironment = &id
+}
+
+// ClearAnsibleFromEnvironment clears the "AnsibleFromEnvironment" edge to the Environment entity.
+func (m *AnsibleMutation) ClearAnsibleFromEnvironment() {
+	m.cleared_AnsibleFromEnvironment = true
+}
+
+// AnsibleFromEnvironmentCleared reports if the "AnsibleFromEnvironment" edge to the Environment entity was cleared.
+func (m *AnsibleMutation) AnsibleFromEnvironmentCleared() bool {
+	return m.cleared_AnsibleFromEnvironment
+}
+
+// AnsibleFromEnvironmentID returns the "AnsibleFromEnvironment" edge ID in the mutation.
+func (m *AnsibleMutation) AnsibleFromEnvironmentID() (id uuid.UUID, exists bool) {
+	if m._AnsibleFromEnvironment != nil {
+		return *m._AnsibleFromEnvironment, true
+	}
+	return
+}
+
+// AnsibleFromEnvironmentIDs returns the "AnsibleFromEnvironment" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AnsibleFromEnvironmentID instead. It exists only for internal usage by the builders.
+func (m *AnsibleMutation) AnsibleFromEnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._AnsibleFromEnvironment; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAnsibleFromEnvironment resets all changes to the "AnsibleFromEnvironment" edge.
+func (m *AnsibleMutation) ResetAnsibleFromEnvironment() {
+	m._AnsibleFromEnvironment = nil
+	m.cleared_AnsibleFromEnvironment = false
+}
+
+// Where appends a list predicates to the AnsibleMutation builder.
+func (m *AnsibleMutation) Where(ps ...predicate.Ansible) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// Op returns the operation name.
+func (m *AnsibleMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (Ansible).
+func (m *AnsibleMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AnsibleMutation) Fields() []string {
+	fields := make([]string, 0, 9)
+	if m.name != nil {
+		fields = append(fields, ansible.FieldName)
+	}
+	if m.hcl_id != nil {
+		fields = append(fields, ansible.FieldHclID)
+	}
+	if m.description != nil {
+		fields = append(fields, ansible.FieldDescription)
+	}
+	if m.source != nil {
+		fields = append(fields, ansible.FieldSource)
+	}
+	if m.playbook_name != nil {
+		fields = append(fields, ansible.FieldPlaybookName)
+	}
+	if m.method != nil {
+		fields = append(fields, ansible.FieldMethod)
+	}
+	if m.inventory != nil {
+		fields = append(fields, ansible.FieldInventory)
+	}
+	if m.abs_path != nil {
+		fields = append(fields, ansible.FieldAbsPath)
+	}
+	if m.tags != nil {
+		fields = append(fields, ansible.FieldTags)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AnsibleMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case ansible.FieldName:
+		return m.Name()
+	case ansible.FieldHclID:
+		return m.HclID()
+	case ansible.FieldDescription:
+		return m.Description()
+	case ansible.FieldSource:
+		return m.Source()
+	case ansible.FieldPlaybookName:
+		return m.PlaybookName()
+	case ansible.FieldMethod:
+		return m.Method()
+	case ansible.FieldInventory:
+		return m.Inventory()
+	case ansible.FieldAbsPath:
+		return m.AbsPath()
+	case ansible.FieldTags:
+		return m.Tags()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AnsibleMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case ansible.FieldName:
+		return m.OldName(ctx)
+	case ansible.FieldHclID:
+		return m.OldHclID(ctx)
+	case ansible.FieldDescription:
+		return m.OldDescription(ctx)
+	case ansible.FieldSource:
+		return m.OldSource(ctx)
+	case ansible.FieldPlaybookName:
+		return m.OldPlaybookName(ctx)
+	case ansible.FieldMethod:
+		return m.OldMethod(ctx)
+	case ansible.FieldInventory:
+		return m.OldInventory(ctx)
+	case ansible.FieldAbsPath:
+		return m.OldAbsPath(ctx)
+	case ansible.FieldTags:
+		return m.OldTags(ctx)
+	}
+	return nil, fmt.Errorf("unknown Ansible field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AnsibleMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case ansible.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case ansible.FieldHclID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHclID(v)
+		return nil
+	case ansible.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	case ansible.FieldSource:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSource(v)
+		return nil
+	case ansible.FieldPlaybookName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPlaybookName(v)
+		return nil
+	case ansible.FieldMethod:
+		v, ok := value.(ansible.Method)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMethod(v)
+		return nil
+	case ansible.FieldInventory:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInventory(v)
+		return nil
+	case ansible.FieldAbsPath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAbsPath(v)
+		return nil
+	case ansible.FieldTags:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTags(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Ansible field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AnsibleMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AnsibleMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AnsibleMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Ansible numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AnsibleMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AnsibleMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AnsibleMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Ansible nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AnsibleMutation) ResetField(name string) error {
+	switch name {
+	case ansible.FieldName:
+		m.ResetName()
+		return nil
+	case ansible.FieldHclID:
+		m.ResetHclID()
+		return nil
+	case ansible.FieldDescription:
+		m.ResetDescription()
+		return nil
+	case ansible.FieldSource:
+		m.ResetSource()
+		return nil
+	case ansible.FieldPlaybookName:
+		m.ResetPlaybookName()
+		return nil
+	case ansible.FieldMethod:
+		m.ResetMethod()
+		return nil
+	case ansible.FieldInventory:
+		m.ResetInventory()
+		return nil
+	case ansible.FieldAbsPath:
+		m.ResetAbsPath()
+		return nil
+	case ansible.FieldTags:
+		m.ResetTags()
+		return nil
+	}
+	return fmt.Errorf("unknown Ansible field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AnsibleMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m._AnsibleToUser != nil {
+		edges = append(edges, ansible.EdgeAnsibleToUser)
+	}
+	if m._AnsibleFromEnvironment != nil {
+		edges = append(edges, ansible.EdgeAnsibleFromEnvironment)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AnsibleMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case ansible.EdgeAnsibleToUser:
+		ids := make([]ent.Value, 0, len(m._AnsibleToUser))
+		for id := range m._AnsibleToUser {
+			ids = append(ids, id)
+		}
+		return ids
+	case ansible.EdgeAnsibleFromEnvironment:
+		if id := m._AnsibleFromEnvironment; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AnsibleMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.removed_AnsibleToUser != nil {
+		edges = append(edges, ansible.EdgeAnsibleToUser)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AnsibleMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case ansible.EdgeAnsibleToUser:
+		ids := make([]ent.Value, 0, len(m.removed_AnsibleToUser))
+		for id := range m.removed_AnsibleToUser {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AnsibleMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.cleared_AnsibleToUser {
+		edges = append(edges, ansible.EdgeAnsibleToUser)
+	}
+	if m.cleared_AnsibleFromEnvironment {
+		edges = append(edges, ansible.EdgeAnsibleFromEnvironment)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AnsibleMutation) EdgeCleared(name string) bool {
+	switch name {
+	case ansible.EdgeAnsibleToUser:
+		return m.cleared_AnsibleToUser
+	case ansible.EdgeAnsibleFromEnvironment:
+		return m.cleared_AnsibleFromEnvironment
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AnsibleMutation) ClearEdge(name string) error {
+	switch name {
+	case ansible.EdgeAnsibleFromEnvironment:
+		m.ClearAnsibleFromEnvironment()
+		return nil
+	}
+	return fmt.Errorf("unknown Ansible unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AnsibleMutation) ResetEdge(name string) error {
+	switch name {
+	case ansible.EdgeAnsibleToUser:
+		m.ResetAnsibleToUser()
+		return nil
+	case ansible.EdgeAnsibleFromEnvironment:
+		m.ResetAnsibleFromEnvironment()
+		return nil
+	}
+	return fmt.Errorf("unknown Ansible edge %s", name)
+}
+
 // AuthUserMutation represents an operation that mutates the AuthUser nodes in the graph.
 type AuthUserMutation struct {
 	config
@@ -3139,7 +4103,7 @@ func withAuthUserID(id uuid.UUID) authuserOption {
 		m.oldValue = func(ctx context.Context) (*AuthUser, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().AuthUser.Get(ctx, id)
 				}
@@ -3172,7 +4136,7 @@ func (m AuthUserMutation) Client() *Client {
 // it returns an error otherwise.
 func (m AuthUserMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -3194,6 +4158,25 @@ func (m *AuthUserMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AuthUserMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AuthUser.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetUsername sets the "username" field.
 func (m *AuthUserMutation) SetUsername(s string) {
 	m.username = &s
@@ -3213,10 +4196,10 @@ func (m *AuthUserMutation) Username() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AuthUserMutation) OldUsername(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldUsername is only allowed on UpdateOne operations")
+		return v, errors.New("OldUsername is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldUsername requires an ID field in the mutation")
+		return v, errors.New("OldUsername requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -3249,10 +4232,10 @@ func (m *AuthUserMutation) Password() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AuthUserMutation) OldPassword(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldPassword is only allowed on UpdateOne operations")
+		return v, errors.New("OldPassword is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldPassword requires an ID field in the mutation")
+		return v, errors.New("OldPassword requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -3285,10 +4268,10 @@ func (m *AuthUserMutation) FirstName() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AuthUserMutation) OldFirstName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldFirstName is only allowed on UpdateOne operations")
+		return v, errors.New("OldFirstName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldFirstName requires an ID field in the mutation")
+		return v, errors.New("OldFirstName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -3321,10 +4304,10 @@ func (m *AuthUserMutation) LastName() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AuthUserMutation) OldLastName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldLastName is only allowed on UpdateOne operations")
+		return v, errors.New("OldLastName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldLastName requires an ID field in the mutation")
+		return v, errors.New("OldLastName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -3357,10 +4340,10 @@ func (m *AuthUserMutation) Email() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AuthUserMutation) OldEmail(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldEmail is only allowed on UpdateOne operations")
+		return v, errors.New("OldEmail is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldEmail requires an ID field in the mutation")
+		return v, errors.New("OldEmail requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -3393,10 +4376,10 @@ func (m *AuthUserMutation) Phone() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AuthUserMutation) OldPhone(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldPhone is only allowed on UpdateOne operations")
+		return v, errors.New("OldPhone is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldPhone requires an ID field in the mutation")
+		return v, errors.New("OldPhone requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -3429,10 +4412,10 @@ func (m *AuthUserMutation) Company() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AuthUserMutation) OldCompany(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldCompany is only allowed on UpdateOne operations")
+		return v, errors.New("OldCompany is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldCompany requires an ID field in the mutation")
+		return v, errors.New("OldCompany requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -3465,10 +4448,10 @@ func (m *AuthUserMutation) Occupation() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AuthUserMutation) OldOccupation(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldOccupation is only allowed on UpdateOne operations")
+		return v, errors.New("OldOccupation is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldOccupation requires an ID field in the mutation")
+		return v, errors.New("OldOccupation requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -3501,10 +4484,10 @@ func (m *AuthUserMutation) PrivateKeyPath() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AuthUserMutation) OldPrivateKeyPath(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldPrivateKeyPath is only allowed on UpdateOne operations")
+		return v, errors.New("OldPrivateKeyPath is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldPrivateKeyPath requires an ID field in the mutation")
+		return v, errors.New("OldPrivateKeyPath requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -3537,10 +4520,10 @@ func (m *AuthUserMutation) Role() (r authuser.Role, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AuthUserMutation) OldRole(ctx context.Context) (v authuser.Role, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldRole is only allowed on UpdateOne operations")
+		return v, errors.New("OldRole is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldRole requires an ID field in the mutation")
+		return v, errors.New("OldRole requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -3573,10 +4556,10 @@ func (m *AuthUserMutation) Provider() (r authuser.Provider, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *AuthUserMutation) OldProvider(ctx context.Context) (v authuser.Provider, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldProvider is only allowed on UpdateOne operations")
+		return v, errors.New("OldProvider is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldProvider requires an ID field in the mutation")
+		return v, errors.New("OldProvider requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -4104,6 +5087,7 @@ type BuildMutation struct {
 	addrevision                       *int
 	environment_revision              *int
 	addenvironment_revision           *int
+	vars                              *map[string]string
 	completed_plan                    *bool
 	clearedFields                     map[string]struct{}
 	_BuildToStatus                    *uuid.UUID
@@ -4114,6 +5098,8 @@ type BuildMutation struct {
 	cleared_BuildToCompetition        bool
 	_BuildToLatestBuildCommit         *uuid.UUID
 	cleared_BuildToLatestBuildCommit  bool
+	_BuildToRepoCommit                *uuid.UUID
+	cleared_BuildToRepoCommit         bool
 	_BuildToProvisionedNetwork        map[uuid.UUID]struct{}
 	removed_BuildToProvisionedNetwork map[uuid.UUID]struct{}
 	cleared_BuildToProvisionedNetwork bool
@@ -4129,6 +5115,12 @@ type BuildMutation struct {
 	_BuildToAdhocPlans                map[uuid.UUID]struct{}
 	removed_BuildToAdhocPlans         map[uuid.UUID]struct{}
 	cleared_BuildToAdhocPlans         bool
+	_BuildToAgentStatuses             map[uuid.UUID]struct{}
+	removed_BuildToAgentStatuses      map[uuid.UUID]struct{}
+	cleared_BuildToAgentStatuses      bool
+	_BuildToServerTasks               map[uuid.UUID]struct{}
+	removed_BuildToServerTasks        map[uuid.UUID]struct{}
+	cleared_BuildToServerTasks        bool
 	done                              bool
 	oldValue                          func(context.Context) (*Build, error)
 	predicates                        []predicate.Build
@@ -4164,7 +5156,7 @@ func withBuildID(id uuid.UUID) buildOption {
 		m.oldValue = func(ctx context.Context) (*Build, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Build.Get(ctx, id)
 				}
@@ -4197,7 +5189,7 @@ func (m BuildMutation) Client() *Client {
 // it returns an error otherwise.
 func (m BuildMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -4217,6 +5209,25 @@ func (m *BuildMutation) ID() (id uuid.UUID, exists bool) {
 		return
 	}
 	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *BuildMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Build.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
 }
 
 // SetRevision sets the "revision" field.
@@ -4239,10 +5250,10 @@ func (m *BuildMutation) Revision() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *BuildMutation) OldRevision(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldRevision is only allowed on UpdateOne operations")
+		return v, errors.New("OldRevision is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldRevision requires an ID field in the mutation")
+		return v, errors.New("OldRevision requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -4295,10 +5306,10 @@ func (m *BuildMutation) EnvironmentRevision() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *BuildMutation) OldEnvironmentRevision(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldEnvironmentRevision is only allowed on UpdateOne operations")
+		return v, errors.New("OldEnvironmentRevision is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldEnvironmentRevision requires an ID field in the mutation")
+		return v, errors.New("OldEnvironmentRevision requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -4331,6 +5342,42 @@ func (m *BuildMutation) ResetEnvironmentRevision() {
 	m.addenvironment_revision = nil
 }
 
+// SetVars sets the "vars" field.
+func (m *BuildMutation) SetVars(value map[string]string) {
+	m.vars = &value
+}
+
+// Vars returns the value of the "vars" field in the mutation.
+func (m *BuildMutation) Vars() (r map[string]string, exists bool) {
+	v := m.vars
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVars returns the old "vars" field's value of the Build entity.
+// If the Build object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BuildMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVars is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVars requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVars: %w", err)
+	}
+	return oldValue.Vars, nil
+}
+
+// ResetVars resets all changes to the "vars" field.
+func (m *BuildMutation) ResetVars() {
+	m.vars = nil
+}
+
 // SetCompletedPlan sets the "completed_plan" field.
 func (m *BuildMutation) SetCompletedPlan(b bool) {
 	m.completed_plan = &b
@@ -4350,10 +5397,10 @@ func (m *BuildMutation) CompletedPlan() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *BuildMutation) OldCompletedPlan(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldCompletedPlan is only allowed on UpdateOne operations")
+		return v, errors.New("OldCompletedPlan is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldCompletedPlan requires an ID field in the mutation")
+		return v, errors.New("OldCompletedPlan requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -4521,6 +5568,45 @@ func (m *BuildMutation) BuildToLatestBuildCommitIDs() (ids []uuid.UUID) {
 func (m *BuildMutation) ResetBuildToLatestBuildCommit() {
 	m._BuildToLatestBuildCommit = nil
 	m.cleared_BuildToLatestBuildCommit = false
+}
+
+// SetBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by id.
+func (m *BuildMutation) SetBuildToRepoCommitID(id uuid.UUID) {
+	m._BuildToRepoCommit = &id
+}
+
+// ClearBuildToRepoCommit clears the "BuildToRepoCommit" edge to the RepoCommit entity.
+func (m *BuildMutation) ClearBuildToRepoCommit() {
+	m.cleared_BuildToRepoCommit = true
+}
+
+// BuildToRepoCommitCleared reports if the "BuildToRepoCommit" edge to the RepoCommit entity was cleared.
+func (m *BuildMutation) BuildToRepoCommitCleared() bool {
+	return m.cleared_BuildToRepoCommit
+}
+
+// BuildToRepoCommitID returns the "BuildToRepoCommit" edge ID in the mutation.
+func (m *BuildMutation) BuildToRepoCommitID() (id uuid.UUID, exists bool) {
+	if m._BuildToRepoCommit != nil {
+		return *m._BuildToRepoCommit, true
+	}
+	return
+}
+
+// BuildToRepoCommitIDs returns the "BuildToRepoCommit" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// BuildToRepoCommitID instead. It exists only for internal usage by the builders.
+func (m *BuildMutation) BuildToRepoCommitIDs() (ids []uuid.UUID) {
+	if id := m._BuildToRepoCommit; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetBuildToRepoCommit resets all changes to the "BuildToRepoCommit" edge.
+func (m *BuildMutation) ResetBuildToRepoCommit() {
+	m._BuildToRepoCommit = nil
+	m.cleared_BuildToRepoCommit = false
 }
 
 // AddBuildToProvisionedNetworkIDs adds the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity by ids.
@@ -4793,6 +5879,114 @@ func (m *BuildMutation) ResetBuildToAdhocPlans() {
 	m.removed_BuildToAdhocPlans = nil
 }
 
+// AddBuildToAgentStatuseIDs adds the "BuildToAgentStatuses" edge to the AgentStatus entity by ids.
+func (m *BuildMutation) AddBuildToAgentStatuseIDs(ids ...uuid.UUID) {
+	if m._BuildToAgentStatuses == nil {
+		m._BuildToAgentStatuses = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._BuildToAgentStatuses[ids[i]] = struct{}{}
+	}
+}
+
+// ClearBuildToAgentStatuses clears the "BuildToAgentStatuses" edge to the AgentStatus entity.
+func (m *BuildMutation) ClearBuildToAgentStatuses() {
+	m.cleared_BuildToAgentStatuses = true
+}
+
+// BuildToAgentStatusesCleared reports if the "BuildToAgentStatuses" edge to the AgentStatus entity was cleared.
+func (m *BuildMutation) BuildToAgentStatusesCleared() bool {
+	return m.cleared_BuildToAgentStatuses
+}
+
+// RemoveBuildToAgentStatuseIDs removes the "BuildToAgentStatuses" edge to the AgentStatus entity by IDs.
+func (m *BuildMutation) RemoveBuildToAgentStatuseIDs(ids ...uuid.UUID) {
+	if m.removed_BuildToAgentStatuses == nil {
+		m.removed_BuildToAgentStatuses = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._BuildToAgentStatuses, ids[i])
+		m.removed_BuildToAgentStatuses[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedBuildToAgentStatuses returns the removed IDs of the "BuildToAgentStatuses" edge to the AgentStatus entity.
+func (m *BuildMutation) RemovedBuildToAgentStatusesIDs() (ids []uuid.UUID) {
+	for id := range m.removed_BuildToAgentStatuses {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// BuildToAgentStatusesIDs returns the "BuildToAgentStatuses" edge IDs in the mutation.
+func (m *BuildMutation) BuildToAgentStatusesIDs() (ids []uuid.UUID) {
+	for id := range m._BuildToAgentStatuses {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetBuildToAgentStatuses resets all changes to the "BuildToAgentStatuses" edge.
+func (m *BuildMutation) ResetBuildToAgentStatuses() {
+	m._BuildToAgentStatuses = nil
+	m.cleared_BuildToAgentStatuses = false
+	m.removed_BuildToAgentStatuses = nil
+}
+
+// AddBuildToServerTaskIDs adds the "BuildToServerTasks" edge to the ServerTask entity by ids.
+func (m *BuildMutation) AddBuildToServerTaskIDs(ids ...uuid.UUID) {
+	if m._BuildToServerTasks == nil {
+		m._BuildToServerTasks = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._BuildToServerTasks[ids[i]] = struct{}{}
+	}
+}
+
+// ClearBuildToServerTasks clears the "BuildToServerTasks" edge to the ServerTask entity.
+func (m *BuildMutation) ClearBuildToServerTasks() {
+	m.cleared_BuildToServerTasks = true
+}
+
+// BuildToServerTasksCleared reports if the "BuildToServerTasks" edge to the ServerTask entity was cleared.
+func (m *BuildMutation) BuildToServerTasksCleared() bool {
+	return m.cleared_BuildToServerTasks
+}
+
+// RemoveBuildToServerTaskIDs removes the "BuildToServerTasks" edge to the ServerTask entity by IDs.
+func (m *BuildMutation) RemoveBuildToServerTaskIDs(ids ...uuid.UUID) {
+	if m.removed_BuildToServerTasks == nil {
+		m.removed_BuildToServerTasks = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._BuildToServerTasks, ids[i])
+		m.removed_BuildToServerTasks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedBuildToServerTasks returns the removed IDs of the "BuildToServerTasks" edge to the ServerTask entity.
+func (m *BuildMutation) RemovedBuildToServerTasksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_BuildToServerTasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// BuildToServerTasksIDs returns the "BuildToServerTasks" edge IDs in the mutation.
+func (m *BuildMutation) BuildToServerTasksIDs() (ids []uuid.UUID) {
+	for id := range m._BuildToServerTasks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetBuildToServerTasks resets all changes to the "BuildToServerTasks" edge.
+func (m *BuildMutation) ResetBuildToServerTasks() {
+	m._BuildToServerTasks = nil
+	m.cleared_BuildToServerTasks = false
+	m.removed_BuildToServerTasks = nil
+}
+
 // Where appends a list predicates to the BuildMutation builder.
 func (m *BuildMutation) Where(ps ...predicate.Build) {
 	m.predicates = append(m.predicates, ps...)
@@ -4812,12 +6006,15 @@ func (m *BuildMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BuildMutation) Fields() []string {
-	fields := make([]string, 0, 3)
+	fields := make([]string, 0, 4)
 	if m.revision != nil {
 		fields = append(fields, build.FieldRevision)
 	}
 	if m.environment_revision != nil {
 		fields = append(fields, build.FieldEnvironmentRevision)
+	}
+	if m.vars != nil {
+		fields = append(fields, build.FieldVars)
 	}
 	if m.completed_plan != nil {
 		fields = append(fields, build.FieldCompletedPlan)
@@ -4834,6 +6031,8 @@ func (m *BuildMutation) Field(name string) (ent.Value, bool) {
 		return m.Revision()
 	case build.FieldEnvironmentRevision:
 		return m.EnvironmentRevision()
+	case build.FieldVars:
+		return m.Vars()
 	case build.FieldCompletedPlan:
 		return m.CompletedPlan()
 	}
@@ -4849,6 +6048,8 @@ func (m *BuildMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldRevision(ctx)
 	case build.FieldEnvironmentRevision:
 		return m.OldEnvironmentRevision(ctx)
+	case build.FieldVars:
+		return m.OldVars(ctx)
 	case build.FieldCompletedPlan:
 		return m.OldCompletedPlan(ctx)
 	}
@@ -4873,6 +6074,13 @@ func (m *BuildMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEnvironmentRevision(v)
+		return nil
+	case build.FieldVars:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVars(v)
 		return nil
 	case build.FieldCompletedPlan:
 		v, ok := value.(bool)
@@ -4963,6 +6171,9 @@ func (m *BuildMutation) ResetField(name string) error {
 	case build.FieldEnvironmentRevision:
 		m.ResetEnvironmentRevision()
 		return nil
+	case build.FieldVars:
+		m.ResetVars()
+		return nil
 	case build.FieldCompletedPlan:
 		m.ResetCompletedPlan()
 		return nil
@@ -4972,7 +6183,7 @@ func (m *BuildMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BuildMutation) AddedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 12)
 	if m._BuildToStatus != nil {
 		edges = append(edges, build.EdgeBuildToStatus)
 	}
@@ -4984,6 +6195,9 @@ func (m *BuildMutation) AddedEdges() []string {
 	}
 	if m._BuildToLatestBuildCommit != nil {
 		edges = append(edges, build.EdgeBuildToLatestBuildCommit)
+	}
+	if m._BuildToRepoCommit != nil {
+		edges = append(edges, build.EdgeBuildToRepoCommit)
 	}
 	if m._BuildToProvisionedNetwork != nil {
 		edges = append(edges, build.EdgeBuildToProvisionedNetwork)
@@ -4999,6 +6213,12 @@ func (m *BuildMutation) AddedEdges() []string {
 	}
 	if m._BuildToAdhocPlans != nil {
 		edges = append(edges, build.EdgeBuildToAdhocPlans)
+	}
+	if m._BuildToAgentStatuses != nil {
+		edges = append(edges, build.EdgeBuildToAgentStatuses)
+	}
+	if m._BuildToServerTasks != nil {
+		edges = append(edges, build.EdgeBuildToServerTasks)
 	}
 	return edges
 }
@@ -5021,6 +6241,10 @@ func (m *BuildMutation) AddedIDs(name string) []ent.Value {
 		}
 	case build.EdgeBuildToLatestBuildCommit:
 		if id := m._BuildToLatestBuildCommit; id != nil {
+			return []ent.Value{*id}
+		}
+	case build.EdgeBuildToRepoCommit:
+		if id := m._BuildToRepoCommit; id != nil {
 			return []ent.Value{*id}
 		}
 	case build.EdgeBuildToProvisionedNetwork:
@@ -5053,13 +6277,25 @@ func (m *BuildMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case build.EdgeBuildToAgentStatuses:
+		ids := make([]ent.Value, 0, len(m._BuildToAgentStatuses))
+		for id := range m._BuildToAgentStatuses {
+			ids = append(ids, id)
+		}
+		return ids
+	case build.EdgeBuildToServerTasks:
+		ids := make([]ent.Value, 0, len(m._BuildToServerTasks))
+		for id := range m._BuildToServerTasks {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BuildMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 12)
 	if m.removed_BuildToProvisionedNetwork != nil {
 		edges = append(edges, build.EdgeBuildToProvisionedNetwork)
 	}
@@ -5074,6 +6310,12 @@ func (m *BuildMutation) RemovedEdges() []string {
 	}
 	if m.removed_BuildToAdhocPlans != nil {
 		edges = append(edges, build.EdgeBuildToAdhocPlans)
+	}
+	if m.removed_BuildToAgentStatuses != nil {
+		edges = append(edges, build.EdgeBuildToAgentStatuses)
+	}
+	if m.removed_BuildToServerTasks != nil {
+		edges = append(edges, build.EdgeBuildToServerTasks)
 	}
 	return edges
 }
@@ -5112,13 +6354,25 @@ func (m *BuildMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case build.EdgeBuildToAgentStatuses:
+		ids := make([]ent.Value, 0, len(m.removed_BuildToAgentStatuses))
+		for id := range m.removed_BuildToAgentStatuses {
+			ids = append(ids, id)
+		}
+		return ids
+	case build.EdgeBuildToServerTasks:
+		ids := make([]ent.Value, 0, len(m.removed_BuildToServerTasks))
+		for id := range m.removed_BuildToServerTasks {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BuildMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 12)
 	if m.cleared_BuildToStatus {
 		edges = append(edges, build.EdgeBuildToStatus)
 	}
@@ -5130,6 +6384,9 @@ func (m *BuildMutation) ClearedEdges() []string {
 	}
 	if m.cleared_BuildToLatestBuildCommit {
 		edges = append(edges, build.EdgeBuildToLatestBuildCommit)
+	}
+	if m.cleared_BuildToRepoCommit {
+		edges = append(edges, build.EdgeBuildToRepoCommit)
 	}
 	if m.cleared_BuildToProvisionedNetwork {
 		edges = append(edges, build.EdgeBuildToProvisionedNetwork)
@@ -5146,6 +6403,12 @@ func (m *BuildMutation) ClearedEdges() []string {
 	if m.cleared_BuildToAdhocPlans {
 		edges = append(edges, build.EdgeBuildToAdhocPlans)
 	}
+	if m.cleared_BuildToAgentStatuses {
+		edges = append(edges, build.EdgeBuildToAgentStatuses)
+	}
+	if m.cleared_BuildToServerTasks {
+		edges = append(edges, build.EdgeBuildToServerTasks)
+	}
 	return edges
 }
 
@@ -5161,6 +6424,8 @@ func (m *BuildMutation) EdgeCleared(name string) bool {
 		return m.cleared_BuildToCompetition
 	case build.EdgeBuildToLatestBuildCommit:
 		return m.cleared_BuildToLatestBuildCommit
+	case build.EdgeBuildToRepoCommit:
+		return m.cleared_BuildToRepoCommit
 	case build.EdgeBuildToProvisionedNetwork:
 		return m.cleared_BuildToProvisionedNetwork
 	case build.EdgeBuildToTeam:
@@ -5171,6 +6436,10 @@ func (m *BuildMutation) EdgeCleared(name string) bool {
 		return m.cleared_BuildToBuildCommits
 	case build.EdgeBuildToAdhocPlans:
 		return m.cleared_BuildToAdhocPlans
+	case build.EdgeBuildToAgentStatuses:
+		return m.cleared_BuildToAgentStatuses
+	case build.EdgeBuildToServerTasks:
+		return m.cleared_BuildToServerTasks
 	}
 	return false
 }
@@ -5190,6 +6459,9 @@ func (m *BuildMutation) ClearEdge(name string) error {
 		return nil
 	case build.EdgeBuildToLatestBuildCommit:
 		m.ClearBuildToLatestBuildCommit()
+		return nil
+	case build.EdgeBuildToRepoCommit:
+		m.ClearBuildToRepoCommit()
 		return nil
 	}
 	return fmt.Errorf("unknown Build unique edge %s", name)
@@ -5211,6 +6483,9 @@ func (m *BuildMutation) ResetEdge(name string) error {
 	case build.EdgeBuildToLatestBuildCommit:
 		m.ResetBuildToLatestBuildCommit()
 		return nil
+	case build.EdgeBuildToRepoCommit:
+		m.ResetBuildToRepoCommit()
+		return nil
 	case build.EdgeBuildToProvisionedNetwork:
 		m.ResetBuildToProvisionedNetwork()
 		return nil
@@ -5226,6 +6501,12 @@ func (m *BuildMutation) ResetEdge(name string) error {
 	case build.EdgeBuildToAdhocPlans:
 		m.ResetBuildToAdhocPlans()
 		return nil
+	case build.EdgeBuildToAgentStatuses:
+		m.ResetBuildToAgentStatuses()
+		return nil
+	case build.EdgeBuildToServerTasks:
+		m.ResetBuildToServerTasks()
+		return nil
 	}
 	return fmt.Errorf("unknown Build edge %s", name)
 }
@@ -5233,22 +6514,26 @@ func (m *BuildMutation) ResetEdge(name string) error {
 // BuildCommitMutation represents an operation that mutates the BuildCommit nodes in the graph.
 type BuildCommitMutation struct {
 	config
-	op                             Op
-	typ                            string
-	id                             *uuid.UUID
-	_type                          *buildcommit.Type
-	revision                       *int
-	addrevision                    *int
-	state                          *buildcommit.State
-	clearedFields                  map[string]struct{}
-	_BuildCommitToBuild            *uuid.UUID
-	cleared_BuildCommitToBuild     bool
-	_BuildCommitToPlanDiffs        map[uuid.UUID]struct{}
-	removed_BuildCommitToPlanDiffs map[uuid.UUID]struct{}
-	cleared_BuildCommitToPlanDiffs bool
-	done                           bool
-	oldValue                       func(context.Context) (*BuildCommit, error)
-	predicates                     []predicate.BuildCommit
+	op                              Op
+	typ                             string
+	id                              *uuid.UUID
+	_type                           *buildcommit.Type
+	revision                        *int
+	addrevision                     *int
+	state                           *buildcommit.State
+	created_at                      *time.Time
+	clearedFields                   map[string]struct{}
+	_BuildCommitToBuild             *uuid.UUID
+	cleared_BuildCommitToBuild      bool
+	_BuildCommitToServerTask        map[uuid.UUID]struct{}
+	removed_BuildCommitToServerTask map[uuid.UUID]struct{}
+	cleared_BuildCommitToServerTask bool
+	_BuildCommitToPlanDiffs         map[uuid.UUID]struct{}
+	removed_BuildCommitToPlanDiffs  map[uuid.UUID]struct{}
+	cleared_BuildCommitToPlanDiffs  bool
+	done                            bool
+	oldValue                        func(context.Context) (*BuildCommit, error)
+	predicates                      []predicate.BuildCommit
 }
 
 var _ ent.Mutation = (*BuildCommitMutation)(nil)
@@ -5281,7 +6566,7 @@ func withBuildCommitID(id uuid.UUID) buildcommitOption {
 		m.oldValue = func(ctx context.Context) (*BuildCommit, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().BuildCommit.Get(ctx, id)
 				}
@@ -5314,7 +6599,7 @@ func (m BuildCommitMutation) Client() *Client {
 // it returns an error otherwise.
 func (m BuildCommitMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -5336,6 +6621,25 @@ func (m *BuildCommitMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *BuildCommitMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().BuildCommit.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetType sets the "type" field.
 func (m *BuildCommitMutation) SetType(b buildcommit.Type) {
 	m._type = &b
@@ -5355,10 +6659,10 @@ func (m *BuildCommitMutation) GetType() (r buildcommit.Type, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *BuildCommitMutation) OldType(ctx context.Context) (v buildcommit.Type, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldType is only allowed on UpdateOne operations")
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldType requires an ID field in the mutation")
+		return v, errors.New("OldType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -5392,10 +6696,10 @@ func (m *BuildCommitMutation) Revision() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *BuildCommitMutation) OldRevision(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldRevision is only allowed on UpdateOne operations")
+		return v, errors.New("OldRevision is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldRevision requires an ID field in the mutation")
+		return v, errors.New("OldRevision requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -5447,10 +6751,10 @@ func (m *BuildCommitMutation) State() (r buildcommit.State, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *BuildCommitMutation) OldState(ctx context.Context) (v buildcommit.State, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldState is only allowed on UpdateOne operations")
+		return v, errors.New("OldState is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldState requires an ID field in the mutation")
+		return v, errors.New("OldState requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -5462,6 +6766,42 @@ func (m *BuildCommitMutation) OldState(ctx context.Context) (v buildcommit.State
 // ResetState resets all changes to the "state" field.
 func (m *BuildCommitMutation) ResetState() {
 	m.state = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *BuildCommitMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *BuildCommitMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the BuildCommit entity.
+// If the BuildCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BuildCommitMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *BuildCommitMutation) ResetCreatedAt() {
+	m.created_at = nil
 }
 
 // SetBuildCommitToBuildID sets the "BuildCommitToBuild" edge to the Build entity by id.
@@ -5501,6 +6841,60 @@ func (m *BuildCommitMutation) BuildCommitToBuildIDs() (ids []uuid.UUID) {
 func (m *BuildCommitMutation) ResetBuildCommitToBuild() {
 	m._BuildCommitToBuild = nil
 	m.cleared_BuildCommitToBuild = false
+}
+
+// AddBuildCommitToServerTaskIDs adds the "BuildCommitToServerTask" edge to the ServerTask entity by ids.
+func (m *BuildCommitMutation) AddBuildCommitToServerTaskIDs(ids ...uuid.UUID) {
+	if m._BuildCommitToServerTask == nil {
+		m._BuildCommitToServerTask = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._BuildCommitToServerTask[ids[i]] = struct{}{}
+	}
+}
+
+// ClearBuildCommitToServerTask clears the "BuildCommitToServerTask" edge to the ServerTask entity.
+func (m *BuildCommitMutation) ClearBuildCommitToServerTask() {
+	m.cleared_BuildCommitToServerTask = true
+}
+
+// BuildCommitToServerTaskCleared reports if the "BuildCommitToServerTask" edge to the ServerTask entity was cleared.
+func (m *BuildCommitMutation) BuildCommitToServerTaskCleared() bool {
+	return m.cleared_BuildCommitToServerTask
+}
+
+// RemoveBuildCommitToServerTaskIDs removes the "BuildCommitToServerTask" edge to the ServerTask entity by IDs.
+func (m *BuildCommitMutation) RemoveBuildCommitToServerTaskIDs(ids ...uuid.UUID) {
+	if m.removed_BuildCommitToServerTask == nil {
+		m.removed_BuildCommitToServerTask = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._BuildCommitToServerTask, ids[i])
+		m.removed_BuildCommitToServerTask[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedBuildCommitToServerTask returns the removed IDs of the "BuildCommitToServerTask" edge to the ServerTask entity.
+func (m *BuildCommitMutation) RemovedBuildCommitToServerTaskIDs() (ids []uuid.UUID) {
+	for id := range m.removed_BuildCommitToServerTask {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// BuildCommitToServerTaskIDs returns the "BuildCommitToServerTask" edge IDs in the mutation.
+func (m *BuildCommitMutation) BuildCommitToServerTaskIDs() (ids []uuid.UUID) {
+	for id := range m._BuildCommitToServerTask {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetBuildCommitToServerTask resets all changes to the "BuildCommitToServerTask" edge.
+func (m *BuildCommitMutation) ResetBuildCommitToServerTask() {
+	m._BuildCommitToServerTask = nil
+	m.cleared_BuildCommitToServerTask = false
+	m.removed_BuildCommitToServerTask = nil
 }
 
 // AddBuildCommitToPlanDiffIDs adds the "BuildCommitToPlanDiffs" edge to the PlanDiff entity by ids.
@@ -5576,7 +6970,7 @@ func (m *BuildCommitMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BuildCommitMutation) Fields() []string {
-	fields := make([]string, 0, 3)
+	fields := make([]string, 0, 4)
 	if m._type != nil {
 		fields = append(fields, buildcommit.FieldType)
 	}
@@ -5585,6 +6979,9 @@ func (m *BuildCommitMutation) Fields() []string {
 	}
 	if m.state != nil {
 		fields = append(fields, buildcommit.FieldState)
+	}
+	if m.created_at != nil {
+		fields = append(fields, buildcommit.FieldCreatedAt)
 	}
 	return fields
 }
@@ -5600,6 +6997,8 @@ func (m *BuildCommitMutation) Field(name string) (ent.Value, bool) {
 		return m.Revision()
 	case buildcommit.FieldState:
 		return m.State()
+	case buildcommit.FieldCreatedAt:
+		return m.CreatedAt()
 	}
 	return nil, false
 }
@@ -5615,6 +7014,8 @@ func (m *BuildCommitMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldRevision(ctx)
 	case buildcommit.FieldState:
 		return m.OldState(ctx)
+	case buildcommit.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown BuildCommit field %s", name)
 }
@@ -5644,6 +7045,13 @@ func (m *BuildCommitMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetState(v)
+		return nil
+	case buildcommit.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
 		return nil
 	}
 	return fmt.Errorf("unknown BuildCommit field %s", name)
@@ -5718,15 +7126,21 @@ func (m *BuildCommitMutation) ResetField(name string) error {
 	case buildcommit.FieldState:
 		m.ResetState()
 		return nil
+	case buildcommit.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
 	}
 	return fmt.Errorf("unknown BuildCommit field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BuildCommitMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m._BuildCommitToBuild != nil {
 		edges = append(edges, buildcommit.EdgeBuildCommitToBuild)
+	}
+	if m._BuildCommitToServerTask != nil {
+		edges = append(edges, buildcommit.EdgeBuildCommitToServerTask)
 	}
 	if m._BuildCommitToPlanDiffs != nil {
 		edges = append(edges, buildcommit.EdgeBuildCommitToPlanDiffs)
@@ -5742,6 +7156,12 @@ func (m *BuildCommitMutation) AddedIDs(name string) []ent.Value {
 		if id := m._BuildCommitToBuild; id != nil {
 			return []ent.Value{*id}
 		}
+	case buildcommit.EdgeBuildCommitToServerTask:
+		ids := make([]ent.Value, 0, len(m._BuildCommitToServerTask))
+		for id := range m._BuildCommitToServerTask {
+			ids = append(ids, id)
+		}
+		return ids
 	case buildcommit.EdgeBuildCommitToPlanDiffs:
 		ids := make([]ent.Value, 0, len(m._BuildCommitToPlanDiffs))
 		for id := range m._BuildCommitToPlanDiffs {
@@ -5754,7 +7174,10 @@ func (m *BuildCommitMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BuildCommitMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
+	if m.removed_BuildCommitToServerTask != nil {
+		edges = append(edges, buildcommit.EdgeBuildCommitToServerTask)
+	}
 	if m.removed_BuildCommitToPlanDiffs != nil {
 		edges = append(edges, buildcommit.EdgeBuildCommitToPlanDiffs)
 	}
@@ -5765,6 +7188,12 @@ func (m *BuildCommitMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *BuildCommitMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case buildcommit.EdgeBuildCommitToServerTask:
+		ids := make([]ent.Value, 0, len(m.removed_BuildCommitToServerTask))
+		for id := range m.removed_BuildCommitToServerTask {
+			ids = append(ids, id)
+		}
+		return ids
 	case buildcommit.EdgeBuildCommitToPlanDiffs:
 		ids := make([]ent.Value, 0, len(m.removed_BuildCommitToPlanDiffs))
 		for id := range m.removed_BuildCommitToPlanDiffs {
@@ -5777,9 +7206,12 @@ func (m *BuildCommitMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BuildCommitMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.cleared_BuildCommitToBuild {
 		edges = append(edges, buildcommit.EdgeBuildCommitToBuild)
+	}
+	if m.cleared_BuildCommitToServerTask {
+		edges = append(edges, buildcommit.EdgeBuildCommitToServerTask)
 	}
 	if m.cleared_BuildCommitToPlanDiffs {
 		edges = append(edges, buildcommit.EdgeBuildCommitToPlanDiffs)
@@ -5793,6 +7225,8 @@ func (m *BuildCommitMutation) EdgeCleared(name string) bool {
 	switch name {
 	case buildcommit.EdgeBuildCommitToBuild:
 		return m.cleared_BuildCommitToBuild
+	case buildcommit.EdgeBuildCommitToServerTask:
+		return m.cleared_BuildCommitToServerTask
 	case buildcommit.EdgeBuildCommitToPlanDiffs:
 		return m.cleared_BuildCommitToPlanDiffs
 	}
@@ -5816,6 +7250,9 @@ func (m *BuildCommitMutation) ResetEdge(name string) error {
 	switch name {
 	case buildcommit.EdgeBuildCommitToBuild:
 		m.ResetBuildCommitToBuild()
+		return nil
+	case buildcommit.EdgeBuildCommitToServerTask:
+		m.ResetBuildCommitToServerTask()
 		return nil
 	case buildcommit.EdgeBuildCommitToPlanDiffs:
 		m.ResetBuildCommitToPlanDiffs()
@@ -5884,7 +7321,7 @@ func withCommandID(id uuid.UUID) commandOption {
 		m.oldValue = func(ctx context.Context) (*Command, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Command.Get(ctx, id)
 				}
@@ -5917,7 +7354,7 @@ func (m CommandMutation) Client() *Client {
 // it returns an error otherwise.
 func (m CommandMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -5939,6 +7376,25 @@ func (m *CommandMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *CommandMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Command.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *CommandMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -5958,10 +7414,10 @@ func (m *CommandMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CommandMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -5994,10 +7450,10 @@ func (m *CommandMutation) Name() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CommandMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -6030,10 +7486,10 @@ func (m *CommandMutation) Description() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CommandMutation) OldDescription(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDescription is only allowed on UpdateOne operations")
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDescription requires an ID field in the mutation")
+		return v, errors.New("OldDescription requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -6066,10 +7522,10 @@ func (m *CommandMutation) Program() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CommandMutation) OldProgram(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldProgram is only allowed on UpdateOne operations")
+		return v, errors.New("OldProgram is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldProgram requires an ID field in the mutation")
+		return v, errors.New("OldProgram requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -6102,10 +7558,10 @@ func (m *CommandMutation) Args() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CommandMutation) OldArgs(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldArgs is only allowed on UpdateOne operations")
+		return v, errors.New("OldArgs is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldArgs requires an ID field in the mutation")
+		return v, errors.New("OldArgs requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -6138,10 +7594,10 @@ func (m *CommandMutation) IgnoreErrors() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CommandMutation) OldIgnoreErrors(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldIgnoreErrors is only allowed on UpdateOne operations")
+		return v, errors.New("OldIgnoreErrors is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldIgnoreErrors requires an ID field in the mutation")
+		return v, errors.New("OldIgnoreErrors requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -6174,10 +7630,10 @@ func (m *CommandMutation) Disabled() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CommandMutation) OldDisabled(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDisabled is only allowed on UpdateOne operations")
+		return v, errors.New("OldDisabled is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDisabled requires an ID field in the mutation")
+		return v, errors.New("OldDisabled requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -6211,10 +7667,10 @@ func (m *CommandMutation) Cooldown() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CommandMutation) OldCooldown(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldCooldown is only allowed on UpdateOne operations")
+		return v, errors.New("OldCooldown is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldCooldown requires an ID field in the mutation")
+		return v, errors.New("OldCooldown requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -6267,10 +7723,10 @@ func (m *CommandMutation) Timeout() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CommandMutation) OldTimeout(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTimeout is only allowed on UpdateOne operations")
+		return v, errors.New("OldTimeout is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTimeout requires an ID field in the mutation")
+		return v, errors.New("OldTimeout requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -6322,10 +7778,10 @@ func (m *CommandMutation) Vars() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CommandMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldVars is only allowed on UpdateOne operations")
+		return v, errors.New("OldVars is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldVars requires an ID field in the mutation")
+		return v, errors.New("OldVars requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -6358,10 +7814,10 @@ func (m *CommandMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CommandMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -6937,7 +8393,7 @@ func withCompetitionID(id uuid.UUID) competitionOption {
 		m.oldValue = func(ctx context.Context) (*Competition, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Competition.Get(ctx, id)
 				}
@@ -6970,7 +8426,7 @@ func (m CompetitionMutation) Client() *Client {
 // it returns an error otherwise.
 func (m CompetitionMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -6992,6 +8448,25 @@ func (m *CompetitionMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *CompetitionMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Competition.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *CompetitionMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -7011,10 +8486,10 @@ func (m *CompetitionMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CompetitionMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -7047,10 +8522,10 @@ func (m *CompetitionMutation) RootPassword() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CompetitionMutation) OldRootPassword(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldRootPassword is only allowed on UpdateOne operations")
+		return v, errors.New("OldRootPassword is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldRootPassword requires an ID field in the mutation")
+		return v, errors.New("OldRootPassword requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -7083,10 +8558,10 @@ func (m *CompetitionMutation) Config() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CompetitionMutation) OldConfig(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldConfig is only allowed on UpdateOne operations")
+		return v, errors.New("OldConfig is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldConfig requires an ID field in the mutation")
+		return v, errors.New("OldConfig requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -7119,10 +8594,10 @@ func (m *CompetitionMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *CompetitionMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -7632,7 +9107,7 @@ func withDNSID(id uuid.UUID) dnsOption {
 		m.oldValue = func(ctx context.Context) (*DNS, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().DNS.Get(ctx, id)
 				}
@@ -7665,7 +9140,7 @@ func (m DNSMutation) Client() *Client {
 // it returns an error otherwise.
 func (m DNSMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -7687,6 +9162,25 @@ func (m *DNSMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *DNSMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().DNS.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *DNSMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -7706,10 +9200,10 @@ func (m *DNSMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -7742,10 +9236,10 @@ func (m *DNSMutation) GetType() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSMutation) OldType(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldType is only allowed on UpdateOne operations")
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldType requires an ID field in the mutation")
+		return v, errors.New("OldType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -7778,10 +9272,10 @@ func (m *DNSMutation) RootDomain() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSMutation) OldRootDomain(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldRootDomain is only allowed on UpdateOne operations")
+		return v, errors.New("OldRootDomain is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldRootDomain requires an ID field in the mutation")
+		return v, errors.New("OldRootDomain requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -7814,10 +9308,10 @@ func (m *DNSMutation) DNSServers() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSMutation) OldDNSServers(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDNSServers is only allowed on UpdateOne operations")
+		return v, errors.New("OldDNSServers is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDNSServers requires an ID field in the mutation")
+		return v, errors.New("OldDNSServers requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -7850,10 +9344,10 @@ func (m *DNSMutation) NtpServers() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSMutation) OldNtpServers(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldNtpServers is only allowed on UpdateOne operations")
+		return v, errors.New("OldNtpServers is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldNtpServers requires an ID field in the mutation")
+		return v, errors.New("OldNtpServers requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -7886,10 +9380,10 @@ func (m *DNSMutation) Config() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSMutation) OldConfig(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldConfig is only allowed on UpdateOne operations")
+		return v, errors.New("OldConfig is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldConfig requires an ID field in the mutation")
+		return v, errors.New("OldConfig requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -8374,7 +9868,7 @@ func withDNSRecordID(id uuid.UUID) dnsrecordOption {
 		m.oldValue = func(ctx context.Context) (*DNSRecord, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().DNSRecord.Get(ctx, id)
 				}
@@ -8407,7 +9901,7 @@ func (m DNSRecordMutation) Client() *Client {
 // it returns an error otherwise.
 func (m DNSRecordMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -8429,6 +9923,25 @@ func (m *DNSRecordMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *DNSRecordMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().DNSRecord.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *DNSRecordMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -8448,10 +9961,10 @@ func (m *DNSRecordMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSRecordMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -8484,10 +9997,10 @@ func (m *DNSRecordMutation) Name() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSRecordMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -8520,10 +10033,10 @@ func (m *DNSRecordMutation) Values() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSRecordMutation) OldValues(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldValues is only allowed on UpdateOne operations")
+		return v, errors.New("OldValues is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldValues requires an ID field in the mutation")
+		return v, errors.New("OldValues requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -8556,10 +10069,10 @@ func (m *DNSRecordMutation) GetType() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSRecordMutation) OldType(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldType is only allowed on UpdateOne operations")
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldType requires an ID field in the mutation")
+		return v, errors.New("OldType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -8592,10 +10105,10 @@ func (m *DNSRecordMutation) Zone() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSRecordMutation) OldZone(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldZone is only allowed on UpdateOne operations")
+		return v, errors.New("OldZone is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldZone requires an ID field in the mutation")
+		return v, errors.New("OldZone requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -8628,10 +10141,10 @@ func (m *DNSRecordMutation) Vars() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSRecordMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldVars is only allowed on UpdateOne operations")
+		return v, errors.New("OldVars is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldVars requires an ID field in the mutation")
+		return v, errors.New("OldVars requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -8664,10 +10177,10 @@ func (m *DNSRecordMutation) Disabled() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSRecordMutation) OldDisabled(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDisabled is only allowed on UpdateOne operations")
+		return v, errors.New("OldDisabled is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDisabled requires an ID field in the mutation")
+		return v, errors.New("OldDisabled requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -8700,10 +10213,10 @@ func (m *DNSRecordMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DNSRecordMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -9113,7 +10626,7 @@ func withDiskID(id uuid.UUID) diskOption {
 		m.oldValue = func(ctx context.Context) (*Disk, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Disk.Get(ctx, id)
 				}
@@ -9146,7 +10659,7 @@ func (m DiskMutation) Client() *Client {
 // it returns an error otherwise.
 func (m DiskMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -9166,6 +10679,25 @@ func (m *DiskMutation) ID() (id uuid.UUID, exists bool) {
 		return
 	}
 	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *DiskMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Disk.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
 }
 
 // SetSize sets the "size" field.
@@ -9188,10 +10720,10 @@ func (m *DiskMutation) Size() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *DiskMutation) OldSize(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldSize is only allowed on UpdateOne operations")
+		return v, errors.New("OldSize is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldSize requires an ID field in the mutation")
+		return v, errors.New("OldSize requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -9535,12 +11067,18 @@ type EnvironmentMutation struct {
 	_EnvironmentToHostDependency         map[uuid.UUID]struct{}
 	removed_EnvironmentToHostDependency  map[uuid.UUID]struct{}
 	cleared_EnvironmentToHostDependency  bool
+	_EnvironmentToAnsible                map[uuid.UUID]struct{}
+	removed_EnvironmentToAnsible         map[uuid.UUID]struct{}
+	cleared_EnvironmentToAnsible         bool
 	_EnvironmentToBuild                  map[uuid.UUID]struct{}
 	removed_EnvironmentToBuild           map[uuid.UUID]struct{}
 	cleared_EnvironmentToBuild           bool
 	_EnvironmentToRepository             map[uuid.UUID]struct{}
 	removed_EnvironmentToRepository      map[uuid.UUID]struct{}
 	cleared_EnvironmentToRepository      bool
+	_EnvironmentToServerTask             map[uuid.UUID]struct{}
+	removed_EnvironmentToServerTask      map[uuid.UUID]struct{}
+	cleared_EnvironmentToServerTask      bool
 	done                                 bool
 	oldValue                             func(context.Context) (*Environment, error)
 	predicates                           []predicate.Environment
@@ -9576,7 +11114,7 @@ func withEnvironmentID(id uuid.UUID) environmentOption {
 		m.oldValue = func(ctx context.Context) (*Environment, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Environment.Get(ctx, id)
 				}
@@ -9609,7 +11147,7 @@ func (m EnvironmentMutation) Client() *Client {
 // it returns an error otherwise.
 func (m EnvironmentMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -9631,6 +11169,25 @@ func (m *EnvironmentMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *EnvironmentMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Environment.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *EnvironmentMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -9650,10 +11207,10 @@ func (m *EnvironmentMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *EnvironmentMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -9686,10 +11243,10 @@ func (m *EnvironmentMutation) CompetitionID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *EnvironmentMutation) OldCompetitionID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldCompetitionID is only allowed on UpdateOne operations")
+		return v, errors.New("OldCompetitionID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldCompetitionID requires an ID field in the mutation")
+		return v, errors.New("OldCompetitionID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -9722,10 +11279,10 @@ func (m *EnvironmentMutation) Name() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *EnvironmentMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -9758,10 +11315,10 @@ func (m *EnvironmentMutation) Description() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *EnvironmentMutation) OldDescription(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDescription is only allowed on UpdateOne operations")
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDescription requires an ID field in the mutation")
+		return v, errors.New("OldDescription requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -9794,10 +11351,10 @@ func (m *EnvironmentMutation) Builder() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *EnvironmentMutation) OldBuilder(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldBuilder is only allowed on UpdateOne operations")
+		return v, errors.New("OldBuilder is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldBuilder requires an ID field in the mutation")
+		return v, errors.New("OldBuilder requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -9831,10 +11388,10 @@ func (m *EnvironmentMutation) TeamCount() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *EnvironmentMutation) OldTeamCount(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTeamCount is only allowed on UpdateOne operations")
+		return v, errors.New("OldTeamCount is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTeamCount requires an ID field in the mutation")
+		return v, errors.New("OldTeamCount requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -9887,10 +11444,10 @@ func (m *EnvironmentMutation) Revision() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *EnvironmentMutation) OldRevision(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldRevision is only allowed on UpdateOne operations")
+		return v, errors.New("OldRevision is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldRevision requires an ID field in the mutation")
+		return v, errors.New("OldRevision requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -9942,10 +11499,10 @@ func (m *EnvironmentMutation) AdminCidrs() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *EnvironmentMutation) OldAdminCidrs(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldAdminCidrs is only allowed on UpdateOne operations")
+		return v, errors.New("OldAdminCidrs is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldAdminCidrs requires an ID field in the mutation")
+		return v, errors.New("OldAdminCidrs requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -9978,10 +11535,10 @@ func (m *EnvironmentMutation) ExposedVdiPorts() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *EnvironmentMutation) OldExposedVdiPorts(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldExposedVdiPorts is only allowed on UpdateOne operations")
+		return v, errors.New("OldExposedVdiPorts is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldExposedVdiPorts requires an ID field in the mutation")
+		return v, errors.New("OldExposedVdiPorts requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -10014,10 +11571,10 @@ func (m *EnvironmentMutation) Config() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *EnvironmentMutation) OldConfig(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldConfig is only allowed on UpdateOne operations")
+		return v, errors.New("OldConfig is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldConfig requires an ID field in the mutation")
+		return v, errors.New("OldConfig requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -10050,10 +11607,10 @@ func (m *EnvironmentMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *EnvironmentMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -10877,6 +12434,60 @@ func (m *EnvironmentMutation) ResetEnvironmentToHostDependency() {
 	m.removed_EnvironmentToHostDependency = nil
 }
 
+// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by ids.
+func (m *EnvironmentMutation) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) {
+	if m._EnvironmentToAnsible == nil {
+		m._EnvironmentToAnsible = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._EnvironmentToAnsible[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEnvironmentToAnsible clears the "EnvironmentToAnsible" edge to the Ansible entity.
+func (m *EnvironmentMutation) ClearEnvironmentToAnsible() {
+	m.cleared_EnvironmentToAnsible = true
+}
+
+// EnvironmentToAnsibleCleared reports if the "EnvironmentToAnsible" edge to the Ansible entity was cleared.
+func (m *EnvironmentMutation) EnvironmentToAnsibleCleared() bool {
+	return m.cleared_EnvironmentToAnsible
+}
+
+// RemoveEnvironmentToAnsibleIDs removes the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
+func (m *EnvironmentMutation) RemoveEnvironmentToAnsibleIDs(ids ...uuid.UUID) {
+	if m.removed_EnvironmentToAnsible == nil {
+		m.removed_EnvironmentToAnsible = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._EnvironmentToAnsible, ids[i])
+		m.removed_EnvironmentToAnsible[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEnvironmentToAnsible returns the removed IDs of the "EnvironmentToAnsible" edge to the Ansible entity.
+func (m *EnvironmentMutation) RemovedEnvironmentToAnsibleIDs() (ids []uuid.UUID) {
+	for id := range m.removed_EnvironmentToAnsible {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EnvironmentToAnsibleIDs returns the "EnvironmentToAnsible" edge IDs in the mutation.
+func (m *EnvironmentMutation) EnvironmentToAnsibleIDs() (ids []uuid.UUID) {
+	for id := range m._EnvironmentToAnsible {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEnvironmentToAnsible resets all changes to the "EnvironmentToAnsible" edge.
+func (m *EnvironmentMutation) ResetEnvironmentToAnsible() {
+	m._EnvironmentToAnsible = nil
+	m.cleared_EnvironmentToAnsible = false
+	m.removed_EnvironmentToAnsible = nil
+}
+
 // AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by ids.
 func (m *EnvironmentMutation) AddEnvironmentToBuildIDs(ids ...uuid.UUID) {
 	if m._EnvironmentToBuild == nil {
@@ -10983,6 +12594,60 @@ func (m *EnvironmentMutation) ResetEnvironmentToRepository() {
 	m._EnvironmentToRepository = nil
 	m.cleared_EnvironmentToRepository = false
 	m.removed_EnvironmentToRepository = nil
+}
+
+// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by ids.
+func (m *EnvironmentMutation) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) {
+	if m._EnvironmentToServerTask == nil {
+		m._EnvironmentToServerTask = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._EnvironmentToServerTask[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEnvironmentToServerTask clears the "EnvironmentToServerTask" edge to the ServerTask entity.
+func (m *EnvironmentMutation) ClearEnvironmentToServerTask() {
+	m.cleared_EnvironmentToServerTask = true
+}
+
+// EnvironmentToServerTaskCleared reports if the "EnvironmentToServerTask" edge to the ServerTask entity was cleared.
+func (m *EnvironmentMutation) EnvironmentToServerTaskCleared() bool {
+	return m.cleared_EnvironmentToServerTask
+}
+
+// RemoveEnvironmentToServerTaskIDs removes the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
+func (m *EnvironmentMutation) RemoveEnvironmentToServerTaskIDs(ids ...uuid.UUID) {
+	if m.removed_EnvironmentToServerTask == nil {
+		m.removed_EnvironmentToServerTask = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._EnvironmentToServerTask, ids[i])
+		m.removed_EnvironmentToServerTask[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEnvironmentToServerTask returns the removed IDs of the "EnvironmentToServerTask" edge to the ServerTask entity.
+func (m *EnvironmentMutation) RemovedEnvironmentToServerTaskIDs() (ids []uuid.UUID) {
+	for id := range m.removed_EnvironmentToServerTask {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EnvironmentToServerTaskIDs returns the "EnvironmentToServerTask" edge IDs in the mutation.
+func (m *EnvironmentMutation) EnvironmentToServerTaskIDs() (ids []uuid.UUID) {
+	for id := range m._EnvironmentToServerTask {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEnvironmentToServerTask resets all changes to the "EnvironmentToServerTask" edge.
+func (m *EnvironmentMutation) ResetEnvironmentToServerTask() {
+	m._EnvironmentToServerTask = nil
+	m.cleared_EnvironmentToServerTask = false
+	m.removed_EnvironmentToServerTask = nil
 }
 
 // Where appends a list predicates to the EnvironmentMutation builder.
@@ -11300,7 +12965,7 @@ func (m *EnvironmentMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EnvironmentMutation) AddedEdges() []string {
-	edges := make([]string, 0, 17)
+	edges := make([]string, 0, 19)
 	if m._EnvironmentToUser != nil {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -11346,11 +13011,17 @@ func (m *EnvironmentMutation) AddedEdges() []string {
 	if m._EnvironmentToHostDependency != nil {
 		edges = append(edges, environment.EdgeEnvironmentToHostDependency)
 	}
+	if m._EnvironmentToAnsible != nil {
+		edges = append(edges, environment.EdgeEnvironmentToAnsible)
+	}
 	if m._EnvironmentToBuild != nil {
 		edges = append(edges, environment.EdgeEnvironmentToBuild)
 	}
 	if m._EnvironmentToRepository != nil {
 		edges = append(edges, environment.EdgeEnvironmentToRepository)
+	}
+	if m._EnvironmentToServerTask != nil {
+		edges = append(edges, environment.EdgeEnvironmentToServerTask)
 	}
 	return edges
 }
@@ -11449,6 +13120,12 @@ func (m *EnvironmentMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case environment.EdgeEnvironmentToAnsible:
+		ids := make([]ent.Value, 0, len(m._EnvironmentToAnsible))
+		for id := range m._EnvironmentToAnsible {
+			ids = append(ids, id)
+		}
+		return ids
 	case environment.EdgeEnvironmentToBuild:
 		ids := make([]ent.Value, 0, len(m._EnvironmentToBuild))
 		for id := range m._EnvironmentToBuild {
@@ -11461,13 +13138,19 @@ func (m *EnvironmentMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case environment.EdgeEnvironmentToServerTask:
+		ids := make([]ent.Value, 0, len(m._EnvironmentToServerTask))
+		for id := range m._EnvironmentToServerTask {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EnvironmentMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 17)
+	edges := make([]string, 0, 19)
 	if m.removed_EnvironmentToUser != nil {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -11513,11 +13196,17 @@ func (m *EnvironmentMutation) RemovedEdges() []string {
 	if m.removed_EnvironmentToHostDependency != nil {
 		edges = append(edges, environment.EdgeEnvironmentToHostDependency)
 	}
+	if m.removed_EnvironmentToAnsible != nil {
+		edges = append(edges, environment.EdgeEnvironmentToAnsible)
+	}
 	if m.removed_EnvironmentToBuild != nil {
 		edges = append(edges, environment.EdgeEnvironmentToBuild)
 	}
 	if m.removed_EnvironmentToRepository != nil {
 		edges = append(edges, environment.EdgeEnvironmentToRepository)
+	}
+	if m.removed_EnvironmentToServerTask != nil {
+		edges = append(edges, environment.EdgeEnvironmentToServerTask)
 	}
 	return edges
 }
@@ -11616,6 +13305,12 @@ func (m *EnvironmentMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case environment.EdgeEnvironmentToAnsible:
+		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToAnsible))
+		for id := range m.removed_EnvironmentToAnsible {
+			ids = append(ids, id)
+		}
+		return ids
 	case environment.EdgeEnvironmentToBuild:
 		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToBuild))
 		for id := range m.removed_EnvironmentToBuild {
@@ -11628,13 +13323,19 @@ func (m *EnvironmentMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case environment.EdgeEnvironmentToServerTask:
+		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToServerTask))
+		for id := range m.removed_EnvironmentToServerTask {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EnvironmentMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 17)
+	edges := make([]string, 0, 19)
 	if m.cleared_EnvironmentToUser {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -11680,11 +13381,17 @@ func (m *EnvironmentMutation) ClearedEdges() []string {
 	if m.cleared_EnvironmentToHostDependency {
 		edges = append(edges, environment.EdgeEnvironmentToHostDependency)
 	}
+	if m.cleared_EnvironmentToAnsible {
+		edges = append(edges, environment.EdgeEnvironmentToAnsible)
+	}
 	if m.cleared_EnvironmentToBuild {
 		edges = append(edges, environment.EdgeEnvironmentToBuild)
 	}
 	if m.cleared_EnvironmentToRepository {
 		edges = append(edges, environment.EdgeEnvironmentToRepository)
+	}
+	if m.cleared_EnvironmentToServerTask {
+		edges = append(edges, environment.EdgeEnvironmentToServerTask)
 	}
 	return edges
 }
@@ -11723,10 +13430,14 @@ func (m *EnvironmentMutation) EdgeCleared(name string) bool {
 		return m.cleared_EnvironmentToNetwork
 	case environment.EdgeEnvironmentToHostDependency:
 		return m.cleared_EnvironmentToHostDependency
+	case environment.EdgeEnvironmentToAnsible:
+		return m.cleared_EnvironmentToAnsible
 	case environment.EdgeEnvironmentToBuild:
 		return m.cleared_EnvironmentToBuild
 	case environment.EdgeEnvironmentToRepository:
 		return m.cleared_EnvironmentToRepository
+	case environment.EdgeEnvironmentToServerTask:
+		return m.cleared_EnvironmentToServerTask
 	}
 	return false
 }
@@ -11788,11 +13499,17 @@ func (m *EnvironmentMutation) ResetEdge(name string) error {
 	case environment.EdgeEnvironmentToHostDependency:
 		m.ResetEnvironmentToHostDependency()
 		return nil
+	case environment.EdgeEnvironmentToAnsible:
+		m.ResetEnvironmentToAnsible()
+		return nil
 	case environment.EdgeEnvironmentToBuild:
 		m.ResetEnvironmentToBuild()
 		return nil
 	case environment.EdgeEnvironmentToRepository:
 		m.ResetEnvironmentToRepository()
+		return nil
+	case environment.EdgeEnvironmentToServerTask:
+		m.ResetEnvironmentToServerTask()
 		return nil
 	}
 	return fmt.Errorf("unknown Environment edge %s", name)
@@ -11845,7 +13562,7 @@ func withFileDeleteID(id uuid.UUID) filedeleteOption {
 		m.oldValue = func(ctx context.Context) (*FileDelete, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().FileDelete.Get(ctx, id)
 				}
@@ -11878,7 +13595,7 @@ func (m FileDeleteMutation) Client() *Client {
 // it returns an error otherwise.
 func (m FileDeleteMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -11900,6 +13617,25 @@ func (m *FileDeleteMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *FileDeleteMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().FileDelete.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *FileDeleteMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -11919,10 +13655,10 @@ func (m *FileDeleteMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDeleteMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -11955,10 +13691,10 @@ func (m *FileDeleteMutation) Path() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDeleteMutation) OldPath(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldPath is only allowed on UpdateOne operations")
+		return v, errors.New("OldPath is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldPath requires an ID field in the mutation")
+		return v, errors.New("OldPath requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -11991,10 +13727,10 @@ func (m *FileDeleteMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDeleteMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -12288,6 +14024,7 @@ type FileDownloadMutation struct {
 	disabled                          *bool
 	md5                               *string
 	abs_path                          *string
+	is_txt                            *bool
 	tags                              *map[string]string
 	clearedFields                     map[string]struct{}
 	_FileDownloadToEnvironment        *uuid.UUID
@@ -12327,7 +14064,7 @@ func withFileDownloadID(id uuid.UUID) filedownloadOption {
 		m.oldValue = func(ctx context.Context) (*FileDownload, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().FileDownload.Get(ctx, id)
 				}
@@ -12360,7 +14097,7 @@ func (m FileDownloadMutation) Client() *Client {
 // it returns an error otherwise.
 func (m FileDownloadMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -12382,6 +14119,25 @@ func (m *FileDownloadMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *FileDownloadMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().FileDownload.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *FileDownloadMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -12401,10 +14157,10 @@ func (m *FileDownloadMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDownloadMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -12437,10 +14193,10 @@ func (m *FileDownloadMutation) SourceType() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDownloadMutation) OldSourceType(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldSourceType is only allowed on UpdateOne operations")
+		return v, errors.New("OldSourceType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldSourceType requires an ID field in the mutation")
+		return v, errors.New("OldSourceType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -12473,10 +14229,10 @@ func (m *FileDownloadMutation) Source() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDownloadMutation) OldSource(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldSource is only allowed on UpdateOne operations")
+		return v, errors.New("OldSource is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldSource requires an ID field in the mutation")
+		return v, errors.New("OldSource requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -12509,10 +14265,10 @@ func (m *FileDownloadMutation) Destination() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDownloadMutation) OldDestination(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDestination is only allowed on UpdateOne operations")
+		return v, errors.New("OldDestination is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDestination requires an ID field in the mutation")
+		return v, errors.New("OldDestination requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -12545,10 +14301,10 @@ func (m *FileDownloadMutation) Template() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDownloadMutation) OldTemplate(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTemplate is only allowed on UpdateOne operations")
+		return v, errors.New("OldTemplate is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTemplate requires an ID field in the mutation")
+		return v, errors.New("OldTemplate requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -12581,10 +14337,10 @@ func (m *FileDownloadMutation) Perms() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDownloadMutation) OldPerms(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldPerms is only allowed on UpdateOne operations")
+		return v, errors.New("OldPerms is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldPerms requires an ID field in the mutation")
+		return v, errors.New("OldPerms requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -12617,10 +14373,10 @@ func (m *FileDownloadMutation) Disabled() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDownloadMutation) OldDisabled(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDisabled is only allowed on UpdateOne operations")
+		return v, errors.New("OldDisabled is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDisabled requires an ID field in the mutation")
+		return v, errors.New("OldDisabled requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -12653,10 +14409,10 @@ func (m *FileDownloadMutation) Md5() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDownloadMutation) OldMd5(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldMd5 is only allowed on UpdateOne operations")
+		return v, errors.New("OldMd5 is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldMd5 requires an ID field in the mutation")
+		return v, errors.New("OldMd5 requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -12689,10 +14445,10 @@ func (m *FileDownloadMutation) AbsPath() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDownloadMutation) OldAbsPath(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldAbsPath is only allowed on UpdateOne operations")
+		return v, errors.New("OldAbsPath is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldAbsPath requires an ID field in the mutation")
+		return v, errors.New("OldAbsPath requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -12704,6 +14460,42 @@ func (m *FileDownloadMutation) OldAbsPath(ctx context.Context) (v string, err er
 // ResetAbsPath resets all changes to the "abs_path" field.
 func (m *FileDownloadMutation) ResetAbsPath() {
 	m.abs_path = nil
+}
+
+// SetIsTxt sets the "is_txt" field.
+func (m *FileDownloadMutation) SetIsTxt(b bool) {
+	m.is_txt = &b
+}
+
+// IsTxt returns the value of the "is_txt" field in the mutation.
+func (m *FileDownloadMutation) IsTxt() (r bool, exists bool) {
+	v := m.is_txt
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsTxt returns the old "is_txt" field's value of the FileDownload entity.
+// If the FileDownload object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FileDownloadMutation) OldIsTxt(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsTxt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsTxt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsTxt: %w", err)
+	}
+	return oldValue.IsTxt, nil
+}
+
+// ResetIsTxt resets all changes to the "is_txt" field.
+func (m *FileDownloadMutation) ResetIsTxt() {
+	m.is_txt = nil
 }
 
 // SetTags sets the "tags" field.
@@ -12725,10 +14517,10 @@ func (m *FileDownloadMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileDownloadMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -12800,7 +14592,7 @@ func (m *FileDownloadMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FileDownloadMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.hcl_id != nil {
 		fields = append(fields, filedownload.FieldHclID)
 	}
@@ -12827,6 +14619,9 @@ func (m *FileDownloadMutation) Fields() []string {
 	}
 	if m.abs_path != nil {
 		fields = append(fields, filedownload.FieldAbsPath)
+	}
+	if m.is_txt != nil {
+		fields = append(fields, filedownload.FieldIsTxt)
 	}
 	if m.tags != nil {
 		fields = append(fields, filedownload.FieldTags)
@@ -12857,6 +14652,8 @@ func (m *FileDownloadMutation) Field(name string) (ent.Value, bool) {
 		return m.Md5()
 	case filedownload.FieldAbsPath:
 		return m.AbsPath()
+	case filedownload.FieldIsTxt:
+		return m.IsTxt()
 	case filedownload.FieldTags:
 		return m.Tags()
 	}
@@ -12886,6 +14683,8 @@ func (m *FileDownloadMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldMd5(ctx)
 	case filedownload.FieldAbsPath:
 		return m.OldAbsPath(ctx)
+	case filedownload.FieldIsTxt:
+		return m.OldIsTxt(ctx)
 	case filedownload.FieldTags:
 		return m.OldTags(ctx)
 	}
@@ -12959,6 +14758,13 @@ func (m *FileDownloadMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAbsPath(v)
+		return nil
+	case filedownload.FieldIsTxt:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsTxt(v)
 		return nil
 	case filedownload.FieldTags:
 		v, ok := value.(map[string]string)
@@ -13042,6 +14848,9 @@ func (m *FileDownloadMutation) ResetField(name string) error {
 		return nil
 	case filedownload.FieldAbsPath:
 		m.ResetAbsPath()
+		return nil
+	case filedownload.FieldIsTxt:
+		m.ResetIsTxt()
 		return nil
 	case filedownload.FieldTags:
 		m.ResetTags()
@@ -13175,7 +14984,7 @@ func withFileExtractID(id uuid.UUID) fileextractOption {
 		m.oldValue = func(ctx context.Context) (*FileExtract, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().FileExtract.Get(ctx, id)
 				}
@@ -13208,7 +15017,7 @@ func (m FileExtractMutation) Client() *Client {
 // it returns an error otherwise.
 func (m FileExtractMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -13230,6 +15039,25 @@ func (m *FileExtractMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *FileExtractMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().FileExtract.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *FileExtractMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -13249,10 +15077,10 @@ func (m *FileExtractMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileExtractMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -13285,10 +15113,10 @@ func (m *FileExtractMutation) Source() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileExtractMutation) OldSource(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldSource is only allowed on UpdateOne operations")
+		return v, errors.New("OldSource is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldSource requires an ID field in the mutation")
+		return v, errors.New("OldSource requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -13321,10 +15149,10 @@ func (m *FileExtractMutation) Destination() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileExtractMutation) OldDestination(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDestination is only allowed on UpdateOne operations")
+		return v, errors.New("OldDestination is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDestination requires an ID field in the mutation")
+		return v, errors.New("OldDestination requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -13357,10 +15185,10 @@ func (m *FileExtractMutation) GetType() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileExtractMutation) OldType(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldType is only allowed on UpdateOne operations")
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldType requires an ID field in the mutation")
+		return v, errors.New("OldType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -13393,10 +15221,10 @@ func (m *FileExtractMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FileExtractMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -13765,7 +15593,7 @@ func withFindingID(id uuid.UUID) findingOption {
 		m.oldValue = func(ctx context.Context) (*Finding, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Finding.Get(ctx, id)
 				}
@@ -13798,7 +15626,7 @@ func (m FindingMutation) Client() *Client {
 // it returns an error otherwise.
 func (m FindingMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -13820,6 +15648,25 @@ func (m *FindingMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *FindingMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Finding.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetName sets the "name" field.
 func (m *FindingMutation) SetName(s string) {
 	m.name = &s
@@ -13839,10 +15686,10 @@ func (m *FindingMutation) Name() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FindingMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -13875,10 +15722,10 @@ func (m *FindingMutation) Description() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FindingMutation) OldDescription(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDescription is only allowed on UpdateOne operations")
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDescription requires an ID field in the mutation")
+		return v, errors.New("OldDescription requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -13911,10 +15758,10 @@ func (m *FindingMutation) Severity() (r finding.Severity, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FindingMutation) OldSeverity(ctx context.Context) (v finding.Severity, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldSeverity is only allowed on UpdateOne operations")
+		return v, errors.New("OldSeverity is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldSeverity requires an ID field in the mutation")
+		return v, errors.New("OldSeverity requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -13947,10 +15794,10 @@ func (m *FindingMutation) Difficulty() (r finding.Difficulty, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FindingMutation) OldDifficulty(ctx context.Context) (v finding.Difficulty, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDifficulty is only allowed on UpdateOne operations")
+		return v, errors.New("OldDifficulty is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDifficulty requires an ID field in the mutation")
+		return v, errors.New("OldDifficulty requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -13983,10 +15830,10 @@ func (m *FindingMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *FindingMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -14542,7 +16389,7 @@ func withGinFileMiddlewareID(id uuid.UUID) ginfilemiddlewareOption {
 		m.oldValue = func(ctx context.Context) (*GinFileMiddleware, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().GinFileMiddleware.Get(ctx, id)
 				}
@@ -14575,7 +16422,7 @@ func (m GinFileMiddlewareMutation) Client() *Client {
 // it returns an error otherwise.
 func (m GinFileMiddlewareMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -14597,6 +16444,25 @@ func (m *GinFileMiddlewareMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *GinFileMiddlewareMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().GinFileMiddleware.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetURLID sets the "url_id" field.
 func (m *GinFileMiddlewareMutation) SetURLID(s string) {
 	m.url_id = &s
@@ -14616,10 +16482,10 @@ func (m *GinFileMiddlewareMutation) URLID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *GinFileMiddlewareMutation) OldURLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldURLID is only allowed on UpdateOne operations")
+		return v, errors.New("OldURLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldURLID requires an ID field in the mutation")
+		return v, errors.New("OldURLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -14652,10 +16518,10 @@ func (m *GinFileMiddlewareMutation) FilePath() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *GinFileMiddlewareMutation) OldFilePath(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldFilePath is only allowed on UpdateOne operations")
+		return v, errors.New("OldFilePath is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldFilePath requires an ID field in the mutation")
+		return v, errors.New("OldFilePath requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -14688,10 +16554,10 @@ func (m *GinFileMiddlewareMutation) Accessed() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *GinFileMiddlewareMutation) OldAccessed(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldAccessed is only allowed on UpdateOne operations")
+		return v, errors.New("OldAccessed is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldAccessed requires an ID field in the mutation")
+		return v, errors.New("OldAccessed requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15100,7 +16966,7 @@ func withHostID(id uuid.UUID) hostOption {
 		m.oldValue = func(ctx context.Context) (*Host, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Host.Get(ctx, id)
 				}
@@ -15133,7 +16999,7 @@ func (m HostMutation) Client() *Client {
 // it returns an error otherwise.
 func (m HostMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -15155,6 +17021,25 @@ func (m *HostMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *HostMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Host.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *HostMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -15174,10 +17059,10 @@ func (m *HostMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15210,10 +17095,10 @@ func (m *HostMutation) Hostname() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldHostname(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHostname is only allowed on UpdateOne operations")
+		return v, errors.New("OldHostname is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHostname requires an ID field in the mutation")
+		return v, errors.New("OldHostname requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15246,10 +17131,10 @@ func (m *HostMutation) Description() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldDescription(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDescription is only allowed on UpdateOne operations")
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDescription requires an ID field in the mutation")
+		return v, errors.New("OldDescription requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15282,10 +17167,10 @@ func (m *HostMutation) OS() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldOS(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldOS is only allowed on UpdateOne operations")
+		return v, errors.New("OldOS is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldOS requires an ID field in the mutation")
+		return v, errors.New("OldOS requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15319,10 +17204,10 @@ func (m *HostMutation) LastOctet() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldLastOctet(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldLastOctet is only allowed on UpdateOne operations")
+		return v, errors.New("OldLastOctet is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldLastOctet requires an ID field in the mutation")
+		return v, errors.New("OldLastOctet requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15374,10 +17259,10 @@ func (m *HostMutation) InstanceSize() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldInstanceSize(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldInstanceSize is only allowed on UpdateOne operations")
+		return v, errors.New("OldInstanceSize is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldInstanceSize requires an ID field in the mutation")
+		return v, errors.New("OldInstanceSize requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15410,10 +17295,10 @@ func (m *HostMutation) AllowMACChanges() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldAllowMACChanges(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldAllowMACChanges is only allowed on UpdateOne operations")
+		return v, errors.New("OldAllowMACChanges is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldAllowMACChanges requires an ID field in the mutation")
+		return v, errors.New("OldAllowMACChanges requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15446,10 +17331,10 @@ func (m *HostMutation) ExposedTCPPorts() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldExposedTCPPorts(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldExposedTCPPorts is only allowed on UpdateOne operations")
+		return v, errors.New("OldExposedTCPPorts is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldExposedTCPPorts requires an ID field in the mutation")
+		return v, errors.New("OldExposedTCPPorts requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15482,10 +17367,10 @@ func (m *HostMutation) ExposedUDPPorts() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldExposedUDPPorts(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldExposedUDPPorts is only allowed on UpdateOne operations")
+		return v, errors.New("OldExposedUDPPorts is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldExposedUDPPorts requires an ID field in the mutation")
+		return v, errors.New("OldExposedUDPPorts requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15518,10 +17403,10 @@ func (m *HostMutation) OverridePassword() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldOverridePassword(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldOverridePassword is only allowed on UpdateOne operations")
+		return v, errors.New("OldOverridePassword is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldOverridePassword requires an ID field in the mutation")
+		return v, errors.New("OldOverridePassword requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15554,10 +17439,10 @@ func (m *HostMutation) Vars() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldVars is only allowed on UpdateOne operations")
+		return v, errors.New("OldVars is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldVars requires an ID field in the mutation")
+		return v, errors.New("OldVars requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15590,10 +17475,10 @@ func (m *HostMutation) UserGroups() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldUserGroups(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldUserGroups is only allowed on UpdateOne operations")
+		return v, errors.New("OldUserGroups is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldUserGroups requires an ID field in the mutation")
+		return v, errors.New("OldUserGroups requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15626,10 +17511,10 @@ func (m *HostMutation) ProvisionSteps() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldProvisionSteps(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldProvisionSteps is only allowed on UpdateOne operations")
+		return v, errors.New("OldProvisionSteps is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldProvisionSteps requires an ID field in the mutation")
+		return v, errors.New("OldProvisionSteps requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -15675,10 +17560,10 @@ func (m *HostMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -16597,7 +18482,7 @@ func withHostDependencyID(id uuid.UUID) hostdependencyOption {
 		m.oldValue = func(ctx context.Context) (*HostDependency, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().HostDependency.Get(ctx, id)
 				}
@@ -16630,7 +18515,7 @@ func (m HostDependencyMutation) Client() *Client {
 // it returns an error otherwise.
 func (m HostDependencyMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -16652,6 +18537,25 @@ func (m *HostDependencyMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *HostDependencyMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().HostDependency.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHostID sets the "host_id" field.
 func (m *HostDependencyMutation) SetHostID(s string) {
 	m.host_id = &s
@@ -16671,10 +18575,10 @@ func (m *HostDependencyMutation) HostID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostDependencyMutation) OldHostID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHostID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHostID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHostID requires an ID field in the mutation")
+		return v, errors.New("OldHostID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -16707,10 +18611,10 @@ func (m *HostDependencyMutation) NetworkID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *HostDependencyMutation) OldNetworkID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldNetworkID is only allowed on UpdateOne operations")
+		return v, errors.New("OldNetworkID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldNetworkID requires an ID field in the mutation")
+		return v, errors.New("OldNetworkID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -17196,7 +19100,7 @@ func withIdentityID(id uuid.UUID) identityOption {
 		m.oldValue = func(ctx context.Context) (*Identity, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Identity.Get(ctx, id)
 				}
@@ -17229,7 +19133,7 @@ func (m IdentityMutation) Client() *Client {
 // it returns an error otherwise.
 func (m IdentityMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -17251,6 +19155,25 @@ func (m *IdentityMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *IdentityMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Identity.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *IdentityMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -17270,10 +19193,10 @@ func (m *IdentityMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *IdentityMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -17306,10 +19229,10 @@ func (m *IdentityMutation) FirstName() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *IdentityMutation) OldFirstName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldFirstName is only allowed on UpdateOne operations")
+		return v, errors.New("OldFirstName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldFirstName requires an ID field in the mutation")
+		return v, errors.New("OldFirstName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -17342,10 +19265,10 @@ func (m *IdentityMutation) LastName() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *IdentityMutation) OldLastName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldLastName is only allowed on UpdateOne operations")
+		return v, errors.New("OldLastName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldLastName requires an ID field in the mutation")
+		return v, errors.New("OldLastName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -17378,10 +19301,10 @@ func (m *IdentityMutation) Email() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *IdentityMutation) OldEmail(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldEmail is only allowed on UpdateOne operations")
+		return v, errors.New("OldEmail is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldEmail requires an ID field in the mutation")
+		return v, errors.New("OldEmail requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -17414,10 +19337,10 @@ func (m *IdentityMutation) Password() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *IdentityMutation) OldPassword(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldPassword is only allowed on UpdateOne operations")
+		return v, errors.New("OldPassword is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldPassword requires an ID field in the mutation")
+		return v, errors.New("OldPassword requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -17450,10 +19373,10 @@ func (m *IdentityMutation) Description() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *IdentityMutation) OldDescription(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDescription is only allowed on UpdateOne operations")
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDescription requires an ID field in the mutation")
+		return v, errors.New("OldDescription requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -17486,10 +19409,10 @@ func (m *IdentityMutation) AvatarFile() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *IdentityMutation) OldAvatarFile(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldAvatarFile is only allowed on UpdateOne operations")
+		return v, errors.New("OldAvatarFile is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldAvatarFile requires an ID field in the mutation")
+		return v, errors.New("OldAvatarFile requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -17522,10 +19445,10 @@ func (m *IdentityMutation) Vars() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *IdentityMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldVars is only allowed on UpdateOne operations")
+		return v, errors.New("OldVars is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldVars requires an ID field in the mutation")
+		return v, errors.New("OldVars requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -17558,10 +19481,10 @@ func (m *IdentityMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *IdentityMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -17997,7 +19920,7 @@ func withIncludedNetworkID(id uuid.UUID) includednetworkOption {
 		m.oldValue = func(ctx context.Context) (*IncludedNetwork, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().IncludedNetwork.Get(ctx, id)
 				}
@@ -18030,7 +19953,7 @@ func (m IncludedNetworkMutation) Client() *Client {
 // it returns an error otherwise.
 func (m IncludedNetworkMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -18052,6 +19975,25 @@ func (m *IncludedNetworkMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *IncludedNetworkMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().IncludedNetwork.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetName sets the "name" field.
 func (m *IncludedNetworkMutation) SetName(s string) {
 	m.name = &s
@@ -18071,10 +20013,10 @@ func (m *IncludedNetworkMutation) Name() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *IncludedNetworkMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -18107,10 +20049,10 @@ func (m *IncludedNetworkMutation) Hosts() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *IncludedNetworkMutation) OldHosts(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHosts is only allowed on UpdateOne operations")
+		return v, errors.New("OldHosts is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHosts requires an ID field in the mutation")
+		return v, errors.New("OldHosts requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -18668,7 +20610,7 @@ func withNetworkID(id uuid.UUID) networkOption {
 		m.oldValue = func(ctx context.Context) (*Network, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Network.Get(ctx, id)
 				}
@@ -18701,7 +20643,7 @@ func (m NetworkMutation) Client() *Client {
 // it returns an error otherwise.
 func (m NetworkMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -18723,6 +20665,25 @@ func (m *NetworkMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *NetworkMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Network.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *NetworkMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -18742,10 +20703,10 @@ func (m *NetworkMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *NetworkMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -18778,10 +20739,10 @@ func (m *NetworkMutation) Name() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *NetworkMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -18814,10 +20775,10 @@ func (m *NetworkMutation) Cidr() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *NetworkMutation) OldCidr(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldCidr is only allowed on UpdateOne operations")
+		return v, errors.New("OldCidr is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldCidr requires an ID field in the mutation")
+		return v, errors.New("OldCidr requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -18850,10 +20811,10 @@ func (m *NetworkMutation) VdiVisible() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *NetworkMutation) OldVdiVisible(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldVdiVisible is only allowed on UpdateOne operations")
+		return v, errors.New("OldVdiVisible is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldVdiVisible requires an ID field in the mutation")
+		return v, errors.New("OldVdiVisible requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -18886,10 +20847,10 @@ func (m *NetworkMutation) Vars() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *NetworkMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldVars is only allowed on UpdateOne operations")
+		return v, errors.New("OldVars is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldVars requires an ID field in the mutation")
+		return v, errors.New("OldVars requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -18922,10 +20883,10 @@ func (m *NetworkMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *NetworkMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -19482,7 +21443,7 @@ func withPlanID(id uuid.UUID) planOption {
 		m.oldValue = func(ctx context.Context) (*Plan, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Plan.Get(ctx, id)
 				}
@@ -19515,7 +21476,7 @@ func (m PlanMutation) Client() *Client {
 // it returns an error otherwise.
 func (m PlanMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -19535,6 +21496,25 @@ func (m *PlanMutation) ID() (id uuid.UUID, exists bool) {
 		return
 	}
 	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PlanMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Plan.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
 }
 
 // SetStepNumber sets the "step_number" field.
@@ -19557,10 +21537,10 @@ func (m *PlanMutation) StepNumber() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *PlanMutation) OldStepNumber(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldStepNumber is only allowed on UpdateOne operations")
+		return v, errors.New("OldStepNumber is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldStepNumber requires an ID field in the mutation")
+		return v, errors.New("OldStepNumber requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -19612,10 +21592,10 @@ func (m *PlanMutation) GetType() (r plan.Type, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *PlanMutation) OldType(ctx context.Context) (v plan.Type, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldType is only allowed on UpdateOne operations")
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldType requires an ID field in the mutation")
+		return v, errors.New("OldType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -19648,10 +21628,10 @@ func (m *PlanMutation) BuildID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *PlanMutation) OldBuildID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldBuildID is only allowed on UpdateOne operations")
+		return v, errors.New("OldBuildID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldBuildID requires an ID field in the mutation")
+		return v, errors.New("OldBuildID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -20519,7 +22499,7 @@ func withPlanDiffID(id uuid.UUID) plandiffOption {
 		m.oldValue = func(ctx context.Context) (*PlanDiff, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().PlanDiff.Get(ctx, id)
 				}
@@ -20552,7 +22532,7 @@ func (m PlanDiffMutation) Client() *Client {
 // it returns an error otherwise.
 func (m PlanDiffMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -20572,6 +22552,25 @@ func (m *PlanDiffMutation) ID() (id uuid.UUID, exists bool) {
 		return
 	}
 	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PlanDiffMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().PlanDiff.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
 }
 
 // SetRevision sets the "revision" field.
@@ -20594,10 +22593,10 @@ func (m *PlanDiffMutation) Revision() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *PlanDiffMutation) OldRevision(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldRevision is only allowed on UpdateOne operations")
+		return v, errors.New("OldRevision is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldRevision requires an ID field in the mutation")
+		return v, errors.New("OldRevision requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -20649,10 +22648,10 @@ func (m *PlanDiffMutation) NewState() (r plandiff.NewState, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *PlanDiffMutation) OldNewState(ctx context.Context) (v plandiff.NewState, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldNewState is only allowed on UpdateOne operations")
+		return v, errors.New("OldNewState is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldNewState requires an ID field in the mutation")
+		return v, errors.New("OldNewState requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -20994,6 +22993,7 @@ type ProvisionedHostMutation struct {
 	id                                          *uuid.UUID
 	subnet_ip                                   *string
 	addon_type                                  *provisionedhost.AddonType
+	vars                                        *map[string]string
 	clearedFields                               map[string]struct{}
 	_ProvisionedHostToStatus                    *uuid.UUID
 	cleared_ProvisionedHostToStatus             bool
@@ -21053,7 +23053,7 @@ func withProvisionedHostID(id uuid.UUID) provisionedhostOption {
 		m.oldValue = func(ctx context.Context) (*ProvisionedHost, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().ProvisionedHost.Get(ctx, id)
 				}
@@ -21086,7 +23086,7 @@ func (m ProvisionedHostMutation) Client() *Client {
 // it returns an error otherwise.
 func (m ProvisionedHostMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -21108,6 +23108,25 @@ func (m *ProvisionedHostMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProvisionedHostMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProvisionedHost.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetSubnetIP sets the "subnet_ip" field.
 func (m *ProvisionedHostMutation) SetSubnetIP(s string) {
 	m.subnet_ip = &s
@@ -21127,10 +23146,10 @@ func (m *ProvisionedHostMutation) SubnetIP() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ProvisionedHostMutation) OldSubnetIP(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldSubnetIP is only allowed on UpdateOne operations")
+		return v, errors.New("OldSubnetIP is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldSubnetIP requires an ID field in the mutation")
+		return v, errors.New("OldSubnetIP requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -21163,10 +23182,10 @@ func (m *ProvisionedHostMutation) AddonType() (r provisionedhost.AddonType, exis
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ProvisionedHostMutation) OldAddonType(ctx context.Context) (v *provisionedhost.AddonType, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldAddonType is only allowed on UpdateOne operations")
+		return v, errors.New("OldAddonType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldAddonType requires an ID field in the mutation")
+		return v, errors.New("OldAddonType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -21191,6 +23210,42 @@ func (m *ProvisionedHostMutation) AddonTypeCleared() bool {
 func (m *ProvisionedHostMutation) ResetAddonType() {
 	m.addon_type = nil
 	delete(m.clearedFields, provisionedhost.FieldAddonType)
+}
+
+// SetVars sets the "vars" field.
+func (m *ProvisionedHostMutation) SetVars(value map[string]string) {
+	m.vars = &value
+}
+
+// Vars returns the value of the "vars" field in the mutation.
+func (m *ProvisionedHostMutation) Vars() (r map[string]string, exists bool) {
+	v := m.vars
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVars returns the old "vars" field's value of the ProvisionedHost entity.
+// If the ProvisionedHost object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProvisionedHostMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVars is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVars requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVars: %w", err)
+	}
+	return oldValue.Vars, nil
+}
+
+// ResetVars resets all changes to the "vars" field.
+func (m *ProvisionedHostMutation) ResetVars() {
+	m.vars = nil
 }
 
 // SetProvisionedHostToStatusID sets the "ProvisionedHostToStatus" edge to the Status entity by id.
@@ -21647,12 +23702,15 @@ func (m *ProvisionedHostMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProvisionedHostMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 3)
 	if m.subnet_ip != nil {
 		fields = append(fields, provisionedhost.FieldSubnetIP)
 	}
 	if m.addon_type != nil {
 		fields = append(fields, provisionedhost.FieldAddonType)
+	}
+	if m.vars != nil {
+		fields = append(fields, provisionedhost.FieldVars)
 	}
 	return fields
 }
@@ -21666,6 +23724,8 @@ func (m *ProvisionedHostMutation) Field(name string) (ent.Value, bool) {
 		return m.SubnetIP()
 	case provisionedhost.FieldAddonType:
 		return m.AddonType()
+	case provisionedhost.FieldVars:
+		return m.Vars()
 	}
 	return nil, false
 }
@@ -21679,6 +23739,8 @@ func (m *ProvisionedHostMutation) OldField(ctx context.Context, name string) (en
 		return m.OldSubnetIP(ctx)
 	case provisionedhost.FieldAddonType:
 		return m.OldAddonType(ctx)
+	case provisionedhost.FieldVars:
+		return m.OldVars(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProvisionedHost field %s", name)
 }
@@ -21701,6 +23763,13 @@ func (m *ProvisionedHostMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAddonType(v)
+		return nil
+	case provisionedhost.FieldVars:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVars(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedHost field %s", name)
@@ -21765,6 +23834,9 @@ func (m *ProvisionedHostMutation) ResetField(name string) error {
 		return nil
 	case provisionedhost.FieldAddonType:
 		m.ResetAddonType()
+		return nil
+	case provisionedhost.FieldVars:
+		m.ResetVars()
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedHost field %s", name)
@@ -22040,6 +24112,7 @@ type ProvisionedNetworkMutation struct {
 	id                                          *uuid.UUID
 	name                                        *string
 	cidr                                        *string
+	vars                                        *map[string]string
 	clearedFields                               map[string]struct{}
 	_ProvisionedNetworkToStatus                 *uuid.UUID
 	cleared_ProvisionedNetworkToStatus          bool
@@ -22089,7 +24162,7 @@ func withProvisionedNetworkID(id uuid.UUID) provisionednetworkOption {
 		m.oldValue = func(ctx context.Context) (*ProvisionedNetwork, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().ProvisionedNetwork.Get(ctx, id)
 				}
@@ -22122,7 +24195,7 @@ func (m ProvisionedNetworkMutation) Client() *Client {
 // it returns an error otherwise.
 func (m ProvisionedNetworkMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -22144,6 +24217,25 @@ func (m *ProvisionedNetworkMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProvisionedNetworkMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProvisionedNetwork.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetName sets the "name" field.
 func (m *ProvisionedNetworkMutation) SetName(s string) {
 	m.name = &s
@@ -22163,10 +24255,10 @@ func (m *ProvisionedNetworkMutation) Name() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ProvisionedNetworkMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -22199,10 +24291,10 @@ func (m *ProvisionedNetworkMutation) Cidr() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ProvisionedNetworkMutation) OldCidr(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldCidr is only allowed on UpdateOne operations")
+		return v, errors.New("OldCidr is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldCidr requires an ID field in the mutation")
+		return v, errors.New("OldCidr requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -22214,6 +24306,42 @@ func (m *ProvisionedNetworkMutation) OldCidr(ctx context.Context) (v string, err
 // ResetCidr resets all changes to the "cidr" field.
 func (m *ProvisionedNetworkMutation) ResetCidr() {
 	m.cidr = nil
+}
+
+// SetVars sets the "vars" field.
+func (m *ProvisionedNetworkMutation) SetVars(value map[string]string) {
+	m.vars = &value
+}
+
+// Vars returns the value of the "vars" field in the mutation.
+func (m *ProvisionedNetworkMutation) Vars() (r map[string]string, exists bool) {
+	v := m.vars
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVars returns the old "vars" field's value of the ProvisionedNetwork entity.
+// If the ProvisionedNetwork object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProvisionedNetworkMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVars is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVars requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVars: %w", err)
+	}
+	return oldValue.Vars, nil
+}
+
+// ResetVars resets all changes to the "vars" field.
+func (m *ProvisionedNetworkMutation) ResetVars() {
+	m.vars = nil
 }
 
 // SetProvisionedNetworkToStatusID sets the "ProvisionedNetworkToStatus" edge to the Status entity by id.
@@ -22484,12 +24612,15 @@ func (m *ProvisionedNetworkMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProvisionedNetworkMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 3)
 	if m.name != nil {
 		fields = append(fields, provisionednetwork.FieldName)
 	}
 	if m.cidr != nil {
 		fields = append(fields, provisionednetwork.FieldCidr)
+	}
+	if m.vars != nil {
+		fields = append(fields, provisionednetwork.FieldVars)
 	}
 	return fields
 }
@@ -22503,6 +24634,8 @@ func (m *ProvisionedNetworkMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case provisionednetwork.FieldCidr:
 		return m.Cidr()
+	case provisionednetwork.FieldVars:
+		return m.Vars()
 	}
 	return nil, false
 }
@@ -22516,6 +24649,8 @@ func (m *ProvisionedNetworkMutation) OldField(ctx context.Context, name string) 
 		return m.OldName(ctx)
 	case provisionednetwork.FieldCidr:
 		return m.OldCidr(ctx)
+	case provisionednetwork.FieldVars:
+		return m.OldVars(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProvisionedNetwork field %s", name)
 }
@@ -22538,6 +24673,13 @@ func (m *ProvisionedNetworkMutation) SetField(name string, value ent.Value) erro
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCidr(v)
+		return nil
+	case provisionednetwork.FieldVars:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVars(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedNetwork field %s", name)
@@ -22593,6 +24735,9 @@ func (m *ProvisionedNetworkMutation) ResetField(name string) error {
 		return nil
 	case provisionednetwork.FieldCidr:
 		m.ResetCidr()
+		return nil
+	case provisionednetwork.FieldVars:
+		m.ResetVars()
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedNetwork field %s", name)
@@ -22798,6 +24943,8 @@ type ProvisioningStepMutation struct {
 	cleared_ProvisioningStepToFileDownload      bool
 	_ProvisioningStepToFileExtract              *uuid.UUID
 	cleared_ProvisioningStepToFileExtract       bool
+	_ProvisioningStepToAnsible                  *uuid.UUID
+	cleared_ProvisioningStepToAnsible           bool
 	_ProvisioningStepToPlan                     *uuid.UUID
 	cleared_ProvisioningStepToPlan              bool
 	_ProvisioningStepToAgentTask                map[uuid.UUID]struct{}
@@ -22840,7 +24987,7 @@ func withProvisioningStepID(id uuid.UUID) provisioningstepOption {
 		m.oldValue = func(ctx context.Context) (*ProvisioningStep, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().ProvisioningStep.Get(ctx, id)
 				}
@@ -22873,7 +25020,7 @@ func (m ProvisioningStepMutation) Client() *Client {
 // it returns an error otherwise.
 func (m ProvisioningStepMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -22895,6 +25042,25 @@ func (m *ProvisioningStepMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProvisioningStepMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProvisioningStep.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetType sets the "type" field.
 func (m *ProvisioningStepMutation) SetType(pr provisioningstep.Type) {
 	m._type = &pr
@@ -22914,10 +25080,10 @@ func (m *ProvisioningStepMutation) GetType() (r provisioningstep.Type, exists bo
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ProvisioningStepMutation) OldType(ctx context.Context) (v provisioningstep.Type, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldType is only allowed on UpdateOne operations")
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldType requires an ID field in the mutation")
+		return v, errors.New("OldType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -22951,10 +25117,10 @@ func (m *ProvisioningStepMutation) StepNumber() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ProvisioningStepMutation) OldStepNumber(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldStepNumber is only allowed on UpdateOne operations")
+		return v, errors.New("OldStepNumber is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldStepNumber requires an ID field in the mutation")
+		return v, errors.New("OldStepNumber requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -23299,6 +25465,45 @@ func (m *ProvisioningStepMutation) ResetProvisioningStepToFileExtract() {
 	m.cleared_ProvisioningStepToFileExtract = false
 }
 
+// SetProvisioningStepToAnsibleID sets the "ProvisioningStepToAnsible" edge to the Ansible entity by id.
+func (m *ProvisioningStepMutation) SetProvisioningStepToAnsibleID(id uuid.UUID) {
+	m._ProvisioningStepToAnsible = &id
+}
+
+// ClearProvisioningStepToAnsible clears the "ProvisioningStepToAnsible" edge to the Ansible entity.
+func (m *ProvisioningStepMutation) ClearProvisioningStepToAnsible() {
+	m.cleared_ProvisioningStepToAnsible = true
+}
+
+// ProvisioningStepToAnsibleCleared reports if the "ProvisioningStepToAnsible" edge to the Ansible entity was cleared.
+func (m *ProvisioningStepMutation) ProvisioningStepToAnsibleCleared() bool {
+	return m.cleared_ProvisioningStepToAnsible
+}
+
+// ProvisioningStepToAnsibleID returns the "ProvisioningStepToAnsible" edge ID in the mutation.
+func (m *ProvisioningStepMutation) ProvisioningStepToAnsibleID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningStepToAnsible != nil {
+		return *m._ProvisioningStepToAnsible, true
+	}
+	return
+}
+
+// ProvisioningStepToAnsibleIDs returns the "ProvisioningStepToAnsible" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProvisioningStepToAnsibleID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningStepMutation) ProvisioningStepToAnsibleIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningStepToAnsible; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProvisioningStepToAnsible resets all changes to the "ProvisioningStepToAnsible" edge.
+func (m *ProvisioningStepMutation) ResetProvisioningStepToAnsible() {
+	m._ProvisioningStepToAnsible = nil
+	m.cleared_ProvisioningStepToAnsible = false
+}
+
 // SetProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by id.
 func (m *ProvisioningStepMutation) SetProvisioningStepToPlanID(id uuid.UUID) {
 	m._ProvisioningStepToPlan = &id
@@ -23581,7 +25786,7 @@ func (m *ProvisioningStepMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProvisioningStepMutation) AddedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m._ProvisioningStepToStatus != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToStatus)
 	}
@@ -23605,6 +25810,9 @@ func (m *ProvisioningStepMutation) AddedEdges() []string {
 	}
 	if m._ProvisioningStepToFileExtract != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToFileExtract)
+	}
+	if m._ProvisioningStepToAnsible != nil {
+		edges = append(edges, provisioningstep.EdgeProvisioningStepToAnsible)
 	}
 	if m._ProvisioningStepToPlan != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToPlan)
@@ -23654,6 +25862,10 @@ func (m *ProvisioningStepMutation) AddedIDs(name string) []ent.Value {
 		if id := m._ProvisioningStepToFileExtract; id != nil {
 			return []ent.Value{*id}
 		}
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		if id := m._ProvisioningStepToAnsible; id != nil {
+			return []ent.Value{*id}
+		}
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		if id := m._ProvisioningStepToPlan; id != nil {
 			return []ent.Value{*id}
@@ -23674,7 +25886,7 @@ func (m *ProvisioningStepMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProvisioningStepMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m.removed_ProvisioningStepToAgentTask != nil {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToAgentTask)
 	}
@@ -23697,7 +25909,7 @@ func (m *ProvisioningStepMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProvisioningStepMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m.cleared_ProvisioningStepToStatus {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToStatus)
 	}
@@ -23721,6 +25933,9 @@ func (m *ProvisioningStepMutation) ClearedEdges() []string {
 	}
 	if m.cleared_ProvisioningStepToFileExtract {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToFileExtract)
+	}
+	if m.cleared_ProvisioningStepToAnsible {
+		edges = append(edges, provisioningstep.EdgeProvisioningStepToAnsible)
 	}
 	if m.cleared_ProvisioningStepToPlan {
 		edges = append(edges, provisioningstep.EdgeProvisioningStepToPlan)
@@ -23754,6 +25969,8 @@ func (m *ProvisioningStepMutation) EdgeCleared(name string) bool {
 		return m.cleared_ProvisioningStepToFileDownload
 	case provisioningstep.EdgeProvisioningStepToFileExtract:
 		return m.cleared_ProvisioningStepToFileExtract
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		return m.cleared_ProvisioningStepToAnsible
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		return m.cleared_ProvisioningStepToPlan
 	case provisioningstep.EdgeProvisioningStepToAgentTask:
@@ -23791,6 +26008,9 @@ func (m *ProvisioningStepMutation) ClearEdge(name string) error {
 		return nil
 	case provisioningstep.EdgeProvisioningStepToFileExtract:
 		m.ClearProvisioningStepToFileExtract()
+		return nil
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		m.ClearProvisioningStepToAnsible()
 		return nil
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		m.ClearProvisioningStepToPlan()
@@ -23830,6 +26050,9 @@ func (m *ProvisioningStepMutation) ResetEdge(name string) error {
 	case provisioningstep.EdgeProvisioningStepToFileExtract:
 		m.ResetProvisioningStepToFileExtract()
 		return nil
+	case provisioningstep.EdgeProvisioningStepToAnsible:
+		m.ResetProvisioningStepToAnsible()
+		return nil
 	case provisioningstep.EdgeProvisioningStepToPlan:
 		m.ResetProvisioningStepToPlan()
 		return nil
@@ -23843,6 +26066,806 @@ func (m *ProvisioningStepMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown ProvisioningStep edge %s", name)
 }
 
+// RepoCommitMutation represents an operation that mutates the RepoCommit nodes in the graph.
+type RepoCommitMutation struct {
+	config
+	op                             Op
+	typ                            string
+	id                             *uuid.UUID
+	revision                       *int
+	addrevision                    *int
+	hash                           *string
+	author                         *object.Signature
+	committer                      *object.Signature
+	pgp_signature                  *string
+	message                        *string
+	tree_hash                      *string
+	parent_hashes                  *[]string
+	clearedFields                  map[string]struct{}
+	_RepoCommitToRepository        *uuid.UUID
+	cleared_RepoCommitToRepository bool
+	done                           bool
+	oldValue                       func(context.Context) (*RepoCommit, error)
+	predicates                     []predicate.RepoCommit
+}
+
+var _ ent.Mutation = (*RepoCommitMutation)(nil)
+
+// repocommitOption allows management of the mutation configuration using functional options.
+type repocommitOption func(*RepoCommitMutation)
+
+// newRepoCommitMutation creates new mutation for the RepoCommit entity.
+func newRepoCommitMutation(c config, op Op, opts ...repocommitOption) *RepoCommitMutation {
+	m := &RepoCommitMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeRepoCommit,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withRepoCommitID sets the ID field of the mutation.
+func withRepoCommitID(id uuid.UUID) repocommitOption {
+	return func(m *RepoCommitMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *RepoCommit
+		)
+		m.oldValue = func(ctx context.Context) (*RepoCommit, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().RepoCommit.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withRepoCommit sets the old RepoCommit of the mutation.
+func withRepoCommit(node *RepoCommit) repocommitOption {
+	return func(m *RepoCommitMutation) {
+		m.oldValue = func(context.Context) (*RepoCommit, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m RepoCommitMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m RepoCommitMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of RepoCommit entities.
+func (m *RepoCommitMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *RepoCommitMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *RepoCommitMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().RepoCommit.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetRevision sets the "revision" field.
+func (m *RepoCommitMutation) SetRevision(i int) {
+	m.revision = &i
+	m.addrevision = nil
+}
+
+// Revision returns the value of the "revision" field in the mutation.
+func (m *RepoCommitMutation) Revision() (r int, exists bool) {
+	v := m.revision
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRevision returns the old "revision" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldRevision(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRevision is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRevision requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRevision: %w", err)
+	}
+	return oldValue.Revision, nil
+}
+
+// AddRevision adds i to the "revision" field.
+func (m *RepoCommitMutation) AddRevision(i int) {
+	if m.addrevision != nil {
+		*m.addrevision += i
+	} else {
+		m.addrevision = &i
+	}
+}
+
+// AddedRevision returns the value that was added to the "revision" field in this mutation.
+func (m *RepoCommitMutation) AddedRevision() (r int, exists bool) {
+	v := m.addrevision
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRevision resets all changes to the "revision" field.
+func (m *RepoCommitMutation) ResetRevision() {
+	m.revision = nil
+	m.addrevision = nil
+}
+
+// SetHash sets the "hash" field.
+func (m *RepoCommitMutation) SetHash(s string) {
+	m.hash = &s
+}
+
+// Hash returns the value of the "hash" field in the mutation.
+func (m *RepoCommitMutation) Hash() (r string, exists bool) {
+	v := m.hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHash returns the old "hash" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHash: %w", err)
+	}
+	return oldValue.Hash, nil
+}
+
+// ResetHash resets all changes to the "hash" field.
+func (m *RepoCommitMutation) ResetHash() {
+	m.hash = nil
+}
+
+// SetAuthor sets the "author" field.
+func (m *RepoCommitMutation) SetAuthor(o object.Signature) {
+	m.author = &o
+}
+
+// Author returns the value of the "author" field in the mutation.
+func (m *RepoCommitMutation) Author() (r object.Signature, exists bool) {
+	v := m.author
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthor returns the old "author" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldAuthor(ctx context.Context) (v object.Signature, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthor is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthor requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthor: %w", err)
+	}
+	return oldValue.Author, nil
+}
+
+// ResetAuthor resets all changes to the "author" field.
+func (m *RepoCommitMutation) ResetAuthor() {
+	m.author = nil
+}
+
+// SetCommitter sets the "committer" field.
+func (m *RepoCommitMutation) SetCommitter(o object.Signature) {
+	m.committer = &o
+}
+
+// Committer returns the value of the "committer" field in the mutation.
+func (m *RepoCommitMutation) Committer() (r object.Signature, exists bool) {
+	v := m.committer
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCommitter returns the old "committer" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldCommitter(ctx context.Context) (v object.Signature, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCommitter is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCommitter requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCommitter: %w", err)
+	}
+	return oldValue.Committer, nil
+}
+
+// ResetCommitter resets all changes to the "committer" field.
+func (m *RepoCommitMutation) ResetCommitter() {
+	m.committer = nil
+}
+
+// SetPgpSignature sets the "pgp_signature" field.
+func (m *RepoCommitMutation) SetPgpSignature(s string) {
+	m.pgp_signature = &s
+}
+
+// PgpSignature returns the value of the "pgp_signature" field in the mutation.
+func (m *RepoCommitMutation) PgpSignature() (r string, exists bool) {
+	v := m.pgp_signature
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPgpSignature returns the old "pgp_signature" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldPgpSignature(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPgpSignature is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPgpSignature requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPgpSignature: %w", err)
+	}
+	return oldValue.PgpSignature, nil
+}
+
+// ResetPgpSignature resets all changes to the "pgp_signature" field.
+func (m *RepoCommitMutation) ResetPgpSignature() {
+	m.pgp_signature = nil
+}
+
+// SetMessage sets the "message" field.
+func (m *RepoCommitMutation) SetMessage(s string) {
+	m.message = &s
+}
+
+// Message returns the value of the "message" field in the mutation.
+func (m *RepoCommitMutation) Message() (r string, exists bool) {
+	v := m.message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMessage returns the old "message" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldMessage(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMessage: %w", err)
+	}
+	return oldValue.Message, nil
+}
+
+// ResetMessage resets all changes to the "message" field.
+func (m *RepoCommitMutation) ResetMessage() {
+	m.message = nil
+}
+
+// SetTreeHash sets the "tree_hash" field.
+func (m *RepoCommitMutation) SetTreeHash(s string) {
+	m.tree_hash = &s
+}
+
+// TreeHash returns the value of the "tree_hash" field in the mutation.
+func (m *RepoCommitMutation) TreeHash() (r string, exists bool) {
+	v := m.tree_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTreeHash returns the old "tree_hash" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldTreeHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTreeHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTreeHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTreeHash: %w", err)
+	}
+	return oldValue.TreeHash, nil
+}
+
+// ResetTreeHash resets all changes to the "tree_hash" field.
+func (m *RepoCommitMutation) ResetTreeHash() {
+	m.tree_hash = nil
+}
+
+// SetParentHashes sets the "parent_hashes" field.
+func (m *RepoCommitMutation) SetParentHashes(s []string) {
+	m.parent_hashes = &s
+}
+
+// ParentHashes returns the value of the "parent_hashes" field in the mutation.
+func (m *RepoCommitMutation) ParentHashes() (r []string, exists bool) {
+	v := m.parent_hashes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParentHashes returns the old "parent_hashes" field's value of the RepoCommit entity.
+// If the RepoCommit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepoCommitMutation) OldParentHashes(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParentHashes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParentHashes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParentHashes: %w", err)
+	}
+	return oldValue.ParentHashes, nil
+}
+
+// ResetParentHashes resets all changes to the "parent_hashes" field.
+func (m *RepoCommitMutation) ResetParentHashes() {
+	m.parent_hashes = nil
+}
+
+// SetRepoCommitToRepositoryID sets the "RepoCommitToRepository" edge to the Repository entity by id.
+func (m *RepoCommitMutation) SetRepoCommitToRepositoryID(id uuid.UUID) {
+	m._RepoCommitToRepository = &id
+}
+
+// ClearRepoCommitToRepository clears the "RepoCommitToRepository" edge to the Repository entity.
+func (m *RepoCommitMutation) ClearRepoCommitToRepository() {
+	m.cleared_RepoCommitToRepository = true
+}
+
+// RepoCommitToRepositoryCleared reports if the "RepoCommitToRepository" edge to the Repository entity was cleared.
+func (m *RepoCommitMutation) RepoCommitToRepositoryCleared() bool {
+	return m.cleared_RepoCommitToRepository
+}
+
+// RepoCommitToRepositoryID returns the "RepoCommitToRepository" edge ID in the mutation.
+func (m *RepoCommitMutation) RepoCommitToRepositoryID() (id uuid.UUID, exists bool) {
+	if m._RepoCommitToRepository != nil {
+		return *m._RepoCommitToRepository, true
+	}
+	return
+}
+
+// RepoCommitToRepositoryIDs returns the "RepoCommitToRepository" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// RepoCommitToRepositoryID instead. It exists only for internal usage by the builders.
+func (m *RepoCommitMutation) RepoCommitToRepositoryIDs() (ids []uuid.UUID) {
+	if id := m._RepoCommitToRepository; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetRepoCommitToRepository resets all changes to the "RepoCommitToRepository" edge.
+func (m *RepoCommitMutation) ResetRepoCommitToRepository() {
+	m._RepoCommitToRepository = nil
+	m.cleared_RepoCommitToRepository = false
+}
+
+// Where appends a list predicates to the RepoCommitMutation builder.
+func (m *RepoCommitMutation) Where(ps ...predicate.RepoCommit) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// Op returns the operation name.
+func (m *RepoCommitMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (RepoCommit).
+func (m *RepoCommitMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *RepoCommitMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.revision != nil {
+		fields = append(fields, repocommit.FieldRevision)
+	}
+	if m.hash != nil {
+		fields = append(fields, repocommit.FieldHash)
+	}
+	if m.author != nil {
+		fields = append(fields, repocommit.FieldAuthor)
+	}
+	if m.committer != nil {
+		fields = append(fields, repocommit.FieldCommitter)
+	}
+	if m.pgp_signature != nil {
+		fields = append(fields, repocommit.FieldPgpSignature)
+	}
+	if m.message != nil {
+		fields = append(fields, repocommit.FieldMessage)
+	}
+	if m.tree_hash != nil {
+		fields = append(fields, repocommit.FieldTreeHash)
+	}
+	if m.parent_hashes != nil {
+		fields = append(fields, repocommit.FieldParentHashes)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *RepoCommitMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case repocommit.FieldRevision:
+		return m.Revision()
+	case repocommit.FieldHash:
+		return m.Hash()
+	case repocommit.FieldAuthor:
+		return m.Author()
+	case repocommit.FieldCommitter:
+		return m.Committer()
+	case repocommit.FieldPgpSignature:
+		return m.PgpSignature()
+	case repocommit.FieldMessage:
+		return m.Message()
+	case repocommit.FieldTreeHash:
+		return m.TreeHash()
+	case repocommit.FieldParentHashes:
+		return m.ParentHashes()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *RepoCommitMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case repocommit.FieldRevision:
+		return m.OldRevision(ctx)
+	case repocommit.FieldHash:
+		return m.OldHash(ctx)
+	case repocommit.FieldAuthor:
+		return m.OldAuthor(ctx)
+	case repocommit.FieldCommitter:
+		return m.OldCommitter(ctx)
+	case repocommit.FieldPgpSignature:
+		return m.OldPgpSignature(ctx)
+	case repocommit.FieldMessage:
+		return m.OldMessage(ctx)
+	case repocommit.FieldTreeHash:
+		return m.OldTreeHash(ctx)
+	case repocommit.FieldParentHashes:
+		return m.OldParentHashes(ctx)
+	}
+	return nil, fmt.Errorf("unknown RepoCommit field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *RepoCommitMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case repocommit.FieldRevision:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRevision(v)
+		return nil
+	case repocommit.FieldHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHash(v)
+		return nil
+	case repocommit.FieldAuthor:
+		v, ok := value.(object.Signature)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthor(v)
+		return nil
+	case repocommit.FieldCommitter:
+		v, ok := value.(object.Signature)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCommitter(v)
+		return nil
+	case repocommit.FieldPgpSignature:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPgpSignature(v)
+		return nil
+	case repocommit.FieldMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMessage(v)
+		return nil
+	case repocommit.FieldTreeHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTreeHash(v)
+		return nil
+	case repocommit.FieldParentHashes:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParentHashes(v)
+		return nil
+	}
+	return fmt.Errorf("unknown RepoCommit field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *RepoCommitMutation) AddedFields() []string {
+	var fields []string
+	if m.addrevision != nil {
+		fields = append(fields, repocommit.FieldRevision)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *RepoCommitMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case repocommit.FieldRevision:
+		return m.AddedRevision()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *RepoCommitMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case repocommit.FieldRevision:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRevision(v)
+		return nil
+	}
+	return fmt.Errorf("unknown RepoCommit numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *RepoCommitMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *RepoCommitMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *RepoCommitMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown RepoCommit nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *RepoCommitMutation) ResetField(name string) error {
+	switch name {
+	case repocommit.FieldRevision:
+		m.ResetRevision()
+		return nil
+	case repocommit.FieldHash:
+		m.ResetHash()
+		return nil
+	case repocommit.FieldAuthor:
+		m.ResetAuthor()
+		return nil
+	case repocommit.FieldCommitter:
+		m.ResetCommitter()
+		return nil
+	case repocommit.FieldPgpSignature:
+		m.ResetPgpSignature()
+		return nil
+	case repocommit.FieldMessage:
+		m.ResetMessage()
+		return nil
+	case repocommit.FieldTreeHash:
+		m.ResetTreeHash()
+		return nil
+	case repocommit.FieldParentHashes:
+		m.ResetParentHashes()
+		return nil
+	}
+	return fmt.Errorf("unknown RepoCommit field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *RepoCommitMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m._RepoCommitToRepository != nil {
+		edges = append(edges, repocommit.EdgeRepoCommitToRepository)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *RepoCommitMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case repocommit.EdgeRepoCommitToRepository:
+		if id := m._RepoCommitToRepository; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *RepoCommitMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *RepoCommitMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *RepoCommitMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleared_RepoCommitToRepository {
+		edges = append(edges, repocommit.EdgeRepoCommitToRepository)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *RepoCommitMutation) EdgeCleared(name string) bool {
+	switch name {
+	case repocommit.EdgeRepoCommitToRepository:
+		return m.cleared_RepoCommitToRepository
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *RepoCommitMutation) ClearEdge(name string) error {
+	switch name {
+	case repocommit.EdgeRepoCommitToRepository:
+		m.ClearRepoCommitToRepository()
+		return nil
+	}
+	return fmt.Errorf("unknown RepoCommit unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *RepoCommitMutation) ResetEdge(name string) error {
+	switch name {
+	case repocommit.EdgeRepoCommitToRepository:
+		m.ResetRepoCommitToRepository()
+		return nil
+	}
+	return fmt.Errorf("unknown RepoCommit edge %s", name)
+}
+
 // RepositoryMutation represents an operation that mutates the Repository nodes in the graph.
 type RepositoryMutation struct {
 	config
@@ -23853,11 +26876,13 @@ type RepositoryMutation struct {
 	branch_name                     *string
 	enviroment_filepath             *string
 	folder_path                     *string
-	commit_info                     *string
 	clearedFields                   map[string]struct{}
 	_RepositoryToEnvironment        map[uuid.UUID]struct{}
 	removed_RepositoryToEnvironment map[uuid.UUID]struct{}
 	cleared_RepositoryToEnvironment bool
+	_RepositoryToRepoCommit         map[uuid.UUID]struct{}
+	removed_RepositoryToRepoCommit  map[uuid.UUID]struct{}
+	cleared_RepositoryToRepoCommit  bool
 	done                            bool
 	oldValue                        func(context.Context) (*Repository, error)
 	predicates                      []predicate.Repository
@@ -23893,7 +26918,7 @@ func withRepositoryID(id uuid.UUID) repositoryOption {
 		m.oldValue = func(ctx context.Context) (*Repository, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Repository.Get(ctx, id)
 				}
@@ -23926,7 +26951,7 @@ func (m RepositoryMutation) Client() *Client {
 // it returns an error otherwise.
 func (m RepositoryMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -23948,6 +26973,25 @@ func (m *RepositoryMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *RepositoryMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Repository.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetRepoURL sets the "repo_url" field.
 func (m *RepositoryMutation) SetRepoURL(s string) {
 	m.repo_url = &s
@@ -23967,10 +27011,10 @@ func (m *RepositoryMutation) RepoURL() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *RepositoryMutation) OldRepoURL(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldRepoURL is only allowed on UpdateOne operations")
+		return v, errors.New("OldRepoURL is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldRepoURL requires an ID field in the mutation")
+		return v, errors.New("OldRepoURL requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24003,10 +27047,10 @@ func (m *RepositoryMutation) BranchName() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *RepositoryMutation) OldBranchName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldBranchName is only allowed on UpdateOne operations")
+		return v, errors.New("OldBranchName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldBranchName requires an ID field in the mutation")
+		return v, errors.New("OldBranchName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24039,10 +27083,10 @@ func (m *RepositoryMutation) EnviromentFilepath() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *RepositoryMutation) OldEnviromentFilepath(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldEnviromentFilepath is only allowed on UpdateOne operations")
+		return v, errors.New("OldEnviromentFilepath is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldEnviromentFilepath requires an ID field in the mutation")
+		return v, errors.New("OldEnviromentFilepath requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24075,10 +27119,10 @@ func (m *RepositoryMutation) FolderPath() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *RepositoryMutation) OldFolderPath(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldFolderPath is only allowed on UpdateOne operations")
+		return v, errors.New("OldFolderPath is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldFolderPath requires an ID field in the mutation")
+		return v, errors.New("OldFolderPath requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24090,42 +27134,6 @@ func (m *RepositoryMutation) OldFolderPath(ctx context.Context) (v string, err e
 // ResetFolderPath resets all changes to the "folder_path" field.
 func (m *RepositoryMutation) ResetFolderPath() {
 	m.folder_path = nil
-}
-
-// SetCommitInfo sets the "commit_info" field.
-func (m *RepositoryMutation) SetCommitInfo(s string) {
-	m.commit_info = &s
-}
-
-// CommitInfo returns the value of the "commit_info" field in the mutation.
-func (m *RepositoryMutation) CommitInfo() (r string, exists bool) {
-	v := m.commit_info
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCommitInfo returns the old "commit_info" field's value of the Repository entity.
-// If the Repository object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RepositoryMutation) OldCommitInfo(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldCommitInfo is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldCommitInfo requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCommitInfo: %w", err)
-	}
-	return oldValue.CommitInfo, nil
-}
-
-// ResetCommitInfo resets all changes to the "commit_info" field.
-func (m *RepositoryMutation) ResetCommitInfo() {
-	m.commit_info = nil
 }
 
 // AddRepositoryToEnvironmentIDs adds the "RepositoryToEnvironment" edge to the Environment entity by ids.
@@ -24182,6 +27190,60 @@ func (m *RepositoryMutation) ResetRepositoryToEnvironment() {
 	m.removed_RepositoryToEnvironment = nil
 }
 
+// AddRepositoryToRepoCommitIDs adds the "RepositoryToRepoCommit" edge to the RepoCommit entity by ids.
+func (m *RepositoryMutation) AddRepositoryToRepoCommitIDs(ids ...uuid.UUID) {
+	if m._RepositoryToRepoCommit == nil {
+		m._RepositoryToRepoCommit = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._RepositoryToRepoCommit[ids[i]] = struct{}{}
+	}
+}
+
+// ClearRepositoryToRepoCommit clears the "RepositoryToRepoCommit" edge to the RepoCommit entity.
+func (m *RepositoryMutation) ClearRepositoryToRepoCommit() {
+	m.cleared_RepositoryToRepoCommit = true
+}
+
+// RepositoryToRepoCommitCleared reports if the "RepositoryToRepoCommit" edge to the RepoCommit entity was cleared.
+func (m *RepositoryMutation) RepositoryToRepoCommitCleared() bool {
+	return m.cleared_RepositoryToRepoCommit
+}
+
+// RemoveRepositoryToRepoCommitIDs removes the "RepositoryToRepoCommit" edge to the RepoCommit entity by IDs.
+func (m *RepositoryMutation) RemoveRepositoryToRepoCommitIDs(ids ...uuid.UUID) {
+	if m.removed_RepositoryToRepoCommit == nil {
+		m.removed_RepositoryToRepoCommit = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._RepositoryToRepoCommit, ids[i])
+		m.removed_RepositoryToRepoCommit[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedRepositoryToRepoCommit returns the removed IDs of the "RepositoryToRepoCommit" edge to the RepoCommit entity.
+func (m *RepositoryMutation) RemovedRepositoryToRepoCommitIDs() (ids []uuid.UUID) {
+	for id := range m.removed_RepositoryToRepoCommit {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// RepositoryToRepoCommitIDs returns the "RepositoryToRepoCommit" edge IDs in the mutation.
+func (m *RepositoryMutation) RepositoryToRepoCommitIDs() (ids []uuid.UUID) {
+	for id := range m._RepositoryToRepoCommit {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetRepositoryToRepoCommit resets all changes to the "RepositoryToRepoCommit" edge.
+func (m *RepositoryMutation) ResetRepositoryToRepoCommit() {
+	m._RepositoryToRepoCommit = nil
+	m.cleared_RepositoryToRepoCommit = false
+	m.removed_RepositoryToRepoCommit = nil
+}
+
 // Where appends a list predicates to the RepositoryMutation builder.
 func (m *RepositoryMutation) Where(ps ...predicate.Repository) {
 	m.predicates = append(m.predicates, ps...)
@@ -24201,7 +27263,7 @@ func (m *RepositoryMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RepositoryMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 4)
 	if m.repo_url != nil {
 		fields = append(fields, repository.FieldRepoURL)
 	}
@@ -24213,9 +27275,6 @@ func (m *RepositoryMutation) Fields() []string {
 	}
 	if m.folder_path != nil {
 		fields = append(fields, repository.FieldFolderPath)
-	}
-	if m.commit_info != nil {
-		fields = append(fields, repository.FieldCommitInfo)
 	}
 	return fields
 }
@@ -24233,8 +27292,6 @@ func (m *RepositoryMutation) Field(name string) (ent.Value, bool) {
 		return m.EnviromentFilepath()
 	case repository.FieldFolderPath:
 		return m.FolderPath()
-	case repository.FieldCommitInfo:
-		return m.CommitInfo()
 	}
 	return nil, false
 }
@@ -24252,8 +27309,6 @@ func (m *RepositoryMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldEnviromentFilepath(ctx)
 	case repository.FieldFolderPath:
 		return m.OldFolderPath(ctx)
-	case repository.FieldCommitInfo:
-		return m.OldCommitInfo(ctx)
 	}
 	return nil, fmt.Errorf("unknown Repository field %s", name)
 }
@@ -24290,13 +27345,6 @@ func (m *RepositoryMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetFolderPath(v)
-		return nil
-	case repository.FieldCommitInfo:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCommitInfo(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Repository field %s", name)
@@ -24359,18 +27407,18 @@ func (m *RepositoryMutation) ResetField(name string) error {
 	case repository.FieldFolderPath:
 		m.ResetFolderPath()
 		return nil
-	case repository.FieldCommitInfo:
-		m.ResetCommitInfo()
-		return nil
 	}
 	return fmt.Errorf("unknown Repository field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RepositoryMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m._RepositoryToEnvironment != nil {
 		edges = append(edges, repository.EdgeRepositoryToEnvironment)
+	}
+	if m._RepositoryToRepoCommit != nil {
+		edges = append(edges, repository.EdgeRepositoryToRepoCommit)
 	}
 	return edges
 }
@@ -24385,15 +27433,24 @@ func (m *RepositoryMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case repository.EdgeRepositoryToRepoCommit:
+		ids := make([]ent.Value, 0, len(m._RepositoryToRepoCommit))
+		for id := range m._RepositoryToRepoCommit {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RepositoryMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.removed_RepositoryToEnvironment != nil {
 		edges = append(edges, repository.EdgeRepositoryToEnvironment)
+	}
+	if m.removed_RepositoryToRepoCommit != nil {
+		edges = append(edges, repository.EdgeRepositoryToRepoCommit)
 	}
 	return edges
 }
@@ -24408,15 +27465,24 @@ func (m *RepositoryMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case repository.EdgeRepositoryToRepoCommit:
+		ids := make([]ent.Value, 0, len(m.removed_RepositoryToRepoCommit))
+		for id := range m.removed_RepositoryToRepoCommit {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RepositoryMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.cleared_RepositoryToEnvironment {
 		edges = append(edges, repository.EdgeRepositoryToEnvironment)
+	}
+	if m.cleared_RepositoryToRepoCommit {
+		edges = append(edges, repository.EdgeRepositoryToRepoCommit)
 	}
 	return edges
 }
@@ -24427,6 +27493,8 @@ func (m *RepositoryMutation) EdgeCleared(name string) bool {
 	switch name {
 	case repository.EdgeRepositoryToEnvironment:
 		return m.cleared_RepositoryToEnvironment
+	case repository.EdgeRepositoryToRepoCommit:
+		return m.cleared_RepositoryToRepoCommit
 	}
 	return false
 }
@@ -24445,6 +27513,9 @@ func (m *RepositoryMutation) ResetEdge(name string) error {
 	switch name {
 	case repository.EdgeRepositoryToEnvironment:
 		m.ResetRepositoryToEnvironment()
+		return nil
+	case repository.EdgeRepositoryToRepoCommit:
+		m.ResetRepositoryToRepoCommit()
 		return nil
 	}
 	return fmt.Errorf("unknown Repository edge %s", name)
@@ -24518,7 +27589,7 @@ func withScriptID(id uuid.UUID) scriptOption {
 		m.oldValue = func(ctx context.Context) (*Script, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Script.Get(ctx, id)
 				}
@@ -24551,7 +27622,7 @@ func (m ScriptMutation) Client() *Client {
 // it returns an error otherwise.
 func (m ScriptMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -24573,6 +27644,25 @@ func (m *ScriptMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ScriptMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Script.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *ScriptMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -24592,10 +27682,10 @@ func (m *ScriptMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24628,10 +27718,10 @@ func (m *ScriptMutation) Name() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24664,10 +27754,10 @@ func (m *ScriptMutation) Language() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldLanguage(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldLanguage is only allowed on UpdateOne operations")
+		return v, errors.New("OldLanguage is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldLanguage requires an ID field in the mutation")
+		return v, errors.New("OldLanguage requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24700,10 +27790,10 @@ func (m *ScriptMutation) Description() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldDescription(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDescription is only allowed on UpdateOne operations")
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDescription requires an ID field in the mutation")
+		return v, errors.New("OldDescription requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24736,10 +27826,10 @@ func (m *ScriptMutation) Source() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldSource(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldSource is only allowed on UpdateOne operations")
+		return v, errors.New("OldSource is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldSource requires an ID field in the mutation")
+		return v, errors.New("OldSource requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24772,10 +27862,10 @@ func (m *ScriptMutation) SourceType() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldSourceType(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldSourceType is only allowed on UpdateOne operations")
+		return v, errors.New("OldSourceType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldSourceType requires an ID field in the mutation")
+		return v, errors.New("OldSourceType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24809,10 +27899,10 @@ func (m *ScriptMutation) Cooldown() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldCooldown(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldCooldown is only allowed on UpdateOne operations")
+		return v, errors.New("OldCooldown is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldCooldown requires an ID field in the mutation")
+		return v, errors.New("OldCooldown requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24865,10 +27955,10 @@ func (m *ScriptMutation) Timeout() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldTimeout(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTimeout is only allowed on UpdateOne operations")
+		return v, errors.New("OldTimeout is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTimeout requires an ID field in the mutation")
+		return v, errors.New("OldTimeout requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24920,10 +28010,10 @@ func (m *ScriptMutation) IgnoreErrors() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldIgnoreErrors(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldIgnoreErrors is only allowed on UpdateOne operations")
+		return v, errors.New("OldIgnoreErrors is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldIgnoreErrors requires an ID field in the mutation")
+		return v, errors.New("OldIgnoreErrors requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24956,10 +28046,10 @@ func (m *ScriptMutation) Args() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldArgs(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldArgs is only allowed on UpdateOne operations")
+		return v, errors.New("OldArgs is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldArgs requires an ID field in the mutation")
+		return v, errors.New("OldArgs requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -24992,10 +28082,10 @@ func (m *ScriptMutation) Disabled() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldDisabled(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDisabled is only allowed on UpdateOne operations")
+		return v, errors.New("OldDisabled is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDisabled requires an ID field in the mutation")
+		return v, errors.New("OldDisabled requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -25028,10 +28118,10 @@ func (m *ScriptMutation) Vars() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldVars is only allowed on UpdateOne operations")
+		return v, errors.New("OldVars is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldVars requires an ID field in the mutation")
+		return v, errors.New("OldVars requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -25064,10 +28154,10 @@ func (m *ScriptMutation) AbsPath() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldAbsPath(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldAbsPath is only allowed on UpdateOne operations")
+		return v, errors.New("OldAbsPath is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldAbsPath requires an ID field in the mutation")
+		return v, errors.New("OldAbsPath requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -25100,10 +28190,10 @@ func (m *ScriptMutation) Tags() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ScriptMutation) OldTags(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTags is only allowed on UpdateOne operations")
+		return v, errors.New("OldTags is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTags requires an ID field in the mutation")
+		return v, errors.New("OldTags requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -25833,6 +28923,8 @@ type ServerTaskMutation struct {
 	cleared_ServerTaskToEnvironment       bool
 	_ServerTaskToBuild                    *uuid.UUID
 	cleared_ServerTaskToBuild             bool
+	_ServerTaskToBuildCommit              *uuid.UUID
+	cleared_ServerTaskToBuildCommit       bool
 	_ServerTaskToGinFileMiddleware        map[uuid.UUID]struct{}
 	removed_ServerTaskToGinFileMiddleware map[uuid.UUID]struct{}
 	cleared_ServerTaskToGinFileMiddleware bool
@@ -25871,7 +28963,7 @@ func withServerTaskID(id uuid.UUID) servertaskOption {
 		m.oldValue = func(ctx context.Context) (*ServerTask, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().ServerTask.Get(ctx, id)
 				}
@@ -25904,7 +28996,7 @@ func (m ServerTaskMutation) Client() *Client {
 // it returns an error otherwise.
 func (m ServerTaskMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -25926,6 +29018,25 @@ func (m *ServerTaskMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ServerTaskMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ServerTask.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetType sets the "type" field.
 func (m *ServerTaskMutation) SetType(s servertask.Type) {
 	m._type = &s
@@ -25945,10 +29056,10 @@ func (m *ServerTaskMutation) GetType() (r servertask.Type, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ServerTaskMutation) OldType(ctx context.Context) (v servertask.Type, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldType is only allowed on UpdateOne operations")
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldType requires an ID field in the mutation")
+		return v, errors.New("OldType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -25981,10 +29092,10 @@ func (m *ServerTaskMutation) StartTime() (r time.Time, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ServerTaskMutation) OldStartTime(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldStartTime is only allowed on UpdateOne operations")
+		return v, errors.New("OldStartTime is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldStartTime requires an ID field in the mutation")
+		return v, errors.New("OldStartTime requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -26030,10 +29141,10 @@ func (m *ServerTaskMutation) EndTime() (r time.Time, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ServerTaskMutation) OldEndTime(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldEndTime is only allowed on UpdateOne operations")
+		return v, errors.New("OldEndTime is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldEndTime requires an ID field in the mutation")
+		return v, errors.New("OldEndTime requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -26079,10 +29190,10 @@ func (m *ServerTaskMutation) Errors() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ServerTaskMutation) OldErrors(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldErrors is only allowed on UpdateOne operations")
+		return v, errors.New("OldErrors is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldErrors requires an ID field in the mutation")
+		return v, errors.New("OldErrors requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -26128,10 +29239,10 @@ func (m *ServerTaskMutation) LogFilePath() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ServerTaskMutation) OldLogFilePath(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldLogFilePath is only allowed on UpdateOne operations")
+		return v, errors.New("OldLogFilePath is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldLogFilePath requires an ID field in the mutation")
+		return v, errors.New("OldLogFilePath requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -26312,6 +29423,45 @@ func (m *ServerTaskMutation) ServerTaskToBuildIDs() (ids []uuid.UUID) {
 func (m *ServerTaskMutation) ResetServerTaskToBuild() {
 	m._ServerTaskToBuild = nil
 	m.cleared_ServerTaskToBuild = false
+}
+
+// SetServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by id.
+func (m *ServerTaskMutation) SetServerTaskToBuildCommitID(id uuid.UUID) {
+	m._ServerTaskToBuildCommit = &id
+}
+
+// ClearServerTaskToBuildCommit clears the "ServerTaskToBuildCommit" edge to the BuildCommit entity.
+func (m *ServerTaskMutation) ClearServerTaskToBuildCommit() {
+	m.cleared_ServerTaskToBuildCommit = true
+}
+
+// ServerTaskToBuildCommitCleared reports if the "ServerTaskToBuildCommit" edge to the BuildCommit entity was cleared.
+func (m *ServerTaskMutation) ServerTaskToBuildCommitCleared() bool {
+	return m.cleared_ServerTaskToBuildCommit
+}
+
+// ServerTaskToBuildCommitID returns the "ServerTaskToBuildCommit" edge ID in the mutation.
+func (m *ServerTaskMutation) ServerTaskToBuildCommitID() (id uuid.UUID, exists bool) {
+	if m._ServerTaskToBuildCommit != nil {
+		return *m._ServerTaskToBuildCommit, true
+	}
+	return
+}
+
+// ServerTaskToBuildCommitIDs returns the "ServerTaskToBuildCommit" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ServerTaskToBuildCommitID instead. It exists only for internal usage by the builders.
+func (m *ServerTaskMutation) ServerTaskToBuildCommitIDs() (ids []uuid.UUID) {
+	if id := m._ServerTaskToBuildCommit; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetServerTaskToBuildCommit resets all changes to the "ServerTaskToBuildCommit" edge.
+func (m *ServerTaskMutation) ResetServerTaskToBuildCommit() {
+	m._ServerTaskToBuildCommit = nil
+	m.cleared_ServerTaskToBuildCommit = false
 }
 
 // AddServerTaskToGinFileMiddlewareIDs adds the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity by ids.
@@ -26581,7 +29731,7 @@ func (m *ServerTaskMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ServerTaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m._ServerTaskToAuthUser != nil {
 		edges = append(edges, servertask.EdgeServerTaskToAuthUser)
 	}
@@ -26593,6 +29743,9 @@ func (m *ServerTaskMutation) AddedEdges() []string {
 	}
 	if m._ServerTaskToBuild != nil {
 		edges = append(edges, servertask.EdgeServerTaskToBuild)
+	}
+	if m._ServerTaskToBuildCommit != nil {
+		edges = append(edges, servertask.EdgeServerTaskToBuildCommit)
 	}
 	if m._ServerTaskToGinFileMiddleware != nil {
 		edges = append(edges, servertask.EdgeServerTaskToGinFileMiddleware)
@@ -26620,6 +29773,10 @@ func (m *ServerTaskMutation) AddedIDs(name string) []ent.Value {
 		if id := m._ServerTaskToBuild; id != nil {
 			return []ent.Value{*id}
 		}
+	case servertask.EdgeServerTaskToBuildCommit:
+		if id := m._ServerTaskToBuildCommit; id != nil {
+			return []ent.Value{*id}
+		}
 	case servertask.EdgeServerTaskToGinFileMiddleware:
 		ids := make([]ent.Value, 0, len(m._ServerTaskToGinFileMiddleware))
 		for id := range m._ServerTaskToGinFileMiddleware {
@@ -26632,7 +29789,7 @@ func (m *ServerTaskMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ServerTaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.removed_ServerTaskToGinFileMiddleware != nil {
 		edges = append(edges, servertask.EdgeServerTaskToGinFileMiddleware)
 	}
@@ -26655,7 +29812,7 @@ func (m *ServerTaskMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ServerTaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.cleared_ServerTaskToAuthUser {
 		edges = append(edges, servertask.EdgeServerTaskToAuthUser)
 	}
@@ -26667,6 +29824,9 @@ func (m *ServerTaskMutation) ClearedEdges() []string {
 	}
 	if m.cleared_ServerTaskToBuild {
 		edges = append(edges, servertask.EdgeServerTaskToBuild)
+	}
+	if m.cleared_ServerTaskToBuildCommit {
+		edges = append(edges, servertask.EdgeServerTaskToBuildCommit)
 	}
 	if m.cleared_ServerTaskToGinFileMiddleware {
 		edges = append(edges, servertask.EdgeServerTaskToGinFileMiddleware)
@@ -26686,6 +29846,8 @@ func (m *ServerTaskMutation) EdgeCleared(name string) bool {
 		return m.cleared_ServerTaskToEnvironment
 	case servertask.EdgeServerTaskToBuild:
 		return m.cleared_ServerTaskToBuild
+	case servertask.EdgeServerTaskToBuildCommit:
+		return m.cleared_ServerTaskToBuildCommit
 	case servertask.EdgeServerTaskToGinFileMiddleware:
 		return m.cleared_ServerTaskToGinFileMiddleware
 	}
@@ -26708,6 +29870,9 @@ func (m *ServerTaskMutation) ClearEdge(name string) error {
 	case servertask.EdgeServerTaskToBuild:
 		m.ClearServerTaskToBuild()
 		return nil
+	case servertask.EdgeServerTaskToBuildCommit:
+		m.ClearServerTaskToBuildCommit()
+		return nil
 	}
 	return fmt.Errorf("unknown ServerTask unique edge %s", name)
 }
@@ -26727,6 +29892,9 @@ func (m *ServerTaskMutation) ResetEdge(name string) error {
 		return nil
 	case servertask.EdgeServerTaskToBuild:
 		m.ResetServerTaskToBuild()
+		return nil
+	case servertask.EdgeServerTaskToBuildCommit:
+		m.ResetServerTaskToBuildCommit()
 		return nil
 	case servertask.EdgeServerTaskToGinFileMiddleware:
 		m.ResetServerTaskToGinFileMiddleware()
@@ -26800,7 +29968,7 @@ func withStatusID(id uuid.UUID) statusOption {
 		m.oldValue = func(ctx context.Context) (*Status, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Status.Get(ctx, id)
 				}
@@ -26833,7 +30001,7 @@ func (m StatusMutation) Client() *Client {
 // it returns an error otherwise.
 func (m StatusMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -26855,6 +30023,25 @@ func (m *StatusMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *StatusMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Status.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetState sets the "state" field.
 func (m *StatusMutation) SetState(s status.State) {
 	m.state = &s
@@ -26874,10 +30061,10 @@ func (m *StatusMutation) State() (r status.State, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *StatusMutation) OldState(ctx context.Context) (v status.State, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldState is only allowed on UpdateOne operations")
+		return v, errors.New("OldState is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldState requires an ID field in the mutation")
+		return v, errors.New("OldState requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -26910,10 +30097,10 @@ func (m *StatusMutation) StatusFor() (r status.StatusFor, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *StatusMutation) OldStatusFor(ctx context.Context) (v status.StatusFor, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldStatusFor is only allowed on UpdateOne operations")
+		return v, errors.New("OldStatusFor is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldStatusFor requires an ID field in the mutation")
+		return v, errors.New("OldStatusFor requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -26946,10 +30133,10 @@ func (m *StatusMutation) StartedAt() (r time.Time, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *StatusMutation) OldStartedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldStartedAt is only allowed on UpdateOne operations")
+		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldStartedAt requires an ID field in the mutation")
+		return v, errors.New("OldStartedAt requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -26995,10 +30182,10 @@ func (m *StatusMutation) EndedAt() (r time.Time, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *StatusMutation) OldEndedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldEndedAt is only allowed on UpdateOne operations")
+		return v, errors.New("OldEndedAt is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldEndedAt requires an ID field in the mutation")
+		return v, errors.New("OldEndedAt requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -27044,10 +30231,10 @@ func (m *StatusMutation) Failed() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *StatusMutation) OldFailed(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldFailed is only allowed on UpdateOne operations")
+		return v, errors.New("OldFailed is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldFailed requires an ID field in the mutation")
+		return v, errors.New("OldFailed requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -27080,10 +30267,10 @@ func (m *StatusMutation) Completed() (r bool, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *StatusMutation) OldCompleted(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldCompleted is only allowed on UpdateOne operations")
+		return v, errors.New("OldCompleted is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldCompleted requires an ID field in the mutation")
+		return v, errors.New("OldCompleted requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -27116,10 +30303,10 @@ func (m *StatusMutation) Error() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *StatusMutation) OldError(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldError is only allowed on UpdateOne operations")
+		return v, errors.New("OldError is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldError requires an ID field in the mutation")
+		return v, errors.New("OldError requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -27944,7 +31131,7 @@ func withTagID(id uuid.UUID) tagOption {
 		m.oldValue = func(ctx context.Context) (*Tag, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Tag.Get(ctx, id)
 				}
@@ -27977,7 +31164,7 @@ func (m TagMutation) Client() *Client {
 // it returns an error otherwise.
 func (m TagMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -27999,6 +31186,25 @@ func (m *TagMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TagMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Tag.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetUUID sets the "uuid" field.
 func (m *TagMutation) SetUUID(u uuid.UUID) {
 	m.uuid = &u
@@ -28018,10 +31224,10 @@ func (m *TagMutation) UUID() (r uuid.UUID, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *TagMutation) OldUUID(ctx context.Context) (v uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldUUID is only allowed on UpdateOne operations")
+		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldUUID requires an ID field in the mutation")
+		return v, errors.New("OldUUID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -28054,10 +31260,10 @@ func (m *TagMutation) Name() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *TagMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -28090,10 +31296,10 @@ func (m *TagMutation) Description() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *TagMutation) OldDescription(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldDescription is only allowed on UpdateOne operations")
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldDescription requires an ID field in the mutation")
+		return v, errors.New("OldDescription requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -28359,7 +31565,7 @@ func withTeamID(id uuid.UUID) teamOption {
 		m.oldValue = func(ctx context.Context) (*Team, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Team.Get(ctx, id)
 				}
@@ -28392,7 +31598,7 @@ func (m TeamMutation) Client() *Client {
 // it returns an error otherwise.
 func (m TeamMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -28412,6 +31618,25 @@ func (m *TeamMutation) ID() (id uuid.UUID, exists bool) {
 		return
 	}
 	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TeamMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Team.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
 }
 
 // SetTeamNumber sets the "team_number" field.
@@ -28434,10 +31659,10 @@ func (m *TeamMutation) TeamNumber() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *TeamMutation) OldTeamNumber(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTeamNumber is only allowed on UpdateOne operations")
+		return v, errors.New("OldTeamNumber is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTeamNumber requires an ID field in the mutation")
+		return v, errors.New("OldTeamNumber requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -28489,10 +31714,10 @@ func (m *TeamMutation) Vars() (r map[string]string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *TeamMutation) OldVars(ctx context.Context) (v map[string]string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldVars is only allowed on UpdateOne operations")
+		return v, errors.New("OldVars is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldVars requires an ID field in the mutation")
+		return v, errors.New("OldVars requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -29010,7 +32235,7 @@ func withTokenID(id uuid.UUID) tokenOption {
 		m.oldValue = func(ctx context.Context) (*Token, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Token.Get(ctx, id)
 				}
@@ -29043,7 +32268,7 @@ func (m TokenMutation) Client() *Client {
 // it returns an error otherwise.
 func (m TokenMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -29065,6 +32290,25 @@ func (m *TokenMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TokenMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Token.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetToken sets the "token" field.
 func (m *TokenMutation) SetToken(s string) {
 	m.token = &s
@@ -29084,10 +32328,10 @@ func (m *TokenMutation) Token() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *TokenMutation) OldToken(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldToken is only allowed on UpdateOne operations")
+		return v, errors.New("OldToken is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldToken requires an ID field in the mutation")
+		return v, errors.New("OldToken requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -29121,10 +32365,10 @@ func (m *TokenMutation) ExpireAt() (r int64, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *TokenMutation) OldExpireAt(ctx context.Context) (v int64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldExpireAt is only allowed on UpdateOne operations")
+		return v, errors.New("OldExpireAt is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldExpireAt requires an ID field in the mutation")
+		return v, errors.New("OldExpireAt requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -29472,7 +32716,7 @@ func withUserID(id uuid.UUID) userOption {
 		m.oldValue = func(ctx context.Context) (*User, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().User.Get(ctx, id)
 				}
@@ -29505,7 +32749,7 @@ func (m UserMutation) Client() *Client {
 // it returns an error otherwise.
 func (m UserMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -29527,6 +32771,25 @@ func (m *UserMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *UserMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().User.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetName sets the "name" field.
 func (m *UserMutation) SetName(s string) {
 	m.name = &s
@@ -29546,10 +32809,10 @@ func (m *UserMutation) Name() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *UserMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -29582,10 +32845,10 @@ func (m *UserMutation) UUID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *UserMutation) OldUUID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldUUID is only allowed on UpdateOne operations")
+		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldUUID requires an ID field in the mutation")
+		return v, errors.New("OldUUID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -29618,10 +32881,10 @@ func (m *UserMutation) Email() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *UserMutation) OldEmail(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldEmail is only allowed on UpdateOne operations")
+		return v, errors.New("OldEmail is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldEmail requires an ID field in the mutation")
+		return v, errors.New("OldEmail requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -29654,10 +32917,10 @@ func (m *UserMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *UserMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {

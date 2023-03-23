@@ -24,11 +24,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func DeleteBuild(client *ent.Client, rdb *redis.Client, logger *logging.Logger, currentUser *ent.AuthUser, serverTask *ent.ServerTask, taskStatus *ent.Status, entBuild *ent.Build, spawnedDelete chan bool) (bool, error) {
+func DeleteBuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, currentUser *ent.AuthUser, serverTask *ent.ServerTask, taskStatus *ent.Status, entBuild *ent.Build, spawnedDelete chan bool) (bool, error) {
 	deleteContext := context.Background()
 	defer deleteContext.Done()
 
 	entDeleteCommit, err := generateDeleteBuildCommit(deleteContext, client, entBuild)
+	if err != nil {
+		spawnedDelete <- false
+		return false, err
+	}
+	err = entDeleteCommit.Update().AddBuildCommitToServerTask(serverTask).Exec(deleteContext)
 	if err != nil {
 		spawnedDelete <- false
 		return false, err
@@ -89,7 +94,7 @@ func DeleteBuild(client *ent.Client, rdb *redis.Client, logger *logging.Logger, 
 
 	var wg sync.WaitGroup
 	for _, entPlan := range entPlans {
-		planStatus, err := entPlan.PlanToStatus(deleteContext)
+		planStatus, err := entPlan.QueryPlanToStatus().Only(deleteContext)
 		if err != nil {
 			taskStatus, serverTask, err = utils.FailServerTask(deleteContext, client, rdb, taskStatus, serverTask)
 			if err != nil {
@@ -129,7 +134,7 @@ func DeleteBuild(client *ent.Client, rdb *redis.Client, logger *logging.Logger, 
 		return false, err
 	}
 
-	genericBuilder, err := builder.BuilderFromEnvironment(environment, logger)
+	genericBuilder, err := builder.BuilderFromEnvironment(laforgeConfig.Builders, environment, logger)
 	if err != nil {
 		logger.Log.Errorf("error generating builder: %v", err)
 		taskStatus, serverTask, err = utils.FailServerTask(deleteContext, client, rdb, taskStatus, serverTask)
@@ -394,7 +399,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 
 		if hasTaintedNextPlans {
 			logger.Log.Errorf("error: children are TAINTED for entPlan %s", entPlan.ID)
-			entStatus, err := entPlan.PlanToStatus(ctx)
+			entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
 			if err != nil {
 				logger.Log.Errorf("error querying status from ent plan: %v", err)
 				return
@@ -440,7 +445,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 
 	logger.Log.Debugf("fr deleting  | %s - %s", entPlan.Type, entPlan.ID)
 
-	entStatus, err := entPlan.PlanToStatus(ctx)
+	entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("error querying status from ent plan: %v", err)
 		return
@@ -472,8 +477,15 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 	case plan.TypeStartTeam:
 		deleteErr = provisionedStatus.Update().SetState(status.StateDELETED).Exec(ctx)
 		rdb.Publish(ctx, "updatedStatus", provisionedStatus.ID.String())
+		entTeam, err := entPlan.QueryPlanToTeam().Only(ctx)
+		if err != nil {
+			logger.Log.Errorf("error querying team from ent plan: %v", err)
+			return
+		}
+		logger.Log.Debugf("del team  | %s", entPlan.ID)
+		deleteErr = deleteTeam(client, logger, builder, ctx, entTeam)
 	case plan.TypeProvisionNetwork:
-		entProNetwork, err := entPlan.PlanToProvisionedNetwork(ctx)
+		entProNetwork, err := entPlan.QueryPlanToProvisionedNetwork().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("error querying provisioned network from ent plan: %v", err)
 			return
@@ -481,7 +493,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 		logger.Log.Debugf("del network  | %s", entPlan.ID)
 		deleteErr = deleteNetwork(client, logger, builder, ctx, entProNetwork)
 	case plan.TypeProvisionHost:
-		entProHost, err := entPlan.PlanToProvisionedHost(ctx)
+		entProHost, err := entPlan.QueryPlanToProvisionedHost().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("error querying provisioned host from ent plan: %v", err)
 			return
@@ -622,5 +634,34 @@ func deleteNetwork(client *ent.Client, logger *logging.Logger, builder *builder.
 		rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
 	}
 	logger.Log.Infof("deleted %s successfully", entProNetwork.Name)
+	return nil
+}
+
+func deleteTeam(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entTeam *ent.Team) error {
+	logger.Log.Infof("del network  | %d", entTeam.TeamNumber)
+	teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while getting Team status: %v", err)
+		return err
+	}
+	err = (*builder).TeardownTeam(ctx, entTeam)
+	if err != nil {
+		logger.Log.Errorf("error while deleteing network: %v", err)
+		_, saveErr := teamStatus.Update().SetState(status.StateTAINTED).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("error while setting Provisioned Network status to TAINTED: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+		return err
+	} else {
+		_, saveErr := teamStatus.Update().SetState(status.StateDELETED).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("error while setting Provisioned Network status to DELETED: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+	}
+	logger.Log.Infof("deleted %d successfully", entTeam.TeamNumber)
 	return nil
 }

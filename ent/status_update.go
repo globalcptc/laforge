@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -405,12 +406,12 @@ func (su *StatusUpdate) ExecX(ctx context.Context) {
 func (su *StatusUpdate) check() error {
 	if v, ok := su.mutation.State(); ok {
 		if err := status.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf("ent: validator failed for field \"state\": %w", err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Status.state": %w`, err)}
 		}
 	}
 	if v, ok := su.mutation.StatusFor(); ok {
 		if err := status.StatusForValidator(v); err != nil {
-			return &ValidationError{Name: "status_for", err: fmt.Errorf("ent: validator failed for field \"status_for\": %w", err)}
+			return &ValidationError{Name: "status_for", err: fmt.Errorf(`ent: validator failed for field "Status.status_for": %w`, err)}
 		}
 	}
 	return nil
@@ -1176,12 +1177,12 @@ func (suo *StatusUpdateOne) ExecX(ctx context.Context) {
 func (suo *StatusUpdateOne) check() error {
 	if v, ok := suo.mutation.State(); ok {
 		if err := status.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf("ent: validator failed for field \"state\": %w", err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Status.state": %w`, err)}
 		}
 	}
 	if v, ok := suo.mutation.StatusFor(); ok {
 		if err := status.StatusForValidator(v); err != nil {
-			return &ValidationError{Name: "status_for", err: fmt.Errorf("ent: validator failed for field \"status_for\": %w", err)}
+			return &ValidationError{Name: "status_for", err: fmt.Errorf(`ent: validator failed for field "Status.status_for": %w`, err)}
 		}
 	}
 	return nil
@@ -1200,7 +1201,7 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 	}
 	id, ok := suo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Status.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Status.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := suo.fields; len(fields) > 0 {

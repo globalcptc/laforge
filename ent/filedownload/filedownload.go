@@ -29,6 +29,8 @@ const (
 	FieldMd5 = "md5"
 	// FieldAbsPath holds the string denoting the abs_path field in the database.
 	FieldAbsPath = "abs_path"
+	// FieldIsTxt holds the string denoting the is_txt field in the database.
+	FieldIsTxt = "is_txt"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
 	// EdgeFileDownloadToEnvironment holds the string denoting the filedownloadtoenvironment edge name in mutations.
@@ -56,6 +58,7 @@ var Columns = []string{
 	FieldDisabled,
 	FieldMd5,
 	FieldAbsPath,
+	FieldIsTxt,
 	FieldTags,
 }
 
@@ -81,6 +84,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultIsTxt holds the default value on creation for the "is_txt" field.
+	DefaultIsTxt bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )

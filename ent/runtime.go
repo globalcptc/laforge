@@ -3,9 +3,12 @@
 package ent
 
 import (
+	"time"
+
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -30,6 +33,7 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/schema"
 	"github.com/gen0cide/laforge/ent/script"
@@ -73,6 +77,12 @@ func init() {
 	agenttaskDescID := agenttaskFields[0].Descriptor()
 	// agenttask.DefaultID holds the default value on creation for the id field.
 	agenttask.DefaultID = agenttaskDescID.Default.(func() uuid.UUID)
+	ansibleFields := schema.Ansible{}.Fields()
+	_ = ansibleFields
+	// ansibleDescID is the schema descriptor for id field.
+	ansibleDescID := ansibleFields[0].Descriptor()
+	// ansible.DefaultID holds the default value on creation for the id field.
+	ansible.DefaultID = ansibleDescID.Default.(func() uuid.UUID)
 	authuserFields := schema.AuthUser{}.Fields()
 	_ = authuserFields
 	// authuserDescFirstName is the schema descriptor for first_name field.
@@ -110,7 +120,7 @@ func init() {
 	buildFields := schema.Build{}.Fields()
 	_ = buildFields
 	// buildDescCompletedPlan is the schema descriptor for completed_plan field.
-	buildDescCompletedPlan := buildFields[3].Descriptor()
+	buildDescCompletedPlan := buildFields[4].Descriptor()
 	// build.DefaultCompletedPlan holds the default value on creation for the completed_plan field.
 	build.DefaultCompletedPlan = buildDescCompletedPlan.Default.(bool)
 	// buildDescID is the schema descriptor for id field.
@@ -119,6 +129,10 @@ func init() {
 	build.DefaultID = buildDescID.Default.(func() uuid.UUID)
 	buildcommitFields := schema.BuildCommit{}.Fields()
 	_ = buildcommitFields
+	// buildcommitDescCreatedAt is the schema descriptor for created_at field.
+	buildcommitDescCreatedAt := buildcommitFields[4].Descriptor()
+	// buildcommit.DefaultCreatedAt holds the default value on creation for the created_at field.
+	buildcommit.DefaultCreatedAt = buildcommitDescCreatedAt.Default.(func() time.Time)
 	// buildcommitDescID is the schema descriptor for id field.
 	buildcommitDescID := buildcommitFields[0].Descriptor()
 	// buildcommit.DefaultID holds the default value on creation for the id field.
@@ -179,6 +193,10 @@ func init() {
 	filedelete.DefaultID = filedeleteDescID.Default.(func() uuid.UUID)
 	filedownloadFields := schema.FileDownload{}.Fields()
 	_ = filedownloadFields
+	// filedownloadDescIsTxt is the schema descriptor for is_txt field.
+	filedownloadDescIsTxt := filedownloadFields[10].Descriptor()
+	// filedownload.DefaultIsTxt holds the default value on creation for the is_txt field.
+	filedownload.DefaultIsTxt = filedownloadDescIsTxt.Default.(bool)
 	// filedownloadDescID is the schema descriptor for id field.
 	filedownloadDescID := filedownloadFields[0].Descriptor()
 	// filedownload.DefaultID holds the default value on creation for the id field.
@@ -265,6 +283,12 @@ func init() {
 	provisioningstepDescID := provisioningstepFields[0].Descriptor()
 	// provisioningstep.DefaultID holds the default value on creation for the id field.
 	provisioningstep.DefaultID = provisioningstepDescID.Default.(func() uuid.UUID)
+	repocommitFields := schema.RepoCommit{}.Fields()
+	_ = repocommitFields
+	// repocommitDescID is the schema descriptor for id field.
+	repocommitDescID := repocommitFields[0].Descriptor()
+	// repocommit.DefaultID holds the default value on creation for the id field.
+	repocommit.DefaultID = repocommitDescID.Default.(func() uuid.UUID)
 	repositoryFields := schema.Repository{}.Fields()
 	_ = repositoryFields
 	// repositoryDescBranchName is the schema descriptor for branch_name field.
@@ -275,10 +299,6 @@ func init() {
 	repositoryDescFolderPath := repositoryFields[4].Descriptor()
 	// repository.DefaultFolderPath holds the default value on creation for the folder_path field.
 	repository.DefaultFolderPath = repositoryDescFolderPath.Default.(string)
-	// repositoryDescCommitInfo is the schema descriptor for commit_info field.
-	repositoryDescCommitInfo := repositoryFields[5].Descriptor()
-	// repository.DefaultCommitInfo holds the default value on creation for the commit_info field.
-	repository.DefaultCommitInfo = repositoryDescCommitInfo.Default.(string)
 	// repositoryDescID is the schema descriptor for id field.
 	repositoryDescID := repositoryFields[0].Descriptor()
 	// repository.DefaultID holds the default value on creation for the id field.

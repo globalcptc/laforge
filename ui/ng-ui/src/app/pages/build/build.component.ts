@@ -1,16 +1,15 @@
-import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import {
-  LaForgeGetBuildTreeQuery,
-  LaForgeGetEnvironmentInfoQuery,
-  LaForgeProvisionStatus,
-  LaForgeSubscribeUpdatedStatusSubscription
-} from '@graphql';
-import { Observable, Subscription } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { LaForgeGetBuildTreeQuery, LaForgeGetPlanStatusCountsQuery, LaForgeProvisionStatus } from '@graphql';
+import { ApiService } from '@services/api/api.service';
+import { StatusService } from '@services/status/status.service';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { SubheaderService } from 'src/app/_metronic/partials/layout/subheader/_services/subheader.service';
 import { EnvironmentService } from 'src/app/services/environment/environment.service';
 
-import { LaForgeExecuteBuildGQL } from '../../../generated/graphql';
+import { ViewLogsModalComponent } from '@components/view-logs-modal/view-logs-modal.component';
 
 @Component({
   selector: 'app-build',
@@ -19,126 +18,124 @@ import { LaForgeExecuteBuildGQL } from '../../../generated/graphql';
 })
 export class BuildComponent implements OnInit, OnDestroy {
   private unsubscribe: Subscription[] = [];
-  environment: Observable<LaForgeGetEnvironmentInfoQuery['environment']>;
-  build: Observable<LaForgeGetBuildTreeQuery['build']>;
-  buildStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
+  private buildId: string;
+  build: BehaviorSubject<LaForgeGetBuildTreeQuery['build']>;
+  planStatusCounts: BehaviorSubject<LaForgeGetPlanStatusCountsQuery['getPlanStatusCounts']>;
   executeBuildLoading = false;
   planStatusesLoading = false;
   agentStatusesLoading = false;
+  // viewTeams: BehaviorSubject<LaForgeGetBuildTreeQuery['build']['buildToTeam']>;
+  statusCountInterval: NodeJS.Timeout;
 
   constructor(
     private subheader: SubheaderService,
     public envService: EnvironmentService,
-    private cdRef: ChangeDetectorRef,
-    private executeBuild: LaForgeExecuteBuildGQL,
-    private snackbar: MatSnackBar
+    private snackbar: MatSnackBar,
+    private api: ApiService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private status: StatusService,
+    private dialog: MatDialog
   ) {
     this.subheader.setTitle('Build');
     this.subheader.setDescription('Monitor the progress of a given build');
-    this.subheader.setShowEnvDropdown(true);
+    this.subheader.setShowEnvDropdown(false);
 
-    this.environment = this.envService.getEnvironmentInfo().asObservable();
-    this.build = this.envService.getBuildTree().asObservable();
-    this.envService.buildIsLoading.subscribe((isLoading) => {
-      if (isLoading)
-        this.snackbar.open('Environment is loading...', null, {
-          panelClass: ['bg-info', 'text-white']
-        });
-      else if (!this.envService.buildIsLoading.getValue()) this.snackbar.dismiss();
+    this.build = new BehaviorSubject(null);
+    this.planStatusCounts = new BehaviorSubject({
+      planning: 0,
+      awaiting: 0,
+      parentAwaiting: 0,
+      inProgress: 0,
+      failed: 0,
+      complete: 0,
+      tainted: 0,
+      toDelete: 0,
+      deleteInProgress: 0,
+      deleted: 0,
+      toRebuild: 0,
+      cancelled: 0
     });
-    this.envService.buildIsLoading.subscribe((isLoading) => {
-      if (isLoading)
-        this.snackbar.open('Build is loading...', null, {
-          panelClass: ['bg-info', 'text-white']
-        });
-      else if (!this.envService.envIsLoading.getValue()) this.snackbar.dismiss();
-    });
+    // this.statuses = new BehaviorSubject([]);
+    // this.agentStatuses = new BehaviorSubject([]);
+    // this.viewTeams = new BehaviorSubject([]);
   }
 
   ngOnInit(): void {
-    const sub1 = this.envService.getBuildTree().subscribe((buildTree) => {
-      if (!buildTree) return;
-      this.planStatusesLoading = true;
-      this.envService
-        .initPlanStatuses()
-        .catch((err) => {
-          this.snackbar.open(err, 'Okay', {
-            panelClass: ['bg-danger', 'text-white']
-          });
-        })
-        .finally(() => {
-          this.planStatusesLoading = false;
-          this.cdRef.detectChanges();
-        });
-      this.agentStatusesLoading = true;
-      this.envService
-        .initAgentStatuses()
-        .catch((err) => {
-          this.snackbar.open(err, 'Okay', {
-            panelClass: ['bg-danger', 'text-white']
-          });
-        })
-        .finally(() => {
-          this.agentStatusesLoading = false;
-          this.cdRef.detectChanges();
-        });
-      this.envService.startAgentStatusSubscription();
-      this.envService.startStatusSubscription();
-      this.envService.startAgentTaskSubscription();
-      this.envService.startBuildCommitSubscription();
-      this.envService.startBuildSubscription();
+    this.route.params.subscribe((params) => {
+      this.buildId = params.id;
+      this.initBuildTree();
+      this.status.loadStatusCacheFromBuild(this.buildId);
+      this.status.loadAgentStatusCacheFromBuild(this.buildId);
+      // this.initStatusMap();
+      // this.initAgentStatusMap();
+      this.statusCountInterval = setInterval(
+        () => this.api.getPlanStatusCountCache(this.buildId).then((counts) => this.planStatusCounts.next(counts)),
+        2000
+      );
     });
-    this.unsubscribe.push(sub1);
-    const sub2 = this.envService.statusUpdate.asObservable().subscribe(() => {
-      this.checkBuildStatus();
-      this.cdRef.detectChanges();
-    });
-    this.unsubscribe.push(sub2);
   }
 
   ngOnDestroy(): void {
     this.unsubscribe.forEach((sub) => sub.unsubscribe());
-    this.envService.stopAgentStatusSubscription();
-    this.envService.stopStatusSubscription();
-    this.envService.stopAgentTaskSubscription();
-    this.envService.stopBuildCommitSubscription();
-    this.envService.stopBuildSubscription();
+    if (this.statusCountInterval) clearInterval(this.statusCountInterval);
   }
 
-  checkBuildStatus(): void {
-    if (!this.envService.getBuildTree().getValue()) return;
-    const updatedStatus = this.envService.getStatus(this.envService.getBuildTree().getValue().buildToStatus.id);
-    if (updatedStatus) {
-      this.buildStatus = { ...updatedStatus };
-    }
-  }
+  checkBuildStatus(): void {}
 
   envIsSelected(): boolean {
     return this.envService.getEnvironmentInfo().getValue() != null;
   }
 
-  triggerExecuteBuild(): void {
-    if (!this.envService.getBuildTree().getValue()?.id) return;
-    this.executeBuildLoading = true;
-    this.executeBuild
-      .mutate({
-        buildId: this.envService.getBuildTree().getValue().id
-      })
-      .toPromise()
-      .then(({ data, errors }) => {
-        if (errors) {
-          return console.error(errors);
-        }
-      }, console.error)
-      .finally(() => {
-        this.executeBuildLoading = false;
-        this.snackbar.open('Successfully started build!', 'Cool', {
-          duration: 3000
-        });
-      });
+  initBuildTree(): void {
+    this.api.getBuildTree(this.buildId).then((b) => {
+      this.build.next(b);
+      // this.viewTeams.next([b.buildToTeam[0]]);
+    });
   }
 
-  canExecuteBuild(): boolean {
-    return this.buildStatus && this.buildStatus.state === LaForgeProvisionStatus.Planning;
+  viewBuildLogs() {
+    const taskUUIDs = this.build.getValue().BuildToServerTasks.map((s) => s.id);
+    this.dialog.open(ViewLogsModalComponent, {
+      width: '75%',
+      height: '90%',
+      data: {
+        taskUUIDs
+      }
+    });
+  }
+
+  buildIsCancellable(): boolean {
+    const _build = this.build.getValue();
+    if (!_build) return false;
+    const _buildStatus = this.status.getStatusValue(_build.buildToStatus.id);
+    if (!_buildStatus) return false;
+    if (_buildStatus.state === LaForgeProvisionStatus.Deleted) return false;
+    if (_buildStatus.state === LaForgeProvisionStatus.Deleteinprogress) return false;
+    if (_buildStatus.state === LaForgeProvisionStatus.Todelete) return false;
+    return true;
+  }
+
+  cancelBuild(buildId: string) {
+    this.snackbar.open('Build is being cancelled...', null, {
+      duration: 1000,
+      panelClass: ['bg-info', 'text-white']
+    });
+    this.api.cancelBuild(buildId).then(
+      () => {
+        this.snackbar.open('Build cancelled successfully.', null, {
+          duration: 1000,
+          panelClass: ['bg-success', 'text-white']
+        });
+        setTimeout(() => this.router.navigate(['manage', this.build.getValue().id]), 1000);
+      },
+      (err) => {
+        console.error(err);
+        this.snackbar.open('Error while creating build. Please check logs for details.', 'Okay', {
+          duration: 3000,
+          panelClass: ['bg-danger', 'text-white']
+        });
+      }
+    );
   }
 }

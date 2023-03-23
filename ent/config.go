@@ -27,6 +27,7 @@ type hooks struct {
 	AdhocPlan          []ent.Hook
 	AgentStatus        []ent.Hook
 	AgentTask          []ent.Hook
+	Ansible            []ent.Hook
 	AuthUser           []ent.Hook
 	Build              []ent.Hook
 	BuildCommit        []ent.Hook
@@ -51,6 +52,7 @@ type hooks struct {
 	ProvisionedHost    []ent.Hook
 	ProvisionedNetwork []ent.Hook
 	ProvisioningStep   []ent.Hook
+	RepoCommit         []ent.Hook
 	Repository         []ent.Hook
 	Script             []ent.Hook
 	ServerTask         []ent.Hook

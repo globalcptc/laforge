@@ -16,21 +16,22 @@ import (
 )
 
 type TempleteContext struct {
-	Build              *ent.Build
-	Competition        *ent.Competition
-	Environment        *ent.Environment
-	Host               *ent.Host
-	DNS                *ent.DNS
-	DNSRecords         []*ent.DNSRecord
-	IncludedNetworks   []*ent.IncludedNetwork
-	Network            *ent.Network
-	Script             *ent.Script
-	Team               *ent.Team
-	Identities         []*ent.Identity
-	ProvisionedNetwork *ent.ProvisionedNetwork
-	ProvisionedHost    *ent.ProvisionedHost
-	ProvisioningStep   *ent.ProvisioningStep
-	AgentSlug          string
+	Build              *ent.Build              `yaml:"build,omitempty"`
+	Competition        *ent.Competition        `yaml:"competition,omitempty"`
+	Environment        *ent.Environment        `yaml:"environment,omitempty"`
+	Host               *ent.Host               `yaml:"host,omitempty"`
+	DNS                *ent.DNS                `yaml:"dns,omitempty"`
+	DNSRecords         []*ent.DNSRecord        `yaml:"dns_records,omitempty"`
+	IncludedNetworks   []*ent.IncludedNetwork  `yaml:"included_networks,omitempty"`
+	Network            *ent.Network            `yaml:"network,omitempty"`
+	Script             *ent.Script             `yaml:"script,omitempty"`
+	Team               *ent.Team               `yaml:"team,omitempty"`
+	Identities         []*ent.Identity         `yaml:"identities,omitempty"`
+	ProvisionedNetwork *ent.ProvisionedNetwork `yaml:"provisioned_network,omitempty"`
+	ProvisionedHost    *ent.ProvisionedHost    `yaml:"provisioned_host,omitempty"`
+	ProvisioningStep   *ent.ProvisioningStep   `yaml:"provisioning_step,omitempty"`
+	AgentSlug          string                  `yaml:"agent_slug,omitempty"`
+	Ansible            *ent.Ansible            `yaml:"ansible,omitempty"`
 }
 
 // TemplateFuncLib is a standard template library of functions
@@ -62,19 +63,51 @@ var TemplateFuncLib = template.FuncMap{
 	"TagEquals":            TagEquals,
 	"Octet":                Octet,
 	"Base":                 path.Base,
+	"CIDR":                 CIDR,
 }
 
 // Octet is a template helper function to get a network's octet at a specified offset
-func Octet(n *ent.Network) string {
+func Octet(n *ent.Network, octet int) string {
+	// Check if we've got the CIDR itself before we make errors
 	if n.Cidr == "" {
 		return "NO_CIDR"
 	}
+
+	// Split the IP.IP.IP.IP/MASK on the dots
 	octets := strings.Split(n.Cidr, ".")
+
+	// We should have 4 things, if not, it's wrong
 	if len(octets) <= 3 {
 		return "INVALID_CIDR"
 	}
 
-	return octets[2]
+	// If we are pulling the last octet, we'll also have the CIDR range, which is a problem.
+	// If not, then we can just return the result
+	if octet == 4 {
+		last := strings.Split(octets[octet-1], "/")
+		return last[0]
+	} else {
+		return octets[octet-1]
+	}
+}
+
+// CIDR is a template helper function to get the subnet off a CIDR range
+func CIDR(n *ent.Network) string {
+	// If we don't even have the property, there's a problem
+	if n.Cidr == "" {
+		return "NO_CIDR"
+	}
+
+	// Let's split on the / to get the mask
+	cidr := strings.Split(n.Cidr, "/")
+
+	// We should have two things, if we don't, there's a problem
+	if len(cidr) < 2 {
+		return "INVALID_CIDR"
+	}
+
+	// Now we can return it.
+	return cidr[1]
 }
 
 func TagEquals(h *ent.Host, tag, value string) bool {

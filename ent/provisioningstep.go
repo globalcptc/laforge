@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/dnsrecord"
 	"github.com/gen0cide/laforge/ent/filedelete"
@@ -51,6 +52,8 @@ type ProvisioningStep struct {
 	HCLProvisioningStepToFileDownload *FileDownload `json:"ProvisioningStepToFileDownload,omitempty"`
 	// ProvisioningStepToFileExtract holds the value of the ProvisioningStepToFileExtract edge.
 	HCLProvisioningStepToFileExtract *FileExtract `json:"ProvisioningStepToFileExtract,omitempty"`
+	// ProvisioningStepToAnsible holds the value of the ProvisioningStepToAnsible edge.
+	HCLProvisioningStepToAnsible *Ansible `json:"ProvisioningStepToAnsible,omitempty"`
 	// ProvisioningStepToPlan holds the value of the ProvisioningStepToPlan edge.
 	HCLProvisioningStepToPlan *Plan `json:"ProvisioningStepToPlan,omitempty"`
 	// ProvisioningStepToAgentTask holds the value of the ProvisioningStepToAgentTask edge.
@@ -67,6 +70,7 @@ type ProvisioningStep struct {
 	provisioning_step_provisioning_step_to_file_delete           *uuid.UUID
 	provisioning_step_provisioning_step_to_file_download         *uuid.UUID
 	provisioning_step_provisioning_step_to_file_extract          *uuid.UUID
+	provisioning_step_provisioning_step_to_ansible               *uuid.UUID
 }
 
 // ProvisioningStepEdges holds the relations/edges for other nodes in the graph.
@@ -87,6 +91,8 @@ type ProvisioningStepEdges struct {
 	ProvisioningStepToFileDownload *FileDownload `json:"ProvisioningStepToFileDownload,omitempty"`
 	// ProvisioningStepToFileExtract holds the value of the ProvisioningStepToFileExtract edge.
 	ProvisioningStepToFileExtract *FileExtract `json:"ProvisioningStepToFileExtract,omitempty"`
+	// ProvisioningStepToAnsible holds the value of the ProvisioningStepToAnsible edge.
+	ProvisioningStepToAnsible *Ansible `json:"ProvisioningStepToAnsible,omitempty"`
 	// ProvisioningStepToPlan holds the value of the ProvisioningStepToPlan edge.
 	ProvisioningStepToPlan *Plan `json:"ProvisioningStepToPlan,omitempty"`
 	// ProvisioningStepToAgentTask holds the value of the ProvisioningStepToAgentTask edge.
@@ -95,7 +101,7 @@ type ProvisioningStepEdges struct {
 	ProvisioningStepToGinFileMiddleware *GinFileMiddleware `json:"ProvisioningStepToGinFileMiddleware,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [11]bool
+	loadedTypes [12]bool
 }
 
 // ProvisioningStepToStatusOrErr returns the ProvisioningStepToStatus value or an error if the edge
@@ -210,10 +216,24 @@ func (e ProvisioningStepEdges) ProvisioningStepToFileExtractOrErr() (*FileExtrac
 	return nil, &NotLoadedError{edge: "ProvisioningStepToFileExtract"}
 }
 
+// ProvisioningStepToAnsibleOrErr returns the ProvisioningStepToAnsible value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProvisioningStepEdges) ProvisioningStepToAnsibleOrErr() (*Ansible, error) {
+	if e.loadedTypes[8] {
+		if e.ProvisioningStepToAnsible == nil {
+			// The edge ProvisioningStepToAnsible was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: ansible.Label}
+		}
+		return e.ProvisioningStepToAnsible, nil
+	}
+	return nil, &NotLoadedError{edge: "ProvisioningStepToAnsible"}
+}
+
 // ProvisioningStepToPlanOrErr returns the ProvisioningStepToPlan value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e ProvisioningStepEdges) ProvisioningStepToPlanOrErr() (*Plan, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[9] {
 		if e.ProvisioningStepToPlan == nil {
 			// The edge ProvisioningStepToPlan was loaded in eager-loading,
 			// but was not found.
@@ -227,7 +247,7 @@ func (e ProvisioningStepEdges) ProvisioningStepToPlanOrErr() (*Plan, error) {
 // ProvisioningStepToAgentTaskOrErr returns the ProvisioningStepToAgentTask value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProvisioningStepEdges) ProvisioningStepToAgentTaskOrErr() ([]*AgentTask, error) {
-	if e.loadedTypes[9] {
+	if e.loadedTypes[10] {
 		return e.ProvisioningStepToAgentTask, nil
 	}
 	return nil, &NotLoadedError{edge: "ProvisioningStepToAgentTask"}
@@ -236,7 +256,7 @@ func (e ProvisioningStepEdges) ProvisioningStepToAgentTaskOrErr() ([]*AgentTask,
 // ProvisioningStepToGinFileMiddlewareOrErr returns the ProvisioningStepToGinFileMiddleware value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e ProvisioningStepEdges) ProvisioningStepToGinFileMiddlewareOrErr() (*GinFileMiddleware, error) {
-	if e.loadedTypes[10] {
+	if e.loadedTypes[11] {
 		if e.ProvisioningStepToGinFileMiddleware == nil {
 			// The edge ProvisioningStepToGinFileMiddleware was loaded in eager-loading,
 			// but was not found.
@@ -275,6 +295,8 @@ func (*ProvisioningStep) scanValues(columns []string) ([]interface{}, error) {
 		case provisioningstep.ForeignKeys[7]: // provisioning_step_provisioning_step_to_file_download
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisioningstep.ForeignKeys[8]: // provisioning_step_provisioning_step_to_file_extract
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case provisioningstep.ForeignKeys[9]: // provisioning_step_provisioning_step_to_ansible
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type ProvisioningStep", columns[i])
@@ -372,6 +394,13 @@ func (ps *ProvisioningStep) assignValues(columns []string, values []interface{})
 				ps.provisioning_step_provisioning_step_to_file_extract = new(uuid.UUID)
 				*ps.provisioning_step_provisioning_step_to_file_extract = *value.S.(*uuid.UUID)
 			}
+		case provisioningstep.ForeignKeys[9]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field provisioning_step_provisioning_step_to_ansible", values[i])
+			} else if value.Valid {
+				ps.provisioning_step_provisioning_step_to_ansible = new(uuid.UUID)
+				*ps.provisioning_step_provisioning_step_to_ansible = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
@@ -415,6 +444,11 @@ func (ps *ProvisioningStep) QueryProvisioningStepToFileDownload() *FileDownloadQ
 // QueryProvisioningStepToFileExtract queries the "ProvisioningStepToFileExtract" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryProvisioningStepToFileExtract() *FileExtractQuery {
 	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToFileExtract(ps)
+}
+
+// QueryProvisioningStepToAnsible queries the "ProvisioningStepToAnsible" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryProvisioningStepToAnsible() *AnsibleQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToAnsible(ps)
 }
 
 // QueryProvisioningStepToPlan queries the "ProvisioningStepToPlan" edge of the ProvisioningStep entity.

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gen0cide/laforge/ent"
+	"github.com/gen0cide/laforge/server/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,17 +33,18 @@ func CreateNewLogger(logFilePath string) Logger {
 		logrus.Error("Failed create log file")
 	}
 
+	logrus.Infof("\033[1;34mLog File Created: \033[0m%s", logFilePath)
 	return Logger{
 		Log:     log,
 		LogFile: logFilePath,
 	}
 }
 
-func CreateLoggerForServerTask(serverTask *ent.ServerTask) (*Logger, error) {
+func CreateLoggerForServerTask(laforgeConfig *utils.ServerConfig, serverTask *ent.ServerTask) (*Logger, error) {
 	ctx := context.Background()
 	defer ctx.Done()
-	logFolder, ok := os.LookupEnv("LAFORGE_LOG_FOLDER")
-	if !ok {
+	logFolder := laforgeConfig.LogFolder
+	if logFolder == "" {
 		// Default log location
 		logFolder = "/var/log/laforge"
 	}

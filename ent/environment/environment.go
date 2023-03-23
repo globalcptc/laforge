@@ -63,10 +63,14 @@ const (
 	EdgeEnvironmentToNetwork = "EnvironmentToNetwork"
 	// EdgeEnvironmentToHostDependency holds the string denoting the environmenttohostdependency edge name in mutations.
 	EdgeEnvironmentToHostDependency = "EnvironmentToHostDependency"
+	// EdgeEnvironmentToAnsible holds the string denoting the environmenttoansible edge name in mutations.
+	EdgeEnvironmentToAnsible = "EnvironmentToAnsible"
 	// EdgeEnvironmentToBuild holds the string denoting the environmenttobuild edge name in mutations.
 	EdgeEnvironmentToBuild = "EnvironmentToBuild"
 	// EdgeEnvironmentToRepository holds the string denoting the environmenttorepository edge name in mutations.
 	EdgeEnvironmentToRepository = "EnvironmentToRepository"
+	// EdgeEnvironmentToServerTask holds the string denoting the environmenttoservertask edge name in mutations.
+	EdgeEnvironmentToServerTask = "EnvironmentToServerTask"
 	// Table holds the table name of the environment in the database.
 	Table = "environments"
 	// EnvironmentToUserTable is the table that holds the EnvironmentToUser relation/edge. The primary key declared below.
@@ -168,6 +172,13 @@ const (
 	EnvironmentToHostDependencyInverseTable = "host_dependencies"
 	// EnvironmentToHostDependencyColumn is the table column denoting the EnvironmentToHostDependency relation/edge.
 	EnvironmentToHostDependencyColumn = "environment_environment_to_host_dependency"
+	// EnvironmentToAnsibleTable is the table that holds the EnvironmentToAnsible relation/edge.
+	EnvironmentToAnsibleTable = "ansibles"
+	// EnvironmentToAnsibleInverseTable is the table name for the Ansible entity.
+	// It exists in this package in order to avoid circular dependency with the "ansible" package.
+	EnvironmentToAnsibleInverseTable = "ansibles"
+	// EnvironmentToAnsibleColumn is the table column denoting the EnvironmentToAnsible relation/edge.
+	EnvironmentToAnsibleColumn = "environment_environment_to_ansible"
 	// EnvironmentToBuildTable is the table that holds the EnvironmentToBuild relation/edge.
 	EnvironmentToBuildTable = "builds"
 	// EnvironmentToBuildInverseTable is the table name for the Build entity.
@@ -180,6 +191,13 @@ const (
 	// EnvironmentToRepositoryInverseTable is the table name for the Repository entity.
 	// It exists in this package in order to avoid circular dependency with the "repository" package.
 	EnvironmentToRepositoryInverseTable = "repositories"
+	// EnvironmentToServerTaskTable is the table that holds the EnvironmentToServerTask relation/edge.
+	EnvironmentToServerTaskTable = "server_tasks"
+	// EnvironmentToServerTaskInverseTable is the table name for the ServerTask entity.
+	// It exists in this package in order to avoid circular dependency with the "servertask" package.
+	EnvironmentToServerTaskInverseTable = "server_tasks"
+	// EnvironmentToServerTaskColumn is the table column denoting the EnvironmentToServerTask relation/edge.
+	EnvironmentToServerTaskColumn = "server_task_server_task_to_environment"
 )
 
 // Columns holds all SQL columns for environment fields.

@@ -35,6 +35,9 @@ func (FileDownload) Fields() []ent.Field {
 			StructTag(`hcl:"md5,optional"`),
 		field.String("abs_path").
 			StructTag(`hcl:"abs_path,optional"`),
+		field.Bool("is_txt").
+			StructTag(`hcl:"is_txt,optional"`).
+			Default(false),
 		field.JSON("tags", map[string]string{}).
 			StructTag(`hcl:"tags,optional"`),
 	}

@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -42,6 +43,12 @@ func (pnu *ProvisionedNetworkUpdate) SetName(s string) *ProvisionedNetworkUpdate
 // SetCidr sets the "cidr" field.
 func (pnu *ProvisionedNetworkUpdate) SetCidr(s string) *ProvisionedNetworkUpdate {
 	pnu.mutation.SetCidr(s)
+	return pnu
+}
+
+// SetVars sets the "vars" field.
+func (pnu *ProvisionedNetworkUpdate) SetVars(m map[string]string) *ProvisionedNetworkUpdate {
+	pnu.mutation.SetVars(m)
 	return pnu
 }
 
@@ -295,6 +302,13 @@ func (pnu *ProvisionedNetworkUpdate) sqlSave(ctx context.Context) (n int, err er
 			Type:   field.TypeString,
 			Value:  value,
 			Column: provisionednetwork.FieldCidr,
+		})
+	}
+	if value, ok := pnu.mutation.Vars(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: provisionednetwork.FieldVars,
 		})
 	}
 	if pnu.mutation.ProvisionedNetworkToStatusCleared() {
@@ -557,6 +571,12 @@ func (pnuo *ProvisionedNetworkUpdateOne) SetCidr(s string) *ProvisionedNetworkUp
 	return pnuo
 }
 
+// SetVars sets the "vars" field.
+func (pnuo *ProvisionedNetworkUpdateOne) SetVars(m map[string]string) *ProvisionedNetworkUpdateOne {
+	pnuo.mutation.SetVars(m)
+	return pnuo
+}
+
 // SetProvisionedNetworkToStatusID sets the "ProvisionedNetworkToStatus" edge to the Status entity by ID.
 func (pnuo *ProvisionedNetworkUpdateOne) SetProvisionedNetworkToStatusID(id uuid.UUID) *ProvisionedNetworkUpdateOne {
 	pnuo.mutation.SetProvisionedNetworkToStatusID(id)
@@ -797,7 +817,7 @@ func (pnuo *ProvisionedNetworkUpdateOne) sqlSave(ctx context.Context) (_node *Pr
 	}
 	id, ok := pnuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing ProvisionedNetwork.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProvisionedNetwork.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := pnuo.fields; len(fields) > 0 {
@@ -831,6 +851,13 @@ func (pnuo *ProvisionedNetworkUpdateOne) sqlSave(ctx context.Context) (_node *Pr
 			Type:   field.TypeString,
 			Value:  value,
 			Column: provisionednetwork.FieldCidr,
+		})
+	}
+	if value, ok := pnuo.mutation.Vars(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: provisionednetwork.FieldVars,
 		})
 	}
 	if pnuo.mutation.ProvisionedNetworkToStatusCleared() {

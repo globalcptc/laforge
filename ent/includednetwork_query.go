@@ -206,7 +206,7 @@ func (inq *IncludedNetworkQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single IncludedNetwork entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one IncludedNetwork entity is not found.
+// Returns a *NotSingularError when more than one IncludedNetwork entity is found.
 // Returns a *NotFoundError when no IncludedNetwork entities are found.
 func (inq *IncludedNetworkQuery) Only(ctx context.Context) (*IncludedNetwork, error) {
 	nodes, err := inq.Limit(2).All(ctx)
@@ -233,7 +233,7 @@ func (inq *IncludedNetworkQuery) OnlyX(ctx context.Context) *IncludedNetwork {
 }
 
 // OnlyID is like Only, but returns the only IncludedNetwork ID in the query.
-// Returns a *NotSingularError when exactly one IncludedNetwork ID is not found.
+// Returns a *NotSingularError when more than one IncludedNetwork ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (inq *IncludedNetworkQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -346,8 +346,9 @@ func (inq *IncludedNetworkQuery) Clone() *IncludedNetworkQuery {
 		withIncludedNetworkToNetwork:     inq.withIncludedNetworkToNetwork.Clone(),
 		withIncludedNetworkToEnvironment: inq.withIncludedNetworkToEnvironment.Clone(),
 		// clone intermediate query.
-		sql:  inq.sql.Clone(),
-		path: inq.path,
+		sql:    inq.sql.Clone(),
+		path:   inq.path,
+		unique: inq.unique,
 	}
 }
 
@@ -687,6 +688,10 @@ func (inq *IncludedNetworkQuery) sqlAll(ctx context.Context) ([]*IncludedNetwork
 
 func (inq *IncludedNetworkQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := inq.querySpec()
+	_spec.Node.Columns = inq.fields
+	if len(inq.fields) > 0 {
+		_spec.Unique = inq.unique != nil && *inq.unique
+	}
 	return sqlgraph.CountNodes(ctx, inq.driver, _spec)
 }
 
@@ -757,6 +762,9 @@ func (inq *IncludedNetworkQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if inq.sql != nil {
 		selector = inq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if inq.unique != nil && *inq.unique {
+		selector.Distinct()
 	}
 	for _, p := range inq.predicates {
 		p(selector)
@@ -1036,9 +1044,7 @@ func (ingb *IncludedNetworkGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range ingb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(ingb.fields...)...)

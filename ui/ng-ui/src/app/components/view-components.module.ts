@@ -18,13 +18,16 @@ import { DeleteBuildModalComponent } from './delete-build-modal/delete-build-mod
 import { EditUserModalComponent } from './edit-user-modal/edit-user-modal.component';
 import { HostModalComponent } from './host-modal/host-modal.component';
 import { HostComponent } from './host/host.component';
+import { ImportRepoModalComponent } from './import-repo-modal/import-repo-modal.component';
 import { NetworkModalComponent } from './network-modal/network-modal.component';
 import { NetworkComponent } from './network/network.component';
+import { NukeDbModalComponent } from './nuke-db-modal/nuke-db-modal.component';
 import { StepModalComponent } from './step-modal/step-modal.component';
 import { StepComponent } from './step/step.component';
 import { TaskListComponent } from './task-list/task-list.component';
 import { TaskComponent } from './task/task.component';
 import { TeamComponent } from './team/team.component';
+import { ViewLogsModalComponent } from './view-logs-modal/view-logs-modal.component';
 
 @NgModule({
   declarations: [
@@ -38,7 +41,10 @@ import { TeamComponent } from './team/team.component';
     TaskListComponent,
     TaskComponent,
     StepModalComponent,
-    EditUserModalComponent
+    EditUserModalComponent,
+    ImportRepoModalComponent,
+    ViewLogsModalComponent,
+    NukeDbModalComponent
   ],
   imports: [
     CommonModule,

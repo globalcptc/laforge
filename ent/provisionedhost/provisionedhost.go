@@ -19,6 +19,8 @@ const (
 	FieldSubnetIP = "subnet_ip"
 	// FieldAddonType holds the string denoting the addon_type field in the database.
 	FieldAddonType = "addon_type"
+	// FieldVars holds the string denoting the vars field in the database.
+	FieldVars = "vars"
 	// EdgeProvisionedHostToStatus holds the string denoting the provisionedhosttostatus edge name in mutations.
 	EdgeProvisionedHostToStatus = "ProvisionedHostToStatus"
 	// EdgeProvisionedHostToProvisionedNetwork holds the string denoting the provisionedhosttoprovisionednetwork edge name in mutations.
@@ -118,6 +120,7 @@ var Columns = []string{
 	FieldID,
 	FieldSubnetIP,
 	FieldAddonType,
+	FieldVars,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provisioned_hosts"

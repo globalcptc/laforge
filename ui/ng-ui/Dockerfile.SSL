@@ -1,0 +1,11 @@
+FROM node:14 as builder
+WORKDIR /app
+COPY . .
+RUN npm ci && npm run build
+
+FROM nginx:stable
+WORKDIR /app
+COPY ./docker_files/ssl.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist/ /app/
+RUN mkdir /app/certs/
+EXPOSE 80 443

@@ -349,7 +349,7 @@ func (phq *ProvisionedHostQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single ProvisionedHost entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one ProvisionedHost entity is not found.
+// Returns a *NotSingularError when more than one ProvisionedHost entity is found.
 // Returns a *NotFoundError when no ProvisionedHost entities are found.
 func (phq *ProvisionedHostQuery) Only(ctx context.Context) (*ProvisionedHost, error) {
 	nodes, err := phq.Limit(2).All(ctx)
@@ -376,7 +376,7 @@ func (phq *ProvisionedHostQuery) OnlyX(ctx context.Context) *ProvisionedHost {
 }
 
 // OnlyID is like Only, but returns the only ProvisionedHost ID in the query.
-// Returns a *NotSingularError when exactly one ProvisionedHost ID is not found.
+// Returns a *NotSingularError when more than one ProvisionedHost ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (phq *ProvisionedHostQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -495,8 +495,9 @@ func (phq *ProvisionedHostQuery) Clone() *ProvisionedHostQuery {
 		withProvisionedHostToPlan:               phq.withProvisionedHostToPlan.Clone(),
 		withProvisionedHostToGinFileMiddleware:  phq.withProvisionedHostToGinFileMiddleware.Clone(),
 		// clone intermediate query.
-		sql:  phq.sql.Clone(),
-		path: phq.path,
+		sql:    phq.sql.Clone(),
+		path:   phq.path,
+		unique: phq.unique,
 	}
 }
 
@@ -1009,6 +1010,10 @@ func (phq *ProvisionedHostQuery) sqlAll(ctx context.Context) ([]*ProvisionedHost
 
 func (phq *ProvisionedHostQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := phq.querySpec()
+	_spec.Node.Columns = phq.fields
+	if len(phq.fields) > 0 {
+		_spec.Unique = phq.unique != nil && *phq.unique
+	}
 	return sqlgraph.CountNodes(ctx, phq.driver, _spec)
 }
 
@@ -1079,6 +1084,9 @@ func (phq *ProvisionedHostQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if phq.sql != nil {
 		selector = phq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if phq.unique != nil && *phq.unique {
+		selector.Distinct()
 	}
 	for _, p := range phq.predicates {
 		p(selector)
@@ -1358,9 +1366,7 @@ func (phgb *ProvisionedHostGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range phgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(phgb.fields...)...)

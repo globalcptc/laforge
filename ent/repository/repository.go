@@ -19,10 +19,10 @@ const (
 	FieldEnviromentFilepath = "enviroment_filepath"
 	// FieldFolderPath holds the string denoting the folder_path field in the database.
 	FieldFolderPath = "folder_path"
-	// FieldCommitInfo holds the string denoting the commit_info field in the database.
-	FieldCommitInfo = "commit_info"
 	// EdgeRepositoryToEnvironment holds the string denoting the repositorytoenvironment edge name in mutations.
 	EdgeRepositoryToEnvironment = "RepositoryToEnvironment"
+	// EdgeRepositoryToRepoCommit holds the string denoting the repositorytorepocommit edge name in mutations.
+	EdgeRepositoryToRepoCommit = "RepositoryToRepoCommit"
 	// Table holds the table name of the repository in the database.
 	Table = "repositories"
 	// RepositoryToEnvironmentTable is the table that holds the RepositoryToEnvironment relation/edge. The primary key declared below.
@@ -30,6 +30,13 @@ const (
 	// RepositoryToEnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	RepositoryToEnvironmentInverseTable = "environments"
+	// RepositoryToRepoCommitTable is the table that holds the RepositoryToRepoCommit relation/edge.
+	RepositoryToRepoCommitTable = "repo_commits"
+	// RepositoryToRepoCommitInverseTable is the table name for the RepoCommit entity.
+	// It exists in this package in order to avoid circular dependency with the "repocommit" package.
+	RepositoryToRepoCommitInverseTable = "repo_commits"
+	// RepositoryToRepoCommitColumn is the table column denoting the RepositoryToRepoCommit relation/edge.
+	RepositoryToRepoCommitColumn = "repository_repository_to_repo_commit"
 )
 
 // Columns holds all SQL columns for repository fields.
@@ -39,7 +46,6 @@ var Columns = []string{
 	FieldBranchName,
 	FieldEnviromentFilepath,
 	FieldFolderPath,
-	FieldCommitInfo,
 }
 
 var (
@@ -63,8 +69,6 @@ var (
 	DefaultBranchName string
 	// DefaultFolderPath holds the default value on creation for the "folder_path" field.
 	DefaultFolderPath string
-	// DefaultCommitInfo holds the default value on creation for the "commit_info" field.
-	DefaultCommitInfo string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )

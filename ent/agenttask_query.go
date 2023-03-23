@@ -206,7 +206,7 @@ func (atq *AgentTaskQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single AgentTask entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one AgentTask entity is not found.
+// Returns a *NotSingularError when more than one AgentTask entity is found.
 // Returns a *NotFoundError when no AgentTask entities are found.
 func (atq *AgentTaskQuery) Only(ctx context.Context) (*AgentTask, error) {
 	nodes, err := atq.Limit(2).All(ctx)
@@ -233,7 +233,7 @@ func (atq *AgentTaskQuery) OnlyX(ctx context.Context) *AgentTask {
 }
 
 // OnlyID is like Only, but returns the only AgentTask ID in the query.
-// Returns a *NotSingularError when exactly one AgentTask ID is not found.
+// Returns a *NotSingularError when more than one AgentTask ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (atq *AgentTaskQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -346,8 +346,9 @@ func (atq *AgentTaskQuery) Clone() *AgentTaskQuery {
 		withAgentTaskToAdhocPlan:        atq.withAgentTaskToAdhocPlan.Clone(),
 		withAgentTaskToValidation:       atq.withAgentTaskToValidation.Clone(),
 		// clone intermediate query.
-		sql:  atq.sql.Clone(),
-		path: atq.path,
+		sql:    atq.sql.Clone(),
+		path:   atq.path,
+		unique: atq.unique,
 	}
 }
 
@@ -614,6 +615,10 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context) ([]*AgentTask, error) {
 
 func (atq *AgentTaskQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := atq.querySpec()
+	_spec.Node.Columns = atq.fields
+	if len(atq.fields) > 0 {
+		_spec.Unique = atq.unique != nil && *atq.unique
+	}
 	return sqlgraph.CountNodes(ctx, atq.driver, _spec)
 }
 
@@ -684,6 +689,9 @@ func (atq *AgentTaskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if atq.sql != nil {
 		selector = atq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if atq.unique != nil && *atq.unique {
+		selector.Distinct()
 	}
 	for _, p := range atq.predicates {
 		p(selector)
@@ -963,9 +971,7 @@ func (atgb *AgentTaskGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range atgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(atgb.fields...)...)

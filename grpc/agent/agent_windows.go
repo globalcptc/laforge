@@ -62,7 +62,7 @@ func AddSystemUserGroup(groupname string, username string) error {
 	return err
 }
 
-func SystemDownloadFile(path, url string) error {
+func SystemDownloadFile(path, url, is_txt string) error {
 	retryCount := 5
 	var resp *http.Response
 	var err error
@@ -91,16 +91,27 @@ func SystemDownloadFile(path, url string) error {
 	}
 	defer out.Close()
 
-	// Convert Unix line endings to windows line endings
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	body := strings.Replace(string(bodyBytes), "\n", "\r\n", -1)
+	if is_txt == "true" {
+		// Convert Unix line endings to windows line endings
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		body := strings.Replace(string(bodyBytes), "\n", "\r\n", -1)
 
-	// Write the body to file
-	_, err = io.WriteString(out, body)
+		// Write the body to file
+		_, err = io.WriteString(out, body)
+	} else {
+		// Write the body to file
+		_, err = io.Copy(out, resp.Body)
+	}
+
 	return err
+}
+
+// SystemExecuteAnsible Runs Ansible Playbook
+func SystemExecuteAnsible(playbookPath, connectionMethod, inventoryList string) (string, error) {
+	return "", fmt.Errorf("Not Implemented for Windows")
 }
 
 // SystemExecuteCommand Runs the Command that is inputted and either returns the error or output

@@ -48,6 +48,19 @@ func (f AgentTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return f(ctx, mv)
 }
 
+// The AnsibleFunc type is an adapter to allow the use of ordinary
+// function as Ansible mutator.
+type AnsibleFunc func(context.Context, *ent.AnsibleMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AnsibleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.AnsibleMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AnsibleMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The AuthUserFunc type is an adapter to allow the use of ordinary
 // function as AuthUser mutator.
 type AuthUserFunc func(context.Context, *ent.AuthUserMutation) (ent.Value, error)
@@ -356,6 +369,19 @@ func (f ProvisioningStepFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.V
 	mv, ok := m.(*ent.ProvisioningStepMutation)
 	if !ok {
 		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProvisioningStepMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The RepoCommitFunc type is an adapter to allow the use of ordinary
+// function as RepoCommit mutator.
+type RepoCommitFunc func(context.Context, *ent.RepoCommitMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RepoCommitFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.RepoCommitMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RepoCommitMutation", m)
 	}
 	return f(ctx, mv)
 }

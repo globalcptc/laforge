@@ -39,6 +39,14 @@ func (tc *TokenCreate) SetID(u uuid.UUID) *TokenCreate {
 	return tc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (tc *TokenCreate) SetNillableID(u *uuid.UUID) *TokenCreate {
+	if u != nil {
+		tc.SetID(*u)
+	}
+	return tc
+}
+
 // SetTokenToAuthUserID sets the "TokenToAuthUser" edge to the AuthUser entity by ID.
 func (tc *TokenCreate) SetTokenToAuthUserID(id uuid.UUID) *TokenCreate {
 	tc.mutation.SetTokenToAuthUserID(id)
@@ -130,13 +138,13 @@ func (tc *TokenCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (tc *TokenCreate) check() error {
 	if _, ok := tc.mutation.Token(); !ok {
-		return &ValidationError{Name: "token", err: errors.New(`ent: missing required field "token"`)}
+		return &ValidationError{Name: "token", err: errors.New(`ent: missing required field "Token.token"`)}
 	}
 	if _, ok := tc.mutation.ExpireAt(); !ok {
-		return &ValidationError{Name: "expire_at", err: errors.New(`ent: missing required field "expire_at"`)}
+		return &ValidationError{Name: "expire_at", err: errors.New(`ent: missing required field "Token.expire_at"`)}
 	}
 	if _, ok := tc.mutation.TokenToAuthUserID(); !ok {
-		return &ValidationError{Name: "TokenToAuthUser", err: errors.New("ent: missing required edge \"TokenToAuthUser\"")}
+		return &ValidationError{Name: "TokenToAuthUser", err: errors.New(`ent: missing required edge "Token.TokenToAuthUser"`)}
 	}
 	return nil
 }
@@ -150,7 +158,11 @@ func (tc *TokenCreate) sqlSave(ctx context.Context) (*Token, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -168,7 +180,7 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := tc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := tc.mutation.Token(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

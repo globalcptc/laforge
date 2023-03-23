@@ -12,6 +12,10 @@ mutation ExecuteBuild($buildId: String!) {
   }
 }
 
+mutation CancelBuild($buildId: String!) {
+  cancelBuild(buildUUID: $buildId)
+}
+
 mutation CreateBuild($envId: String!) {
   createBuild(envUUID: $envId, renderFiles: true) {
     id
@@ -24,14 +28,22 @@ mutation ModifyCurrentUser($firstName: String, $lastName: String, $email: String
   }
 }
 
-mutation CreateEnvironmentFromGit($repoURL: String!, $repoName: String!, $branchName: String!, $envFilePath: String!) {
-  createEnviromentFromRepo(repoURL: $repoURL, repoName: $repoName, branchName: $branchName, envFilePath: $envFilePath) {
+mutation CreateEnvironmentFromGit($repoURL: String!, $branchName: String!, $envFilePath: String!) {
+  createEnviromentFromRepo(repoURL: $repoURL, branchName: $branchName, envFilePath: $envFilePath) {
     id
   }
 }
 
-mutation UpdateEnviromentViaPull($envId: String!) {
+mutation UpdateEnvironmentViaPull($envId: String!) {
   updateEnviromentViaPull(envUUID: $envId) {
     id
   }
+}
+
+mutation ApproveBuildCommit($buildCommitId: String!) {
+  approveCommit(commitUUID: $buildCommitId)
+}
+
+mutation CancelBuildCommit($buildCommitId: String!) {
+  cancelCommit(commitUUID: $buildCommitId)
 }

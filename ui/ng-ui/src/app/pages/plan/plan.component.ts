@@ -1,16 +1,8 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Router } from '@angular/router';
-import {
-  LaForgeApproveBuildCommitGQL,
-  LaForgeBuildCommitFieldsFragment,
-  LaForgeBuildCommitState,
-  LaForgeCancelBuildCommitGQL,
-  LaForgeGetBuildTreeQuery,
-  LaForgeGetEnvironmentInfoQuery,
-  LaForgeSubscribeUpdatedStatusSubscription
-} from '@graphql';
-import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { LaForgeApproveBuildCommitGQL, LaForgeBuildCommitState, LaForgeCancelBuildCommitGQL, LaForgeGetBuildCommitQuery } from '@graphql';
+import { BehaviorSubject } from 'rxjs';
 import { SubheaderService } from 'src/app/_metronic/partials/layout/subheader/_services/subheader.service';
 import { ApiService } from 'src/app/services/api/api.service';
 import { EnvironmentService } from 'src/app/services/environment/environment.service';
@@ -21,14 +13,10 @@ import { EnvironmentService } from 'src/app/services/environment/environment.ser
   styleUrls: ['./plan.component.scss']
 })
 export class PlanComponent implements OnInit, OnDestroy {
-  private unsubscribe: Subscription[] = [];
-  environment: Observable<LaForgeGetEnvironmentInfoQuery['environment']>;
-  build: Observable<LaForgeGetBuildTreeQuery['build']>;
-  buildStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
-  latestCommit: BehaviorSubject<LaForgeBuildCommitFieldsFragment>;
-  apolloError: any = {};
-  approveDenyCommitLoading = false;
-  planLoading = true;
+  approveDenyCommitLoading: BehaviorSubject<boolean>;
+  // planLoading = true;
+  buildCommitId: string;
+  buildCommit: BehaviorSubject<LaForgeGetBuildCommitQuery['getBuildCommit']>;
 
   constructor(
     private api: ApiService,
@@ -38,115 +26,36 @@ export class PlanComponent implements OnInit, OnDestroy {
     private approveBuildCommit: LaForgeApproveBuildCommitGQL,
     private cancelBuildCommit: LaForgeCancelBuildCommitGQL,
     private snackBar: MatSnackBar,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {
     this.subheader.setTitle('Plan');
     this.subheader.setDescription('Plan an environment to build');
-    this.subheader.setShowEnvDropdown(true);
+    this.subheader.setShowEnvDropdown(false);
 
-    this.environment = this.envService.getEnvironmentInfo().asObservable();
-    this.build = this.envService.getBuildTree().asObservable();
-    this.latestCommit = new BehaviorSubject(null);
+    this.approveDenyCommitLoading = new BehaviorSubject(false);
+    this.buildCommit = new BehaviorSubject(null);
+
+    this.route.params.subscribe((params) => {
+      this.buildCommitId = params.id;
+      this.getBuildCommit();
+    });
   }
 
   ngOnInit(): void {
-    this.planLoading = true;
-    const sub1 = this.envService.getBuildTree().subscribe(() => {
-      this.envService.initPlanStatuses();
-      // this.envService.initAgentStatuses();
-      this.envService.initPlans();
-      this.envService.initBuildCommits();
-      this.checkLatestCommit();
-      this.envService.startStatusSubscription();
-      this.envService.startAgentStatusSubscription();
-      this.envService.startBuildSubscription();
-      this.envService.startBuildCommitSubscription();
+    // this.planLoading = true;
+  }
+
+  ngOnDestroy(): void {}
+
+  getBuildCommit(): void {
+    this.api.getBuildCommit(this.buildCommitId).then((getBuildCommit) => {
+      this.buildCommit.next(getBuildCommit);
     });
-    this.unsubscribe.push(sub1);
-    const sub2 = this.envService.statusUpdate.subscribe(() => {
-      this.checkBuildStatus();
-      this.cdRef.detectChanges();
-    });
-    this.unsubscribe.push(sub2);
-    this.planLoading = true;
-    const sub3 = this.envService.planUpdate.subscribe(() => {
-      this.planLoading = false;
-      this.cdRef.detectChanges();
-    });
-    this.unsubscribe.push(sub3);
-    // const sub4 = this.envService.buildCommitUpdate.subscribe(() => {
-    //   this.checkLatestCommit();
-    //   this.cdRef.detectChanges();
-    // });
-    // this.unsubscribe.push(sub4);
   }
-
-  ngOnDestroy(): void {
-    this.unsubscribe.forEach((sub) => sub.unsubscribe());
-    this.envService.stopStatusSubscription();
-    this.envService.stopAgentStatusSubscription();
-    this.envService.stopBuildSubscription();
-    this.envService.stopBuildCommitSubscription();
-  }
-
-  envIsSelected(): boolean {
-    return this.envService.getEnvironmentInfo().getValue() != null;
-  }
-
-  checkBuildStatus(): void {
-    if (!this.envService.getBuildTree().getValue()) return;
-    const updatedStatus = this.envService.getStatus(this.envService.getBuildTree().getValue().buildToStatus.id);
-    if (updatedStatus) {
-      this.buildStatus = { ...updatedStatus };
-    }
-  }
-
-  checkLatestCommit(): void {
-    if (!this.envService.getBuildTree().getValue()) return;
-    const updatedBuildCommit = this.envService.getLatestCommit();
-    if (updatedBuildCommit && (!this.latestCommit.getValue() || this.latestCommit.getValue().id !== updatedBuildCommit.id)) {
-      this.latestCommit.next({ ...updatedBuildCommit });
-      this.cdRef.detectChanges();
-    }
-    if (this.latestCommit.getValue() && this.latestCommit.getValue().state === LaForgeBuildCommitState.Inprogress) {
-      this.router.navigate(['build']);
-      this.snackBar.open('Plan is in progress. Redirecting to build...', null, {
-        duration: 1000
-      });
-    }
-  }
-
-  // triggerExecuteBuild(): void {
-  //   if (!this.envService.getBuildTree().getValue()?.id) return;
-  //   this.executeBuildLoading = true;
-  //   this.executeBuild
-  //     .mutate({
-  //       buildId: this.envService.getBuildTree().getValue().id
-  //     })
-  //     .toPromise()
-  //     .then(({ data, errors }) => {
-  //       if (errors) {
-  //         return console.error(errors);
-  //       } else {
-  //         this.snackBar.open('Successfully started build!', 'Cool', {
-  //           duration: 3000
-  //         });
-  //         this.router.navigate(['build']);
-  //       }
-  //     }, console.error)
-  //     .finally(() => {
-  //       this.executeBuildLoading = false;
-  //     });
-  // }
-
-  // canExecuteBuild(): boolean {
-  //   return this.buildStatus && this.buildStatus.state === LaForgeProvisionStatus.Planning;
-  // }
 
   getCommitStateColor(): string {
-    const latestCommit = this.envService.getLatestCommit();
-    if (!latestCommit) return '';
-    switch (latestCommit.state) {
+    switch (this.buildCommit.value.state) {
       case LaForgeBuildCommitState.Approved:
         return 'accent';
       case LaForgeBuildCommitState.Cancelled:
@@ -157,13 +66,13 @@ export class PlanComponent implements OnInit, OnDestroy {
         return 'primary';
       case LaForgeBuildCommitState.Applied:
         return 'link';
+      default:
+        return 'dark';
     }
   }
 
   getCommitStateText(): string {
-    const latestCommit = this.envService.getLatestCommit();
-    if (!latestCommit) return '';
-    switch (latestCommit.state) {
+    switch (this.buildCommit.value.state) {
       case LaForgeBuildCommitState.Approved:
         return 'Approved';
       case LaForgeBuildCommitState.Cancelled:
@@ -174,13 +83,15 @@ export class PlanComponent implements OnInit, OnDestroy {
         return 'Planning';
       case LaForgeBuildCommitState.Applied:
         return 'Applied';
+      default:
+        return '';
     }
   }
 
   approveCommit(): void {
     this.approveBuildCommit
       .mutate({
-        buildCommitId: this.envService.getBuildTree().getValue().BuildToLatestBuildCommit.id
+        buildCommitId: this.buildCommitId
       })
       .toPromise()
       .then(
@@ -195,7 +106,7 @@ export class PlanComponent implements OnInit, OnDestroy {
               // duration: 3000,
               panelClass: ['bg-success', 'text-white']
             });
-            this.router.navigate(['build']);
+            this.router.navigate(['build', this.buildCommit.value.BuildCommitToBuild.id]);
           }
         },
         (err) => {
@@ -211,7 +122,7 @@ export class PlanComponent implements OnInit, OnDestroy {
   cancelCommit(): void {
     this.cancelBuildCommit
       .mutate({
-        buildCommitId: this.envService.getBuildTree().getValue().BuildToLatestBuildCommit.id
+        buildCommitId: this.buildCommitId
       })
       .toPromise()
       .then(
@@ -222,9 +133,10 @@ export class PlanComponent implements OnInit, OnDestroy {
               panelClass: 'bg-danger'
             });
           } else if (data.cancelCommit) {
-            this.snackBar.open('Commit cancelled', 'Okay', {
+            const ref = this.snackBar.open('Commit cancelled', 'Okay', {
               duration: 3000
             });
+            ref.afterDismissed().subscribe(() => this.router.navigate(['home']));
           }
         },
         (err) => {
@@ -238,9 +150,11 @@ export class PlanComponent implements OnInit, OnDestroy {
   }
 
   canApproveDenyCommit(): boolean {
-    const latestCommit = this.envService.getLatestCommit();
-    if (!latestCommit) return false;
-    if (latestCommit.state === LaForgeBuildCommitState.Planning) return true;
+    // const latestCommit = this.envService.getLatestCommit();
+    // if (!latestCommit) return false;
+    // if (latestCommit.state === LaForgeBuildCommitState.Planning) return true;
+    if (!this.buildCommit.value) return false;
+    if (this.buildCommit.value.state === LaForgeBuildCommitState.Planning) return true;
     return false;
   }
 }

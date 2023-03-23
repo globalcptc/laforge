@@ -22,6 +22,7 @@ $dark-text-on-background: #fff;
 $dark-text-on-surface: #fff;
 $dark-text-on-surface-light: rgba(#fff, 0.87);
 $dark-text-on-surface-lighter: rgba(#fff, 0.54);
+$dark-text-on-surface-lightest: rgba(#fff, 0.21);
 $dark-text-on-error: #000;
 
 :root {
@@ -116,6 +117,14 @@ $dark-text-on-error: #000;
 
   .mat-option {
     color: $dark-text-on-surface !important;
+  }
+
+  .mat-slide-toggle-label {
+    color: $dark-text-on-surface !important;
+
+    .mat-slide-toggle-bar {
+      background-color: $dark-surface-24;
+    }
   }
 
   div.splash-screen#splash-screen {
@@ -325,5 +334,50 @@ $dark-text-on-error: #000;
   .mat-flat-button.mat-link {
     background-color: transparent !important;
     color: white !important;
+  }
+
+  .env-list {
+    color: white !important;
+
+    .env {
+      background-color: $dark-surface-08 !important;
+    }
+
+    .env.env-header {
+      color: $dark-text-on-surface-lighter !important;
+    }
+
+    // .env.env-header {
+    //   color: #101010 !important;
+    // }
+
+    .builds {
+      .build {
+        background-color: $dark-surface-04 !important;
+      }
+
+      .build.build-header {
+        color: $dark-text-on-surface-lighter !important;
+      }
+
+      .build.build-revision {
+        background-color: $dark-surface-02 !important;
+
+        .revision {
+          color: $dark-text-on-surface-lightest !important;
+        }
+      }
+    }
+  }
+
+  .logs {
+    background-color: $dark-surface-02 !important;
+    color: white;
+  }
+
+  .tasks {
+    .task {
+      background-color: $dark-surface-02 !important;
+    }
   }
 }

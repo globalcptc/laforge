@@ -2,11 +2,25 @@ query GetBuildTree($buildId: String!) {
   build(buildUUID: $buildId) {
     id
     revision
-    BuildToLatestBuildCommit {
+    buildToEnvironment {
       id
+      name
+      description
+      team_count
+      admin_cidrs
+      exposed_vdi_ports
+    }
+    BuildToRepoCommit {
+      id
+      hash
+      committer
+      RepoCommitToRepository {
+        id
+        repo_url
+      }
     }
     buildToStatus {
-      ...StatusFields
+      id
     }
     buildToTeam {
       id
@@ -175,6 +189,9 @@ query GetBuildTree($buildId: String!) {
         }
       }
     }
+    BuildToServerTasks {
+      id
+    }
   }
 }
 
@@ -187,11 +204,58 @@ query GetBuildPlans($buildId: String!) {
   }
 }
 
+query GetBuildStatuses($buildUUID: String!) {
+  build(buildUUID: $buildUUID) {
+    id
+    buildToPlan {
+      id
+      PlanToStatus {
+        ...StatusFields
+      }
+    }
+    buildToTeam {
+      id
+      TeamToStatus {
+        ...StatusFields
+      }
+      TeamToProvisionedNetwork {
+        id
+        ProvisionedNetworkToStatus {
+          ...StatusFields
+        }
+        ProvisionedNetworkToProvisionedHost {
+          id
+          ProvisionedHostToStatus {
+            ...StatusFields
+          }
+        }
+      }
+    }
+  }
+}
+
 query GetBuildCommits($buildId: String!) {
   build(buildUUID: $buildId) {
     id
     BuildToBuildCommits {
       ...BuildCommitFields
     }
+  }
+}
+
+query GetPlanStatusCounts($buildId: String!) {
+  getPlanStatusCounts(buildUUID: $buildId) {
+    planning
+    awaiting
+    parentAwaiting
+    inProgress
+    failed
+    complete
+    tainted
+    toDelete
+    deleteInProgress
+    deleted
+    toRebuild
+    cancelled
   }
 }

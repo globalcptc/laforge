@@ -133,7 +133,7 @@ func (tu *TokenUpdate) ExecX(ctx context.Context) {
 // check runs all checks and user-defined validators on the builder.
 func (tu *TokenUpdate) check() error {
 	if _, ok := tu.mutation.TokenToAuthUserID(); tu.mutation.TokenToAuthUserCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"TokenToAuthUser\"")
+		return errors.New(`ent: clearing a required unique edge "Token.TokenToAuthUser"`)
 	}
 	return nil
 }
@@ -342,7 +342,7 @@ func (tuo *TokenUpdateOne) ExecX(ctx context.Context) {
 // check runs all checks and user-defined validators on the builder.
 func (tuo *TokenUpdateOne) check() error {
 	if _, ok := tuo.mutation.TokenToAuthUserID(); tuo.mutation.TokenToAuthUserCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"TokenToAuthUser\"")
+		return errors.New(`ent: clearing a required unique edge "Token.TokenToAuthUser"`)
 	}
 	return nil
 }
@@ -360,7 +360,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 	}
 	id, ok := tuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Token.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Token.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := tuo.fields; len(fields) > 0 {

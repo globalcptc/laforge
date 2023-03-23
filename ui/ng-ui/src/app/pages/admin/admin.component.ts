@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { LaForgeAuthUser, LaForgeGetUserListQuery } from '@graphql';
@@ -10,6 +10,7 @@ import { SubheaderService } from 'src/app/_metronic/partials/layout/subheader/_s
 import { AuthService } from 'src/app/modules/auth/_services/auth.service';
 
 import { EditUserModalComponent } from '@components/edit-user-modal/edit-user-modal.component';
+import { NukeDbModalComponent } from '@components/nuke-db-modal/nuke-db-modal.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -77,7 +78,6 @@ export class AdminComponent implements OnInit {
   }
 
   editUser(user: LaForgeAuthUser) {
-    MatDialogConfig;
     this.dialog
       .open(EditUserModalComponent, {
         data: {
@@ -103,5 +103,20 @@ export class AdminComponent implements OnInit {
       })
       .afterClosed()
       .subscribe(() => this.refreshUserList());
+  }
+
+  nukeBackend() {
+    this.api.nukeBackend().then(console.log, (err) => {
+      this.errorMessage.next(err);
+      this.snackbar.open(err, 'Okay', {
+        panelClass: ['bg-danger', 'text-white']
+      });
+    });
+  }
+
+  toggleNukeBackendModal(): void {
+    this.dialog.open(NukeDbModalComponent, {
+      width: '50%'
+    });
   }
 }

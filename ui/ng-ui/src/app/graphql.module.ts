@@ -16,7 +16,8 @@ export function createApollo(httpLink: HttpLink): ApolloClientOptions<any> {
     options: {
       reconnect: true,
       timeout: 30000,
-      minTimeout: 100000
+      minTimeout: 30000,
+      lazy: true
     }
   });
 

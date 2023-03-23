@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
+	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
 	"github.com/gen0cide/laforge/ent/servertask"
@@ -86,6 +87,14 @@ func (stc *ServerTaskCreate) SetID(u uuid.UUID) *ServerTaskCreate {
 	return stc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (stc *ServerTaskCreate) SetNillableID(u *uuid.UUID) *ServerTaskCreate {
+	if u != nil {
+		stc.SetID(*u)
+	}
+	return stc
+}
+
 // SetServerTaskToAuthUserID sets the "ServerTaskToAuthUser" edge to the AuthUser entity by ID.
 func (stc *ServerTaskCreate) SetServerTaskToAuthUserID(id uuid.UUID) *ServerTaskCreate {
 	stc.mutation.SetServerTaskToAuthUserID(id)
@@ -144,6 +153,25 @@ func (stc *ServerTaskCreate) SetNillableServerTaskToBuildID(id *uuid.UUID) *Serv
 // SetServerTaskToBuild sets the "ServerTaskToBuild" edge to the Build entity.
 func (stc *ServerTaskCreate) SetServerTaskToBuild(b *Build) *ServerTaskCreate {
 	return stc.SetServerTaskToBuildID(b.ID)
+}
+
+// SetServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by ID.
+func (stc *ServerTaskCreate) SetServerTaskToBuildCommitID(id uuid.UUID) *ServerTaskCreate {
+	stc.mutation.SetServerTaskToBuildCommitID(id)
+	return stc
+}
+
+// SetNillableServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by ID if the given value is not nil.
+func (stc *ServerTaskCreate) SetNillableServerTaskToBuildCommitID(id *uuid.UUID) *ServerTaskCreate {
+	if id != nil {
+		stc = stc.SetServerTaskToBuildCommitID(*id)
+	}
+	return stc
+}
+
+// SetServerTaskToBuildCommit sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity.
+func (stc *ServerTaskCreate) SetServerTaskToBuildCommit(b *BuildCommit) *ServerTaskCreate {
+	return stc.SetServerTaskToBuildCommitID(b.ID)
 }
 
 // AddServerTaskToGinFileMiddlewareIDs adds the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity by IDs.
@@ -241,18 +269,18 @@ func (stc *ServerTaskCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (stc *ServerTaskCreate) check() error {
 	if _, ok := stc.mutation.GetType(); !ok {
-		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "type"`)}
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "ServerTask.type"`)}
 	}
 	if v, ok := stc.mutation.GetType(); ok {
 		if err := servertask.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "type": %w`, err)}
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ServerTask.type": %w`, err)}
 		}
 	}
 	if _, ok := stc.mutation.ServerTaskToAuthUserID(); !ok {
-		return &ValidationError{Name: "ServerTaskToAuthUser", err: errors.New("ent: missing required edge \"ServerTaskToAuthUser\"")}
+		return &ValidationError{Name: "ServerTaskToAuthUser", err: errors.New(`ent: missing required edge "ServerTask.ServerTaskToAuthUser"`)}
 	}
 	if _, ok := stc.mutation.ServerTaskToStatusID(); !ok {
-		return &ValidationError{Name: "ServerTaskToStatus", err: errors.New("ent: missing required edge \"ServerTaskToStatus\"")}
+		return &ValidationError{Name: "ServerTaskToStatus", err: errors.New(`ent: missing required edge "ServerTask.ServerTaskToStatus"`)}
 	}
 	return nil
 }
@@ -266,7 +294,11 @@ func (stc *ServerTaskCreate) sqlSave(ctx context.Context) (*ServerTask, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -284,7 +316,7 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := stc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := stc.mutation.GetType(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -403,6 +435,26 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.server_task_server_task_to_build = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := stc.mutation.ServerTaskToBuildCommitIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   servertask.ServerTaskToBuildCommitTable,
+			Columns: []string{servertask.ServerTaskToBuildCommitColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: buildcommit.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.server_task_server_task_to_build_commit = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := stc.mutation.ServerTaskToGinFileMiddlewareIDs(); len(nodes) > 0 {

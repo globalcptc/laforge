@@ -42,6 +42,14 @@ func (inc *IncludedNetworkCreate) SetID(u uuid.UUID) *IncludedNetworkCreate {
 	return inc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (inc *IncludedNetworkCreate) SetNillableID(u *uuid.UUID) *IncludedNetworkCreate {
+	if u != nil {
+		inc.SetID(*u)
+	}
+	return inc
+}
+
 // AddIncludedNetworkToTagIDs adds the "IncludedNetworkToTag" edge to the Tag entity by IDs.
 func (inc *IncludedNetworkCreate) AddIncludedNetworkToTagIDs(ids ...uuid.UUID) *IncludedNetworkCreate {
 	inc.mutation.AddIncludedNetworkToTagIDs(ids...)
@@ -186,10 +194,10 @@ func (inc *IncludedNetworkCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (inc *IncludedNetworkCreate) check() error {
 	if _, ok := inc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "IncludedNetwork.name"`)}
 	}
 	if _, ok := inc.mutation.Hosts(); !ok {
-		return &ValidationError{Name: "hosts", err: errors.New(`ent: missing required field "hosts"`)}
+		return &ValidationError{Name: "hosts", err: errors.New(`ent: missing required field "IncludedNetwork.hosts"`)}
 	}
 	return nil
 }
@@ -203,7 +211,11 @@ func (inc *IncludedNetworkCreate) sqlSave(ctx context.Context) (*IncludedNetwork
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -221,7 +233,7 @@ func (inc *IncludedNetworkCreate) createSpec() (*IncludedNetwork, *sqlgraph.Crea
 	)
 	if id, ok := inc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := inc.mutation.Name(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

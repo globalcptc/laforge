@@ -67,18 +67,26 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.headerMenuHTMLAttributes = this.layout.getHTMLAttributes('header_menu');
   }
 
+  // private getLogoURL() {
+  //   if (this.brandSkin === 'light') {
+  //     return '/assets/media/logos/logo-dark.png';
+  //   } else {
+  //     return '/assets/media/logos/logo-light.png';
+  //   }
+  // }
+
   private getLogoURL(): string {
-    let result = 'logo-light.png';
+    const result = 'logo-light.png';
 
-    if (this.headerSelfTheme && this.headerSelfTheme === 'light') {
-      result = 'logo-dark.png';
-    }
+    // if (this.headerSelfTheme && this.headerSelfTheme === 'light') {
+    //   result = 'logo-dark.png';
+    // }
 
-    if (this.headerSelfTheme && this.headerSelfTheme === 'dark') {
-      result = 'logo-dark.png';
-    }
+    // if (this.headerSelfTheme && this.headerSelfTheme === 'dark') {
+    //   result = 'logo-dark.png';
+    // }
 
-    return `./assets/media/logos/${result}`;
+    return `/assets/media/logos/${result}`;
   }
 
   ngAfterViewInit(): void {

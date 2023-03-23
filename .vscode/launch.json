@@ -18,9 +18,9 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/server/server.go",
-      "envFile": "${workspaceFolder}/.dbug.env",
+      // "envFile": "${workspaceFolder}/.dbug.env",
       "showLog": true,
-      "cwd": "${workspaceFolder}/server",
+      "cwd": "${workspaceFolder}",
       "args": []
     },
     {

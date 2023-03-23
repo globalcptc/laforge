@@ -3,7 +3,6 @@ package planner
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,21 +12,35 @@ import (
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/buildcommit"
-	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/plan"
+	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/gen0cide/laforge/server/utils"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
-func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.AuthUser, serverTask *ent.ServerTask, taskStatus *ent.Status, entBuild *ent.Build) error {
-	logger.Log.Debug("BUILDER | START BUILD")
-	ctx := context.Background()
-	defer ctx.Done()
+var cancelMap = map[uuid.UUID]context.CancelFunc{}
 
+func CancelBuild(id uuid.UUID) bool {
+	if cancelMap[id] != nil {
+		cancelMap[id]()
+		delete(cancelMap, id)
+		return true
+	}
+	return false
+}
+
+func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, currentUser *ent.AuthUser, serverTask *ent.ServerTask, taskStatus *ent.Status, entBuild *ent.Build) error {
+	logger.Log.Debug("BUILDER | START BUILD")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer ctx.Done()
+	cancelMap[entBuild.ID] = cancel
+	ctxClosing := context.Background()
+	defer ctxClosing.Done()
 	entPlans, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePLANNING))).All(ctx)
 
 	if err != nil {
@@ -43,7 +56,7 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 	var wg sync.WaitGroup
 
 	for _, entPlan := range entPlans {
-		entStatus, err := entPlan.PlanToStatus(ctx)
+		entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
 
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
@@ -72,7 +85,7 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 					logger.Log.Errorf("Failed to Query Provisioned Network. Err: %v", err)
 					return
 				}
-				entStatus, err := entProNetwork.ProvisionedNetworkToStatus(ctx)
+				entStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -85,7 +98,7 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 					logger.Log.Errorf("Failed to Query Provisioned Host. Err: %v", err)
 					return
 				}
-				entStatus, err := entProHost.ProvisionedHostToStatus(ctx)
+				entStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -98,7 +111,7 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 					logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 					return
 				}
-				entStatus, err := entProvisioningStep.ProvisioningStepToStatus(ctx)
+				entStatus, err := entProvisioningStep.QueryProvisioningStepToStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -111,7 +124,7 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 					logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 					return
 				}
-				entStatus, err := entTeam.TeamToStatus(ctx)
+				entStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -124,7 +137,7 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 					logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 					return
 				}
-				entStatus, err := entBuild.BuildToStatus(ctx)
+				entStatus, err := entBuild.QueryBuildToStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -141,7 +154,7 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 
 	rootPlans, err := entBuild.QueryBuildToPlan().Where(plan.TypeEQ(plan.TypeStartBuild)).All(ctx)
 	if err != nil {
-		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
+		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
 		if err != nil {
 			logger.Log.Errorf("error failing execute build server task: %v", err)
 			return err
@@ -151,7 +164,7 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 	}
 	environment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
 	if err != nil {
-		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
+		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
 		if err != nil {
 			logger.Log.Errorf("error failing execute build server task: %v", err)
 			return err
@@ -160,10 +173,10 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 		return err
 	}
 
-	genericBuilder, err := builder.BuilderFromEnvironment(environment, logger)
+	genericBuilder, err := builder.BuilderFromEnvironment(laforgeConfig.Builders, environment, logger)
 	if err != nil {
 		logger.Log.Errorf("error generating builder: %v", err)
-		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
+		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
 		if err != nil {
 			logger.Log.Errorf("error failing execute build server task: %v", err)
 			return err
@@ -177,43 +190,54 @@ func StartBuild(client *ent.Client, logger *logging.Logger, currentUser *ent.Aut
 		return err
 	}
 
-	err = entRootCommit.Update().SetState(buildcommit.StateINPROGRESS).Exec(ctx)
+	err = entRootCommit.Update().SetState(buildcommit.StateINPROGRESS).Exec(ctxClosing)
 	if err != nil {
 		logger.Log.Errorf("error while cancelling rebuild commit: %v", err)
 		return err
 	}
-	rdb.Publish(ctx, "updatedBuildCommit", entRootCommit.ID.String())
+	rdb.Publish(ctxClosing, "updatedBuildCommit", entRootCommit.ID.String())
 
 	for _, entPlan := range rootPlans {
 		wg.Add(1)
-		go buildRoutine(client, logger, &genericBuilder, ctx, entPlan, &wg)
+		go buildRoutine(client, laforgeConfig, logger, &genericBuilder, ctx, entPlan, &wg)
 	}
 
 	wg.Wait()
 
-	taskStatus, serverTask, err = utils.CompleteServerTask(ctx, client, rdb, taskStatus, serverTask)
-	if err != nil {
-		logger.Log.Errorf("error completing execute build server task: %v", err)
-		return err
+	if ctx.Err() != nil {
+		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
+		if err != nil {
+			logger.Log.Errorf("error failing execute build server task: %v", err)
+			return err
+		}
+	} else {
+		taskStatus, serverTask, err = utils.CompleteServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
+		if err != nil {
+			logger.Log.Errorf("error completing execute build server task: %v", err)
+			return err
+		}
+		delete(cancelMap, entBuild.ID)
 	}
 
-	err = entRootCommit.Update().SetState(buildcommit.StateAPPLIED).Exec(ctx)
+	err = entRootCommit.Update().SetState(buildcommit.StateAPPLIED).Exec(ctxClosing)
 	if err != nil {
 		logger.Log.Errorf("error while cancelling rebuild commit: %v", err)
 		return err
 	}
-	rdb.Publish(ctx, "updatedBuildCommit", entRootCommit.ID.String())
+	rdb.Publish(ctxClosing, "updatedBuildCommit", entRootCommit.ID.String())
 
 	return nil
 }
 
-func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entPlan *ent.Plan, wg *sync.WaitGroup) {
+func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entPlan *ent.Plan, wg *sync.WaitGroup) {
 	logger.Log.WithFields(logrus.Fields{
 		"plan": entPlan.ID,
 	}).Debugf("BUILDER | BUILD ROUTINE START")
 	defer wg.Done()
+	ctxClosing := context.Background()
+	defer ctxClosing.Done()
 
-	entStatus, err := entPlan.PlanToStatus(ctx)
+	entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
 
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
@@ -249,7 +273,7 @@ func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.B
 
 	parentNodeFailed := false
 
-	entStatus, err = entStatus.Update().SetState(status.StatePARENTAWAITING).Save(ctx)
+	entStatus, err = entStatus.Update().SetState(status.StatePARENTAWAITING).Save(ctxClosing)
 	if err != nil {
 		logger.Log.WithFields(logrus.Fields{
 			"plan": entPlan.ID,
@@ -301,15 +325,15 @@ func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.B
 	logger.Log.WithFields(logrus.Fields{
 		"plan": entPlan.ID,
 	}).Debugf("BUILDER | done waiting on parents")
-	entStatus, err = entPlan.PlanToStatus(ctx)
+	entStatus, err = entPlan.QueryPlanToStatus().Only(ctx)
 
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 		return
 	}
 
-	entStatus.Update().SetState(status.StateINPROGRESS).Save(ctx)
-	rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
+	entStatus.Update().SetState(status.StateINPROGRESS).Save(ctxClosing)
+	rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
 
 	var planErr error = nil
 	switch entPlan.Type {
@@ -320,17 +344,17 @@ func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.B
 			return
 		}
 		if parentNodeFailed {
-			networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
+			networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
 				return
 			}
-			_, saveErr := networkStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+			_, saveErr := networkStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctxClosing)
 			if saveErr != nil {
 				logger.Log.Errorf("Error while setting Provisioned Network status to FAILED: %v", saveErr)
 				return
 			}
-			rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+			rdb.Publish(ctxClosing, "updatedStatus", networkStatus.ID.String())
 			planErr = fmt.Errorf("parent node for Provionded Network has failed")
 		} else {
 			planErr = buildNetwork(client, logger, builder, ctx, entProNetwork)
@@ -342,17 +366,17 @@ func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.B
 			return
 		}
 		if parentNodeFailed {
-			hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
+			hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
 				return
 			}
-			_, saveErr := hostStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+			_, saveErr := hostStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctxClosing)
 			if saveErr != nil {
 				logger.Log.Errorf("Error while setting Provisioned Network status to FAILED: %v", saveErr)
 				return
 			}
-			rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
+			rdb.Publish(ctxClosing, "updatedStatus", hostStatus.ID.String())
 			planErr = fmt.Errorf("parent node for Provionded Host has failed")
 		} else {
 			planErr = buildHost(client, logger, builder, ctx, entProHost)
@@ -364,77 +388,71 @@ func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.B
 			return
 		}
 		if parentNodeFailed {
-			stepStatus, err := entProvisioningStep.QueryProvisioningStepToStatus().Only(ctx)
+			stepStatus, err := entProvisioningStep.QueryProvisioningStepToStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
 				return
 			}
-			_, err = stepStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+			_, err = stepStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("error while trying to set ent.ProvisioningStep.Status.State to status.StateFAILED: %v", err)
 				return
 			}
-			rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
+			rdb.Publish(ctxClosing, "updatedStatus", stepStatus.ID.String())
 			planErr = fmt.Errorf("parent node for Provisioning Step has failed")
 		} else {
-			planErr = execStep(client, logger, ctx, entProvisioningStep)
+			planErr = execStep(client, laforgeConfig, logger, ctx, entProvisioningStep)
 		}
 	case plan.TypeStartTeam:
 		entTeam, err := entPlan.QueryPlanToTeam().Only(ctx)
 		if err != nil {
-			logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
+			logger.Log.Errorf("Failed to Query Ent Tean. Err: %v", err)
 			return
 		}
-		// TODO: REMOVE ME
-		entProNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(
-			provisionednetwork.HasProvisionedNetworkToNetworkWith(
-				network.NameEQ("vdi"),
-			),
-		).First(ctx)
-
-		if err != nil {
-			logger.Log.Errorf("failed to query provisioned network from entTeam: %v", err)
-			return
+		if parentNodeFailed {
+			teamStatus, err := entTeam.QueryTeamToStatus().Only(ctxClosing)
+			if err != nil {
+				logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
+				return
+			}
+			_, err = teamStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctxClosing)
+			if err != nil {
+				logger.Log.Errorf("error while trying to set ent.ProvisioningStep.Status.State to status.StateFAILED: %v", err)
+				return
+			}
+			rdb.Publish(ctxClosing, "updatedStatus", teamStatus.ID.String())
+			planErr = fmt.Errorf("parent node for Team has failed")
+		} else {
+			planErr = buildTeam(client, logger, builder, ctx, entTeam)
 		}
-		err = (*builder).DeployNetwork(ctx, entProNetwork)
-		if err != nil {
-			logger.Log.Error("failed to pre-create Tier-1 network (%s). continuing anyways: %v", err)
-		}
-		// TODO: END REMOVE ME
-		entStatus, err := entTeam.TeamToStatus(ctx)
-		if err != nil {
-			logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
-			return
-		}
-		entStatus.Update().SetState(status.StateCOMPLETE).Save(ctx)
-		rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
 	case plan.TypeStartBuild:
 		entBuild, err := entPlan.QueryPlanToBuild().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 			return
 		}
-		entStatus, err := entBuild.BuildToStatus(ctx)
+		entStatus, err := entBuild.QueryBuildToStatus().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 			return
 		}
-		entStatus.Update().SetState(status.StateCOMPLETE).Save(ctx)
-		rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
+		entStatus.Update().SetState(status.StateCOMPLETE).Save(ctxClosing)
+		rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
 	default:
 		break
 	}
 
 	if planErr != nil {
-		entStatus.Update().SetState(status.StateFAILED).SetFailed(true).Save(ctx)
-		rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
+		entStatus.Update().SetState(status.StateFAILED).SetFailed(true).Save(ctxClosing)
+		rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
 		logger.Log.WithFields(logrus.Fields{
 			"type":    entPlan.Type,
 			"builder": (*builder).ID(),
 		}).Errorf("error while executing plan: %v", planErr)
 	} else {
-		entStatus.Update().SetState(status.StateCOMPLETE).SetCompleted(true).Save(ctx)
-		rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
+
+		entStatus.Update().SetState(status.StateCOMPLETE).SetCompleted(true).Save(ctxClosing)
+		rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
 	}
 
 	logger.Log.WithFields(logrus.Fields{
@@ -444,7 +462,7 @@ func buildRoutine(client *ent.Client, logger *logging.Logger, builder *builder.B
 	nextPlans, err := entPlan.QueryNextPlan().All(ctx)
 	for _, nextPlan := range nextPlans {
 		wg.Add(1)
-		go buildRoutine(client, logger, builder, ctx, nextPlan, wg)
+		go buildRoutine(client, laforgeConfig, logger, builder, ctx, nextPlan, wg)
 	}
 
 }
@@ -477,6 +495,12 @@ func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 		logger.Log.Errorf("Error while getting Provisioned Host status: %v", err)
 		return err
 	}
+	entProNetwork, err := entProHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+
 	_, saveErr := hostStatus.Update().SetState(status.StateINPROGRESS).Save(ctx)
 	if saveErr != nil {
 		logger.Log.Errorf("Error while setting Provisioned Host status to INPROGRESS: %v", saveErr)
@@ -492,14 +516,15 @@ func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 			return saveErr
 		}
 		rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
+		checkNetworkStatus(client, logger, ctx, entProNetwork)
 		return err
 	}
 	logger.Log.Infof("deployed %s successfully", entProHost.SubnetIP)
-	_, saveErr = hostStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Save(ctx)
-	if saveErr != nil {
-		logger.Log.Errorf("Error while setting Provisioned Host status to COMPLETE: %v", saveErr)
-		return saveErr
-	}
+	// _, saveErr = hostStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Save(ctx)
+	// if saveErr != nil {
+	// 	logger.Log.Errorf("Error while setting Provisioned Host status to COMPLETE: %v", saveErr)
+	// 	return saveErr
+	// }
 	rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
 	return nil
 }
@@ -509,6 +534,11 @@ func buildNetwork(client *ent.Client, logger *logging.Logger, builder *builder.B
 	networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
+		return err
+	}
+	entTeam, err := entProNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while getting team: %v", err)
 		return err
 	}
 	_, saveErr := networkStatus.Update().SetState(status.StateINPROGRESS).Save(ctx)
@@ -526,22 +556,273 @@ func buildNetwork(client *ent.Client, logger *logging.Logger, builder *builder.B
 			return saveErr
 		}
 		rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+		checkTeamStatus(client, logger, ctx, entTeam)
 		return err
 	}
 	logger.Log.Infof("deployed %s successfully", entProNetwork.Name)
-	// Allow networks to set up
-	time.Sleep(1 * time.Minute)
 
-	_, saveErr = networkStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Save(ctx)
-	if saveErr != nil {
-		logger.Log.Errorf("Error while setting Provisioned Network status to COMPLETE: %v", saveErr)
-		return saveErr
-	}
-	rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+	// _, saveErr = networkStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Save(ctx)
+	// if saveErr != nil {
+	// 	logger.Log.Errorf("Error while setting Provisioned Network status to COMPLETE: %v", saveErr)
+	// 	return saveErr
+	// }
+	// rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
 	return nil
 }
 
-func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, entStep *ent.ProvisioningStep) error {
+func buildTeam(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entTeam *ent.Team) error {
+	logger.Log.Infof("deploying Team: %d", entTeam.TeamNumber)
+
+	teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while getting Team status: %v", err)
+		return err
+	}
+	_, saveErr := teamStatus.Update().SetState(status.StateINPROGRESS).Save(ctx)
+	if saveErr != nil {
+		logger.Log.Errorf("Error while setting Team status to INPROGRESS: %v", saveErr)
+		return saveErr
+	}
+	rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+	err = (*builder).DeployTeam(ctx, entTeam)
+	if err != nil {
+		logger.Log.Errorf("Error while deploying network: %v", err)
+		_, saveErr := teamStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Network status to FAILED: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+		checkTeamStatus(client, logger, ctx, entTeam)
+		return err
+	}
+	logger.Log.Infof("deployed %d successfully", entTeam.TeamNumber)
+	return nil
+}
+
+func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entTeam *ent.Team) error {
+	stepAwaitingInProgress, err := entTeam.
+		QueryTeamToProvisionedNetwork().
+		Where(
+			provisionednetwork.
+				HasProvisionedNetworkToStatusWith(
+					status.Or(
+						status.StateEQ(status.StateAWAITING),
+						status.StateEQ(status.StateINPROGRESS),
+					),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is in progress: %v", err)
+		return err
+	}
+	if stepAwaitingInProgress {
+		logger.Log.Debug("team %s is in progress", entTeam.ID)
+		return nil
+	}
+
+	teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+	if teamStatus.State != status.StateINPROGRESS {
+		return nil
+	}
+
+	hostFailed, err := entTeam.
+		QueryTeamToProvisionedNetwork().
+		Where(
+			provisionednetwork.
+				HasProvisionedNetworkToStatusWith(
+					status.Or(
+						status.StateEQ(status.StateFAILED),
+						status.StateEQ(status.StateTAINTED),
+					),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if hostFailed {
+		_, saveErr := teamStatus.Update().SetCompleted(false).SetFailed(true).SetState(status.StateTAINTED).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Network status to Tainted: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+		logger.Log.Debug("host %s is failed", teamStatus.ID)
+		return nil
+	}
+
+	stepNotCompleted, err := entTeam.
+		QueryTeamToProvisionedNetwork().
+		Where(
+			provisionednetwork.
+				HasProvisionedNetworkToStatusWith(
+					status.StateNEQ(status.StateCOMPLETE),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if !stepNotCompleted {
+		_, saveErr := teamStatus.Update().SetCompleted(true).SetFailed(false).SetState(status.StateCOMPLETE).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Network status to Completed: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
+		logger.Log.Debug("host %s is failed", teamStatus.ID)
+		return nil
+	}
+	return nil
+}
+
+func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entProNetwork *ent.ProvisionedNetwork) error {
+	stepAwaitingInProgress, err := entProNetwork.
+		QueryProvisionedNetworkToProvisionedHost().
+		Where(
+			provisionedhost.
+				HasProvisionedHostToStatusWith(
+					status.Or(
+						status.StateEQ(status.StateAWAITING),
+						status.StateEQ(status.StateINPROGRESS),
+					),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is in progress: %v", err)
+		return err
+	}
+	if stepAwaitingInProgress {
+		logger.Log.Debug("network %s is in progress", entProNetwork.ID)
+		return nil
+	}
+
+	networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
+	if networkStatus.State != status.StateINPROGRESS {
+		return nil
+	}
+	entTeam, err := entProNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while getting team: %v", err)
+		return err
+	}
+
+	hostFailed, err := entProNetwork.
+		QueryProvisionedNetworkToProvisionedHost().
+		Where(
+			provisionedhost.
+				HasProvisionedHostToStatusWith(
+					status.Or(
+						status.StateEQ(status.StateFAILED),
+						status.StateEQ(status.StateTAINTED),
+					),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if hostFailed {
+		_, saveErr := networkStatus.Update().SetCompleted(false).SetFailed(true).SetState(status.StateTAINTED).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Network status to Tainted: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+		logger.Log.Debug("host %s is failed", networkStatus.ID)
+		checkTeamStatus(client, logger, ctx, entTeam)
+		return nil
+	}
+
+	stepNotCompleted, err := entProNetwork.
+		QueryProvisionedNetworkToProvisionedHost().
+		Where(
+			provisionedhost.
+				HasProvisionedHostToStatusWith(
+					status.StateNEQ(status.StateCOMPLETE),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if !stepNotCompleted {
+		_, saveErr := networkStatus.Update().SetCompleted(true).SetFailed(false).SetState(status.StateCOMPLETE).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Network status to Completed: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
+		logger.Log.Debug("host %s is Completed", networkStatus.ID)
+		checkTeamStatus(client, logger, ctx, entTeam)
+		return nil
+	}
+	return nil
+}
+
+func checkHostStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entProHost *ent.ProvisionedHost) error {
+	hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
+	if hostStatus.State != status.StateINPROGRESS {
+		return nil
+	}
+	entProNetwork, err := entProHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+
+	stepFailed, err := entProHost.
+		QueryProvisionedHostToProvisioningStep().
+		Where(
+			provisioningstep.
+				HasProvisioningStepToStatusWith(
+					status.StateEQ(status.StateFAILED),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if stepFailed {
+		_, saveErr := hostStatus.Update().SetCompleted(false).SetFailed(true).SetState(status.StateTAINTED).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Host status to Tainted: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
+		logger.Log.Debug("host %s is failed", entProHost.ID)
+		checkNetworkStatus(client, logger, ctx, entProNetwork)
+		return nil
+	}
+
+	stepNotCompleted, err := entProHost.
+		QueryProvisionedHostToProvisioningStep().
+		Where(
+			provisioningstep.
+				HasProvisioningStepToStatusWith(
+					status.StateNEQ(status.StateCOMPLETE),
+				),
+		).Exist(ctx)
+	if err != nil {
+		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
+		return err
+	}
+	if !stepNotCompleted {
+		_, saveErr := hostStatus.Update().SetCompleted(true).SetFailed(false).SetState(status.StateCOMPLETE).Save(ctx)
+		if saveErr != nil {
+			logger.Log.Errorf("Error while setting Provisioned Host status to Completed: %v", saveErr)
+			return saveErr
+		}
+		rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
+		logger.Log.Debug("host %s is completed", entProHost.ID)
+		checkNetworkStatus(client, logger, ctx, entProNetwork)
+		return nil
+	}
+	return nil
+}
+
+func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, ctx context.Context, entStep *ent.ProvisioningStep) error {
 	stepStatus, err := entStep.QueryProvisioningStepToStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
@@ -553,11 +834,6 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 		return err
 	}
 	rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
-	downloadURL, ok := os.LookupEnv("API_DOWNLOAD_URL")
-
-	if !ok {
-		downloadURL = "http://localhost:8080/api/download/"
-	}
 
 	entProvisionedHost, err := entStep.QueryProvisioningStepToProvisionedHost().Only(ctx)
 	if err != nil {
@@ -593,7 +869,7 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 		}
 		_, err = client.AgentTask.Create().
 			SetCommand(agenttask.CommandDOWNLOAD).
-			SetArgs(entScript.Source + "💔" + downloadURL + entGinMiddleware.URLID).
+			SetArgs(entScript.Source + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + "true").
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
 			SetAgentTaskToProvisionedHost(entProvisionedHost).
@@ -694,7 +970,7 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 		if entFileDownload.SourceType == "remote" {
 			_, err = client.AgentTask.Create().
 				SetCommand(agenttask.CommandDOWNLOAD).
-				SetArgs(entFileDownload.Destination + "💔" + entFileDownload.Source).
+				SetArgs(entFileDownload.Destination + "💔" + entFileDownload.Source + "💔" + strings.ToLower(fmt.Sprintf("%v", entFileDownload.IsTxt))).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
 				SetAgentTaskToProvisionedHost(entProvisionedHost).
@@ -703,7 +979,7 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 		} else {
 			_, err = client.AgentTask.Create().
 				SetCommand(agenttask.CommandDOWNLOAD).
-				SetArgs(entFileDownload.Destination + "💔" + downloadURL + entGinMiddleware.URLID).
+				SetArgs(entFileDownload.Destination + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + strings.ToLower(fmt.Sprintf("%v", entFileDownload.IsTxt))).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
 				SetAgentTaskToProvisionedHost(entProvisionedHost).
@@ -734,6 +1010,77 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 		}
 	case provisioningstep.TypeDNSRecord:
 		break
+	case provisioningstep.TypeAnsible:
+		entAnsible, err := entStep.QueryProvisioningStepToAnsible().Only(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed querying Ansible for Provioning Step: %v", err)
+			return err
+		}
+		entGinMiddleware, err := entStep.QueryProvisioningStepToGinFileMiddleware().Only(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed querying Gin File Middleware for Script: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandDOWNLOAD).
+			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + "false").
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandEXTRACT).
+			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + "/tmp").
+			SetNumber(taskCount + 1).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandANSIBLE).
+			SetArgs("/tmp/" + entAnsible.Name + "/" + entAnsible.PlaybookName + "💔" + string(entAnsible.Method) + "💔" + entAnsible.Inventory).
+			SetNumber(taskCount + 2).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Execute: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandDELETE).
+			SetArgs("/tmp/" + entAnsible.Name).
+			SetNumber(taskCount + 3).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
+			return err
+		}
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandDELETE).
+			SetArgs("/tmp/" + entAnsible.Name + ".zip").
+			SetNumber(taskCount + 4).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			Save(ctx)
+		if err != nil {
+			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
+			return err
+		}
 	default:
 		break
 	}
@@ -756,6 +1103,7 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 				logger.Log.Errorf("error while trying to set ent.ProvisioningStep.Status.State to status.StateFAILED: %v", err)
 				return err
 			}
+			checkHostStatus(client, logger, ctx, entProvisionedHost)
 			rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
 			return fmt.Errorf("one or more agent tasks failed")
 		}
@@ -778,10 +1126,12 @@ func execStep(client *ent.Client, logger *logging.Logger, ctx context.Context, e
 		time.Sleep(time.Second)
 	}
 	_, err = stepStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Save(ctx)
+
 	if err != nil {
 		logger.Log.Errorf("error while trying to set ent.ProvisioningStep.Status.State to status.StateCOMPLETED: %v", err)
 		return err
 	}
+	checkHostStatus(client, logger, ctx, entProvisionedHost)
 	rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
 
 	agent_task_for_entstep, fetch_agent_task_err := entStep.ProvisioningStepToAgentTask(ctx)

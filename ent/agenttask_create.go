@@ -82,6 +82,14 @@ func (atc *AgentTaskCreate) SetID(u uuid.UUID) *AgentTaskCreate {
 	return atc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (atc *AgentTaskCreate) SetNillableID(u *uuid.UUID) *AgentTaskCreate {
+	if u != nil {
+		atc.SetID(*u)
+	}
+	return atc
+}
+
 // SetAgentTaskToProvisioningStepID sets the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity by ID.
 func (atc *AgentTaskCreate) SetAgentTaskToProvisioningStepID(id uuid.UUID) *AgentTaskCreate {
 	atc.mutation.SetAgentTaskToProvisioningStepID(id)
@@ -234,35 +242,35 @@ func (atc *AgentTaskCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (atc *AgentTaskCreate) check() error {
 	if _, ok := atc.mutation.Command(); !ok {
-		return &ValidationError{Name: "command", err: errors.New(`ent: missing required field "command"`)}
+		return &ValidationError{Name: "command", err: errors.New(`ent: missing required field "AgentTask.command"`)}
 	}
 	if v, ok := atc.mutation.Command(); ok {
 		if err := agenttask.CommandValidator(v); err != nil {
-			return &ValidationError{Name: "command", err: fmt.Errorf(`ent: validator failed for field "command": %w`, err)}
+			return &ValidationError{Name: "command", err: fmt.Errorf(`ent: validator failed for field "AgentTask.command": %w`, err)}
 		}
 	}
 	if _, ok := atc.mutation.Args(); !ok {
-		return &ValidationError{Name: "args", err: errors.New(`ent: missing required field "args"`)}
+		return &ValidationError{Name: "args", err: errors.New(`ent: missing required field "AgentTask.args"`)}
 	}
 	if _, ok := atc.mutation.Number(); !ok {
-		return &ValidationError{Name: "number", err: errors.New(`ent: missing required field "number"`)}
+		return &ValidationError{Name: "number", err: errors.New(`ent: missing required field "AgentTask.number"`)}
 	}
 	if _, ok := atc.mutation.Output(); !ok {
-		return &ValidationError{Name: "output", err: errors.New(`ent: missing required field "output"`)}
+		return &ValidationError{Name: "output", err: errors.New(`ent: missing required field "AgentTask.output"`)}
 	}
 	if _, ok := atc.mutation.State(); !ok {
-		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "state"`)}
+		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "AgentTask.state"`)}
 	}
 	if v, ok := atc.mutation.State(); ok {
 		if err := agenttask.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "state": %w`, err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "AgentTask.state": %w`, err)}
 		}
 	}
 	if _, ok := atc.mutation.ErrorMessage(); !ok {
-		return &ValidationError{Name: "error_message", err: errors.New(`ent: missing required field "error_message"`)}
+		return &ValidationError{Name: "error_message", err: errors.New(`ent: missing required field "AgentTask.error_message"`)}
 	}
 	if _, ok := atc.mutation.AgentTaskToProvisionedHostID(); !ok {
-		return &ValidationError{Name: "AgentTaskToProvisionedHost", err: errors.New("ent: missing required edge \"AgentTaskToProvisionedHost\"")}
+		return &ValidationError{Name: "AgentTaskToProvisionedHost", err: errors.New(`ent: missing required edge "AgentTask.AgentTaskToProvisionedHost"`)}
 	}
 	return nil
 }
@@ -276,7 +284,11 @@ func (atc *AgentTaskCreate) sqlSave(ctx context.Context) (*AgentTask, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -294,7 +306,7 @@ func (atc *AgentTaskCreate) createSpec() (*AgentTask, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := atc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := atc.mutation.Command(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

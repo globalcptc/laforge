@@ -117,6 +117,14 @@ func (sc *StatusCreate) SetID(u uuid.UUID) *StatusCreate {
 	return sc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (sc *StatusCreate) SetNillableID(u *uuid.UUID) *StatusCreate {
+	if u != nil {
+		sc.SetID(*u)
+	}
+	return sc
+}
+
 // SetStatusToBuildID sets the "StatusToBuild" edge to the Build entity by ID.
 func (sc *StatusCreate) SetStatusToBuildID(id uuid.UUID) *StatusCreate {
 	sc.mutation.SetStatusToBuildID(id)
@@ -357,26 +365,26 @@ func (sc *StatusCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (sc *StatusCreate) check() error {
 	if _, ok := sc.mutation.State(); !ok {
-		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "state"`)}
+		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "Status.state"`)}
 	}
 	if v, ok := sc.mutation.State(); ok {
 		if err := status.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "state": %w`, err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Status.state": %w`, err)}
 		}
 	}
 	if _, ok := sc.mutation.StatusFor(); !ok {
-		return &ValidationError{Name: "status_for", err: errors.New(`ent: missing required field "status_for"`)}
+		return &ValidationError{Name: "status_for", err: errors.New(`ent: missing required field "Status.status_for"`)}
 	}
 	if v, ok := sc.mutation.StatusFor(); ok {
 		if err := status.StatusForValidator(v); err != nil {
-			return &ValidationError{Name: "status_for", err: fmt.Errorf(`ent: validator failed for field "status_for": %w`, err)}
+			return &ValidationError{Name: "status_for", err: fmt.Errorf(`ent: validator failed for field "Status.status_for": %w`, err)}
 		}
 	}
 	if _, ok := sc.mutation.Failed(); !ok {
-		return &ValidationError{Name: "failed", err: errors.New(`ent: missing required field "failed"`)}
+		return &ValidationError{Name: "failed", err: errors.New(`ent: missing required field "Status.failed"`)}
 	}
 	if _, ok := sc.mutation.Completed(); !ok {
-		return &ValidationError{Name: "completed", err: errors.New(`ent: missing required field "completed"`)}
+		return &ValidationError{Name: "completed", err: errors.New(`ent: missing required field "Status.completed"`)}
 	}
 	return nil
 }
@@ -390,7 +398,11 @@ func (sc *StatusCreate) sqlSave(ctx context.Context) (*Status, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -408,7 +420,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := sc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := sc.mutation.State(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

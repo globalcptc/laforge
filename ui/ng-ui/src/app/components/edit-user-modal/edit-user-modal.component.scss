@@ -1,0 +1,7 @@
+::ng-deep input.mat-input-element:disabled {
+  + span.mat-form-field-label-wrapper {
+    label.mat-form-field-label {
+      color: rgba(255, 255, 255, 0.25) !important;
+    }
+  }
+}

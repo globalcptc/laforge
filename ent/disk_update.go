@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -135,7 +136,7 @@ func (du *DiskUpdate) ExecX(ctx context.Context) {
 func (du *DiskUpdate) check() error {
 	if v, ok := du.mutation.Size(); ok {
 		if err := disk.SizeValidator(v); err != nil {
-			return &ValidationError{Name: "size", err: fmt.Errorf("ent: validator failed for field \"size\": %w", err)}
+			return &ValidationError{Name: "size", err: fmt.Errorf(`ent: validator failed for field "Disk.size": %w`, err)}
 		}
 	}
 	return nil
@@ -341,7 +342,7 @@ func (duo *DiskUpdateOne) ExecX(ctx context.Context) {
 func (duo *DiskUpdateOne) check() error {
 	if v, ok := duo.mutation.Size(); ok {
 		if err := disk.SizeValidator(v); err != nil {
-			return &ValidationError{Name: "size", err: fmt.Errorf("ent: validator failed for field \"size\": %w", err)}
+			return &ValidationError{Name: "size", err: fmt.Errorf(`ent: validator failed for field "Disk.size": %w`, err)}
 		}
 	}
 	return nil
@@ -360,7 +361,7 @@ func (duo *DiskUpdateOne) sqlSave(ctx context.Context) (_node *Disk, err error) 
 	}
 	id, ok := duo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Disk.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Disk.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := duo.fields; len(fields) > 0 {

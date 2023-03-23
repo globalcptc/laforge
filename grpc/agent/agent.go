@@ -99,8 +99,13 @@ func AddUserGroup(groupname string, username string) error {
 }
 
 // DownloadFile will download a url to a local file.
-func DownloadFile(path string, url string) error {
-	return SystemDownloadFile(path, url)
+func DownloadFile(path, url, is_txt string) error {
+	return SystemDownloadFile(path, url, is_txt)
+}
+
+// ExecuteAnsible will execute an Ansible Playbook
+func ExecuteAnsible(playbookPath, connectionMethod, inventoryList string) (string, error) {
+	return SystemExecuteAnsible(playbookPath, connectionMethod, inventoryList)
 }
 
 // ChangePermissions will download a url to a local file.
@@ -192,6 +197,14 @@ func RequestTask(c pb.LaforgeClient) {
 		logger.Errorf("Error: %v", err)
 	} else {
 		switch r.GetCommand() {
+		case pb.TaskReply_ANSIBLE:
+			taskArgs := strings.Split(r.GetArgs(), "💔")
+			playbookPath := taskArgs[0]
+			connectionMethod := taskArgs[1]
+			inventoryList := taskArgs[2]
+			taskoutput, taskerr := ExecuteAnsible(playbookPath, connectionMethod, inventoryList)
+			taskoutput = strings.ReplaceAll(taskoutput, "\n", "🔥")
+			RequestTaskStatusRequest(taskoutput, taskerr, r.Id, c)
 		case pb.TaskReply_EXECUTE:
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			command := taskArgs[0]
@@ -204,7 +217,8 @@ func RequestTask(c pb.LaforgeClient) {
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			filepath := taskArgs[0]
 			url := taskArgs[1]
-			taskerr := DownloadFile(filepath, url)
+			is_txt := taskArgs[2]
+			taskerr := DownloadFile(filepath, url, is_txt)
 			RequestTaskStatusRequest("", taskerr, r.Id, c)
 		case pb.TaskReply_EXTRACT:
 			taskArgs := strings.Split(r.GetArgs(), "💔")

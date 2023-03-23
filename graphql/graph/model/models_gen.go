@@ -20,6 +20,22 @@ type LaForgePageInfo struct {
 	NextOffset int `json:"nextOffset"`
 }
 
+type PlanCounts struct {
+	Planning         int `json:"planning"`
+	Awaiting         int `json:"awaiting"`
+	ParentAwaiting   int `json:"parentAwaiting"`
+	InProgress       int `json:"inProgress"`
+	Failed           int `json:"failed"`
+	Complete         int `json:"complete"`
+	Tainted          int `json:"tainted"`
+	Undefined        int `json:"undefined"`
+	ToDelete         int `json:"toDelete"`
+	DeleteInProgress int `json:"deleteInProgress"`
+	Deleted          int `json:"deleted"`
+	ToRebuild        int `json:"toRebuild"`
+	Cancelled        int `json:"cancelled"`
+}
+
 type StatusBatch struct {
 	Statuses []*ent.Status    `json:"statuses"`
 	PageInfo *LaForgePageInfo `json:"pageInfo"`
@@ -28,6 +44,11 @@ type StatusBatch struct {
 type ConfigMap struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
+}
+
+type IntMap struct {
+	Key   string `json:"key"`
+	Value int    `json:"value"`
 }
 
 type TagMap struct {
@@ -431,6 +452,7 @@ type ProvisionStatus string
 const (
 	ProvisionStatusPlanning         ProvisionStatus = "PLANNING"
 	ProvisionStatusAwaiting         ProvisionStatus = "AWAITING"
+	ProvisionStatusParentawaiting   ProvisionStatus = "PARENTAWAITING"
 	ProvisionStatusInprogress       ProvisionStatus = "INPROGRESS"
 	ProvisionStatusFailed           ProvisionStatus = "FAILED"
 	ProvisionStatusComplete         ProvisionStatus = "COMPLETE"
@@ -440,11 +462,13 @@ const (
 	ProvisionStatusDeleteinprogress ProvisionStatus = "DELETEINPROGRESS"
 	ProvisionStatusDeleted          ProvisionStatus = "DELETED"
 	ProvisionStatusTorebuild        ProvisionStatus = "TOREBUILD"
+	ProvisionStatusCancelled        ProvisionStatus = "CANCELLED"
 )
 
 var AllProvisionStatus = []ProvisionStatus{
 	ProvisionStatusPlanning,
 	ProvisionStatusAwaiting,
+	ProvisionStatusParentawaiting,
 	ProvisionStatusInprogress,
 	ProvisionStatusFailed,
 	ProvisionStatusComplete,
@@ -454,11 +478,12 @@ var AllProvisionStatus = []ProvisionStatus{
 	ProvisionStatusDeleteinprogress,
 	ProvisionStatusDeleted,
 	ProvisionStatusTorebuild,
+	ProvisionStatusCancelled,
 }
 
 func (e ProvisionStatus) IsValid() bool {
 	switch e {
-	case ProvisionStatusPlanning, ProvisionStatusAwaiting, ProvisionStatusInprogress, ProvisionStatusFailed, ProvisionStatusComplete, ProvisionStatusTainted, ProvisionStatusUndefined, ProvisionStatusTodelete, ProvisionStatusDeleteinprogress, ProvisionStatusDeleted, ProvisionStatusTorebuild:
+	case ProvisionStatusPlanning, ProvisionStatusAwaiting, ProvisionStatusParentawaiting, ProvisionStatusInprogress, ProvisionStatusFailed, ProvisionStatusComplete, ProvisionStatusTainted, ProvisionStatusUndefined, ProvisionStatusTodelete, ProvisionStatusDeleteinprogress, ProvisionStatusDeleted, ProvisionStatusTorebuild, ProvisionStatusCancelled:
 		return true
 	}
 	return false
@@ -539,6 +564,7 @@ func (e ProvisionStatusFor) MarshalGQL(w io.Writer) {
 type ProvisioningStepType string
 
 const (
+	ProvisioningStepTypeAnsible      ProvisioningStepType = "Ansible"
 	ProvisioningStepTypeScript       ProvisioningStepType = "Script"
 	ProvisioningStepTypeCommand      ProvisioningStepType = "Command"
 	ProvisioningStepTypeDNSRecord    ProvisioningStepType = "DNSRecord"
@@ -549,6 +575,7 @@ const (
 )
 
 var AllProvisioningStepType = []ProvisioningStepType{
+	ProvisioningStepTypeAnsible,
 	ProvisioningStepTypeScript,
 	ProvisioningStepTypeCommand,
 	ProvisioningStepTypeDNSRecord,
@@ -560,7 +587,7 @@ var AllProvisioningStepType = []ProvisioningStepType{
 
 func (e ProvisioningStepType) IsValid() bool {
 	switch e {
-	case ProvisioningStepTypeScript, ProvisioningStepTypeCommand, ProvisioningStepTypeDNSRecord, ProvisioningStepTypeFileDelete, ProvisioningStepTypeFileDownload, ProvisioningStepTypeFileExtract, ProvisioningStepTypeUndefined:
+	case ProvisioningStepTypeAnsible, ProvisioningStepTypeScript, ProvisioningStepTypeCommand, ProvisioningStepTypeDNSRecord, ProvisioningStepTypeFileDelete, ProvisioningStepTypeFileDownload, ProvisioningStepTypeFileExtract, ProvisioningStepTypeUndefined:
 		return true
 	}
 	return false

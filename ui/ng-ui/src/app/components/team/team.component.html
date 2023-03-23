@@ -1,4 +1,4 @@
-<div class="team" [ngClass]="style" [class.selectable]="selectable" *ngIf="shouldHideLoading || !shouldHide">
+<div class="team" [ngClass]="style" [class.selectable]="selectable" *ngIf="!(shouldHide | async)">
   <div class="rebuild-select" *ngIf="selectable">
     <!-- <input type="checkbox" (change)="onSelect($event)" title="Select for rebuild" aria-label="Select for rebuild" /> -->
     <mat-checkbox [checked]="isSelected()" (change)="onSelect()" [aria-label]="'Select Network'"></mat-checkbox>
@@ -14,9 +14,9 @@
         </ng-container>
       </div>
       <div class="team-details">
-        <span class="team-number"
-          ><b>Team {{ team.team_number }}</b></span
-        >
+        <span class="team-number">
+          <b>Team {{ team.team_number }}</b>
+        </span>
       </div>
       <div class="toggle-collapse" *ngIf="shouldCollapse()">
         <i class="fas cursor-pointer" [ngClass]="'fa-' + (expandOverride ? 'chevron-up' : 'chevron-down')" (click)="toggleCollapse()"></i>
@@ -26,7 +26,7 @@
       <app-network
         *ngFor="let provNetwork of team.TeamToProvisionedNetwork | sortBy: 'asc':'name'"
         [provisionedNetwork]="provNetwork"
-        [status]="provNetwork.ProvisionedNetworkToStatus"
+        [planDiffs]="planDiffs"
         [style]="style"
         [selectable]="selectable"
         [parentSelected]="isSelected()"

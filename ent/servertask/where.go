@@ -594,6 +594,34 @@ func HasServerTaskToBuildWith(preds ...predicate.Build) predicate.ServerTask {
 	})
 }
 
+// HasServerTaskToBuildCommit applies the HasEdge predicate on the "ServerTaskToBuildCommit" edge.
+func HasServerTaskToBuildCommit() predicate.ServerTask {
+	return predicate.ServerTask(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ServerTaskToBuildCommitTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, ServerTaskToBuildCommitTable, ServerTaskToBuildCommitColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasServerTaskToBuildCommitWith applies the HasEdge predicate on the "ServerTaskToBuildCommit" edge with a given conditions (other predicates).
+func HasServerTaskToBuildCommitWith(preds ...predicate.BuildCommit) predicate.ServerTask {
+	return predicate.ServerTask(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ServerTaskToBuildCommitInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, ServerTaskToBuildCommitTable, ServerTaskToBuildCommitColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasServerTaskToGinFileMiddleware applies the HasEdge predicate on the "ServerTaskToGinFileMiddleware" edge.
 func HasServerTaskToGinFileMiddleware() predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {

@@ -4,11 +4,13 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/competition"
@@ -27,6 +29,7 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/script"
+	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
 )
@@ -349,6 +352,21 @@ func (eu *EnvironmentUpdate) AddEnvironmentToHostDependency(h ...*HostDependency
 	return eu.AddEnvironmentToHostDependencyIDs(ids...)
 }
 
+// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
+func (eu *EnvironmentUpdate) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddEnvironmentToAnsibleIDs(ids...)
+	return eu
+}
+
+// AddEnvironmentToAnsible adds the "EnvironmentToAnsible" edges to the Ansible entity.
+func (eu *EnvironmentUpdate) AddEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return eu.AddEnvironmentToAnsibleIDs(ids...)
+}
+
 // AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
 func (eu *EnvironmentUpdate) AddEnvironmentToBuildIDs(ids ...uuid.UUID) *EnvironmentUpdate {
 	eu.mutation.AddEnvironmentToBuildIDs(ids...)
@@ -377,6 +395,21 @@ func (eu *EnvironmentUpdate) AddEnvironmentToRepository(r ...*Repository) *Envir
 		ids[i] = r[i].ID
 	}
 	return eu.AddEnvironmentToRepositoryIDs(ids...)
+}
+
+// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
+func (eu *EnvironmentUpdate) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddEnvironmentToServerTaskIDs(ids...)
+	return eu
+}
+
+// AddEnvironmentToServerTask adds the "EnvironmentToServerTask" edges to the ServerTask entity.
+func (eu *EnvironmentUpdate) AddEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return eu.AddEnvironmentToServerTaskIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -699,6 +732,27 @@ func (eu *EnvironmentUpdate) RemoveEnvironmentToHostDependency(h ...*HostDepende
 	return eu.RemoveEnvironmentToHostDependencyIDs(ids...)
 }
 
+// ClearEnvironmentToAnsible clears all "EnvironmentToAnsible" edges to the Ansible entity.
+func (eu *EnvironmentUpdate) ClearEnvironmentToAnsible() *EnvironmentUpdate {
+	eu.mutation.ClearEnvironmentToAnsible()
+	return eu
+}
+
+// RemoveEnvironmentToAnsibleIDs removes the "EnvironmentToAnsible" edge to Ansible entities by IDs.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveEnvironmentToAnsibleIDs(ids...)
+	return eu
+}
+
+// RemoveEnvironmentToAnsible removes "EnvironmentToAnsible" edges to Ansible entities.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return eu.RemoveEnvironmentToAnsibleIDs(ids...)
+}
+
 // ClearEnvironmentToBuild clears all "EnvironmentToBuild" edges to the Build entity.
 func (eu *EnvironmentUpdate) ClearEnvironmentToBuild() *EnvironmentUpdate {
 	eu.mutation.ClearEnvironmentToBuild()
@@ -739,6 +793,27 @@ func (eu *EnvironmentUpdate) RemoveEnvironmentToRepository(r ...*Repository) *En
 		ids[i] = r[i].ID
 	}
 	return eu.RemoveEnvironmentToRepositoryIDs(ids...)
+}
+
+// ClearEnvironmentToServerTask clears all "EnvironmentToServerTask" edges to the ServerTask entity.
+func (eu *EnvironmentUpdate) ClearEnvironmentToServerTask() *EnvironmentUpdate {
+	eu.mutation.ClearEnvironmentToServerTask()
+	return eu
+}
+
+// RemoveEnvironmentToServerTaskIDs removes the "EnvironmentToServerTask" edge to ServerTask entities by IDs.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveEnvironmentToServerTaskIDs(ids...)
+	return eu
+}
+
+// RemoveEnvironmentToServerTask removes "EnvironmentToServerTask" edges to ServerTask entities.
+func (eu *EnvironmentUpdate) RemoveEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdate {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return eu.RemoveEnvironmentToServerTaskIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1714,6 +1789,60 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if eu.mutation.EnvironmentToAnsibleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedEnvironmentToAnsibleIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToAnsibleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.EnvironmentToAnsibleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if eu.mutation.EnvironmentToBuildCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1814,6 +1943,60 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: repository.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.EnvironmentToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedEnvironmentToServerTaskIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.EnvironmentToServerTaskIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
 				},
 			},
 		}
@@ -2146,6 +2329,21 @@ func (euo *EnvironmentUpdateOne) AddEnvironmentToHostDependency(h ...*HostDepend
 	return euo.AddEnvironmentToHostDependencyIDs(ids...)
 }
 
+// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddEnvironmentToAnsibleIDs(ids...)
+	return euo
+}
+
+// AddEnvironmentToAnsible adds the "EnvironmentToAnsible" edges to the Ansible entity.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return euo.AddEnvironmentToAnsibleIDs(ids...)
+}
+
 // AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
 func (euo *EnvironmentUpdateOne) AddEnvironmentToBuildIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
 	euo.mutation.AddEnvironmentToBuildIDs(ids...)
@@ -2174,6 +2372,21 @@ func (euo *EnvironmentUpdateOne) AddEnvironmentToRepository(r ...*Repository) *E
 		ids[i] = r[i].ID
 	}
 	return euo.AddEnvironmentToRepositoryIDs(ids...)
+}
+
+// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddEnvironmentToServerTaskIDs(ids...)
+	return euo
+}
+
+// AddEnvironmentToServerTask adds the "EnvironmentToServerTask" edges to the ServerTask entity.
+func (euo *EnvironmentUpdateOne) AddEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return euo.AddEnvironmentToServerTaskIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -2496,6 +2709,27 @@ func (euo *EnvironmentUpdateOne) RemoveEnvironmentToHostDependency(h ...*HostDep
 	return euo.RemoveEnvironmentToHostDependencyIDs(ids...)
 }
 
+// ClearEnvironmentToAnsible clears all "EnvironmentToAnsible" edges to the Ansible entity.
+func (euo *EnvironmentUpdateOne) ClearEnvironmentToAnsible() *EnvironmentUpdateOne {
+	euo.mutation.ClearEnvironmentToAnsible()
+	return euo
+}
+
+// RemoveEnvironmentToAnsibleIDs removes the "EnvironmentToAnsible" edge to Ansible entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveEnvironmentToAnsibleIDs(ids...)
+	return euo
+}
+
+// RemoveEnvironmentToAnsible removes "EnvironmentToAnsible" edges to Ansible entities.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return euo.RemoveEnvironmentToAnsibleIDs(ids...)
+}
+
 // ClearEnvironmentToBuild clears all "EnvironmentToBuild" edges to the Build entity.
 func (euo *EnvironmentUpdateOne) ClearEnvironmentToBuild() *EnvironmentUpdateOne {
 	euo.mutation.ClearEnvironmentToBuild()
@@ -2536,6 +2770,27 @@ func (euo *EnvironmentUpdateOne) RemoveEnvironmentToRepository(r ...*Repository)
 		ids[i] = r[i].ID
 	}
 	return euo.RemoveEnvironmentToRepositoryIDs(ids...)
+}
+
+// ClearEnvironmentToServerTask clears all "EnvironmentToServerTask" edges to the ServerTask entity.
+func (euo *EnvironmentUpdateOne) ClearEnvironmentToServerTask() *EnvironmentUpdateOne {
+	euo.mutation.ClearEnvironmentToServerTask()
+	return euo
+}
+
+// RemoveEnvironmentToServerTaskIDs removes the "EnvironmentToServerTask" edge to ServerTask entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveEnvironmentToServerTaskIDs(ids...)
+	return euo
+}
+
+// RemoveEnvironmentToServerTask removes "EnvironmentToServerTask" edges to ServerTask entities.
+func (euo *EnvironmentUpdateOne) RemoveEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdateOne {
+	ids := make([]uuid.UUID, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return euo.RemoveEnvironmentToServerTaskIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -2612,7 +2867,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 	}
 	id, ok := euo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Environment.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Environment.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := euo.fields; len(fields) > 0 {
@@ -3535,6 +3790,60 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if euo.mutation.EnvironmentToAnsibleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedEnvironmentToAnsibleIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToAnsibleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.EnvironmentToAnsibleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.EnvironmentToAnsibleTable,
+			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: ansible.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if euo.mutation.EnvironmentToBuildCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -3635,6 +3944,60 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: repository.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.EnvironmentToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedEnvironmentToServerTaskIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToServerTaskCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.EnvironmentToServerTaskIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.EnvironmentToServerTaskTable,
+			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
 				},
 			},
 		}

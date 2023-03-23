@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gen0cide/laforge/ent"
+	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/command"
@@ -30,6 +32,7 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/repocommit"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
@@ -37,8 +40,10 @@ import (
 	"github.com/gen0cide/laforge/grpc"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/gen0cide/laforge/server/utils"
+	"github.com/ghodss/yaml"
 	"github.com/go-redis/redis/v8"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/mholt/archiver/v3"
 	"github.com/sirupsen/logrus"
 )
 
@@ -86,12 +91,12 @@ func createPlanningStatus(ctx context.Context, client *ent.Client, logger *loggi
 	return entStatus, nil
 }
 
-func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, currentUser *ent.AuthUser, entEnvironment *ent.Environment) (*ent.Build, error) {
+func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerConfig, currentUser *ent.AuthUser, entEnvironment *ent.Environment) (*ent.Build, error) {
 	taskStatus, serverTask, err := utils.CreateServerTask(ctx, client, rdb, currentUser, servertask.TypeCREATEBUILD)
 	if err != nil {
 		return nil, fmt.Errorf("error creating server task: %v", err)
 	}
-	logger, err := logging.CreateLoggerForServerTask(serverTask)
+	logger, err := logging.CreateLoggerForServerTask(laforgeConfig, serverTask)
 	if err != nil {
 		return nil, err
 	}
@@ -129,12 +134,23 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 		}
 		return nil, err
 	}
+	entRepoCommit, err := entEnvironment.QueryEnvironmentToRepository().QueryRepositoryToRepoCommit().Order(ent.Desc(repocommit.FieldRevision)).First(ctx)
+	if err != nil {
+		logger.Log.Errorf("Failed to Query Repository from Environment %v. Err: %v", entEnvironment.HclID, err)
+		_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
+		if err != nil {
+			return nil, fmt.Errorf("error failing server task: %v", err)
+		}
+		return nil, err
+	}
 	entBuild, err := client.Build.Create().
 		SetRevision(len(entEnvironment.Edges.EnvironmentToBuild)).
 		SetEnvironmentRevision(entEnvironment.Revision).
+		SetBuildToRepoCommit(entRepoCommit).
 		SetBuildToEnvironment(entEnvironment).
 		SetBuildToStatus(entStatus).
 		SetBuildToCompetition(entCompetition).
+		SetVars(map[string]string{}).
 		Save(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to create Build %v for Environment %v. Err: %v", len(entEnvironment.Edges.EnvironmentToBuild), entEnvironment.HclID, err)
@@ -180,10 +196,10 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 		}
 		return nil, err
 	}
-	for teamNumber := 0; teamNumber < entEnvironment.TeamCount; teamNumber++ {
+	for teamNumber := 1; teamNumber <= entEnvironment.TeamCount; teamNumber++ {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, teamNumber int, logger *logging.Logger, entBuild *ent.Build, client *ent.Client) {
-			_, err := createTeam(client, logger, entBuild, teamNumber, wg)
+			_, err := createTeam(client, laforgeConfig, logger, entBuild, teamNumber, wg)
 			if err != nil {
 				logrus.Errorf("error creating team: %v", err)
 				logger.Log.Errorf("error creating team: %v", err)
@@ -200,6 +216,11 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 		defer ctx.Done()
 
 		entCommit, err := utils.CreateRootCommit(client, rdb, entBuild)
+		if err != nil {
+			_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
+			return
+		}
+		err = entCommit.Update().AddBuildCommitToServerTask(serverTask).Exec(ctx)
 		if err != nil {
 			_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
 			return
@@ -230,6 +251,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 		}
 		rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 		rdb.Publish(ctx, "updatedBuild", entBuild.ID.String())
+		rdb.Publish(ctx, "updatedBuildCommit", entCommit.ID.String())
 		// entBuild.Update().SetCompletedPlan(true).SaveX(ctx)
 
 		logger.Log.Debug("-----\nWAITING FOR COMMIT REVIEW\n-----")
@@ -253,7 +275,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 				logger.Log.Errorf("error creating server task: %v", err)
 				return
 			}
-			serverTask, err = client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(entBuild).SetServerTaskToEnvironment(entEnvironment).Save(ctx)
+			serverTask, err = client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(entBuild).SetServerTaskToEnvironment(entEnvironment).SetServerTaskToBuildCommit(entCommit).Save(ctx)
 			if err != nil {
 				taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
 				if err != nil {
@@ -265,12 +287,12 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 			}
 			rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 
-			executeLogger, err := logging.CreateLoggerForServerTask(serverTask)
+			executeLogger, err := logging.CreateLoggerForServerTask(laforgeConfig, serverTask)
 			if err != nil {
 				logger.Log.Errorf("error creating logger for execute build: %v", err)
 				return
 			}
-			go StartBuild(client, executeLogger, currentUser, serverTask, taskStatus, entBuild)
+			go StartBuild(client, laforgeConfig, executeLogger, currentUser, serverTask, taskStatus, entBuild)
 		} else {
 			logger.Log.Debug("-----\nCOMMIT CANCELLED/TIMED OUT\n-----")
 			logger.Log.Errorf("root commit has been cancelled or 20 minute timeout has been reached")
@@ -282,7 +304,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, cur
 	return entBuild, nil
 }
 
-func createTeam(client *ent.Client, logger *logging.Logger, entBuild *ent.Build, teamNumber int, wg *sync.WaitGroup) (*ent.Team, error) {
+func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, entBuild *ent.Build, teamNumber int, wg *sync.WaitGroup) (*ent.Team, error) {
 	logger.Log.WithFields(logrus.Fields{
 		"teamNumber": teamNumber,
 	}).Debug("creating team")
@@ -335,7 +357,11 @@ func createTeam(client *ent.Client, logger *logging.Logger, entBuild *ent.Build,
 	}
 	createProvisonedNetworks := []*ent.ProvisionedNetwork{}
 	for _, buildNetwork := range buildNetworks {
-		pNetwork, _ := createProvisionedNetworks(ctx, client, logger, entBuild, entTeam, buildNetwork)
+		pNetwork, err := createProvisionedNetworks(ctx, client, laforgeConfig, logger, entBuild, entTeam, buildNetwork)
+		if err != nil {
+			logger.Log.Errorf("Failed to Create Provisioned Network for Network %v. Err: %v", buildNetwork.Name, err)
+			return nil, err
+		}
 		createProvisonedNetworks = append(createProvisonedNetworks, pNetwork)
 	}
 	for _, pNetwork := range createProvisonedNetworks {
@@ -354,7 +380,7 @@ func createTeam(client *ent.Client, logger *logging.Logger, entBuild *ent.Build,
 			return nil, err
 		}
 		for _, entHost := range entHosts {
-			_, err = createProvisionedHosts(ctx, client, logger, pNetwork, entHost, networkPlan)
+			_, err = createProvisionedHosts(ctx, client, laforgeConfig, logger, pNetwork, entHost, networkPlan)
 			if err != nil {
 				logrus.Errorf("Failed to create provisioned hosts")
 				logger.Log.Errorf("Failed to create provisioned hosts")
@@ -365,7 +391,7 @@ func createTeam(client *ent.Client, logger *logging.Logger, entBuild *ent.Build,
 	return entTeam, nil
 }
 
-func createProvisionedNetworks(ctx context.Context, client *ent.Client, logger *logging.Logger, entBuild *ent.Build, entTeam *ent.Team, entNetwork *ent.Network) (*ent.ProvisionedNetwork, error) {
+func createProvisionedNetworks(ctx context.Context, client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, entBuild *ent.Build, entTeam *ent.Team, entNetwork *ent.Network) (*ent.ProvisionedNetwork, error) {
 	logger.Log.WithFields(logrus.Fields{
 		"team":            entTeam.ID,
 		"team.teamNumber": entTeam.TeamNumber,
@@ -380,6 +406,7 @@ func createProvisionedNetworks(ctx context.Context, client *ent.Client, logger *
 	entProvisionedNetwork, err := client.ProvisionedNetwork.Create().
 		SetName(entNetwork.Name).
 		SetCidr(entNetwork.Cidr).
+		SetVars(map[string]string{}).
 		SetProvisionedNetworkToStatus(entStatus).
 		SetProvisionedNetworkToNetwork(entNetwork).
 		SetProvisionedNetworkToTeam(entTeam).
@@ -415,7 +442,7 @@ func createProvisionedNetworks(ctx context.Context, client *ent.Client, logger *
 	return entProvisionedNetwork, nil
 }
 
-func createProvisionedHosts(ctx context.Context, client *ent.Client, logger *logging.Logger, pNetwork *ent.ProvisionedNetwork, entHost *ent.Host, prevPlan *ent.Plan) (*ent.ProvisionedHost, error) {
+func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, pNetwork *ent.ProvisionedNetwork, entHost *ent.Host, prevPlan *ent.Plan) (*ent.ProvisionedHost, error) {
 	logger.Log.WithFields(logrus.Fields{
 		"pNetwork":      pNetwork.ID,
 		"pNetwork.Name": pNetwork.Name,
@@ -500,7 +527,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, logger *log
 					logger.Log.Errorf("error while retrieving plan from provisioned network: %v", err)
 					return nil, err
 				}
-				entDependsOnHost, err = createProvisionedHosts(ctx, client, logger, dependOnPnetwork, entHostDependency.Edges.HostDependencyToDependOnHost, dependOnPnetworkPlan)
+				entDependsOnHost, err = createProvisionedHosts(ctx, client, laforgeConfig, logger, dependOnPnetwork, entHostDependency.Edges.HostDependencyToDependOnHost, dependOnPnetworkPlan)
 				if err != nil {
 					logger.Log.Errorf("error creating depends on host: %v", err)
 					return nil, err
@@ -531,6 +558,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, logger *log
 
 	entProvisionedHost, err = client.ProvisionedHost.Create().
 		SetSubnetIP(subnetIP).
+		SetVars(map[string]string{}).
 		SetProvisionedHostToStatus(entStatus).
 		SetProvisionedHostToProvisionedNetwork(pNetwork).
 		SetProvisionedHostToHost(entHost).
@@ -570,10 +598,6 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, logger *log
 		return nil, err
 	}
 
-	serverAddress, ok := os.LookupEnv("GRPC_SERVER")
-	if !ok {
-		serverAddress = "localhost:50051"
-	}
 	isWindowsHost := false
 	if strings.Contains(entHost.OS, "w2k") {
 		isWindowsHost = true
@@ -591,7 +615,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, logger *log
 		return nil, err
 	}
 	if RenderFiles {
-		err = grpc.BuildAgent(logger, fmt.Sprint(entProvisionedHost.ID), serverAddress, binaryName, isWindowsHost)
+		err = grpc.BuildAgent(logger, fmt.Sprint(entProvisionedHost.ID), laforgeConfig.Agent.GrpcServerUri, binaryName, isWindowsHost)
 		if err != nil {
 			return nil, err
 		}
@@ -831,16 +855,78 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 													}).Errorf("Failed to Query FileDelete %v. Err: %v", hclID, err)
 													return nil, err
 												} else {
-													logger.Log.WithFields(logrus.Fields{
-														"pHost":               pHost.ID,
-														"pHost.HCLID":         entHost.HclID,
-														"pHost.SubnetIP":      pHost.SubnetIP,
-														"stepNumber":          stepNumber,
-														"prevPlan":            prevPlan.ID,
-														"prevPlan.Type":       prevPlan.Type,
-														"prevPlan.StepNumber": prevPlan.StepNumber,
-													}).Errorf("No Provisioning Steps found for %v. Err: %v", hclID, err)
-													return nil, err
+													entAnsible, err := client.Ansible.Query().Where(
+														ansible.And(
+															ansible.HasAnsibleFromEnvironmentWith(
+																environment.IDEQ(currentEnvironment.ID),
+															),
+															ansible.HclIDEQ(hclID),
+														)).Only(ctx)
+													if err != nil {
+														if err != err.(*ent.NotFoundError) {
+															logger.Log.WithFields(logrus.Fields{
+																"pHost":               pHost.ID,
+																"pHost.HCLID":         entHost.HclID,
+																"pHost.SubnetIP":      pHost.SubnetIP,
+																"stepNumber":          stepNumber,
+																"prevPlan":            prevPlan.ID,
+																"prevPlan.Type":       prevPlan.Type,
+																"prevPlan.StepNumber": prevPlan.StepNumber,
+															}).Errorf("Failed to Query Ansible %v. Err: %v", hclID, err)
+															return nil, err
+														} else {
+															logger.Log.WithFields(logrus.Fields{
+																"pHost":               pHost.ID,
+																"pHost.HCLID":         entHost.HclID,
+																"pHost.SubnetIP":      pHost.SubnetIP,
+																"stepNumber":          stepNumber,
+																"prevPlan":            prevPlan.ID,
+																"prevPlan.Type":       prevPlan.Type,
+																"prevPlan.StepNumber": prevPlan.StepNumber,
+															}).Errorf("No Provisioning Steps found for %v. Err: %v", hclID, err)
+															return nil, err
+														}
+													} else {
+														entProvisioningStep, err = client.ProvisioningStep.Create().
+															SetStepNumber(stepNumber).
+															SetType(provisioningstep.TypeAnsible).
+															SetProvisioningStepToAnsible(entAnsible).
+															SetProvisioningStepToStatus(entStatus).
+															SetProvisioningStepToProvisionedHost(pHost).
+															Save(ctx)
+														if err != nil {
+															logger.Log.WithFields(logrus.Fields{
+																"pHost":               pHost.ID,
+																"pHost.HCLID":         entHost.HclID,
+																"pHost.SubnetIP":      pHost.SubnetIP,
+																"stepNumber":          stepNumber,
+																"prevPlan":            prevPlan.ID,
+																"prevPlan.Type":       prevPlan.Type,
+																"prevPlan.StepNumber": prevPlan.StepNumber,
+															}).Errorf("Failed to Create Provisioning Step for Ansible %v. Err: %v", hclID, err)
+															return nil, err
+														}
+														if RenderFiles {
+															filePath, err := renderAnsible(ctx, client, logger, entProvisioningStep)
+															if err != nil {
+																return nil, err
+															}
+															entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
+															if err != nil {
+																return nil, err
+															}
+															_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
+															if err != nil {
+																return nil, err
+															}
+															if RenderFilesTask != nil {
+																RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
+																if err != nil {
+																	return nil, err
+																}
+															}
+														}
+													}
 												}
 											} else {
 												entProvisioningStep, err = client.ProvisioningStep.Create().
@@ -1155,6 +1241,87 @@ func renderFileDownload(ctx context.Context, logger *logging.Logger, pStep *ent.
 	return fileName, nil
 }
 
+func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logger, pStep *ent.ProvisioningStep) (string, error) {
+	logger.Log.WithFields(logrus.Fields{
+		"pStep":            pStep.ID,
+		"pStep.StepNumber": pStep.StepNumber,
+		"pStep.Type":       pStep.Type,
+	}).Debug("render ansible")
+	currentProvisionedHost := pStep.QueryProvisioningStepToProvisionedHost().OnlyX(ctx)
+	currentAnsible := pStep.QueryProvisioningStepToAnsible().OnlyX(ctx)
+	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
+	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
+	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
+	currentEnvironment := currentBuild.QueryBuildToEnvironment().OnlyX(ctx)
+	currentIncludedNetwork := currentEnvironment.QueryEnvironmentToIncludedNetwork().WithIncludedNetworkToHost().WithIncludedNetworkToNetwork().AllX(ctx)
+	currentCompetition := currentBuild.QueryBuildToCompetition().OnlyX(ctx)
+	currentNetwork := currentProvisionedNetwork.QueryProvisionedNetworkToNetwork().OnlyX(ctx)
+	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
+	currentIdentities := currentEnvironment.QueryEnvironmentToIdentity().AllX(ctx)
+	agentScriptFile := currentProvisionedHost.QueryProvisionedHostToGinFileMiddleware().OnlyX(ctx)
+	// Need to Make Unique and change how it's loaded in
+	currentDNS := currentCompetition.QueryCompetitionToDNS().FirstX(ctx)
+	templateData := TempleteContext{
+		Build:              currentBuild,
+		Competition:        currentCompetition,
+		Environment:        currentEnvironment,
+		Host:               currentHost,
+		DNS:                currentDNS,
+		IncludedNetworks:   currentIncludedNetwork,
+		Network:            currentNetwork,
+		Ansible:            currentAnsible,
+		Team:               currentTeam,
+		Identities:         currentIdentities,
+		ProvisionedNetwork: currentProvisionedNetwork,
+		ProvisionedHost:    currentProvisionedHost,
+		ProvisioningStep:   pStep,
+		AgentSlug:          agentScriptFile.URLID,
+	}
+
+	dirRelativePath := path.Join("builds", currentEnvironment.Name, fmt.Sprint(currentBuild.Revision), fmt.Sprint(currentTeam.TeamNumber), currentProvisionedNetwork.Name, currentHost.Hostname)
+	dirAbsPath, err := filepath.Abs(dirRelativePath)
+	if err != nil {
+		logger.Log.Errorf("Error Generating Absolute Directory Path for Ansible %v. Err: %v", currentAnsible.Name, err)
+		return "", err
+	}
+
+	ansibleFolder := path.Join(dirAbsPath, currentAnsible.Name)
+	err = os.MkdirAll(ansibleFolder, 0755)
+	if err != nil {
+		logger.Log.Errorf("Failed to create folder for ansible %v. Err: %v", currentAnsible.HclID, err)
+		return "", err
+	}
+
+	data, err := yaml.Marshal(templateData)
+	if err != nil {
+		logger.Log.Errorf("Failed to render vars file for ansible %v. Err: %v", currentAnsible.HclID, err)
+		return "", err
+	}
+	varFileName := path.Join(ansibleFolder, "laforge_vars.yml")
+	err = ioutil.WriteFile(varFileName, data, 0755)
+	if err != nil {
+		logger.Log.Errorf("Failed to create vars file for ansible %v. Err: %v", currentAnsible.HclID, err)
+		return "", err
+	}
+
+	err = CopyDir(currentAnsible.AbsPath, ansibleFolder)
+	if err != nil {
+		logger.Log.Errorf("Failed to copy folder for ansible %v. Err: %v", currentAnsible.HclID, err)
+		return "", err
+	}
+
+	zipFileName := path.Join(dirAbsPath, currentAnsible.Name+".zip")
+	err = archiver.Archive([]string{ansibleFolder}, zipFileName)
+	if err != nil {
+		logger.Log.WithFields(logrus.Fields{
+			"ansibleName": currentAnsible.Name,
+			"path":        currentAnsible.AbsPath,
+		}).Errorf("error while creating zip for ansible: %v", err)
+	}
+
+	return zipFileName, nil
+}
+
 // IPv42Int converts net.IP address objects to their uint32 representation
 func IPv42Int(ip net.IP) uint32 {
 	if len(ip) == 16 {
@@ -1168,4 +1335,65 @@ func Int2IPv4(nn uint32) net.IP {
 	ip := make(net.IP, 4)
 	binary.BigEndian.PutUint32(ip, nn)
 	return ip
+}
+
+func CopyDir(src string, dest string) error {
+
+	if dest == src {
+		return fmt.Errorf("cannot copy a folder into the folder itself")
+	}
+
+	f, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+
+	file, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	if !file.IsDir() {
+		return fmt.Errorf("Source " + file.Name() + " is not a directory!")
+	}
+
+	err = os.MkdirAll(dest, 0755)
+	if err != nil {
+		return err
+	}
+
+	files, err := ioutil.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+
+		if f.IsDir() {
+
+			err = CopyDir(src+"/"+f.Name(), dest+"/"+f.Name())
+			if err != nil {
+				return err
+			}
+
+		}
+
+		if !f.IsDir() {
+
+			content, err := ioutil.ReadFile(src + "/" + f.Name())
+			if err != nil {
+				return err
+
+			}
+
+			err = ioutil.WriteFile(dest+"/"+f.Name(), content, 0755)
+			if err != nil {
+				return err
+
+			}
+
+		}
+
+	}
+
+	return nil
 }

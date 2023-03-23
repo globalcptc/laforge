@@ -20,6 +20,7 @@
         formControlName="username"
         autocomplete="off"
         [ngClass]="{ 'is-invalid': loginForm.controls['username'].invalid }"
+        tabindex="1"
       />
       <ng-container
         [ngTemplateOutlet]="formError"
@@ -64,6 +65,7 @@
           routerLink="/auth/forgot-password"
           class="text-primary font-size-h6 font-weight-bolder text-hover-primary pt-5"
           id="kt_login_forgot"
+          tabindex="4"
         >
           Forgot Password ?
         </a>
@@ -76,6 +78,7 @@
         autocomplete="off"
         formControlName="password"
         [ngClass]="{ 'is-invalid': loginForm.controls['password'].invalid }"
+        tabindex="2"
       />
       <ng-container
         [ngTemplateOutlet]="formError"
@@ -111,11 +114,14 @@
         id="kt_login_signin_submit"
         class="btn btn-primary font-weight-bolder font-size-h6 px-8 py-4 my-3 mr-3"
         [disabled]="loginForm.invalid"
+        tabindex="3"
       >
-        <i class="fad fa-user-visor"></i> Sign In
+        <i class="fad fa-user-visor"></i>
+        Sign In
       </button>
       <a href="/auth/github/login" class="btn btn-light-primary font-weight-bolder px-8 py-4 my-3 font-size-lg">
-        <i class="fab fa-github"></i> Sign in with GitHub
+        <i class="fab fa-github"></i>
+        Sign in with GitHub
       </a>
 
       <ng-container *ngIf="(isLoading$ | async) || (redirectLoading | async)">

@@ -150,6 +150,14 @@ func (auc *AuthUserCreate) SetID(u uuid.UUID) *AuthUserCreate {
 	return auc
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (auc *AuthUserCreate) SetNillableID(u *uuid.UUID) *AuthUserCreate {
+	if u != nil {
+		auc.SetID(*u)
+	}
+	return auc
+}
+
 // AddAuthUserToTokenIDs adds the "AuthUserToToken" edge to the Token entity by IDs.
 func (auc *AuthUserCreate) AddAuthUserToTokenIDs(ids ...uuid.UUID) *AuthUserCreate {
 	auc.mutation.AddAuthUserToTokenIDs(ids...)
@@ -288,46 +296,46 @@ func (auc *AuthUserCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (auc *AuthUserCreate) check() error {
 	if _, ok := auc.mutation.Username(); !ok {
-		return &ValidationError{Name: "username", err: errors.New(`ent: missing required field "username"`)}
+		return &ValidationError{Name: "username", err: errors.New(`ent: missing required field "AuthUser.username"`)}
 	}
 	if _, ok := auc.mutation.Password(); !ok {
-		return &ValidationError{Name: "password", err: errors.New(`ent: missing required field "password"`)}
+		return &ValidationError{Name: "password", err: errors.New(`ent: missing required field "AuthUser.password"`)}
 	}
 	if _, ok := auc.mutation.FirstName(); !ok {
-		return &ValidationError{Name: "first_name", err: errors.New(`ent: missing required field "first_name"`)}
+		return &ValidationError{Name: "first_name", err: errors.New(`ent: missing required field "AuthUser.first_name"`)}
 	}
 	if _, ok := auc.mutation.LastName(); !ok {
-		return &ValidationError{Name: "last_name", err: errors.New(`ent: missing required field "last_name"`)}
+		return &ValidationError{Name: "last_name", err: errors.New(`ent: missing required field "AuthUser.last_name"`)}
 	}
 	if _, ok := auc.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "email"`)}
+		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "AuthUser.email"`)}
 	}
 	if _, ok := auc.mutation.Phone(); !ok {
-		return &ValidationError{Name: "phone", err: errors.New(`ent: missing required field "phone"`)}
+		return &ValidationError{Name: "phone", err: errors.New(`ent: missing required field "AuthUser.phone"`)}
 	}
 	if _, ok := auc.mutation.Company(); !ok {
-		return &ValidationError{Name: "company", err: errors.New(`ent: missing required field "company"`)}
+		return &ValidationError{Name: "company", err: errors.New(`ent: missing required field "AuthUser.company"`)}
 	}
 	if _, ok := auc.mutation.Occupation(); !ok {
-		return &ValidationError{Name: "occupation", err: errors.New(`ent: missing required field "occupation"`)}
+		return &ValidationError{Name: "occupation", err: errors.New(`ent: missing required field "AuthUser.occupation"`)}
 	}
 	if _, ok := auc.mutation.PrivateKeyPath(); !ok {
-		return &ValidationError{Name: "private_key_path", err: errors.New(`ent: missing required field "private_key_path"`)}
+		return &ValidationError{Name: "private_key_path", err: errors.New(`ent: missing required field "AuthUser.private_key_path"`)}
 	}
 	if _, ok := auc.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "role"`)}
+		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "AuthUser.role"`)}
 	}
 	if v, ok := auc.mutation.Role(); ok {
 		if err := authuser.RoleValidator(v); err != nil {
-			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "role": %w`, err)}
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "AuthUser.role": %w`, err)}
 		}
 	}
 	if _, ok := auc.mutation.Provider(); !ok {
-		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "provider"`)}
+		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "AuthUser.provider"`)}
 	}
 	if v, ok := auc.mutation.Provider(); ok {
 		if err := authuser.ProviderValidator(v); err != nil {
-			return &ValidationError{Name: "provider", err: fmt.Errorf(`ent: validator failed for field "provider": %w`, err)}
+			return &ValidationError{Name: "provider", err: fmt.Errorf(`ent: validator failed for field "AuthUser.provider": %w`, err)}
 		}
 	}
 	return nil
@@ -342,7 +350,11 @@ func (auc *AuthUserCreate) sqlSave(ctx context.Context) (*AuthUser, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -360,7 +372,7 @@ func (auc *AuthUserCreate) createSpec() (*AuthUser, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := auc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := auc.mutation.Username(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

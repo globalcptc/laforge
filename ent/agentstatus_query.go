@@ -181,7 +181,7 @@ func (asq *AgentStatusQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single AgentStatus entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one AgentStatus entity is not found.
+// Returns a *NotSingularError when more than one AgentStatus entity is found.
 // Returns a *NotFoundError when no AgentStatus entities are found.
 func (asq *AgentStatusQuery) Only(ctx context.Context) (*AgentStatus, error) {
 	nodes, err := asq.Limit(2).All(ctx)
@@ -208,7 +208,7 @@ func (asq *AgentStatusQuery) OnlyX(ctx context.Context) *AgentStatus {
 }
 
 // OnlyID is like Only, but returns the only AgentStatus ID in the query.
-// Returns a *NotSingularError when exactly one AgentStatus ID is not found.
+// Returns a *NotSingularError when more than one AgentStatus ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (asq *AgentStatusQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -320,8 +320,9 @@ func (asq *AgentStatusQuery) Clone() *AgentStatusQuery {
 		withAgentStatusToProvisionedNetwork: asq.withAgentStatusToProvisionedNetwork.Clone(),
 		withAgentStatusToBuild:              asq.withAgentStatusToBuild.Clone(),
 		// clone intermediate query.
-		sql:  asq.sql.Clone(),
-		path: asq.path,
+		sql:    asq.sql.Clone(),
+		path:   asq.path,
+		unique: asq.unique,
 	}
 }
 
@@ -548,6 +549,10 @@ func (asq *AgentStatusQuery) sqlAll(ctx context.Context) ([]*AgentStatus, error)
 
 func (asq *AgentStatusQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := asq.querySpec()
+	_spec.Node.Columns = asq.fields
+	if len(asq.fields) > 0 {
+		_spec.Unique = asq.unique != nil && *asq.unique
+	}
 	return sqlgraph.CountNodes(ctx, asq.driver, _spec)
 }
 
@@ -618,6 +623,9 @@ func (asq *AgentStatusQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if asq.sql != nil {
 		selector = asq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if asq.unique != nil && *asq.unique {
+		selector.Distinct()
 	}
 	for _, p := range asq.predicates {
 		p(selector)
@@ -897,9 +905,7 @@ func (asgb *AgentStatusGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range asgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(asgb.fields...)...)

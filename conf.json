@@ -1,0 +1,27 @@
+{
+  "debug": false,
+  "builders": {},
+  "database": {
+    "postgres_uri": "postgresql://laforger:laforge@db/laforge",
+    "admin_user": "laforger",
+    "admin_password": "laforge"
+  },
+  "auth": {
+    "github_id": "",
+    "github_secret": "",
+    "cookie_timeout": 720
+  },
+  "ui": {
+    "https_enabled": false,
+    "allowed_origins": ["http://localhost", "http://localhost:4200"]
+  },
+  "agent": {
+    "grpc_server_uri": "localhost:50051",
+    "api_download_url": "http://localhost/api/download/"
+  },
+  "graphql": {
+    "hostname": "localhost",
+    "redis_server_uri": "redis:6379",
+    "redis_password": ""
+  }
+}

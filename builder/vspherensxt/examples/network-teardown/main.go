@@ -1,74 +1,80 @@
 package main
 
-import (
-	"context"
-	"fmt"
-	"log"
-	"os"
+// import (
+// 	"context"
+// 	"fmt"
+// 	"log"
+// 	"os"
 
-	"github.com/gen0cide/laforge/builder"
-	"github.com/gen0cide/laforge/ent"
-	"github.com/gen0cide/laforge/ent/build"
-	"github.com/gen0cide/laforge/ent/environment"
-	"github.com/gen0cide/laforge/logging"
-)
+// 	"github.com/gen0cide/laforge/builder"
+// 	"github.com/gen0cide/laforge/ent"
+// 	"github.com/gen0cide/laforge/ent/build"
+// 	"github.com/gen0cide/laforge/ent/environment"
+// 	"github.com/gen0cide/laforge/logging"
+// 	"github.com/gen0cide/laforge/server/utils"
+// 	"github.com/sirupsen/logrus"
+// )
 
-func main() {
+// func main() {
 
-	pgHost, ok := os.LookupEnv("PG_URI")
-	client := &ent.Client{}
+// 	laforgeConfig, err := utils.LoadServerConfig()
+// 	if err != nil {
+// 		logrus.Errorf("failed to load LaForge config: %v", err)
+// 		return
+// 	}
 
-	if !ok {
-		client = ent.PGOpen("postgresql://laforger:laforge@127.0.0.1/laforge")
-	} else {
-		client = ent.PGOpen(pgHost)
-	}
+// 	if laforgeConfig.Database.PostgresUri == "" {
+// 		logrus.Errorf("Database.PostgresUri not set in LaForge config")
+// 		os.Exit(1)
+// 	}
 
-	ctx := context.Background()
-	defer ctx.Done()
-	defer client.Close()
+// 	client := ent.PGOpen(laforgeConfig.Database.PostgresUri)
 
-	// Run the auto migration tool.
-	if err := client.Schema.Create(ctx); err != nil {
-		log.Fatalf("failed creating schema resources: %v", err)
-	}
+// 	ctx := context.Background()
+// 	defer ctx.Done()
+// 	defer client.Close()
 
-	env, err := client.Environment.Query().Where(environment.NameEQ("fred")).Only(ctx)
-	if err != nil {
-		log.Fatalf("error querying env: %v", err)
-	}
+// 	// Run the auto migration tool.
+// 	if err := client.Schema.Create(ctx); err != nil {
+// 		log.Fatalf("failed creating schema resources: %v", err)
+// 	}
 
-	defaultLogger := logging.CreateNewLogger("./output.lfglog")
+// 	env, err := client.Environment.Query().Where(environment.NameEQ("fred")).Only(ctx)
+// 	if err != nil {
+// 		log.Fatalf("error querying env: %v", err)
+// 	}
 
-	fmt.Println("Creating vSphere/NSX-T builder...")
-	vsphereNsxt, err := builder.NewVSphereNSXTBuilder(env, &defaultLogger)
-	if err != nil {
-		log.Fatalf("error while creating vCenter/NSX-T builder: %v", err)
-	}
+// 	defaultLogger := logging.CreateNewLogger("./output.lfglog")
 
-	build, err := env.QueryEnvironmentToBuild().Order(ent.Desc(build.FieldRevision)).First(ctx)
-	if err != nil {
-		log.Fatalf("error querying build from env: %v", err)
-	}
-	teams, err := build.QueryBuildToTeam().All(ctx)
-	if err != nil {
-		log.Fatalf("error querying teams from build: %v", err)
-	}
+// 	fmt.Println("Creating vSphere/NSX-T builder...")
+// 	vsphereNsxt, err := builder.NewVSphereNSXTBuilder(env, &defaultLogger)
+// 	if err != nil {
+// 		log.Fatalf("error while creating vCenter/NSX-T builder: %v", err)
+// 	}
 
-	for _, team := range teams {
-		fmt.Printf("Networks for Team %d\n", team.TeamNumber)
-		pnets, err := team.QueryTeamToProvisionedNetwork().All(ctx)
-		if err != nil {
-			log.Fatalf("error while querying provisioned netowrks from team: %v", err)
-		}
-		for _, pnet := range pnets {
-			fmt.Printf("\t%s | %s\n", pnet.Name, pnet.Cidr)
-			err := vsphereNsxt.TeardownNetwork(ctx, pnet)
-			if err != nil {
-				fmt.Printf("\tERROR: %v\n", err)
-			} else {
-				fmt.Println("\tOK")
-			}
-		}
-	}
-}
+// 	build, err := env.QueryEnvironmentToBuild().Order(ent.Desc(build.FieldRevision)).First(ctx)
+// 	if err != nil {
+// 		log.Fatalf("error querying build from env: %v", err)
+// 	}
+// 	teams, err := build.QueryBuildToTeam().All(ctx)
+// 	if err != nil {
+// 		log.Fatalf("error querying teams from build: %v", err)
+// 	}
+
+// 	for _, team := range teams {
+// 		fmt.Printf("Networks for Team %d\n", team.TeamNumber)
+// 		pnets, err := team.QueryTeamToProvisionedNetwork().All(ctx)
+// 		if err != nil {
+// 			log.Fatalf("error while querying provisioned netowrks from team: %v", err)
+// 		}
+// 		for _, pnet := range pnets {
+// 			fmt.Printf("\t%s | %s\n", pnet.Name, pnet.Cidr)
+// 			err := vsphereNsxt.TeardownNetwork(ctx, pnet)
+// 			if err != nil {
+// 				fmt.Printf("\tERROR: %v\n", err)
+// 			} else {
+// 				fmt.Println("\tOK")
+// 			}
+// 		}
+// 	}
+// }

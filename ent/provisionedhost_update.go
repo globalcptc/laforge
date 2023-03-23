@@ -63,6 +63,12 @@ func (phu *ProvisionedHostUpdate) ClearAddonType() *ProvisionedHostUpdate {
 	return phu
 }
 
+// SetVars sets the "vars" field.
+func (phu *ProvisionedHostUpdate) SetVars(m map[string]string) *ProvisionedHostUpdate {
+	phu.mutation.SetVars(m)
+	return phu
+}
+
 // SetProvisionedHostToStatusID sets the "ProvisionedHostToStatus" edge to the Status entity by ID.
 func (phu *ProvisionedHostUpdate) SetProvisionedHostToStatusID(id uuid.UUID) *ProvisionedHostUpdate {
 	phu.mutation.SetProvisionedHostToStatusID(id)
@@ -383,20 +389,20 @@ func (phu *ProvisionedHostUpdate) ExecX(ctx context.Context) {
 func (phu *ProvisionedHostUpdate) check() error {
 	if v, ok := phu.mutation.AddonType(); ok {
 		if err := provisionedhost.AddonTypeValidator(v); err != nil {
-			return &ValidationError{Name: "addon_type", err: fmt.Errorf("ent: validator failed for field \"addon_type\": %w", err)}
+			return &ValidationError{Name: "addon_type", err: fmt.Errorf(`ent: validator failed for field "ProvisionedHost.addon_type": %w`, err)}
 		}
 	}
 	if _, ok := phu.mutation.ProvisionedHostToStatusID(); phu.mutation.ProvisionedHostToStatusCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToStatus\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToStatus"`)
 	}
 	if _, ok := phu.mutation.ProvisionedHostToProvisionedNetworkID(); phu.mutation.ProvisionedHostToProvisionedNetworkCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToProvisionedNetwork\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToProvisionedNetwork"`)
 	}
 	if _, ok := phu.mutation.ProvisionedHostToHostID(); phu.mutation.ProvisionedHostToHostCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToHost\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToHost"`)
 	}
 	if _, ok := phu.mutation.ProvisionedHostToBuildID(); phu.mutation.ProvisionedHostToBuildCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToBuild\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToBuild"`)
 	}
 	return nil
 }
@@ -437,6 +443,13 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
 			Column: provisionedhost.FieldAddonType,
+		})
+	}
+	if value, ok := phu.mutation.Vars(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: provisionedhost.FieldVars,
 		})
 	}
 	if phu.mutation.ProvisionedHostToStatusCleared() {
@@ -891,6 +904,12 @@ func (phuo *ProvisionedHostUpdateOne) ClearAddonType() *ProvisionedHostUpdateOne
 	return phuo
 }
 
+// SetVars sets the "vars" field.
+func (phuo *ProvisionedHostUpdateOne) SetVars(m map[string]string) *ProvisionedHostUpdateOne {
+	phuo.mutation.SetVars(m)
+	return phuo
+}
+
 // SetProvisionedHostToStatusID sets the "ProvisionedHostToStatus" edge to the Status entity by ID.
 func (phuo *ProvisionedHostUpdateOne) SetProvisionedHostToStatusID(id uuid.UUID) *ProvisionedHostUpdateOne {
 	phuo.mutation.SetProvisionedHostToStatusID(id)
@@ -1218,20 +1237,20 @@ func (phuo *ProvisionedHostUpdateOne) ExecX(ctx context.Context) {
 func (phuo *ProvisionedHostUpdateOne) check() error {
 	if v, ok := phuo.mutation.AddonType(); ok {
 		if err := provisionedhost.AddonTypeValidator(v); err != nil {
-			return &ValidationError{Name: "addon_type", err: fmt.Errorf("ent: validator failed for field \"addon_type\": %w", err)}
+			return &ValidationError{Name: "addon_type", err: fmt.Errorf(`ent: validator failed for field "ProvisionedHost.addon_type": %w`, err)}
 		}
 	}
 	if _, ok := phuo.mutation.ProvisionedHostToStatusID(); phuo.mutation.ProvisionedHostToStatusCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToStatus\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToStatus"`)
 	}
 	if _, ok := phuo.mutation.ProvisionedHostToProvisionedNetworkID(); phuo.mutation.ProvisionedHostToProvisionedNetworkCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToProvisionedNetwork\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToProvisionedNetwork"`)
 	}
 	if _, ok := phuo.mutation.ProvisionedHostToHostID(); phuo.mutation.ProvisionedHostToHostCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToHost\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToHost"`)
 	}
 	if _, ok := phuo.mutation.ProvisionedHostToBuildID(); phuo.mutation.ProvisionedHostToBuildCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"ProvisionedHostToBuild\"")
+		return errors.New(`ent: clearing a required unique edge "ProvisionedHost.ProvisionedHostToBuild"`)
 	}
 	return nil
 }
@@ -1249,7 +1268,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 	}
 	id, ok := phuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing ProvisionedHost.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProvisionedHost.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := phuo.fields; len(fields) > 0 {
@@ -1289,6 +1308,13 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
 			Column: provisionedhost.FieldAddonType,
+		})
+	}
+	if value, ok := phuo.mutation.Vars(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: provisionedhost.FieldVars,
 		})
 	}
 	if phuo.mutation.ProvisionedHostToStatusCleared() {

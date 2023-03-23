@@ -12,20 +12,20 @@
     <!--begin::Page-->
     <div class="d-flex flex-row flex-column-fluid page">
       <!-- begin:: Aside Left -->
-      <ng-container *ngIf="asideSelfDisplay">
-        <!--begin::STATIC Aside-->
-        <app-aside #ktAside id="kt_aside" class="aside aside-left d-flex flex-column flex-row-auto" [ngClass]="asideCSSClasses"></app-aside>
-        <!--end::STATIC Aside-->
+      <!-- <ng-container *ngIf="asideSelfDisplay"> -->
+      <!--begin::STATIC Aside-->
+      <!-- <app-aside #ktAside id="kt_aside" class="aside aside-left d-flex flex-column flex-row-auto" [ngClass]="asideCSSClasses"></app-aside> -->
+      <!--end::STATIC Aside-->
 
-        <!--begin::DYNAMIC Aside-->
-        <!-- <app-aside-dynamic
+      <!--begin::DYNAMIC Aside-->
+      <!-- <app-aside-dynamic
           #ktAside
           id="kt_aside"
           class="aside aside-left d-flex flex-column flex-row-auto"
           [ngClass]="asideCSSClasses"
         ></app-aside-dynamic> -->
-        <!--end::DYNAMIC Aside-->
-      </ng-container>
+      <!--end::DYNAMIC Aside-->
+      <!-- </ng-container> -->
       <!-- end:: Aside Left -->
 
       <!--begin::Wrapper-->
@@ -35,7 +35,7 @@
         <!-- end:: Header -->
 
         <!-- begin:: Content -->
-        <div class="content d-flex flex-column flex-column-fluid" id="kt_content" [ngClass]="contentClasses">
+        <div class="content d-flex flex-column flex-column-fluid mb-5" id="kt_content" [ngClass]="contentClasses">
           <!-- begin:: Content Head -->
           <ng-container *ngIf="subheaderDisplay">
             <app-subheader></app-subheader>
