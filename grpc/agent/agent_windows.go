@@ -445,21 +445,25 @@ func HostFirewallPort(port int) (bool, error) {
 	return false, nil
 }
 
-func main() {
-	// fmt.Println("windows")
-	// fmt.Println(HostPortOpen(8080))
-	// fmt.Println(NetHttpContentHash("https://curtisf.dev/", "c76fdd9a87b2a3c653968b12973c2498"))
-	// fmt.Println(FileHash("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
-	// fmt.Println(FileContentRegex("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
-	// fmt.Println(DirectoryExists("C:\\Users\\Nkdileo\\Documents"))
-	// fmt.Println(UserGroupMember("The Power", "Administrators"))
-	// fmt.Println(HostProcessRunning("grewgegregegegegegegrergre"))
-	// fmt.Println(HostProcessRunning("Discord"))
-	// fmt.Println(NetUDPOpen("10.247.63.254", 8080))
-	// fmt.Println(NetTCPOpen("10.247.63.254", 22))
-	// fmt.Println(NetICMP("192.168.1.1"))
-	// fmt.Println(FileContentString("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go", "5646548932"))
-	// fmt.Println(UserExists("piero"))
-	// fmt.Println(FilePermission("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go"))
-	// fmt.Println(FileExists("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go"))
+func LinuxAPTInstalled(package_name string) (bool, error) {
+	return false, nil
 }
+
+// func main() {
+// fmt.Println("windows")
+// fmt.Println(HostPortOpen(8080))
+// fmt.Println(NetHttpContentHash("https://curtisf.dev/", "c76fdd9a87b2a3c653968b12973c2498"))
+// fmt.Println(FileHash("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
+// fmt.Println(FileContentRegex("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
+// fmt.Println(DirectoryExists("C:\\Users\\Nkdileo\\Documents"))
+// fmt.Println(UserGroupMember("The Power", "Administrators"))
+// fmt.Println(HostProcessRunning("grewgegregegegegegegrergre"))
+// fmt.Println(HostProcessRunning("Discord"))
+// fmt.Println(NetUDPOpen("10.247.63.254", 8080))
+// fmt.Println(NetTCPOpen("10.247.63.254", 22))
+// fmt.Println(NetICMP("192.168.1.1"))
+// fmt.Println(FileContentString("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go", "5646548932"))
+// fmt.Println(UserExists("piero"))
+// fmt.Println(FilePermission("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go"))
+// fmt.Println(FileExists("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go"))
+// }
