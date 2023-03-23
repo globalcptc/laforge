@@ -120,6 +120,13 @@ func ErrorMessage(v string) predicate.Validation {
 	})
 }
 
+// Hash applies equality check predicate on the "hash" field. It's identical to HashEQ.
+func Hash(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldHash), v))
+	})
+}
+
 // Regex applies equality check predicate on the "regex" field. It's identical to RegexEQ.
 func Regex(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
@@ -169,10 +176,17 @@ func GroupName(v string) predicate.Validation {
 	})
 }
 
-// FieldPath applies equality check predicate on the "field_path" field. It's identical to FieldPathEQ.
-func FieldPath(v string) predicate.Validation {
+// FilePath applies equality check predicate on the "file_path" field. It's identical to FilePathEQ.
+func FilePath(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldFieldPath), v))
+		s.Where(sql.EQ(s.C(FieldFilePath), v))
+	})
+}
+
+// SearchString applies equality check predicate on the "search_string" field. It's identical to SearchStringEQ.
+func SearchString(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldSearchString), v))
 	})
 }
 
@@ -180,6 +194,13 @@ func FieldPath(v string) predicate.Validation {
 func ServiceName(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldServiceName), v))
+	})
+}
+
+// ServiceStatus applies equality check predicate on the "service_status" field. It's identical to ServiceStatusEQ.
+func ServiceStatus(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldServiceStatus), v))
 	})
 }
 
@@ -679,6 +700,117 @@ func ErrorMessageEqualFold(v string) predicate.Validation {
 func ErrorMessageContainsFold(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldErrorMessage), v))
+	})
+}
+
+// HashEQ applies the EQ predicate on the "hash" field.
+func HashEQ(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldHash), v))
+	})
+}
+
+// HashNEQ applies the NEQ predicate on the "hash" field.
+func HashNEQ(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldHash), v))
+	})
+}
+
+// HashIn applies the In predicate on the "hash" field.
+func HashIn(vs ...string) predicate.Validation {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Validation(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldHash), v...))
+	})
+}
+
+// HashNotIn applies the NotIn predicate on the "hash" field.
+func HashNotIn(vs ...string) predicate.Validation {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Validation(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldHash), v...))
+	})
+}
+
+// HashGT applies the GT predicate on the "hash" field.
+func HashGT(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldHash), v))
+	})
+}
+
+// HashGTE applies the GTE predicate on the "hash" field.
+func HashGTE(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldHash), v))
+	})
+}
+
+// HashLT applies the LT predicate on the "hash" field.
+func HashLT(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldHash), v))
+	})
+}
+
+// HashLTE applies the LTE predicate on the "hash" field.
+func HashLTE(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldHash), v))
+	})
+}
+
+// HashContains applies the Contains predicate on the "hash" field.
+func HashContains(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldHash), v))
+	})
+}
+
+// HashHasPrefix applies the HasPrefix predicate on the "hash" field.
+func HashHasPrefix(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldHash), v))
+	})
+}
+
+// HashHasSuffix applies the HasSuffix predicate on the "hash" field.
+func HashHasSuffix(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldHash), v))
+	})
+}
+
+// HashEqualFold applies the EqualFold predicate on the "hash" field.
+func HashEqualFold(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldHash), v))
+	})
+}
+
+// HashContainsFold applies the ContainsFold predicate on the "hash" field.
+func HashContainsFold(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldHash), v))
 	})
 }
 
@@ -1424,22 +1556,22 @@ func GroupNameContainsFold(v string) predicate.Validation {
 	})
 }
 
-// FieldPathEQ applies the EQ predicate on the "field_path" field.
-func FieldPathEQ(v string) predicate.Validation {
+// FilePathEQ applies the EQ predicate on the "file_path" field.
+func FilePathEQ(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldFieldPath), v))
+		s.Where(sql.EQ(s.C(FieldFilePath), v))
 	})
 }
 
-// FieldPathNEQ applies the NEQ predicate on the "field_path" field.
-func FieldPathNEQ(v string) predicate.Validation {
+// FilePathNEQ applies the NEQ predicate on the "file_path" field.
+func FilePathNEQ(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldFieldPath), v))
+		s.Where(sql.NEQ(s.C(FieldFilePath), v))
 	})
 }
 
-// FieldPathIn applies the In predicate on the "field_path" field.
-func FieldPathIn(vs ...string) predicate.Validation {
+// FilePathIn applies the In predicate on the "file_path" field.
+func FilePathIn(vs ...string) predicate.Validation {
 	v := make([]interface{}, len(vs))
 	for i := range v {
 		v[i] = vs[i]
@@ -1451,12 +1583,12 @@ func FieldPathIn(vs ...string) predicate.Validation {
 			s.Where(sql.False())
 			return
 		}
-		s.Where(sql.In(s.C(FieldFieldPath), v...))
+		s.Where(sql.In(s.C(FieldFilePath), v...))
 	})
 }
 
-// FieldPathNotIn applies the NotIn predicate on the "field_path" field.
-func FieldPathNotIn(vs ...string) predicate.Validation {
+// FilePathNotIn applies the NotIn predicate on the "file_path" field.
+func FilePathNotIn(vs ...string) predicate.Validation {
 	v := make([]interface{}, len(vs))
 	for i := range v {
 		v[i] = vs[i]
@@ -1468,70 +1600,181 @@ func FieldPathNotIn(vs ...string) predicate.Validation {
 			s.Where(sql.False())
 			return
 		}
-		s.Where(sql.NotIn(s.C(FieldFieldPath), v...))
+		s.Where(sql.NotIn(s.C(FieldFilePath), v...))
 	})
 }
 
-// FieldPathGT applies the GT predicate on the "field_path" field.
-func FieldPathGT(v string) predicate.Validation {
+// FilePathGT applies the GT predicate on the "file_path" field.
+func FilePathGT(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldFieldPath), v))
+		s.Where(sql.GT(s.C(FieldFilePath), v))
 	})
 }
 
-// FieldPathGTE applies the GTE predicate on the "field_path" field.
-func FieldPathGTE(v string) predicate.Validation {
+// FilePathGTE applies the GTE predicate on the "file_path" field.
+func FilePathGTE(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldFieldPath), v))
+		s.Where(sql.GTE(s.C(FieldFilePath), v))
 	})
 }
 
-// FieldPathLT applies the LT predicate on the "field_path" field.
-func FieldPathLT(v string) predicate.Validation {
+// FilePathLT applies the LT predicate on the "file_path" field.
+func FilePathLT(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldFieldPath), v))
+		s.Where(sql.LT(s.C(FieldFilePath), v))
 	})
 }
 
-// FieldPathLTE applies the LTE predicate on the "field_path" field.
-func FieldPathLTE(v string) predicate.Validation {
+// FilePathLTE applies the LTE predicate on the "file_path" field.
+func FilePathLTE(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldFieldPath), v))
+		s.Where(sql.LTE(s.C(FieldFilePath), v))
 	})
 }
 
-// FieldPathContains applies the Contains predicate on the "field_path" field.
-func FieldPathContains(v string) predicate.Validation {
+// FilePathContains applies the Contains predicate on the "file_path" field.
+func FilePathContains(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldFieldPath), v))
+		s.Where(sql.Contains(s.C(FieldFilePath), v))
 	})
 }
 
-// FieldPathHasPrefix applies the HasPrefix predicate on the "field_path" field.
-func FieldPathHasPrefix(v string) predicate.Validation {
+// FilePathHasPrefix applies the HasPrefix predicate on the "file_path" field.
+func FilePathHasPrefix(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldFieldPath), v))
+		s.Where(sql.HasPrefix(s.C(FieldFilePath), v))
 	})
 }
 
-// FieldPathHasSuffix applies the HasSuffix predicate on the "field_path" field.
-func FieldPathHasSuffix(v string) predicate.Validation {
+// FilePathHasSuffix applies the HasSuffix predicate on the "file_path" field.
+func FilePathHasSuffix(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldFieldPath), v))
+		s.Where(sql.HasSuffix(s.C(FieldFilePath), v))
 	})
 }
 
-// FieldPathEqualFold applies the EqualFold predicate on the "field_path" field.
-func FieldPathEqualFold(v string) predicate.Validation {
+// FilePathEqualFold applies the EqualFold predicate on the "file_path" field.
+func FilePathEqualFold(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldFieldPath), v))
+		s.Where(sql.EqualFold(s.C(FieldFilePath), v))
 	})
 }
 
-// FieldPathContainsFold applies the ContainsFold predicate on the "field_path" field.
-func FieldPathContainsFold(v string) predicate.Validation {
+// FilePathContainsFold applies the ContainsFold predicate on the "file_path" field.
+func FilePathContainsFold(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldFieldPath), v))
+		s.Where(sql.ContainsFold(s.C(FieldFilePath), v))
+	})
+}
+
+// SearchStringEQ applies the EQ predicate on the "search_string" field.
+func SearchStringEQ(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldSearchString), v))
+	})
+}
+
+// SearchStringNEQ applies the NEQ predicate on the "search_string" field.
+func SearchStringNEQ(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldSearchString), v))
+	})
+}
+
+// SearchStringIn applies the In predicate on the "search_string" field.
+func SearchStringIn(vs ...string) predicate.Validation {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Validation(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldSearchString), v...))
+	})
+}
+
+// SearchStringNotIn applies the NotIn predicate on the "search_string" field.
+func SearchStringNotIn(vs ...string) predicate.Validation {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Validation(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldSearchString), v...))
+	})
+}
+
+// SearchStringGT applies the GT predicate on the "search_string" field.
+func SearchStringGT(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldSearchString), v))
+	})
+}
+
+// SearchStringGTE applies the GTE predicate on the "search_string" field.
+func SearchStringGTE(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldSearchString), v))
+	})
+}
+
+// SearchStringLT applies the LT predicate on the "search_string" field.
+func SearchStringLT(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldSearchString), v))
+	})
+}
+
+// SearchStringLTE applies the LTE predicate on the "search_string" field.
+func SearchStringLTE(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldSearchString), v))
+	})
+}
+
+// SearchStringContains applies the Contains predicate on the "search_string" field.
+func SearchStringContains(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldSearchString), v))
+	})
+}
+
+// SearchStringHasPrefix applies the HasPrefix predicate on the "search_string" field.
+func SearchStringHasPrefix(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldSearchString), v))
+	})
+}
+
+// SearchStringHasSuffix applies the HasSuffix predicate on the "search_string" field.
+func SearchStringHasSuffix(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldSearchString), v))
+	})
+}
+
+// SearchStringEqualFold applies the EqualFold predicate on the "search_string" field.
+func SearchStringEqualFold(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldSearchString), v))
+	})
+}
+
+// SearchStringContainsFold applies the ContainsFold predicate on the "search_string" field.
+func SearchStringContainsFold(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldSearchString), v))
 	})
 }
 
@@ -1643,6 +1886,117 @@ func ServiceNameEqualFold(v string) predicate.Validation {
 func ServiceNameContainsFold(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldServiceName), v))
+	})
+}
+
+// ServiceStatusEQ applies the EQ predicate on the "service_status" field.
+func ServiceStatusEQ(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldServiceStatus), v))
+	})
+}
+
+// ServiceStatusNEQ applies the NEQ predicate on the "service_status" field.
+func ServiceStatusNEQ(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldServiceStatus), v))
+	})
+}
+
+// ServiceStatusIn applies the In predicate on the "service_status" field.
+func ServiceStatusIn(vs ...string) predicate.Validation {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Validation(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldServiceStatus), v...))
+	})
+}
+
+// ServiceStatusNotIn applies the NotIn predicate on the "service_status" field.
+func ServiceStatusNotIn(vs ...string) predicate.Validation {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Validation(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldServiceStatus), v...))
+	})
+}
+
+// ServiceStatusGT applies the GT predicate on the "service_status" field.
+func ServiceStatusGT(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldServiceStatus), v))
+	})
+}
+
+// ServiceStatusGTE applies the GTE predicate on the "service_status" field.
+func ServiceStatusGTE(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldServiceStatus), v))
+	})
+}
+
+// ServiceStatusLT applies the LT predicate on the "service_status" field.
+func ServiceStatusLT(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldServiceStatus), v))
+	})
+}
+
+// ServiceStatusLTE applies the LTE predicate on the "service_status" field.
+func ServiceStatusLTE(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldServiceStatus), v))
+	})
+}
+
+// ServiceStatusContains applies the Contains predicate on the "service_status" field.
+func ServiceStatusContains(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldServiceStatus), v))
+	})
+}
+
+// ServiceStatusHasPrefix applies the HasPrefix predicate on the "service_status" field.
+func ServiceStatusHasPrefix(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldServiceStatus), v))
+	})
+}
+
+// ServiceStatusHasSuffix applies the HasSuffix predicate on the "service_status" field.
+func ServiceStatusHasSuffix(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldServiceStatus), v))
+	})
+}
+
+// ServiceStatusEqualFold applies the EqualFold predicate on the "service_status" field.
+func ServiceStatusEqualFold(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldServiceStatus), v))
+	})
+}
+
+// ServiceStatusContainsFold applies the ContainsFold predicate on the "service_status" field.
+func ServiceStatusContainsFold(v string) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldServiceStatus), v))
 	})
 }
 

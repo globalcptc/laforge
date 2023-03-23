@@ -337,7 +337,6 @@ func (pdq *PlanDiffQuery) WithPlanDiffToPlan(opts ...func(*PlanQuery)) *PlanDiff
 //		GroupBy(plandiff.FieldRevision).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (pdq *PlanDiffQuery) GroupBy(field string, fields ...string) *PlanDiffGroupBy {
 	group := &PlanDiffGroupBy{config: pdq.config}
 	group.fields = append([]string{field}, fields...)
@@ -362,7 +361,6 @@ func (pdq *PlanDiffQuery) GroupBy(field string, fields ...string) *PlanDiffGroup
 //	client.PlanDiff.Query().
 //		Select(plandiff.FieldRevision).
 //		Scan(ctx, &v)
-//
 func (pdq *PlanDiffQuery) Select(fields ...string) *PlanDiffSelect {
 	pdq.fields = append(pdq.fields, fields...)
 	return &PlanDiffSelect{PlanDiffQuery: pdq}

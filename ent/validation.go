@@ -28,6 +28,8 @@ type Validation struct {
 	State validation.State `json:"state,omitempty"`
 	// ErrorMessage holds the value of the "error_message" field.
 	ErrorMessage string `json:"error_message,omitempty"`
+	// Hash holds the value of the "hash" field.
+	Hash string `json:"hash,omitempty" hcl:"hash,optional"`
 	// Regex holds the value of the "regex" field.
 	Regex string `json:"regex,omitempty" hcl:"regex,optional"`
 	// IP holds the value of the "ip" field.
@@ -44,10 +46,14 @@ type Validation struct {
 	Username string `json:"username,omitempty" hcl:"username,optional"`
 	// GroupName holds the value of the "group_name" field.
 	GroupName string `json:"group_name,omitempty" hcl:"group_name,optional"`
-	// FieldPath holds the value of the "field_path" field.
-	FieldPath string `json:"field_path,omitempty" hcl:"field_path,optional"`
+	// FilePath holds the value of the "file_path" field.
+	FilePath string `json:"file_path,omitempty" hcl:"file_path,optional"`
+	// SearchString holds the value of the "search_string" field.
+	SearchString string `json:"search_string,omitempty" hcl:"search_string,optional"`
 	// ServiceName holds the value of the "service_name" field.
 	ServiceName string `json:"service_name,omitempty" hcl:"service_name,optional"`
+	// ServiceStatus holds the value of the "service_status" field.
+	ServiceStatus string `json:"service_status,omitempty" hcl:"service_status,optional"`
 	// ProcessName holds the value of the "process_name" field.
 	ProcessName string `json:"process_name,omitempty" hcl:"process_name,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -106,7 +112,7 @@ func (*Validation) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new([]byte)
 		case validation.FieldPort:
 			values[i] = new(sql.NullInt64)
-		case validation.FieldHclID, validation.FieldValidationType, validation.FieldOutput, validation.FieldState, validation.FieldErrorMessage, validation.FieldRegex, validation.FieldIP, validation.FieldHostname, validation.FieldPackageName, validation.FieldUsername, validation.FieldGroupName, validation.FieldFieldPath, validation.FieldServiceName, validation.FieldProcessName:
+		case validation.FieldHclID, validation.FieldValidationType, validation.FieldOutput, validation.FieldState, validation.FieldErrorMessage, validation.FieldHash, validation.FieldRegex, validation.FieldIP, validation.FieldHostname, validation.FieldPackageName, validation.FieldUsername, validation.FieldGroupName, validation.FieldFilePath, validation.FieldSearchString, validation.FieldServiceName, validation.FieldServiceStatus, validation.FieldProcessName:
 			values[i] = new(sql.NullString)
 		case validation.FieldID:
 			values[i] = new(uuid.UUID)
@@ -163,6 +169,12 @@ func (v *Validation) assignValues(columns []string, values []interface{}) error 
 			} else if value.Valid {
 				v.ErrorMessage = value.String
 			}
+		case validation.FieldHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field hash", values[i])
+			} else if value.Valid {
+				v.Hash = value.String
+			}
 		case validation.FieldRegex:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field regex", values[i])
@@ -213,17 +225,29 @@ func (v *Validation) assignValues(columns []string, values []interface{}) error 
 			} else if value.Valid {
 				v.GroupName = value.String
 			}
-		case validation.FieldFieldPath:
+		case validation.FieldFilePath:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field field_path", values[i])
+				return fmt.Errorf("unexpected type %T for field file_path", values[i])
 			} else if value.Valid {
-				v.FieldPath = value.String
+				v.FilePath = value.String
+			}
+		case validation.FieldSearchString:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field search_string", values[i])
+			} else if value.Valid {
+				v.SearchString = value.String
 			}
 		case validation.FieldServiceName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field service_name", values[i])
 			} else if value.Valid {
 				v.ServiceName = value.String
+			}
+		case validation.FieldServiceStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field service_status", values[i])
+			} else if value.Valid {
+				v.ServiceStatus = value.String
 			}
 		case validation.FieldProcessName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -286,6 +310,8 @@ func (v *Validation) String() string {
 	builder.WriteString(fmt.Sprintf("%v", v.State))
 	builder.WriteString(", error_message=")
 	builder.WriteString(v.ErrorMessage)
+	builder.WriteString(", hash=")
+	builder.WriteString(v.Hash)
 	builder.WriteString(", regex=")
 	builder.WriteString(v.Regex)
 	builder.WriteString(", ip=")
@@ -302,10 +328,14 @@ func (v *Validation) String() string {
 	builder.WriteString(v.Username)
 	builder.WriteString(", group_name=")
 	builder.WriteString(v.GroupName)
-	builder.WriteString(", field_path=")
-	builder.WriteString(v.FieldPath)
+	builder.WriteString(", file_path=")
+	builder.WriteString(v.FilePath)
+	builder.WriteString(", search_string=")
+	builder.WriteString(v.SearchString)
 	builder.WriteString(", service_name=")
 	builder.WriteString(v.ServiceName)
+	builder.WriteString(", service_status=")
+	builder.WriteString(v.ServiceStatus)
 	builder.WriteString(", process_name=")
 	builder.WriteString(v.ProcessName)
 	builder.WriteByte(')')

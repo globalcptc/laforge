@@ -949,7 +949,6 @@ func (eq *EnvironmentQuery) WithEnvironmentToServerTask(opts ...func(*ServerTask
 //		GroupBy(environment.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (eq *EnvironmentQuery) GroupBy(field string, fields ...string) *EnvironmentGroupBy {
 	group := &EnvironmentGroupBy{config: eq.config}
 	group.fields = append([]string{field}, fields...)
@@ -974,7 +973,6 @@ func (eq *EnvironmentQuery) GroupBy(field string, fields ...string) *Environment
 //	client.Environment.Query().
 //		Select(environment.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (eq *EnvironmentQuery) Select(fields ...string) *EnvironmentSelect {
 	eq.fields = append(eq.fields, fields...)
 	return &EnvironmentSelect{EnvironmentQuery: eq}

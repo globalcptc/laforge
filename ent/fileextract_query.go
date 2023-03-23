@@ -301,7 +301,6 @@ func (feq *FileExtractQuery) WithFileExtractToEnvironment(opts ...func(*Environm
 //		GroupBy(fileextract.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (feq *FileExtractQuery) GroupBy(field string, fields ...string) *FileExtractGroupBy {
 	group := &FileExtractGroupBy{config: feq.config}
 	group.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (feq *FileExtractQuery) GroupBy(field string, fields ...string) *FileExtrac
 //	client.FileExtract.Query().
 //		Select(fileextract.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (feq *FileExtractQuery) Select(fields ...string) *FileExtractSelect {
 	feq.fields = append(feq.fields, fields...)
 	return &FileExtractSelect{FileExtractQuery: feq}

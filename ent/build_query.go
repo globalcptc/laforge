@@ -697,7 +697,6 @@ func (bq *BuildQuery) WithBuildToServerTasks(opts ...func(*ServerTaskQuery)) *Bu
 //		GroupBy(build.FieldRevision).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (bq *BuildQuery) GroupBy(field string, fields ...string) *BuildGroupBy {
 	group := &BuildGroupBy{config: bq.config}
 	group.fields = append([]string{field}, fields...)
@@ -722,7 +721,6 @@ func (bq *BuildQuery) GroupBy(field string, fields ...string) *BuildGroupBy {
 //	client.Build.Query().
 //		Select(build.FieldRevision).
 //		Scan(ctx, &v)
-//
 func (bq *BuildQuery) Select(fields ...string) *BuildSelect {
 	bq.fields = append(bq.fields, fields...)
 	return &BuildSelect{BuildQuery: bq}

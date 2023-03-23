@@ -92,6 +92,14 @@ func (at *AgentTask) AgentTaskToAdhocPlan(ctx context.Context) ([]*AdhocPlan, er
 	return result, err
 }
 
+func (at *AgentTask) AgentTaskToValidation(ctx context.Context) (*Validation, error) {
+	result, err := at.Edges.AgentTaskToValidationOrErr()
+	if IsNotLoaded(err) {
+		result, err = at.QueryAgentTaskToValidation().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (a *Ansible) AnsibleToUser(ctx context.Context) ([]*User, error) {
 	result, err := a.Edges.AnsibleToUserOrErr()
 	if IsNotLoaded(err) {
@@ -1044,6 +1052,14 @@ func (s *Script) ScriptToEnvironment(ctx context.Context) (*Environment, error) 
 	return result, MaskNotFound(err)
 }
 
+func (s *Script) ScriptToValidation(ctx context.Context) (*Validation, error) {
+	result, err := s.Edges.ScriptToValidationOrErr()
+	if IsNotLoaded(err) {
+		result, err = s.QueryScriptToValidation().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (st *ServerTask) ServerTaskToAuthUser(ctx context.Context) (*AuthUser, error) {
 	result, err := st.Edges.ServerTaskToAuthUserOrErr()
 	if IsNotLoaded(err) {
@@ -1208,6 +1224,22 @@ func (u *User) UserToEnvironment(ctx context.Context) ([]*Environment, error) {
 	result, err := u.Edges.UserToEnvironmentOrErr()
 	if IsNotLoaded(err) {
 		result, err = u.QueryUserToEnvironment().All(ctx)
+	}
+	return result, err
+}
+
+func (v *Validation) ValidationToAgentTask(ctx context.Context) (*AgentTask, error) {
+	result, err := v.Edges.ValidationToAgentTaskOrErr()
+	if IsNotLoaded(err) {
+		result, err = v.QueryValidationToAgentTask().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (v *Validation) ValidationToScript(ctx context.Context) ([]*Script, error) {
+	result, err := v.Edges.ValidationToScriptOrErr()
+	if IsNotLoaded(err) {
+		result, err = v.QueryValidationToScript().All(ctx)
 	}
 	return result, err
 }

@@ -337,7 +337,6 @@ func (dq *DNSQuery) WithDNSToCompetition(opts ...func(*CompetitionQuery)) *DNSQu
 //		GroupBy(dns.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (dq *DNSQuery) GroupBy(field string, fields ...string) *DNSGroupBy {
 	group := &DNSGroupBy{config: dq.config}
 	group.fields = append([]string{field}, fields...)
@@ -362,7 +361,6 @@ func (dq *DNSQuery) GroupBy(field string, fields ...string) *DNSGroupBy {
 //	client.DNS.Query().
 //		Select(dns.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (dq *DNSQuery) Select(fields ...string) *DNSSelect {
 	dq.fields = append(dq.fields, fields...)
 	return &DNSSelect{DNSQuery: dq}

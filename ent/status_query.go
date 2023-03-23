@@ -553,7 +553,6 @@ func (sq *StatusQuery) WithStatusToAdhocPlan(opts ...func(*AdhocPlanQuery)) *Sta
 //		GroupBy(status.FieldState).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (sq *StatusQuery) GroupBy(field string, fields ...string) *StatusGroupBy {
 	group := &StatusGroupBy{config: sq.config}
 	group.fields = append([]string{field}, fields...)
@@ -578,7 +577,6 @@ func (sq *StatusQuery) GroupBy(field string, fields ...string) *StatusGroupBy {
 //	client.Status.Query().
 //		Select(status.FieldState).
 //		Scan(ctx, &v)
-//
 func (sq *StatusQuery) Select(fields ...string) *StatusSelect {
 	sq.fields = append(sq.fields, fields...)
 	return &StatusSelect{StatusQuery: sq}

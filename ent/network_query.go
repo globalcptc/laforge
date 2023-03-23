@@ -374,7 +374,6 @@ func (nq *NetworkQuery) WithNetworkToIncludedNetwork(opts ...func(*IncludedNetwo
 //		GroupBy(network.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (nq *NetworkQuery) GroupBy(field string, fields ...string) *NetworkGroupBy {
 	group := &NetworkGroupBy{config: nq.config}
 	group.fields = append([]string{field}, fields...)
@@ -399,7 +398,6 @@ func (nq *NetworkQuery) GroupBy(field string, fields ...string) *NetworkGroupBy 
 //	client.Network.Query().
 //		Select(network.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (nq *NetworkQuery) Select(fields ...string) *NetworkSelect {
 	nq.fields = append(nq.fields, fields...)
 	return &NetworkSelect{NetworkQuery: nq}

@@ -301,7 +301,6 @@ func (iq *IdentityQuery) WithIdentityToEnvironment(opts ...func(*EnvironmentQuer
 //		GroupBy(identity.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (iq *IdentityQuery) GroupBy(field string, fields ...string) *IdentityGroupBy {
 	group := &IdentityGroupBy{config: iq.config}
 	group.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (iq *IdentityQuery) GroupBy(field string, fields ...string) *IdentityGroupB
 //	client.Identity.Query().
 //		Select(identity.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (iq *IdentityQuery) Select(fields ...string) *IdentitySelect {
 	iq.fields = append(iq.fields, fields...)
 	return &IdentitySelect{IdentityQuery: iq}

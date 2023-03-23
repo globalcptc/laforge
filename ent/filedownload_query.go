@@ -301,7 +301,6 @@ func (fdq *FileDownloadQuery) WithFileDownloadToEnvironment(opts ...func(*Enviro
 //		GroupBy(filedownload.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (fdq *FileDownloadQuery) GroupBy(field string, fields ...string) *FileDownloadGroupBy {
 	group := &FileDownloadGroupBy{config: fdq.config}
 	group.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (fdq *FileDownloadQuery) GroupBy(field string, fields ...string) *FileDownl
 //	client.FileDownload.Query().
 //		Select(filedownload.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (fdq *FileDownloadQuery) Select(fields ...string) *FileDownloadSelect {
 	fdq.fields = append(fdq.fields, fields...)
 	return &FileDownloadSelect{FileDownloadQuery: fdq}

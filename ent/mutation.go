@@ -47,8 +47,8 @@ import (
 	"github.com/gen0cide/laforge/ent/team"
 	"github.com/gen0cide/laforge/ent/token"
 	"github.com/gen0cide/laforge/ent/user"
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/gen0cide/laforge/ent/validation"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/uuid"
 
 	"entgo.io/ent"
@@ -33330,6 +33330,7 @@ type ValidationMutation struct {
 	output                        *string
 	state                         *validation.State
 	error_message                 *string
+	hash                          *string
 	regex                         *string
 	ip                            *string
 	port                          *int
@@ -33339,8 +33340,10 @@ type ValidationMutation struct {
 	package_name                  *string
 	username                      *string
 	group_name                    *string
-	field_path                    *string
+	file_path                     *string
+	search_string                 *string
 	service_name                  *string
+	service_status                *string
 	process_name                  *string
 	clearedFields                 map[string]struct{}
 	_ValidationToAgentTask        *uuid.UUID
@@ -33383,7 +33386,7 @@ func withValidationID(id uuid.UUID) validationOption {
 		m.oldValue = func(ctx context.Context) (*Validation, error) {
 			once.Do(func() {
 				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
+					err = errors.New("querying old values post mutation is not allowed")
 				} else {
 					value, err = m.Client().Validation.Get(ctx, id)
 				}
@@ -33416,7 +33419,7 @@ func (m ValidationMutation) Client() *Client {
 // it returns an error otherwise.
 func (m ValidationMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()
@@ -33438,6 +33441,25 @@ func (m *ValidationMutation) ID() (id uuid.UUID, exists bool) {
 	return *m.id, true
 }
 
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ValidationMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Validation.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
 // SetHclID sets the "hcl_id" field.
 func (m *ValidationMutation) SetHclID(s string) {
 	m.hcl_id = &s
@@ -33457,10 +33479,10 @@ func (m *ValidationMutation) HclID() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldHclID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHclID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33493,10 +33515,10 @@ func (m *ValidationMutation) ValidationType() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldValidationType(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldValidationType is only allowed on UpdateOne operations")
+		return v, errors.New("OldValidationType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldValidationType requires an ID field in the mutation")
+		return v, errors.New("OldValidationType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33529,10 +33551,10 @@ func (m *ValidationMutation) Output() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldOutput(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldOutput is only allowed on UpdateOne operations")
+		return v, errors.New("OldOutput is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldOutput requires an ID field in the mutation")
+		return v, errors.New("OldOutput requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33565,10 +33587,10 @@ func (m *ValidationMutation) State() (r validation.State, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldState(ctx context.Context) (v validation.State, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldState is only allowed on UpdateOne operations")
+		return v, errors.New("OldState is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldState requires an ID field in the mutation")
+		return v, errors.New("OldState requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33601,10 +33623,10 @@ func (m *ValidationMutation) ErrorMessage() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldErrorMessage(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldErrorMessage is only allowed on UpdateOne operations")
+		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldErrorMessage requires an ID field in the mutation")
+		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33616,6 +33638,42 @@ func (m *ValidationMutation) OldErrorMessage(ctx context.Context) (v string, err
 // ResetErrorMessage resets all changes to the "error_message" field.
 func (m *ValidationMutation) ResetErrorMessage() {
 	m.error_message = nil
+}
+
+// SetHash sets the "hash" field.
+func (m *ValidationMutation) SetHash(s string) {
+	m.hash = &s
+}
+
+// Hash returns the value of the "hash" field in the mutation.
+func (m *ValidationMutation) Hash() (r string, exists bool) {
+	v := m.hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHash returns the old "hash" field's value of the Validation entity.
+// If the Validation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ValidationMutation) OldHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHash: %w", err)
+	}
+	return oldValue.Hash, nil
+}
+
+// ResetHash resets all changes to the "hash" field.
+func (m *ValidationMutation) ResetHash() {
+	m.hash = nil
 }
 
 // SetRegex sets the "regex" field.
@@ -33637,10 +33695,10 @@ func (m *ValidationMutation) Regex() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldRegex(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldRegex is only allowed on UpdateOne operations")
+		return v, errors.New("OldRegex is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldRegex requires an ID field in the mutation")
+		return v, errors.New("OldRegex requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33673,10 +33731,10 @@ func (m *ValidationMutation) IP() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldIP(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldIP is only allowed on UpdateOne operations")
+		return v, errors.New("OldIP is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldIP requires an ID field in the mutation")
+		return v, errors.New("OldIP requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33710,10 +33768,10 @@ func (m *ValidationMutation) Port() (r int, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldPort(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldPort is only allowed on UpdateOne operations")
+		return v, errors.New("OldPort is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldPort requires an ID field in the mutation")
+		return v, errors.New("OldPort requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33765,10 +33823,10 @@ func (m *ValidationMutation) Hostname() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldHostname(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldHostname is only allowed on UpdateOne operations")
+		return v, errors.New("OldHostname is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldHostname requires an ID field in the mutation")
+		return v, errors.New("OldHostname requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33801,10 +33859,10 @@ func (m *ValidationMutation) Nameservers() (r []string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldNameservers(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldNameservers is only allowed on UpdateOne operations")
+		return v, errors.New("OldNameservers is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldNameservers requires an ID field in the mutation")
+		return v, errors.New("OldNameservers requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33837,10 +33895,10 @@ func (m *ValidationMutation) PackageName() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldPackageName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldPackageName is only allowed on UpdateOne operations")
+		return v, errors.New("OldPackageName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldPackageName requires an ID field in the mutation")
+		return v, errors.New("OldPackageName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33873,10 +33931,10 @@ func (m *ValidationMutation) Username() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldUsername(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldUsername is only allowed on UpdateOne operations")
+		return v, errors.New("OldUsername is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldUsername requires an ID field in the mutation")
+		return v, errors.New("OldUsername requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33909,10 +33967,10 @@ func (m *ValidationMutation) GroupName() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldGroupName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldGroupName is only allowed on UpdateOne operations")
+		return v, errors.New("OldGroupName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldGroupName requires an ID field in the mutation")
+		return v, errors.New("OldGroupName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33926,40 +33984,76 @@ func (m *ValidationMutation) ResetGroupName() {
 	m.group_name = nil
 }
 
-// SetFieldPath sets the "field_path" field.
-func (m *ValidationMutation) SetFieldPath(s string) {
-	m.field_path = &s
+// SetFilePath sets the "file_path" field.
+func (m *ValidationMutation) SetFilePath(s string) {
+	m.file_path = &s
 }
 
-// FieldPath returns the value of the "field_path" field in the mutation.
-func (m *ValidationMutation) FieldPath() (r string, exists bool) {
-	v := m.field_path
+// FilePath returns the value of the "file_path" field in the mutation.
+func (m *ValidationMutation) FilePath() (r string, exists bool) {
+	v := m.file_path
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldFieldPath returns the old "field_path" field's value of the Validation entity.
+// OldFilePath returns the old "file_path" field's value of the Validation entity.
 // If the Validation object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ValidationMutation) OldFieldPath(ctx context.Context) (v string, err error) {
+func (m *ValidationMutation) OldFilePath(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldFieldPath is only allowed on UpdateOne operations")
+		return v, errors.New("OldFilePath is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldFieldPath requires an ID field in the mutation")
+		return v, errors.New("OldFilePath requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldFieldPath: %w", err)
+		return v, fmt.Errorf("querying old value for OldFilePath: %w", err)
 	}
-	return oldValue.FieldPath, nil
+	return oldValue.FilePath, nil
 }
 
-// ResetFieldPath resets all changes to the "field_path" field.
-func (m *ValidationMutation) ResetFieldPath() {
-	m.field_path = nil
+// ResetFilePath resets all changes to the "file_path" field.
+func (m *ValidationMutation) ResetFilePath() {
+	m.file_path = nil
+}
+
+// SetSearchString sets the "search_string" field.
+func (m *ValidationMutation) SetSearchString(s string) {
+	m.search_string = &s
+}
+
+// SearchString returns the value of the "search_string" field in the mutation.
+func (m *ValidationMutation) SearchString() (r string, exists bool) {
+	v := m.search_string
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSearchString returns the old "search_string" field's value of the Validation entity.
+// If the Validation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ValidationMutation) OldSearchString(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSearchString is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSearchString requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSearchString: %w", err)
+	}
+	return oldValue.SearchString, nil
+}
+
+// ResetSearchString resets all changes to the "search_string" field.
+func (m *ValidationMutation) ResetSearchString() {
+	m.search_string = nil
 }
 
 // SetServiceName sets the "service_name" field.
@@ -33981,10 +34075,10 @@ func (m *ValidationMutation) ServiceName() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldServiceName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldServiceName is only allowed on UpdateOne operations")
+		return v, errors.New("OldServiceName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldServiceName requires an ID field in the mutation")
+		return v, errors.New("OldServiceName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -33996,6 +34090,42 @@ func (m *ValidationMutation) OldServiceName(ctx context.Context) (v string, err 
 // ResetServiceName resets all changes to the "service_name" field.
 func (m *ValidationMutation) ResetServiceName() {
 	m.service_name = nil
+}
+
+// SetServiceStatus sets the "service_status" field.
+func (m *ValidationMutation) SetServiceStatus(s string) {
+	m.service_status = &s
+}
+
+// ServiceStatus returns the value of the "service_status" field in the mutation.
+func (m *ValidationMutation) ServiceStatus() (r string, exists bool) {
+	v := m.service_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldServiceStatus returns the old "service_status" field's value of the Validation entity.
+// If the Validation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ValidationMutation) OldServiceStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldServiceStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldServiceStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldServiceStatus: %w", err)
+	}
+	return oldValue.ServiceStatus, nil
+}
+
+// ResetServiceStatus resets all changes to the "service_status" field.
+func (m *ValidationMutation) ResetServiceStatus() {
+	m.service_status = nil
 }
 
 // SetProcessName sets the "process_name" field.
@@ -34017,10 +34147,10 @@ func (m *ValidationMutation) ProcessName() (r string, exists bool) {
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *ValidationMutation) OldProcessName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldProcessName is only allowed on UpdateOne operations")
+		return v, errors.New("OldProcessName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldProcessName requires an ID field in the mutation")
+		return v, errors.New("OldProcessName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
@@ -34146,7 +34276,7 @@ func (m *ValidationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ValidationMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 19)
 	if m.hcl_id != nil {
 		fields = append(fields, validation.FieldHclID)
 	}
@@ -34161,6 +34291,9 @@ func (m *ValidationMutation) Fields() []string {
 	}
 	if m.error_message != nil {
 		fields = append(fields, validation.FieldErrorMessage)
+	}
+	if m.hash != nil {
+		fields = append(fields, validation.FieldHash)
 	}
 	if m.regex != nil {
 		fields = append(fields, validation.FieldRegex)
@@ -34186,11 +34319,17 @@ func (m *ValidationMutation) Fields() []string {
 	if m.group_name != nil {
 		fields = append(fields, validation.FieldGroupName)
 	}
-	if m.field_path != nil {
-		fields = append(fields, validation.FieldFieldPath)
+	if m.file_path != nil {
+		fields = append(fields, validation.FieldFilePath)
+	}
+	if m.search_string != nil {
+		fields = append(fields, validation.FieldSearchString)
 	}
 	if m.service_name != nil {
 		fields = append(fields, validation.FieldServiceName)
+	}
+	if m.service_status != nil {
+		fields = append(fields, validation.FieldServiceStatus)
 	}
 	if m.process_name != nil {
 		fields = append(fields, validation.FieldProcessName)
@@ -34213,6 +34352,8 @@ func (m *ValidationMutation) Field(name string) (ent.Value, bool) {
 		return m.State()
 	case validation.FieldErrorMessage:
 		return m.ErrorMessage()
+	case validation.FieldHash:
+		return m.Hash()
 	case validation.FieldRegex:
 		return m.Regex()
 	case validation.FieldIP:
@@ -34229,10 +34370,14 @@ func (m *ValidationMutation) Field(name string) (ent.Value, bool) {
 		return m.Username()
 	case validation.FieldGroupName:
 		return m.GroupName()
-	case validation.FieldFieldPath:
-		return m.FieldPath()
+	case validation.FieldFilePath:
+		return m.FilePath()
+	case validation.FieldSearchString:
+		return m.SearchString()
 	case validation.FieldServiceName:
 		return m.ServiceName()
+	case validation.FieldServiceStatus:
+		return m.ServiceStatus()
 	case validation.FieldProcessName:
 		return m.ProcessName()
 	}
@@ -34254,6 +34399,8 @@ func (m *ValidationMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldState(ctx)
 	case validation.FieldErrorMessage:
 		return m.OldErrorMessage(ctx)
+	case validation.FieldHash:
+		return m.OldHash(ctx)
 	case validation.FieldRegex:
 		return m.OldRegex(ctx)
 	case validation.FieldIP:
@@ -34270,10 +34417,14 @@ func (m *ValidationMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldUsername(ctx)
 	case validation.FieldGroupName:
 		return m.OldGroupName(ctx)
-	case validation.FieldFieldPath:
-		return m.OldFieldPath(ctx)
+	case validation.FieldFilePath:
+		return m.OldFilePath(ctx)
+	case validation.FieldSearchString:
+		return m.OldSearchString(ctx)
 	case validation.FieldServiceName:
 		return m.OldServiceName(ctx)
+	case validation.FieldServiceStatus:
+		return m.OldServiceStatus(ctx)
 	case validation.FieldProcessName:
 		return m.OldProcessName(ctx)
 	}
@@ -34319,6 +34470,13 @@ func (m *ValidationMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetErrorMessage(v)
+		return nil
+	case validation.FieldHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHash(v)
 		return nil
 	case validation.FieldRegex:
 		v, ok := value.(string)
@@ -34376,12 +34534,19 @@ func (m *ValidationMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetGroupName(v)
 		return nil
-	case validation.FieldFieldPath:
+	case validation.FieldFilePath:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetFieldPath(v)
+		m.SetFilePath(v)
+		return nil
+	case validation.FieldSearchString:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSearchString(v)
 		return nil
 	case validation.FieldServiceName:
 		v, ok := value.(string)
@@ -34389,6 +34554,13 @@ func (m *ValidationMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetServiceName(v)
+		return nil
+	case validation.FieldServiceStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetServiceStatus(v)
 		return nil
 	case validation.FieldProcessName:
 		v, ok := value.(string)
@@ -34476,6 +34648,9 @@ func (m *ValidationMutation) ResetField(name string) error {
 	case validation.FieldErrorMessage:
 		m.ResetErrorMessage()
 		return nil
+	case validation.FieldHash:
+		m.ResetHash()
+		return nil
 	case validation.FieldRegex:
 		m.ResetRegex()
 		return nil
@@ -34500,11 +34675,17 @@ func (m *ValidationMutation) ResetField(name string) error {
 	case validation.FieldGroupName:
 		m.ResetGroupName()
 		return nil
-	case validation.FieldFieldPath:
-		m.ResetFieldPath()
+	case validation.FieldFilePath:
+		m.ResetFilePath()
+		return nil
+	case validation.FieldSearchString:
+		m.ResetSearchString()
 		return nil
 	case validation.FieldServiceName:
 		m.ResetServiceName()
+		return nil
+	case validation.FieldServiceStatus:
+		m.ResetServiceStatus()
 		return nil
 	case validation.FieldProcessName:
 		m.ResetProcessName()

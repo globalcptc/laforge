@@ -804,7 +804,7 @@ var (
 	// ProvisioningStepsColumns holds the columns for the "provisioning_steps" table.
 	ProvisioningStepsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract", "Ansible", "Validate"}},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract", "Ansible"}},
 		{Name: "step_number", Type: field.TypeInt},
 		{Name: "gin_file_middleware_gin_file_middleware_to_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
@@ -1223,6 +1223,7 @@ var (
 		{Name: "output", Type: field.TypeString, Default: ""},
 		{Name: "state", Type: field.TypeEnum, Enums: []string{"AWAITING", "INPROGRESS", "FAILED", "COMPLETE"}},
 		{Name: "error_message", Type: field.TypeString, Default: ""},
+		{Name: "hash", Type: field.TypeString},
 		{Name: "regex", Type: field.TypeString},
 		{Name: "ip", Type: field.TypeString},
 		{Name: "port", Type: field.TypeInt},
@@ -1231,8 +1232,10 @@ var (
 		{Name: "package_name", Type: field.TypeString},
 		{Name: "username", Type: field.TypeString},
 		{Name: "group_name", Type: field.TypeString},
-		{Name: "field_path", Type: field.TypeString},
+		{Name: "file_path", Type: field.TypeString},
+		{Name: "search_string", Type: field.TypeString},
 		{Name: "service_name", Type: field.TypeString},
+		{Name: "service_status", Type: field.TypeString},
 		{Name: "process_name", Type: field.TypeString},
 		{Name: "agent_task_agent_task_to_validation", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
@@ -1244,7 +1247,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "validations_agent_tasks_AgentTaskToValidation",
-				Columns:    []*schema.Column{ValidationsColumns[17]},
+				Columns:    []*schema.Column{ValidationsColumns[20]},
 				RefColumns: []*schema.Column{AgentTasksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

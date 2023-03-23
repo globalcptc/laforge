@@ -301,7 +301,6 @@ func (tq *TokenQuery) WithTokenToAuthUser(opts ...func(*AuthUserQuery)) *TokenQu
 //		GroupBy(token.FieldToken).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (tq *TokenQuery) GroupBy(field string, fields ...string) *TokenGroupBy {
 	group := &TokenGroupBy{config: tq.config}
 	group.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (tq *TokenQuery) GroupBy(field string, fields ...string) *TokenGroupBy {
 //	client.Token.Query().
 //		Select(token.FieldToken).
 //		Scan(ctx, &v)
-//
 func (tq *TokenQuery) Select(fields ...string) *TokenSelect {
 	tq.fields = append(tq.fields, fields...)
 	return &TokenSelect{TokenQuery: tq}

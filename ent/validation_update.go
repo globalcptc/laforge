@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
@@ -83,6 +84,12 @@ func (vu *ValidationUpdate) SetNillableErrorMessage(s *string) *ValidationUpdate
 	return vu
 }
 
+// SetHash sets the "hash" field.
+func (vu *ValidationUpdate) SetHash(s string) *ValidationUpdate {
+	vu.mutation.SetHash(s)
+	return vu
+}
+
 // SetRegex sets the "regex" field.
 func (vu *ValidationUpdate) SetRegex(s string) *ValidationUpdate {
 	vu.mutation.SetRegex(s)
@@ -138,15 +145,27 @@ func (vu *ValidationUpdate) SetGroupName(s string) *ValidationUpdate {
 	return vu
 }
 
-// SetFieldPath sets the "field_path" field.
-func (vu *ValidationUpdate) SetFieldPath(s string) *ValidationUpdate {
-	vu.mutation.SetFieldPath(s)
+// SetFilePath sets the "file_path" field.
+func (vu *ValidationUpdate) SetFilePath(s string) *ValidationUpdate {
+	vu.mutation.SetFilePath(s)
+	return vu
+}
+
+// SetSearchString sets the "search_string" field.
+func (vu *ValidationUpdate) SetSearchString(s string) *ValidationUpdate {
+	vu.mutation.SetSearchString(s)
 	return vu
 }
 
 // SetServiceName sets the "service_name" field.
 func (vu *ValidationUpdate) SetServiceName(s string) *ValidationUpdate {
 	vu.mutation.SetServiceName(s)
+	return vu
+}
+
+// SetServiceStatus sets the "service_status" field.
+func (vu *ValidationUpdate) SetServiceStatus(s string) *ValidationUpdate {
+	vu.mutation.SetServiceStatus(s)
 	return vu
 }
 
@@ -286,7 +305,7 @@ func (vu *ValidationUpdate) ExecX(ctx context.Context) {
 func (vu *ValidationUpdate) check() error {
 	if v, ok := vu.mutation.State(); ok {
 		if err := validation.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf("ent: validator failed for field \"state\": %w", err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Validation.state": %w`, err)}
 		}
 	}
 	return nil
@@ -343,6 +362,13 @@ func (vu *ValidationUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Type:   field.TypeString,
 			Value:  value,
 			Column: validation.FieldErrorMessage,
+		})
+	}
+	if value, ok := vu.mutation.Hash(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: validation.FieldHash,
 		})
 	}
 	if value, ok := vu.mutation.Regex(); ok {
@@ -408,11 +434,18 @@ func (vu *ValidationUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: validation.FieldGroupName,
 		})
 	}
-	if value, ok := vu.mutation.FieldPath(); ok {
+	if value, ok := vu.mutation.FilePath(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
 			Value:  value,
-			Column: validation.FieldFieldPath,
+			Column: validation.FieldFilePath,
+		})
+	}
+	if value, ok := vu.mutation.SearchString(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: validation.FieldSearchString,
 		})
 	}
 	if value, ok := vu.mutation.ServiceName(); ok {
@@ -420,6 +453,13 @@ func (vu *ValidationUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Type:   field.TypeString,
 			Value:  value,
 			Column: validation.FieldServiceName,
+		})
+	}
+	if value, ok := vu.mutation.ServiceStatus(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: validation.FieldServiceStatus,
 		})
 	}
 	if value, ok := vu.mutation.ProcessName(); ok {
@@ -591,6 +631,12 @@ func (vuo *ValidationUpdateOne) SetNillableErrorMessage(s *string) *ValidationUp
 	return vuo
 }
 
+// SetHash sets the "hash" field.
+func (vuo *ValidationUpdateOne) SetHash(s string) *ValidationUpdateOne {
+	vuo.mutation.SetHash(s)
+	return vuo
+}
+
 // SetRegex sets the "regex" field.
 func (vuo *ValidationUpdateOne) SetRegex(s string) *ValidationUpdateOne {
 	vuo.mutation.SetRegex(s)
@@ -646,15 +692,27 @@ func (vuo *ValidationUpdateOne) SetGroupName(s string) *ValidationUpdateOne {
 	return vuo
 }
 
-// SetFieldPath sets the "field_path" field.
-func (vuo *ValidationUpdateOne) SetFieldPath(s string) *ValidationUpdateOne {
-	vuo.mutation.SetFieldPath(s)
+// SetFilePath sets the "file_path" field.
+func (vuo *ValidationUpdateOne) SetFilePath(s string) *ValidationUpdateOne {
+	vuo.mutation.SetFilePath(s)
+	return vuo
+}
+
+// SetSearchString sets the "search_string" field.
+func (vuo *ValidationUpdateOne) SetSearchString(s string) *ValidationUpdateOne {
+	vuo.mutation.SetSearchString(s)
 	return vuo
 }
 
 // SetServiceName sets the "service_name" field.
 func (vuo *ValidationUpdateOne) SetServiceName(s string) *ValidationUpdateOne {
 	vuo.mutation.SetServiceName(s)
+	return vuo
+}
+
+// SetServiceStatus sets the "service_status" field.
+func (vuo *ValidationUpdateOne) SetServiceStatus(s string) *ValidationUpdateOne {
+	vuo.mutation.SetServiceStatus(s)
 	return vuo
 }
 
@@ -801,7 +859,7 @@ func (vuo *ValidationUpdateOne) ExecX(ctx context.Context) {
 func (vuo *ValidationUpdateOne) check() error {
 	if v, ok := vuo.mutation.State(); ok {
 		if err := validation.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf("ent: validator failed for field \"state\": %w", err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Validation.state": %w`, err)}
 		}
 	}
 	return nil
@@ -820,7 +878,7 @@ func (vuo *ValidationUpdateOne) sqlSave(ctx context.Context) (_node *Validation,
 	}
 	id, ok := vuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Validation.ID for update")}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Validation.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := vuo.fields; len(fields) > 0 {
@@ -875,6 +933,13 @@ func (vuo *ValidationUpdateOne) sqlSave(ctx context.Context) (_node *Validation,
 			Type:   field.TypeString,
 			Value:  value,
 			Column: validation.FieldErrorMessage,
+		})
+	}
+	if value, ok := vuo.mutation.Hash(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: validation.FieldHash,
 		})
 	}
 	if value, ok := vuo.mutation.Regex(); ok {
@@ -940,11 +1005,18 @@ func (vuo *ValidationUpdateOne) sqlSave(ctx context.Context) (_node *Validation,
 			Column: validation.FieldGroupName,
 		})
 	}
-	if value, ok := vuo.mutation.FieldPath(); ok {
+	if value, ok := vuo.mutation.FilePath(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
 			Value:  value,
-			Column: validation.FieldFieldPath,
+			Column: validation.FieldFilePath,
+		})
+	}
+	if value, ok := vuo.mutation.SearchString(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: validation.FieldSearchString,
 		})
 	}
 	if value, ok := vuo.mutation.ServiceName(); ok {
@@ -952,6 +1024,13 @@ func (vuo *ValidationUpdateOne) sqlSave(ctx context.Context) (_node *Validation,
 			Type:   field.TypeString,
 			Value:  value,
 			Column: validation.FieldServiceName,
+		})
+	}
+	if value, ok := vuo.mutation.ServiceStatus(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: validation.FieldServiceStatus,
 		})
 	}
 	if value, ok := vuo.mutation.ProcessName(); ok {

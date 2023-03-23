@@ -338,7 +338,6 @@ func (aq *AnsibleQuery) WithAnsibleFromEnvironment(opts ...func(*EnvironmentQuer
 //		GroupBy(ansible.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (aq *AnsibleQuery) GroupBy(field string, fields ...string) *AnsibleGroupBy {
 	group := &AnsibleGroupBy{config: aq.config}
 	group.fields = append([]string{field}, fields...)
@@ -363,7 +362,6 @@ func (aq *AnsibleQuery) GroupBy(field string, fields ...string) *AnsibleGroupBy 
 //	client.Ansible.Query().
 //		Select(ansible.FieldName).
 //		Scan(ctx, &v)
-//
 func (aq *AnsibleQuery) Select(fields ...string) *AnsibleSelect {
 	aq.fields = append(aq.fields, fields...)
 	return &AnsibleSelect{AnsibleQuery: aq}

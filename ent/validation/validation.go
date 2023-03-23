@@ -25,6 +25,8 @@ const (
 	FieldState = "state"
 	// FieldErrorMessage holds the string denoting the error_message field in the database.
 	FieldErrorMessage = "error_message"
+	// FieldHash holds the string denoting the hash field in the database.
+	FieldHash = "hash"
 	// FieldRegex holds the string denoting the regex field in the database.
 	FieldRegex = "regex"
 	// FieldIP holds the string denoting the ip field in the database.
@@ -41,10 +43,14 @@ const (
 	FieldUsername = "username"
 	// FieldGroupName holds the string denoting the group_name field in the database.
 	FieldGroupName = "group_name"
-	// FieldFieldPath holds the string denoting the field_path field in the database.
-	FieldFieldPath = "field_path"
+	// FieldFilePath holds the string denoting the file_path field in the database.
+	FieldFilePath = "file_path"
+	// FieldSearchString holds the string denoting the search_string field in the database.
+	FieldSearchString = "search_string"
 	// FieldServiceName holds the string denoting the service_name field in the database.
 	FieldServiceName = "service_name"
+	// FieldServiceStatus holds the string denoting the service_status field in the database.
+	FieldServiceStatus = "service_status"
 	// FieldProcessName holds the string denoting the process_name field in the database.
 	FieldProcessName = "process_name"
 	// EdgeValidationToAgentTask holds the string denoting the validationtoagenttask edge name in mutations.
@@ -77,6 +83,7 @@ var Columns = []string{
 	FieldOutput,
 	FieldState,
 	FieldErrorMessage,
+	FieldHash,
 	FieldRegex,
 	FieldIP,
 	FieldPort,
@@ -85,8 +92,10 @@ var Columns = []string{
 	FieldPackageName,
 	FieldUsername,
 	FieldGroupName,
-	FieldFieldPath,
+	FieldFilePath,
+	FieldSearchString,
 	FieldServiceName,
+	FieldServiceStatus,
 	FieldProcessName,
 }
 

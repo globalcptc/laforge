@@ -3706,7 +3706,7 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     v.ID,
 		Type:   "Validation",
-		Fields: make([]*Field, 16),
+		Fields: make([]*Field, 19),
 		Edges:  make([]*Edge, 2),
 	}
 	var buf []byte
@@ -3750,10 +3750,18 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "error_message",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(v.Regex); err != nil {
+	if buf, err = json.Marshal(v.Hash); err != nil {
 		return nil, err
 	}
 	node.Fields[5] = &Field{
+		Type:  "string",
+		Name:  "hash",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.Regex); err != nil {
+		return nil, err
+	}
+	node.Fields[6] = &Field{
 		Type:  "string",
 		Name:  "regex",
 		Value: string(buf),
@@ -3761,7 +3769,7 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(v.IP); err != nil {
 		return nil, err
 	}
-	node.Fields[6] = &Field{
+	node.Fields[7] = &Field{
 		Type:  "string",
 		Name:  "ip",
 		Value: string(buf),
@@ -3769,7 +3777,7 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(v.Port); err != nil {
 		return nil, err
 	}
-	node.Fields[7] = &Field{
+	node.Fields[8] = &Field{
 		Type:  "int",
 		Name:  "port",
 		Value: string(buf),
@@ -3777,7 +3785,7 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(v.Hostname); err != nil {
 		return nil, err
 	}
-	node.Fields[8] = &Field{
+	node.Fields[9] = &Field{
 		Type:  "string",
 		Name:  "hostname",
 		Value: string(buf),
@@ -3785,7 +3793,7 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(v.Nameservers); err != nil {
 		return nil, err
 	}
-	node.Fields[9] = &Field{
+	node.Fields[10] = &Field{
 		Type:  "[]string",
 		Name:  "nameservers",
 		Value: string(buf),
@@ -3793,7 +3801,7 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(v.PackageName); err != nil {
 		return nil, err
 	}
-	node.Fields[10] = &Field{
+	node.Fields[11] = &Field{
 		Type:  "string",
 		Name:  "package_name",
 		Value: string(buf),
@@ -3801,7 +3809,7 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(v.Username); err != nil {
 		return nil, err
 	}
-	node.Fields[11] = &Field{
+	node.Fields[12] = &Field{
 		Type:  "string",
 		Name:  "username",
 		Value: string(buf),
@@ -3809,31 +3817,47 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(v.GroupName); err != nil {
 		return nil, err
 	}
-	node.Fields[12] = &Field{
+	node.Fields[13] = &Field{
 		Type:  "string",
 		Name:  "group_name",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(v.FieldPath); err != nil {
+	if buf, err = json.Marshal(v.FilePath); err != nil {
 		return nil, err
 	}
-	node.Fields[13] = &Field{
+	node.Fields[14] = &Field{
 		Type:  "string",
-		Name:  "field_path",
+		Name:  "file_path",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.SearchString); err != nil {
+		return nil, err
+	}
+	node.Fields[15] = &Field{
+		Type:  "string",
+		Name:  "search_string",
 		Value: string(buf),
 	}
 	if buf, err = json.Marshal(v.ServiceName); err != nil {
 		return nil, err
 	}
-	node.Fields[14] = &Field{
+	node.Fields[16] = &Field{
 		Type:  "string",
 		Name:  "service_name",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(v.ServiceStatus); err != nil {
+		return nil, err
+	}
+	node.Fields[17] = &Field{
+		Type:  "string",
+		Name:  "service_status",
 		Value: string(buf),
 	}
 	if buf, err = json.Marshal(v.ProcessName); err != nil {
 		return nil, err
 	}
-	node.Fields[15] = &Field{
+	node.Fields[18] = &Field{
 		Type:  "string",
 		Name:  "process_name",
 		Value: string(buf),
@@ -3910,9 +3934,8 @@ func (c *Client) newNodeOpts(opts []NodeOption) *nodeOptions {
 // Noder returns a Node by its id. If the NodeType was not provided, it will
 // be derived from the id value according to the universal-id configuration.
 //
-//		c.Noder(ctx, id)
-//		c.Noder(ctx, id, ent.WithNodeType(pet.Table))
-//
+//	c.Noder(ctx, id)
+//	c.Noder(ctx, id, ent.WithNodeType(pet.Table))
 func (c *Client) Noder(ctx context.Context, id uuid.UUID, opts ...NodeOption) (_ Noder, err error) {
 	defer func() {
 		if IsNotFound(err) {

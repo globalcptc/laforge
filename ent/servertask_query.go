@@ -482,7 +482,6 @@ func (stq *ServerTaskQuery) WithServerTaskToGinFileMiddleware(opts ...func(*GinF
 //		GroupBy(servertask.FieldType).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (stq *ServerTaskQuery) GroupBy(field string, fields ...string) *ServerTaskGroupBy {
 	group := &ServerTaskGroupBy{config: stq.config}
 	group.fields = append([]string{field}, fields...)
@@ -507,7 +506,6 @@ func (stq *ServerTaskQuery) GroupBy(field string, fields ...string) *ServerTaskG
 //	client.ServerTask.Query().
 //		Select(servertask.FieldType).
 //		Scan(ctx, &v)
-//
 func (stq *ServerTaskQuery) Select(fields ...string) *ServerTaskSelect {
 	stq.fields = append(stq.fields, fields...)
 	return &ServerTaskSelect{ServerTaskQuery: stq}

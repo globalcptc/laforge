@@ -264,7 +264,6 @@ func (tq *TagQuery) Clone() *TagQuery {
 //		GroupBy(tag.FieldUUID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (tq *TagQuery) GroupBy(field string, fields ...string) *TagGroupBy {
 	group := &TagGroupBy{config: tq.config}
 	group.fields = append([]string{field}, fields...)
@@ -289,7 +288,6 @@ func (tq *TagQuery) GroupBy(field string, fields ...string) *TagGroupBy {
 //	client.Tag.Query().
 //		Select(tag.FieldUUID).
 //		Scan(ctx, &v)
-//
 func (tq *TagQuery) Select(fields ...string) *TagSelect {
 	tq.fields = append(tq.fields, fields...)
 	return &TagSelect{TagQuery: tq}

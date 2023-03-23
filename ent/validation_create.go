@@ -76,6 +76,12 @@ func (vc *ValidationCreate) SetNillableErrorMessage(s *string) *ValidationCreate
 	return vc
 }
 
+// SetHash sets the "hash" field.
+func (vc *ValidationCreate) SetHash(s string) *ValidationCreate {
+	vc.mutation.SetHash(s)
+	return vc
+}
+
 // SetRegex sets the "regex" field.
 func (vc *ValidationCreate) SetRegex(s string) *ValidationCreate {
 	vc.mutation.SetRegex(s)
@@ -124,15 +130,27 @@ func (vc *ValidationCreate) SetGroupName(s string) *ValidationCreate {
 	return vc
 }
 
-// SetFieldPath sets the "field_path" field.
-func (vc *ValidationCreate) SetFieldPath(s string) *ValidationCreate {
-	vc.mutation.SetFieldPath(s)
+// SetFilePath sets the "file_path" field.
+func (vc *ValidationCreate) SetFilePath(s string) *ValidationCreate {
+	vc.mutation.SetFilePath(s)
+	return vc
+}
+
+// SetSearchString sets the "search_string" field.
+func (vc *ValidationCreate) SetSearchString(s string) *ValidationCreate {
+	vc.mutation.SetSearchString(s)
 	return vc
 }
 
 // SetServiceName sets the "service_name" field.
 func (vc *ValidationCreate) SetServiceName(s string) *ValidationCreate {
 	vc.mutation.SetServiceName(s)
+	return vc
+}
+
+// SetServiceStatus sets the "service_status" field.
+func (vc *ValidationCreate) SetServiceStatus(s string) *ValidationCreate {
+	vc.mutation.SetServiceStatus(s)
 	return vc
 }
 
@@ -145,6 +163,14 @@ func (vc *ValidationCreate) SetProcessName(s string) *ValidationCreate {
 // SetID sets the "id" field.
 func (vc *ValidationCreate) SetID(u uuid.UUID) *ValidationCreate {
 	vc.mutation.SetID(u)
+	return vc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (vc *ValidationCreate) SetNillableID(u *uuid.UUID) *ValidationCreate {
+	if u != nil {
+		vc.SetID(*u)
+	}
 	return vc
 }
 
@@ -274,57 +300,66 @@ func (vc *ValidationCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (vc *ValidationCreate) check() error {
 	if _, ok := vc.mutation.HclID(); !ok {
-		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "hcl_id"`)}
+		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Validation.hcl_id"`)}
 	}
 	if _, ok := vc.mutation.ValidationType(); !ok {
-		return &ValidationError{Name: "validation_type", err: errors.New(`ent: missing required field "validation_type"`)}
+		return &ValidationError{Name: "validation_type", err: errors.New(`ent: missing required field "Validation.validation_type"`)}
 	}
 	if _, ok := vc.mutation.Output(); !ok {
-		return &ValidationError{Name: "output", err: errors.New(`ent: missing required field "output"`)}
+		return &ValidationError{Name: "output", err: errors.New(`ent: missing required field "Validation.output"`)}
 	}
 	if _, ok := vc.mutation.State(); !ok {
-		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "state"`)}
+		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "Validation.state"`)}
 	}
 	if v, ok := vc.mutation.State(); ok {
 		if err := validation.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "state": %w`, err)}
+			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Validation.state": %w`, err)}
 		}
 	}
 	if _, ok := vc.mutation.ErrorMessage(); !ok {
-		return &ValidationError{Name: "error_message", err: errors.New(`ent: missing required field "error_message"`)}
+		return &ValidationError{Name: "error_message", err: errors.New(`ent: missing required field "Validation.error_message"`)}
+	}
+	if _, ok := vc.mutation.Hash(); !ok {
+		return &ValidationError{Name: "hash", err: errors.New(`ent: missing required field "Validation.hash"`)}
 	}
 	if _, ok := vc.mutation.Regex(); !ok {
-		return &ValidationError{Name: "regex", err: errors.New(`ent: missing required field "regex"`)}
+		return &ValidationError{Name: "regex", err: errors.New(`ent: missing required field "Validation.regex"`)}
 	}
 	if _, ok := vc.mutation.IP(); !ok {
-		return &ValidationError{Name: "ip", err: errors.New(`ent: missing required field "ip"`)}
+		return &ValidationError{Name: "ip", err: errors.New(`ent: missing required field "Validation.ip"`)}
 	}
 	if _, ok := vc.mutation.Port(); !ok {
-		return &ValidationError{Name: "port", err: errors.New(`ent: missing required field "port"`)}
+		return &ValidationError{Name: "port", err: errors.New(`ent: missing required field "Validation.port"`)}
 	}
 	if _, ok := vc.mutation.Hostname(); !ok {
-		return &ValidationError{Name: "hostname", err: errors.New(`ent: missing required field "hostname"`)}
+		return &ValidationError{Name: "hostname", err: errors.New(`ent: missing required field "Validation.hostname"`)}
 	}
 	if _, ok := vc.mutation.Nameservers(); !ok {
-		return &ValidationError{Name: "nameservers", err: errors.New(`ent: missing required field "nameservers"`)}
+		return &ValidationError{Name: "nameservers", err: errors.New(`ent: missing required field "Validation.nameservers"`)}
 	}
 	if _, ok := vc.mutation.PackageName(); !ok {
-		return &ValidationError{Name: "package_name", err: errors.New(`ent: missing required field "package_name"`)}
+		return &ValidationError{Name: "package_name", err: errors.New(`ent: missing required field "Validation.package_name"`)}
 	}
 	if _, ok := vc.mutation.Username(); !ok {
-		return &ValidationError{Name: "username", err: errors.New(`ent: missing required field "username"`)}
+		return &ValidationError{Name: "username", err: errors.New(`ent: missing required field "Validation.username"`)}
 	}
 	if _, ok := vc.mutation.GroupName(); !ok {
-		return &ValidationError{Name: "group_name", err: errors.New(`ent: missing required field "group_name"`)}
+		return &ValidationError{Name: "group_name", err: errors.New(`ent: missing required field "Validation.group_name"`)}
 	}
-	if _, ok := vc.mutation.FieldPath(); !ok {
-		return &ValidationError{Name: "field_path", err: errors.New(`ent: missing required field "field_path"`)}
+	if _, ok := vc.mutation.FilePath(); !ok {
+		return &ValidationError{Name: "file_path", err: errors.New(`ent: missing required field "Validation.file_path"`)}
+	}
+	if _, ok := vc.mutation.SearchString(); !ok {
+		return &ValidationError{Name: "search_string", err: errors.New(`ent: missing required field "Validation.search_string"`)}
 	}
 	if _, ok := vc.mutation.ServiceName(); !ok {
-		return &ValidationError{Name: "service_name", err: errors.New(`ent: missing required field "service_name"`)}
+		return &ValidationError{Name: "service_name", err: errors.New(`ent: missing required field "Validation.service_name"`)}
+	}
+	if _, ok := vc.mutation.ServiceStatus(); !ok {
+		return &ValidationError{Name: "service_status", err: errors.New(`ent: missing required field "Validation.service_status"`)}
 	}
 	if _, ok := vc.mutation.ProcessName(); !ok {
-		return &ValidationError{Name: "process_name", err: errors.New(`ent: missing required field "process_name"`)}
+		return &ValidationError{Name: "process_name", err: errors.New(`ent: missing required field "Validation.process_name"`)}
 	}
 	return nil
 }
@@ -338,7 +373,11 @@ func (vc *ValidationCreate) sqlSave(ctx context.Context) (*Validation, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		_node.ID = _spec.ID.Value.(uuid.UUID)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
 	}
 	return _node, nil
 }
@@ -356,7 +395,7 @@ func (vc *ValidationCreate) createSpec() (*Validation, *sqlgraph.CreateSpec) {
 	)
 	if id, ok := vc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := vc.mutation.HclID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -397,6 +436,14 @@ func (vc *ValidationCreate) createSpec() (*Validation, *sqlgraph.CreateSpec) {
 			Column: validation.FieldErrorMessage,
 		})
 		_node.ErrorMessage = value
+	}
+	if value, ok := vc.mutation.Hash(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: validation.FieldHash,
+		})
+		_node.Hash = value
 	}
 	if value, ok := vc.mutation.Regex(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -462,13 +509,21 @@ func (vc *ValidationCreate) createSpec() (*Validation, *sqlgraph.CreateSpec) {
 		})
 		_node.GroupName = value
 	}
-	if value, ok := vc.mutation.FieldPath(); ok {
+	if value, ok := vc.mutation.FilePath(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
 			Value:  value,
-			Column: validation.FieldFieldPath,
+			Column: validation.FieldFilePath,
 		})
-		_node.FieldPath = value
+		_node.FilePath = value
+	}
+	if value, ok := vc.mutation.SearchString(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: validation.FieldSearchString,
+		})
+		_node.SearchString = value
 	}
 	if value, ok := vc.mutation.ServiceName(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -477,6 +532,14 @@ func (vc *ValidationCreate) createSpec() (*Validation, *sqlgraph.CreateSpec) {
 			Column: validation.FieldServiceName,
 		})
 		_node.ServiceName = value
+	}
+	if value, ok := vc.mutation.ServiceStatus(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: validation.FieldServiceStatus,
+		})
+		_node.ServiceStatus = value
 	}
 	if value, ok := vc.mutation.ProcessName(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

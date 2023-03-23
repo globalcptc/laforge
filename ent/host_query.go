@@ -481,7 +481,6 @@ func (hq *HostQuery) WithDependByHostToHostDependency(opts ...func(*HostDependen
 //		GroupBy(host.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (hq *HostQuery) GroupBy(field string, fields ...string) *HostGroupBy {
 	group := &HostGroupBy{config: hq.config}
 	group.fields = append([]string{field}, fields...)
@@ -506,7 +505,6 @@ func (hq *HostQuery) GroupBy(field string, fields ...string) *HostGroupBy {
 //	client.Host.Query().
 //		Select(host.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (hq *HostQuery) Select(fields ...string) *HostSelect {
 	hq.fields = append(hq.fields, fields...)
 	return &HostSelect{HostQuery: hq}

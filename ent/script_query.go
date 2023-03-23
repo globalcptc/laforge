@@ -410,7 +410,6 @@ func (sq *ScriptQuery) WithScriptToValidation(opts ...func(*ValidationQuery)) *S
 //		GroupBy(script.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (sq *ScriptQuery) GroupBy(field string, fields ...string) *ScriptGroupBy {
 	group := &ScriptGroupBy{config: sq.config}
 	group.fields = append([]string{field}, fields...)
@@ -435,7 +434,6 @@ func (sq *ScriptQuery) GroupBy(field string, fields ...string) *ScriptGroupBy {
 //	client.Script.Query().
 //		Select(script.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (sq *ScriptQuery) Select(fields ...string) *ScriptSelect {
 	sq.fields = append(sq.fields, fields...)
 	return &ScriptSelect{ScriptQuery: sq}

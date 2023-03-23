@@ -374,7 +374,6 @@ func (cq *CompetitionQuery) WithCompetitionToBuild(opts ...func(*BuildQuery)) *C
 //		GroupBy(competition.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (cq *CompetitionQuery) GroupBy(field string, fields ...string) *CompetitionGroupBy {
 	group := &CompetitionGroupBy{config: cq.config}
 	group.fields = append([]string{field}, fields...)
@@ -399,7 +398,6 @@ func (cq *CompetitionQuery) GroupBy(field string, fields ...string) *Competition
 //	client.Competition.Query().
 //		Select(competition.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (cq *CompetitionQuery) Select(fields ...string) *CompetitionSelect {
 	cq.fields = append(cq.fields, fields...)
 	return &CompetitionSelect{CompetitionQuery: cq}

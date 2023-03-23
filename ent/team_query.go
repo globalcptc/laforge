@@ -410,7 +410,6 @@ func (tq *TeamQuery) WithTeamToPlan(opts ...func(*PlanQuery)) *TeamQuery {
 //		GroupBy(team.FieldTeamNumber).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (tq *TeamQuery) GroupBy(field string, fields ...string) *TeamGroupBy {
 	group := &TeamGroupBy{config: tq.config}
 	group.fields = append([]string{field}, fields...)
@@ -435,7 +434,6 @@ func (tq *TeamQuery) GroupBy(field string, fields ...string) *TeamGroupBy {
 //	client.Team.Query().
 //		Select(team.FieldTeamNumber).
 //		Scan(ctx, &v)
-//
 func (tq *TeamQuery) Select(fields ...string) *TeamSelect {
 	tq.fields = append(tq.fields, fields...)
 	return &TeamSelect{TeamQuery: tq}

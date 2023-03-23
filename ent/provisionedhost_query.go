@@ -625,7 +625,6 @@ func (phq *ProvisionedHostQuery) WithProvisionedHostToGinFileMiddleware(opts ...
 //		GroupBy(provisionedhost.FieldSubnetIP).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (phq *ProvisionedHostQuery) GroupBy(field string, fields ...string) *ProvisionedHostGroupBy {
 	group := &ProvisionedHostGroupBy{config: phq.config}
 	group.fields = append([]string{field}, fields...)
@@ -650,7 +649,6 @@ func (phq *ProvisionedHostQuery) GroupBy(field string, fields ...string) *Provis
 //	client.ProvisionedHost.Query().
 //		Select(provisionedhost.FieldSubnetIP).
 //		Scan(ctx, &v)
-//
 func (phq *ProvisionedHostQuery) Select(fields ...string) *ProvisionedHostSelect {
 	phq.fields = append(phq.fields, fields...)
 	return &ProvisionedHostSelect{ProvisionedHostQuery: phq}

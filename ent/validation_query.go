@@ -158,7 +158,7 @@ func (vq *ValidationQuery) FirstIDX(ctx context.Context) uuid.UUID {
 }
 
 // Only returns a single Validation entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when exactly one Validation entity is not found.
+// Returns a *NotSingularError when more than one Validation entity is found.
 // Returns a *NotFoundError when no Validation entities are found.
 func (vq *ValidationQuery) Only(ctx context.Context) (*Validation, error) {
 	nodes, err := vq.Limit(2).All(ctx)
@@ -185,7 +185,7 @@ func (vq *ValidationQuery) OnlyX(ctx context.Context) *Validation {
 }
 
 // OnlyID is like Only, but returns the only Validation ID in the query.
-// Returns a *NotSingularError when exactly one Validation ID is not found.
+// Returns a *NotSingularError when more than one Validation ID is found.
 // Returns a *NotFoundError when no entities are found.
 func (vq *ValidationQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
@@ -296,8 +296,9 @@ func (vq *ValidationQuery) Clone() *ValidationQuery {
 		withValidationToAgentTask: vq.withValidationToAgentTask.Clone(),
 		withValidationToScript:    vq.withValidationToScript.Clone(),
 		// clone intermediate query.
-		sql:  vq.sql.Clone(),
-		path: vq.path,
+		sql:    vq.sql.Clone(),
+		path:   vq.path,
+		unique: vq.unique,
 	}
 }
 
@@ -337,7 +338,6 @@ func (vq *ValidationQuery) WithValidationToScript(opts ...func(*ScriptQuery)) *V
 //		GroupBy(validation.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (vq *ValidationQuery) GroupBy(field string, fields ...string) *ValidationGroupBy {
 	group := &ValidationGroupBy{config: vq.config}
 	group.fields = append([]string{field}, fields...)
@@ -362,7 +362,6 @@ func (vq *ValidationQuery) GroupBy(field string, fields ...string) *ValidationGr
 //	client.Validation.Query().
 //		Select(validation.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (vq *ValidationQuery) Select(fields ...string) *ValidationSelect {
 	vq.fields = append(vq.fields, fields...)
 	return &ValidationSelect{ValidationQuery: vq}
@@ -483,6 +482,10 @@ func (vq *ValidationQuery) sqlAll(ctx context.Context) ([]*Validation, error) {
 
 func (vq *ValidationQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := vq.querySpec()
+	_spec.Node.Columns = vq.fields
+	if len(vq.fields) > 0 {
+		_spec.Unique = vq.unique != nil && *vq.unique
+	}
 	return sqlgraph.CountNodes(ctx, vq.driver, _spec)
 }
 
@@ -553,6 +556,9 @@ func (vq *ValidationQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if vq.sql != nil {
 		selector = vq.sql
 		selector.Select(selector.Columns(columns...)...)
+	}
+	if vq.unique != nil && *vq.unique {
+		selector.Distinct()
 	}
 	for _, p := range vq.predicates {
 		p(selector)
@@ -832,9 +838,7 @@ func (vgb *ValidationGroupBy) sqlQuery() *sql.Selector {
 		for _, f := range vgb.fields {
 			columns = append(columns, selector.C(f))
 		}
-		for _, c := range aggregation {
-			columns = append(columns, c)
-		}
+		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
 	return selector.GroupBy(selector.Columns(vgb.fields...)...)

@@ -301,7 +301,6 @@ func (rcq *RepoCommitQuery) WithRepoCommitToRepository(opts ...func(*RepositoryQ
 //		GroupBy(repocommit.FieldRevision).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (rcq *RepoCommitQuery) GroupBy(field string, fields ...string) *RepoCommitGroupBy {
 	group := &RepoCommitGroupBy{config: rcq.config}
 	group.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (rcq *RepoCommitQuery) GroupBy(field string, fields ...string) *RepoCommitG
 //	client.RepoCommit.Query().
 //		Select(repocommit.FieldRevision).
 //		Scan(ctx, &v)
-//
 func (rcq *RepoCommitQuery) Select(fields ...string) *RepoCommitSelect {
 	rcq.fields = append(rcq.fields, fields...)
 	return &RepoCommitSelect{RepoCommitQuery: rcq}

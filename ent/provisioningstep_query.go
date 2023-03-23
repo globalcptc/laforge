@@ -698,7 +698,6 @@ func (psq *ProvisioningStepQuery) WithProvisioningStepToGinFileMiddleware(opts .
 //		GroupBy(provisioningstep.FieldType).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (psq *ProvisioningStepQuery) GroupBy(field string, fields ...string) *ProvisioningStepGroupBy {
 	group := &ProvisioningStepGroupBy{config: psq.config}
 	group.fields = append([]string{field}, fields...)
@@ -723,7 +722,6 @@ func (psq *ProvisioningStepQuery) GroupBy(field string, fields ...string) *Provi
 //	client.ProvisioningStep.Query().
 //		Select(provisioningstep.FieldType).
 //		Scan(ctx, &v)
-//
 func (psq *ProvisioningStepQuery) Select(fields ...string) *ProvisioningStepSelect {
 	psq.fields = append(psq.fields, fields...)
 	return &ProvisioningStepSelect{ProvisioningStepQuery: psq}

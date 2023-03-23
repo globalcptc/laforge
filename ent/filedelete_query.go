@@ -301,7 +301,6 @@ func (fdq *FileDeleteQuery) WithFileDeleteToEnvironment(opts ...func(*Environmen
 //		GroupBy(filedelete.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (fdq *FileDeleteQuery) GroupBy(field string, fields ...string) *FileDeleteGroupBy {
 	group := &FileDeleteGroupBy{config: fdq.config}
 	group.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (fdq *FileDeleteQuery) GroupBy(field string, fields ...string) *FileDeleteG
 //	client.FileDelete.Query().
 //		Select(filedelete.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (fdq *FileDeleteQuery) Select(fields ...string) *FileDeleteSelect {
 	fdq.fields = append(fdq.fields, fields...)
 	return &FileDeleteSelect{FileDeleteQuery: fdq}
