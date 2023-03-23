@@ -130,22 +130,8 @@ func SystemExecuteCommand(command string, args ...string) (string, error) {
 	arguments = append(arguments, args...)
 	cmd := exec.Command("powershell.exe", arguments...)
 	out, err := cmd.CombinedOutput()
+
 	return string(out), err
-	// retryCount := 5
-	// for i := 0; i < retryCount; i++ {
-	// 	// Get the data
-	// 	cmd := exec.Command("powershell.exe", arguments...)
-	// 	out, err := cmd.CombinedOutput()
-	// 	if err == nil {
-	// 		output = string(out)
-	// 		break
-	// 	}
-	// 	time.Sleep(1 * time.Minute)
-	// }
-	// if err != nil {
-	// 	return output, err
-	// }
-	// return output, nil
 }
 
 func GetSystemDependencies() []string {
