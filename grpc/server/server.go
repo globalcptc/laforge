@@ -31,7 +31,7 @@ type Server struct {
 	RDB *redis.Client
 }
 
-//ByteCountIEC Converts Bytes to Higher Order
+// ByteCountIEC Converts Bytes to Higher Order
 func ByteCountIEC(b uint64) string {
 	const unit = 1024
 	if b < unit {
@@ -46,7 +46,7 @@ func ByteCountIEC(b uint64) string {
 		float64(b)/float64(div), "KMGTPE"[exp])
 }
 
-//GetHeartBeat Recives Heartbeat from client and sends back a reply
+// GetHeartBeat Recives Heartbeat from client and sends back a reply
 func (s *Server) GetHeartBeat(ctx context.Context, in *pb.HeartbeatRequest) (*pb.HeartbeatReply, error) {
 	// message := fmt.Sprintf("Recived ID: %v | Hostname: %v | Uptime: %v | Boot Time: %v| Number of Running Processes: %v| OS Arch: %v| Host ID: %v| Load1: %v| Load5: %v| Load15: %v| Total Memory: %v| Avalible Memory: %v| Used Memory: %v", in.GetClientId(), in.GetHostname(), in.GetUptime(), in.GetBoottime(), in.GetNumprocs(), in.GetOs(), in.GetHostid(), in.GetLoad1(), in.GetLoad5(), in.GetLoad15(), ByteCountIEC(in.GetTotalmem()), ByteCountIEC(in.GetFreemem()), ByteCountIEC(in.GetUsedmem()))
 	message := fmt.Sprintf("Heartbeat Recived: %v", time.Now().Unix())
@@ -150,7 +150,7 @@ func (s *Server) GetHeartBeat(ctx context.Context, in *pb.HeartbeatRequest) (*pb
 	return &pb.HeartbeatReply{Status: message, AvalibleTasks: avalibleTasks}, nil
 }
 
-//GetTask Gets a task that needs to be run on the client and sends it over
+// GetTask Gets a task that needs to be run on the client and sends it over
 func (s *Server) GetTask(ctx context.Context, in *pb.TaskRequest) (*pb.TaskReply, error) {
 	uuid, err := uuid.Parse(in.GetClientId())
 	if err != nil {
@@ -199,7 +199,7 @@ func (s *Server) InformTaskStatus(ctx context.Context, in *pb.TaskStatusRequest)
 		return &pb.TaskStatusReply{Status: "ERROR"}, nil
 	}
 	output := strings.ReplaceAll(in.GetOutput(), "🔥", "\n")
-	agent_command, err := s.Client.Command.Query().Where(command.IDEQ(uuid)).First(ctx)
+	_, err = s.Client.Command.Query().Where(command.IDEQ(uuid)).First(ctx)
 	// server-side validation hook starting
 	if entAgentTask.Edges.AgentTaskToValidation != nil && entAgentTask.Edges.AgentTaskToValidation.State == "INPROGRESS" {
 		validation_edge := entAgentTask.Edges.AgentTaskToValidation
