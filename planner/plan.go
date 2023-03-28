@@ -1433,16 +1433,17 @@ func createStepPlan(ctx context.Context, client *ent.Client, logger *logging.Log
 	}
 	entPlanCreate := client.Plan.Create().
 		AddPrevPlan(prevPlan).
-		SetType(plan.TypeExecuteStep).
 		SetBuildID(prevPlan.BuildID).
 		SetPlanToBuild(entBuild).
 		SetStepNumber(prevPlan.StepNumber + 1).
 		SetPlanToStatus(entPlanStatus)
 	if entProvisioningStep != nil {
 		entPlanCreate = entPlanCreate.
+			SetType(plan.TypeExecuteStep).
 			SetPlanToProvisioningStep(entProvisioningStep)
 	} else if entProvisioningScheduledStep != nil {
 		entPlanCreate = entPlanCreate.
+			SetType(plan.TypeStartScheduledStep).
 			SetPlanToProvisioningScheduledStep(entProvisioningScheduledStep)
 	}
 	_, err = entPlanCreate.Save(ctx)
