@@ -15,10 +15,12 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/gen0cide/laforge/server/utils"
 	"github.com/google/uuid"
+	"github.com/gorhill/cronexpr"
 	"github.com/sirupsen/logrus"
 )
 
@@ -437,6 +439,17 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		}
 		entStatus.Update().SetState(status.StateCOMPLETE).Save(ctxClosing)
 		rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
+	case plan.TypeStartScheduledStep:
+		entProvisioningScheduledStep, err := entPlan.QueryPlanToProvisioningScheduledStep().Only(ctx)
+		if err != nil {
+			logger.Log.Errorf("Failed to Query Provisioning Scheduled Step. Err: %v", err)
+			return
+		}
+		if parentNodeFailed {
+			planErr = fmt.Errorf("parent node for Provisioning Step has failed")
+		} else {
+			planErr = startScheduledStep(client, laforgeConfig, logger, ctx, entProvisioningScheduledStep)
+		}
 	default:
 		break
 	}
@@ -1132,6 +1145,37 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 	}
 	checkHostStatus(client, logger, ctx, entProvisionedHost)
 	rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
+
+	return nil
+}
+
+func startScheduledStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, ctx context.Context, entProvisioningScheduledStep *ent.ProvisioningScheduledStep) error {
+	entScheduledStep, err := entProvisioningScheduledStep.QueryProvisioningScheduledStepToScheduledStep().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query scheduled step from provisioning scheduled step: %v", err)
+	}
+	if entScheduledStep.Type == scheduledstep.TypeRUNONCE {
+		// We can ignore RUNONCE steps as their run_at time is already accurate
+		//   and will be handled by the scheduling watchdog
+		return nil
+	}
+	if entScheduledStep.Type == scheduledstep.TypeCRON && entProvisioningScheduledStep.RunTime.Unix() > 0 {
+		// These steps were already scheduled during the planning phase and we
+		//   can ignore at build time
+		return nil
+	}
+	scheduleExpr, err := cronexpr.Parse(entScheduledStep.Schedule)
+	if err != nil {
+		return fmt.Errorf("failed to parse scheduled step schedule: %v", err)
+	}
+	// determine the next time this step should run after this
+	runTime := scheduleExpr.Next(time.Now())
+
+	// set the proper run_time, watchdog will handle scheduling the further ones
+	err = entProvisioningScheduledStep.Update().SetRunTime(runTime).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update run_time of provisioning scheduled step: %v", err)
+	}
 
 	return nil
 }
