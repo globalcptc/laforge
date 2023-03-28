@@ -26,6 +26,7 @@ func (Plan) Fields() []ent.Field {
 				"provision_network",
 				"provision_host",
 				"execute_step",
+				"start_scheduled_step",
 			),
 		field.String("build_id"),
 	}

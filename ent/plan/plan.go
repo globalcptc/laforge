@@ -153,11 +153,12 @@ type Type string
 
 // Type values.
 const (
-	TypeStartBuild       Type = "start_build"
-	TypeStartTeam        Type = "start_team"
-	TypeProvisionNetwork Type = "provision_network"
-	TypeProvisionHost    Type = "provision_host"
-	TypeExecuteStep      Type = "execute_step"
+	TypeStartBuild         Type = "start_build"
+	TypeStartTeam          Type = "start_team"
+	TypeProvisionNetwork   Type = "provision_network"
+	TypeProvisionHost      Type = "provision_host"
+	TypeExecuteStep        Type = "execute_step"
+	TypeStartScheduledStep Type = "start_scheduled_step"
 )
 
 func (_type Type) String() string {
@@ -167,7 +168,7 @@ func (_type Type) String() string {
 // TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
 func TypeValidator(_type Type) error {
 	switch _type {
-	case TypeStartBuild, TypeStartTeam, TypeProvisionNetwork, TypeProvisionHost, TypeExecuteStep:
+	case TypeStartBuild, TypeStartTeam, TypeProvisionNetwork, TypeProvisionHost, TypeExecuteStep, TypeStartScheduledStep:
 		return nil
 	default:
 		return fmt.Errorf("plan: invalid enum value for type field: %q", _type)

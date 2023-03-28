@@ -658,7 +658,7 @@ var (
 	PlansColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "step_number", Type: field.TypeInt},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"start_build", "start_team", "provision_network", "provision_host", "execute_step"}},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"start_build", "start_team", "provision_network", "provision_host", "execute_step", "start_scheduled_step"}},
 		{Name: "build_id", Type: field.TypeString},
 		{Name: "plan_plan_to_build", Type: field.TypeUUID, Nullable: true},
 	}
