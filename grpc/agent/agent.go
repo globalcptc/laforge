@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -44,7 +43,8 @@ var (
 )
 
 // Program structures.
-//  Define Start and Stop methods.
+//
+//	Define Start and Stop methods.
 type program struct {
 	exit chan struct{}
 }
@@ -296,7 +296,7 @@ func RequestTask(c pb.LaforgeClient) {
 				if err != nil {
 					RequestTaskStatusRequest(strconv.FormatBool(false), err, r.Id, c)
 				}
-				open, err := NetUDPOpen(ip, port)
+				open, err := NetUDPOpen(ip, port, "udp-test")
 				RequestTaskStatusRequest(strconv.FormatBool(open), err, r.Id, c)
 			case "net-http-content-regex":
 				ip := taskArgs[1]
@@ -538,56 +538,57 @@ func (p *program) Stop(s service.Service) error {
 }
 
 // Service setup.
-//   Define service config.
-//   Create the service.
-//   Setup the logger.
-//   Handle service controls (optional).
-//   Run the service.
-func main() {
-	svcFlag := flag.String("service", "", "Control the system service.")
-	flag.Parse()
+//
+//	Define service config.
+//	Create the service.
+//	Setup the logger.
+//	Handle service controls (optional).
+//	Run the service.
+// func main() {
+// 	svcFlag := flag.String("service", "", "Control the system service.")
+// 	flag.Parse()
 
-	options := make(service.KeyValue)
-	options["Restart"] = "always"
-	// options["SuccessExitStatus"] = "1 2 8 SIGKILL"
-	svcConfig := &service.Config{
-		Name:         "laforge-agent",
-		DisplayName:  "Laforge Agent",
-		Description:  "Tool used for monitoring hosts. NOT IN COMPETITION SCOPE",
-		Dependencies: GetSystemDependencies(),
-		Option:       options,
-	}
+// 	options := make(service.KeyValue)
+// 	options["Restart"] = "always"
+// 	// options["SuccessExitStatus"] = "1 2 8 SIGKILL"
+// 	svcConfig := &service.Config{
+// 		Name:         "laforge-agent",
+// 		DisplayName:  "Laforge Agent",
+// 		Description:  "Tool used for monitoring hosts. NOT IN COMPETITION SCOPE",
+// 		Dependencies: GetSystemDependencies(),
+// 		Option:       options,
+// 	}
 
-	prg := &program{}
-	s, err := service.New(prg, svcConfig)
-	if err != nil {
-		logger.Error(err)
-	}
-	errs := make(chan error, 5)
-	logger, err = s.Logger(errs)
-	if err != nil {
-		logger.Error(err)
-	}
+// 	prg := &program{}
+// 	s, err := service.New(prg, svcConfig)
+// 	if err != nil {
+// 		logger.Error(err)
+// 	}
+// 	errs := make(chan error, 5)
+// 	logger, err = s.Logger(errs)
+// 	if err != nil {
+// 		logger.Error(err)
+// 	}
 
-	go func() {
-		for {
-			err := <-errs
-			if err != nil {
-				logger.Error(err)
-			}
-		}
-	}()
+// 	go func() {
+// 		for {
+// 			err := <-errs
+// 			if err != nil {
+// 				logger.Error(err)
+// 			}
+// 		}
+// 	}()
 
-	if len(*svcFlag) != 0 {
-		err := service.Control(s, *svcFlag)
-		if err != nil {
-			logger.Infof("Valid actions: %q\n", service.ControlAction)
-			logger.Error(err)
-		}
-		return
-	}
-	err = s.Run()
-	if err != nil {
-		logger.Error(err)
-	}
-}
+// 	if len(*svcFlag) != 0 {
+// 		err := service.Control(s, *svcFlag)
+// 		if err != nil {
+// 			logger.Infof("Valid actions: %q\n", service.ControlAction)
+// 			logger.Error(err)
+// 		}
+// 		return
+// 	}
+// 	err = s.Run()
+// 	if err != nil {
+// 		logger.Error(err)
+// 	}
+// }
