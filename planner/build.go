@@ -1154,6 +1154,10 @@ func startScheduledStep(client *ent.Client, laforgeConfig *utils.ServerConfig, l
 	if err != nil {
 		return fmt.Errorf("failed to query scheduled step from provisioning scheduled step: %v", err)
 	}
+	entStatus, err := entProvisioningScheduledStep.QueryProvisioningScheduledStepToStatus().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query status from provisioning scheduled step: %v", err)
+	}
 	if entScheduledStep.Type == scheduledstep.TypeRUNONCE {
 		// We can ignore RUNONCE steps as their run_at time is already accurate
 		//   and will be handled by the scheduling watchdog
@@ -1175,6 +1179,11 @@ func startScheduledStep(client *ent.Client, laforgeConfig *utils.ServerConfig, l
 	err = entProvisioningScheduledStep.Update().SetRunTime(runTime).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update run_time of provisioning scheduled step: %v", err)
+	}
+
+	err = entStatus.Update().SetState(status.StateAWAITING).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to set provisioning scheduled step status to AWAITING: %v", err)
 	}
 
 	return nil
