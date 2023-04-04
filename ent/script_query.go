@@ -514,6 +514,12 @@ func (sq *ScriptQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Scrip
 			return nil, err
 		}
 	}
+	if query := sq.withScriptToValidation; query != nil {
+		if err := sq.loadScriptToValidation(ctx, query, nodes, nil,
+			func(n *Script, e *Validation) { n.Edges.ScriptToValidation = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -608,35 +614,35 @@ func (sq *ScriptQuery) loadScriptToEnvironment(ctx context.Context, query *Envir
 	}
 	return nil
 }
-
-	if query := sq.withScriptToValidation; query != nil {
-		ids := make([]uuid.UUID, 0, len(nodes))
-		nodeids := make(map[uuid.UUID][]*Script)
+func (sq *ScriptQuery) loadScriptToValidation(ctx context.Context, query *ValidationQuery, nodes []*Script, init func(*Script), assign func(*Script, *Validation)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Script)
+	for i := range nodes {
+		if nodes[i].script_script_to_validation == nil {
+			continue
+		}
+		fk := *nodes[i].script_script_to_validation
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(validation.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "script_script_to_validation" returned %v`, n.ID)
+		}
 		for i := range nodes {
-			if nodes[i].script_script_to_validation == nil {
-				continue
-			}
-			fk := *nodes[i].script_script_to_validation
-			if _, ok := nodeids[fk]; !ok {
-				ids = append(ids, fk)
-			}
-			nodeids[fk] = append(nodeids[fk], nodes[i])
-		}
-		query.Where(validation.IDIn(ids...))
-		neighbors, err := query.All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, n := range neighbors {
-			nodes, ok := nodeids[n.ID]
-			if !ok {
-				return nil, fmt.Errorf(`unexpected foreign-key "script_script_to_validation" returned %v`, n.ID)
-			}
-			for i := range nodes {
-				nodes[i].Edges.ScriptToValidation = n
-			}
+			assign(nodes[i], n)
 		}
 	}
+	return nil
+}
 
 func (sq *ScriptQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := sq.querySpec()

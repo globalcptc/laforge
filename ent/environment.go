@@ -136,7 +136,7 @@ type EnvironmentEdges struct {
 	EnvironmentToValidation []*Validation `json:"EnvironmentToValidation,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [20]bool
+	loadedTypes [21]bool
 }
 
 // EnvironmentToUserOrErr returns the EnvironmentToUser value or an error if the edge
@@ -322,7 +322,7 @@ func (e EnvironmentEdges) EnvironmentToServerTaskOrErr() ([]*ServerTask, error) 
 // EnvironmentToValidationOrErr returns the EnvironmentToValidation value or an error if the edge
 // was not loaded in eager-loading.
 func (e EnvironmentEdges) EnvironmentToValidationOrErr() ([]*Validation, error) {
-	if e.loadedTypes[19] {
+	if e.loadedTypes[20] {
 		return e.EnvironmentToValidation, nil
 	}
 	return nil, &NotLoadedError{edge: "EnvironmentToValidation"}

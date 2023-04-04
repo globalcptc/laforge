@@ -298,7 +298,7 @@ func (at *AgentTask) Node(ctx context.Context) (node *Node, err error) {
 		ID:     at.ID,
 		Type:   "AgentTask",
 		Fields: make([]*Field, 6),
-		Edges:  make([]*Edge, 4),
+		Edges:  make([]*Edge, 5),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(at.Command); err != nil {
@@ -389,13 +389,13 @@ func (at *AgentTask) Node(ctx context.Context) (node *Node, err error) {
 	if err != nil {
 		return nil, err
 	}
-	node.Edges[3] = &Edge{
+	node.Edges[4] = &Edge{
 		Type: "Validation",
 		Name: "AgentTaskToValidation",
 	}
 	err = at.QueryAgentTaskToValidation().
 		Select(validation.FieldID).
-		Scan(ctx, &node.Edges[3].IDs)
+		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -1266,7 +1266,7 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 		ID:     e.ID,
 		Type:   "Environment",
 		Fields: make([]*Field, 11),
-		Edges:  make([]*Edge, 20),
+		Edges:  make([]*Edge, 21),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(e.HclID); err != nil {
@@ -1557,13 +1557,13 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	if err != nil {
 		return nil, err
 	}
-	node.Edges[19] = &Edge{
+	node.Edges[20] = &Edge{
 		Type: "Validation",
 		Name: "EnvironmentToValidation",
 	}
 	err = e.QueryEnvironmentToValidation().
 		Select(validation.FieldID).
-		Scan(ctx, &node.Edges[19].IDs)
+		Scan(ctx, &node.Edges[20].IDs)
 	if err != nil {
 		return nil, err
 	}

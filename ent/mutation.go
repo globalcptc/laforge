@@ -104,7 +104,7 @@ const (
 	TypeTeam                      = "Team"
 	TypeToken                     = "Token"
 	TypeUser                      = "User"
-	TypeValidation         = "Validation"
+	TypeValidation                = "Validation"
 )
 
 // AdhocPlanMutation represents an operation that mutates the AdhocPlan nodes in the graph.
@@ -2277,8 +2277,8 @@ type AgentTaskMutation struct {
 	_AgentTaskToAdhocPlan                        map[uuid.UUID]struct{}
 	removed_AgentTaskToAdhocPlan                 map[uuid.UUID]struct{}
 	cleared_AgentTaskToAdhocPlan                 bool
-	_AgentTaskToValidation              *uuid.UUID
-	cleared_AgentTaskToValidation       bool
+	_AgentTaskToValidation                       *uuid.UUID
+	cleared_AgentTaskToValidation                bool
 	done                                         bool
 	oldValue                                     func(context.Context) (*AgentTask, error)
 	predicates                                   []predicate.AgentTask
@@ -3052,7 +3052,7 @@ func (m *AgentTaskMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AgentTaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m._AgentTaskToProvisioningStep != nil {
 		edges = append(edges, agenttask.EdgeAgentTaskToProvisioningStep)
 	}
@@ -3103,7 +3103,7 @@ func (m *AgentTaskMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AgentTaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removed_AgentTaskToAdhocPlan != nil {
 		edges = append(edges, agenttask.EdgeAgentTaskToAdhocPlan)
 	}
@@ -3126,7 +3126,7 @@ func (m *AgentTaskMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AgentTaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.cleared_AgentTaskToProvisioningStep {
 		edges = append(edges, agenttask.EdgeAgentTaskToProvisioningStep)
 	}
@@ -13362,7 +13362,7 @@ func (m *EnvironmentMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EnvironmentMutation) AddedEdges() []string {
-	edges := make([]string, 0, 20)
+	edges := make([]string, 0, 21)
 	if m._EnvironmentToUser != nil {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -13565,7 +13565,7 @@ func (m *EnvironmentMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EnvironmentMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 20)
+	edges := make([]string, 0, 21)
 	if m.removed_EnvironmentToUser != nil {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}
@@ -13768,7 +13768,7 @@ func (m *EnvironmentMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EnvironmentMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 20)
+	edges := make([]string, 0, 21)
 	if m.cleared_EnvironmentToUser {
 		edges = append(edges, environment.EdgeEnvironmentToUser)
 	}

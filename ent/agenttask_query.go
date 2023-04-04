@@ -24,18 +24,18 @@ import (
 // AgentTaskQuery is the builder for querying AgentTask entities.
 type AgentTaskQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
-	predicates []predicate.AgentTask
-	// eager-loading edges.
-	withAgentTaskToProvisioningStep *ProvisioningStepQuery
-	withAgentTaskToProvisionedHost  *ProvisionedHostQuery
-	withAgentTaskToAdhocPlan        *AdhocPlanQuery
-	withAgentTaskToValidation       *ValidationQuery
-	withFKs                         bool
+	limit                                    *int
+	offset                                   *int
+	unique                                   *bool
+	order                                    []OrderFunc
+	fields                                   []string
+	predicates                               []predicate.AgentTask
+	withAgentTaskToProvisioningStep          *ProvisioningStepQuery
+	withAgentTaskToProvisioningScheduledStep *ProvisioningScheduledStepQuery
+	withAgentTaskToProvisionedHost           *ProvisionedHostQuery
+	withAgentTaskToAdhocPlan                 *AdhocPlanQuery
+	withAgentTaskToValidation                *ValidationQuery
+	withFKs                                  bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -358,15 +358,16 @@ func (atq *AgentTaskQuery) Clone() *AgentTaskQuery {
 		return nil
 	}
 	return &AgentTaskQuery{
-		config:                          atq.config,
-		limit:                           atq.limit,
-		offset:                          atq.offset,
-		order:                           append([]OrderFunc{}, atq.order...),
-		predicates:                      append([]predicate.AgentTask{}, atq.predicates...),
-		withAgentTaskToProvisioningStep: atq.withAgentTaskToProvisioningStep.Clone(),
-		withAgentTaskToProvisionedHost:  atq.withAgentTaskToProvisionedHost.Clone(),
-		withAgentTaskToAdhocPlan:        atq.withAgentTaskToAdhocPlan.Clone(),
-		withAgentTaskToValidation:       atq.withAgentTaskToValidation.Clone(),
+		config:                                   atq.config,
+		limit:                                    atq.limit,
+		offset:                                   atq.offset,
+		order:                                    append([]OrderFunc{}, atq.order...),
+		predicates:                               append([]predicate.AgentTask{}, atq.predicates...),
+		withAgentTaskToProvisioningStep:          atq.withAgentTaskToProvisioningStep.Clone(),
+		withAgentTaskToProvisioningScheduledStep: atq.withAgentTaskToProvisioningScheduledStep.Clone(),
+		withAgentTaskToProvisionedHost:           atq.withAgentTaskToProvisionedHost.Clone(),
+		withAgentTaskToAdhocPlan:                 atq.withAgentTaskToAdhocPlan.Clone(),
+		withAgentTaskToValidation:                atq.withAgentTaskToValidation.Clone(),
 		// clone intermediate query.
 		sql:    atq.sql.Clone(),
 		path:   atq.path,
@@ -498,7 +499,7 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 		nodes       = []*AgentTask{}
 		withFKs     = atq.withFKs
 		_spec       = atq.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			atq.withAgentTaskToProvisioningStep != nil,
 			atq.withAgentTaskToProvisioningScheduledStep != nil,
 			atq.withAgentTaskToProvisionedHost != nil,
@@ -557,6 +558,12 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 			return nil, err
 		}
 	}
+	if query := atq.withAgentTaskToValidation; query != nil {
+		if err := atq.loadAgentTaskToValidation(ctx, query, nodes, nil,
+			func(n *AgentTask, e *Validation) { n.Edges.AgentTaskToValidation = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -587,36 +594,123 @@ func (atq *AgentTaskQuery) loadAgentTaskToProvisioningStep(ctx context.Context, 
 			assign(nodes[i], n)
 		}
 	}
-
-	if query := atq.withAgentTaskToValidation; query != nil {
-		fks := make([]driver.Value, 0, len(nodes))
-		nodeids := make(map[uuid.UUID]*AgentTask)
+	return nil
+}
+func (atq *AgentTaskQuery) loadAgentTaskToProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisioningScheduledStep)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*AgentTask)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.ProvisioningScheduledStep(func(s *sql.Selector) {
+		s.Where(sql.InValues(agenttask.AgentTaskToProvisioningScheduledStepColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.agent_task_agent_task_to_provisioning_scheduled_step
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "agent_task_agent_task_to_provisioning_scheduled_step" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_provisioning_scheduled_step" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (atq *AgentTaskQuery) loadAgentTaskToProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisionedHost)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*AgentTask)
+	for i := range nodes {
+		if nodes[i].agent_task_agent_task_to_provisioned_host == nil {
+			continue
+		}
+		fk := *nodes[i].agent_task_agent_task_to_provisioned_host
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(provisionedhost.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_provisioned_host" returned %v`, n.ID)
+		}
 		for i := range nodes {
-			fks = append(fks, nodes[i].ID)
-			nodeids[nodes[i].ID] = nodes[i]
-		}
-		query.withFKs = true
-		query.Where(predicate.Validation(func(s *sql.Selector) {
-			s.Where(sql.InValues(agenttask.AgentTaskToValidationColumn, fks...))
-		}))
-		neighbors, err := query.All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, n := range neighbors {
-			fk := n.agent_task_agent_task_to_validation
-			if fk == nil {
-				return nil, fmt.Errorf(`foreign-key "agent_task_agent_task_to_validation" is nil for node %v`, n.ID)
-			}
-			node, ok := nodeids[*fk]
-			if !ok {
-				return nil, fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_validation" returned %v for node %v`, *fk, n.ID)
-			}
-			node.Edges.AgentTaskToValidation = n
+			assign(nodes[i], n)
 		}
 	}
-
-	return nodes, nil
+	return nil
+}
+func (atq *AgentTaskQuery) loadAgentTaskToAdhocPlan(ctx context.Context, query *AdhocPlanQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *AdhocPlan)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*AgentTask)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.AdhocPlan(func(s *sql.Selector) {
+		s.Where(sql.InValues(agenttask.AgentTaskToAdhocPlanColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.adhoc_plan_adhoc_plan_to_agent_task
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "adhoc_plan_adhoc_plan_to_agent_task" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_adhoc_plan_to_agent_task" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (atq *AgentTaskQuery) loadAgentTaskToValidation(ctx context.Context, query *ValidationQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *Validation)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*AgentTask)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.InValues(agenttask.AgentTaskToValidationColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.agent_task_agent_task_to_validation
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "agent_task_agent_task_to_validation" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_validation" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (atq *AgentTaskQuery) sqlCount(ctx context.Context) (int, error) {

@@ -1073,7 +1073,7 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	var (
 		nodes       = []*Environment{}
 		_spec       = eq.querySpec()
-		loadedTypes = [20]bool{
+		loadedTypes = [21]bool{
 			eq.withEnvironmentToUser != nil,
 			eq.withEnvironmentToHost != nil,
 			eq.withEnvironmentToCompetition != nil,
@@ -1281,6 +1281,15 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 			func(n *Environment) { n.Edges.EnvironmentToServerTask = []*ServerTask{} },
 			func(n *Environment, e *ServerTask) {
 				n.Edges.EnvironmentToServerTask = append(n.Edges.EnvironmentToServerTask, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := eq.withEnvironmentToValidation; query != nil {
+		if err := eq.loadEnvironmentToValidation(ctx, query, nodes,
+			func(n *Environment) { n.Edges.EnvironmentToValidation = []*Validation{} },
+			func(n *Environment, e *Validation) {
+				n.Edges.EnvironmentToValidation = append(n.Edges.EnvironmentToValidation, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -2016,71 +2025,64 @@ func (eq *EnvironmentQuery) loadEnvironmentToServerTask(ctx context.Context, que
 	}
 	return nil
 }
-
-	if query := eq.withEnvironmentToValidation; query != nil {
-		fks := make([]driver.Value, 0, len(nodes))
-		ids := make(map[uuid.UUID]*Environment, len(nodes))
-		for _, node := range nodes {
-			ids[node.ID] = node
-			fks = append(fks, node.ID)
-			node.Edges.EnvironmentToValidation = []*Validation{}
-		}
-		var (
-			edgeids []uuid.UUID
-			edges   = make(map[uuid.UUID][]*Environment)
-		)
-		_spec := &sqlgraph.EdgeQuerySpec{
-			Edge: &sqlgraph.EdgeSpec{
-				Inverse: false,
-				Table:   environment.EnvironmentToValidationTable,
-				Columns: environment.EnvironmentToValidationPrimaryKey,
-			},
-			Predicate: func(s *sql.Selector) {
-				s.Where(sql.InValues(environment.EnvironmentToValidationPrimaryKey[0], fks...))
-			},
-			ScanValues: func() [2]interface{} {
-				return [2]interface{}{new(uuid.UUID), new(uuid.UUID)}
-			},
-			Assign: func(out, in interface{}) error {
-				eout, ok := out.(*uuid.UUID)
-				if !ok || eout == nil {
-					return fmt.Errorf("unexpected id value for edge-out")
-				}
-				ein, ok := in.(*uuid.UUID)
-				if !ok || ein == nil {
-					return fmt.Errorf("unexpected id value for edge-in")
-				}
-				outValue := *eout
-				inValue := *ein
-				node, ok := ids[outValue]
-				if !ok {
-					return fmt.Errorf("unexpected node id in edges: %v", outValue)
-				}
-				if _, ok := edges[inValue]; !ok {
-					edgeids = append(edgeids, inValue)
-				}
-				edges[inValue] = append(edges[inValue], node)
-				return nil
-			},
-		}
-		if err := sqlgraph.QueryEdges(ctx, eq.driver, _spec); err != nil {
-			return nil, fmt.Errorf(`query edges "EnvironmentToValidation": %w`, err)
-		}
-		query.Where(validation.IDIn(edgeids...))
-		neighbors, err := query.All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, n := range neighbors {
-			nodes, ok := edges[n.ID]
-			if !ok {
-				return nil, fmt.Errorf(`unexpected "EnvironmentToValidation" node returned %v`, n.ID)
-			}
-			for i := range nodes {
-				nodes[i].Edges.EnvironmentToValidation = append(nodes[i].Edges.EnvironmentToValidation, n)
-			}
+func (eq *EnvironmentQuery) loadEnvironmentToValidation(ctx context.Context, query *ValidationQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Validation)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Environment)
+	nids := make(map[uuid.UUID]map[*Environment]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
 		}
 	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(environment.EnvironmentToValidationTable)
+		s.Join(joinT).On(s.C(validation.FieldID), joinT.C(environment.EnvironmentToValidationPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(environment.EnvironmentToValidationPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(environment.EnvironmentToValidationPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+		assign := spec.Assign
+		values := spec.ScanValues
+		spec.ScanValues = func(columns []string) ([]interface{}, error) {
+			values, err := values(columns[1:])
+			if err != nil {
+				return nil, err
+			}
+			return append([]interface{}{new(uuid.UUID)}, values...), nil
+		}
+		spec.Assign = func(columns []string, values []interface{}) error {
+			outValue := *values[0].(*uuid.UUID)
+			inValue := *values[1].(*uuid.UUID)
+			if nids[inValue] == nil {
+				nids[inValue] = map[*Environment]struct{}{byID[outValue]: struct{}{}}
+				return assign(columns[1:], values[1:])
+			}
+			nids[inValue][byID[outValue]] = struct{}{}
+			return nil
+		}
+	})
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "EnvironmentToValidation" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
+	}
+	return nil
+}
 
 func (eq *EnvironmentQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := eq.querySpec()

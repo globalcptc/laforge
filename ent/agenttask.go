@@ -66,7 +66,7 @@ type AgentTaskEdges struct {
 	AgentTaskToValidation *Validation `json:"AgentTaskToValidation,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // AgentTaskToProvisioningStepOrErr returns the AgentTaskToProvisioningStep value or an error if the edge
@@ -123,7 +123,7 @@ func (e AgentTaskEdges) AgentTaskToAdhocPlanOrErr() ([]*AdhocPlan, error) {
 // AgentTaskToValidationOrErr returns the AgentTaskToValidation value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e AgentTaskEdges) AgentTaskToValidationOrErr() (*Validation, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[4] {
 		if e.AgentTaskToValidation == nil {
 			// The edge AgentTaskToValidation was loaded in eager-loading,
 			// but was not found.
