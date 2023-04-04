@@ -31,5 +31,7 @@ func (GinFileMiddleware) Edges() []ent.Edge {
 			Unique(),
 		edge.To("GinFileMiddlewareToProvisioningStep", ProvisioningStep.Type).
 			Unique(),
+		edge.To("GinFileMiddlewareToProvisioningScheduledStep", ProvisioningScheduledStep.Type).
+			Unique(),
 	}
 }

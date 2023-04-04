@@ -122,6 +122,10 @@ func (Environment) Edges() []ent.Edge {
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
+		edge.To("EnvironmentToScheduledStep", ScheduledStep.Type).
+			Annotations(entsql.Annotation{
+				OnDelete: entsql.Cascade,
+			}),
 		edge.From("EnvironmentToBuild", Build.Type).
 			Ref("BuildToEnvironment"),
 		edge.From("EnvironmentToRepository", Repository.Type).

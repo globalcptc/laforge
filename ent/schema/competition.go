@@ -31,6 +31,12 @@ func (Competition) Fields() []ent.Field {
 			StructTag(`hcl:"id,label"`),
 		field.String("root_password").
 			StructTag(`hcl:"root_password,attr"`),
+		field.Int64("start_time").
+			Optional().
+			StructTag(`hcl:"start_time,optional"`),
+		field.Int64("stop_time").
+			Optional().
+			StructTag(`hcl:"stop_time,optional"`),
 		field.JSON("config", map[string]string{}).
 			StructTag(`hcl:"config,optional"`),
 		field.JSON("tags", map[string]string{}).

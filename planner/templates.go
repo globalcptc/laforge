@@ -13,25 +13,27 @@ import (
 	"github.com/gen0cide/laforge/ent"
 	"github.com/iancoleman/strcase"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/text/cases"
 )
 
 type TempleteContext struct {
-	Build              *ent.Build              `yaml:"build,omitempty"`
-	Competition        *ent.Competition        `yaml:"competition,omitempty"`
-	Environment        *ent.Environment        `yaml:"environment,omitempty"`
-	Host               *ent.Host               `yaml:"host,omitempty"`
-	DNS                *ent.DNS                `yaml:"dns,omitempty"`
-	DNSRecords         []*ent.DNSRecord        `yaml:"dns_records,omitempty"`
-	IncludedNetworks   []*ent.IncludedNetwork  `yaml:"included_networks,omitempty"`
-	Network            *ent.Network            `yaml:"network,omitempty"`
-	Script             *ent.Script             `yaml:"script,omitempty"`
-	Team               *ent.Team               `yaml:"team,omitempty"`
-	Identities         []*ent.Identity         `yaml:"identities,omitempty"`
-	ProvisionedNetwork *ent.ProvisionedNetwork `yaml:"provisioned_network,omitempty"`
-	ProvisionedHost    *ent.ProvisionedHost    `yaml:"provisioned_host,omitempty"`
-	ProvisioningStep   *ent.ProvisioningStep   `yaml:"provisioning_step,omitempty"`
-	AgentSlug          string                  `yaml:"agent_slug,omitempty"`
-	Ansible            *ent.Ansible            `yaml:"ansible,omitempty"`
+	Build                     *ent.Build                     `yaml:"build,omitempty"`
+	Competition               *ent.Competition               `yaml:"competition,omitempty"`
+	Environment               *ent.Environment               `yaml:"environment,omitempty"`
+	Host                      *ent.Host                      `yaml:"host,omitempty"`
+	DNS                       *ent.DNS                       `yaml:"dns,omitempty"`
+	DNSRecords                []*ent.DNSRecord               `yaml:"dns_records,omitempty"`
+	IncludedNetworks          []*ent.IncludedNetwork         `yaml:"included_networks,omitempty"`
+	Network                   *ent.Network                   `yaml:"network,omitempty"`
+	Script                    *ent.Script                    `yaml:"script,omitempty"`
+	Team                      *ent.Team                      `yaml:"team,omitempty"`
+	Identities                []*ent.Identity                `yaml:"identities,omitempty"`
+	ProvisionedNetwork        *ent.ProvisionedNetwork        `yaml:"provisioned_network,omitempty"`
+	ProvisionedHost           *ent.ProvisionedHost           `yaml:"provisioned_host,omitempty"`
+	ProvisioningStep          *ent.ProvisioningStep          `yaml:"provisioning_step,omitempty"`
+	ProvisioningScheduledStep *ent.ProvisioningScheduledStep `yaml:"provisioning_scheduled_step,omitempty"`
+	AgentSlug                 string                         `yaml:"agent_slug,omitempty"`
+	Ansible                   *ent.Ansible                   `yaml:"ansible,omitempty"`
 }
 
 // TemplateFuncLib is a standard template library of functions
@@ -48,7 +50,7 @@ var TemplateFuncLib = template.FuncMap{
 	"Replace":              strings.Replace,
 	"Repeat":               strings.Repeat,
 	"Split":                strings.Split,
-	"Title":                strings.Title,
+	"Title":                cases.Title,
 	"ToLower":              strings.ToLower,
 	"ToSnake":              strcase.ToSnake,
 	"ToScreamingSnake":     strcase.ToScreamingSnake,

@@ -230,74 +230,6 @@ func generateDeleteBuildCommit(ctx context.Context, client *ent.Client, entBuild
 	return entDeleteCommit, nil
 }
 
-// func cleanupBuild(client *ent.Client, ctx context.Context, entPlan *ent.Plan, wg *sync.WaitGroup) {
-// 	defer wg.Done()
-
-// 	var planFilter predicate.Plan
-// 	switch entPlan.Type {
-// 	case plan.TypeStartBuild:
-// 		planFilter = plan.TypeEQ(plan.TypeStartTeam)
-// 	case plan.TypeStartTeam:
-// 		planFilter = plan.TypeEQ(plan.TypeProvisionNetwork)
-// 	case plan.TypeProvisionNetwork:
-// 		planFilter = plan.TypeEQ(plan.TypeProvisionHost)
-// 	case plan.TypeProvisionHost:
-// 		planFilter = plan.TypeEQ(plan.TypeExecuteStep)
-// 	case plan.TypeExecuteStep:
-// 		planFilter = plan.TypeEQ(plan.TypeExecuteStep)
-// 	default:
-// 		break
-// 	}
-// 	nextPlans, err := entPlan.QueryNextPlan().Where(planFilter).All(ctx)
-// 	if err != nil {
-// 		logrus.Errorf("error querying next plan from ent plan: %v", err)
-// 		return
-// 	}
-
-// 	var nextPlanWg sync.WaitGroup
-// 	for _, nextPlan := range nextPlans {
-// 		nextPlanWg.Add(1)
-// 		go cleanupBuild(client, ctx, nextPlan, &nextPlanWg)
-// 	}
-// 	nextPlanWg.Wait()
-
-// 	var deleteErr error = nil
-// 	switch entPlan.Type {
-// 	case plan.TypeStartBuild:
-// 		build, getStatusError := entPlan.QueryPlanToBuild().Only(ctx)
-// 		if getStatusError != nil {
-// 			break
-// 		}
-// 		deleteErr = client.Build.DeleteOne(build).Exec(ctx)
-// 	case plan.TypeStartTeam:
-// 		team, getStatusError := entPlan.QueryPlanToTeam().Only(ctx)
-// 		if getStatusError != nil {
-// 			break
-// 		}
-// 		deleteErr = client.Team.DeleteOne(team).Exec(ctx)
-// 	case plan.TypeProvisionNetwork:
-// 		pnet, getStatusError := entPlan.QueryPlanToProvisionedNetwork().Only(ctx)
-// 		if getStatusError != nil {
-// 			break
-// 		}
-// 		deleteErr = client.ProvisionedNetwork.DeleteOne(pnet).Exec(ctx)
-// 	case plan.TypeProvisionHost:
-// 		phost, getStatusError := entPlan.QueryPlanToProvisionedHost().Only(ctx)
-// 		if getStatusError != nil {
-// 			break
-// 		}
-// 		deleteErr = client.ProvisionedHost.DeleteOne(phost).Exec(ctx)
-// 	case plan.TypeExecuteStep:
-// 		step, getStatusError := entPlan.QueryPlanToProvisioningStep().Only(ctx)
-// 		if getStatusError != nil {
-// 			break
-// 		}
-// 		deleteErr = client.ProvisioningStep.DeleteOne(step).Exec(ctx)
-// 	default:
-// 		break
-// 	}
-// }
-
 func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entPlan *ent.Plan, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -343,6 +275,12 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 			break
 		}
 		provisionedStatus, getStatusError = step.QueryProvisioningStepToStatus().Only(ctx)
+	case plan.TypeStartScheduledStep:
+		step, getStatusError := entPlan.QueryPlanToProvisioningScheduledStep().Only(ctx)
+		if getStatusError != nil {
+			break
+		}
+		provisionedStatus, getStatusError = step.QueryProvisioningScheduledStepToStatus().Only(ctx)
 	default:
 		break
 	}
@@ -363,7 +301,9 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 	case plan.TypeProvisionHost:
 		planFilter = plan.TypeEQ(plan.TypeExecuteStep)
 	case plan.TypeExecuteStep:
-		planFilter = plan.TypeEQ(plan.TypeExecuteStep)
+		planFilter = plan.Or(plan.TypeEQ(plan.TypeExecuteStep), plan.TypeEQ(plan.TypeStartScheduledStep))
+	case plan.TypeStartScheduledStep:
+		planFilter = plan.TypeEQ(plan.TypeStartScheduledStep)
 	default:
 		break
 	}
@@ -506,6 +446,22 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 			break
 		}
 		ginFileMiddleware, deleteErr := step.QueryProvisioningStepToGinFileMiddleware().Only(ctx)
+		if deleteErr != nil {
+			break
+		}
+		deleteErr = ginFileMiddleware.Update().SetAccessed(false).Exec(ctx)
+		// deleteErr = client.GinFileMiddleware.DeleteOne(ginFileMiddleware).Exec(ctx)
+		if deleteErr != nil {
+			break
+		}
+		deleteErr = provisionedStatus.Update().SetState(status.StateDELETED).Exec(ctx)
+		rdb.Publish(ctx, "updatedStatus", provisionedStatus.ID.String())
+	case plan.TypeStartScheduledStep:
+		step, deleteErr := entPlan.QueryPlanToProvisioningScheduledStep().Only(ctx)
+		if deleteErr != nil {
+			break
+		}
+		ginFileMiddleware, deleteErr := step.QueryProvisioningScheduledStepToGinFileMiddleware().Only(ctx)
 		if deleteErr != nil {
 			break
 		}

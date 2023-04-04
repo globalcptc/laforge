@@ -46,6 +46,8 @@ func (AgentTask) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("AgentTaskToProvisioningStep", ProvisioningStep.Type).
 			Unique(),
+		edge.To("AgentTaskToProvisioningScheduledStep", ProvisioningScheduledStep.Type).
+			Unique(),
 		edge.To("AgentTaskToProvisionedHost", ProvisionedHost.Type).
 			Required().
 			Unique(),

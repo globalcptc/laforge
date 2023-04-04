@@ -26,6 +26,7 @@ func (Plan) Fields() []ent.Field {
 				"provision_network",
 				"provision_host",
 				"execute_step",
+				"start_scheduled_step",
 			),
 		field.String("build_id"),
 	}
@@ -44,6 +45,7 @@ func (Plan) Edges() []ent.Edge {
 		edge.To("PlanToProvisionedNetwork", ProvisionedNetwork.Type).Unique(),
 		edge.To("PlanToProvisionedHost", ProvisionedHost.Type).Unique(),
 		edge.To("PlanToProvisioningStep", ProvisioningStep.Type).Unique(),
+		edge.To("PlanToProvisioningScheduledStep", ProvisioningScheduledStep.Type).Unique(),
 		edge.To("PlanToStatus", Status.Type).Unique().Required().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
