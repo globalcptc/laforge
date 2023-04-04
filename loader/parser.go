@@ -27,7 +27,6 @@ import (
 	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
-	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/gen0cide/laforge/loader/include"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/google/uuid"
@@ -52,35 +51,35 @@ type fileGlobResolver struct {
 
 // DefinedConfigs is the stuct to hold in all the loading for hcl
 type DefinedConfigs struct {
-	Filename            string
-	BaseDir             string             `hcl:"base_dir,optional" json:"base_dir,omitempty"`
-	IncludePaths        []*Include         `hcl:"include,block" json:"include_paths,omitempty"`
-	DefinedCompetitions []*ent.Competition `hcl:"competition,block" json:"competitions,omitempty"`
-	DefinedHosts        []*ent.Host        `hcl:"host,block" json:"hosts,omitempty"`
-	DefinedNetworks     []*ent.Network     `hcl:"network,block" json:"networks,omitempty"`
-	DefinedScripts      []*ent.Script      `hcl:"script,block" json:"scripts,omitempty"`
-	DefinedCommands     []*ent.Command     `hcl:"command,block" json:"defined_commands,omitempty"`
-	DefinedDNSRecords   []*ent.DNSRecord   `hcl:"dns_record,block" json:"defined_dns_records,omitempty"`
-	// specifically for validations
-	// DefinedValidations  []*ent.ValidatorConfigBlock  `hcl:"validator,block" json:"defined_validators,omitempty"`
-	DefinedEnvironments []*ent.Environment           `hcl:"environment,block" json:"environments,omitempty"`
-	DefinedFileDownload []*ent.FileDownload          `hcl:"file_download,block" json:"file_download,omitempty"`
-	DefinedFileDelete   []*ent.FileDelete            `hcl:"file_delete,block" json:"file_delete,omitempty"`
-	DefinedFileExtract  []*ent.FileExtract           `hcl:"file_extract,block" json:"file_extract,omitempty"`
-	DefinedIdentities   []*ent.Identity              `hcl:"identity,block" json:"identities,omitempty"`
-	DefinedAnsible      []*ent.Ansible               `hcl:"ansible,block" json:"ansible,omitempty"`
-	Competitions        map[string]*ent.Competition  `json:"-"`
-	Hosts               map[string]*ent.Host         `json:"-"`
-	Networks            map[string]*ent.Network      `json:"-"`
-	Scripts             map[string]*ent.Script       `json:"-"`
-	Commands            map[string]*ent.Command      `json:"-"`
-	DNSRecords          map[string]*ent.DNSRecord    `json:"-"`
-	Environments        map[string]*ent.Environment  `json:"-"`
-	FileDownload        map[string]*ent.FileDownload `json:"-"`
-	FileDelete          map[string]*ent.FileDelete   `json:"-"`
-	FileExtract         map[string]*ent.FileExtract  `json:"-"`
-	Identities          map[string]*ent.Identity     `json:"-"`
-	Ansible             map[string]*ent.Ansible      `json:"-"`
+	Filename              string
+	BaseDir               string                        `hcl:"base_dir,optional" json:"base_dir,omitempty"`
+	IncludePaths          []*Include                    `hcl:"include,block" json:"include_paths,omitempty"`
+	DefinedCompetitions   []*ent.Competition            `hcl:"competition,block" json:"competitions,omitempty"`
+	DefinedHosts          []*ent.Host                   `hcl:"host,block" json:"hosts,omitempty"`
+	DefinedNetworks       []*ent.Network                `hcl:"network,block" json:"networks,omitempty"`
+	DefinedScripts        []*ent.Script                 `hcl:"script,block" json:"scripts,omitempty"`
+	DefinedCommands       []*ent.Command                `hcl:"command,block" json:"defined_commands,omitempty"`
+	DefinedDNSRecords     []*ent.DNSRecord              `hcl:"dns_record,block" json:"defined_dns_records,omitempty"`
+	DefinedEnvironments   []*ent.Environment            `hcl:"environment,block" json:"environments,omitempty"`
+	DefinedFileDownload   []*ent.FileDownload           `hcl:"file_download,block" json:"file_download,omitempty"`
+	DefinedFileDelete     []*ent.FileDelete             `hcl:"file_delete,block" json:"file_delete,omitempty"`
+	DefinedFileExtract    []*ent.FileExtract            `hcl:"file_extract,block" json:"file_extract,omitempty"`
+	DefinedIdentities     []*ent.Identity               `hcl:"identity,block" json:"identities,omitempty"`
+	DefinedAnsible        []*ent.Ansible                `hcl:"ansible,block" json:"ansible,omitempty"`
+	DefinedScheduledSteps []*ent.ScheduledStep          `hcl:"schedule_step,block" json:"schedule_step,omitempty"`
+	Competitions          map[string]*ent.Competition   `json:"-"`
+	Hosts                 map[string]*ent.Host          `json:"-"`
+	Networks              map[string]*ent.Network       `json:"-"`
+	Scripts               map[string]*ent.Script        `json:"-"`
+	Commands              map[string]*ent.Command       `json:"-"`
+	DNSRecords            map[string]*ent.DNSRecord     `json:"-"`
+	Environments          map[string]*ent.Environment   `json:"-"`
+	FileDownload          map[string]*ent.FileDownload  `json:"-"`
+	FileDelete            map[string]*ent.FileDelete    `json:"-"`
+	FileExtract           map[string]*ent.FileExtract   `json:"-"`
+	Identities            map[string]*ent.Identity      `json:"-"`
+	Ansible               map[string]*ent.Ansible       `json:"-"`
+	ScheduledSteps        map[string]*ent.ScheduledStep `json:"-"`
 }
 
 // Loader defines the Laforge configuration loader object
@@ -1747,75 +1746,4 @@ func validateHostDependencies(txClient *ent.Tx, ctx context.Context, log *loggin
 
 	}
 	return checkedHostDependencies, nil
-}
-
-func createValidations(ctx context.Context, client *ent.Client, log *logging.Logger, configValidations []*ent.Validation, envHclID string) ([]*ent.Validation, error) {
-	bulk := []*ent.ValidationCreate{}
-	returnedValidations := []*ent.Validation{}
-	for _, cValidation := range configValidations {
-		entValidation, err := client.Validation.
-			Query().
-			Where(
-				validation.And(
-					validation.HclIDEQ(cValidation.HclID),
-					validation.HasValidationToEnvironmentWith(environment.HclIDEQ(envHclID)),
-				),
-			).
-			Only(ctx)
-		if err != nil {
-			if err == err.(*ent.NotFoundError) {
-				createdQuery := client.Validation.Create().
-					SetHclID(cValidation.HclID).
-					SetValidationType(cValidation.ValidationType).
-					SetOutput(cValidation.Output).
-					SetState(cValidation.State).
-					SetErrorMessage(cValidation.ErrorMessage).
-					SetRegex(cValidation.Regex).
-					SetIP(cValidation.IP).
-					SetPort(cValidation.Port).
-					SetHostname(cValidation.Hostname).
-					SetNameservers(cValidation.Nameservers).
-					SetPackageName(cValidation.PackageName).
-					SetUsername(cValidation.Username).
-					SetGroupName(cValidation.GroupName).
-					SetFilePath(cValidation.FilePath).
-					SetServiceName(cValidation.ServiceName).
-					SetProcessName(cValidation.ProcessName)
-				bulk = append(bulk, createdQuery)
-				continue
-			}
-		}
-		entValidation, err = entValidation.Update().
-			SetHclID(cValidation.HclID).
-			SetValidationType(cValidation.ValidationType).
-			SetOutput(cValidation.Output).
-			SetState(cValidation.State).
-			SetErrorMessage(cValidation.ErrorMessage).
-			SetRegex(cValidation.Regex).
-			SetIP(cValidation.IP).
-			SetPort(cValidation.Port).
-			SetHostname(cValidation.Hostname).
-			SetNameservers(cValidation.Nameservers).
-			SetPackageName(cValidation.PackageName).
-			SetUsername(cValidation.Username).
-			SetGroupName(cValidation.GroupName).
-			SetFilePath(cValidation.FilePath).
-			SetServiceName(cValidation.ServiceName).
-			SetProcessName(cValidation.ProcessName).
-			Save(ctx)
-		if err != nil {
-			log.Log.Errorf("Failed to Update Validation %v. Err: %v", cValidation.HclID, err)
-			return nil, err
-		}
-		returnedValidations = append(returnedValidations, entValidation)
-	}
-	if len(bulk) > 0 {
-		dbValidations, err := client.Validation.CreateBulk(bulk...).Save(ctx)
-		if err != nil {
-			log.Log.Errorf("Failed to create bulk Validations. Err: %v", err)
-			return nil, err
-		}
-		returnedValidations = append(returnedValidations, dbValidations...)
-	}
-	return returnedValidations, nil
 }
