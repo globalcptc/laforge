@@ -5,6 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gorhill/cronexpr"
+	hcl2 "github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
+	hcl2parse "github.com/hashicorp/hcl/v2/hclparse"
+	"github.com/sirupsen/logrus"
+
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/command"
@@ -18,37 +24,104 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
-	createProvisioningScheduleStep(ctx, nil, nil, nil)
+	// ctx := context.Background()
+	testConfig, err := parseTestConfigs()
+	if err != nil {
+		logrus.Errorf("failed to parse test configs: %v", err)
+		return
+	}
+
+	logrus.Infof("Competitions: %v", testConfig.Competitions)
+	logrus.Infof("Scheduled Steps: %v", testConfig.ScheduledSteps)
+	// createProvisioningScheduleStep(ctx, nil, nil, nil)
 }
 
-// createProvisionedScheduleStep is a skeleton of the scheduling function
-func createProvisioningScheduleStep(ctx context.Context, client *ent.Client, entProvisionedHost *ent.ProvisionedHost, entScheduledSteps []*ent.ScheduledStep) error {
+var TEST_ENV = []byte(`
+competition "laforge-demo" {
+  root_password = "test123"
+
+	start_time = 1678208400
+	stop_time = 1678294800
+
+  dns "default" {
+    type = "bind"
+    root_domain = "cp.tc"
+
+    dns_servers = [
+      "8.8.8.8",
+      "8.8.4.4",
+    ]
+
+    ntp_servers = [
+      "129.6.15.28",
+      "129.6.15.29",
+    ]
+  }
+}
+
+scheduled "/scheduled/windows/reboot" {
+	name = "Periodic Reboot"
+	description = "Reboot windows every 3 hours"
+
+	step = "/commands/generic/reboot"
+
+	type = "cron" // cron, runonce
+
+	// Cron schedule
+	schedule = "0 */3 * * *" // Every 3 hours
+
+	// Unix time to run at
+	// run_time = 1677296367
+}`)
+
+type DefinedConfigs struct {
+	Competitions   []*ent.Competition   `hcl:"competition,block"`
+	ScheduledSteps []*ent.ScheduledStep `hcl:"scheduled,block"`
+}
+
+func parseTestConfigs() (*DefinedConfigs, error) {
+	p := hcl2parse.NewParser()
+
+	_, diags := p.ParseHCL(TEST_ENV, "test_env.hcl")
+	if diags.HasErrors() {
+		for _, e := range diags.Errs() {
+			ne, ok := e.(*hcl2.Diagnostic)
+			if ok {
+				logrus.Errorf("Laforge failed to parse a config file:\n Location: %v\n    Issue: %v\n   Detail: %v", ne.Subject, ne.Summary, ne.Detail)
+			}
+		}
+		return nil, fmt.Errorf("failed to parse HCL")
+	}
+
+	var testConfig DefinedConfigs
+
+	for _, f := range p.Files() {
+		diags := gohcl.DecodeBody(f.Body, nil, &testConfig)
+		if diags.HasErrors() {
+			for _, e := range diags.Errs() {
+				ne, ok := e.(*hcl2.Diagnostic)
+				if ok {
+					logrus.Errorf("Laforge failed to parse a config file:\n Location: %v\n    Issue: %v\n   Detail: %v", ne.Subject, ne.Summary, ne.Detail)
+				}
+			}
+			return nil, fmt.Errorf("failed to parse HCL")
+		}
+	}
+
+	return &testConfig, nil
+}
+
+// createProvisionedScheduleStep is used when competitions have a well-defined start and stop time and are cron scheduled
+func createProvisioningScheduleStep(ctx context.Context, client *ent.Client, entCompetition *ent.Competition, entProvisionedHost *ent.ProvisionedHost, entScheduledSteps []*ent.ScheduledStep) error {
 	// Loop to read through Sched. Steps
 	for _, entScheduledStep := range entScheduledSteps {
 		// Determine RunTime
-		if entScheduledStep.Repeated {
-			bulkProvisioningScheduledSteps := make([]*ent.ProvisioningScheduledStepCreate, 0)
-			for run_time := entScheduledStep.StartTime; run_time <= entScheduledStep.EndTime; run_time += int64(entScheduledStep.Interval) {
-				// entStatus, err := createPlanningStatus(ctx, client, logger, status.StatusForProvisioningScheduledStep)
-				// if err != nil {
-				// 	return nil, fmt.Errorf("failed to create status for provisioning scheduled step: %v", err)
-				// }
-				entProvisionedScheduleStepCreate, err := generateProvisioningScheduledStepByType(ctx, client, entScheduledStep)
-				if err != nil {
-					return fmt.Errorf("failed to generate provisioning scheduled step by type: %v", err)
-				}
-				entProvisionedScheduleStepCreate = entProvisionedScheduleStepCreate.
-					SetProvisioningScheduledStepToProvisionedHost(entProvisionedHost).
-					SetRunTime(time.Unix(run_time, 0))
-					// SetProvisioningScheduledStepToStatus(entStatus)
-				bulkProvisioningScheduledSteps = append(bulkProvisioningScheduledSteps, entProvisionedScheduleStepCreate)
-			}
-			err := client.ProvisioningScheduledStep.CreateBulk(bulkProvisioningScheduledSteps...).Exec(ctx)
-			if err != nil {
-				return fmt.Errorf("failed to bulk create repeated provisioning scheduled steps: %v", err)
-			}
-		} else {
+		scheduleExpr, err := cronexpr.Parse(entScheduledStep.Schedule)
+		if err != nil {
+			return fmt.Errorf("failed to parse scheduled step schedule: %v", err)
+		}
+		runTime := scheduleExpr.Next(time.Unix(entCompetition.StartTime, 0))
+		for runTime.Unix() <= entCompetition.StopTime {
 			// entStatus, err := createPlanningStatus(ctx, client, logger, status.StatusForProvisioningScheduledStep)
 			// if err != nil {
 			// 	return nil, fmt.Errorf("failed to create status for provisioning scheduled step: %v", err)
@@ -59,33 +132,34 @@ func createProvisioningScheduleStep(ctx context.Context, client *ent.Client, ent
 			}
 			err = entProvisionedScheduleStepCreate.
 				SetProvisioningScheduledStepToProvisionedHost(entProvisionedHost).
-				SetRunTime(time.Unix(entScheduledStep.StartTime, 0)).
+				SetRunTime(runTime).
 				// SetProvisioningScheduleStepToStatus(entStatus)
 				Exec(ctx)
 			if err != nil {
 				return fmt.Errorf("failed to create provisioning scheduled step: %v", err)
 			}
+			// if RenderFiles {
+			// 	filePath, err := renderScript(ctx, client, logger, entProvisioningStep)
+			// 	if err != nil {
+			// 		return nil, err
+			// 	}
+			// 	entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
+			// 	if err != nil {
+			// 		return nil, err
+			// 	}
+			// 	_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
+			// 	if err != nil {
+			// 		return nil, err
+			// 	}
+			// 	if RenderFilesTask != nil {
+			// 		RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
+			// 		if err != nil {
+			// 			return nil, err
+			// 		}
+			// 	}
+			// }
+			runTime = scheduleExpr.Next(runTime)
 		}
-		// if RenderFiles {
-		// 	filePath, err := renderScript(ctx, client, logger, entProvisioningStep)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-		// 	entTmpUrl, err := utils.CreateTempURL(ctx, client, filePath)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-		// 	_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-		// 	if RenderFilesTask != nil {
-		// 		RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
-		// 		if err != nil {
-		// 			return nil, err
-		// 		}
-		// 	}
-		// }
 	}
 	return nil
 }
