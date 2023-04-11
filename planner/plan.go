@@ -1371,7 +1371,7 @@ func renderFiles(ctx context.Context, client *ent.Client, logger *logging.Logger
 		if entProvisioningStep != nil {
 			switch entProvisioningStep.Type {
 			case provisioningstep.TypeScript:
-				filePath, err = renderScript(ctx, client, logger, entProvisioningStep)
+				filePath, err = RenderScript(ctx, client, logger, entProvisioningStep)
 			case provisioningstep.TypeFileDownload:
 				filePath, err = renderFileDownload(ctx, logger, entProvisioningStep)
 			case provisioningstep.TypeAnsible:
@@ -1382,7 +1382,7 @@ func renderFiles(ctx context.Context, client *ent.Client, logger *logging.Logger
 		} else if entProvisioningScheduledStep != nil {
 			switch entProvisioningScheduledStep.Type {
 			case provisioningscheduledstep.TypeScript:
-				filePath, err = renderScript(ctx, client, logger, entProvisioningScheduledStep)
+				filePath, err = RenderScript(ctx, client, logger, entProvisioningScheduledStep)
 			case provisioningscheduledstep.TypeFileDownload:
 				filePath, err = renderFileDownload(ctx, logger, entProvisioningScheduledStep)
 			case provisioningscheduledstep.TypeAnsible:
@@ -1460,7 +1460,7 @@ func createStepPlan(ctx context.Context, client *ent.Client, logger *logging.Log
 	return nil
 }
 
-func renderScript(ctx context.Context, client *ent.Client, logger *logging.Logger, entStep interface{}) (string, error) {
+func RenderScript(ctx context.Context, client *ent.Client, logger *logging.Logger, entStep interface{}) (string, error) {
 	var entProvisioningStep *ent.ProvisioningStep
 	var entProvisioningScheduledStep *ent.ProvisioningScheduledStep
 	var ok bool

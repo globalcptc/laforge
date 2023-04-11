@@ -867,7 +867,7 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			return err
 		}
 		if _, ok := entScript.Vars["build_render"]; ok {
-			_, err := renderScript(ctx, client, logger, entStep)
+			_, err := RenderScript(ctx, client, logger, entStep)
 			if err != nil {
 				logger.Log.Errorf("failed rerendering Script: %v", err)
 				return err
