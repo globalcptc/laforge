@@ -27,7 +27,7 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/hcl/v2 v2.11.1
+	github.com/hashicorp/hcl/v2 v2.16.2
 	github.com/hedwigz/entviz v0.0.0-20220529060928-44574cfd7a21
 	github.com/iamacarpet/go-win64api v0.0.0-20210311141720-fe38760bed28
 	github.com/iancoleman/strcase v0.2.0
@@ -43,7 +43,7 @@ require (
 	github.com/vektah/gqlparser/v2 v2.4.5
 	github.com/vmihailenco/msgpack/v5 v5.0.0-beta.9
 	github.com/vmware/govmomi v0.25.0
-	github.com/zclconf/go-cty v1.8.3
+	github.com/zclconf/go-cty v1.12.1
 	golang.org/x/crypto v0.7.0
 	golang.org/x/net v0.8.0
 	golang.org/x/sync v0.1.0

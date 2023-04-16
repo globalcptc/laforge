@@ -27,6 +27,7 @@ import (
 	"github.com/gen0cide/laforge/ent/network"
 	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/gen0cide/laforge/loader/include"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/google/uuid"
@@ -60,6 +61,7 @@ type DefinedConfigs struct {
 	DefinedScripts        []*ent.Script                 `hcl:"script,block" json:"scripts,omitempty"`
 	DefinedCommands       []*ent.Command                `hcl:"command,block" json:"defined_commands,omitempty"`
 	DefinedDNSRecords     []*ent.DNSRecord              `hcl:"dns_record,block" json:"defined_dns_records,omitempty"`
+	DefinedValidations    []*ent.Validation             `hcl:"validator,block" json:"defined_validators,omitempty"`
 	DefinedEnvironments   []*ent.Environment            `hcl:"environment,block" json:"environments,omitempty"`
 	DefinedFileDownload   []*ent.FileDownload           `hcl:"file_download,block" json:"file_download,omitempty"`
 	DefinedFileDelete     []*ent.FileDelete             `hcl:"file_delete,block" json:"file_delete,omitempty"`
@@ -73,6 +75,7 @@ type DefinedConfigs struct {
 	Scripts               map[string]*ent.Script        `json:"-"`
 	Commands              map[string]*ent.Command       `json:"-"`
 	DNSRecords            map[string]*ent.DNSRecord     `json:"-"`
+	Validations           map[string]*ent.Validation    `json:"-"`
 	Environments          map[string]*ent.Environment   `json:"-"`
 	FileDownload          map[string]*ent.FileDownload  `json:"-"`
 	FileDelete            map[string]*ent.FileDelete    `json:"-"`
@@ -257,6 +260,7 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 		Scripts:        map[string]*ent.Script{},
 		Commands:       map[string]*ent.Command{},
 		DNSRecords:     map[string]*ent.DNSRecord{},
+		Validations:    map[string]*ent.Validation{},
 		Environments:   map[string]*ent.Environment{},
 		FileDownload:   map[string]*ent.FileDownload{},
 		FileDelete:     map[string]*ent.FileDelete{},
@@ -324,6 +328,13 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 			_, found := combinedConfigs.DNSRecords[x.HclID]
 			if !found {
 				combinedConfigs.DNSRecords[x.HclID] = x
+				continue
+			}
+		}
+		for _, x := range element.Validations {
+			_, found := combinedConfigs.Environments[x.HclID]
+			if !found {
+				combinedConfigs.Validations[x.HclID] = x
 				continue
 			}
 		}
@@ -456,6 +467,11 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			log.Log.Errorf("Error loading in dns_records into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
+		returnedValidations, err := createValidations(txClient, ctx, log, loadedConfig.Validations, cEnviroment.HclID)
+		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in validations into env: %v, Err: %v", cEnviroment.HclID, err)
+		}
 		returnedFileDownloads, err := createFileDownload(txClient, ctx, log, loadedConfig.FileDownload, cEnviroment.HclID)
 		if err != nil {
 			err = rollback(txClient, err)
@@ -536,6 +552,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 					AddEnvironmentToFinding(returnedFindings...).
 					AddEnvironmentToCommand(returnedCommands...).
 					AddEnvironmentToDNSRecord(returnedDNSRecords...).
+					AddEnvironmentToValidation(returnedValidations...).
 					AddEnvironmentToFileDownload(returnedFileDownloads...).
 					AddEnvironmentToFileDelete(returnedFileDeletes...).
 					AddEnvironmentToFileExtract(returnedFileExtracts...).
@@ -580,6 +597,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			ClearEnvironmentToFinding().
 			ClearEnvironmentToCommand().
 			ClearEnvironmentToDNSRecord().
+			ClearEnvironmentToValidation().
 			ClearEnvironmentToFileDownload().
 			ClearEnvironmentToFileDelete().
 			ClearEnvironmentToFileExtract().
@@ -612,6 +630,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			AddEnvironmentToHostDependency(returnedHostDependencies...).
 			AddEnvironmentToIncludedNetwork(returnedIncludedNetworks...).
 			AddEnvironmentToDNS(returnedDNS...).
+			AddEnvironmentToValidation(returnedValidations...).
 			AddEnvironmentToAnsible(returnedAnsible...).
 			AddEnvironmentToAnsible(returnedAnsible...).
 			Save(ctx)
@@ -1178,6 +1197,86 @@ func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 		returnedDNSRecords = append(returnedDNSRecords, dbDNSRecords...)
 	}
 	return returnedDNSRecords, nil
+}
+
+func createValidations(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configValidations map[string]*ent.Validation, envHclID string) ([]*ent.Validation, error) {
+	bulk := []*ent.ValidationCreate{}
+	returnedValidations := []*ent.Validation{}
+	for _, cValidation := range configValidations {
+		log.Log.Debugf("Creating Validations: %v for Env: %v", cValidation.HclID, envHclID)
+
+		entValidation, err := txClient.Validation.
+			Query().
+			Where(
+				validation.And(
+					validation.HclIDEQ(cValidation.HclID),
+					validation.HasValidationToEnvironmentWith(environment.HclIDEQ(envHclID)),
+				),
+			).
+			Only(ctx)
+		if err != nil {
+			if err == err.(*ent.NotFoundError) {
+				createdQuery := txClient.Validation.Create().
+					SetHclID(cValidation.HclID).
+					SetValidationType(cValidation.ValidationType).
+					SetOutput(cValidation.Output).
+					SetState(cValidation.State).
+					SetErrorMessage(cValidation.ErrorMessage).
+					SetHash(cValidation.Hash).
+					SetRegex(cValidation.Regex).
+					SetIP(cValidation.IP).
+					SetPort(cValidation.Port).
+					SetHostname(cValidation.Hostname).
+					SetNameservers(cValidation.Nameservers).
+					SetPackageName(cValidation.PackageName).
+					SetUsername(cValidation.Username).
+					SetGroupName(cValidation.GroupName).
+					SetFilePath(cValidation.FilePath).
+					SetSearchString(cValidation.SearchString).
+					SetServiceName(cValidation.ServiceName).
+					SetServiceStatus(cValidation.ServiceStatus).
+					SetProcessName(cValidation.ProcessName)
+				bulk = append(bulk, createdQuery)
+				continue
+			}
+		}
+		entValidation, err = entValidation.Update().
+			SetHclID(cValidation.HclID).
+			SetValidationType(cValidation.ValidationType).
+			SetOutput(cValidation.Output).
+			SetState(cValidation.State).
+			SetErrorMessage(cValidation.ErrorMessage).
+			SetHash(cValidation.Hash).
+			SetRegex(cValidation.Regex).
+			SetIP(cValidation.IP).
+			SetPort(cValidation.Port).
+			SetHostname(cValidation.Hostname).
+			SetNameservers(cValidation.Nameservers).
+			SetPackageName(cValidation.PackageName).
+			SetUsername(cValidation.Username).
+			SetGroupName(cValidation.GroupName).
+			SetFilePath(cValidation.FilePath).
+			SetSearchString(cValidation.SearchString).
+			SetServiceName(cValidation.ServiceName).
+			SetServiceStatus(cValidation.ServiceStatus).
+			SetProcessName(cValidation.ProcessName).
+			Save(ctx)
+		if err != nil {
+			log.Log.Errorf("Failed to Update Validation &v. Err: %v", cValidation, err)
+			return nil, err
+		}
+		returnedValidations = append(returnedValidations, entValidation)
+	}
+	if len(bulk) > 0 {
+		dbValidators, err := txClient.Validation.CreateBulk(bulk...).Save(ctx)
+		if err != nil {
+			log.Log.Errorf("failed to create bulk DNS Records. Err: %v", err)
+			return nil, err
+		}
+		returnedValidations = append(returnedValidations, dbValidators...)
+	}
+
+	return returnedValidations, nil
 }
 
 func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFileDownloads map[string]*ent.FileDownload, envHclID string) ([]*ent.FileDownload, error) {
