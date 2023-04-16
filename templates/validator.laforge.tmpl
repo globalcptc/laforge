@@ -1,0 +1,76 @@
+// EXAMPLE LAFORGE VALIDATOR CONFIGURATION
+
+validator "{{ $.ID }}"{
+    // Type of Validation
+    validation_type = {{ $.ValidationType }}
+    
+    {{ if  $.Hash }} 
+    // hash of file to check
+    hash = {{ $.Hash }}
+    {{ end }}
+
+    {{ if  $.Regex }} 
+    // regex of file contents
+    regex = {{ $.Regex }}
+    {{ end }}
+    
+    {{ if  $.Ip }}
+    // remote IP
+    ip = {{ $.Ip }}
+    {{ end }}
+
+    {{ if  $.Port }} 
+    // remote port
+    port = {{ $.Port }}
+    {{ end }}
+
+    {{ if  $.Hostname }}
+    // hostname of remote machine
+    hostname = {{ $.Hostname }}
+    {{ end }}
+
+    {{ if  $.Nameservers }} 
+    // name
+    nameservers = {{ $.Nameserver }}
+    {{ end }}
+
+    {{ if  $.PackageName }} 
+    // package name to install
+    package_name = {{ $.PackageName }}
+    {{ end }}
+
+    {{ if  $.Username }} 
+    // name of user
+    username = {{ $.Username }}
+    {{ end }}
+
+    {{ if  $.GroupName }} 
+    // name of group
+    group_name = {{ $.GroupName }}
+    {{ end }}
+
+    {{ if  $.FilePath }} 
+    // path of file
+    file_path = {{ $.FilePath }}
+    {{ end }}
+
+    {{ if  $.SearchString }} 
+    // string to search
+    search_string = {{ $.SearchString }}
+    {{ end }}
+
+    {{ if  $.ServiceName }} 
+    // name of service
+    service_name = {{ $.ServiceName }}
+    {{ end }}
+
+    {{ if  $.ServiceStatus }} 
+    // status of service
+    service_status = {{ $.ServiceStatus }}
+    {{ end }}
+
+    {{ if  $.ProcessName }} 
+    // name of process
+    process_name = {{ $.ProcessName }}
+    {{ end }}
+}
