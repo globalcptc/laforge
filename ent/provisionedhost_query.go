@@ -1029,13 +1029,13 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisioningScheduledStep(
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host
+		fk := n.provisioning_scheduled_step_provisioned_host
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioning_scheduled_step_provisioned_host" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_scheduled_step_provisioned_host" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

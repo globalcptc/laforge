@@ -50,7 +50,7 @@ func (ProvisionedHost) Edges() []ent.Edge {
 		edge.From("ProvisionedHostToProvisioningStep", ProvisioningStep.Type).
 			Ref("ProvisioningStepToProvisionedHost"),
 		edge.From("ProvisionedHostToProvisioningScheduledStep", ProvisioningScheduledStep.Type).
-			Ref("ProvisioningScheduledStepToProvisionedHost"),
+			Ref("ProvisionedHost"),
 		edge.From("ProvisionedHostToAgentStatus", AgentStatus.Type).
 			Ref("AgentStatusToProvisionedHost"),
 		edge.From("ProvisionedHostToAgentTask", AgentTask.Type).

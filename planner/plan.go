@@ -1128,8 +1128,8 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 
 				// Set the run time to next cron time
 				entProvisioningScheduledStep, err := entProvisioningScheduledStepCreate.
-					SetProvisioningScheduledStepToProvisionedHost(entProvisionedHost).
-					SetProvisioningScheduledStepToStatus(entStatus).
+					SetProvisionedHost(entProvisionedHost).
+					SetStatus(entStatus).
 					SetRunTime(runTime).
 					Save(ctx)
 				if err != nil {
@@ -1167,8 +1167,8 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 			// Set the run time to 0, this way it wil be automatically
 			// triggered by the scheduler upon provisioning completion
 			entProvisioningScheduledStep, err := entProvisioningScheduledStepCreate.
-				SetProvisioningScheduledStepToProvisionedHost(entProvisionedHost).
-				SetProvisioningScheduledStepToStatus(entStatus).
+				SetProvisionedHost(entProvisionedHost).
+				SetStatus(entStatus).
 				SetRunTime(time.Unix(0, 0)).
 				Save(ctx)
 			if err != nil {
@@ -1207,8 +1207,8 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 		// Set the run time to 0, this way it wil be automatically
 		// triggered by the scheduler upon provisioning completion
 		entProvisioningScheduledStep, err := entProvisioningScheduledStepCreate.
-			SetProvisioningScheduledStepToProvisionedHost(entProvisionedHost).
-			SetProvisioningScheduledStepToStatus(entStatus).
+			SetProvisionedHost(entProvisionedHost).
+			SetStatus(entStatus).
 			SetRunTime(time.Unix(entScheduledStep.RunAt, 0)).
 			Save(ctx)
 		if err != nil {
@@ -1246,7 +1246,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a script
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeScript).
-			SetProvisioningScheduledStepToScript(entScript), nil
+			SetScript(entScript), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for script based on hcl_id from scheduled step: %v", err)
 	}
@@ -1263,7 +1263,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a command
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeCommand).
-			SetProvisioningScheduledStepToCommand(entCommand), nil
+			SetCommand(entCommand), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for command based on hcl_id from scheduled step: %v", err)
 	}
@@ -1280,7 +1280,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a file download
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeFileDownload).
-			SetProvisioningScheduledStepToFileDownload(entFileDownload), nil
+			SetFileDownload(entFileDownload), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for file download based on hcl_id from scheduled step: %v", err)
 	}
@@ -1297,7 +1297,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a file extract
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeFileExtract).
-			SetProvisioningScheduledStepToFileExtract(entFileExtract), nil
+			SetFileExtract(entFileExtract), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for file extract based on hcl_id from scheduled step: %v", err)
 	}
@@ -1314,7 +1314,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a file delete
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeFileDelete).
-			SetProvisioningScheduledStepToFileDelete(entFileDelete), nil
+			SetFileDelete(entFileDelete), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for file delete based on hcl_id from scheduled step: %v", err)
 	}
@@ -1331,7 +1331,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a dns record
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeDNSRecord).
-			SetProvisioningScheduledStepToDNSRecord(entDNSRecord), nil
+			SetDNSRecord(entDNSRecord), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for dns record based on hcl_id from scheduled step: %v", err)
 	}
@@ -1348,7 +1348,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a ansible
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeAnsible).
-			SetProvisioningScheduledStepToAnsible(entAnsible), nil
+			SetAnsible(entAnsible), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for ansible based on hcl_id from scheduled step: %v", err)
 	}
@@ -1485,8 +1485,8 @@ func RenderScript(ctx context.Context, client *ent.Client, logger *logging.Logge
 			"pScheduledStep":      entProvisioningScheduledStep.ID,
 			"pScheduledStep.Type": entProvisioningScheduledStep.Type,
 		}).Debug("render script")
-		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisioningScheduledStepToProvisionedHost().OnlyX(ctx)
-		currentScript = entProvisioningScheduledStep.QueryProvisioningScheduledStepToScript().OnlyX(ctx)
+		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisionedHost().OnlyX(ctx)
+		currentScript = entProvisioningScheduledStep.QueryScript().OnlyX(ctx)
 	}
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
@@ -1571,8 +1571,8 @@ func renderFileDownload(ctx context.Context, logger *logging.Logger, entStep int
 			"pScheduledStep":      entProvisioningScheduledStep.ID,
 			"pScheduledStep.Type": entProvisioningScheduledStep.Type,
 		}).Debug("render file download")
-		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisioningScheduledStepToProvisionedHost().OnlyX(ctx)
-		currentFileDownload = entProvisioningScheduledStep.QueryProvisioningScheduledStepToFileDownload().OnlyX(ctx)
+		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisionedHost().OnlyX(ctx)
+		currentFileDownload = entProvisioningScheduledStep.QueryFileDownload().OnlyX(ctx)
 	}
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
@@ -1637,8 +1637,8 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 			"pScheduledStep":      entProvisioningScheduledStep.ID,
 			"pScheduledStep.Type": entProvisioningScheduledStep.Type,
 		}).Debug("render ansible")
-		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisioningScheduledStepToProvisionedHost().OnlyX(ctx)
-		currentAnsible = entProvisioningScheduledStep.QueryProvisioningScheduledStepToAnsible().OnlyX(ctx)
+		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisionedHost().OnlyX(ctx)
+		currentAnsible = entProvisioningScheduledStep.QueryAnsible().OnlyX(ctx)
 	}
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)

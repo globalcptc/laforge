@@ -940,106 +940,106 @@ func (pn *ProvisionedNetwork) ProvisionedNetworkToPlan(ctx context.Context) (*Pl
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToStatus(ctx context.Context) (*Status, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToStatusOrErr()
+func (pss *ProvisioningScheduledStep) Status(ctx context.Context) (*Status, error) {
+	result, err := pss.Edges.StatusOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToStatus().Only(ctx)
+		result, err = pss.QueryStatus().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToScheduledStep(ctx context.Context) (*ScheduledStep, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToScheduledStepOrErr()
+func (pss *ProvisioningScheduledStep) ScheduledStep(ctx context.Context) (*ScheduledStep, error) {
+	result, err := pss.Edges.ScheduledStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToScheduledStep().Only(ctx)
+		result, err = pss.QueryScheduledStep().Only(ctx)
 	}
 	return result, err
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToProvisionedHostOrErr()
+func (pss *ProvisioningScheduledStep) ProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
+	result, err := pss.Edges.ProvisionedHostOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToProvisionedHost().Only(ctx)
+		result, err = pss.QueryProvisionedHost().Only(ctx)
 	}
 	return result, err
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToScript(ctx context.Context) (*Script, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToScriptOrErr()
+func (pss *ProvisioningScheduledStep) Script(ctx context.Context) (*Script, error) {
+	result, err := pss.Edges.ScriptOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToScript().Only(ctx)
+		result, err = pss.QueryScript().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToCommand(ctx context.Context) (*Command, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToCommandOrErr()
+func (pss *ProvisioningScheduledStep) Command(ctx context.Context) (*Command, error) {
+	result, err := pss.Edges.CommandOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToCommand().Only(ctx)
+		result, err = pss.QueryCommand().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToDNSRecord(ctx context.Context) (*DNSRecord, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToDNSRecordOrErr()
+func (pss *ProvisioningScheduledStep) DNSRecord(ctx context.Context) (*DNSRecord, error) {
+	result, err := pss.Edges.DNSRecordOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToDNSRecord().Only(ctx)
+		result, err = pss.QueryDNSRecord().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToFileDelete(ctx context.Context) (*FileDelete, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToFileDeleteOrErr()
+func (pss *ProvisioningScheduledStep) FileDelete(ctx context.Context) (*FileDelete, error) {
+	result, err := pss.Edges.FileDeleteOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToFileDelete().Only(ctx)
+		result, err = pss.QueryFileDelete().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToFileDownload(ctx context.Context) (*FileDownload, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToFileDownloadOrErr()
+func (pss *ProvisioningScheduledStep) FileDownload(ctx context.Context) (*FileDownload, error) {
+	result, err := pss.Edges.FileDownloadOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToFileDownload().Only(ctx)
+		result, err = pss.QueryFileDownload().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToFileExtract(ctx context.Context) (*FileExtract, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToFileExtractOrErr()
+func (pss *ProvisioningScheduledStep) FileExtract(ctx context.Context) (*FileExtract, error) {
+	result, err := pss.Edges.FileExtractOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToFileExtract().Only(ctx)
+		result, err = pss.QueryFileExtract().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToAnsible(ctx context.Context) (*Ansible, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToAnsibleOrErr()
+func (pss *ProvisioningScheduledStep) Ansible(ctx context.Context) (*Ansible, error) {
+	result, err := pss.Edges.AnsibleOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToAnsible().Only(ctx)
+		result, err = pss.QueryAnsible().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToAgentTask(ctx context.Context) (*AgentTask, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToAgentTaskOrErr()
+func (pss *ProvisioningScheduledStep) AgentTask(ctx context.Context) (*AgentTask, error) {
+	result, err := pss.Edges.AgentTaskOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToAgentTask().Only(ctx)
+		result, err = pss.QueryAgentTask().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningStepToPlan(ctx context.Context) (*Plan, error) {
-	result, err := pss.Edges.ProvisioningStepToPlanOrErr()
+func (pss *ProvisioningScheduledStep) Plan(ctx context.Context) (*Plan, error) {
+	result, err := pss.Edges.PlanOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningStepToPlan().Only(ctx)
+		result, err = pss.QueryPlan().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) ProvisioningScheduledStepToGinFileMiddleware(ctx context.Context) (*GinFileMiddleware, error) {
-	result, err := pss.Edges.ProvisioningScheduledStepToGinFileMiddlewareOrErr()
+func (pss *ProvisioningScheduledStep) GinFileMiddleware(ctx context.Context) (*GinFileMiddleware, error) {
+	result, err := pss.Edges.GinFileMiddlewareOrErr()
 	if IsNotLoaded(err) {
-		result, err = pss.QueryProvisioningScheduledStepToGinFileMiddleware().Only(ctx)
+		result, err = pss.QueryGinFileMiddleware().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

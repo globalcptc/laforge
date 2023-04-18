@@ -19,125 +19,125 @@ const (
 	FieldType = "type"
 	// FieldRunTime holds the string denoting the run_time field in the database.
 	FieldRunTime = "run_time"
-	// EdgeProvisioningScheduledStepToStatus holds the string denoting the provisioningscheduledsteptostatus edge name in mutations.
-	EdgeProvisioningScheduledStepToStatus = "ProvisioningScheduledStepToStatus"
-	// EdgeProvisioningScheduledStepToScheduledStep holds the string denoting the provisioningscheduledsteptoscheduledstep edge name in mutations.
-	EdgeProvisioningScheduledStepToScheduledStep = "ProvisioningScheduledStepToScheduledStep"
-	// EdgeProvisioningScheduledStepToProvisionedHost holds the string denoting the provisioningscheduledsteptoprovisionedhost edge name in mutations.
-	EdgeProvisioningScheduledStepToProvisionedHost = "ProvisioningScheduledStepToProvisionedHost"
-	// EdgeProvisioningScheduledStepToScript holds the string denoting the provisioningscheduledsteptoscript edge name in mutations.
-	EdgeProvisioningScheduledStepToScript = "ProvisioningScheduledStepToScript"
-	// EdgeProvisioningScheduledStepToCommand holds the string denoting the provisioningscheduledsteptocommand edge name in mutations.
-	EdgeProvisioningScheduledStepToCommand = "ProvisioningScheduledStepToCommand"
-	// EdgeProvisioningScheduledStepToDNSRecord holds the string denoting the provisioningscheduledsteptodnsrecord edge name in mutations.
-	EdgeProvisioningScheduledStepToDNSRecord = "ProvisioningScheduledStepToDNSRecord"
-	// EdgeProvisioningScheduledStepToFileDelete holds the string denoting the provisioningscheduledsteptofiledelete edge name in mutations.
-	EdgeProvisioningScheduledStepToFileDelete = "ProvisioningScheduledStepToFileDelete"
-	// EdgeProvisioningScheduledStepToFileDownload holds the string denoting the provisioningscheduledsteptofiledownload edge name in mutations.
-	EdgeProvisioningScheduledStepToFileDownload = "ProvisioningScheduledStepToFileDownload"
-	// EdgeProvisioningScheduledStepToFileExtract holds the string denoting the provisioningscheduledsteptofileextract edge name in mutations.
-	EdgeProvisioningScheduledStepToFileExtract = "ProvisioningScheduledStepToFileExtract"
-	// EdgeProvisioningScheduledStepToAnsible holds the string denoting the provisioningscheduledsteptoansible edge name in mutations.
-	EdgeProvisioningScheduledStepToAnsible = "ProvisioningScheduledStepToAnsible"
-	// EdgeProvisioningScheduledStepToAgentTask holds the string denoting the provisioningscheduledsteptoagenttask edge name in mutations.
-	EdgeProvisioningScheduledStepToAgentTask = "ProvisioningScheduledStepToAgentTask"
-	// EdgeProvisioningStepToPlan holds the string denoting the provisioningsteptoplan edge name in mutations.
-	EdgeProvisioningStepToPlan = "ProvisioningStepToPlan"
-	// EdgeProvisioningScheduledStepToGinFileMiddleware holds the string denoting the provisioningscheduledsteptoginfilemiddleware edge name in mutations.
-	EdgeProvisioningScheduledStepToGinFileMiddleware = "ProvisioningScheduledStepToGinFileMiddleware"
+	// EdgeStatus holds the string denoting the status edge name in mutations.
+	EdgeStatus = "Status"
+	// EdgeScheduledStep holds the string denoting the scheduledstep edge name in mutations.
+	EdgeScheduledStep = "ScheduledStep"
+	// EdgeProvisionedHost holds the string denoting the provisionedhost edge name in mutations.
+	EdgeProvisionedHost = "ProvisionedHost"
+	// EdgeScript holds the string denoting the script edge name in mutations.
+	EdgeScript = "Script"
+	// EdgeCommand holds the string denoting the command edge name in mutations.
+	EdgeCommand = "Command"
+	// EdgeDNSRecord holds the string denoting the dnsrecord edge name in mutations.
+	EdgeDNSRecord = "DNSRecord"
+	// EdgeFileDelete holds the string denoting the filedelete edge name in mutations.
+	EdgeFileDelete = "FileDelete"
+	// EdgeFileDownload holds the string denoting the filedownload edge name in mutations.
+	EdgeFileDownload = "FileDownload"
+	// EdgeFileExtract holds the string denoting the fileextract edge name in mutations.
+	EdgeFileExtract = "FileExtract"
+	// EdgeAnsible holds the string denoting the ansible edge name in mutations.
+	EdgeAnsible = "Ansible"
+	// EdgeAgentTask holds the string denoting the agenttask edge name in mutations.
+	EdgeAgentTask = "AgentTask"
+	// EdgePlan holds the string denoting the plan edge name in mutations.
+	EdgePlan = "Plan"
+	// EdgeGinFileMiddleware holds the string denoting the ginfilemiddleware edge name in mutations.
+	EdgeGinFileMiddleware = "GinFileMiddleware"
 	// Table holds the table name of the provisioningscheduledstep in the database.
 	Table = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToStatusTable is the table that holds the ProvisioningScheduledStepToStatus relation/edge.
-	ProvisioningScheduledStepToStatusTable = "status"
-	// ProvisioningScheduledStepToStatusInverseTable is the table name for the Status entity.
+	// StatusTable is the table that holds the Status relation/edge.
+	StatusTable = "status"
+	// StatusInverseTable is the table name for the Status entity.
 	// It exists in this package in order to avoid circular dependency with the "status" package.
-	ProvisioningScheduledStepToStatusInverseTable = "status"
-	// ProvisioningScheduledStepToStatusColumn is the table column denoting the ProvisioningScheduledStepToStatus relation/edge.
-	ProvisioningScheduledStepToStatusColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_status"
-	// ProvisioningScheduledStepToScheduledStepTable is the table that holds the ProvisioningScheduledStepToScheduledStep relation/edge.
-	ProvisioningScheduledStepToScheduledStepTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToScheduledStepInverseTable is the table name for the ScheduledStep entity.
+	StatusInverseTable = "status"
+	// StatusColumn is the table column denoting the Status relation/edge.
+	StatusColumn = "provisioning_scheduled_step_status"
+	// ScheduledStepTable is the table that holds the ScheduledStep relation/edge.
+	ScheduledStepTable = "provisioning_scheduled_steps"
+	// ScheduledStepInverseTable is the table name for the ScheduledStep entity.
 	// It exists in this package in order to avoid circular dependency with the "scheduledstep" package.
-	ProvisioningScheduledStepToScheduledStepInverseTable = "scheduled_steps"
-	// ProvisioningScheduledStepToScheduledStepColumn is the table column denoting the ProvisioningScheduledStepToScheduledStep relation/edge.
-	ProvisioningScheduledStepToScheduledStepColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_scheduled_step"
-	// ProvisioningScheduledStepToProvisionedHostTable is the table that holds the ProvisioningScheduledStepToProvisionedHost relation/edge.
-	ProvisioningScheduledStepToProvisionedHostTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
+	ScheduledStepInverseTable = "scheduled_steps"
+	// ScheduledStepColumn is the table column denoting the ScheduledStep relation/edge.
+	ScheduledStepColumn = "provisioning_scheduled_step_scheduled_step"
+	// ProvisionedHostTable is the table that holds the ProvisionedHost relation/edge.
+	ProvisionedHostTable = "provisioning_scheduled_steps"
+	// ProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
-	ProvisioningScheduledStepToProvisionedHostInverseTable = "provisioned_hosts"
-	// ProvisioningScheduledStepToProvisionedHostColumn is the table column denoting the ProvisioningScheduledStepToProvisionedHost relation/edge.
-	ProvisioningScheduledStepToProvisionedHostColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host"
-	// ProvisioningScheduledStepToScriptTable is the table that holds the ProvisioningScheduledStepToScript relation/edge.
-	ProvisioningScheduledStepToScriptTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToScriptInverseTable is the table name for the Script entity.
+	ProvisionedHostInverseTable = "provisioned_hosts"
+	// ProvisionedHostColumn is the table column denoting the ProvisionedHost relation/edge.
+	ProvisionedHostColumn = "provisioning_scheduled_step_provisioned_host"
+	// ScriptTable is the table that holds the Script relation/edge.
+	ScriptTable = "provisioning_scheduled_steps"
+	// ScriptInverseTable is the table name for the Script entity.
 	// It exists in this package in order to avoid circular dependency with the "script" package.
-	ProvisioningScheduledStepToScriptInverseTable = "scripts"
-	// ProvisioningScheduledStepToScriptColumn is the table column denoting the ProvisioningScheduledStepToScript relation/edge.
-	ProvisioningScheduledStepToScriptColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_script"
-	// ProvisioningScheduledStepToCommandTable is the table that holds the ProvisioningScheduledStepToCommand relation/edge.
-	ProvisioningScheduledStepToCommandTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToCommandInverseTable is the table name for the Command entity.
+	ScriptInverseTable = "scripts"
+	// ScriptColumn is the table column denoting the Script relation/edge.
+	ScriptColumn = "provisioning_scheduled_step_script"
+	// CommandTable is the table that holds the Command relation/edge.
+	CommandTable = "provisioning_scheduled_steps"
+	// CommandInverseTable is the table name for the Command entity.
 	// It exists in this package in order to avoid circular dependency with the "command" package.
-	ProvisioningScheduledStepToCommandInverseTable = "commands"
-	// ProvisioningScheduledStepToCommandColumn is the table column denoting the ProvisioningScheduledStepToCommand relation/edge.
-	ProvisioningScheduledStepToCommandColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_command"
-	// ProvisioningScheduledStepToDNSRecordTable is the table that holds the ProvisioningScheduledStepToDNSRecord relation/edge.
-	ProvisioningScheduledStepToDNSRecordTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToDNSRecordInverseTable is the table name for the DNSRecord entity.
+	CommandInverseTable = "commands"
+	// CommandColumn is the table column denoting the Command relation/edge.
+	CommandColumn = "provisioning_scheduled_step_command"
+	// DNSRecordTable is the table that holds the DNSRecord relation/edge.
+	DNSRecordTable = "provisioning_scheduled_steps"
+	// DNSRecordInverseTable is the table name for the DNSRecord entity.
 	// It exists in this package in order to avoid circular dependency with the "dnsrecord" package.
-	ProvisioningScheduledStepToDNSRecordInverseTable = "dns_records"
-	// ProvisioningScheduledStepToDNSRecordColumn is the table column denoting the ProvisioningScheduledStepToDNSRecord relation/edge.
-	ProvisioningScheduledStepToDNSRecordColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_dns_record"
-	// ProvisioningScheduledStepToFileDeleteTable is the table that holds the ProvisioningScheduledStepToFileDelete relation/edge.
-	ProvisioningScheduledStepToFileDeleteTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToFileDeleteInverseTable is the table name for the FileDelete entity.
+	DNSRecordInverseTable = "dns_records"
+	// DNSRecordColumn is the table column denoting the DNSRecord relation/edge.
+	DNSRecordColumn = "provisioning_scheduled_step_dns_record"
+	// FileDeleteTable is the table that holds the FileDelete relation/edge.
+	FileDeleteTable = "provisioning_scheduled_steps"
+	// FileDeleteInverseTable is the table name for the FileDelete entity.
 	// It exists in this package in order to avoid circular dependency with the "filedelete" package.
-	ProvisioningScheduledStepToFileDeleteInverseTable = "file_deletes"
-	// ProvisioningScheduledStepToFileDeleteColumn is the table column denoting the ProvisioningScheduledStepToFileDelete relation/edge.
-	ProvisioningScheduledStepToFileDeleteColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_file_delete"
-	// ProvisioningScheduledStepToFileDownloadTable is the table that holds the ProvisioningScheduledStepToFileDownload relation/edge.
-	ProvisioningScheduledStepToFileDownloadTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToFileDownloadInverseTable is the table name for the FileDownload entity.
+	FileDeleteInverseTable = "file_deletes"
+	// FileDeleteColumn is the table column denoting the FileDelete relation/edge.
+	FileDeleteColumn = "provisioning_scheduled_step_file_delete"
+	// FileDownloadTable is the table that holds the FileDownload relation/edge.
+	FileDownloadTable = "provisioning_scheduled_steps"
+	// FileDownloadInverseTable is the table name for the FileDownload entity.
 	// It exists in this package in order to avoid circular dependency with the "filedownload" package.
-	ProvisioningScheduledStepToFileDownloadInverseTable = "file_downloads"
-	// ProvisioningScheduledStepToFileDownloadColumn is the table column denoting the ProvisioningScheduledStepToFileDownload relation/edge.
-	ProvisioningScheduledStepToFileDownloadColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_file_download"
-	// ProvisioningScheduledStepToFileExtractTable is the table that holds the ProvisioningScheduledStepToFileExtract relation/edge.
-	ProvisioningScheduledStepToFileExtractTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToFileExtractInverseTable is the table name for the FileExtract entity.
+	FileDownloadInverseTable = "file_downloads"
+	// FileDownloadColumn is the table column denoting the FileDownload relation/edge.
+	FileDownloadColumn = "provisioning_scheduled_step_file_download"
+	// FileExtractTable is the table that holds the FileExtract relation/edge.
+	FileExtractTable = "provisioning_scheduled_steps"
+	// FileExtractInverseTable is the table name for the FileExtract entity.
 	// It exists in this package in order to avoid circular dependency with the "fileextract" package.
-	ProvisioningScheduledStepToFileExtractInverseTable = "file_extracts"
-	// ProvisioningScheduledStepToFileExtractColumn is the table column denoting the ProvisioningScheduledStepToFileExtract relation/edge.
-	ProvisioningScheduledStepToFileExtractColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_file_extract"
-	// ProvisioningScheduledStepToAnsibleTable is the table that holds the ProvisioningScheduledStepToAnsible relation/edge.
-	ProvisioningScheduledStepToAnsibleTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToAnsibleInverseTable is the table name for the Ansible entity.
+	FileExtractInverseTable = "file_extracts"
+	// FileExtractColumn is the table column denoting the FileExtract relation/edge.
+	FileExtractColumn = "provisioning_scheduled_step_file_extract"
+	// AnsibleTable is the table that holds the Ansible relation/edge.
+	AnsibleTable = "provisioning_scheduled_steps"
+	// AnsibleInverseTable is the table name for the Ansible entity.
 	// It exists in this package in order to avoid circular dependency with the "ansible" package.
-	ProvisioningScheduledStepToAnsibleInverseTable = "ansibles"
-	// ProvisioningScheduledStepToAnsibleColumn is the table column denoting the ProvisioningScheduledStepToAnsible relation/edge.
-	ProvisioningScheduledStepToAnsibleColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_ansible"
-	// ProvisioningScheduledStepToAgentTaskTable is the table that holds the ProvisioningScheduledStepToAgentTask relation/edge.
-	ProvisioningScheduledStepToAgentTaskTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToAgentTaskInverseTable is the table name for the AgentTask entity.
+	AnsibleInverseTable = "ansibles"
+	// AnsibleColumn is the table column denoting the Ansible relation/edge.
+	AnsibleColumn = "provisioning_scheduled_step_ansible"
+	// AgentTaskTable is the table that holds the AgentTask relation/edge.
+	AgentTaskTable = "provisioning_scheduled_steps"
+	// AgentTaskInverseTable is the table name for the AgentTask entity.
 	// It exists in this package in order to avoid circular dependency with the "agenttask" package.
-	ProvisioningScheduledStepToAgentTaskInverseTable = "agent_tasks"
-	// ProvisioningScheduledStepToAgentTaskColumn is the table column denoting the ProvisioningScheduledStepToAgentTask relation/edge.
-	ProvisioningScheduledStepToAgentTaskColumn = "agent_task_agent_task_to_provisioning_scheduled_step"
-	// ProvisioningStepToPlanTable is the table that holds the ProvisioningStepToPlan relation/edge.
-	ProvisioningStepToPlanTable = "provisioning_scheduled_steps"
-	// ProvisioningStepToPlanInverseTable is the table name for the Plan entity.
+	AgentTaskInverseTable = "agent_tasks"
+	// AgentTaskColumn is the table column denoting the AgentTask relation/edge.
+	AgentTaskColumn = "agent_task_agent_task_to_provisioning_scheduled_step"
+	// PlanTable is the table that holds the Plan relation/edge.
+	PlanTable = "provisioning_scheduled_steps"
+	// PlanInverseTable is the table name for the Plan entity.
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
-	ProvisioningStepToPlanInverseTable = "plans"
-	// ProvisioningStepToPlanColumn is the table column denoting the ProvisioningStepToPlan relation/edge.
-	ProvisioningStepToPlanColumn = "plan_plan_to_provisioning_scheduled_step"
-	// ProvisioningScheduledStepToGinFileMiddlewareTable is the table that holds the ProvisioningScheduledStepToGinFileMiddleware relation/edge.
-	ProvisioningScheduledStepToGinFileMiddlewareTable = "provisioning_scheduled_steps"
-	// ProvisioningScheduledStepToGinFileMiddlewareInverseTable is the table name for the GinFileMiddleware entity.
+	PlanInverseTable = "plans"
+	// PlanColumn is the table column denoting the Plan relation/edge.
+	PlanColumn = "plan_plan_to_provisioning_scheduled_step"
+	// GinFileMiddlewareTable is the table that holds the GinFileMiddleware relation/edge.
+	GinFileMiddlewareTable = "provisioning_scheduled_steps"
+	// GinFileMiddlewareInverseTable is the table name for the GinFileMiddleware entity.
 	// It exists in this package in order to avoid circular dependency with the "ginfilemiddleware" package.
-	ProvisioningScheduledStepToGinFileMiddlewareInverseTable = "gin_file_middlewares"
-	// ProvisioningScheduledStepToGinFileMiddlewareColumn is the table column denoting the ProvisioningScheduledStepToGinFileMiddleware relation/edge.
-	ProvisioningScheduledStepToGinFileMiddlewareColumn = "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step"
+	GinFileMiddlewareInverseTable = "gin_file_middlewares"
+	// GinFileMiddlewareColumn is the table column denoting the GinFileMiddleware relation/edge.
+	GinFileMiddlewareColumn = "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step"
 )
 
 // Columns holds all SQL columns for provisioningscheduledstep fields.
@@ -153,15 +153,15 @@ var ForeignKeys = []string{
 	"agent_task_agent_task_to_provisioning_scheduled_step",
 	"gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step",
 	"plan_plan_to_provisioning_scheduled_step",
-	"provisioning_scheduled_step_provisioning_scheduled_step_to_scheduled_step",
-	"provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host",
-	"provisioning_scheduled_step_provisioning_scheduled_step_to_script",
-	"provisioning_scheduled_step_provisioning_scheduled_step_to_command",
-	"provisioning_scheduled_step_provisioning_scheduled_step_to_dns_record",
-	"provisioning_scheduled_step_provisioning_scheduled_step_to_file_delete",
-	"provisioning_scheduled_step_provisioning_scheduled_step_to_file_download",
-	"provisioning_scheduled_step_provisioning_scheduled_step_to_file_extract",
-	"provisioning_scheduled_step_provisioning_scheduled_step_to_ansible",
+	"provisioning_scheduled_step_scheduled_step",
+	"provisioning_scheduled_step_provisioned_host",
+	"provisioning_scheduled_step_script",
+	"provisioning_scheduled_step_command",
+	"provisioning_scheduled_step_dns_record",
+	"provisioning_scheduled_step_file_delete",
+	"provisioning_scheduled_step_file_download",
+	"provisioning_scheduled_step_file_extract",
+	"provisioning_scheduled_step_ansible",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

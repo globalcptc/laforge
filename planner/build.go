@@ -1150,11 +1150,11 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 }
 
 func startScheduledStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, ctx context.Context, entProvisioningScheduledStep *ent.ProvisioningScheduledStep) error {
-	entScheduledStep, err := entProvisioningScheduledStep.QueryProvisioningScheduledStepToScheduledStep().Only(ctx)
+	entScheduledStep, err := entProvisioningScheduledStep.QueryScheduledStep().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query scheduled step from provisioning scheduled step: %v", err)
 	}
-	entStatus, err := entProvisioningScheduledStep.QueryProvisioningScheduledStepToStatus().Only(ctx)
+	entStatus, err := entProvisioningScheduledStep.QueryStatus().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query status from provisioning scheduled step: %v", err)
 	}

@@ -280,7 +280,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 		if getStatusError != nil {
 			break
 		}
-		provisionedStatus, getStatusError = step.QueryProvisioningScheduledStepToStatus().Only(ctx)
+		provisionedStatus, getStatusError = step.QueryStatus().Only(ctx)
 	default:
 		break
 	}
@@ -461,7 +461,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 		if deleteErr != nil {
 			break
 		}
-		ginFileMiddleware, deleteErr := step.QueryProvisioningScheduledStepToGinFileMiddleware().Only(ctx)
+		ginFileMiddleware, deleteErr := step.QueryGinFileMiddleware().Only(ctx)
 		if deleteErr != nil {
 			break
 		}

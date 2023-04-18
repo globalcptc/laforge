@@ -131,7 +131,7 @@ func createProvisioningScheduleStep(ctx context.Context, client *ent.Client, ent
 				return fmt.Errorf("failed to generate provisioning scheduled step by type: %v", err)
 			}
 			err = entProvisionedScheduleStepCreate.
-				SetProvisioningScheduledStepToProvisionedHost(entProvisionedHost).
+				SetProvisionedHost(entProvisionedHost).
 				SetRunTime(runTime).
 				// SetProvisioningScheduleStepToStatus(entStatus)
 				Exec(ctx)
@@ -182,7 +182,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a script
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeScript).
-			SetProvisioningScheduledStepToScript(entScript), nil
+			SetScript(entScript), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for script based on hcl_id from scheduled step: %v", err)
 	}
@@ -199,7 +199,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a command
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeCommand).
-			SetProvisioningScheduledStepToCommand(entCommand), nil
+			SetCommand(entCommand), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for command based on hcl_id from scheduled step: %v", err)
 	}
@@ -216,7 +216,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a file download
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeFileDownload).
-			SetProvisioningScheduledStepToFileDownload(entFileDownload), nil
+			SetFileDownload(entFileDownload), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for file download based on hcl_id from scheduled step: %v", err)
 	}
@@ -233,7 +233,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a file extract
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeFileExtract).
-			SetProvisioningScheduledStepToFileExtract(entFileExtract), nil
+			SetFileExtract(entFileExtract), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for file extract based on hcl_id from scheduled step: %v", err)
 	}
@@ -250,7 +250,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a file delete
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeFileDelete).
-			SetProvisioningScheduledStepToFileDelete(entFileDelete), nil
+			SetFileDelete(entFileDelete), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for file delete based on hcl_id from scheduled step: %v", err)
 	}
@@ -267,7 +267,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a dns record
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeDNSRecord).
-			SetProvisioningScheduledStepToDNSRecord(entDNSRecord), nil
+			SetDNSRecord(entDNSRecord), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for dns record based on hcl_id from scheduled step: %v", err)
 	}
@@ -284,7 +284,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a ansible
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeAnsible).
-			SetProvisioningScheduledStepToAnsible(entAnsible), nil
+			SetAnsible(entAnsible), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for ansible based on hcl_id from scheduled step: %v", err)
 	}

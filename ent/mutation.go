@@ -25499,41 +25499,41 @@ func (m *ProvisionedNetworkMutation) ResetEdge(name string) error {
 // ProvisioningScheduledStepMutation represents an operation that mutates the ProvisioningScheduledStep nodes in the graph.
 type ProvisioningScheduledStepMutation struct {
 	config
-	op                                                   Op
-	typ                                                  string
-	id                                                   *uuid.UUID
-	_type                                                *provisioningscheduledstep.Type
-	run_time                                             *time.Time
-	clearedFields                                        map[string]struct{}
-	_ProvisioningScheduledStepToStatus                   *uuid.UUID
-	cleared_ProvisioningScheduledStepToStatus            bool
-	_ProvisioningScheduledStepToScheduledStep            *uuid.UUID
-	cleared_ProvisioningScheduledStepToScheduledStep     bool
-	_ProvisioningScheduledStepToProvisionedHost          *uuid.UUID
-	cleared_ProvisioningScheduledStepToProvisionedHost   bool
-	_ProvisioningScheduledStepToScript                   *uuid.UUID
-	cleared_ProvisioningScheduledStepToScript            bool
-	_ProvisioningScheduledStepToCommand                  *uuid.UUID
-	cleared_ProvisioningScheduledStepToCommand           bool
-	_ProvisioningScheduledStepToDNSRecord                *uuid.UUID
-	cleared_ProvisioningScheduledStepToDNSRecord         bool
-	_ProvisioningScheduledStepToFileDelete               *uuid.UUID
-	cleared_ProvisioningScheduledStepToFileDelete        bool
-	_ProvisioningScheduledStepToFileDownload             *uuid.UUID
-	cleared_ProvisioningScheduledStepToFileDownload      bool
-	_ProvisioningScheduledStepToFileExtract              *uuid.UUID
-	cleared_ProvisioningScheduledStepToFileExtract       bool
-	_ProvisioningScheduledStepToAnsible                  *uuid.UUID
-	cleared_ProvisioningScheduledStepToAnsible           bool
-	_ProvisioningScheduledStepToAgentTask                *uuid.UUID
-	cleared_ProvisioningScheduledStepToAgentTask         bool
-	_ProvisioningStepToPlan                              *uuid.UUID
-	cleared_ProvisioningStepToPlan                       bool
-	_ProvisioningScheduledStepToGinFileMiddleware        *uuid.UUID
-	cleared_ProvisioningScheduledStepToGinFileMiddleware bool
-	done                                                 bool
-	oldValue                                             func(context.Context) (*ProvisioningScheduledStep, error)
-	predicates                                           []predicate.ProvisioningScheduledStep
+	op                        Op
+	typ                       string
+	id                        *uuid.UUID
+	_type                     *provisioningscheduledstep.Type
+	run_time                  *time.Time
+	clearedFields             map[string]struct{}
+	_Status                   *uuid.UUID
+	cleared_Status            bool
+	_ScheduledStep            *uuid.UUID
+	cleared_ScheduledStep     bool
+	_ProvisionedHost          *uuid.UUID
+	cleared_ProvisionedHost   bool
+	_Script                   *uuid.UUID
+	cleared_Script            bool
+	_Command                  *uuid.UUID
+	cleared_Command           bool
+	_DNSRecord                *uuid.UUID
+	cleared_DNSRecord         bool
+	_FileDelete               *uuid.UUID
+	cleared_FileDelete        bool
+	_FileDownload             *uuid.UUID
+	cleared_FileDownload      bool
+	_FileExtract              *uuid.UUID
+	cleared_FileExtract       bool
+	_Ansible                  *uuid.UUID
+	cleared_Ansible           bool
+	_AgentTask                *uuid.UUID
+	cleared_AgentTask         bool
+	_Plan                     *uuid.UUID
+	cleared_Plan              bool
+	_GinFileMiddleware        *uuid.UUID
+	cleared_GinFileMiddleware bool
+	done                      bool
+	oldValue                  func(context.Context) (*ProvisioningScheduledStep, error)
+	predicates                []predicate.ProvisioningScheduledStep
 }
 
 var _ ent.Mutation = (*ProvisioningScheduledStepMutation)(nil)
@@ -25712,511 +25712,511 @@ func (m *ProvisioningScheduledStepMutation) ResetRunTime() {
 	m.run_time = nil
 }
 
-// SetProvisioningScheduledStepToStatusID sets the "ProvisioningScheduledStepToStatus" edge to the Status entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToStatusID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToStatus = &id
+// SetStatusID sets the "Status" edge to the Status entity by id.
+func (m *ProvisioningScheduledStepMutation) SetStatusID(id uuid.UUID) {
+	m._Status = &id
 }
 
-// ClearProvisioningScheduledStepToStatus clears the "ProvisioningScheduledStepToStatus" edge to the Status entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToStatus() {
-	m.cleared_ProvisioningScheduledStepToStatus = true
+// ClearStatus clears the "Status" edge to the Status entity.
+func (m *ProvisioningScheduledStepMutation) ClearStatus() {
+	m.cleared_Status = true
 }
 
-// ProvisioningScheduledStepToStatusCleared reports if the "ProvisioningScheduledStepToStatus" edge to the Status entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToStatusCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToStatus
+// StatusCleared reports if the "Status" edge to the Status entity was cleared.
+func (m *ProvisioningScheduledStepMutation) StatusCleared() bool {
+	return m.cleared_Status
 }
 
-// ProvisioningScheduledStepToStatusID returns the "ProvisioningScheduledStepToStatus" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToStatusID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToStatus != nil {
-		return *m._ProvisioningScheduledStepToStatus, true
+// StatusID returns the "Status" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) StatusID() (id uuid.UUID, exists bool) {
+	if m._Status != nil {
+		return *m._Status, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToStatusIDs returns the "ProvisioningScheduledStepToStatus" edge IDs in the mutation.
+// StatusIDs returns the "Status" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToStatusID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToStatusIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToStatus; id != nil {
+// StatusID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) StatusIDs() (ids []uuid.UUID) {
+	if id := m._Status; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToStatus resets all changes to the "ProvisioningScheduledStepToStatus" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToStatus() {
-	m._ProvisioningScheduledStepToStatus = nil
-	m.cleared_ProvisioningScheduledStepToStatus = false
+// ResetStatus resets all changes to the "Status" edge.
+func (m *ProvisioningScheduledStepMutation) ResetStatus() {
+	m._Status = nil
+	m.cleared_Status = false
 }
 
-// SetProvisioningScheduledStepToScheduledStepID sets the "ProvisioningScheduledStepToScheduledStep" edge to the ScheduledStep entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToScheduledStepID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToScheduledStep = &id
+// SetScheduledStepID sets the "ScheduledStep" edge to the ScheduledStep entity by id.
+func (m *ProvisioningScheduledStepMutation) SetScheduledStepID(id uuid.UUID) {
+	m._ScheduledStep = &id
 }
 
-// ClearProvisioningScheduledStepToScheduledStep clears the "ProvisioningScheduledStepToScheduledStep" edge to the ScheduledStep entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToScheduledStep() {
-	m.cleared_ProvisioningScheduledStepToScheduledStep = true
+// ClearScheduledStep clears the "ScheduledStep" edge to the ScheduledStep entity.
+func (m *ProvisioningScheduledStepMutation) ClearScheduledStep() {
+	m.cleared_ScheduledStep = true
 }
 
-// ProvisioningScheduledStepToScheduledStepCleared reports if the "ProvisioningScheduledStepToScheduledStep" edge to the ScheduledStep entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToScheduledStepCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToScheduledStep
+// ScheduledStepCleared reports if the "ScheduledStep" edge to the ScheduledStep entity was cleared.
+func (m *ProvisioningScheduledStepMutation) ScheduledStepCleared() bool {
+	return m.cleared_ScheduledStep
 }
 
-// ProvisioningScheduledStepToScheduledStepID returns the "ProvisioningScheduledStepToScheduledStep" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToScheduledStepID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToScheduledStep != nil {
-		return *m._ProvisioningScheduledStepToScheduledStep, true
+// ScheduledStepID returns the "ScheduledStep" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) ScheduledStepID() (id uuid.UUID, exists bool) {
+	if m._ScheduledStep != nil {
+		return *m._ScheduledStep, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToScheduledStepIDs returns the "ProvisioningScheduledStepToScheduledStep" edge IDs in the mutation.
+// ScheduledStepIDs returns the "ScheduledStep" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToScheduledStepID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToScheduledStepIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToScheduledStep; id != nil {
+// ScheduledStepID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) ScheduledStepIDs() (ids []uuid.UUID) {
+	if id := m._ScheduledStep; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToScheduledStep resets all changes to the "ProvisioningScheduledStepToScheduledStep" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToScheduledStep() {
-	m._ProvisioningScheduledStepToScheduledStep = nil
-	m.cleared_ProvisioningScheduledStepToScheduledStep = false
+// ResetScheduledStep resets all changes to the "ScheduledStep" edge.
+func (m *ProvisioningScheduledStepMutation) ResetScheduledStep() {
+	m._ScheduledStep = nil
+	m.cleared_ScheduledStep = false
 }
 
-// SetProvisioningScheduledStepToProvisionedHostID sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToProvisionedHostID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToProvisionedHost = &id
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by id.
+func (m *ProvisioningScheduledStepMutation) SetProvisionedHostID(id uuid.UUID) {
+	m._ProvisionedHost = &id
 }
 
-// ClearProvisioningScheduledStepToProvisionedHost clears the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToProvisionedHost() {
-	m.cleared_ProvisioningScheduledStepToProvisionedHost = true
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (m *ProvisioningScheduledStepMutation) ClearProvisionedHost() {
+	m.cleared_ProvisionedHost = true
 }
 
-// ProvisioningScheduledStepToProvisionedHostCleared reports if the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToProvisionedHostCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToProvisionedHost
+// ProvisionedHostCleared reports if the "ProvisionedHost" edge to the ProvisionedHost entity was cleared.
+func (m *ProvisioningScheduledStepMutation) ProvisionedHostCleared() bool {
+	return m.cleared_ProvisionedHost
 }
 
-// ProvisioningScheduledStepToProvisionedHostID returns the "ProvisioningScheduledStepToProvisionedHost" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToProvisionedHostID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToProvisionedHost != nil {
-		return *m._ProvisioningScheduledStepToProvisionedHost, true
+// ProvisionedHostID returns the "ProvisionedHost" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) ProvisionedHostID() (id uuid.UUID, exists bool) {
+	if m._ProvisionedHost != nil {
+		return *m._ProvisionedHost, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToProvisionedHostIDs returns the "ProvisioningScheduledStepToProvisionedHost" edge IDs in the mutation.
+// ProvisionedHostIDs returns the "ProvisionedHost" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToProvisionedHostID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToProvisionedHostIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToProvisionedHost; id != nil {
+// ProvisionedHostID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) ProvisionedHostIDs() (ids []uuid.UUID) {
+	if id := m._ProvisionedHost; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToProvisionedHost resets all changes to the "ProvisioningScheduledStepToProvisionedHost" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToProvisionedHost() {
-	m._ProvisioningScheduledStepToProvisionedHost = nil
-	m.cleared_ProvisioningScheduledStepToProvisionedHost = false
+// ResetProvisionedHost resets all changes to the "ProvisionedHost" edge.
+func (m *ProvisioningScheduledStepMutation) ResetProvisionedHost() {
+	m._ProvisionedHost = nil
+	m.cleared_ProvisionedHost = false
 }
 
-// SetProvisioningScheduledStepToScriptID sets the "ProvisioningScheduledStepToScript" edge to the Script entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToScriptID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToScript = &id
+// SetScriptID sets the "Script" edge to the Script entity by id.
+func (m *ProvisioningScheduledStepMutation) SetScriptID(id uuid.UUID) {
+	m._Script = &id
 }
 
-// ClearProvisioningScheduledStepToScript clears the "ProvisioningScheduledStepToScript" edge to the Script entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToScript() {
-	m.cleared_ProvisioningScheduledStepToScript = true
+// ClearScript clears the "Script" edge to the Script entity.
+func (m *ProvisioningScheduledStepMutation) ClearScript() {
+	m.cleared_Script = true
 }
 
-// ProvisioningScheduledStepToScriptCleared reports if the "ProvisioningScheduledStepToScript" edge to the Script entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToScriptCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToScript
+// ScriptCleared reports if the "Script" edge to the Script entity was cleared.
+func (m *ProvisioningScheduledStepMutation) ScriptCleared() bool {
+	return m.cleared_Script
 }
 
-// ProvisioningScheduledStepToScriptID returns the "ProvisioningScheduledStepToScript" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToScriptID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToScript != nil {
-		return *m._ProvisioningScheduledStepToScript, true
+// ScriptID returns the "Script" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) ScriptID() (id uuid.UUID, exists bool) {
+	if m._Script != nil {
+		return *m._Script, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToScriptIDs returns the "ProvisioningScheduledStepToScript" edge IDs in the mutation.
+// ScriptIDs returns the "Script" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToScriptID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToScriptIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToScript; id != nil {
+// ScriptID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) ScriptIDs() (ids []uuid.UUID) {
+	if id := m._Script; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToScript resets all changes to the "ProvisioningScheduledStepToScript" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToScript() {
-	m._ProvisioningScheduledStepToScript = nil
-	m.cleared_ProvisioningScheduledStepToScript = false
+// ResetScript resets all changes to the "Script" edge.
+func (m *ProvisioningScheduledStepMutation) ResetScript() {
+	m._Script = nil
+	m.cleared_Script = false
 }
 
-// SetProvisioningScheduledStepToCommandID sets the "ProvisioningScheduledStepToCommand" edge to the Command entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToCommandID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToCommand = &id
+// SetCommandID sets the "Command" edge to the Command entity by id.
+func (m *ProvisioningScheduledStepMutation) SetCommandID(id uuid.UUID) {
+	m._Command = &id
 }
 
-// ClearProvisioningScheduledStepToCommand clears the "ProvisioningScheduledStepToCommand" edge to the Command entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToCommand() {
-	m.cleared_ProvisioningScheduledStepToCommand = true
+// ClearCommand clears the "Command" edge to the Command entity.
+func (m *ProvisioningScheduledStepMutation) ClearCommand() {
+	m.cleared_Command = true
 }
 
-// ProvisioningScheduledStepToCommandCleared reports if the "ProvisioningScheduledStepToCommand" edge to the Command entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToCommandCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToCommand
+// CommandCleared reports if the "Command" edge to the Command entity was cleared.
+func (m *ProvisioningScheduledStepMutation) CommandCleared() bool {
+	return m.cleared_Command
 }
 
-// ProvisioningScheduledStepToCommandID returns the "ProvisioningScheduledStepToCommand" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToCommandID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToCommand != nil {
-		return *m._ProvisioningScheduledStepToCommand, true
+// CommandID returns the "Command" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) CommandID() (id uuid.UUID, exists bool) {
+	if m._Command != nil {
+		return *m._Command, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToCommandIDs returns the "ProvisioningScheduledStepToCommand" edge IDs in the mutation.
+// CommandIDs returns the "Command" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToCommandID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToCommandIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToCommand; id != nil {
+// CommandID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) CommandIDs() (ids []uuid.UUID) {
+	if id := m._Command; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToCommand resets all changes to the "ProvisioningScheduledStepToCommand" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToCommand() {
-	m._ProvisioningScheduledStepToCommand = nil
-	m.cleared_ProvisioningScheduledStepToCommand = false
+// ResetCommand resets all changes to the "Command" edge.
+func (m *ProvisioningScheduledStepMutation) ResetCommand() {
+	m._Command = nil
+	m.cleared_Command = false
 }
 
-// SetProvisioningScheduledStepToDNSRecordID sets the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToDNSRecordID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToDNSRecord = &id
+// SetDNSRecordID sets the "DNSRecord" edge to the DNSRecord entity by id.
+func (m *ProvisioningScheduledStepMutation) SetDNSRecordID(id uuid.UUID) {
+	m._DNSRecord = &id
 }
 
-// ClearProvisioningScheduledStepToDNSRecord clears the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToDNSRecord() {
-	m.cleared_ProvisioningScheduledStepToDNSRecord = true
+// ClearDNSRecord clears the "DNSRecord" edge to the DNSRecord entity.
+func (m *ProvisioningScheduledStepMutation) ClearDNSRecord() {
+	m.cleared_DNSRecord = true
 }
 
-// ProvisioningScheduledStepToDNSRecordCleared reports if the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToDNSRecordCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToDNSRecord
+// DNSRecordCleared reports if the "DNSRecord" edge to the DNSRecord entity was cleared.
+func (m *ProvisioningScheduledStepMutation) DNSRecordCleared() bool {
+	return m.cleared_DNSRecord
 }
 
-// ProvisioningScheduledStepToDNSRecordID returns the "ProvisioningScheduledStepToDNSRecord" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToDNSRecordID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToDNSRecord != nil {
-		return *m._ProvisioningScheduledStepToDNSRecord, true
+// DNSRecordID returns the "DNSRecord" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) DNSRecordID() (id uuid.UUID, exists bool) {
+	if m._DNSRecord != nil {
+		return *m._DNSRecord, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToDNSRecordIDs returns the "ProvisioningScheduledStepToDNSRecord" edge IDs in the mutation.
+// DNSRecordIDs returns the "DNSRecord" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToDNSRecordID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToDNSRecordIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToDNSRecord; id != nil {
+// DNSRecordID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) DNSRecordIDs() (ids []uuid.UUID) {
+	if id := m._DNSRecord; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToDNSRecord resets all changes to the "ProvisioningScheduledStepToDNSRecord" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToDNSRecord() {
-	m._ProvisioningScheduledStepToDNSRecord = nil
-	m.cleared_ProvisioningScheduledStepToDNSRecord = false
+// ResetDNSRecord resets all changes to the "DNSRecord" edge.
+func (m *ProvisioningScheduledStepMutation) ResetDNSRecord() {
+	m._DNSRecord = nil
+	m.cleared_DNSRecord = false
 }
 
-// SetProvisioningScheduledStepToFileDeleteID sets the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToFileDeleteID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToFileDelete = &id
+// SetFileDeleteID sets the "FileDelete" edge to the FileDelete entity by id.
+func (m *ProvisioningScheduledStepMutation) SetFileDeleteID(id uuid.UUID) {
+	m._FileDelete = &id
 }
 
-// ClearProvisioningScheduledStepToFileDelete clears the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToFileDelete() {
-	m.cleared_ProvisioningScheduledStepToFileDelete = true
+// ClearFileDelete clears the "FileDelete" edge to the FileDelete entity.
+func (m *ProvisioningScheduledStepMutation) ClearFileDelete() {
+	m.cleared_FileDelete = true
 }
 
-// ProvisioningScheduledStepToFileDeleteCleared reports if the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToFileDeleteCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToFileDelete
+// FileDeleteCleared reports if the "FileDelete" edge to the FileDelete entity was cleared.
+func (m *ProvisioningScheduledStepMutation) FileDeleteCleared() bool {
+	return m.cleared_FileDelete
 }
 
-// ProvisioningScheduledStepToFileDeleteID returns the "ProvisioningScheduledStepToFileDelete" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToFileDeleteID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToFileDelete != nil {
-		return *m._ProvisioningScheduledStepToFileDelete, true
+// FileDeleteID returns the "FileDelete" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) FileDeleteID() (id uuid.UUID, exists bool) {
+	if m._FileDelete != nil {
+		return *m._FileDelete, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToFileDeleteIDs returns the "ProvisioningScheduledStepToFileDelete" edge IDs in the mutation.
+// FileDeleteIDs returns the "FileDelete" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToFileDeleteID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToFileDeleteIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToFileDelete; id != nil {
+// FileDeleteID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) FileDeleteIDs() (ids []uuid.UUID) {
+	if id := m._FileDelete; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToFileDelete resets all changes to the "ProvisioningScheduledStepToFileDelete" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToFileDelete() {
-	m._ProvisioningScheduledStepToFileDelete = nil
-	m.cleared_ProvisioningScheduledStepToFileDelete = false
+// ResetFileDelete resets all changes to the "FileDelete" edge.
+func (m *ProvisioningScheduledStepMutation) ResetFileDelete() {
+	m._FileDelete = nil
+	m.cleared_FileDelete = false
 }
 
-// SetProvisioningScheduledStepToFileDownloadID sets the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToFileDownloadID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToFileDownload = &id
+// SetFileDownloadID sets the "FileDownload" edge to the FileDownload entity by id.
+func (m *ProvisioningScheduledStepMutation) SetFileDownloadID(id uuid.UUID) {
+	m._FileDownload = &id
 }
 
-// ClearProvisioningScheduledStepToFileDownload clears the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToFileDownload() {
-	m.cleared_ProvisioningScheduledStepToFileDownload = true
+// ClearFileDownload clears the "FileDownload" edge to the FileDownload entity.
+func (m *ProvisioningScheduledStepMutation) ClearFileDownload() {
+	m.cleared_FileDownload = true
 }
 
-// ProvisioningScheduledStepToFileDownloadCleared reports if the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToFileDownloadCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToFileDownload
+// FileDownloadCleared reports if the "FileDownload" edge to the FileDownload entity was cleared.
+func (m *ProvisioningScheduledStepMutation) FileDownloadCleared() bool {
+	return m.cleared_FileDownload
 }
 
-// ProvisioningScheduledStepToFileDownloadID returns the "ProvisioningScheduledStepToFileDownload" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToFileDownloadID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToFileDownload != nil {
-		return *m._ProvisioningScheduledStepToFileDownload, true
+// FileDownloadID returns the "FileDownload" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) FileDownloadID() (id uuid.UUID, exists bool) {
+	if m._FileDownload != nil {
+		return *m._FileDownload, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToFileDownloadIDs returns the "ProvisioningScheduledStepToFileDownload" edge IDs in the mutation.
+// FileDownloadIDs returns the "FileDownload" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToFileDownloadID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToFileDownloadIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToFileDownload; id != nil {
+// FileDownloadID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) FileDownloadIDs() (ids []uuid.UUID) {
+	if id := m._FileDownload; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToFileDownload resets all changes to the "ProvisioningScheduledStepToFileDownload" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToFileDownload() {
-	m._ProvisioningScheduledStepToFileDownload = nil
-	m.cleared_ProvisioningScheduledStepToFileDownload = false
+// ResetFileDownload resets all changes to the "FileDownload" edge.
+func (m *ProvisioningScheduledStepMutation) ResetFileDownload() {
+	m._FileDownload = nil
+	m.cleared_FileDownload = false
 }
 
-// SetProvisioningScheduledStepToFileExtractID sets the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToFileExtractID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToFileExtract = &id
+// SetFileExtractID sets the "FileExtract" edge to the FileExtract entity by id.
+func (m *ProvisioningScheduledStepMutation) SetFileExtractID(id uuid.UUID) {
+	m._FileExtract = &id
 }
 
-// ClearProvisioningScheduledStepToFileExtract clears the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToFileExtract() {
-	m.cleared_ProvisioningScheduledStepToFileExtract = true
+// ClearFileExtract clears the "FileExtract" edge to the FileExtract entity.
+func (m *ProvisioningScheduledStepMutation) ClearFileExtract() {
+	m.cleared_FileExtract = true
 }
 
-// ProvisioningScheduledStepToFileExtractCleared reports if the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToFileExtractCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToFileExtract
+// FileExtractCleared reports if the "FileExtract" edge to the FileExtract entity was cleared.
+func (m *ProvisioningScheduledStepMutation) FileExtractCleared() bool {
+	return m.cleared_FileExtract
 }
 
-// ProvisioningScheduledStepToFileExtractID returns the "ProvisioningScheduledStepToFileExtract" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToFileExtractID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToFileExtract != nil {
-		return *m._ProvisioningScheduledStepToFileExtract, true
+// FileExtractID returns the "FileExtract" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) FileExtractID() (id uuid.UUID, exists bool) {
+	if m._FileExtract != nil {
+		return *m._FileExtract, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToFileExtractIDs returns the "ProvisioningScheduledStepToFileExtract" edge IDs in the mutation.
+// FileExtractIDs returns the "FileExtract" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToFileExtractID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToFileExtractIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToFileExtract; id != nil {
+// FileExtractID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) FileExtractIDs() (ids []uuid.UUID) {
+	if id := m._FileExtract; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToFileExtract resets all changes to the "ProvisioningScheduledStepToFileExtract" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToFileExtract() {
-	m._ProvisioningScheduledStepToFileExtract = nil
-	m.cleared_ProvisioningScheduledStepToFileExtract = false
+// ResetFileExtract resets all changes to the "FileExtract" edge.
+func (m *ProvisioningScheduledStepMutation) ResetFileExtract() {
+	m._FileExtract = nil
+	m.cleared_FileExtract = false
 }
 
-// SetProvisioningScheduledStepToAnsibleID sets the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToAnsibleID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToAnsible = &id
+// SetAnsibleID sets the "Ansible" edge to the Ansible entity by id.
+func (m *ProvisioningScheduledStepMutation) SetAnsibleID(id uuid.UUID) {
+	m._Ansible = &id
 }
 
-// ClearProvisioningScheduledStepToAnsible clears the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToAnsible() {
-	m.cleared_ProvisioningScheduledStepToAnsible = true
+// ClearAnsible clears the "Ansible" edge to the Ansible entity.
+func (m *ProvisioningScheduledStepMutation) ClearAnsible() {
+	m.cleared_Ansible = true
 }
 
-// ProvisioningScheduledStepToAnsibleCleared reports if the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToAnsibleCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToAnsible
+// AnsibleCleared reports if the "Ansible" edge to the Ansible entity was cleared.
+func (m *ProvisioningScheduledStepMutation) AnsibleCleared() bool {
+	return m.cleared_Ansible
 }
 
-// ProvisioningScheduledStepToAnsibleID returns the "ProvisioningScheduledStepToAnsible" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToAnsibleID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToAnsible != nil {
-		return *m._ProvisioningScheduledStepToAnsible, true
+// AnsibleID returns the "Ansible" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) AnsibleID() (id uuid.UUID, exists bool) {
+	if m._Ansible != nil {
+		return *m._Ansible, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToAnsibleIDs returns the "ProvisioningScheduledStepToAnsible" edge IDs in the mutation.
+// AnsibleIDs returns the "Ansible" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToAnsibleID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToAnsibleIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToAnsible; id != nil {
+// AnsibleID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) AnsibleIDs() (ids []uuid.UUID) {
+	if id := m._Ansible; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToAnsible resets all changes to the "ProvisioningScheduledStepToAnsible" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToAnsible() {
-	m._ProvisioningScheduledStepToAnsible = nil
-	m.cleared_ProvisioningScheduledStepToAnsible = false
+// ResetAnsible resets all changes to the "Ansible" edge.
+func (m *ProvisioningScheduledStepMutation) ResetAnsible() {
+	m._Ansible = nil
+	m.cleared_Ansible = false
 }
 
-// SetProvisioningScheduledStepToAgentTaskID sets the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToAgentTaskID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToAgentTask = &id
+// SetAgentTaskID sets the "AgentTask" edge to the AgentTask entity by id.
+func (m *ProvisioningScheduledStepMutation) SetAgentTaskID(id uuid.UUID) {
+	m._AgentTask = &id
 }
 
-// ClearProvisioningScheduledStepToAgentTask clears the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToAgentTask() {
-	m.cleared_ProvisioningScheduledStepToAgentTask = true
+// ClearAgentTask clears the "AgentTask" edge to the AgentTask entity.
+func (m *ProvisioningScheduledStepMutation) ClearAgentTask() {
+	m.cleared_AgentTask = true
 }
 
-// ProvisioningScheduledStepToAgentTaskCleared reports if the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToAgentTaskCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToAgentTask
+// AgentTaskCleared reports if the "AgentTask" edge to the AgentTask entity was cleared.
+func (m *ProvisioningScheduledStepMutation) AgentTaskCleared() bool {
+	return m.cleared_AgentTask
 }
 
-// ProvisioningScheduledStepToAgentTaskID returns the "ProvisioningScheduledStepToAgentTask" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToAgentTaskID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToAgentTask != nil {
-		return *m._ProvisioningScheduledStepToAgentTask, true
+// AgentTaskID returns the "AgentTask" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) AgentTaskID() (id uuid.UUID, exists bool) {
+	if m._AgentTask != nil {
+		return *m._AgentTask, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToAgentTaskIDs returns the "ProvisioningScheduledStepToAgentTask" edge IDs in the mutation.
+// AgentTaskIDs returns the "AgentTask" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToAgentTaskID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToAgentTaskIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToAgentTask; id != nil {
+// AgentTaskID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) AgentTaskIDs() (ids []uuid.UUID) {
+	if id := m._AgentTask; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToAgentTask resets all changes to the "ProvisioningScheduledStepToAgentTask" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToAgentTask() {
-	m._ProvisioningScheduledStepToAgentTask = nil
-	m.cleared_ProvisioningScheduledStepToAgentTask = false
+// ResetAgentTask resets all changes to the "AgentTask" edge.
+func (m *ProvisioningScheduledStepMutation) ResetAgentTask() {
+	m._AgentTask = nil
+	m.cleared_AgentTask = false
 }
 
-// SetProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningStepToPlanID(id uuid.UUID) {
-	m._ProvisioningStepToPlan = &id
+// SetPlanID sets the "Plan" edge to the Plan entity by id.
+func (m *ProvisioningScheduledStepMutation) SetPlanID(id uuid.UUID) {
+	m._Plan = &id
 }
 
-// ClearProvisioningStepToPlan clears the "ProvisioningStepToPlan" edge to the Plan entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningStepToPlan() {
-	m.cleared_ProvisioningStepToPlan = true
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (m *ProvisioningScheduledStepMutation) ClearPlan() {
+	m.cleared_Plan = true
 }
 
-// ProvisioningStepToPlanCleared reports if the "ProvisioningStepToPlan" edge to the Plan entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningStepToPlanCleared() bool {
-	return m.cleared_ProvisioningStepToPlan
+// PlanCleared reports if the "Plan" edge to the Plan entity was cleared.
+func (m *ProvisioningScheduledStepMutation) PlanCleared() bool {
+	return m.cleared_Plan
 }
 
-// ProvisioningStepToPlanID returns the "ProvisioningStepToPlan" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningStepToPlanID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningStepToPlan != nil {
-		return *m._ProvisioningStepToPlan, true
+// PlanID returns the "Plan" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) PlanID() (id uuid.UUID, exists bool) {
+	if m._Plan != nil {
+		return *m._Plan, true
 	}
 	return
 }
 
-// ProvisioningStepToPlanIDs returns the "ProvisioningStepToPlan" edge IDs in the mutation.
+// PlanIDs returns the "Plan" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningStepToPlanID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningStepToPlanIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningStepToPlan; id != nil {
+// PlanID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) PlanIDs() (ids []uuid.UUID) {
+	if id := m._Plan; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningStepToPlan resets all changes to the "ProvisioningStepToPlan" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningStepToPlan() {
-	m._ProvisioningStepToPlan = nil
-	m.cleared_ProvisioningStepToPlan = false
+// ResetPlan resets all changes to the "Plan" edge.
+func (m *ProvisioningScheduledStepMutation) ResetPlan() {
+	m._Plan = nil
+	m.cleared_Plan = false
 }
 
-// SetProvisioningScheduledStepToGinFileMiddlewareID sets the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity by id.
-func (m *ProvisioningScheduledStepMutation) SetProvisioningScheduledStepToGinFileMiddlewareID(id uuid.UUID) {
-	m._ProvisioningScheduledStepToGinFileMiddleware = &id
+// SetGinFileMiddlewareID sets the "GinFileMiddleware" edge to the GinFileMiddleware entity by id.
+func (m *ProvisioningScheduledStepMutation) SetGinFileMiddlewareID(id uuid.UUID) {
+	m._GinFileMiddleware = &id
 }
 
-// ClearProvisioningScheduledStepToGinFileMiddleware clears the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity.
-func (m *ProvisioningScheduledStepMutation) ClearProvisioningScheduledStepToGinFileMiddleware() {
-	m.cleared_ProvisioningScheduledStepToGinFileMiddleware = true
+// ClearGinFileMiddleware clears the "GinFileMiddleware" edge to the GinFileMiddleware entity.
+func (m *ProvisioningScheduledStepMutation) ClearGinFileMiddleware() {
+	m.cleared_GinFileMiddleware = true
 }
 
-// ProvisioningScheduledStepToGinFileMiddlewareCleared reports if the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity was cleared.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToGinFileMiddlewareCleared() bool {
-	return m.cleared_ProvisioningScheduledStepToGinFileMiddleware
+// GinFileMiddlewareCleared reports if the "GinFileMiddleware" edge to the GinFileMiddleware entity was cleared.
+func (m *ProvisioningScheduledStepMutation) GinFileMiddlewareCleared() bool {
+	return m.cleared_GinFileMiddleware
 }
 
-// ProvisioningScheduledStepToGinFileMiddlewareID returns the "ProvisioningScheduledStepToGinFileMiddleware" edge ID in the mutation.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToGinFileMiddlewareID() (id uuid.UUID, exists bool) {
-	if m._ProvisioningScheduledStepToGinFileMiddleware != nil {
-		return *m._ProvisioningScheduledStepToGinFileMiddleware, true
+// GinFileMiddlewareID returns the "GinFileMiddleware" edge ID in the mutation.
+func (m *ProvisioningScheduledStepMutation) GinFileMiddlewareID() (id uuid.UUID, exists bool) {
+	if m._GinFileMiddleware != nil {
+		return *m._GinFileMiddleware, true
 	}
 	return
 }
 
-// ProvisioningScheduledStepToGinFileMiddlewareIDs returns the "ProvisioningScheduledStepToGinFileMiddleware" edge IDs in the mutation.
+// GinFileMiddlewareIDs returns the "GinFileMiddleware" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisioningScheduledStepToGinFileMiddlewareID instead. It exists only for internal usage by the builders.
-func (m *ProvisioningScheduledStepMutation) ProvisioningScheduledStepToGinFileMiddlewareIDs() (ids []uuid.UUID) {
-	if id := m._ProvisioningScheduledStepToGinFileMiddleware; id != nil {
+// GinFileMiddlewareID instead. It exists only for internal usage by the builders.
+func (m *ProvisioningScheduledStepMutation) GinFileMiddlewareIDs() (ids []uuid.UUID) {
+	if id := m._GinFileMiddleware; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisioningScheduledStepToGinFileMiddleware resets all changes to the "ProvisioningScheduledStepToGinFileMiddleware" edge.
-func (m *ProvisioningScheduledStepMutation) ResetProvisioningScheduledStepToGinFileMiddleware() {
-	m._ProvisioningScheduledStepToGinFileMiddleware = nil
-	m.cleared_ProvisioningScheduledStepToGinFileMiddleware = false
+// ResetGinFileMiddleware resets all changes to the "GinFileMiddleware" edge.
+func (m *ProvisioningScheduledStepMutation) ResetGinFileMiddleware() {
+	m._GinFileMiddleware = nil
+	m.cleared_GinFileMiddleware = false
 }
 
 // Where appends a list predicates to the ProvisioningScheduledStepMutation builder.
@@ -26355,44 +26355,44 @@ func (m *ProvisioningScheduledStepMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProvisioningScheduledStepMutation) AddedEdges() []string {
 	edges := make([]string, 0, 13)
-	if m._ProvisioningScheduledStepToStatus != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToStatus)
+	if m._Status != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeStatus)
 	}
-	if m._ProvisioningScheduledStepToScheduledStep != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToScheduledStep)
+	if m._ScheduledStep != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeScheduledStep)
 	}
-	if m._ProvisioningScheduledStepToProvisionedHost != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost)
+	if m._ProvisionedHost != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeProvisionedHost)
 	}
-	if m._ProvisioningScheduledStepToScript != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToScript)
+	if m._Script != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeScript)
 	}
-	if m._ProvisioningScheduledStepToCommand != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToCommand)
+	if m._Command != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeCommand)
 	}
-	if m._ProvisioningScheduledStepToDNSRecord != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToDNSRecord)
+	if m._DNSRecord != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeDNSRecord)
 	}
-	if m._ProvisioningScheduledStepToFileDelete != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDelete)
+	if m._FileDelete != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeFileDelete)
 	}
-	if m._ProvisioningScheduledStepToFileDownload != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDownload)
+	if m._FileDownload != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeFileDownload)
 	}
-	if m._ProvisioningScheduledStepToFileExtract != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToFileExtract)
+	if m._FileExtract != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeFileExtract)
 	}
-	if m._ProvisioningScheduledStepToAnsible != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToAnsible)
+	if m._Ansible != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeAnsible)
 	}
-	if m._ProvisioningScheduledStepToAgentTask != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToAgentTask)
+	if m._AgentTask != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeAgentTask)
 	}
-	if m._ProvisioningStepToPlan != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningStepToPlan)
+	if m._Plan != nil {
+		edges = append(edges, provisioningscheduledstep.EdgePlan)
 	}
-	if m._ProvisioningScheduledStepToGinFileMiddleware != nil {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToGinFileMiddleware)
+	if m._GinFileMiddleware != nil {
+		edges = append(edges, provisioningscheduledstep.EdgeGinFileMiddleware)
 	}
 	return edges
 }
@@ -26401,56 +26401,56 @@ func (m *ProvisioningScheduledStepMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *ProvisioningScheduledStepMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToStatus:
-		if id := m._ProvisioningScheduledStepToStatus; id != nil {
+	case provisioningscheduledstep.EdgeStatus:
+		if id := m._Status; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScheduledStep:
-		if id := m._ProvisioningScheduledStepToScheduledStep; id != nil {
+	case provisioningscheduledstep.EdgeScheduledStep:
+		if id := m._ScheduledStep; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost:
-		if id := m._ProvisioningScheduledStepToProvisionedHost; id != nil {
+	case provisioningscheduledstep.EdgeProvisionedHost:
+		if id := m._ProvisionedHost; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScript:
-		if id := m._ProvisioningScheduledStepToScript; id != nil {
+	case provisioningscheduledstep.EdgeScript:
+		if id := m._Script; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToCommand:
-		if id := m._ProvisioningScheduledStepToCommand; id != nil {
+	case provisioningscheduledstep.EdgeCommand:
+		if id := m._Command; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToDNSRecord:
-		if id := m._ProvisioningScheduledStepToDNSRecord; id != nil {
+	case provisioningscheduledstep.EdgeDNSRecord:
+		if id := m._DNSRecord; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDelete:
-		if id := m._ProvisioningScheduledStepToFileDelete; id != nil {
+	case provisioningscheduledstep.EdgeFileDelete:
+		if id := m._FileDelete; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDownload:
-		if id := m._ProvisioningScheduledStepToFileDownload; id != nil {
+	case provisioningscheduledstep.EdgeFileDownload:
+		if id := m._FileDownload; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileExtract:
-		if id := m._ProvisioningScheduledStepToFileExtract; id != nil {
+	case provisioningscheduledstep.EdgeFileExtract:
+		if id := m._FileExtract; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToAnsible:
-		if id := m._ProvisioningScheduledStepToAnsible; id != nil {
+	case provisioningscheduledstep.EdgeAnsible:
+		if id := m._Ansible; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToAgentTask:
-		if id := m._ProvisioningScheduledStepToAgentTask; id != nil {
+	case provisioningscheduledstep.EdgeAgentTask:
+		if id := m._AgentTask; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningStepToPlan:
-		if id := m._ProvisioningStepToPlan; id != nil {
+	case provisioningscheduledstep.EdgePlan:
+		if id := m._Plan; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToGinFileMiddleware:
-		if id := m._ProvisioningScheduledStepToGinFileMiddleware; id != nil {
+	case provisioningscheduledstep.EdgeGinFileMiddleware:
+		if id := m._GinFileMiddleware; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -26474,44 +26474,44 @@ func (m *ProvisioningScheduledStepMutation) RemovedIDs(name string) []ent.Value 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProvisioningScheduledStepMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 13)
-	if m.cleared_ProvisioningScheduledStepToStatus {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToStatus)
+	if m.cleared_Status {
+		edges = append(edges, provisioningscheduledstep.EdgeStatus)
 	}
-	if m.cleared_ProvisioningScheduledStepToScheduledStep {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToScheduledStep)
+	if m.cleared_ScheduledStep {
+		edges = append(edges, provisioningscheduledstep.EdgeScheduledStep)
 	}
-	if m.cleared_ProvisioningScheduledStepToProvisionedHost {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost)
+	if m.cleared_ProvisionedHost {
+		edges = append(edges, provisioningscheduledstep.EdgeProvisionedHost)
 	}
-	if m.cleared_ProvisioningScheduledStepToScript {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToScript)
+	if m.cleared_Script {
+		edges = append(edges, provisioningscheduledstep.EdgeScript)
 	}
-	if m.cleared_ProvisioningScheduledStepToCommand {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToCommand)
+	if m.cleared_Command {
+		edges = append(edges, provisioningscheduledstep.EdgeCommand)
 	}
-	if m.cleared_ProvisioningScheduledStepToDNSRecord {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToDNSRecord)
+	if m.cleared_DNSRecord {
+		edges = append(edges, provisioningscheduledstep.EdgeDNSRecord)
 	}
-	if m.cleared_ProvisioningScheduledStepToFileDelete {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDelete)
+	if m.cleared_FileDelete {
+		edges = append(edges, provisioningscheduledstep.EdgeFileDelete)
 	}
-	if m.cleared_ProvisioningScheduledStepToFileDownload {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDownload)
+	if m.cleared_FileDownload {
+		edges = append(edges, provisioningscheduledstep.EdgeFileDownload)
 	}
-	if m.cleared_ProvisioningScheduledStepToFileExtract {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToFileExtract)
+	if m.cleared_FileExtract {
+		edges = append(edges, provisioningscheduledstep.EdgeFileExtract)
 	}
-	if m.cleared_ProvisioningScheduledStepToAnsible {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToAnsible)
+	if m.cleared_Ansible {
+		edges = append(edges, provisioningscheduledstep.EdgeAnsible)
 	}
-	if m.cleared_ProvisioningScheduledStepToAgentTask {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToAgentTask)
+	if m.cleared_AgentTask {
+		edges = append(edges, provisioningscheduledstep.EdgeAgentTask)
 	}
-	if m.cleared_ProvisioningStepToPlan {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningStepToPlan)
+	if m.cleared_Plan {
+		edges = append(edges, provisioningscheduledstep.EdgePlan)
 	}
-	if m.cleared_ProvisioningScheduledStepToGinFileMiddleware {
-		edges = append(edges, provisioningscheduledstep.EdgeProvisioningScheduledStepToGinFileMiddleware)
+	if m.cleared_GinFileMiddleware {
+		edges = append(edges, provisioningscheduledstep.EdgeGinFileMiddleware)
 	}
 	return edges
 }
@@ -26520,32 +26520,32 @@ func (m *ProvisioningScheduledStepMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *ProvisioningScheduledStepMutation) EdgeCleared(name string) bool {
 	switch name {
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToStatus:
-		return m.cleared_ProvisioningScheduledStepToStatus
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScheduledStep:
-		return m.cleared_ProvisioningScheduledStepToScheduledStep
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost:
-		return m.cleared_ProvisioningScheduledStepToProvisionedHost
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScript:
-		return m.cleared_ProvisioningScheduledStepToScript
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToCommand:
-		return m.cleared_ProvisioningScheduledStepToCommand
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToDNSRecord:
-		return m.cleared_ProvisioningScheduledStepToDNSRecord
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDelete:
-		return m.cleared_ProvisioningScheduledStepToFileDelete
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDownload:
-		return m.cleared_ProvisioningScheduledStepToFileDownload
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileExtract:
-		return m.cleared_ProvisioningScheduledStepToFileExtract
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToAnsible:
-		return m.cleared_ProvisioningScheduledStepToAnsible
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToAgentTask:
-		return m.cleared_ProvisioningScheduledStepToAgentTask
-	case provisioningscheduledstep.EdgeProvisioningStepToPlan:
-		return m.cleared_ProvisioningStepToPlan
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToGinFileMiddleware:
-		return m.cleared_ProvisioningScheduledStepToGinFileMiddleware
+	case provisioningscheduledstep.EdgeStatus:
+		return m.cleared_Status
+	case provisioningscheduledstep.EdgeScheduledStep:
+		return m.cleared_ScheduledStep
+	case provisioningscheduledstep.EdgeProvisionedHost:
+		return m.cleared_ProvisionedHost
+	case provisioningscheduledstep.EdgeScript:
+		return m.cleared_Script
+	case provisioningscheduledstep.EdgeCommand:
+		return m.cleared_Command
+	case provisioningscheduledstep.EdgeDNSRecord:
+		return m.cleared_DNSRecord
+	case provisioningscheduledstep.EdgeFileDelete:
+		return m.cleared_FileDelete
+	case provisioningscheduledstep.EdgeFileDownload:
+		return m.cleared_FileDownload
+	case provisioningscheduledstep.EdgeFileExtract:
+		return m.cleared_FileExtract
+	case provisioningscheduledstep.EdgeAnsible:
+		return m.cleared_Ansible
+	case provisioningscheduledstep.EdgeAgentTask:
+		return m.cleared_AgentTask
+	case provisioningscheduledstep.EdgePlan:
+		return m.cleared_Plan
+	case provisioningscheduledstep.EdgeGinFileMiddleware:
+		return m.cleared_GinFileMiddleware
 	}
 	return false
 }
@@ -26554,44 +26554,44 @@ func (m *ProvisioningScheduledStepMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ProvisioningScheduledStepMutation) ClearEdge(name string) error {
 	switch name {
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToStatus:
-		m.ClearProvisioningScheduledStepToStatus()
+	case provisioningscheduledstep.EdgeStatus:
+		m.ClearStatus()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScheduledStep:
-		m.ClearProvisioningScheduledStepToScheduledStep()
+	case provisioningscheduledstep.EdgeScheduledStep:
+		m.ClearScheduledStep()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost:
-		m.ClearProvisioningScheduledStepToProvisionedHost()
+	case provisioningscheduledstep.EdgeProvisionedHost:
+		m.ClearProvisionedHost()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScript:
-		m.ClearProvisioningScheduledStepToScript()
+	case provisioningscheduledstep.EdgeScript:
+		m.ClearScript()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToCommand:
-		m.ClearProvisioningScheduledStepToCommand()
+	case provisioningscheduledstep.EdgeCommand:
+		m.ClearCommand()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToDNSRecord:
-		m.ClearProvisioningScheduledStepToDNSRecord()
+	case provisioningscheduledstep.EdgeDNSRecord:
+		m.ClearDNSRecord()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDelete:
-		m.ClearProvisioningScheduledStepToFileDelete()
+	case provisioningscheduledstep.EdgeFileDelete:
+		m.ClearFileDelete()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDownload:
-		m.ClearProvisioningScheduledStepToFileDownload()
+	case provisioningscheduledstep.EdgeFileDownload:
+		m.ClearFileDownload()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileExtract:
-		m.ClearProvisioningScheduledStepToFileExtract()
+	case provisioningscheduledstep.EdgeFileExtract:
+		m.ClearFileExtract()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToAnsible:
-		m.ClearProvisioningScheduledStepToAnsible()
+	case provisioningscheduledstep.EdgeAnsible:
+		m.ClearAnsible()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToAgentTask:
-		m.ClearProvisioningScheduledStepToAgentTask()
+	case provisioningscheduledstep.EdgeAgentTask:
+		m.ClearAgentTask()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningStepToPlan:
-		m.ClearProvisioningStepToPlan()
+	case provisioningscheduledstep.EdgePlan:
+		m.ClearPlan()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToGinFileMiddleware:
-		m.ClearProvisioningScheduledStepToGinFileMiddleware()
+	case provisioningscheduledstep.EdgeGinFileMiddleware:
+		m.ClearGinFileMiddleware()
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisioningScheduledStep unique edge %s", name)
@@ -26601,44 +26601,44 @@ func (m *ProvisioningScheduledStepMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ProvisioningScheduledStepMutation) ResetEdge(name string) error {
 	switch name {
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToStatus:
-		m.ResetProvisioningScheduledStepToStatus()
+	case provisioningscheduledstep.EdgeStatus:
+		m.ResetStatus()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScheduledStep:
-		m.ResetProvisioningScheduledStepToScheduledStep()
+	case provisioningscheduledstep.EdgeScheduledStep:
+		m.ResetScheduledStep()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToProvisionedHost:
-		m.ResetProvisioningScheduledStepToProvisionedHost()
+	case provisioningscheduledstep.EdgeProvisionedHost:
+		m.ResetProvisionedHost()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToScript:
-		m.ResetProvisioningScheduledStepToScript()
+	case provisioningscheduledstep.EdgeScript:
+		m.ResetScript()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToCommand:
-		m.ResetProvisioningScheduledStepToCommand()
+	case provisioningscheduledstep.EdgeCommand:
+		m.ResetCommand()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToDNSRecord:
-		m.ResetProvisioningScheduledStepToDNSRecord()
+	case provisioningscheduledstep.EdgeDNSRecord:
+		m.ResetDNSRecord()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDelete:
-		m.ResetProvisioningScheduledStepToFileDelete()
+	case provisioningscheduledstep.EdgeFileDelete:
+		m.ResetFileDelete()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileDownload:
-		m.ResetProvisioningScheduledStepToFileDownload()
+	case provisioningscheduledstep.EdgeFileDownload:
+		m.ResetFileDownload()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToFileExtract:
-		m.ResetProvisioningScheduledStepToFileExtract()
+	case provisioningscheduledstep.EdgeFileExtract:
+		m.ResetFileExtract()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToAnsible:
-		m.ResetProvisioningScheduledStepToAnsible()
+	case provisioningscheduledstep.EdgeAnsible:
+		m.ResetAnsible()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToAgentTask:
-		m.ResetProvisioningScheduledStepToAgentTask()
+	case provisioningscheduledstep.EdgeAgentTask:
+		m.ResetAgentTask()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningStepToPlan:
-		m.ResetProvisioningStepToPlan()
+	case provisioningscheduledstep.EdgePlan:
+		m.ResetPlan()
 		return nil
-	case provisioningscheduledstep.EdgeProvisioningScheduledStepToGinFileMiddleware:
-		m.ResetProvisioningScheduledStepToGinFileMiddleware()
+	case provisioningscheduledstep.EdgeGinFileMiddleware:
+		m.ResetGinFileMiddleware()
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisioningScheduledStep edge %s", name)

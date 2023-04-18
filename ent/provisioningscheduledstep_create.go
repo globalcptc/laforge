@@ -60,235 +60,235 @@ func (pssc *ProvisioningScheduledStepCreate) SetNillableID(u *uuid.UUID) *Provis
 	return pssc
 }
 
-// SetProvisioningScheduledStepToStatusID sets the "ProvisioningScheduledStepToStatus" edge to the Status entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToStatusID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToStatusID(id)
+// SetStatusID sets the "Status" edge to the Status entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetStatusID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetStatusID(id)
 	return pssc
 }
 
-// SetNillableProvisioningScheduledStepToStatusID sets the "ProvisioningScheduledStepToStatus" edge to the Status entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableProvisioningScheduledStepToStatusID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
+// SetNillableStatusID sets the "Status" edge to the Status entity by ID if the given value is not nil.
+func (pssc *ProvisioningScheduledStepCreate) SetNillableStatusID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
 	if id != nil {
-		pssc = pssc.SetProvisioningScheduledStepToStatusID(*id)
+		pssc = pssc.SetStatusID(*id)
 	}
 	return pssc
 }
 
-// SetProvisioningScheduledStepToStatus sets the "ProvisioningScheduledStepToStatus" edge to the Status entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToStatus(s *Status) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToStatusID(s.ID)
+// SetStatus sets the "Status" edge to the Status entity.
+func (pssc *ProvisioningScheduledStepCreate) SetStatus(s *Status) *ProvisioningScheduledStepCreate {
+	return pssc.SetStatusID(s.ID)
 }
 
-// SetProvisioningScheduledStepToScheduledStepID sets the "ProvisioningScheduledStepToScheduledStep" edge to the ScheduledStep entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToScheduledStepID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToScheduledStepID(id)
+// SetScheduledStepID sets the "ScheduledStep" edge to the ScheduledStep entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetScheduledStepID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetScheduledStepID(id)
 	return pssc
 }
 
-// SetProvisioningScheduledStepToScheduledStep sets the "ProvisioningScheduledStepToScheduledStep" edge to the ScheduledStep entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToScheduledStep(s *ScheduledStep) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToScheduledStepID(s.ID)
+// SetScheduledStep sets the "ScheduledStep" edge to the ScheduledStep entity.
+func (pssc *ProvisioningScheduledStepCreate) SetScheduledStep(s *ScheduledStep) *ProvisioningScheduledStepCreate {
+	return pssc.SetScheduledStepID(s.ID)
 }
 
-// SetProvisioningScheduledStepToProvisionedHostID sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToProvisionedHostID(id)
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetProvisionedHostID(id)
 	return pssc
 }
 
-// SetProvisioningScheduledStepToProvisionedHost sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToProvisionedHostID(p.ID)
+// SetProvisionedHost sets the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (pssc *ProvisioningScheduledStepCreate) SetProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepCreate {
+	return pssc.SetProvisionedHostID(p.ID)
 }
 
-// SetProvisioningScheduledStepToScriptID sets the "ProvisioningScheduledStepToScript" edge to the Script entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToScriptID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToScriptID(id)
+// SetScriptID sets the "Script" edge to the Script entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetScriptID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetScriptID(id)
 	return pssc
 }
 
-// SetNillableProvisioningScheduledStepToScriptID sets the "ProvisioningScheduledStepToScript" edge to the Script entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableProvisioningScheduledStepToScriptID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
+// SetNillableScriptID sets the "Script" edge to the Script entity by ID if the given value is not nil.
+func (pssc *ProvisioningScheduledStepCreate) SetNillableScriptID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
 	if id != nil {
-		pssc = pssc.SetProvisioningScheduledStepToScriptID(*id)
+		pssc = pssc.SetScriptID(*id)
 	}
 	return pssc
 }
 
-// SetProvisioningScheduledStepToScript sets the "ProvisioningScheduledStepToScript" edge to the Script entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToScript(s *Script) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToScriptID(s.ID)
+// SetScript sets the "Script" edge to the Script entity.
+func (pssc *ProvisioningScheduledStepCreate) SetScript(s *Script) *ProvisioningScheduledStepCreate {
+	return pssc.SetScriptID(s.ID)
 }
 
-// SetProvisioningScheduledStepToCommandID sets the "ProvisioningScheduledStepToCommand" edge to the Command entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToCommandID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToCommandID(id)
+// SetCommandID sets the "Command" edge to the Command entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetCommandID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetCommandID(id)
 	return pssc
 }
 
-// SetNillableProvisioningScheduledStepToCommandID sets the "ProvisioningScheduledStepToCommand" edge to the Command entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableProvisioningScheduledStepToCommandID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
+// SetNillableCommandID sets the "Command" edge to the Command entity by ID if the given value is not nil.
+func (pssc *ProvisioningScheduledStepCreate) SetNillableCommandID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
 	if id != nil {
-		pssc = pssc.SetProvisioningScheduledStepToCommandID(*id)
+		pssc = pssc.SetCommandID(*id)
 	}
 	return pssc
 }
 
-// SetProvisioningScheduledStepToCommand sets the "ProvisioningScheduledStepToCommand" edge to the Command entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToCommand(c *Command) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToCommandID(c.ID)
+// SetCommand sets the "Command" edge to the Command entity.
+func (pssc *ProvisioningScheduledStepCreate) SetCommand(c *Command) *ProvisioningScheduledStepCreate {
+	return pssc.SetCommandID(c.ID)
 }
 
-// SetProvisioningScheduledStepToDNSRecordID sets the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToDNSRecordID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToDNSRecordID(id)
+// SetDNSRecordID sets the "DNSRecord" edge to the DNSRecord entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetDNSRecordID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetDNSRecordID(id)
 	return pssc
 }
 
-// SetNillableProvisioningScheduledStepToDNSRecordID sets the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableProvisioningScheduledStepToDNSRecordID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
+// SetNillableDNSRecordID sets the "DNSRecord" edge to the DNSRecord entity by ID if the given value is not nil.
+func (pssc *ProvisioningScheduledStepCreate) SetNillableDNSRecordID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
 	if id != nil {
-		pssc = pssc.SetProvisioningScheduledStepToDNSRecordID(*id)
+		pssc = pssc.SetDNSRecordID(*id)
 	}
 	return pssc
 }
 
-// SetProvisioningScheduledStepToDNSRecord sets the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToDNSRecord(d *DNSRecord) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToDNSRecordID(d.ID)
+// SetDNSRecord sets the "DNSRecord" edge to the DNSRecord entity.
+func (pssc *ProvisioningScheduledStepCreate) SetDNSRecord(d *DNSRecord) *ProvisioningScheduledStepCreate {
+	return pssc.SetDNSRecordID(d.ID)
 }
 
-// SetProvisioningScheduledStepToFileDeleteID sets the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToFileDeleteID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToFileDeleteID(id)
+// SetFileDeleteID sets the "FileDelete" edge to the FileDelete entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetFileDeleteID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetFileDeleteID(id)
 	return pssc
 }
 
-// SetNillableProvisioningScheduledStepToFileDeleteID sets the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableProvisioningScheduledStepToFileDeleteID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
+// SetNillableFileDeleteID sets the "FileDelete" edge to the FileDelete entity by ID if the given value is not nil.
+func (pssc *ProvisioningScheduledStepCreate) SetNillableFileDeleteID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
 	if id != nil {
-		pssc = pssc.SetProvisioningScheduledStepToFileDeleteID(*id)
+		pssc = pssc.SetFileDeleteID(*id)
 	}
 	return pssc
 }
 
-// SetProvisioningScheduledStepToFileDelete sets the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToFileDelete(f *FileDelete) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToFileDeleteID(f.ID)
+// SetFileDelete sets the "FileDelete" edge to the FileDelete entity.
+func (pssc *ProvisioningScheduledStepCreate) SetFileDelete(f *FileDelete) *ProvisioningScheduledStepCreate {
+	return pssc.SetFileDeleteID(f.ID)
 }
 
-// SetProvisioningScheduledStepToFileDownloadID sets the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToFileDownloadID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToFileDownloadID(id)
+// SetFileDownloadID sets the "FileDownload" edge to the FileDownload entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetFileDownloadID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetFileDownloadID(id)
 	return pssc
 }
 
-// SetNillableProvisioningScheduledStepToFileDownloadID sets the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableProvisioningScheduledStepToFileDownloadID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
+// SetNillableFileDownloadID sets the "FileDownload" edge to the FileDownload entity by ID if the given value is not nil.
+func (pssc *ProvisioningScheduledStepCreate) SetNillableFileDownloadID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
 	if id != nil {
-		pssc = pssc.SetProvisioningScheduledStepToFileDownloadID(*id)
+		pssc = pssc.SetFileDownloadID(*id)
 	}
 	return pssc
 }
 
-// SetProvisioningScheduledStepToFileDownload sets the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToFileDownload(f *FileDownload) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToFileDownloadID(f.ID)
+// SetFileDownload sets the "FileDownload" edge to the FileDownload entity.
+func (pssc *ProvisioningScheduledStepCreate) SetFileDownload(f *FileDownload) *ProvisioningScheduledStepCreate {
+	return pssc.SetFileDownloadID(f.ID)
 }
 
-// SetProvisioningScheduledStepToFileExtractID sets the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToFileExtractID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToFileExtractID(id)
+// SetFileExtractID sets the "FileExtract" edge to the FileExtract entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetFileExtractID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetFileExtractID(id)
 	return pssc
 }
 
-// SetNillableProvisioningScheduledStepToFileExtractID sets the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableProvisioningScheduledStepToFileExtractID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
+// SetNillableFileExtractID sets the "FileExtract" edge to the FileExtract entity by ID if the given value is not nil.
+func (pssc *ProvisioningScheduledStepCreate) SetNillableFileExtractID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
 	if id != nil {
-		pssc = pssc.SetProvisioningScheduledStepToFileExtractID(*id)
+		pssc = pssc.SetFileExtractID(*id)
 	}
 	return pssc
 }
 
-// SetProvisioningScheduledStepToFileExtract sets the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToFileExtract(f *FileExtract) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToFileExtractID(f.ID)
+// SetFileExtract sets the "FileExtract" edge to the FileExtract entity.
+func (pssc *ProvisioningScheduledStepCreate) SetFileExtract(f *FileExtract) *ProvisioningScheduledStepCreate {
+	return pssc.SetFileExtractID(f.ID)
 }
 
-// SetProvisioningScheduledStepToAnsibleID sets the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToAnsibleID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToAnsibleID(id)
+// SetAnsibleID sets the "Ansible" edge to the Ansible entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetAnsibleID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetAnsibleID(id)
 	return pssc
 }
 
-// SetNillableProvisioningScheduledStepToAnsibleID sets the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableProvisioningScheduledStepToAnsibleID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
+// SetNillableAnsibleID sets the "Ansible" edge to the Ansible entity by ID if the given value is not nil.
+func (pssc *ProvisioningScheduledStepCreate) SetNillableAnsibleID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
 	if id != nil {
-		pssc = pssc.SetProvisioningScheduledStepToAnsibleID(*id)
+		pssc = pssc.SetAnsibleID(*id)
 	}
 	return pssc
 }
 
-// SetProvisioningScheduledStepToAnsible sets the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToAnsible(a *Ansible) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToAnsibleID(a.ID)
+// SetAnsible sets the "Ansible" edge to the Ansible entity.
+func (pssc *ProvisioningScheduledStepCreate) SetAnsible(a *Ansible) *ProvisioningScheduledStepCreate {
+	return pssc.SetAnsibleID(a.ID)
 }
 
-// SetProvisioningScheduledStepToAgentTaskID sets the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToAgentTaskID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToAgentTaskID(id)
+// SetAgentTaskID sets the "AgentTask" edge to the AgentTask entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetAgentTaskID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetAgentTaskID(id)
 	return pssc
 }
 
-// SetNillableProvisioningScheduledStepToAgentTaskID sets the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableProvisioningScheduledStepToAgentTaskID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
+// SetNillableAgentTaskID sets the "AgentTask" edge to the AgentTask entity by ID if the given value is not nil.
+func (pssc *ProvisioningScheduledStepCreate) SetNillableAgentTaskID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
 	if id != nil {
-		pssc = pssc.SetProvisioningScheduledStepToAgentTaskID(*id)
+		pssc = pssc.SetAgentTaskID(*id)
 	}
 	return pssc
 }
 
-// SetProvisioningScheduledStepToAgentTask sets the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToAgentTask(a *AgentTask) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToAgentTaskID(a.ID)
+// SetAgentTask sets the "AgentTask" edge to the AgentTask entity.
+func (pssc *ProvisioningScheduledStepCreate) SetAgentTask(a *AgentTask) *ProvisioningScheduledStepCreate {
+	return pssc.SetAgentTaskID(a.ID)
 }
 
-// SetProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningStepToPlanID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningStepToPlanID(id)
+// SetPlanID sets the "Plan" edge to the Plan entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetPlanID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetPlanID(id)
 	return pssc
 }
 
-// SetNillableProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableProvisioningStepToPlanID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
+// SetNillablePlanID sets the "Plan" edge to the Plan entity by ID if the given value is not nil.
+func (pssc *ProvisioningScheduledStepCreate) SetNillablePlanID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
 	if id != nil {
-		pssc = pssc.SetProvisioningStepToPlanID(*id)
+		pssc = pssc.SetPlanID(*id)
 	}
 	return pssc
 }
 
-// SetProvisioningStepToPlan sets the "ProvisioningStepToPlan" edge to the Plan entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningStepToPlan(p *Plan) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningStepToPlanID(p.ID)
+// SetPlan sets the "Plan" edge to the Plan entity.
+func (pssc *ProvisioningScheduledStepCreate) SetPlan(p *Plan) *ProvisioningScheduledStepCreate {
+	return pssc.SetPlanID(p.ID)
 }
 
-// SetProvisioningScheduledStepToGinFileMiddlewareID sets the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToGinFileMiddlewareID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetProvisioningScheduledStepToGinFileMiddlewareID(id)
+// SetGinFileMiddlewareID sets the "GinFileMiddleware" edge to the GinFileMiddleware entity by ID.
+func (pssc *ProvisioningScheduledStepCreate) SetGinFileMiddlewareID(id uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.SetGinFileMiddlewareID(id)
 	return pssc
 }
 
-// SetNillableProvisioningScheduledStepToGinFileMiddlewareID sets the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableProvisioningScheduledStepToGinFileMiddlewareID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
+// SetNillableGinFileMiddlewareID sets the "GinFileMiddleware" edge to the GinFileMiddleware entity by ID if the given value is not nil.
+func (pssc *ProvisioningScheduledStepCreate) SetNillableGinFileMiddlewareID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
 	if id != nil {
-		pssc = pssc.SetProvisioningScheduledStepToGinFileMiddlewareID(*id)
+		pssc = pssc.SetGinFileMiddlewareID(*id)
 	}
 	return pssc
 }
 
-// SetProvisioningScheduledStepToGinFileMiddleware sets the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity.
-func (pssc *ProvisioningScheduledStepCreate) SetProvisioningScheduledStepToGinFileMiddleware(g *GinFileMiddleware) *ProvisioningScheduledStepCreate {
-	return pssc.SetProvisioningScheduledStepToGinFileMiddlewareID(g.ID)
+// SetGinFileMiddleware sets the "GinFileMiddleware" edge to the GinFileMiddleware entity.
+func (pssc *ProvisioningScheduledStepCreate) SetGinFileMiddleware(g *GinFileMiddleware) *ProvisioningScheduledStepCreate {
+	return pssc.SetGinFileMiddlewareID(g.ID)
 }
 
 // Mutation returns the ProvisioningScheduledStepMutation object of the builder.
@@ -387,11 +387,11 @@ func (pssc *ProvisioningScheduledStepCreate) check() error {
 	if _, ok := pssc.mutation.RunTime(); !ok {
 		return &ValidationError{Name: "run_time", err: errors.New(`ent: missing required field "ProvisioningScheduledStep.run_time"`)}
 	}
-	if _, ok := pssc.mutation.ProvisioningScheduledStepToScheduledStepID(); !ok {
-		return &ValidationError{Name: "ProvisioningScheduledStepToScheduledStep", err: errors.New(`ent: missing required edge "ProvisioningScheduledStep.ProvisioningScheduledStepToScheduledStep"`)}
+	if _, ok := pssc.mutation.ScheduledStepID(); !ok {
+		return &ValidationError{Name: "ScheduledStep", err: errors.New(`ent: missing required edge "ProvisioningScheduledStep.ScheduledStep"`)}
 	}
-	if _, ok := pssc.mutation.ProvisioningScheduledStepToProvisionedHostID(); !ok {
-		return &ValidationError{Name: "ProvisioningScheduledStepToProvisionedHost", err: errors.New(`ent: missing required edge "ProvisioningScheduledStep.ProvisioningScheduledStepToProvisionedHost"`)}
+	if _, ok := pssc.mutation.ProvisionedHostID(); !ok {
+		return &ValidationError{Name: "ProvisionedHost", err: errors.New(`ent: missing required edge "ProvisioningScheduledStep.ProvisionedHost"`)}
 	}
 	return nil
 }
@@ -445,12 +445,12 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		})
 		_node.RunTime = value
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToStatusIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.StatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToStatusTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToStatusColumn},
+			Table:   provisioningscheduledstep.StatusTable,
+			Columns: []string{provisioningscheduledstep.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -464,12 +464,12 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToScheduledStepIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.ScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepColumn},
+			Table:   provisioningscheduledstep.ScheduledStepTable,
+			Columns: []string{provisioningscheduledstep.ScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -481,15 +481,15 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_scheduled_step_provisioning_scheduled_step_to_scheduled_step = &nodes[0]
+		_node.provisioning_scheduled_step_scheduled_step = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn},
+			Table:   provisioningscheduledstep.ProvisionedHostTable,
+			Columns: []string{provisioningscheduledstep.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -501,15 +501,15 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host = &nodes[0]
+		_node.provisioning_scheduled_step_provisioned_host = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToScriptIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.ScriptIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToScriptTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToScriptColumn},
+			Table:   provisioningscheduledstep.ScriptTable,
+			Columns: []string{provisioningscheduledstep.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -521,15 +521,15 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_scheduled_step_provisioning_scheduled_step_to_script = &nodes[0]
+		_node.provisioning_scheduled_step_script = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToCommandIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.CommandIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToCommandTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToCommandColumn},
+			Table:   provisioningscheduledstep.CommandTable,
+			Columns: []string{provisioningscheduledstep.CommandColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -541,15 +541,15 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_scheduled_step_provisioning_scheduled_step_to_command = &nodes[0]
+		_node.provisioning_scheduled_step_command = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToDNSRecordIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.DNSRecordIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordColumn},
+			Table:   provisioningscheduledstep.DNSRecordTable,
+			Columns: []string{provisioningscheduledstep.DNSRecordColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -561,15 +561,15 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_scheduled_step_provisioning_scheduled_step_to_dns_record = &nodes[0]
+		_node.provisioning_scheduled_step_dns_record = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToFileDeleteIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.FileDeleteIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteColumn},
+			Table:   provisioningscheduledstep.FileDeleteTable,
+			Columns: []string{provisioningscheduledstep.FileDeleteColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -581,15 +581,15 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_scheduled_step_provisioning_scheduled_step_to_file_delete = &nodes[0]
+		_node.provisioning_scheduled_step_file_delete = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToFileDownloadIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.FileDownloadIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadColumn},
+			Table:   provisioningscheduledstep.FileDownloadTable,
+			Columns: []string{provisioningscheduledstep.FileDownloadColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -601,15 +601,15 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_scheduled_step_provisioning_scheduled_step_to_file_download = &nodes[0]
+		_node.provisioning_scheduled_step_file_download = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToFileExtractIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.FileExtractIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileExtractTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileExtractColumn},
+			Table:   provisioningscheduledstep.FileExtractTable,
+			Columns: []string{provisioningscheduledstep.FileExtractColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -621,15 +621,15 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_scheduled_step_provisioning_scheduled_step_to_file_extract = &nodes[0]
+		_node.provisioning_scheduled_step_file_extract = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToAnsibleIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.AnsibleIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToAnsibleTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToAnsibleColumn},
+			Table:   provisioningscheduledstep.AnsibleTable,
+			Columns: []string{provisioningscheduledstep.AnsibleColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -641,15 +641,15 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_scheduled_step_provisioning_scheduled_step_to_ansible = &nodes[0]
+		_node.provisioning_scheduled_step_ansible = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToAgentTaskIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.AgentTaskIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskColumn},
+			Table:   provisioningscheduledstep.AgentTaskTable,
+			Columns: []string{provisioningscheduledstep.AgentTaskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -664,12 +664,12 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		_node.agent_task_agent_task_to_provisioning_scheduled_step = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningStepToPlanIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.PlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningStepToPlanTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningStepToPlanColumn},
+			Table:   provisioningscheduledstep.PlanTable,
+			Columns: []string{provisioningscheduledstep.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -684,12 +684,12 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		_node.plan_plan_to_provisioning_scheduled_step = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.ProvisioningScheduledStepToGinFileMiddlewareIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.GinFileMiddlewareIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareColumn},
+			Table:   provisioningscheduledstep.GinFileMiddlewareTable,
+			Columns: []string{provisioningscheduledstep.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

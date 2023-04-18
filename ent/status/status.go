@@ -111,7 +111,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "provisioningscheduledstep" package.
 	StatusToProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
 	// StatusToProvisioningScheduledStepColumn is the table column denoting the StatusToProvisioningScheduledStep relation/edge.
-	StatusToProvisioningScheduledStepColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_status"
+	StatusToProvisioningScheduledStepColumn = "provisioning_scheduled_step_status"
 )
 
 // Columns holds all SQL columns for status fields.
@@ -134,7 +134,7 @@ var ForeignKeys = []string{
 	"plan_plan_to_status",
 	"provisioned_host_provisioned_host_to_status",
 	"provisioned_network_provisioned_network_to_status",
-	"provisioning_scheduled_step_provisioning_scheduled_step_to_status",
+	"provisioning_scheduled_step_status",
 	"provisioning_step_provisioning_step_to_status",
 	"server_task_server_task_to_status",
 	"team_team_to_status",

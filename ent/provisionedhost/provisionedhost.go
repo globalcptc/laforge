@@ -93,7 +93,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "provisioningscheduledstep" package.
 	ProvisionedHostToProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
 	// ProvisionedHostToProvisioningScheduledStepColumn is the table column denoting the ProvisionedHostToProvisioningScheduledStep relation/edge.
-	ProvisionedHostToProvisioningScheduledStepColumn = "provisioning_scheduled_step_provisioning_scheduled_step_to_provisioned_host"
+	ProvisionedHostToProvisioningScheduledStepColumn = "provisioning_scheduled_step_provisioned_host"
 	// ProvisionedHostToAgentStatusTable is the table that holds the ProvisionedHostToAgentStatus relation/edge.
 	ProvisionedHostToAgentStatusTable = "agent_status"
 	// ProvisionedHostToAgentStatusInverseTable is the table name for the AgentStatus entity.

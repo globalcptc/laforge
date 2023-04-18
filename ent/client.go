@@ -4777,15 +4777,15 @@ func (c *ProvisioningScheduledStepClient) GetX(ctx context.Context, id uuid.UUID
 	return obj
 }
 
-// QueryProvisioningScheduledStepToStatus queries the ProvisioningScheduledStepToStatus edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToStatus(pss *ProvisioningScheduledStep) *StatusQuery {
+// QueryStatus queries the Status edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryStatus(pss *ProvisioningScheduledStep) *StatusQuery {
 	query := &StatusQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, provisioningscheduledstep.ProvisioningScheduledStepToStatusTable, provisioningscheduledstep.ProvisioningScheduledStepToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, provisioningscheduledstep.StatusTable, provisioningscheduledstep.StatusColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4793,15 +4793,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToStatus
 	return query
 }
 
-// QueryProvisioningScheduledStepToScheduledStep queries the ProvisioningScheduledStepToScheduledStep edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToScheduledStep(pss *ProvisioningScheduledStep) *ScheduledStepQuery {
+// QueryScheduledStep queries the ScheduledStep edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryScheduledStep(pss *ProvisioningScheduledStep) *ScheduledStepQuery {
 	query := &ScheduledStepQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(scheduledstep.Table, scheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepTable, provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ScheduledStepTable, provisioningscheduledstep.ScheduledStepColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4809,15 +4809,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToSchedu
 	return query
 }
 
-// QueryProvisioningScheduledStepToProvisionedHost queries the ProvisioningScheduledStepToProvisionedHost edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToProvisionedHost(pss *ProvisioningScheduledStep) *ProvisionedHostQuery {
+// QueryProvisionedHost queries the ProvisionedHost edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryProvisionedHost(pss *ProvisioningScheduledStep) *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable, provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisionedHostTable, provisioningscheduledstep.ProvisionedHostColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4825,15 +4825,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToProvis
 	return query
 }
 
-// QueryProvisioningScheduledStepToScript queries the ProvisioningScheduledStepToScript edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToScript(pss *ProvisioningScheduledStep) *ScriptQuery {
+// QueryScript queries the Script edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryScript(pss *ProvisioningScheduledStep) *ScriptQuery {
 	query := &ScriptQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(script.Table, script.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToScriptTable, provisioningscheduledstep.ProvisioningScheduledStepToScriptColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ScriptTable, provisioningscheduledstep.ScriptColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4841,15 +4841,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToScript
 	return query
 }
 
-// QueryProvisioningScheduledStepToCommand queries the ProvisioningScheduledStepToCommand edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToCommand(pss *ProvisioningScheduledStep) *CommandQuery {
+// QueryCommand queries the Command edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryCommand(pss *ProvisioningScheduledStep) *CommandQuery {
 	query := &CommandQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(command.Table, command.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToCommandTable, provisioningscheduledstep.ProvisioningScheduledStepToCommandColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.CommandTable, provisioningscheduledstep.CommandColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4857,15 +4857,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToComman
 	return query
 }
 
-// QueryProvisioningScheduledStepToDNSRecord queries the ProvisioningScheduledStepToDNSRecord edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToDNSRecord(pss *ProvisioningScheduledStep) *DNSRecordQuery {
+// QueryDNSRecord queries the DNSRecord edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryDNSRecord(pss *ProvisioningScheduledStep) *DNSRecordQuery {
 	query := &DNSRecordQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(dnsrecord.Table, dnsrecord.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordTable, provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.DNSRecordTable, provisioningscheduledstep.DNSRecordColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4873,15 +4873,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToDNSRec
 	return query
 }
 
-// QueryProvisioningScheduledStepToFileDelete queries the ProvisioningScheduledStepToFileDelete edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToFileDelete(pss *ProvisioningScheduledStep) *FileDeleteQuery {
+// QueryFileDelete queries the FileDelete edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryFileDelete(pss *ProvisioningScheduledStep) *FileDeleteQuery {
 	query := &FileDeleteQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(filedelete.Table, filedelete.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteTable, provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.FileDeleteTable, provisioningscheduledstep.FileDeleteColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4889,15 +4889,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToFileDe
 	return query
 }
 
-// QueryProvisioningScheduledStepToFileDownload queries the ProvisioningScheduledStepToFileDownload edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToFileDownload(pss *ProvisioningScheduledStep) *FileDownloadQuery {
+// QueryFileDownload queries the FileDownload edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryFileDownload(pss *ProvisioningScheduledStep) *FileDownloadQuery {
 	query := &FileDownloadQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(filedownload.Table, filedownload.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadTable, provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.FileDownloadTable, provisioningscheduledstep.FileDownloadColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4905,15 +4905,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToFileDo
 	return query
 }
 
-// QueryProvisioningScheduledStepToFileExtract queries the ProvisioningScheduledStepToFileExtract edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToFileExtract(pss *ProvisioningScheduledStep) *FileExtractQuery {
+// QueryFileExtract queries the FileExtract edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryFileExtract(pss *ProvisioningScheduledStep) *FileExtractQuery {
 	query := &FileExtractQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(fileextract.Table, fileextract.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToFileExtractTable, provisioningscheduledstep.ProvisioningScheduledStepToFileExtractColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.FileExtractTable, provisioningscheduledstep.FileExtractColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4921,15 +4921,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToFileEx
 	return query
 }
 
-// QueryProvisioningScheduledStepToAnsible queries the ProvisioningScheduledStepToAnsible edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToAnsible(pss *ProvisioningScheduledStep) *AnsibleQuery {
+// QueryAnsible queries the Ansible edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryAnsible(pss *ProvisioningScheduledStep) *AnsibleQuery {
 	query := &AnsibleQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(ansible.Table, ansible.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.ProvisioningScheduledStepToAnsibleTable, provisioningscheduledstep.ProvisioningScheduledStepToAnsibleColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningscheduledstep.AnsibleTable, provisioningscheduledstep.AnsibleColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4937,15 +4937,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToAnsibl
 	return query
 }
 
-// QueryProvisioningScheduledStepToAgentTask queries the ProvisioningScheduledStepToAgentTask edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToAgentTask(pss *ProvisioningScheduledStep) *AgentTaskQuery {
+// QueryAgentTask queries the AgentTask edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryAgentTask(pss *ProvisioningScheduledStep) *AgentTaskQuery {
 	query := &AgentTaskQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(agenttask.Table, agenttask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskTable, provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisioningscheduledstep.AgentTaskTable, provisioningscheduledstep.AgentTaskColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4953,15 +4953,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToAgentT
 	return query
 }
 
-// QueryProvisioningStepToPlan queries the ProvisioningStepToPlan edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningStepToPlan(pss *ProvisioningScheduledStep) *PlanQuery {
+// QueryPlan queries the Plan edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryPlan(pss *ProvisioningScheduledStep) *PlanQuery {
 	query := &PlanQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisioningscheduledstep.ProvisioningStepToPlanTable, provisioningscheduledstep.ProvisioningStepToPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisioningscheduledstep.PlanTable, provisioningscheduledstep.PlanColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil
@@ -4969,15 +4969,15 @@ func (c *ProvisioningScheduledStepClient) QueryProvisioningStepToPlan(pss *Provi
 	return query
 }
 
-// QueryProvisioningScheduledStepToGinFileMiddleware queries the ProvisioningScheduledStepToGinFileMiddleware edge of a ProvisioningScheduledStep.
-func (c *ProvisioningScheduledStepClient) QueryProvisioningScheduledStepToGinFileMiddleware(pss *ProvisioningScheduledStep) *GinFileMiddlewareQuery {
+// QueryGinFileMiddleware queries the GinFileMiddleware edge of a ProvisioningScheduledStep.
+func (c *ProvisioningScheduledStepClient) QueryGinFileMiddleware(pss *ProvisioningScheduledStep) *GinFileMiddlewareQuery {
 	query := &GinFileMiddlewareQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, id),
 			sqlgraph.To(ginfilemiddleware.Table, ginfilemiddleware.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareTable, provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisioningscheduledstep.GinFileMiddlewareTable, provisioningscheduledstep.GinFileMiddlewareColumn),
 		)
 		fromV = sqlgraph.Neighbors(pss.driver.Dialect(), step)
 		return fromV, nil

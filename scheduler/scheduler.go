@@ -72,11 +72,11 @@ func InitSchedulerLogger(laforgeConfig *utils.ServerConfig) (*logging.Logger, er
 func GetStepsToExecute(ctx context.Context, client *ent.Client) ([]*ent.ProvisioningScheduledStep, error) {
 	entProvisioningScheduledSteps, err := client.ProvisioningScheduledStep.Query().Where(
 		provisioningscheduledstep.And(
-			provisioningscheduledstep.HasProvisioningScheduledStepToStatusWith(
+			provisioningscheduledstep.HasStatusWith(
 				status.StateEQ(status.StateAWAITING), // Is of status AWAITING (has been queued by the builder)
 			),
 			provisioningscheduledstep.RunTimeNEQ(time.Unix(0, 0)), // Has a non-zero run time
-			provisioningscheduledstep.RunTimeLTE(time.Now()), // Should be run now or in the past
+			provisioningscheduledstep.RunTimeLTE(time.Now()),      // Should be run now or in the past
 		),
 	).All(ctx)
 	if err != nil {
@@ -86,7 +86,7 @@ func GetStepsToExecute(ctx context.Context, client *ent.Client) ([]*ent.Provisio
 }
 
 func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Client, logger *logging.Logger, laforgeConfig *utils.ServerConfig, entProvisioningScheduledStep *ent.ProvisioningScheduledStep) {
-	entStatus, err := entProvisioningScheduledStep.ProvisioningScheduledStepToStatus(ctx)
+	entStatus, err := entProvisioningScheduledStep.Status(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed to query provisioned scheduled step status: %v", err)
 		return
@@ -98,7 +98,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 	}
 	rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
 
-	entProvisionedHost, err := entProvisioningScheduledStep.ProvisioningScheduledStepToProvisionedHost(ctx)
+	entProvisionedHost, err := entProvisioningScheduledStep.ProvisionedHost(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed to query provisioned host: %v", err)
 		return
@@ -112,7 +112,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 
 	switch entProvisioningScheduledStep.Type {
 	case provisioningscheduledstep.TypeScript:
-		entScript, err := entProvisioningScheduledStep.ProvisioningScheduledStepToScript(ctx)
+		entScript, err := entProvisioningScheduledStep.Script(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying Script for provioning scheduled step: %v", err)
 			return
@@ -125,7 +125,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			}
 			logger.Log.Debug("successful rerendering for Script: %v", err)
 		}
-		entGinMiddleware, err := entProvisioningScheduledStep.ProvisioningScheduledStepToGinFileMiddleware(ctx)
+		entGinMiddleware, err := entProvisioningScheduledStep.GinFileMiddleware(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying Gin File Middleware for Script: %v", err)
 			return
@@ -168,7 +168,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			return
 		}
 	case provisioningscheduledstep.TypeCommand:
-		entCommand, err := entProvisioningScheduledStep.ProvisioningScheduledStepToCommand(ctx)
+		entCommand, err := entProvisioningScheduledStep.Command(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying command for provioning scheduled step: %v", err)
 			return
@@ -181,7 +181,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
 				SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+				SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
 				Save(ctx)
 			if err != nil {
 				logger.Log.Errorf("failed Creating Agent Task for Reboot Command: %v", err)
@@ -194,7 +194,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
 				SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+				SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
 				Save(ctx)
 			if err != nil {
 				logger.Log.Errorf("failed Creating Agent Task for Command: %v", err)
@@ -202,7 +202,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			}
 		}
 	case provisioningscheduledstep.TypeFileDelete:
-		entFileDelete, err := entProvisioningScheduledStep.ProvisioningScheduledStepToFileDelete(ctx)
+		entFileDelete, err := entProvisioningScheduledStep.FileDelete(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying File Delete for provioning scheduled step: %v", err)
 			return
@@ -220,12 +220,12 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			return
 		}
 	case provisioningscheduledstep.TypeFileDownload:
-		entFileDownload, err := entProvisioningScheduledStep.ProvisioningScheduledStepToFileDownload(ctx)
+		entFileDownload, err := entProvisioningScheduledStep.FileDownload(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying File Download for Provioning scheduled Step: %v", err)
 			return
 		}
-		entGinMiddleware, err := entProvisioningScheduledStep.ProvisioningScheduledStepToGinFileMiddleware(ctx)
+		entGinMiddleware, err := entProvisioningScheduledStep.GinFileMiddleware(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying Gin File Middleware for File Download: %v", err)
 			return
@@ -237,7 +237,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
 				SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+				SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
 				Save(ctx)
 		} else {
 			_, err = client.AgentTask.Create().
@@ -246,7 +246,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
 				SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+				SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
 				Save(ctx)
 		}
 		if err != nil {
@@ -254,7 +254,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			return
 		}
 	case provisioningscheduledstep.TypeFileExtract:
-		entFileExtract, err := entProvisioningScheduledStep.ProvisioningScheduledStepToFileExtract(ctx)
+		entFileExtract, err := entProvisioningScheduledStep.FileExtract(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying File Extract for Provioning scheduled Step: %v", err)
 			return
@@ -274,12 +274,12 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 	case provisioningscheduledstep.TypeDNSRecord:
 		break
 	case provisioningscheduledstep.TypeAnsible:
-		entAnsible, err := entProvisioningScheduledStep.ProvisioningScheduledStepToAnsible(ctx)
+		entAnsible, err := entProvisioningScheduledStep.Ansible(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying Ansible for Provioning scheduled Step: %v", err)
 			return
 		}
-		entGinMiddleware, err := entProvisioningScheduledStep.ProvisioningScheduledStepToGinFileMiddleware(ctx)
+		entGinMiddleware, err := entProvisioningScheduledStep.GinFileMiddleware(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying Gin File Middleware for Script: %v", err)
 			return
@@ -349,7 +349,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 	}
 
 	for {
-		taskFailed, err := entProvisioningScheduledStep.QueryProvisioningScheduledStepToAgentTask().Where(
+		taskFailed, err := entProvisioningScheduledStep.QueryAgentTask().Where(
 			agenttask.StateEQ(
 				agenttask.StateFAILED,
 			),
@@ -371,7 +371,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			return
 		}
 
-		taskRunning, err := entProvisioningScheduledStep.QueryProvisioningScheduledStepToAgentTask().Where(
+		taskRunning, err := entProvisioningScheduledStep.QueryAgentTask().Where(
 			agenttask.StateNEQ(
 				agenttask.StateCOMPLETE,
 			),
