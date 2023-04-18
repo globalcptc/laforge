@@ -30,7 +30,7 @@ func (Validation) Fields() []ent.Field {
 			StructTag(`hcl:"id,label"`),
 		field.String("validation_type").
 			Default("").
-			StructTag(`hcl:"validator_type`),
+			StructTag(`hcl:"validation_type"`),
 		field.String("output").Default(""),
 		field.Enum("state").Values("AWAITING", "INPROGRESS", "FAILED", "COMPLETE"),
 		field.String("error_message").Default(""),

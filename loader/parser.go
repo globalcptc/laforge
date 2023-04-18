@@ -61,7 +61,7 @@ type DefinedConfigs struct {
 	DefinedScripts        []*ent.Script                 `hcl:"script,block" json:"scripts,omitempty"`
 	DefinedCommands       []*ent.Command                `hcl:"command,block" json:"defined_commands,omitempty"`
 	DefinedDNSRecords     []*ent.DNSRecord              `hcl:"dns_record,block" json:"defined_dns_records,omitempty"`
-	DefinedValidations    []*ent.Validation             `hcl:"validator,block" json:"defined_validators,omitempty"`
+	DefinedValidations    []*ent.Validation             `hcl:"validation,block" json:"defined_validations,omitempty"`
 	DefinedEnvironments   []*ent.Environment            `hcl:"environment,block" json:"environments,omitempty"`
 	DefinedFileDownload   []*ent.FileDownload           `hcl:"file_download,block" json:"file_download,omitempty"`
 	DefinedFileDelete     []*ent.FileDelete             `hcl:"file_delete,block" json:"file_delete,omitempty"`
@@ -1270,7 +1270,7 @@ func createValidations(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 	if len(bulk) > 0 {
 		dbValidators, err := txClient.Validation.CreateBulk(bulk...).Save(ctx)
 		if err != nil {
-			log.Log.Errorf("failed to create bulk DNS Records. Err: %v", err)
+			log.Log.Errorf("failed to create bulk Validators. Err: %v", err)
 			return nil, err
 		}
 		returnedValidations = append(returnedValidations, dbValidators...)

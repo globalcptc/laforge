@@ -21,7 +21,7 @@ type Validation struct {
 	// HclID holds the value of the "hcl_id" field.
 	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// ValidationType holds the value of the "validation_type" field.
-	ValidationType string `json:"validation_type,omitempty" hcl:"validator_type`
+	ValidationType string `json:"validation_type,omitempty" hcl:"validation_type"`
 	// Output holds the value of the "output" field.
 	Output string `json:"output,omitempty"`
 	// State holds the value of the "state" field.
