@@ -47,6 +47,8 @@ type Script struct {
 	AbsPath string `json:"abs_path,omitempty" hcl:"abs_path,optional"`
 	// Tags holds the value of the "tags" field.
 	Tags map[string]string `json:"tags,omitempty" hcl:"tags,optional"`
+	// Validations holds the value of the "validations" field.
+	Validations []string `json:"validations,omitempty" hcl:"validations,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ScriptQuery when eager-loading is set.
 	Edges ScriptEdges `json:"edges"`
@@ -131,7 +133,7 @@ func (*Script) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case script.FieldArgs, script.FieldVars, script.FieldTags:
+		case script.FieldArgs, script.FieldVars, script.FieldTags, script.FieldValidations:
 			values[i] = new([]byte)
 		case script.FieldIgnoreErrors, script.FieldDisabled:
 			values[i] = new(sql.NullBool)
@@ -256,6 +258,14 @@ func (s *Script) assignValues(columns []string, values []interface{}) error {
 					return fmt.Errorf("unmarshal field tags: %w", err)
 				}
 			}
+		case script.FieldValidations:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field validations", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &s.Validations); err != nil {
+					return fmt.Errorf("unmarshal field validations: %w", err)
+				}
+			}
 		case script.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field environment_environment_to_script", values[i])
@@ -346,6 +356,8 @@ func (s *Script) String() string {
 	builder.WriteString(s.AbsPath)
 	builder.WriteString(", tags=")
 	builder.WriteString(fmt.Sprintf("%v", s.Tags))
+	builder.WriteString(", validations=")
+	builder.WriteString(fmt.Sprintf("%v", s.Validations))
 	builder.WriteByte(')')
 	return builder.String()
 }

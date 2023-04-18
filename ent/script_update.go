@@ -130,6 +130,12 @@ func (su *ScriptUpdate) SetTags(m map[string]string) *ScriptUpdate {
 	return su
 }
 
+// SetValidations sets the "validations" field.
+func (su *ScriptUpdate) SetValidations(s []string) *ScriptUpdate {
+	su.mutation.SetValidations(s)
+	return su
+}
+
 // AddScriptToUserIDs adds the "ScriptToUser" edge to the User entity by IDs.
 func (su *ScriptUpdate) AddScriptToUserIDs(ids ...uuid.UUID) *ScriptUpdate {
 	su.mutation.AddScriptToUserIDs(ids...)
@@ -441,6 +447,13 @@ func (su *ScriptUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: script.FieldTags,
 		})
 	}
+	if value, ok := su.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: script.FieldValidations,
+		})
+	}
 	if su.mutation.ScriptToUserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -733,6 +746,12 @@ func (suo *ScriptUpdateOne) SetAbsPath(s string) *ScriptUpdateOne {
 // SetTags sets the "tags" field.
 func (suo *ScriptUpdateOne) SetTags(m map[string]string) *ScriptUpdateOne {
 	suo.mutation.SetTags(m)
+	return suo
+}
+
+// SetValidations sets the "validations" field.
+func (suo *ScriptUpdateOne) SetValidations(s []string) *ScriptUpdateOne {
+	suo.mutation.SetValidations(s)
 	return suo
 }
 
@@ -1075,6 +1094,13 @@ func (suo *ScriptUpdateOne) sqlSave(ctx context.Context) (_node *Script, err err
 			Type:   field.TypeJSON,
 			Value:  value,
 			Column: script.FieldTags,
+		})
+	}
+	if value, ok := suo.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: script.FieldValidations,
 		})
 	}
 	if suo.mutation.ScriptToUserCleared() {

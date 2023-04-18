@@ -3403,7 +3403,7 @@ func (s *Script) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     s.ID,
 		Type:   "Script",
-		Fields: make([]*Field, 14),
+		Fields: make([]*Field, 15),
 		Edges:  make([]*Edge, 4),
 	}
 	var buf []byte
@@ -3517,6 +3517,14 @@ func (s *Script) Node(ctx context.Context) (node *Node, err error) {
 	node.Fields[13] = &Field{
 		Type:  "map[string]string",
 		Name:  "tags",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(s.Validations); err != nil {
+		return nil, err
+	}
+	node.Fields[14] = &Field{
+		Type:  "[]string",
+		Name:  "validations",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{

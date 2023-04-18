@@ -449,6 +449,11 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			log.Log.Errorf("Error loading in competition into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
+		returnedValidations, err := createValidations(txClient, ctx, log, loadedConfig.Validations, cEnviroment.HclID)
+		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in validations into env: %v, Err: %v", cEnviroment.HclID, err)
+		}
 		returnedScripts, returnedFindings, err := createScripts(txClient, ctx, log, loadedConfig.Scripts, cEnviroment.HclID)
 		if err != nil {
 			err = rollback(txClient, err)
@@ -466,11 +471,6 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			err = rollback(txClient, err)
 			log.Log.Errorf("Error loading in dns_records into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
-		}
-		returnedValidations, err := createValidations(txClient, ctx, log, loadedConfig.Validations, cEnviroment.HclID)
-		if err != nil {
-			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in validations into env: %v, Err: %v", cEnviroment.HclID, err)
 		}
 		returnedFileDownloads, err := createFileDownload(txClient, ctx, log, loadedConfig.FileDownload, cEnviroment.HclID)
 		if err != nil {
@@ -897,6 +897,20 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 		if err != nil {
 			return nil, nil, err
 		}
+		for _, validationHCLID := range cScript.Validations {
+			exist, err := txClient.Validation.Query().
+				Where(
+					validation.HclIDEQ(validationHCLID),
+				).Exist(ctx)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			if !exist {
+				return nil, nil, fmt.Errorf("validation \"%s\" does not exist for script \"%s\"", validationHCLID, cScript.HclID)
+			}
+		}
+
 		entScript, err := txClient.Script.
 			Query().
 			Where(
@@ -923,6 +937,7 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 					SetVars(cScript.Vars).
 					SetTags(cScript.Tags).
 					SetAbsPath(cScript.AbsPath).
+					SetValidations(cScript.Validations).
 					AddScriptToFinding(returnedFindings...)
 				bulk = append(bulk, createdQuery)
 				continue
@@ -943,6 +958,7 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 			SetVars(cScript.Vars).
 			SetTags(cScript.Tags).
 			SetAbsPath(cScript.AbsPath).
+			SetValidations(cScript.Validations).
 			ClearScriptToFinding().
 			Save(ctx)
 		if err != nil {

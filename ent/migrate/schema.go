@@ -1070,6 +1070,7 @@ var (
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "abs_path", Type: field.TypeString},
 		{Name: "tags", Type: field.TypeJSON},
+		{Name: "validations", Type: field.TypeJSON},
 		{Name: "environment_environment_to_script", Type: field.TypeUUID, Nullable: true},
 		{Name: "script_script_to_validation", Type: field.TypeUUID, Nullable: true},
 	}
@@ -1081,13 +1082,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "scripts_environments_EnvironmentToScript",
-				Columns:    []*schema.Column{ScriptsColumns[15]},
+				Columns:    []*schema.Column{ScriptsColumns[16]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "scripts_validations_ScriptToValidation",
-				Columns:    []*schema.Column{ScriptsColumns[16]},
+				Columns:    []*schema.Column{ScriptsColumns[17]},
 				RefColumns: []*schema.Column{ValidationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

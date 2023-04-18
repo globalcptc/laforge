@@ -30202,6 +30202,7 @@ type ScriptMutation struct {
 	vars                        *map[string]string
 	abs_path                    *string
 	tags                        *map[string]string
+	validations                 *[]string
 	clearedFields               map[string]struct{}
 	_ScriptToUser               map[uuid.UUID]struct{}
 	removed_ScriptToUser        map[uuid.UUID]struct{}
@@ -30866,6 +30867,42 @@ func (m *ScriptMutation) ResetTags() {
 	m.tags = nil
 }
 
+// SetValidations sets the "validations" field.
+func (m *ScriptMutation) SetValidations(s []string) {
+	m.validations = &s
+}
+
+// Validations returns the value of the "validations" field in the mutation.
+func (m *ScriptMutation) Validations() (r []string, exists bool) {
+	v := m.validations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldValidations returns the old "validations" field's value of the Script entity.
+// If the Script object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScriptMutation) OldValidations(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldValidations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldValidations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldValidations: %w", err)
+	}
+	return oldValue.Validations, nil
+}
+
+// ResetValidations resets all changes to the "validations" field.
+func (m *ScriptMutation) ResetValidations() {
+	m.validations = nil
+}
+
 // AddScriptToUserIDs adds the "ScriptToUser" edge to the User entity by ids.
 func (m *ScriptMutation) AddScriptToUserIDs(ids ...uuid.UUID) {
 	if m._ScriptToUser == nil {
@@ -31071,7 +31108,7 @@ func (m *ScriptMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ScriptMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 15)
 	if m.hcl_id != nil {
 		fields = append(fields, script.FieldHclID)
 	}
@@ -31114,6 +31151,9 @@ func (m *ScriptMutation) Fields() []string {
 	if m.tags != nil {
 		fields = append(fields, script.FieldTags)
 	}
+	if m.validations != nil {
+		fields = append(fields, script.FieldValidations)
+	}
 	return fields
 }
 
@@ -31150,6 +31190,8 @@ func (m *ScriptMutation) Field(name string) (ent.Value, bool) {
 		return m.AbsPath()
 	case script.FieldTags:
 		return m.Tags()
+	case script.FieldValidations:
+		return m.Validations()
 	}
 	return nil, false
 }
@@ -31187,6 +31229,8 @@ func (m *ScriptMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldAbsPath(ctx)
 	case script.FieldTags:
 		return m.OldTags(ctx)
+	case script.FieldValidations:
+		return m.OldValidations(ctx)
 	}
 	return nil, fmt.Errorf("unknown Script field %s", name)
 }
@@ -31293,6 +31337,13 @@ func (m *ScriptMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTags(v)
+		return nil
+	case script.FieldValidations:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetValidations(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Script field %s", name)
@@ -31411,6 +31462,9 @@ func (m *ScriptMutation) ResetField(name string) error {
 		return nil
 	case script.FieldTags:
 		m.ResetTags()
+		return nil
+	case script.FieldValidations:
+		m.ResetValidations()
 		return nil
 	}
 	return fmt.Errorf("unknown Script field %s", name)

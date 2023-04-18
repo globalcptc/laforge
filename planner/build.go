@@ -18,6 +18,7 @@ import (
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/status"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/gen0cide/laforge/server/utils"
 	"github.com/google/uuid"
@@ -917,6 +918,13 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
 			return err
 		}
+		for i, validationHCLID := range entScript.Validations {
+			err = createValidation(client, logger, ctx, validationHCLID, taskCount+3+i, entProvisionedHost, entStep)
+			if err != nil {
+				logger.Log.Errorf("failed Creating Agent Task for Script Validation: %v", err)
+			}
+
+		}
 	case provisioningstep.TypeCommand:
 		entCommand, err := entStep.QueryProvisioningStepToCommand().Only(ctx)
 		if err != nil {
@@ -1147,195 +1155,199 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 	checkHostStatus(client, logger, ctx, entProvisionedHost)
 	rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
 
-	agent_task_for_entstep, fetch_agent_task_err := entStep.ProvisioningStepToAgentTask(ctx)
-	if fetch_agent_task_err != nil {
-		logger.Log.Errorf("error while trying to get agent tasks for ProvisioningStep: %v", fetch_agent_task_err)
+	return nil
+
+}
+
+func createValidation(client *ent.Client, logger *logging.Logger, ctx context.Context, validationHCLID string, taskCount int, entProvisionedHost *ent.ProvisionedHost, entStep *ent.ProvisioningStep) error {
+	entValidation, err := client.Validation.Query().
+		Where(
+			validation.HclIDEQ(
+				validationHCLID,
+			),
+		).
+		Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("failed Query Validation for Script: %v", err)
+		return err
 	}
 
-	for _, iter_agent_task := range agent_task_for_entstep {
-		validation, err := iter_agent_task.AgentTaskToValidation(ctx)
-		if err != nil {
-			logger.Log.Errorf("error while trying to get validations for AgentTask: %v", err)
-			return err
-		}
-		switch validation.ValidationType {
-		case "linux-apt-installed":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("linux-apt-installed" + "💔" + validation.PackageName).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "net-tcp-open":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("net-tcp-open" + "💔" + validation.IP + "💔" + strconv.Itoa(validation.Port)).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "net-udp-open":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("net-udp-open" + "💔" + validation.IP + "💔" + strconv.Itoa(validation.Port)).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "net-http-content-regex":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("net-http-content-regex" + "💔" + validation.IP).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "file-exists":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("file-exists" + "💔" + validation.FilePath).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "file-hash":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("file-hash" + "💔" + validation.FilePath).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "file-content-regex":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("file-content-regex" + "💔" + validation.FilePath + "💔" + validation.Regex).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "dir-exists":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("dir-exists" + "💔" + validation.FilePath).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "user-exists":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("user-exists" + "💔" + validation.Username).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "user-group-membership":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("user-group-membership" + "💔" + validation.Username + "💔" + validation.GroupName).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "host-port-open":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("host-port-open" + "💔" + strconv.Itoa(validation.Port)).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "host-process-running":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("host-process-running" + "💔" + validation.ProcessName).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "host-service-state":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("host-service-state" + "💔" + validation.ServiceName).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "net-icmp":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("net-icmp" + "💔" + validation.IP).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "net-http-content-hash":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("net-http-content-hash" + "💔" + validation.IP).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "file-content-string":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("file-content-string" + validation.FilePath + "💔" + validation.SearchString).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		case "file-permission":
-			_, err = client.AgentTask.Create().
-				SetCommand(agenttask.CommandVALIDATOR).
-				SetArgs("file-permission" + "💔" + validation.FilePath).
-				SetNumber(taskCount).
-				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
-				SetAgentTaskToValidation(validation).
-				Save(ctx)
-		}
-		if err != nil {
-			logger.Log.Errorf("Agent task failed with error: %v", err)
-			return err
-		}
+	switch entValidation.ValidationType {
+	case "linux-apt-installed":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("linux-apt-installed" + "💔" + entValidation.PackageName).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "net-tcp-open":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("net-tcp-open" + "💔" + entValidation.IP + "💔" + strconv.Itoa(entValidation.Port)).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "net-udp-open":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("net-udp-open" + "💔" + entValidation.IP + "💔" + strconv.Itoa(entValidation.Port)).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "net-http-content-regex":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("net-http-content-regex" + "💔" + entValidation.IP).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "file-exists":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("file-exists" + "💔" + entValidation.FilePath).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "file-hash":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("file-hash" + "💔" + entValidation.FilePath).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "file-content-regex":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("file-content-regex" + "💔" + entValidation.FilePath + "💔" + entValidation.Regex).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "dir-exists":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("dir-exists" + "💔" + entValidation.FilePath).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "user-exists":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("user-exists" + "💔" + entValidation.Username).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "user-group-membership":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("user-group-membership" + "💔" + entValidation.Username + "💔" + entValidation.GroupName).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "host-port-open":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("host-port-open" + "💔" + strconv.Itoa(entValidation.Port)).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "host-process-running":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("host-process-running" + "💔" + entValidation.ProcessName).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "host-service-state":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("host-service-state" + "💔" + entValidation.ServiceName).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "net-icmp":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("net-icmp" + "💔" + entValidation.IP).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "net-http-content-hash":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("net-http-content-hash" + "💔" + entValidation.IP).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "file-content-string":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("file-content-string" + entValidation.FilePath + "💔" + entValidation.SearchString).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
+	case "file-permission":
+		_, err = client.AgentTask.Create().
+			SetCommand(agenttask.CommandVALIDATOR).
+			SetArgs("file-permission" + "💔" + entValidation.FilePath).
+			SetNumber(taskCount).
+			SetState(agenttask.StateAWAITING).
+			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetAgentTaskToProvisioningStep(entStep).
+			SetAgentTaskToValidation(entValidation).
+			Save(ctx)
 	}
-
+	if err != nil {
+		logger.Log.Errorf("Agent task failed with error: %v", err)
+		return err
+	}
 	return nil
 }
 
