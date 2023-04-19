@@ -587,6 +587,7 @@ func (sq *StatusQuery) WithStatusToProvisioningScheduledStep(opts ...func(*Provi
 //		GroupBy(status.FieldState).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (sq *StatusQuery) GroupBy(field string, fields ...string) *StatusGroupBy {
 	grbuild := &StatusGroupBy{config: sq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -613,6 +614,7 @@ func (sq *StatusQuery) GroupBy(field string, fields ...string) *StatusGroupBy {
 //	client.Status.Query().
 //		Select(status.FieldState).
 //		Scan(ctx, &v)
+//
 func (sq *StatusQuery) Select(fields ...string) *StatusSelect {
 	sq.fields = append(sq.fields, fields...)
 	selbuild := &StatusSelect{StatusQuery: sq}

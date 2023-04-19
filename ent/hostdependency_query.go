@@ -406,6 +406,7 @@ func (hdq *HostDependencyQuery) WithHostDependencyToEnvironment(opts ...func(*En
 //		GroupBy(hostdependency.FieldHostID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (hdq *HostDependencyQuery) GroupBy(field string, fields ...string) *HostDependencyGroupBy {
 	grbuild := &HostDependencyGroupBy{config: hdq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -432,6 +433,7 @@ func (hdq *HostDependencyQuery) GroupBy(field string, fields ...string) *HostDep
 //	client.HostDependency.Query().
 //		Select(hostdependency.FieldHostID).
 //		Scan(ctx, &v)
+//
 func (hdq *HostDependencyQuery) Select(fields ...string) *HostDependencySelect {
 	hdq.fields = append(hdq.fields, fields...)
 	selbuild := &HostDependencySelect{HostDependencyQuery: hdq}

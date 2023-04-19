@@ -444,6 +444,7 @@ func (atq *AgentTaskQuery) WithAgentTaskToValidation(opts ...func(*ValidationQue
 //		GroupBy(agenttask.FieldCommand).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (atq *AgentTaskQuery) GroupBy(field string, fields ...string) *AgentTaskGroupBy {
 	grbuild := &AgentTaskGroupBy{config: atq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -470,6 +471,7 @@ func (atq *AgentTaskQuery) GroupBy(field string, fields ...string) *AgentTaskGro
 //	client.AgentTask.Query().
 //		Select(agenttask.FieldCommand).
 //		Scan(ctx, &v)
+//
 func (atq *AgentTaskQuery) Select(fields ...string) *AgentTaskSelect {
 	atq.fields = append(atq.fields, fields...)
 	selbuild := &AgentTaskSelect{AgentTaskQuery: atq}

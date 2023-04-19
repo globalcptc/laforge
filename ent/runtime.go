@@ -369,10 +369,6 @@ func init() {
 	user.DefaultID = userDescID.Default.(func() uuid.UUID)
 	validationFields := schema.Validation{}.Fields()
 	_ = validationFields
-	// validationDescValidationType is the schema descriptor for validation_type field.
-	validationDescValidationType := validationFields[2].Descriptor()
-	// validation.DefaultValidationType holds the default value on creation for the validation_type field.
-	validation.DefaultValidationType = validationDescValidationType.Default.(string)
 	// validationDescOutput is the schema descriptor for output field.
 	validationDescOutput := validationFields[3].Descriptor()
 	// validation.DefaultOutput holds the default value on creation for the output field.

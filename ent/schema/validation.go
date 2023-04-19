@@ -28,8 +28,25 @@ func (Validation) Fields() []ent.Field {
 			Default(uuid.New),
 		field.String("hcl_id").
 			StructTag(`hcl:"id,label"`),
-		field.String("validation_type").
-			Default("").
+		field.Enum("validation_type").
+			Values(
+				"linux-apt-installed",
+				"net-tcp-open",
+				"net-udp-open",
+				"net-http-content-regex",
+				"file-exists",
+				"file-hash",
+				"file-content-regex",
+				"dir-exists",
+				"user-exists",
+				"user-group-membership",
+				"host-port-open",
+				"host-process-running",
+				"host-service-state",
+				"net-icmp",
+				"file-content-string",
+				"file-permission",
+			).
 			StructTag(`hcl:"validation_type"`),
 		field.String("output").Default(""),
 		field.Enum("state").Values("AWAITING", "INPROGRESS", "FAILED", "COMPLETE"),

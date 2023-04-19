@@ -336,6 +336,7 @@ func (cq *CommandQuery) WithCommandToEnvironment(opts ...func(*EnvironmentQuery)
 //		GroupBy(command.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (cq *CommandQuery) GroupBy(field string, fields ...string) *CommandGroupBy {
 	grbuild := &CommandGroupBy{config: cq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -362,6 +363,7 @@ func (cq *CommandQuery) GroupBy(field string, fields ...string) *CommandGroupBy 
 //	client.Command.Query().
 //		Select(command.FieldHclID).
 //		Scan(ctx, &v)
+//
 func (cq *CommandQuery) Select(fields ...string) *CommandSelect {
 	cq.fields = append(cq.fields, fields...)
 	selbuild := &CommandSelect{CommandQuery: cq}

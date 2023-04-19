@@ -335,6 +335,7 @@ func (auq *AuthUserQuery) WithAuthUserToServerTasks(opts ...func(*ServerTaskQuer
 //		GroupBy(authuser.FieldUsername).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (auq *AuthUserQuery) GroupBy(field string, fields ...string) *AuthUserGroupBy {
 	grbuild := &AuthUserGroupBy{config: auq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -361,6 +362,7 @@ func (auq *AuthUserQuery) GroupBy(field string, fields ...string) *AuthUserGroup
 //	client.AuthUser.Query().
 //		Select(authuser.FieldUsername).
 //		Scan(ctx, &v)
+//
 func (auq *AuthUserQuery) Select(fields ...string) *AuthUserSelect {
 	auq.fields = append(auq.fields, fields...)
 	selbuild := &AuthUserSelect{AuthUserQuery: auq}

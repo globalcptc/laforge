@@ -87,13 +87,6 @@ func HclID(v string) predicate.Validation {
 	})
 }
 
-// ValidationType applies equality check predicate on the "validation_type" field. It's identical to ValidationTypeEQ.
-func ValidationType(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldValidationType), v))
-	})
-}
-
 // Output applies equality check predicate on the "output" field. It's identical to OutputEQ.
 func Output(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
@@ -299,21 +292,21 @@ func HclIDContainsFold(v string) predicate.Validation {
 }
 
 // ValidationTypeEQ applies the EQ predicate on the "validation_type" field.
-func ValidationTypeEQ(v string) predicate.Validation {
+func ValidationTypeEQ(v ValidationType) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldValidationType), v))
 	})
 }
 
 // ValidationTypeNEQ applies the NEQ predicate on the "validation_type" field.
-func ValidationTypeNEQ(v string) predicate.Validation {
+func ValidationTypeNEQ(v ValidationType) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldValidationType), v))
 	})
 }
 
 // ValidationTypeIn applies the In predicate on the "validation_type" field.
-func ValidationTypeIn(vs ...string) predicate.Validation {
+func ValidationTypeIn(vs ...ValidationType) predicate.Validation {
 	v := make([]interface{}, len(vs))
 	for i := range v {
 		v[i] = vs[i]
@@ -324,76 +317,13 @@ func ValidationTypeIn(vs ...string) predicate.Validation {
 }
 
 // ValidationTypeNotIn applies the NotIn predicate on the "validation_type" field.
-func ValidationTypeNotIn(vs ...string) predicate.Validation {
+func ValidationTypeNotIn(vs ...ValidationType) predicate.Validation {
 	v := make([]interface{}, len(vs))
 	for i := range v {
 		v[i] = vs[i]
 	}
 	return predicate.Validation(func(s *sql.Selector) {
 		s.Where(sql.NotIn(s.C(FieldValidationType), v...))
-	})
-}
-
-// ValidationTypeGT applies the GT predicate on the "validation_type" field.
-func ValidationTypeGT(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldValidationType), v))
-	})
-}
-
-// ValidationTypeGTE applies the GTE predicate on the "validation_type" field.
-func ValidationTypeGTE(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldValidationType), v))
-	})
-}
-
-// ValidationTypeLT applies the LT predicate on the "validation_type" field.
-func ValidationTypeLT(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldValidationType), v))
-	})
-}
-
-// ValidationTypeLTE applies the LTE predicate on the "validation_type" field.
-func ValidationTypeLTE(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldValidationType), v))
-	})
-}
-
-// ValidationTypeContains applies the Contains predicate on the "validation_type" field.
-func ValidationTypeContains(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldValidationType), v))
-	})
-}
-
-// ValidationTypeHasPrefix applies the HasPrefix predicate on the "validation_type" field.
-func ValidationTypeHasPrefix(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldValidationType), v))
-	})
-}
-
-// ValidationTypeHasSuffix applies the HasSuffix predicate on the "validation_type" field.
-func ValidationTypeHasSuffix(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldValidationType), v))
-	})
-}
-
-// ValidationTypeEqualFold applies the EqualFold predicate on the "validation_type" field.
-func ValidationTypeEqualFold(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldValidationType), v))
-	})
-}
-
-// ValidationTypeContainsFold applies the ContainsFold predicate on the "validation_type" field.
-func ValidationTypeContainsFold(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldValidationType), v))
 	})
 }
 

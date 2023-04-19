@@ -372,6 +372,7 @@ func (vq *ValidationQuery) WithValidationToEnvironment(opts ...func(*Environment
 //		GroupBy(validation.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (vq *ValidationQuery) GroupBy(field string, fields ...string) *ValidationGroupBy {
 	grbuild := &ValidationGroupBy{config: vq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -398,6 +399,7 @@ func (vq *ValidationQuery) GroupBy(field string, fields ...string) *ValidationGr
 //	client.Validation.Query().
 //		Select(validation.FieldHclID).
 //		Scan(ctx, &v)
+//
 func (vq *ValidationQuery) Select(fields ...string) *ValidationSelect {
 	vq.fields = append(vq.fields, fields...)
 	selbuild := &ValidationSelect{ValidationQuery: vq}

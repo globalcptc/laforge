@@ -372,6 +372,7 @@ func (gfmq *GinFileMiddlewareQuery) WithGinFileMiddlewareToProvisioningScheduled
 //		GroupBy(ginfilemiddleware.FieldURLID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (gfmq *GinFileMiddlewareQuery) GroupBy(field string, fields ...string) *GinFileMiddlewareGroupBy {
 	grbuild := &GinFileMiddlewareGroupBy{config: gfmq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -398,6 +399,7 @@ func (gfmq *GinFileMiddlewareQuery) GroupBy(field string, fields ...string) *Gin
 //	client.GinFileMiddleware.Query().
 //		Select(ginfilemiddleware.FieldURLID).
 //		Scan(ctx, &v)
+//
 func (gfmq *GinFileMiddlewareQuery) Select(fields ...string) *GinFileMiddlewareSelect {
 	gfmq.fields = append(gfmq.fields, fields...)
 	selbuild := &GinFileMiddlewareSelect{GinFileMiddlewareQuery: gfmq}

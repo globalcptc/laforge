@@ -480,6 +480,7 @@ func (pnq *ProvisionedNetworkQuery) WithProvisionedNetworkToPlan(opts ...func(*P
 //		GroupBy(provisionednetwork.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (pnq *ProvisionedNetworkQuery) GroupBy(field string, fields ...string) *ProvisionedNetworkGroupBy {
 	grbuild := &ProvisionedNetworkGroupBy{config: pnq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -506,6 +507,7 @@ func (pnq *ProvisionedNetworkQuery) GroupBy(field string, fields ...string) *Pro
 //	client.ProvisionedNetwork.Query().
 //		Select(provisionednetwork.FieldName).
 //		Scan(ctx, &v)
+//
 func (pnq *ProvisionedNetworkQuery) Select(fields ...string) *ProvisionedNetworkSelect {
 	pnq.fields = append(pnq.fields, fields...)
 	selbuild := &ProvisionedNetworkSelect{ProvisionedNetworkQuery: pnq}

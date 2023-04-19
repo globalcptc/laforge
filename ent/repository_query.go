@@ -335,6 +335,7 @@ func (rq *RepositoryQuery) WithRepositoryToRepoCommit(opts ...func(*RepoCommitQu
 //		GroupBy(repository.FieldRepoURL).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (rq *RepositoryQuery) GroupBy(field string, fields ...string) *RepositoryGroupBy {
 	grbuild := &RepositoryGroupBy{config: rq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -361,6 +362,7 @@ func (rq *RepositoryQuery) GroupBy(field string, fields ...string) *RepositoryGr
 //	client.Repository.Query().
 //		Select(repository.FieldRepoURL).
 //		Scan(ctx, &v)
+//
 func (rq *RepositoryQuery) Select(fields ...string) *RepositorySelect {
 	rq.fields = append(rq.fields, fields...)
 	selbuild := &RepositorySelect{RepositoryQuery: rq}

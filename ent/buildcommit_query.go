@@ -372,6 +372,7 @@ func (bcq *BuildCommitQuery) WithBuildCommitToPlanDiffs(opts ...func(*PlanDiffQu
 //		GroupBy(buildcommit.FieldType).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (bcq *BuildCommitQuery) GroupBy(field string, fields ...string) *BuildCommitGroupBy {
 	grbuild := &BuildCommitGroupBy{config: bcq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -398,6 +399,7 @@ func (bcq *BuildCommitQuery) GroupBy(field string, fields ...string) *BuildCommi
 //	client.BuildCommit.Query().
 //		Select(buildcommit.FieldType).
 //		Scan(ctx, &v)
+//
 func (bcq *BuildCommitQuery) Select(fields ...string) *BuildCommitSelect {
 	bcq.fields = append(bcq.fields, fields...)
 	selbuild := &BuildCommitSelect{BuildCommitQuery: bcq}

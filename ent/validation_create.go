@@ -30,16 +30,8 @@ func (vc *ValidationCreate) SetHclID(s string) *ValidationCreate {
 }
 
 // SetValidationType sets the "validation_type" field.
-func (vc *ValidationCreate) SetValidationType(s string) *ValidationCreate {
-	vc.mutation.SetValidationType(s)
-	return vc
-}
-
-// SetNillableValidationType sets the "validation_type" field if the given value is not nil.
-func (vc *ValidationCreate) SetNillableValidationType(s *string) *ValidationCreate {
-	if s != nil {
-		vc.SetValidationType(*s)
-	}
+func (vc *ValidationCreate) SetValidationType(vt validation.ValidationType) *ValidationCreate {
+	vc.mutation.SetValidationType(vt)
 	return vc
 }
 
@@ -301,10 +293,6 @@ func (vc *ValidationCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (vc *ValidationCreate) defaults() {
-	if _, ok := vc.mutation.ValidationType(); !ok {
-		v := validation.DefaultValidationType
-		vc.mutation.SetValidationType(v)
-	}
 	if _, ok := vc.mutation.Output(); !ok {
 		v := validation.DefaultOutput
 		vc.mutation.SetOutput(v)
@@ -326,6 +314,11 @@ func (vc *ValidationCreate) check() error {
 	}
 	if _, ok := vc.mutation.ValidationType(); !ok {
 		return &ValidationError{Name: "validation_type", err: errors.New(`ent: missing required field "Validation.validation_type"`)}
+	}
+	if v, ok := vc.mutation.ValidationType(); ok {
+		if err := validation.ValidationTypeValidator(v); err != nil {
+			return &ValidationError{Name: "validation_type", err: fmt.Errorf(`ent: validator failed for field "Validation.validation_type": %w`, err)}
+		}
 	}
 	if _, ok := vc.mutation.Output(); !ok {
 		return &ValidationError{Name: "output", err: errors.New(`ent: missing required field "Validation.output"`)}
@@ -429,7 +422,7 @@ func (vc *ValidationCreate) createSpec() (*Validation, *sqlgraph.CreateSpec) {
 	}
 	if value, ok := vc.mutation.ValidationType(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
+			Type:   field.TypeEnum,
 			Value:  value,
 			Column: validation.FieldValidationType,
 		})

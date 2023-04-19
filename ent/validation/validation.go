@@ -134,8 +134,6 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// DefaultValidationType holds the default value on creation for the "validation_type" field.
-	DefaultValidationType string
 	// DefaultOutput holds the default value on creation for the "output" field.
 	DefaultOutput string
 	// DefaultErrorMessage holds the default value on creation for the "error_message" field.
@@ -143,6 +141,43 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// ValidationType defines the type for the "validation_type" enum field.
+type ValidationType string
+
+// ValidationType values.
+const (
+	ValidationTypeLinuxAptInstalled   ValidationType = "linux-apt-installed"
+	ValidationTypeNetTCPOpen          ValidationType = "net-tcp-open"
+	ValidationTypeNetUDPOpen          ValidationType = "net-udp-open"
+	ValidationTypeNetHTTPContentRegex ValidationType = "net-http-content-regex"
+	ValidationTypeFileExists          ValidationType = "file-exists"
+	ValidationTypeFileHash            ValidationType = "file-hash"
+	ValidationTypeFileContentRegex    ValidationType = "file-content-regex"
+	ValidationTypeDirExists           ValidationType = "dir-exists"
+	ValidationTypeUserExists          ValidationType = "user-exists"
+	ValidationTypeUserGroupMembership ValidationType = "user-group-membership"
+	ValidationTypeHostPortOpen        ValidationType = "host-port-open"
+	ValidationTypeHostProcessRunning  ValidationType = "host-process-running"
+	ValidationTypeHostServiceState    ValidationType = "host-service-state"
+	ValidationTypeNetIcmp             ValidationType = "net-icmp"
+	ValidationTypeFileContentString   ValidationType = "file-content-string"
+	ValidationTypeFilePermission      ValidationType = "file-permission"
+)
+
+func (vt ValidationType) String() string {
+	return string(vt)
+}
+
+// ValidationTypeValidator is a validator for the "validation_type" field enum values. It is called by the builders before save.
+func ValidationTypeValidator(vt ValidationType) error {
+	switch vt {
+	case ValidationTypeLinuxAptInstalled, ValidationTypeNetTCPOpen, ValidationTypeNetUDPOpen, ValidationTypeNetHTTPContentRegex, ValidationTypeFileExists, ValidationTypeFileHash, ValidationTypeFileContentRegex, ValidationTypeDirExists, ValidationTypeUserExists, ValidationTypeUserGroupMembership, ValidationTypeHostPortOpen, ValidationTypeHostProcessRunning, ValidationTypeHostServiceState, ValidationTypeNetIcmp, ValidationTypeFileContentString, ValidationTypeFilePermission:
+		return nil
+	default:
+		return fmt.Errorf("validation: invalid enum value for validation_type field: %q", vt)
+	}
+}
 
 // State defines the type for the "state" enum field.
 type State string
@@ -167,6 +202,24 @@ func StateValidator(s State) error {
 	default:
 		return fmt.Errorf("validation: invalid enum value for state field: %q", s)
 	}
+}
+
+// MarshalGQL implements graphql.Marshaler interface.
+func (vt ValidationType) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(vt.String()))
+}
+
+// UnmarshalGQL implements graphql.Unmarshaler interface.
+func (vt *ValidationType) UnmarshalGQL(val interface{}) error {
+	str, ok := val.(string)
+	if !ok {
+		return fmt.Errorf("enum %T must be a string", val)
+	}
+	*vt = ValidationType(str)
+	if err := ValidationTypeValidator(*vt); err != nil {
+		return fmt.Errorf("%s is not a valid ValidationType", str)
+	}
+	return nil
 }
 
 // MarshalGQL implements graphql.Marshaler interface.

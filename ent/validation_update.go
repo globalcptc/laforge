@@ -38,16 +38,8 @@ func (vu *ValidationUpdate) SetHclID(s string) *ValidationUpdate {
 }
 
 // SetValidationType sets the "validation_type" field.
-func (vu *ValidationUpdate) SetValidationType(s string) *ValidationUpdate {
-	vu.mutation.SetValidationType(s)
-	return vu
-}
-
-// SetNillableValidationType sets the "validation_type" field if the given value is not nil.
-func (vu *ValidationUpdate) SetNillableValidationType(s *string) *ValidationUpdate {
-	if s != nil {
-		vu.SetValidationType(*s)
-	}
+func (vu *ValidationUpdate) SetValidationType(vt validation.ValidationType) *ValidationUpdate {
+	vu.mutation.SetValidationType(vt)
 	return vu
 }
 
@@ -340,6 +332,11 @@ func (vu *ValidationUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (vu *ValidationUpdate) check() error {
+	if v, ok := vu.mutation.ValidationType(); ok {
+		if err := validation.ValidationTypeValidator(v); err != nil {
+			return &ValidationError{Name: "validation_type", err: fmt.Errorf(`ent: validator failed for field "Validation.validation_type": %w`, err)}
+		}
+	}
 	if v, ok := vu.mutation.State(); ok {
 		if err := validation.StateValidator(v); err != nil {
 			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Validation.state": %w`, err)}
@@ -375,7 +372,7 @@ func (vu *ValidationUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := vu.mutation.ValidationType(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
+			Type:   field.TypeEnum,
 			Value:  value,
 			Column: validation.FieldValidationType,
 		})
@@ -675,16 +672,8 @@ func (vuo *ValidationUpdateOne) SetHclID(s string) *ValidationUpdateOne {
 }
 
 // SetValidationType sets the "validation_type" field.
-func (vuo *ValidationUpdateOne) SetValidationType(s string) *ValidationUpdateOne {
-	vuo.mutation.SetValidationType(s)
-	return vuo
-}
-
-// SetNillableValidationType sets the "validation_type" field if the given value is not nil.
-func (vuo *ValidationUpdateOne) SetNillableValidationType(s *string) *ValidationUpdateOne {
-	if s != nil {
-		vuo.SetValidationType(*s)
-	}
+func (vuo *ValidationUpdateOne) SetValidationType(vt validation.ValidationType) *ValidationUpdateOne {
+	vuo.mutation.SetValidationType(vt)
 	return vuo
 }
 
@@ -990,6 +979,11 @@ func (vuo *ValidationUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (vuo *ValidationUpdateOne) check() error {
+	if v, ok := vuo.mutation.ValidationType(); ok {
+		if err := validation.ValidationTypeValidator(v); err != nil {
+			return &ValidationError{Name: "validation_type", err: fmt.Errorf(`ent: validator failed for field "Validation.validation_type": %w`, err)}
+		}
+	}
 	if v, ok := vuo.mutation.State(); ok {
 		if err := validation.StateValidator(v); err != nil {
 			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Validation.state": %w`, err)}
@@ -1042,7 +1036,7 @@ func (vuo *ValidationUpdateOne) sqlSave(ctx context.Context) (_node *Validation,
 	}
 	if value, ok := vuo.mutation.ValidationType(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
+			Type:   field.TypeEnum,
 			Value:  value,
 			Column: validation.FieldValidationType,
 		})

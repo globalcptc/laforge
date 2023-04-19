@@ -408,6 +408,7 @@ func (fq *FindingQuery) WithFindingToEnvironment(opts ...func(*EnvironmentQuery)
 //		GroupBy(finding.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (fq *FindingQuery) GroupBy(field string, fields ...string) *FindingGroupBy {
 	grbuild := &FindingGroupBy{config: fq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -434,6 +435,7 @@ func (fq *FindingQuery) GroupBy(field string, fields ...string) *FindingGroupBy 
 //	client.Finding.Query().
 //		Select(finding.FieldName).
 //		Scan(ctx, &v)
+//
 func (fq *FindingQuery) Select(fields ...string) *FindingSelect {
 	fq.fields = append(fq.fields, fields...)
 	selbuild := &FindingSelect{FindingQuery: fq}

@@ -732,6 +732,7 @@ func (pssq *ProvisioningScheduledStepQuery) WithProvisioningScheduledStepToGinFi
 //		GroupBy(provisioningscheduledstep.FieldType).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (pssq *ProvisioningScheduledStepQuery) GroupBy(field string, fields ...string) *ProvisioningScheduledStepGroupBy {
 	grbuild := &ProvisioningScheduledStepGroupBy{config: pssq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -758,6 +759,7 @@ func (pssq *ProvisioningScheduledStepQuery) GroupBy(field string, fields ...stri
 //	client.ProvisioningScheduledStep.Query().
 //		Select(provisioningscheduledstep.FieldType).
 //		Scan(ctx, &v)
+//
 func (pssq *ProvisioningScheduledStepQuery) Select(fields ...string) *ProvisioningScheduledStepSelect {
 	pssq.fields = append(pssq.fields, fields...)
 	selbuild := &ProvisioningScheduledStepSelect{ProvisioningScheduledStepQuery: pssq}

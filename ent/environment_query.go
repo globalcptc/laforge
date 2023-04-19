@@ -1019,6 +1019,7 @@ func (eq *EnvironmentQuery) WithEnvironmentToValidation(opts ...func(*Validation
 //		GroupBy(environment.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (eq *EnvironmentQuery) GroupBy(field string, fields ...string) *EnvironmentGroupBy {
 	grbuild := &EnvironmentGroupBy{config: eq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -1045,6 +1046,7 @@ func (eq *EnvironmentQuery) GroupBy(field string, fields ...string) *Environment
 //	client.Environment.Query().
 //		Select(environment.FieldHclID).
 //		Scan(ctx, &v)
+//
 func (eq *EnvironmentQuery) Select(fields ...string) *EnvironmentSelect {
 	eq.fields = append(eq.fields, fields...)
 	selbuild := &EnvironmentSelect{EnvironmentQuery: eq}

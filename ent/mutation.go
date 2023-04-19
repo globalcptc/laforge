@@ -36098,7 +36098,7 @@ type ValidationMutation struct {
 	typ                             string
 	id                              *uuid.UUID
 	hcl_id                          *string
-	validation_type                 *string
+	validation_type                 *validation.ValidationType
 	output                          *string
 	state                           *validation.State
 	error_message                   *string
@@ -36272,12 +36272,12 @@ func (m *ValidationMutation) ResetHclID() {
 }
 
 // SetValidationType sets the "validation_type" field.
-func (m *ValidationMutation) SetValidationType(s string) {
-	m.validation_type = &s
+func (m *ValidationMutation) SetValidationType(vt validation.ValidationType) {
+	m.validation_type = &vt
 }
 
 // ValidationType returns the value of the "validation_type" field in the mutation.
-func (m *ValidationMutation) ValidationType() (r string, exists bool) {
+func (m *ValidationMutation) ValidationType() (r validation.ValidationType, exists bool) {
 	v := m.validation_type
 	if v == nil {
 		return
@@ -36288,7 +36288,7 @@ func (m *ValidationMutation) ValidationType() (r string, exists bool) {
 // OldValidationType returns the old "validation_type" field's value of the Validation entity.
 // If the Validation object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ValidationMutation) OldValidationType(ctx context.Context) (v string, err error) {
+func (m *ValidationMutation) OldValidationType(ctx context.Context) (v validation.ValidationType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldValidationType is only allowed on UpdateOne operations")
 	}
@@ -37273,7 +37273,7 @@ func (m *ValidationMutation) SetField(name string, value ent.Value) error {
 		m.SetHclID(v)
 		return nil
 	case validation.FieldValidationType:
-		v, ok := value.(string)
+		v, ok := value.(validation.ValidationType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}

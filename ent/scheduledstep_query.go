@@ -299,6 +299,7 @@ func (ssq *ScheduledStepQuery) WithScheduledStepToEnvironment(opts ...func(*Envi
 //		GroupBy(scheduledstep.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (ssq *ScheduledStepQuery) GroupBy(field string, fields ...string) *ScheduledStepGroupBy {
 	grbuild := &ScheduledStepGroupBy{config: ssq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -325,6 +326,7 @@ func (ssq *ScheduledStepQuery) GroupBy(field string, fields ...string) *Schedule
 //	client.ScheduledStep.Query().
 //		Select(scheduledstep.FieldHclID).
 //		Scan(ctx, &v)
+//
 func (ssq *ScheduledStepQuery) Select(fields ...string) *ScheduledStepSelect {
 	ssq.fields = append(ssq.fields, fields...)
 	selbuild := &ScheduledStepSelect{ScheduledStepQuery: ssq}

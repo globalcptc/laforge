@@ -408,6 +408,7 @@ func (inq *IncludedNetworkQuery) WithIncludedNetworkToEnvironment(opts ...func(*
 //		GroupBy(includednetwork.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (inq *IncludedNetworkQuery) GroupBy(field string, fields ...string) *IncludedNetworkGroupBy {
 	grbuild := &IncludedNetworkGroupBy{config: inq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -434,6 +435,7 @@ func (inq *IncludedNetworkQuery) GroupBy(field string, fields ...string) *Includ
 //	client.IncludedNetwork.Query().
 //		Select(includednetwork.FieldName).
 //		Scan(ctx, &v)
+//
 func (inq *IncludedNetworkQuery) Select(fields ...string) *IncludedNetworkSelect {
 	inq.fields = append(inq.fields, fields...)
 	selbuild := &IncludedNetworkSelect{IncludedNetworkQuery: inq}

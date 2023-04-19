@@ -1354,7 +1354,7 @@ var (
 	ValidationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "hcl_id", Type: field.TypeString},
-		{Name: "validation_type", Type: field.TypeString, Default: ""},
+		{Name: "validation_type", Type: field.TypeEnum, Enums: []string{"linux-apt-installed", "net-tcp-open", "net-udp-open", "net-http-content-regex", "file-exists", "file-hash", "file-content-regex", "dir-exists", "user-exists", "user-group-membership", "host-port-open", "host-process-running", "host-service-state", "net-icmp", "file-content-string", "file-permission"}},
 		{Name: "output", Type: field.TypeString, Default: ""},
 		{Name: "state", Type: field.TypeEnum, Enums: []string{"AWAITING", "INPROGRESS", "FAILED", "COMPLETE"}},
 		{Name: "error_message", Type: field.TypeString, Default: ""},

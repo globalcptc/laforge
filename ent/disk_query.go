@@ -299,6 +299,7 @@ func (dq *DiskQuery) WithDiskToHost(opts ...func(*HostQuery)) *DiskQuery {
 //		GroupBy(disk.FieldSize).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (dq *DiskQuery) GroupBy(field string, fields ...string) *DiskGroupBy {
 	grbuild := &DiskGroupBy{config: dq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -325,6 +326,7 @@ func (dq *DiskQuery) GroupBy(field string, fields ...string) *DiskGroupBy {
 //	client.Disk.Query().
 //		Select(disk.FieldSize).
 //		Scan(ctx, &v)
+//
 func (dq *DiskQuery) Select(fields ...string) *DiskSelect {
 	dq.fields = append(dq.fields, fields...)
 	selbuild := &DiskSelect{DiskQuery: dq}

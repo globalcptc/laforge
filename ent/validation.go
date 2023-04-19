@@ -21,7 +21,7 @@ type Validation struct {
 	// HclID holds the value of the "hcl_id" field.
 	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// ValidationType holds the value of the "validation_type" field.
-	ValidationType string `json:"validation_type,omitempty" hcl:"validation_type"`
+	ValidationType validation.ValidationType `json:"validation_type,omitempty" hcl:"validation_type"`
 	// Output holds the value of the "output" field.
 	Output string `json:"output,omitempty"`
 	// State holds the value of the "state" field.
@@ -162,7 +162,7 @@ func (v *Validation) assignValues(columns []string, values []interface{}) error 
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field validation_type", values[i])
 			} else if value.Valid {
-				v.ValidationType = value.String
+				v.ValidationType = validation.ValidationType(value.String)
 			}
 		case validation.FieldOutput:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -321,7 +321,7 @@ func (v *Validation) String() string {
 	builder.WriteString(", hcl_id=")
 	builder.WriteString(v.HclID)
 	builder.WriteString(", validation_type=")
-	builder.WriteString(v.ValidationType)
+	builder.WriteString(fmt.Sprintf("%v", v.ValidationType))
 	builder.WriteString(", output=")
 	builder.WriteString(v.Output)
 	builder.WriteString(", state=")

@@ -371,6 +371,7 @@ func (asq *AgentStatusQuery) WithAgentStatusToBuild(opts ...func(*BuildQuery)) *
 //		GroupBy(agentstatus.FieldClientID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (asq *AgentStatusQuery) GroupBy(field string, fields ...string) *AgentStatusGroupBy {
 	grbuild := &AgentStatusGroupBy{config: asq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -397,6 +398,7 @@ func (asq *AgentStatusQuery) GroupBy(field string, fields ...string) *AgentStatu
 //	client.AgentStatus.Query().
 //		Select(agentstatus.FieldClientID).
 //		Scan(ctx, &v)
+//
 func (asq *AgentStatusQuery) Select(fields ...string) *AgentStatusSelect {
 	asq.fields = append(asq.fields, fields...)
 	selbuild := &AgentStatusSelect{AgentStatusQuery: asq}

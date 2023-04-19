@@ -299,6 +299,7 @@ func (drq *DNSRecordQuery) WithDNSRecordToEnvironment(opts ...func(*EnvironmentQ
 //		GroupBy(dnsrecord.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
+//
 func (drq *DNSRecordQuery) GroupBy(field string, fields ...string) *DNSRecordGroupBy {
 	grbuild := &DNSRecordGroupBy{config: drq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -325,6 +326,7 @@ func (drq *DNSRecordQuery) GroupBy(field string, fields ...string) *DNSRecordGro
 //	client.DNSRecord.Query().
 //		Select(dnsrecord.FieldHclID).
 //		Scan(ctx, &v)
+//
 func (drq *DNSRecordQuery) Select(fields ...string) *DNSRecordSelect {
 	drq.fields = append(drq.fields, fields...)
 	selbuild := &DNSRecordSelect{DNSRecordQuery: drq}
