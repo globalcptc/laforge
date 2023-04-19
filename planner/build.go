@@ -959,6 +959,13 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 				return err
 			}
 		}
+		for i, validationHCLID := range entCommand.Validations {
+			err = createValidation(client, logger, ctx, validationHCLID, taskCount+3+i, entProvisionedHost, entStep)
+			if err != nil {
+				logger.Log.Errorf("failed Creating Agent Task for Command Validation: %v", err)
+			}
+
+		}
 	case provisioningstep.TypeFileDelete:
 		entFileDelete, err := entStep.QueryProvisioningStepToFileDelete().Only(ctx)
 		if err != nil {
@@ -976,6 +983,13 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for File Delete: %v", err)
 			return err
+		}
+		for i, validationHCLID := range entFileDelete.Validations {
+			err = createValidation(client, logger, ctx, validationHCLID, taskCount+3+i, entProvisionedHost, entStep)
+			if err != nil {
+				logger.Log.Errorf("failed Creating Agent Task for FileDelete Validation: %v", err)
+			}
+
 		}
 	case provisioningstep.TypeFileDownload:
 		entFileDownload, err := entStep.QueryProvisioningStepToFileDownload().Only(ctx)
@@ -1011,6 +1025,13 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			logger.Log.Errorf("failed Creating Agent Task for File Download: %v", err)
 			return err
 		}
+		for i, validationHCLID := range entFileDownload.Validations {
+			err = createValidation(client, logger, ctx, validationHCLID, taskCount+3+i, entProvisionedHost, entStep)
+			if err != nil {
+				logger.Log.Errorf("failed Creating Agent Task for FileDownloads Validation: %v", err)
+			}
+
+		}
 	case provisioningstep.TypeFileExtract:
 		entFileExtract, err := entStep.QueryProvisioningStepToFileExtract().Only(ctx)
 		if err != nil {
@@ -1028,6 +1049,13 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for File Extract: %v", err)
 			return err
+		}
+		for i, validationHCLID := range entFileExtract.Validations {
+			err = createValidation(client, logger, ctx, validationHCLID, taskCount+3+i, entProvisionedHost, entStep)
+			if err != nil {
+				logger.Log.Errorf("failed Creating Agent Task for FileExtract Validation: %v", err)
+			}
+
 		}
 	case provisioningstep.TypeDNSRecord:
 		break
@@ -1101,6 +1129,13 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
 			return err
+		}
+		for i, validationHCLID := range entAnsible.Validations {
+			err = createValidation(client, logger, ctx, validationHCLID, taskCount+3+i, entProvisionedHost, entStep)
+			if err != nil {
+				logger.Log.Errorf("failed Creating Agent Task for Ansible Validation: %v", err)
+			}
+
 		}
 	default:
 		break
@@ -1326,7 +1361,7 @@ func createValidation(client *ent.Client, logger *logging.Logger, ctx context.Co
 	case "file-content-string":
 		_, err = client.AgentTask.Create().
 			SetCommand(agenttask.CommandVALIDATOR).
-			SetArgs("file-content-string" + entValidation.FilePath + "💔" + entValidation.SearchString).
+			SetArgs("file-content-string" + "💔" + entValidation.FilePath + "💔" + entValidation.SearchString).
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
 			SetAgentTaskToProvisionedHost(entProvisionedHost).

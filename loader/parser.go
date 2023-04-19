@@ -989,6 +989,21 @@ func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 	returnedAnsible := []*ent.Ansible{}
 	for _, cAnsible := range configAnsible {
 		log.Log.Debugf("Creating Ansible: %v for Env: %v", cAnsible.HclID, envHclID)
+
+		for _, validationHCLID := range cAnsible.Validations {
+			exist, err := txClient.Validation.Query().
+				Where(
+					validation.HclIDEQ(validationHCLID),
+				).Exist(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			if !exist {
+				return nil, fmt.Errorf("validation \"%s\" does not exist for ansible \"%s\"", validationHCLID, cAnsible.HclID)
+			}
+		}
+
 		entAnsible, err := txClient.Ansible.
 			Query().
 			Where(
@@ -1009,7 +1024,8 @@ func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 					SetMethod(cAnsible.Method).
 					SetInventory(cAnsible.Inventory).
 					SetTags(cAnsible.Tags).
-					SetAbsPath(cAnsible.AbsPath)
+					SetAbsPath(cAnsible.AbsPath).
+					SetValidations(cAnsible.Validations)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
@@ -1024,6 +1040,7 @@ func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 			SetInventory(cAnsible.Inventory).
 			SetTags(cAnsible.Tags).
 			SetAbsPath(cAnsible.AbsPath).
+			SetValidations(cAnsible.Validations).
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update Ansible %v. Err: %v", cAnsible.HclID, err)
@@ -1101,6 +1118,21 @@ func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 	returnedCommands := []*ent.Command{}
 	for _, cCommand := range configCommands {
 		log.Log.Debugf("Creating Command: %v for Env: %v", cCommand.HclID, envHclID)
+
+		for _, validationHCLID := range cCommand.Validations {
+			exist, err := txClient.Validation.Query().
+				Where(
+					validation.HclIDEQ(validationHCLID),
+				).Exist(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			if !exist {
+				return nil, fmt.Errorf("validation \"%s\" does not exist for command \"%s\"", validationHCLID, cCommand.HclID)
+			}
+		}
+
 		entCommand, err := txClient.Command.
 			Query().
 			Where(
@@ -1123,7 +1155,8 @@ func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 					SetProgram(cCommand.Program).
 					SetTags(cCommand.Tags).
 					SetTimeout(cCommand.Timeout).
-					SetVars(cCommand.Vars)
+					SetVars(cCommand.Vars).
+					SetValidations(cCommand.Validations)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
@@ -1140,6 +1173,7 @@ func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 			SetTags(cCommand.Tags).
 			SetTimeout(cCommand.Timeout).
 			SetVars(cCommand.Vars).
+			SetValidations(cCommand.Validations).
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update Command %v. Err: %v", cCommand.HclID, err)
@@ -1164,6 +1198,20 @@ func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 	for _, cDNSRecord := range configDNSRecords {
 		log.Log.Debugf("Creating DNSRecord: %v for Env: %v", cDNSRecord.HclID, envHclID)
 
+		for _, validationHCLID := range cDNSRecord.Validations {
+			exist, err := txClient.Validation.Query().
+				Where(
+					validation.HclIDEQ(validationHCLID),
+				).Exist(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			if !exist {
+				return nil, fmt.Errorf("validation \"%s\" does not exist for DNSRecord \"%s\"", validationHCLID, cDNSRecord.HclID)
+			}
+		}
+
 		entDNSRecord, err := txClient.DNSRecord.
 			Query().
 			Where(
@@ -1183,7 +1231,8 @@ func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 					SetType(cDNSRecord.Type).
 					SetValues(cDNSRecord.Values).
 					SetVars(cDNSRecord.Vars).
-					SetZone(cDNSRecord.Zone)
+					SetZone(cDNSRecord.Zone).
+					SetValidations(cDNSRecord.Validations)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
@@ -1197,6 +1246,7 @@ func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 			SetValues(cDNSRecord.Values).
 			SetVars(cDNSRecord.Vars).
 			SetZone(cDNSRecord.Zone).
+			SetValidations(cDNSRecord.Validations).
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update DNS Record %v. Err: %v", cDNSRecord.HclID, err)
@@ -1301,6 +1351,20 @@ func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 	for _, cFileDownload := range configFileDownloads {
 		log.Log.Debugf("Creating FileDownload: %v for Env: %v", cFileDownload.HclID, envHclID)
 
+		for _, validationHCLID := range cFileDownload.Validations {
+			exist, err := txClient.Validation.Query().
+				Where(
+					validation.HclIDEQ(validationHCLID),
+				).Exist(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			if !exist {
+				return nil, fmt.Errorf("validation \"%s\" does not exist for FileDownload \"%s\"", validationHCLID, cFileDownload.HclID)
+			}
+		}
+
 		entFileDownload, err := txClient.FileDownload.
 			Query().
 			Where(
@@ -1323,7 +1387,8 @@ func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 					SetMd5(cFileDownload.Md5).
 					SetAbsPath(cFileDownload.AbsPath).
 					SetTags(cFileDownload.Tags).
-					SetIsTxt(cFileDownload.IsTxt)
+					SetIsTxt(cFileDownload.IsTxt).
+					SetValidations(cFileDownload.Validations)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
@@ -1340,6 +1405,7 @@ func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 			SetAbsPath(cFileDownload.AbsPath).
 			SetTags(cFileDownload.Tags).
 			SetIsTxt(cFileDownload.IsTxt).
+			SetValidations(cFileDownload.Validations).
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update File Download %v. Err: %v", cFileDownload.HclID, err)
@@ -1364,6 +1430,20 @@ func createFileDelete(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 	for _, cFileDelete := range configFileDeletes {
 		log.Log.Debugf("Creating FileDelete: %v for Env: %v", cFileDelete.HclID, envHclID)
 
+		for _, validationHCLID := range cFileDelete.Validations {
+			exist, err := txClient.Validation.Query().
+				Where(
+					validation.HclIDEQ(validationHCLID),
+				).Exist(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			if !exist {
+				return nil, fmt.Errorf("validation \"%s\" does not exist for FileDelete \"%s\"", validationHCLID, cFileDelete.HclID)
+			}
+		}
+
 		entFileDelete, err := txClient.FileDelete.
 			Query().
 			Where(
@@ -1378,7 +1458,8 @@ func createFileDelete(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 				createdQuery := txClient.FileDelete.Create().
 					SetHclID(cFileDelete.HclID).
 					SetPath(cFileDelete.Path).
-					SetTags(cFileDelete.Tags)
+					SetTags(cFileDelete.Tags).
+					SetValidations(cFileDelete.Validations)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
@@ -1387,6 +1468,7 @@ func createFileDelete(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 			SetHclID(cFileDelete.HclID).
 			SetPath(cFileDelete.Path).
 			SetTags(cFileDelete.Tags).
+			SetValidations(cFileDelete.Validations).
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update File Delete %v. Err: %v", cFileDelete.HclID, err)
@@ -1411,6 +1493,20 @@ func createFileExtract(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 	for _, cFileExtract := range configFileExtracts {
 		log.Log.Debugf("Creating FileExtract: %v for Env: %v", cFileExtract.HclID, envHclID)
 
+		for _, validationHCLID := range cFileExtract.Validations {
+			exist, err := txClient.Validation.Query().
+				Where(
+					validation.HclIDEQ(validationHCLID),
+				).Exist(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			if !exist {
+				return nil, fmt.Errorf("validation \"%s\" does not exist for script \"%s\"", validationHCLID, cFileExtract.HclID)
+			}
+		}
+
 		entFileExtract, err := txClient.FileExtract.
 			Query().
 			Where(
@@ -1427,7 +1523,8 @@ func createFileExtract(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 					SetHclID(cFileExtract.HclID).
 					SetSource(cFileExtract.Source).
 					SetTags(cFileExtract.Tags).
-					SetType(cFileExtract.Type)
+					SetType(cFileExtract.Type).
+					SetValidations(cFileExtract.Validations)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
@@ -1438,6 +1535,7 @@ func createFileExtract(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 			SetSource(cFileExtract.Source).
 			SetTags(cFileExtract.Tags).
 			SetType(cFileExtract.Type).
+			SetValidations(cFileExtract.Validations).
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update File Extract %v. Err: %v", cFileExtract.HclID, err)
