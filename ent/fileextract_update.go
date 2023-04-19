@@ -59,6 +59,12 @@ func (feu *FileExtractUpdate) SetTags(m map[string]string) *FileExtractUpdate {
 	return feu
 }
 
+// SetValidations sets the "validations" field.
+func (feu *FileExtractUpdate) SetValidations(s []string) *FileExtractUpdate {
+	feu.mutation.SetValidations(s)
+	return feu
+}
+
 // SetFileExtractToEnvironmentID sets the "FileExtractToEnvironment" edge to the Environment entity by ID.
 func (feu *FileExtractUpdate) SetFileExtractToEnvironmentID(id uuid.UUID) *FileExtractUpdate {
 	feu.mutation.SetFileExtractToEnvironmentID(id)
@@ -196,6 +202,13 @@ func (feu *FileExtractUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: fileextract.FieldTags,
 		})
 	}
+	if value, ok := feu.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: fileextract.FieldValidations,
+		})
+	}
 	if feu.mutation.FileExtractToEnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -277,6 +290,12 @@ func (feuo *FileExtractUpdateOne) SetType(s string) *FileExtractUpdateOne {
 // SetTags sets the "tags" field.
 func (feuo *FileExtractUpdateOne) SetTags(m map[string]string) *FileExtractUpdateOne {
 	feuo.mutation.SetTags(m)
+	return feuo
+}
+
+// SetValidations sets the "validations" field.
+func (feuo *FileExtractUpdateOne) SetValidations(s []string) *FileExtractUpdateOne {
+	feuo.mutation.SetValidations(s)
 	return feuo
 }
 
@@ -445,6 +464,13 @@ func (feuo *FileExtractUpdateOne) sqlSave(ctx context.Context) (_node *FileExtra
 			Type:   field.TypeJSON,
 			Value:  value,
 			Column: fileextract.FieldTags,
+		})
+	}
+	if value, ok := feuo.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: fileextract.FieldValidations,
 		})
 	}
 	if feuo.mutation.FileExtractToEnvironmentCleared() {

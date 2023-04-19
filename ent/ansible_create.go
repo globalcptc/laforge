@@ -76,6 +76,12 @@ func (ac *AnsibleCreate) SetTags(m map[string]string) *AnsibleCreate {
 	return ac
 }
 
+// SetValidations sets the "validations" field.
+func (ac *AnsibleCreate) SetValidations(s []string) *AnsibleCreate {
+	ac.mutation.SetValidations(s)
+	return ac
+}
+
 // SetID sets the "id" field.
 func (ac *AnsibleCreate) SetID(u uuid.UUID) *AnsibleCreate {
 	ac.mutation.SetID(u)
@@ -241,6 +247,9 @@ func (ac *AnsibleCreate) check() error {
 	if _, ok := ac.mutation.Tags(); !ok {
 		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Ansible.tags"`)}
 	}
+	if _, ok := ac.mutation.Validations(); !ok {
+		return &ValidationError{Name: "validations", err: errors.New(`ent: missing required field "Ansible.validations"`)}
+	}
 	return nil
 }
 
@@ -348,6 +357,14 @@ func (ac *AnsibleCreate) createSpec() (*Ansible, *sqlgraph.CreateSpec) {
 			Column: ansible.FieldTags,
 		})
 		_node.Tags = value
+	}
+	if value, ok := ac.mutation.Validations(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: ansible.FieldValidations,
+		})
+		_node.Validations = value
 	}
 	if nodes := ac.mutation.AnsibleToUserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

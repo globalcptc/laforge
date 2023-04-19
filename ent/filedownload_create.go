@@ -95,6 +95,12 @@ func (fdc *FileDownloadCreate) SetTags(m map[string]string) *FileDownloadCreate 
 	return fdc
 }
 
+// SetValidations sets the "validations" field.
+func (fdc *FileDownloadCreate) SetValidations(s []string) *FileDownloadCreate {
+	fdc.mutation.SetValidations(s)
+	return fdc
+}
+
 // SetID sets the "id" field.
 func (fdc *FileDownloadCreate) SetID(u uuid.UUID) *FileDownloadCreate {
 	fdc.mutation.SetID(u)
@@ -250,6 +256,9 @@ func (fdc *FileDownloadCreate) check() error {
 	if _, ok := fdc.mutation.Tags(); !ok {
 		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "FileDownload.tags"`)}
 	}
+	if _, ok := fdc.mutation.Validations(); !ok {
+		return &ValidationError{Name: "validations", err: errors.New(`ent: missing required field "FileDownload.validations"`)}
+	}
 	return nil
 }
 
@@ -373,6 +382,14 @@ func (fdc *FileDownloadCreate) createSpec() (*FileDownload, *sqlgraph.CreateSpec
 			Column: filedownload.FieldTags,
 		})
 		_node.Tags = value
+	}
+	if value, ok := fdc.mutation.Validations(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: filedownload.FieldValidations,
+		})
+		_node.Validations = value
 	}
 	if nodes := fdc.mutation.FileDownloadToEnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

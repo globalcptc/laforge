@@ -28,6 +28,8 @@ type FileExtract struct {
 	Type string `json:"type,omitempty" hcl:"type,attr"`
 	// Tags holds the value of the "tags" field.
 	Tags map[string]string `json:"tags,omitempty" hcl:"tags,optional"`
+	// Validations holds the value of the "validations" field.
+	Validations []string `json:"validations,omitempty" hcl:"validations,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the FileExtractQuery when eager-loading is set.
 	Edges FileExtractEdges `json:"edges"`
@@ -67,7 +69,7 @@ func (*FileExtract) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case fileextract.FieldTags:
+		case fileextract.FieldTags, fileextract.FieldValidations:
 			values[i] = new([]byte)
 		case fileextract.FieldHclID, fileextract.FieldSource, fileextract.FieldDestination, fileextract.FieldType:
 			values[i] = new(sql.NullString)
@@ -128,6 +130,14 @@ func (fe *FileExtract) assignValues(columns []string, values []interface{}) erro
 					return fmt.Errorf("unmarshal field tags: %w", err)
 				}
 			}
+		case fileextract.FieldValidations:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field validations", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &fe.Validations); err != nil {
+					return fmt.Errorf("unmarshal field validations: %w", err)
+				}
+			}
 		case fileextract.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field environment_environment_to_file_extract", values[i])
@@ -178,6 +188,8 @@ func (fe *FileExtract) String() string {
 	builder.WriteString(fe.Type)
 	builder.WriteString(", tags=")
 	builder.WriteString(fmt.Sprintf("%v", fe.Tags))
+	builder.WriteString(", validations=")
+	builder.WriteString(fmt.Sprintf("%v", fe.Validations))
 	builder.WriteByte(')')
 	return builder.String()
 }

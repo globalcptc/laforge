@@ -88,6 +88,12 @@ func (cc *CommandCreate) SetTags(m map[string]string) *CommandCreate {
 	return cc
 }
 
+// SetValidations sets the "validations" field.
+func (cc *CommandCreate) SetValidations(s []string) *CommandCreate {
+	cc.mutation.SetValidations(s)
+	return cc
+}
+
 // SetID sets the "id" field.
 func (cc *CommandCreate) SetID(u uuid.UUID) *CommandCreate {
 	cc.mutation.SetID(u)
@@ -264,6 +270,9 @@ func (cc *CommandCreate) check() error {
 	if _, ok := cc.mutation.Tags(); !ok {
 		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Command.tags"`)}
 	}
+	if _, ok := cc.mutation.Validations(); !ok {
+		return &ValidationError{Name: "validations", err: errors.New(`ent: missing required field "Command.validations"`)}
+	}
 	return nil
 }
 
@@ -387,6 +396,14 @@ func (cc *CommandCreate) createSpec() (*Command, *sqlgraph.CreateSpec) {
 			Column: command.FieldTags,
 		})
 		_node.Tags = value
+	}
+	if value, ok := cc.mutation.Validations(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: command.FieldValidations,
+		})
+		_node.Validations = value
 	}
 	if nodes := cc.mutation.CommandToUserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

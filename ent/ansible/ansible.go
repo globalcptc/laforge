@@ -33,6 +33,8 @@ const (
 	FieldAbsPath = "abs_path"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
+	// FieldValidations holds the string denoting the validations field in the database.
+	FieldValidations = "validations"
 	// EdgeAnsibleToUser holds the string denoting the ansibletouser edge name in mutations.
 	EdgeAnsibleToUser = "AnsibleToUser"
 	// EdgeAnsibleFromEnvironment holds the string denoting the ansiblefromenvironment edge name in mutations.
@@ -67,6 +69,7 @@ var Columns = []string{
 	FieldInventory,
 	FieldAbsPath,
 	FieldTags,
+	FieldValidations,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "ansibles"

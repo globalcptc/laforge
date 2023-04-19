@@ -23,6 +23,8 @@ func (FileDelete) Fields() []ent.Field {
 			StructTag(`hcl:"path,attr"`),
 		field.JSON("tags", map[string]string{}).
 			StructTag(`hcl:"tags,optional"`),
+		field.Strings("validations").
+			StructTag(`hcl:"validations,optional"`),
 	}
 }
 

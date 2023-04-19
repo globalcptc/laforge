@@ -77,6 +77,12 @@ func (dru *DNSRecordUpdate) SetTags(m map[string]string) *DNSRecordUpdate {
 	return dru
 }
 
+// SetValidations sets the "validations" field.
+func (dru *DNSRecordUpdate) SetValidations(s []string) *DNSRecordUpdate {
+	dru.mutation.SetValidations(s)
+	return dru
+}
+
 // SetDNSRecordToEnvironmentID sets the "DNSRecordToEnvironment" edge to the Environment entity by ID.
 func (dru *DNSRecordUpdate) SetDNSRecordToEnvironmentID(id uuid.UUID) *DNSRecordUpdate {
 	dru.mutation.SetDNSRecordToEnvironmentID(id)
@@ -235,6 +241,13 @@ func (dru *DNSRecordUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: dnsrecord.FieldTags,
 		})
 	}
+	if value, ok := dru.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: dnsrecord.FieldValidations,
+		})
+	}
 	if dru.mutation.DNSRecordToEnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -334,6 +347,12 @@ func (druo *DNSRecordUpdateOne) SetDisabled(b bool) *DNSRecordUpdateOne {
 // SetTags sets the "tags" field.
 func (druo *DNSRecordUpdateOne) SetTags(m map[string]string) *DNSRecordUpdateOne {
 	druo.mutation.SetTags(m)
+	return druo
+}
+
+// SetValidations sets the "validations" field.
+func (druo *DNSRecordUpdateOne) SetValidations(s []string) *DNSRecordUpdateOne {
+	druo.mutation.SetValidations(s)
 	return druo
 }
 
@@ -523,6 +542,13 @@ func (druo *DNSRecordUpdateOne) sqlSave(ctx context.Context) (_node *DNSRecord, 
 			Type:   field.TypeJSON,
 			Value:  value,
 			Column: dnsrecord.FieldTags,
+		})
+	}
+	if value, ok := druo.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: dnsrecord.FieldValidations,
 		})
 	}
 	if druo.mutation.DNSRecordToEnvironmentCleared() {

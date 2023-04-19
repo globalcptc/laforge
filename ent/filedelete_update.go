@@ -47,6 +47,12 @@ func (fdu *FileDeleteUpdate) SetTags(m map[string]string) *FileDeleteUpdate {
 	return fdu
 }
 
+// SetValidations sets the "validations" field.
+func (fdu *FileDeleteUpdate) SetValidations(s []string) *FileDeleteUpdate {
+	fdu.mutation.SetValidations(s)
+	return fdu
+}
+
 // SetFileDeleteToEnvironmentID sets the "FileDeleteToEnvironment" edge to the Environment entity by ID.
 func (fdu *FileDeleteUpdate) SetFileDeleteToEnvironmentID(id uuid.UUID) *FileDeleteUpdate {
 	fdu.mutation.SetFileDeleteToEnvironmentID(id)
@@ -170,6 +176,13 @@ func (fdu *FileDeleteUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: filedelete.FieldTags,
 		})
 	}
+	if value, ok := fdu.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: filedelete.FieldValidations,
+		})
+	}
 	if fdu.mutation.FileDeleteToEnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -239,6 +252,12 @@ func (fduo *FileDeleteUpdateOne) SetPath(s string) *FileDeleteUpdateOne {
 // SetTags sets the "tags" field.
 func (fduo *FileDeleteUpdateOne) SetTags(m map[string]string) *FileDeleteUpdateOne {
 	fduo.mutation.SetTags(m)
+	return fduo
+}
+
+// SetValidations sets the "validations" field.
+func (fduo *FileDeleteUpdateOne) SetValidations(s []string) *FileDeleteUpdateOne {
+	fduo.mutation.SetValidations(s)
 	return fduo
 }
 
@@ -393,6 +412,13 @@ func (fduo *FileDeleteUpdateOne) sqlSave(ctx context.Context) (_node *FileDelete
 			Type:   field.TypeJSON,
 			Value:  value,
 			Column: filedelete.FieldTags,
+		})
+	}
+	if value, ok := fduo.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: filedelete.FieldValidations,
 		})
 	}
 	if fduo.mutation.FileDeleteToEnvironmentCleared() {

@@ -33,6 +33,8 @@ const (
 	FieldVars = "vars"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
+	// FieldValidations holds the string denoting the validations field in the database.
+	FieldValidations = "validations"
 	// EdgeCommandToUser holds the string denoting the commandtouser edge name in mutations.
 	EdgeCommandToUser = "CommandToUser"
 	// EdgeCommandToEnvironment holds the string denoting the commandtoenvironment edge name in mutations.
@@ -69,6 +71,7 @@ var Columns = []string{
 	FieldTimeout,
 	FieldVars,
 	FieldTags,
+	FieldValidations,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "commands"

@@ -3221,6 +3221,7 @@ type AnsibleMutation struct {
 	inventory                      *string
 	abs_path                       *string
 	tags                           *map[string]string
+	validations                    *[]string
 	clearedFields                  map[string]struct{}
 	_AnsibleToUser                 map[uuid.UUID]struct{}
 	removed_AnsibleToUser          map[uuid.UUID]struct{}
@@ -3660,6 +3661,42 @@ func (m *AnsibleMutation) ResetTags() {
 	m.tags = nil
 }
 
+// SetValidations sets the "validations" field.
+func (m *AnsibleMutation) SetValidations(s []string) {
+	m.validations = &s
+}
+
+// Validations returns the value of the "validations" field in the mutation.
+func (m *AnsibleMutation) Validations() (r []string, exists bool) {
+	v := m.validations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldValidations returns the old "validations" field's value of the Ansible entity.
+// If the Ansible object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnsibleMutation) OldValidations(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldValidations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldValidations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldValidations: %w", err)
+	}
+	return oldValue.Validations, nil
+}
+
+// ResetValidations resets all changes to the "validations" field.
+func (m *AnsibleMutation) ResetValidations() {
+	m.validations = nil
+}
+
 // AddAnsibleToUserIDs adds the "AnsibleToUser" edge to the User entity by ids.
 func (m *AnsibleMutation) AddAnsibleToUserIDs(ids ...uuid.UUID) {
 	if m._AnsibleToUser == nil {
@@ -3772,7 +3809,7 @@ func (m *AnsibleMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AnsibleMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.name != nil {
 		fields = append(fields, ansible.FieldName)
 	}
@@ -3800,6 +3837,9 @@ func (m *AnsibleMutation) Fields() []string {
 	if m.tags != nil {
 		fields = append(fields, ansible.FieldTags)
 	}
+	if m.validations != nil {
+		fields = append(fields, ansible.FieldValidations)
+	}
 	return fields
 }
 
@@ -3826,6 +3866,8 @@ func (m *AnsibleMutation) Field(name string) (ent.Value, bool) {
 		return m.AbsPath()
 	case ansible.FieldTags:
 		return m.Tags()
+	case ansible.FieldValidations:
+		return m.Validations()
 	}
 	return nil, false
 }
@@ -3853,6 +3895,8 @@ func (m *AnsibleMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldAbsPath(ctx)
 	case ansible.FieldTags:
 		return m.OldTags(ctx)
+	case ansible.FieldValidations:
+		return m.OldValidations(ctx)
 	}
 	return nil, fmt.Errorf("unknown Ansible field %s", name)
 }
@@ -3924,6 +3968,13 @@ func (m *AnsibleMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTags(v)
+		return nil
+	case ansible.FieldValidations:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetValidations(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Ansible field %s", name)
@@ -4000,6 +4051,9 @@ func (m *AnsibleMutation) ResetField(name string) error {
 		return nil
 	case ansible.FieldTags:
 		m.ResetTags()
+		return nil
+	case ansible.FieldValidations:
+		m.ResetValidations()
 		return nil
 	}
 	return fmt.Errorf("unknown Ansible field %s", name)
@@ -7343,6 +7397,7 @@ type CommandMutation struct {
 	addtimeout                   *int
 	vars                         *map[string]string
 	tags                         *map[string]string
+	validations                  *[]string
 	clearedFields                map[string]struct{}
 	_CommandToUser               map[uuid.UUID]struct{}
 	removed_CommandToUser        map[uuid.UUID]struct{}
@@ -7894,6 +7949,42 @@ func (m *CommandMutation) ResetTags() {
 	m.tags = nil
 }
 
+// SetValidations sets the "validations" field.
+func (m *CommandMutation) SetValidations(s []string) {
+	m.validations = &s
+}
+
+// Validations returns the value of the "validations" field in the mutation.
+func (m *CommandMutation) Validations() (r []string, exists bool) {
+	v := m.validations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldValidations returns the old "validations" field's value of the Command entity.
+// If the Command object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommandMutation) OldValidations(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldValidations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldValidations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldValidations: %w", err)
+	}
+	return oldValue.Validations, nil
+}
+
+// ResetValidations resets all changes to the "validations" field.
+func (m *CommandMutation) ResetValidations() {
+	m.validations = nil
+}
+
 // AddCommandToUserIDs adds the "CommandToUser" edge to the User entity by ids.
 func (m *CommandMutation) AddCommandToUserIDs(ids ...uuid.UUID) {
 	if m._CommandToUser == nil {
@@ -8006,7 +8097,7 @@ func (m *CommandMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CommandMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.hcl_id != nil {
 		fields = append(fields, command.FieldHclID)
 	}
@@ -8040,6 +8131,9 @@ func (m *CommandMutation) Fields() []string {
 	if m.tags != nil {
 		fields = append(fields, command.FieldTags)
 	}
+	if m.validations != nil {
+		fields = append(fields, command.FieldValidations)
+	}
 	return fields
 }
 
@@ -8070,6 +8164,8 @@ func (m *CommandMutation) Field(name string) (ent.Value, bool) {
 		return m.Vars()
 	case command.FieldTags:
 		return m.Tags()
+	case command.FieldValidations:
+		return m.Validations()
 	}
 	return nil, false
 }
@@ -8101,6 +8197,8 @@ func (m *CommandMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldVars(ctx)
 	case command.FieldTags:
 		return m.OldTags(ctx)
+	case command.FieldValidations:
+		return m.OldValidations(ctx)
 	}
 	return nil, fmt.Errorf("unknown Command field %s", name)
 }
@@ -8186,6 +8284,13 @@ func (m *CommandMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTags(v)
+		return nil
+	case command.FieldValidations:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetValidations(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Command field %s", name)
@@ -8295,6 +8400,9 @@ func (m *CommandMutation) ResetField(name string) error {
 		return nil
 	case command.FieldTags:
 		m.ResetTags()
+		return nil
+	case command.FieldValidations:
+		m.ResetValidations()
 		return nil
 	}
 	return fmt.Errorf("unknown Command field %s", name)
@@ -10113,6 +10221,7 @@ type DNSRecordMutation struct {
 	vars                           *map[string]string
 	disabled                       *bool
 	tags                           *map[string]string
+	validations                    *[]string
 	clearedFields                  map[string]struct{}
 	_DNSRecordToEnvironment        *uuid.UUID
 	cleared_DNSRecordToEnvironment bool
@@ -10513,6 +10622,42 @@ func (m *DNSRecordMutation) ResetTags() {
 	m.tags = nil
 }
 
+// SetValidations sets the "validations" field.
+func (m *DNSRecordMutation) SetValidations(s []string) {
+	m.validations = &s
+}
+
+// Validations returns the value of the "validations" field in the mutation.
+func (m *DNSRecordMutation) Validations() (r []string, exists bool) {
+	v := m.validations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldValidations returns the old "validations" field's value of the DNSRecord entity.
+// If the DNSRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DNSRecordMutation) OldValidations(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldValidations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldValidations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldValidations: %w", err)
+	}
+	return oldValue.Validations, nil
+}
+
+// ResetValidations resets all changes to the "validations" field.
+func (m *DNSRecordMutation) ResetValidations() {
+	m.validations = nil
+}
+
 // SetDNSRecordToEnvironmentID sets the "DNSRecordToEnvironment" edge to the Environment entity by id.
 func (m *DNSRecordMutation) SetDNSRecordToEnvironmentID(id uuid.UUID) {
 	m._DNSRecordToEnvironment = &id
@@ -10571,7 +10716,7 @@ func (m *DNSRecordMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DNSRecordMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.hcl_id != nil {
 		fields = append(fields, dnsrecord.FieldHclID)
 	}
@@ -10595,6 +10740,9 @@ func (m *DNSRecordMutation) Fields() []string {
 	}
 	if m.tags != nil {
 		fields = append(fields, dnsrecord.FieldTags)
+	}
+	if m.validations != nil {
+		fields = append(fields, dnsrecord.FieldValidations)
 	}
 	return fields
 }
@@ -10620,6 +10768,8 @@ func (m *DNSRecordMutation) Field(name string) (ent.Value, bool) {
 		return m.Disabled()
 	case dnsrecord.FieldTags:
 		return m.Tags()
+	case dnsrecord.FieldValidations:
+		return m.Validations()
 	}
 	return nil, false
 }
@@ -10645,6 +10795,8 @@ func (m *DNSRecordMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldDisabled(ctx)
 	case dnsrecord.FieldTags:
 		return m.OldTags(ctx)
+	case dnsrecord.FieldValidations:
+		return m.OldValidations(ctx)
 	}
 	return nil, fmt.Errorf("unknown DNSRecord field %s", name)
 }
@@ -10709,6 +10861,13 @@ func (m *DNSRecordMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTags(v)
+		return nil
+	case dnsrecord.FieldValidations:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetValidations(v)
 		return nil
 	}
 	return fmt.Errorf("unknown DNSRecord field %s", name)
@@ -10782,6 +10941,9 @@ func (m *DNSRecordMutation) ResetField(name string) error {
 		return nil
 	case dnsrecord.FieldTags:
 		m.ResetTags()
+		return nil
+	case dnsrecord.FieldValidations:
+		m.ResetValidations()
 		return nil
 	}
 	return fmt.Errorf("unknown DNSRecord field %s", name)
@@ -13973,6 +14135,7 @@ type FileDeleteMutation struct {
 	hcl_id                          *string
 	_path                           *string
 	tags                            *map[string]string
+	validations                     *[]string
 	clearedFields                   map[string]struct{}
 	_FileDeleteToEnvironment        *uuid.UUID
 	cleared_FileDeleteToEnvironment bool
@@ -14193,6 +14356,42 @@ func (m *FileDeleteMutation) ResetTags() {
 	m.tags = nil
 }
 
+// SetValidations sets the "validations" field.
+func (m *FileDeleteMutation) SetValidations(s []string) {
+	m.validations = &s
+}
+
+// Validations returns the value of the "validations" field in the mutation.
+func (m *FileDeleteMutation) Validations() (r []string, exists bool) {
+	v := m.validations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldValidations returns the old "validations" field's value of the FileDelete entity.
+// If the FileDelete object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FileDeleteMutation) OldValidations(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldValidations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldValidations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldValidations: %w", err)
+	}
+	return oldValue.Validations, nil
+}
+
+// ResetValidations resets all changes to the "validations" field.
+func (m *FileDeleteMutation) ResetValidations() {
+	m.validations = nil
+}
+
 // SetFileDeleteToEnvironmentID sets the "FileDeleteToEnvironment" edge to the Environment entity by id.
 func (m *FileDeleteMutation) SetFileDeleteToEnvironmentID(id uuid.UUID) {
 	m._FileDeleteToEnvironment = &id
@@ -14251,7 +14450,7 @@ func (m *FileDeleteMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FileDeleteMutation) Fields() []string {
-	fields := make([]string, 0, 3)
+	fields := make([]string, 0, 4)
 	if m.hcl_id != nil {
 		fields = append(fields, filedelete.FieldHclID)
 	}
@@ -14260,6 +14459,9 @@ func (m *FileDeleteMutation) Fields() []string {
 	}
 	if m.tags != nil {
 		fields = append(fields, filedelete.FieldTags)
+	}
+	if m.validations != nil {
+		fields = append(fields, filedelete.FieldValidations)
 	}
 	return fields
 }
@@ -14275,6 +14477,8 @@ func (m *FileDeleteMutation) Field(name string) (ent.Value, bool) {
 		return m.Path()
 	case filedelete.FieldTags:
 		return m.Tags()
+	case filedelete.FieldValidations:
+		return m.Validations()
 	}
 	return nil, false
 }
@@ -14290,6 +14494,8 @@ func (m *FileDeleteMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldPath(ctx)
 	case filedelete.FieldTags:
 		return m.OldTags(ctx)
+	case filedelete.FieldValidations:
+		return m.OldValidations(ctx)
 	}
 	return nil, fmt.Errorf("unknown FileDelete field %s", name)
 }
@@ -14319,6 +14525,13 @@ func (m *FileDeleteMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTags(v)
+		return nil
+	case filedelete.FieldValidations:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetValidations(v)
 		return nil
 	}
 	return fmt.Errorf("unknown FileDelete field %s", name)
@@ -14377,6 +14590,9 @@ func (m *FileDeleteMutation) ResetField(name string) error {
 		return nil
 	case filedelete.FieldTags:
 		m.ResetTags()
+		return nil
+	case filedelete.FieldValidations:
+		m.ResetValidations()
 		return nil
 	}
 	return fmt.Errorf("unknown FileDelete field %s", name)
@@ -14475,6 +14691,7 @@ type FileDownloadMutation struct {
 	abs_path                          *string
 	is_txt                            *bool
 	tags                              *map[string]string
+	validations                       *[]string
 	clearedFields                     map[string]struct{}
 	_FileDownloadToEnvironment        *uuid.UUID
 	cleared_FileDownloadToEnvironment bool
@@ -14983,6 +15200,42 @@ func (m *FileDownloadMutation) ResetTags() {
 	m.tags = nil
 }
 
+// SetValidations sets the "validations" field.
+func (m *FileDownloadMutation) SetValidations(s []string) {
+	m.validations = &s
+}
+
+// Validations returns the value of the "validations" field in the mutation.
+func (m *FileDownloadMutation) Validations() (r []string, exists bool) {
+	v := m.validations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldValidations returns the old "validations" field's value of the FileDownload entity.
+// If the FileDownload object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FileDownloadMutation) OldValidations(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldValidations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldValidations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldValidations: %w", err)
+	}
+	return oldValue.Validations, nil
+}
+
+// ResetValidations resets all changes to the "validations" field.
+func (m *FileDownloadMutation) ResetValidations() {
+	m.validations = nil
+}
+
 // SetFileDownloadToEnvironmentID sets the "FileDownloadToEnvironment" edge to the Environment entity by id.
 func (m *FileDownloadMutation) SetFileDownloadToEnvironmentID(id uuid.UUID) {
 	m._FileDownloadToEnvironment = &id
@@ -15041,7 +15294,7 @@ func (m *FileDownloadMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FileDownloadMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.hcl_id != nil {
 		fields = append(fields, filedownload.FieldHclID)
 	}
@@ -15075,6 +15328,9 @@ func (m *FileDownloadMutation) Fields() []string {
 	if m.tags != nil {
 		fields = append(fields, filedownload.FieldTags)
 	}
+	if m.validations != nil {
+		fields = append(fields, filedownload.FieldValidations)
+	}
 	return fields
 }
 
@@ -15105,6 +15361,8 @@ func (m *FileDownloadMutation) Field(name string) (ent.Value, bool) {
 		return m.IsTxt()
 	case filedownload.FieldTags:
 		return m.Tags()
+	case filedownload.FieldValidations:
+		return m.Validations()
 	}
 	return nil, false
 }
@@ -15136,6 +15394,8 @@ func (m *FileDownloadMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldIsTxt(ctx)
 	case filedownload.FieldTags:
 		return m.OldTags(ctx)
+	case filedownload.FieldValidations:
+		return m.OldValidations(ctx)
 	}
 	return nil, fmt.Errorf("unknown FileDownload field %s", name)
 }
@@ -15222,6 +15482,13 @@ func (m *FileDownloadMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTags(v)
 		return nil
+	case filedownload.FieldValidations:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetValidations(v)
+		return nil
 	}
 	return fmt.Errorf("unknown FileDownload field %s", name)
 }
@@ -15303,6 +15570,9 @@ func (m *FileDownloadMutation) ResetField(name string) error {
 		return nil
 	case filedownload.FieldTags:
 		m.ResetTags()
+		return nil
+	case filedownload.FieldValidations:
+		m.ResetValidations()
 		return nil
 	}
 	return fmt.Errorf("unknown FileDownload field %s", name)
@@ -15395,6 +15665,7 @@ type FileExtractMutation struct {
 	destination                      *string
 	_type                            *string
 	tags                             *map[string]string
+	validations                      *[]string
 	clearedFields                    map[string]struct{}
 	_FileExtractToEnvironment        *uuid.UUID
 	cleared_FileExtractToEnvironment bool
@@ -15687,6 +15958,42 @@ func (m *FileExtractMutation) ResetTags() {
 	m.tags = nil
 }
 
+// SetValidations sets the "validations" field.
+func (m *FileExtractMutation) SetValidations(s []string) {
+	m.validations = &s
+}
+
+// Validations returns the value of the "validations" field in the mutation.
+func (m *FileExtractMutation) Validations() (r []string, exists bool) {
+	v := m.validations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldValidations returns the old "validations" field's value of the FileExtract entity.
+// If the FileExtract object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FileExtractMutation) OldValidations(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldValidations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldValidations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldValidations: %w", err)
+	}
+	return oldValue.Validations, nil
+}
+
+// ResetValidations resets all changes to the "validations" field.
+func (m *FileExtractMutation) ResetValidations() {
+	m.validations = nil
+}
+
 // SetFileExtractToEnvironmentID sets the "FileExtractToEnvironment" edge to the Environment entity by id.
 func (m *FileExtractMutation) SetFileExtractToEnvironmentID(id uuid.UUID) {
 	m._FileExtractToEnvironment = &id
@@ -15745,7 +16052,7 @@ func (m *FileExtractMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FileExtractMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.hcl_id != nil {
 		fields = append(fields, fileextract.FieldHclID)
 	}
@@ -15760,6 +16067,9 @@ func (m *FileExtractMutation) Fields() []string {
 	}
 	if m.tags != nil {
 		fields = append(fields, fileextract.FieldTags)
+	}
+	if m.validations != nil {
+		fields = append(fields, fileextract.FieldValidations)
 	}
 	return fields
 }
@@ -15779,6 +16089,8 @@ func (m *FileExtractMutation) Field(name string) (ent.Value, bool) {
 		return m.GetType()
 	case fileextract.FieldTags:
 		return m.Tags()
+	case fileextract.FieldValidations:
+		return m.Validations()
 	}
 	return nil, false
 }
@@ -15798,6 +16110,8 @@ func (m *FileExtractMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldType(ctx)
 	case fileextract.FieldTags:
 		return m.OldTags(ctx)
+	case fileextract.FieldValidations:
+		return m.OldValidations(ctx)
 	}
 	return nil, fmt.Errorf("unknown FileExtract field %s", name)
 }
@@ -15841,6 +16155,13 @@ func (m *FileExtractMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTags(v)
+		return nil
+	case fileextract.FieldValidations:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetValidations(v)
 		return nil
 	}
 	return fmt.Errorf("unknown FileExtract field %s", name)
@@ -15905,6 +16226,9 @@ func (m *FileExtractMutation) ResetField(name string) error {
 		return nil
 	case fileextract.FieldTags:
 		m.ResetTags()
+		return nil
+	case fileextract.FieldValidations:
+		m.ResetValidations()
 		return nil
 	}
 	return fmt.Errorf("unknown FileExtract field %s", name)

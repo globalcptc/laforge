@@ -406,7 +406,7 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     a.ID,
 		Type:   "Ansible",
-		Fields: make([]*Field, 9),
+		Fields: make([]*Field, 10),
 		Edges:  make([]*Edge, 2),
 	}
 	var buf []byte
@@ -480,6 +480,14 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	node.Fields[8] = &Field{
 		Type:  "map[string]string",
 		Name:  "tags",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(a.Validations); err != nil {
+		return nil, err
+	}
+	node.Fields[9] = &Field{
+		Type:  "[]string",
+		Name:  "validations",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{
@@ -864,7 +872,7 @@ func (c *Command) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     c.ID,
 		Type:   "Command",
-		Fields: make([]*Field, 11),
+		Fields: make([]*Field, 12),
 		Edges:  make([]*Edge, 2),
 	}
 	var buf []byte
@@ -954,6 +962,14 @@ func (c *Command) Node(ctx context.Context) (node *Node, err error) {
 	node.Fields[10] = &Field{
 		Type:  "map[string]string",
 		Name:  "tags",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(c.Validations); err != nil {
+		return nil, err
+	}
+	node.Fields[11] = &Field{
+		Type:  "[]string",
+		Name:  "validations",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{
@@ -1151,7 +1167,7 @@ func (dr *DNSRecord) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     dr.ID,
 		Type:   "DNSRecord",
-		Fields: make([]*Field, 8),
+		Fields: make([]*Field, 9),
 		Edges:  make([]*Edge, 1),
 	}
 	var buf []byte
@@ -1217,6 +1233,14 @@ func (dr *DNSRecord) Node(ctx context.Context) (node *Node, err error) {
 	node.Fields[7] = &Field{
 		Type:  "map[string]string",
 		Name:  "tags",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(dr.Validations); err != nil {
+		return nil, err
+	}
+	node.Fields[8] = &Field{
+		Type:  "[]string",
+		Name:  "validations",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{
@@ -1574,7 +1598,7 @@ func (fd *FileDelete) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     fd.ID,
 		Type:   "FileDelete",
-		Fields: make([]*Field, 3),
+		Fields: make([]*Field, 4),
 		Edges:  make([]*Edge, 1),
 	}
 	var buf []byte
@@ -1602,6 +1626,14 @@ func (fd *FileDelete) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "tags",
 		Value: string(buf),
 	}
+	if buf, err = json.Marshal(fd.Validations); err != nil {
+		return nil, err
+	}
+	node.Fields[3] = &Field{
+		Type:  "[]string",
+		Name:  "validations",
+		Value: string(buf),
+	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
 		Name: "FileDeleteToEnvironment",
@@ -1619,7 +1651,7 @@ func (fd *FileDownload) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     fd.ID,
 		Type:   "FileDownload",
-		Fields: make([]*Field, 11),
+		Fields: make([]*Field, 12),
 		Edges:  make([]*Edge, 1),
 	}
 	var buf []byte
@@ -1711,6 +1743,14 @@ func (fd *FileDownload) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "tags",
 		Value: string(buf),
 	}
+	if buf, err = json.Marshal(fd.Validations); err != nil {
+		return nil, err
+	}
+	node.Fields[11] = &Field{
+		Type:  "[]string",
+		Name:  "validations",
+		Value: string(buf),
+	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
 		Name: "FileDownloadToEnvironment",
@@ -1728,7 +1768,7 @@ func (fe *FileExtract) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     fe.ID,
 		Type:   "FileExtract",
-		Fields: make([]*Field, 5),
+		Fields: make([]*Field, 6),
 		Edges:  make([]*Edge, 1),
 	}
 	var buf []byte
@@ -1770,6 +1810,14 @@ func (fe *FileExtract) Node(ctx context.Context) (node *Node, err error) {
 	node.Fields[4] = &Field{
 		Type:  "map[string]string",
 		Name:  "tags",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(fe.Validations); err != nil {
+		return nil, err
+	}
+	node.Fields[5] = &Field{
+		Type:  "[]string",
+		Name:  "validations",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{

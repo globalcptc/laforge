@@ -17,6 +17,8 @@ const (
 	FieldPath = "path"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
+	// FieldValidations holds the string denoting the validations field in the database.
+	FieldValidations = "validations"
 	// EdgeFileDeleteToEnvironment holds the string denoting the filedeletetoenvironment edge name in mutations.
 	EdgeFileDeleteToEnvironment = "FileDeleteToEnvironment"
 	// Table holds the table name of the filedelete in the database.
@@ -36,6 +38,7 @@ var Columns = []string{
 	FieldHclID,
 	FieldPath,
 	FieldTags,
+	FieldValidations,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "file_deletes"

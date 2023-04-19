@@ -40,6 +40,8 @@ type FileDownload struct {
 	IsTxt bool `json:"is_txt,omitempty" hcl:"is_txt,optional"`
 	// Tags holds the value of the "tags" field.
 	Tags map[string]string `json:"tags,omitempty" hcl:"tags,optional"`
+	// Validations holds the value of the "validations" field.
+	Validations []string `json:"validations,omitempty" hcl:"validations,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the FileDownloadQuery when eager-loading is set.
 	Edges FileDownloadEdges `json:"edges"`
@@ -79,7 +81,7 @@ func (*FileDownload) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case filedownload.FieldTags:
+		case filedownload.FieldTags, filedownload.FieldValidations:
 			values[i] = new([]byte)
 		case filedownload.FieldTemplate, filedownload.FieldDisabled, filedownload.FieldIsTxt:
 			values[i] = new(sql.NullBool)
@@ -178,6 +180,14 @@ func (fd *FileDownload) assignValues(columns []string, values []interface{}) err
 					return fmt.Errorf("unmarshal field tags: %w", err)
 				}
 			}
+		case filedownload.FieldValidations:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field validations", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &fd.Validations); err != nil {
+					return fmt.Errorf("unmarshal field validations: %w", err)
+				}
+			}
 		case filedownload.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field environment_environment_to_file_download", values[i])
@@ -240,6 +250,8 @@ func (fd *FileDownload) String() string {
 	builder.WriteString(fmt.Sprintf("%v", fd.IsTxt))
 	builder.WriteString(", tags=")
 	builder.WriteString(fmt.Sprintf("%v", fd.Tags))
+	builder.WriteString(", validations=")
+	builder.WriteString(fmt.Sprintf("%v", fd.Validations))
 	builder.WriteByte(')')
 	return builder.String()
 }

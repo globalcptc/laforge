@@ -110,6 +110,12 @@ func (cu *CommandUpdate) SetTags(m map[string]string) *CommandUpdate {
 	return cu
 }
 
+// SetValidations sets the "validations" field.
+func (cu *CommandUpdate) SetValidations(s []string) *CommandUpdate {
+	cu.mutation.SetValidations(s)
+	return cu
+}
+
 // AddCommandToUserIDs adds the "CommandToUser" edge to the User entity by IDs.
 func (cu *CommandUpdate) AddCommandToUserIDs(ids ...uuid.UUID) *CommandUpdate {
 	cu.mutation.AddCommandToUserIDs(ids...)
@@ -360,6 +366,13 @@ func (cu *CommandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: command.FieldTags,
 		})
 	}
+	if value, ok := cu.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: command.FieldValidations,
+		})
+	}
 	if cu.mutation.CommandToUserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -545,6 +558,12 @@ func (cuo *CommandUpdateOne) SetVars(m map[string]string) *CommandUpdateOne {
 // SetTags sets the "tags" field.
 func (cuo *CommandUpdateOne) SetTags(m map[string]string) *CommandUpdateOne {
 	cuo.mutation.SetTags(m)
+	return cuo
+}
+
+// SetValidations sets the "validations" field.
+func (cuo *CommandUpdateOne) SetValidations(s []string) *CommandUpdateOne {
+	cuo.mutation.SetValidations(s)
 	return cuo
 }
 
@@ -826,6 +845,13 @@ func (cuo *CommandUpdateOne) sqlSave(ctx context.Context) (_node *Command, err e
 			Type:   field.TypeJSON,
 			Value:  value,
 			Column: command.FieldTags,
+		})
+	}
+	if value, ok := cuo.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: command.FieldValidations,
 		})
 	}
 	if cuo.mutation.CommandToUserCleared() {

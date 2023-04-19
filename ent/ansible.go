@@ -36,6 +36,8 @@ type Ansible struct {
 	AbsPath string `json:"abs_path,omitempty" hcl:"abs_path,optional"`
 	// Tags holds the value of the "tags" field.
 	Tags map[string]string `json:"tags,omitempty" hcl:"tags,optional"`
+	// Validations holds the value of the "validations" field.
+	Validations []string `json:"validations,omitempty" hcl:"validations,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AnsibleQuery when eager-loading is set.
 	Edges AnsibleEdges `json:"edges"`
@@ -88,7 +90,7 @@ func (*Ansible) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case ansible.FieldTags:
+		case ansible.FieldTags, ansible.FieldValidations:
 			values[i] = new([]byte)
 		case ansible.FieldName, ansible.FieldHclID, ansible.FieldDescription, ansible.FieldSource, ansible.FieldPlaybookName, ansible.FieldMethod, ansible.FieldInventory, ansible.FieldAbsPath:
 			values[i] = new(sql.NullString)
@@ -173,6 +175,14 @@ func (a *Ansible) assignValues(columns []string, values []interface{}) error {
 					return fmt.Errorf("unmarshal field tags: %w", err)
 				}
 			}
+		case ansible.FieldValidations:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field validations", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &a.Validations); err != nil {
+					return fmt.Errorf("unmarshal field validations: %w", err)
+				}
+			}
 		case ansible.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field environment_environment_to_ansible", values[i])
@@ -236,6 +246,8 @@ func (a *Ansible) String() string {
 	builder.WriteString(a.AbsPath)
 	builder.WriteString(", tags=")
 	builder.WriteString(fmt.Sprintf("%v", a.Tags))
+	builder.WriteString(", validations=")
+	builder.WriteString(fmt.Sprintf("%v", a.Validations))
 	builder.WriteByte(')')
 	return builder.String()
 }

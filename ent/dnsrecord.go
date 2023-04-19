@@ -34,6 +34,8 @@ type DNSRecord struct {
 	Disabled bool `json:"disabled,omitempty" hcl:"disabled,optional"`
 	// Tags holds the value of the "tags" field.
 	Tags map[string]string `json:"tags,omitempty" hcl:"tags,optional"`
+	// Validations holds the value of the "validations" field.
+	Validations []string `json:"validations,omitempty" hcl:"validations,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the DNSRecordQuery when eager-loading is set.
 	Edges DNSRecordEdges `json:"edges"`
@@ -73,7 +75,7 @@ func (*DNSRecord) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case dnsrecord.FieldValues, dnsrecord.FieldVars, dnsrecord.FieldTags:
+		case dnsrecord.FieldValues, dnsrecord.FieldVars, dnsrecord.FieldTags, dnsrecord.FieldValidations:
 			values[i] = new([]byte)
 		case dnsrecord.FieldDisabled:
 			values[i] = new(sql.NullBool)
@@ -158,6 +160,14 @@ func (dr *DNSRecord) assignValues(columns []string, values []interface{}) error 
 					return fmt.Errorf("unmarshal field tags: %w", err)
 				}
 			}
+		case dnsrecord.FieldValidations:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field validations", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &dr.Validations); err != nil {
+					return fmt.Errorf("unmarshal field validations: %w", err)
+				}
+			}
 		case dnsrecord.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field environment_environment_to_dns_record", values[i])
@@ -214,6 +224,8 @@ func (dr *DNSRecord) String() string {
 	builder.WriteString(fmt.Sprintf("%v", dr.Disabled))
 	builder.WriteString(", tags=")
 	builder.WriteString(fmt.Sprintf("%v", dr.Tags))
+	builder.WriteString(", validations=")
+	builder.WriteString(fmt.Sprintf("%v", dr.Validations))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -40,6 +40,8 @@ type Command struct {
 	Vars map[string]string `json:"vars,omitempty" hcl:"vars,attr"`
 	// Tags holds the value of the "tags" field.
 	Tags map[string]string `json:"tags,omitempty" hcl:"tags,optional"`
+	// Validations holds the value of the "validations" field.
+	Validations []string `json:"validations,omitempty" hcl:"validations,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CommandQuery when eager-loading is set.
 	Edges CommandEdges `json:"edges"`
@@ -92,7 +94,7 @@ func (*Command) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case command.FieldArgs, command.FieldVars, command.FieldTags:
+		case command.FieldArgs, command.FieldVars, command.FieldTags, command.FieldValidations:
 			values[i] = new([]byte)
 		case command.FieldIgnoreErrors, command.FieldDisabled:
 			values[i] = new(sql.NullBool)
@@ -197,6 +199,14 @@ func (c *Command) assignValues(columns []string, values []interface{}) error {
 					return fmt.Errorf("unmarshal field tags: %w", err)
 				}
 			}
+		case command.FieldValidations:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field validations", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &c.Validations); err != nil {
+					return fmt.Errorf("unmarshal field validations: %w", err)
+				}
+			}
 		case command.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field environment_environment_to_command", values[i])
@@ -264,6 +274,8 @@ func (c *Command) String() string {
 	builder.WriteString(fmt.Sprintf("%v", c.Vars))
 	builder.WriteString(", tags=")
 	builder.WriteString(fmt.Sprintf("%v", c.Tags))
+	builder.WriteString(", validations=")
+	builder.WriteString(fmt.Sprintf("%v", c.Validations))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -21,6 +21,8 @@ const (
 	FieldType = "type"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
+	// FieldValidations holds the string denoting the validations field in the database.
+	FieldValidations = "validations"
 	// EdgeFileExtractToEnvironment holds the string denoting the fileextracttoenvironment edge name in mutations.
 	EdgeFileExtractToEnvironment = "FileExtractToEnvironment"
 	// Table holds the table name of the fileextract in the database.
@@ -42,6 +44,7 @@ var Columns = []string{
 	FieldDestination,
 	FieldType,
 	FieldTags,
+	FieldValidations,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "file_extracts"

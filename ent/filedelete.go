@@ -24,6 +24,8 @@ type FileDelete struct {
 	Path string `json:"path,omitempty" hcl:"path,attr"`
 	// Tags holds the value of the "tags" field.
 	Tags map[string]string `json:"tags,omitempty" hcl:"tags,optional"`
+	// Validations holds the value of the "validations" field.
+	Validations []string `json:"validations,omitempty" hcl:"validations,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the FileDeleteQuery when eager-loading is set.
 	Edges FileDeleteEdges `json:"edges"`
@@ -63,7 +65,7 @@ func (*FileDelete) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case filedelete.FieldTags:
+		case filedelete.FieldTags, filedelete.FieldValidations:
 			values[i] = new([]byte)
 		case filedelete.FieldHclID, filedelete.FieldPath:
 			values[i] = new(sql.NullString)
@@ -112,6 +114,14 @@ func (fd *FileDelete) assignValues(columns []string, values []interface{}) error
 					return fmt.Errorf("unmarshal field tags: %w", err)
 				}
 			}
+		case filedelete.FieldValidations:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field validations", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &fd.Validations); err != nil {
+					return fmt.Errorf("unmarshal field validations: %w", err)
+				}
+			}
 		case filedelete.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field environment_environment_to_file_delete", values[i])
@@ -158,6 +168,8 @@ func (fd *FileDelete) String() string {
 	builder.WriteString(fd.Path)
 	builder.WriteString(", tags=")
 	builder.WriteString(fmt.Sprintf("%v", fd.Tags))
+	builder.WriteString(", validations=")
+	builder.WriteString(fmt.Sprintf("%v", fd.Validations))
 	builder.WriteByte(')')
 	return builder.String()
 }

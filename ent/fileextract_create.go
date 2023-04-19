@@ -51,6 +51,12 @@ func (fec *FileExtractCreate) SetTags(m map[string]string) *FileExtractCreate {
 	return fec
 }
 
+// SetValidations sets the "validations" field.
+func (fec *FileExtractCreate) SetValidations(s []string) *FileExtractCreate {
+	fec.mutation.SetValidations(s)
+	return fec
+}
+
 // SetID sets the "id" field.
 func (fec *FileExtractCreate) SetID(u uuid.UUID) *FileExtractCreate {
 	fec.mutation.SetID(u)
@@ -184,6 +190,9 @@ func (fec *FileExtractCreate) check() error {
 	if _, ok := fec.mutation.Tags(); !ok {
 		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "FileExtract.tags"`)}
 	}
+	if _, ok := fec.mutation.Validations(); !ok {
+		return &ValidationError{Name: "validations", err: errors.New(`ent: missing required field "FileExtract.validations"`)}
+	}
 	return nil
 }
 
@@ -259,6 +268,14 @@ func (fec *FileExtractCreate) createSpec() (*FileExtract, *sqlgraph.CreateSpec) 
 			Column: fileextract.FieldTags,
 		})
 		_node.Tags = value
+	}
+	if value, ok := fec.mutation.Validations(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: fileextract.FieldValidations,
+		})
+		_node.Validations = value
 	}
 	if nodes := fec.mutation.FileExtractToEnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

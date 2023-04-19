@@ -69,6 +69,12 @@ func (drc *DNSRecordCreate) SetTags(m map[string]string) *DNSRecordCreate {
 	return drc
 }
 
+// SetValidations sets the "validations" field.
+func (drc *DNSRecordCreate) SetValidations(s []string) *DNSRecordCreate {
+	drc.mutation.SetValidations(s)
+	return drc
+}
+
 // SetID sets the "id" field.
 func (drc *DNSRecordCreate) SetID(u uuid.UUID) *DNSRecordCreate {
 	drc.mutation.SetID(u)
@@ -211,6 +217,9 @@ func (drc *DNSRecordCreate) check() error {
 	if _, ok := drc.mutation.Tags(); !ok {
 		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "DNSRecord.tags"`)}
 	}
+	if _, ok := drc.mutation.Validations(); !ok {
+		return &ValidationError{Name: "validations", err: errors.New(`ent: missing required field "DNSRecord.validations"`)}
+	}
 	return nil
 }
 
@@ -310,6 +319,14 @@ func (drc *DNSRecordCreate) createSpec() (*DNSRecord, *sqlgraph.CreateSpec) {
 			Column: dnsrecord.FieldTags,
 		})
 		_node.Tags = value
+	}
+	if value, ok := drc.mutation.Validations(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: dnsrecord.FieldValidations,
+		})
+		_node.Validations = value
 	}
 	if nodes := drc.mutation.DNSRecordToEnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

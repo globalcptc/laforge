@@ -103,6 +103,12 @@ func (fdu *FileDownloadUpdate) SetTags(m map[string]string) *FileDownloadUpdate 
 	return fdu
 }
 
+// SetValidations sets the "validations" field.
+func (fdu *FileDownloadUpdate) SetValidations(s []string) *FileDownloadUpdate {
+	fdu.mutation.SetValidations(s)
+	return fdu
+}
+
 // SetFileDownloadToEnvironmentID sets the "FileDownloadToEnvironment" edge to the Environment entity by ID.
 func (fdu *FileDownloadUpdate) SetFileDownloadToEnvironmentID(id uuid.UUID) *FileDownloadUpdate {
 	fdu.mutation.SetFileDownloadToEnvironmentID(id)
@@ -282,6 +288,13 @@ func (fdu *FileDownloadUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: filedownload.FieldTags,
 		})
 	}
+	if value, ok := fdu.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: filedownload.FieldValidations,
+		})
+	}
 	if fdu.mutation.FileDownloadToEnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -407,6 +420,12 @@ func (fduo *FileDownloadUpdateOne) SetNillableIsTxt(b *bool) *FileDownloadUpdate
 // SetTags sets the "tags" field.
 func (fduo *FileDownloadUpdateOne) SetTags(m map[string]string) *FileDownloadUpdateOne {
 	fduo.mutation.SetTags(m)
+	return fduo
+}
+
+// SetValidations sets the "validations" field.
+func (fduo *FileDownloadUpdateOne) SetValidations(s []string) *FileDownloadUpdateOne {
+	fduo.mutation.SetValidations(s)
 	return fduo
 }
 
@@ -617,6 +636,13 @@ func (fduo *FileDownloadUpdateOne) sqlSave(ctx context.Context) (_node *FileDown
 			Type:   field.TypeJSON,
 			Value:  value,
 			Column: filedownload.FieldTags,
+		})
+	}
+	if value, ok := fduo.mutation.Validations(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: filedownload.FieldValidations,
 		})
 	}
 	if fduo.mutation.FileDownloadToEnvironmentCleared() {

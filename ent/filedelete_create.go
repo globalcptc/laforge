@@ -39,6 +39,12 @@ func (fdc *FileDeleteCreate) SetTags(m map[string]string) *FileDeleteCreate {
 	return fdc
 }
 
+// SetValidations sets the "validations" field.
+func (fdc *FileDeleteCreate) SetValidations(s []string) *FileDeleteCreate {
+	fdc.mutation.SetValidations(s)
+	return fdc
+}
+
 // SetID sets the "id" field.
 func (fdc *FileDeleteCreate) SetID(u uuid.UUID) *FileDeleteCreate {
 	fdc.mutation.SetID(u)
@@ -166,6 +172,9 @@ func (fdc *FileDeleteCreate) check() error {
 	if _, ok := fdc.mutation.Tags(); !ok {
 		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "FileDelete.tags"`)}
 	}
+	if _, ok := fdc.mutation.Validations(); !ok {
+		return &ValidationError{Name: "validations", err: errors.New(`ent: missing required field "FileDelete.validations"`)}
+	}
 	return nil
 }
 
@@ -225,6 +234,14 @@ func (fdc *FileDeleteCreate) createSpec() (*FileDelete, *sqlgraph.CreateSpec) {
 			Column: filedelete.FieldTags,
 		})
 		_node.Tags = value
+	}
+	if value, ok := fdc.mutation.Validations(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: filedelete.FieldValidations,
+		})
+		_node.Validations = value
 	}
 	if nodes := fdc.mutation.FileDeleteToEnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

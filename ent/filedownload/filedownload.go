@@ -33,6 +33,8 @@ const (
 	FieldIsTxt = "is_txt"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
+	// FieldValidations holds the string denoting the validations field in the database.
+	FieldValidations = "validations"
 	// EdgeFileDownloadToEnvironment holds the string denoting the filedownloadtoenvironment edge name in mutations.
 	EdgeFileDownloadToEnvironment = "FileDownloadToEnvironment"
 	// Table holds the table name of the filedownload in the database.
@@ -60,6 +62,7 @@ var Columns = []string{
 	FieldAbsPath,
 	FieldIsTxt,
 	FieldTags,
+	FieldValidations,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "file_downloads"

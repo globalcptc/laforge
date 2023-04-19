@@ -125,6 +125,7 @@ var (
 		{Name: "inventory", Type: field.TypeString},
 		{Name: "abs_path", Type: field.TypeString},
 		{Name: "tags", Type: field.TypeJSON},
+		{Name: "validations", Type: field.TypeJSON},
 		{Name: "environment_environment_to_ansible", Type: field.TypeUUID, Nullable: true},
 	}
 	// AnsiblesTable holds the schema information for the "ansibles" table.
@@ -135,7 +136,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "ansibles_environments_EnvironmentToAnsible",
-				Columns:    []*schema.Column{AnsiblesColumns[10]},
+				Columns:    []*schema.Column{AnsiblesColumns[11]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -243,6 +244,7 @@ var (
 		{Name: "timeout", Type: field.TypeInt},
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "tags", Type: field.TypeJSON},
+		{Name: "validations", Type: field.TypeJSON},
 		{Name: "environment_environment_to_command", Type: field.TypeUUID, Nullable: true},
 	}
 	// CommandsTable holds the schema information for the "commands" table.
@@ -253,7 +255,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "commands_environments_EnvironmentToCommand",
-				Columns:    []*schema.Column{CommandsColumns[12]},
+				Columns:    []*schema.Column{CommandsColumns[13]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -311,6 +313,7 @@ var (
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "disabled", Type: field.TypeBool},
 		{Name: "tags", Type: field.TypeJSON},
+		{Name: "validations", Type: field.TypeJSON},
 		{Name: "environment_environment_to_dns_record", Type: field.TypeUUID, Nullable: true},
 	}
 	// DNSRecordsTable holds the schema information for the "dns_records" table.
@@ -321,7 +324,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "dns_records_environments_EnvironmentToDNSRecord",
-				Columns:    []*schema.Column{DNSRecordsColumns[9]},
+				Columns:    []*schema.Column{DNSRecordsColumns[10]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -374,6 +377,7 @@ var (
 		{Name: "hcl_id", Type: field.TypeString},
 		{Name: "path", Type: field.TypeString},
 		{Name: "tags", Type: field.TypeJSON},
+		{Name: "validations", Type: field.TypeJSON},
 		{Name: "environment_environment_to_file_delete", Type: field.TypeUUID, Nullable: true},
 	}
 	// FileDeletesTable holds the schema information for the "file_deletes" table.
@@ -384,7 +388,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "file_deletes_environments_EnvironmentToFileDelete",
-				Columns:    []*schema.Column{FileDeletesColumns[4]},
+				Columns:    []*schema.Column{FileDeletesColumns[5]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -404,6 +408,7 @@ var (
 		{Name: "abs_path", Type: field.TypeString},
 		{Name: "is_txt", Type: field.TypeBool, Default: false},
 		{Name: "tags", Type: field.TypeJSON},
+		{Name: "validations", Type: field.TypeJSON},
 		{Name: "environment_environment_to_file_download", Type: field.TypeUUID, Nullable: true},
 	}
 	// FileDownloadsTable holds the schema information for the "file_downloads" table.
@@ -414,7 +419,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "file_downloads_environments_EnvironmentToFileDownload",
-				Columns:    []*schema.Column{FileDownloadsColumns[12]},
+				Columns:    []*schema.Column{FileDownloadsColumns[13]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -428,6 +433,7 @@ var (
 		{Name: "destination", Type: field.TypeString},
 		{Name: "type", Type: field.TypeString},
 		{Name: "tags", Type: field.TypeJSON},
+		{Name: "validations", Type: field.TypeJSON},
 		{Name: "environment_environment_to_file_extract", Type: field.TypeUUID, Nullable: true},
 	}
 	// FileExtractsTable holds the schema information for the "file_extracts" table.
@@ -438,7 +444,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "file_extracts_environments_EnvironmentToFileExtract",
-				Columns:    []*schema.Column{FileExtractsColumns[6]},
+				Columns:    []*schema.Column{FileExtractsColumns[7]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
