@@ -91,7 +91,7 @@ func main() {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.IncludedNetwork.Delete().Where(includednetwork.Not(includednetwork.HasIncludedNetworkToEnvironment())).Exec(ctx)
+	deletedCount, err = client.IncludedNetwork.Delete().Where(includednetwork.Not(includednetwork.HasEnvironments())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}

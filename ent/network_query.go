@@ -563,13 +563,13 @@ func (nq *NetworkQuery) loadNetworkToIncludedNetwork(ctx context.Context, query 
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.included_network_included_network_to_network
+		fk := n.included_network_network
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "included_network_included_network_to_network" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "included_network_network" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "included_network_included_network_to_network" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "included_network_network" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

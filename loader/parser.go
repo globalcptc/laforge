@@ -430,7 +430,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 
 		environmentHosts := []string{}
 		for _, cIncludedNetwork := range cEnviroment.HCLIncludedNetworks {
-			environmentHosts = append(environmentHosts, cIncludedNetwork.Hosts...)
+			environmentHosts = append(environmentHosts, cIncludedNetwork.IncludedHosts...)
 		}
 		returnedCompetitions, returnedDNS, err := createCompetitions(txClient, ctx, log, loadedConfig.Competitions, cEnviroment.HclID)
 		if err != nil {
@@ -1613,7 +1613,7 @@ func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.L
 			return nil, err
 		}
 		entHosts := []*ent.Host{}
-		for _, cHostHclID := range cIncludedNetwork.Hosts {
+		for _, cHostHclID := range cIncludedNetwork.IncludedHosts {
 			entHost, err := txClient.Host.Query().Where(
 				host.And(
 					host.HclIDEQ(cHostHclID),
@@ -1634,7 +1634,7 @@ func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.L
 			Query().
 			Where(
 				includednetwork.And(
-					includednetwork.HasIncludedNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					includednetwork.HasEnvironmentsWith(environment.HclIDEQ(envHclID)),
 					includednetwork.NameEQ(cIncludedNetwork.Name),
 				),
 			).
@@ -1643,26 +1643,26 @@ func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.L
 			if err == err.(*ent.NotFoundError) {
 				createdQuery := txClient.IncludedNetwork.Create().
 					SetName(cIncludedNetwork.Name).
-					SetHosts(cIncludedNetwork.Hosts).
-					SetIncludedNetworkToNetwork(entNetwork).
-					AddIncludedNetworkToHost(entHosts...)
+					SetIncludedHosts(cIncludedNetwork.IncludedHosts).
+					SetNetwork(entNetwork).
+					AddHosts(entHosts...)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
 		}
 		entIncludedNetwork, err = entIncludedNetwork.Update().
 			SetName(cIncludedNetwork.Name).
-			SetHosts(cIncludedNetwork.Hosts).
-			ClearIncludedNetworkToHost().
-			ClearIncludedNetworkToNetwork().
+			SetIncludedHosts(cIncludedNetwork.IncludedHosts).
+			ClearHosts().
+			ClearNetwork().
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to update the Included Network %v with Hosts %v. Err: %v", cIncludedNetwork.Name, cIncludedNetwork.Hosts, err)
 			return nil, err
 		}
 		entIncludedNetwork, err = entIncludedNetwork.Update().
-			AddIncludedNetworkToHost(entHosts...).
-			SetIncludedNetworkToNetwork(entNetwork).
+			AddHosts(entHosts...).
+			SetNetwork(entNetwork).
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to update the Included Network %v Edges with Hosts %v. Err: %v", cIncludedNetwork.Name, cIncludedNetwork.Hosts, err)
@@ -1706,9 +1706,9 @@ func validateHostDependencies(txClient *ent.Tx, ctx context.Context, log *loggin
 		}
 		_, err = txClient.IncludedNetwork.Query().Where(
 			includednetwork.And(
-				includednetwork.HasIncludedNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
-				includednetwork.HasIncludedNetworkToHostWith(host.HclIDEQ(uncheckedHostDependency.HostID)),
-				includednetwork.HasIncludedNetworkToNetworkWith(network.HclIDEQ(uncheckedHostDependency.NetworkID)),
+				includednetwork.HasEnvironmentsWith(environment.HclIDEQ(envHclID)),
+				includednetwork.HasHostsWith(host.HclIDEQ(uncheckedHostDependency.HostID)),
+				includednetwork.HasNetworkWith(network.HclIDEQ(uncheckedHostDependency.NetworkID)),
 			),
 		).Only(ctx)
 		if err != nil {

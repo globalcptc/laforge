@@ -32,7 +32,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "tags"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"included_network_included_network_to_tag",
+	"included_network_tags",
 	"user_user_to_tag",
 }
 

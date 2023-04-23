@@ -370,7 +370,7 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 		entHosts, err := pNetwork.
 			QueryProvisionedNetworkToNetwork().
 			QueryNetworkToIncludedNetwork().
-			QueryIncludedNetworkToHost().
+			QueryHosts().
 			All(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Hosts for Network %v. Err: %v", pNetwork.Name, err)
@@ -1492,7 +1492,7 @@ func RenderScript(ctx context.Context, client *ent.Client, logger *logging.Logge
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
-	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithIncludedNetworkToHost().WithIncludedNetworkToNetwork().AllX(ctx)
+	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithHosts().WithNetwork().AllX(ctx)
 	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)
 	currentNetwork := currentProvisionedNetwork.QueryProvisionedNetworkToNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
@@ -1644,7 +1644,7 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
-	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithIncludedNetworkToHost().WithIncludedNetworkToNetwork().AllX(ctx)
+	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithHosts().WithNetwork().AllX(ctx)
 	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)
 	currentNetwork := currentProvisionedNetwork.QueryProvisionedNetworkToNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)

@@ -2287,19 +2287,19 @@ func (in *IncludedNetwork) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "name",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(in.Hosts); err != nil {
+	if buf, err = json.Marshal(in.IncludedHosts); err != nil {
 		return nil, err
 	}
 	node.Fields[1] = &Field{
 		Type:  "[]string",
-		Name:  "hosts",
+		Name:  "included_hosts",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{
 		Type: "Tag",
-		Name: "IncludedNetworkToTag",
+		Name: "Tags",
 	}
-	err = in.QueryIncludedNetworkToTag().
+	err = in.QueryTags().
 		Select(tag.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -2307,9 +2307,9 @@ func (in *IncludedNetwork) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Host",
-		Name: "IncludedNetworkToHost",
+		Name: "Hosts",
 	}
-	err = in.QueryIncludedNetworkToHost().
+	err = in.QueryHosts().
 		Select(host.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -2317,9 +2317,9 @@ func (in *IncludedNetwork) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Network",
-		Name: "IncludedNetworkToNetwork",
+		Name: "Network",
 	}
-	err = in.QueryIncludedNetworkToNetwork().
+	err = in.QueryNetwork().
 		Select(network.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -2327,9 +2327,9 @@ func (in *IncludedNetwork) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "Environment",
-		Name: "IncludedNetworkToEnvironment",
+		Name: "Environments",
 	}
-	err = in.QueryIncludedNetworkToEnvironment().
+	err = in.QueryEnvironments().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {

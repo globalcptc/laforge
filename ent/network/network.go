@@ -51,7 +51,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "includednetwork" package.
 	NetworkToIncludedNetworkInverseTable = "included_networks"
 	// NetworkToIncludedNetworkColumn is the table column denoting the NetworkToIncludedNetwork relation/edge.
-	NetworkToIncludedNetworkColumn = "included_network_included_network_to_network"
+	NetworkToIncludedNetworkColumn = "included_network_network"
 )
 
 // Columns holds all SQL columns for network fields.

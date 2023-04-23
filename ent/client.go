@@ -3661,15 +3661,15 @@ func (c *IncludedNetworkClient) GetX(ctx context.Context, id uuid.UUID) *Include
 	return obj
 }
 
-// QueryIncludedNetworkToTag queries the IncludedNetworkToTag edge of a IncludedNetwork.
-func (c *IncludedNetworkClient) QueryIncludedNetworkToTag(in *IncludedNetwork) *TagQuery {
+// QueryTags queries the Tags edge of a IncludedNetwork.
+func (c *IncludedNetworkClient) QueryTags(in *IncludedNetwork) *TagQuery {
 	query := &TagQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := in.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(includednetwork.Table, includednetwork.FieldID, id),
 			sqlgraph.To(tag.Table, tag.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, includednetwork.IncludedNetworkToTagTable, includednetwork.IncludedNetworkToTagColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, includednetwork.TagsTable, includednetwork.TagsColumn),
 		)
 		fromV = sqlgraph.Neighbors(in.driver.Dialect(), step)
 		return fromV, nil
@@ -3677,15 +3677,15 @@ func (c *IncludedNetworkClient) QueryIncludedNetworkToTag(in *IncludedNetwork) *
 	return query
 }
 
-// QueryIncludedNetworkToHost queries the IncludedNetworkToHost edge of a IncludedNetwork.
-func (c *IncludedNetworkClient) QueryIncludedNetworkToHost(in *IncludedNetwork) *HostQuery {
+// QueryHosts queries the Hosts edge of a IncludedNetwork.
+func (c *IncludedNetworkClient) QueryHosts(in *IncludedNetwork) *HostQuery {
 	query := &HostQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := in.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(includednetwork.Table, includednetwork.FieldID, id),
 			sqlgraph.To(host.Table, host.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, includednetwork.IncludedNetworkToHostTable, includednetwork.IncludedNetworkToHostPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, includednetwork.HostsTable, includednetwork.HostsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(in.driver.Dialect(), step)
 		return fromV, nil
@@ -3693,15 +3693,15 @@ func (c *IncludedNetworkClient) QueryIncludedNetworkToHost(in *IncludedNetwork) 
 	return query
 }
 
-// QueryIncludedNetworkToNetwork queries the IncludedNetworkToNetwork edge of a IncludedNetwork.
-func (c *IncludedNetworkClient) QueryIncludedNetworkToNetwork(in *IncludedNetwork) *NetworkQuery {
+// QueryNetwork queries the Network edge of a IncludedNetwork.
+func (c *IncludedNetworkClient) QueryNetwork(in *IncludedNetwork) *NetworkQuery {
 	query := &NetworkQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := in.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(includednetwork.Table, includednetwork.FieldID, id),
 			sqlgraph.To(network.Table, network.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, includednetwork.IncludedNetworkToNetworkTable, includednetwork.IncludedNetworkToNetworkColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, includednetwork.NetworkTable, includednetwork.NetworkColumn),
 		)
 		fromV = sqlgraph.Neighbors(in.driver.Dialect(), step)
 		return fromV, nil
@@ -3709,15 +3709,15 @@ func (c *IncludedNetworkClient) QueryIncludedNetworkToNetwork(in *IncludedNetwor
 	return query
 }
 
-// QueryIncludedNetworkToEnvironment queries the IncludedNetworkToEnvironment edge of a IncludedNetwork.
-func (c *IncludedNetworkClient) QueryIncludedNetworkToEnvironment(in *IncludedNetwork) *EnvironmentQuery {
+// QueryEnvironments queries the Environments edge of a IncludedNetwork.
+func (c *IncludedNetworkClient) QueryEnvironments(in *IncludedNetwork) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := in.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(includednetwork.Table, includednetwork.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, includednetwork.IncludedNetworkToEnvironmentTable, includednetwork.IncludedNetworkToEnvironmentPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, true, includednetwork.EnvironmentsTable, includednetwork.EnvironmentsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(in.driver.Dialect(), step)
 		return fromV, nil

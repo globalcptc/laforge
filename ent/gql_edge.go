@@ -652,34 +652,34 @@ func (i *Identity) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (in *IncludedNetwork) IncludedNetworkToTag(ctx context.Context) ([]*Tag, error) {
-	result, err := in.Edges.IncludedNetworkToTagOrErr()
+func (in *IncludedNetwork) Tags(ctx context.Context) ([]*Tag, error) {
+	result, err := in.Edges.TagsOrErr()
 	if IsNotLoaded(err) {
-		result, err = in.QueryIncludedNetworkToTag().All(ctx)
+		result, err = in.QueryTags().All(ctx)
 	}
 	return result, err
 }
 
-func (in *IncludedNetwork) IncludedNetworkToHost(ctx context.Context) ([]*Host, error) {
-	result, err := in.Edges.IncludedNetworkToHostOrErr()
+func (in *IncludedNetwork) Hosts(ctx context.Context) ([]*Host, error) {
+	result, err := in.Edges.HostsOrErr()
 	if IsNotLoaded(err) {
-		result, err = in.QueryIncludedNetworkToHost().All(ctx)
+		result, err = in.QueryHosts().All(ctx)
 	}
 	return result, err
 }
 
-func (in *IncludedNetwork) IncludedNetworkToNetwork(ctx context.Context) (*Network, error) {
-	result, err := in.Edges.IncludedNetworkToNetworkOrErr()
+func (in *IncludedNetwork) Network(ctx context.Context) (*Network, error) {
+	result, err := in.Edges.NetworkOrErr()
 	if IsNotLoaded(err) {
-		result, err = in.QueryIncludedNetworkToNetwork().Only(ctx)
+		result, err = in.QueryNetwork().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (in *IncludedNetwork) IncludedNetworkToEnvironment(ctx context.Context) ([]*Environment, error) {
-	result, err := in.Edges.IncludedNetworkToEnvironmentOrErr()
+func (in *IncludedNetwork) Environments(ctx context.Context) ([]*Environment, error) {
+	result, err := in.Edges.EnvironmentsOrErr()
 	if IsNotLoaded(err) {
-		result, err = in.QueryIncludedNetworkToEnvironment().All(ctx)
+		result, err = in.QueryEnvironments().All(ctx)
 	}
 	return result, err
 }
