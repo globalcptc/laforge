@@ -19,14 +19,14 @@ import (
 // IdentityQuery is the builder for querying Identity entities.
 type IdentityQuery struct {
 	config
-	limit                     *int
-	offset                    *int
-	unique                    *bool
-	order                     []OrderFunc
-	fields                    []string
-	predicates                []predicate.Identity
-	withIdentityToEnvironment *EnvironmentQuery
-	withFKs                   bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.Identity
+	withEnvironment *EnvironmentQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,8 +63,8 @@ func (iq *IdentityQuery) Order(o ...OrderFunc) *IdentityQuery {
 	return iq
 }
 
-// QueryIdentityToEnvironment chains the current query on the "IdentityToEnvironment" edge.
-func (iq *IdentityQuery) QueryIdentityToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (iq *IdentityQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: iq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := iq.prepareQuery(ctx); err != nil {
@@ -77,7 +77,7 @@ func (iq *IdentityQuery) QueryIdentityToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(identity.Table, identity.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, identity.IdentityToEnvironmentTable, identity.IdentityToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, identity.EnvironmentTable, identity.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(iq.driver.Dialect(), step)
 		return fromU, nil
@@ -261,12 +261,12 @@ func (iq *IdentityQuery) Clone() *IdentityQuery {
 		return nil
 	}
 	return &IdentityQuery{
-		config:                    iq.config,
-		limit:                     iq.limit,
-		offset:                    iq.offset,
-		order:                     append([]OrderFunc{}, iq.order...),
-		predicates:                append([]predicate.Identity{}, iq.predicates...),
-		withIdentityToEnvironment: iq.withIdentityToEnvironment.Clone(),
+		config:          iq.config,
+		limit:           iq.limit,
+		offset:          iq.offset,
+		order:           append([]OrderFunc{}, iq.order...),
+		predicates:      append([]predicate.Identity{}, iq.predicates...),
+		withEnvironment: iq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    iq.sql.Clone(),
 		path:   iq.path,
@@ -274,14 +274,14 @@ func (iq *IdentityQuery) Clone() *IdentityQuery {
 	}
 }
 
-// WithIdentityToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "IdentityToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (iq *IdentityQuery) WithIdentityToEnvironment(opts ...func(*EnvironmentQuery)) *IdentityQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (iq *IdentityQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *IdentityQuery {
 	query := &EnvironmentQuery{config: iq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	iq.withIdentityToEnvironment = query
+	iq.withEnvironment = query
 	return iq
 }
 
@@ -355,10 +355,10 @@ func (iq *IdentityQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ide
 		withFKs     = iq.withFKs
 		_spec       = iq.querySpec()
 		loadedTypes = [1]bool{
-			iq.withIdentityToEnvironment != nil,
+			iq.withEnvironment != nil,
 		}
 	)
-	if iq.withIdentityToEnvironment != nil {
+	if iq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -382,16 +382,16 @@ func (iq *IdentityQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ide
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := iq.withIdentityToEnvironment; query != nil {
-		if err := iq.loadIdentityToEnvironment(ctx, query, nodes, nil,
-			func(n *Identity, e *Environment) { n.Edges.IdentityToEnvironment = e }); err != nil {
+	if query := iq.withEnvironment; query != nil {
+		if err := iq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *Identity, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (iq *IdentityQuery) loadIdentityToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Identity, init func(*Identity), assign func(*Identity, *Environment)) error {
+func (iq *IdentityQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Identity, init func(*Identity), assign func(*Identity, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Identity)
 	for i := range nodes {

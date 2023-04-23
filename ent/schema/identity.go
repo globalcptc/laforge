@@ -41,7 +41,7 @@ func (Identity) Fields() []ent.Field {
 // Edges of the Identity.
 func (Identity) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("IdentityToEnvironment", Environment.Type).
+		edge.From("Environment", Environment.Type).
 			Ref("Identities").
 			Unique(),
 	}

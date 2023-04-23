@@ -1351,7 +1351,7 @@ func createIdentities(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 			Where(
 				identity.And(
 					identity.HclIDEQ(cIdentity.HclID),
-					identity.HasIdentityToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					identity.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)

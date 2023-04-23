@@ -644,10 +644,10 @@ func (hd *HostDependency) Environment(ctx context.Context) (*Environment, error)
 	return result, MaskNotFound(err)
 }
 
-func (i *Identity) IdentityToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := i.Edges.IdentityToEnvironmentOrErr()
+func (i *Identity) Environment(ctx context.Context) (*Environment, error) {
+	result, err := i.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = i.QueryIdentityToEnvironment().Only(ctx)
+		result, err = i.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

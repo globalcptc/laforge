@@ -71,7 +71,7 @@ func main() {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.Identity.Delete().Where(identity.Not(identity.HasIdentityToEnvironment())).Exec(ctx)
+	deletedCount, err = client.Identity.Delete().Where(identity.Not(identity.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}

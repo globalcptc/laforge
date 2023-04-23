@@ -3555,15 +3555,15 @@ func (c *IdentityClient) GetX(ctx context.Context, id uuid.UUID) *Identity {
 	return obj
 }
 
-// QueryIdentityToEnvironment queries the IdentityToEnvironment edge of a Identity.
-func (c *IdentityClient) QueryIdentityToEnvironment(i *Identity) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a Identity.
+func (c *IdentityClient) QueryEnvironment(i *Identity) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := i.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(identity.Table, identity.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, identity.IdentityToEnvironmentTable, identity.IdentityToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, identity.EnvironmentTable, identity.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(i.driver.Dialect(), step)
 		return fromV, nil

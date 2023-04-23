@@ -2260,9 +2260,9 @@ func (i *Identity) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
-		Name: "IdentityToEnvironment",
+		Name: "Environment",
 	}
-	err = i.QueryIdentityToEnvironment().
+	err = i.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {

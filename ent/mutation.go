@@ -19487,24 +19487,24 @@ func (m *HostDependencyMutation) ResetEdge(name string) error {
 // IdentityMutation represents an operation that mutates the Identity nodes in the graph.
 type IdentityMutation struct {
 	config
-	op                            Op
-	typ                           string
-	id                            *uuid.UUID
-	hcl_id                        *string
-	first_name                    *string
-	last_name                     *string
-	email                         *string
-	password                      *string
-	description                   *string
-	avatar_file                   *string
-	vars                          *map[string]string
-	tags                          *map[string]string
-	clearedFields                 map[string]struct{}
-	_IdentityToEnvironment        *uuid.UUID
-	cleared_IdentityToEnvironment bool
-	done                          bool
-	oldValue                      func(context.Context) (*Identity, error)
-	predicates                    []predicate.Identity
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	hcl_id              *string
+	first_name          *string
+	last_name           *string
+	email               *string
+	password            *string
+	description         *string
+	avatar_file         *string
+	vars                *map[string]string
+	tags                *map[string]string
+	clearedFields       map[string]struct{}
+	_Environment        *uuid.UUID
+	cleared_Environment bool
+	done                bool
+	oldValue            func(context.Context) (*Identity, error)
+	predicates          []predicate.Identity
 }
 
 var _ ent.Mutation = (*IdentityMutation)(nil)
@@ -19935,43 +19935,43 @@ func (m *IdentityMutation) ResetTags() {
 	m.tags = nil
 }
 
-// SetIdentityToEnvironmentID sets the "IdentityToEnvironment" edge to the Environment entity by id.
-func (m *IdentityMutation) SetIdentityToEnvironmentID(id uuid.UUID) {
-	m._IdentityToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *IdentityMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearIdentityToEnvironment clears the "IdentityToEnvironment" edge to the Environment entity.
-func (m *IdentityMutation) ClearIdentityToEnvironment() {
-	m.cleared_IdentityToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *IdentityMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// IdentityToEnvironmentCleared reports if the "IdentityToEnvironment" edge to the Environment entity was cleared.
-func (m *IdentityMutation) IdentityToEnvironmentCleared() bool {
-	return m.cleared_IdentityToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *IdentityMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// IdentityToEnvironmentID returns the "IdentityToEnvironment" edge ID in the mutation.
-func (m *IdentityMutation) IdentityToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._IdentityToEnvironment != nil {
-		return *m._IdentityToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *IdentityMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// IdentityToEnvironmentIDs returns the "IdentityToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// IdentityToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *IdentityMutation) IdentityToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._IdentityToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *IdentityMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetIdentityToEnvironment resets all changes to the "IdentityToEnvironment" edge.
-func (m *IdentityMutation) ResetIdentityToEnvironment() {
-	m._IdentityToEnvironment = nil
-	m.cleared_IdentityToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *IdentityMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
 // Where appends a list predicates to the IdentityMutation builder.
@@ -20229,8 +20229,8 @@ func (m *IdentityMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *IdentityMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m._IdentityToEnvironment != nil {
-		edges = append(edges, identity.EdgeIdentityToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, identity.EdgeEnvironment)
 	}
 	return edges
 }
@@ -20239,8 +20239,8 @@ func (m *IdentityMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *IdentityMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case identity.EdgeIdentityToEnvironment:
-		if id := m._IdentityToEnvironment; id != nil {
+	case identity.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -20264,8 +20264,8 @@ func (m *IdentityMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *IdentityMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.cleared_IdentityToEnvironment {
-		edges = append(edges, identity.EdgeIdentityToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, identity.EdgeEnvironment)
 	}
 	return edges
 }
@@ -20274,8 +20274,8 @@ func (m *IdentityMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *IdentityMutation) EdgeCleared(name string) bool {
 	switch name {
-	case identity.EdgeIdentityToEnvironment:
-		return m.cleared_IdentityToEnvironment
+	case identity.EdgeEnvironment:
+		return m.cleared_Environment
 	}
 	return false
 }
@@ -20284,8 +20284,8 @@ func (m *IdentityMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *IdentityMutation) ClearEdge(name string) error {
 	switch name {
-	case identity.EdgeIdentityToEnvironment:
-		m.ClearIdentityToEnvironment()
+	case identity.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Identity unique edge %s", name)
@@ -20295,8 +20295,8 @@ func (m *IdentityMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *IdentityMutation) ResetEdge(name string) error {
 	switch name {
-	case identity.EdgeIdentityToEnvironment:
-		m.ResetIdentityToEnvironment()
+	case identity.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Identity edge %s", name)
