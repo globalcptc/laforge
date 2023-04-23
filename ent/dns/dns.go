@@ -35,7 +35,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	DNSToEnvironmentInverseTable = "environments"
 	// DNSToCompetitionTable is the table that holds the DNSToCompetition relation/edge. The primary key declared below.
-	DNSToCompetitionTable = "competition_CompetitionToDNS"
+	DNSToCompetitionTable = "competition_DNS"
 	// DNSToCompetitionInverseTable is the table name for the Competition entity.
 	// It exists in this package in order to avoid circular dependency with the "competition" package.
 	DNSToCompetitionInverseTable = "competitions"

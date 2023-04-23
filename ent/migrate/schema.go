@@ -1367,26 +1367,26 @@ var (
 			},
 		},
 	}
-	// CompetitionCompetitionToDNSColumns holds the columns for the "competition_CompetitionToDNS" table.
-	CompetitionCompetitionToDNSColumns = []*schema.Column{
+	// CompetitionDNSColumns holds the columns for the "competition_DNS" table.
+	CompetitionDNSColumns = []*schema.Column{
 		{Name: "competition_id", Type: field.TypeUUID},
 		{Name: "dns_id", Type: field.TypeUUID},
 	}
-	// CompetitionCompetitionToDNSTable holds the schema information for the "competition_CompetitionToDNS" table.
-	CompetitionCompetitionToDNSTable = &schema.Table{
-		Name:       "competition_CompetitionToDNS",
-		Columns:    CompetitionCompetitionToDNSColumns,
-		PrimaryKey: []*schema.Column{CompetitionCompetitionToDNSColumns[0], CompetitionCompetitionToDNSColumns[1]},
+	// CompetitionDNSTable holds the schema information for the "competition_DNS" table.
+	CompetitionDNSTable = &schema.Table{
+		Name:       "competition_DNS",
+		Columns:    CompetitionDNSColumns,
+		PrimaryKey: []*schema.Column{CompetitionDNSColumns[0], CompetitionDNSColumns[1]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "competition_CompetitionToDNS_competition_id",
-				Columns:    []*schema.Column{CompetitionCompetitionToDNSColumns[0]},
+				Symbol:     "competition_DNS_competition_id",
+				Columns:    []*schema.Column{CompetitionDNSColumns[0]},
 				RefColumns: []*schema.Column{CompetitionsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "competition_CompetitionToDNS_dns_id",
-				Columns:    []*schema.Column{CompetitionCompetitionToDNSColumns[1]},
+				Symbol:     "competition_DNS_dns_id",
+				Columns:    []*schema.Column{CompetitionDNSColumns[1]},
 				RefColumns: []*schema.Column{DnSsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1584,7 +1584,7 @@ var (
 		TokensTable,
 		UsersTable,
 		AdhocPlanNextAdhocPlansTable,
-		CompetitionCompetitionToDNSTable,
+		CompetitionDNSTable,
 		EnvironmentEnvironmentToUserTable,
 		EnvironmentEnvironmentToIncludedNetworkTable,
 		EnvironmentEnvironmentToDNSTable,
@@ -1690,8 +1690,8 @@ func init() {
 	UsersTable.ForeignKeys[4].RefTable = ScriptsTable
 	AdhocPlanNextAdhocPlansTable.ForeignKeys[0].RefTable = AdhocPlansTable
 	AdhocPlanNextAdhocPlansTable.ForeignKeys[1].RefTable = AdhocPlansTable
-	CompetitionCompetitionToDNSTable.ForeignKeys[0].RefTable = CompetitionsTable
-	CompetitionCompetitionToDNSTable.ForeignKeys[1].RefTable = DnSsTable
+	CompetitionDNSTable.ForeignKeys[0].RefTable = CompetitionsTable
+	CompetitionDNSTable.ForeignKeys[1].RefTable = DnSsTable
 	EnvironmentEnvironmentToUserTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	EnvironmentEnvironmentToUserTable.ForeignKeys[1].RefTable = UsersTable
 	EnvironmentEnvironmentToIncludedNetworkTable.ForeignKeys[0].RefTable = EnvironmentsTable

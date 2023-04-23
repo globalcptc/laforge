@@ -1026,9 +1026,9 @@ func (c *Competition) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "DNS",
-		Name: "CompetitionToDNS",
+		Name: "DNS",
 	}
-	err = c.QueryCompetitionToDNS().
+	err = c.QueryDNS().
 		Select(dns.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -1036,9 +1036,9 @@ func (c *Competition) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Environment",
-		Name: "CompetitionToEnvironment",
+		Name: "Environment",
 	}
-	err = c.QueryCompetitionToEnvironment().
+	err = c.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -1046,9 +1046,9 @@ func (c *Competition) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Build",
-		Name: "CompetitionToBuild",
+		Name: "Builds",
 	}
-	err = c.QueryCompetitionToBuild().
+	err = c.QueryBuilds().
 		Select(build.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {

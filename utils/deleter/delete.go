@@ -66,7 +66,7 @@ func main() {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.Competition.Delete().Where(competition.Not(competition.HasCompetitionToEnvironment())).Exec(ctx)
+	deletedCount, err = client.Competition.Delete().Where(competition.Not(competition.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}

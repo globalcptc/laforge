@@ -1723,15 +1723,15 @@ func (c *CompetitionClient) GetX(ctx context.Context, id uuid.UUID) *Competition
 	return obj
 }
 
-// QueryCompetitionToDNS queries the CompetitionToDNS edge of a Competition.
-func (c *CompetitionClient) QueryCompetitionToDNS(co *Competition) *DNSQuery {
+// QueryDNS queries the DNS edge of a Competition.
+func (c *CompetitionClient) QueryDNS(co *Competition) *DNSQuery {
 	query := &DNSQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := co.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(competition.Table, competition.FieldID, id),
 			sqlgraph.To(dns.Table, dns.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, competition.CompetitionToDNSTable, competition.CompetitionToDNSPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, competition.DNSTable, competition.DNSPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
 		return fromV, nil
@@ -1739,15 +1739,15 @@ func (c *CompetitionClient) QueryCompetitionToDNS(co *Competition) *DNSQuery {
 	return query
 }
 
-// QueryCompetitionToEnvironment queries the CompetitionToEnvironment edge of a Competition.
-func (c *CompetitionClient) QueryCompetitionToEnvironment(co *Competition) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a Competition.
+func (c *CompetitionClient) QueryEnvironment(co *Competition) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := co.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(competition.Table, competition.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, competition.CompetitionToEnvironmentTable, competition.CompetitionToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, competition.EnvironmentTable, competition.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
 		return fromV, nil
@@ -1755,15 +1755,15 @@ func (c *CompetitionClient) QueryCompetitionToEnvironment(co *Competition) *Envi
 	return query
 }
 
-// QueryCompetitionToBuild queries the CompetitionToBuild edge of a Competition.
-func (c *CompetitionClient) QueryCompetitionToBuild(co *Competition) *BuildQuery {
+// QueryBuilds queries the Builds edge of a Competition.
+func (c *CompetitionClient) QueryBuilds(co *Competition) *BuildQuery {
 	query := &BuildQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := co.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(competition.Table, competition.FieldID, id),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, competition.CompetitionToBuildTable, competition.CompetitionToBuildColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, competition.BuildsTable, competition.BuildsColumn),
 		)
 		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
 		return fromV, nil

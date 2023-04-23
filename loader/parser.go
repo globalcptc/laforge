@@ -282,8 +282,8 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 			if x.Tags != nil {
 				obj.Tags = x.Tags
 			}
-			if x.HCLCompetitionToDNS != nil {
-				obj.HCLCompetitionToDNS = x.HCLCompetitionToDNS
+			if x.HCLDNS != nil {
+				obj.HCLDNS = x.HCLDNS
 			}
 			combinedConfigs.Competitions[x.HclID] = obj
 		}
@@ -644,7 +644,7 @@ func createCompetitions(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 	returnedAllDNS := []*ent.DNS{}
 	for _, cCompetition := range configCompetitions {
 		log.Log.Debugf("Creating Competition: %v for Env: %v", cCompetition.HclID, envHclID)
-		returnedDNS, err := createDNS(txClient, ctx, log, cCompetition.HCLCompetitionToDNS, envHclID)
+		returnedDNS, err := createDNS(txClient, ctx, log, cCompetition.HCLDNS, envHclID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -653,7 +653,7 @@ func createCompetitions(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 			Where(
 				competition.And(
 					competition.HclIDEQ(cCompetition.HclID),
-					competition.HasCompetitionToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					competition.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)
@@ -664,7 +664,7 @@ func createCompetitions(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 					SetHclID(cCompetition.HclID).
 					SetRootPassword(cCompetition.RootPassword).
 					SetTags(cCompetition.Tags).
-					AddCompetitionToDNS(returnedDNS...)
+					AddDNS(returnedDNS...)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
@@ -674,13 +674,13 @@ func createCompetitions(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 			SetHclID(cCompetition.HclID).
 			SetRootPassword(cCompetition.RootPassword).
 			SetTags(cCompetition.Tags).
-			ClearCompetitionToDNS().
+			ClearDNS().
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update Competition %v. Err: %v", cCompetition.HclID, err)
 			return nil, nil, err
 		}
-		_, err = entCompetition.Update().AddCompetitionToDNS(returnedDNS...).Save(ctx)
+		_, err = entCompetition.Update().AddDNS(returnedDNS...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update Competition %v with DNS. Err: %v", cCompetition.HclID, err)
 			return nil, nil, err

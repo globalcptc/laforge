@@ -8344,29 +8344,29 @@ func (m *CommandMutation) ResetEdge(name string) error {
 // CompetitionMutation represents an operation that mutates the Competition nodes in the graph.
 type CompetitionMutation struct {
 	config
-	op                               Op
-	typ                              string
-	id                               *uuid.UUID
-	hcl_id                           *string
-	root_password                    *string
-	start_time                       *int64
-	addstart_time                    *int64
-	stop_time                        *int64
-	addstop_time                     *int64
-	_config                          *map[string]string
-	tags                             *map[string]string
-	clearedFields                    map[string]struct{}
-	_CompetitionToDNS                map[uuid.UUID]struct{}
-	removed_CompetitionToDNS         map[uuid.UUID]struct{}
-	cleared_CompetitionToDNS         bool
-	_CompetitionToEnvironment        *uuid.UUID
-	cleared_CompetitionToEnvironment bool
-	_CompetitionToBuild              map[uuid.UUID]struct{}
-	removed_CompetitionToBuild       map[uuid.UUID]struct{}
-	cleared_CompetitionToBuild       bool
-	done                             bool
-	oldValue                         func(context.Context) (*Competition, error)
-	predicates                       []predicate.Competition
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	hcl_id              *string
+	root_password       *string
+	start_time          *int64
+	addstart_time       *int64
+	stop_time           *int64
+	addstop_time        *int64
+	_config             *map[string]string
+	tags                *map[string]string
+	clearedFields       map[string]struct{}
+	_DNS                map[uuid.UUID]struct{}
+	removed_DNS         map[uuid.UUID]struct{}
+	cleared_DNS         bool
+	_Environment        *uuid.UUID
+	cleared_Environment bool
+	_Builds             map[uuid.UUID]struct{}
+	removed_Builds      map[uuid.UUID]struct{}
+	cleared_Builds      bool
+	done                bool
+	oldValue            func(context.Context) (*Competition, error)
+	predicates          []predicate.Competition
 }
 
 var _ ent.Mutation = (*CompetitionMutation)(nil)
@@ -8757,151 +8757,151 @@ func (m *CompetitionMutation) ResetTags() {
 	m.tags = nil
 }
 
-// AddCompetitionToDNSIDs adds the "CompetitionToDNS" edge to the DNS entity by ids.
-func (m *CompetitionMutation) AddCompetitionToDNSIDs(ids ...uuid.UUID) {
-	if m._CompetitionToDNS == nil {
-		m._CompetitionToDNS = make(map[uuid.UUID]struct{})
+// AddDNSIDs adds the "DNS" edge to the DNS entity by ids.
+func (m *CompetitionMutation) AddDNSIDs(ids ...uuid.UUID) {
+	if m._DNS == nil {
+		m._DNS = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._CompetitionToDNS[ids[i]] = struct{}{}
+		m._DNS[ids[i]] = struct{}{}
 	}
 }
 
-// ClearCompetitionToDNS clears the "CompetitionToDNS" edge to the DNS entity.
-func (m *CompetitionMutation) ClearCompetitionToDNS() {
-	m.cleared_CompetitionToDNS = true
+// ClearDNS clears the "DNS" edge to the DNS entity.
+func (m *CompetitionMutation) ClearDNS() {
+	m.cleared_DNS = true
 }
 
-// CompetitionToDNSCleared reports if the "CompetitionToDNS" edge to the DNS entity was cleared.
-func (m *CompetitionMutation) CompetitionToDNSCleared() bool {
-	return m.cleared_CompetitionToDNS
+// DNSCleared reports if the "DNS" edge to the DNS entity was cleared.
+func (m *CompetitionMutation) DNSCleared() bool {
+	return m.cleared_DNS
 }
 
-// RemoveCompetitionToDNSIDs removes the "CompetitionToDNS" edge to the DNS entity by IDs.
-func (m *CompetitionMutation) RemoveCompetitionToDNSIDs(ids ...uuid.UUID) {
-	if m.removed_CompetitionToDNS == nil {
-		m.removed_CompetitionToDNS = make(map[uuid.UUID]struct{})
+// RemoveDNSIDs removes the "DNS" edge to the DNS entity by IDs.
+func (m *CompetitionMutation) RemoveDNSIDs(ids ...uuid.UUID) {
+	if m.removed_DNS == nil {
+		m.removed_DNS = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._CompetitionToDNS, ids[i])
-		m.removed_CompetitionToDNS[ids[i]] = struct{}{}
+		delete(m._DNS, ids[i])
+		m.removed_DNS[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedCompetitionToDNS returns the removed IDs of the "CompetitionToDNS" edge to the DNS entity.
-func (m *CompetitionMutation) RemovedCompetitionToDNSIDs() (ids []uuid.UUID) {
-	for id := range m.removed_CompetitionToDNS {
+// RemovedDNS returns the removed IDs of the "DNS" edge to the DNS entity.
+func (m *CompetitionMutation) RemovedDNSIDs() (ids []uuid.UUID) {
+	for id := range m.removed_DNS {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// CompetitionToDNSIDs returns the "CompetitionToDNS" edge IDs in the mutation.
-func (m *CompetitionMutation) CompetitionToDNSIDs() (ids []uuid.UUID) {
-	for id := range m._CompetitionToDNS {
+// DNSIDs returns the "DNS" edge IDs in the mutation.
+func (m *CompetitionMutation) DNSIDs() (ids []uuid.UUID) {
+	for id := range m._DNS {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetCompetitionToDNS resets all changes to the "CompetitionToDNS" edge.
-func (m *CompetitionMutation) ResetCompetitionToDNS() {
-	m._CompetitionToDNS = nil
-	m.cleared_CompetitionToDNS = false
-	m.removed_CompetitionToDNS = nil
+// ResetDNS resets all changes to the "DNS" edge.
+func (m *CompetitionMutation) ResetDNS() {
+	m._DNS = nil
+	m.cleared_DNS = false
+	m.removed_DNS = nil
 }
 
-// SetCompetitionToEnvironmentID sets the "CompetitionToEnvironment" edge to the Environment entity by id.
-func (m *CompetitionMutation) SetCompetitionToEnvironmentID(id uuid.UUID) {
-	m._CompetitionToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *CompetitionMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearCompetitionToEnvironment clears the "CompetitionToEnvironment" edge to the Environment entity.
-func (m *CompetitionMutation) ClearCompetitionToEnvironment() {
-	m.cleared_CompetitionToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *CompetitionMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// CompetitionToEnvironmentCleared reports if the "CompetitionToEnvironment" edge to the Environment entity was cleared.
-func (m *CompetitionMutation) CompetitionToEnvironmentCleared() bool {
-	return m.cleared_CompetitionToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *CompetitionMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// CompetitionToEnvironmentID returns the "CompetitionToEnvironment" edge ID in the mutation.
-func (m *CompetitionMutation) CompetitionToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._CompetitionToEnvironment != nil {
-		return *m._CompetitionToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *CompetitionMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// CompetitionToEnvironmentIDs returns the "CompetitionToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// CompetitionToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *CompetitionMutation) CompetitionToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._CompetitionToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *CompetitionMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetCompetitionToEnvironment resets all changes to the "CompetitionToEnvironment" edge.
-func (m *CompetitionMutation) ResetCompetitionToEnvironment() {
-	m._CompetitionToEnvironment = nil
-	m.cleared_CompetitionToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *CompetitionMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
-// AddCompetitionToBuildIDs adds the "CompetitionToBuild" edge to the Build entity by ids.
-func (m *CompetitionMutation) AddCompetitionToBuildIDs(ids ...uuid.UUID) {
-	if m._CompetitionToBuild == nil {
-		m._CompetitionToBuild = make(map[uuid.UUID]struct{})
+// AddBuildIDs adds the "Builds" edge to the Build entity by ids.
+func (m *CompetitionMutation) AddBuildIDs(ids ...uuid.UUID) {
+	if m._Builds == nil {
+		m._Builds = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._CompetitionToBuild[ids[i]] = struct{}{}
+		m._Builds[ids[i]] = struct{}{}
 	}
 }
 
-// ClearCompetitionToBuild clears the "CompetitionToBuild" edge to the Build entity.
-func (m *CompetitionMutation) ClearCompetitionToBuild() {
-	m.cleared_CompetitionToBuild = true
+// ClearBuilds clears the "Builds" edge to the Build entity.
+func (m *CompetitionMutation) ClearBuilds() {
+	m.cleared_Builds = true
 }
 
-// CompetitionToBuildCleared reports if the "CompetitionToBuild" edge to the Build entity was cleared.
-func (m *CompetitionMutation) CompetitionToBuildCleared() bool {
-	return m.cleared_CompetitionToBuild
+// BuildsCleared reports if the "Builds" edge to the Build entity was cleared.
+func (m *CompetitionMutation) BuildsCleared() bool {
+	return m.cleared_Builds
 }
 
-// RemoveCompetitionToBuildIDs removes the "CompetitionToBuild" edge to the Build entity by IDs.
-func (m *CompetitionMutation) RemoveCompetitionToBuildIDs(ids ...uuid.UUID) {
-	if m.removed_CompetitionToBuild == nil {
-		m.removed_CompetitionToBuild = make(map[uuid.UUID]struct{})
+// RemoveBuildIDs removes the "Builds" edge to the Build entity by IDs.
+func (m *CompetitionMutation) RemoveBuildIDs(ids ...uuid.UUID) {
+	if m.removed_Builds == nil {
+		m.removed_Builds = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._CompetitionToBuild, ids[i])
-		m.removed_CompetitionToBuild[ids[i]] = struct{}{}
+		delete(m._Builds, ids[i])
+		m.removed_Builds[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedCompetitionToBuild returns the removed IDs of the "CompetitionToBuild" edge to the Build entity.
-func (m *CompetitionMutation) RemovedCompetitionToBuildIDs() (ids []uuid.UUID) {
-	for id := range m.removed_CompetitionToBuild {
+// RemovedBuilds returns the removed IDs of the "Builds" edge to the Build entity.
+func (m *CompetitionMutation) RemovedBuildsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Builds {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// CompetitionToBuildIDs returns the "CompetitionToBuild" edge IDs in the mutation.
-func (m *CompetitionMutation) CompetitionToBuildIDs() (ids []uuid.UUID) {
-	for id := range m._CompetitionToBuild {
+// BuildsIDs returns the "Builds" edge IDs in the mutation.
+func (m *CompetitionMutation) BuildsIDs() (ids []uuid.UUID) {
+	for id := range m._Builds {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetCompetitionToBuild resets all changes to the "CompetitionToBuild" edge.
-func (m *CompetitionMutation) ResetCompetitionToBuild() {
-	m._CompetitionToBuild = nil
-	m.cleared_CompetitionToBuild = false
-	m.removed_CompetitionToBuild = nil
+// ResetBuilds resets all changes to the "Builds" edge.
+func (m *CompetitionMutation) ResetBuilds() {
+	m._Builds = nil
+	m.cleared_Builds = false
+	m.removed_Builds = nil
 }
 
 // Where appends a list predicates to the CompetitionMutation builder.
@@ -9150,14 +9150,14 @@ func (m *CompetitionMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *CompetitionMutation) AddedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m._CompetitionToDNS != nil {
-		edges = append(edges, competition.EdgeCompetitionToDNS)
+	if m._DNS != nil {
+		edges = append(edges, competition.EdgeDNS)
 	}
-	if m._CompetitionToEnvironment != nil {
-		edges = append(edges, competition.EdgeCompetitionToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, competition.EdgeEnvironment)
 	}
-	if m._CompetitionToBuild != nil {
-		edges = append(edges, competition.EdgeCompetitionToBuild)
+	if m._Builds != nil {
+		edges = append(edges, competition.EdgeBuilds)
 	}
 	return edges
 }
@@ -9166,19 +9166,19 @@ func (m *CompetitionMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *CompetitionMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case competition.EdgeCompetitionToDNS:
-		ids := make([]ent.Value, 0, len(m._CompetitionToDNS))
-		for id := range m._CompetitionToDNS {
+	case competition.EdgeDNS:
+		ids := make([]ent.Value, 0, len(m._DNS))
+		for id := range m._DNS {
 			ids = append(ids, id)
 		}
 		return ids
-	case competition.EdgeCompetitionToEnvironment:
-		if id := m._CompetitionToEnvironment; id != nil {
+	case competition.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
-	case competition.EdgeCompetitionToBuild:
-		ids := make([]ent.Value, 0, len(m._CompetitionToBuild))
-		for id := range m._CompetitionToBuild {
+	case competition.EdgeBuilds:
+		ids := make([]ent.Value, 0, len(m._Builds))
+		for id := range m._Builds {
 			ids = append(ids, id)
 		}
 		return ids
@@ -9189,11 +9189,11 @@ func (m *CompetitionMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CompetitionMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m.removed_CompetitionToDNS != nil {
-		edges = append(edges, competition.EdgeCompetitionToDNS)
+	if m.removed_DNS != nil {
+		edges = append(edges, competition.EdgeDNS)
 	}
-	if m.removed_CompetitionToBuild != nil {
-		edges = append(edges, competition.EdgeCompetitionToBuild)
+	if m.removed_Builds != nil {
+		edges = append(edges, competition.EdgeBuilds)
 	}
 	return edges
 }
@@ -9202,15 +9202,15 @@ func (m *CompetitionMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *CompetitionMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case competition.EdgeCompetitionToDNS:
-		ids := make([]ent.Value, 0, len(m.removed_CompetitionToDNS))
-		for id := range m.removed_CompetitionToDNS {
+	case competition.EdgeDNS:
+		ids := make([]ent.Value, 0, len(m.removed_DNS))
+		for id := range m.removed_DNS {
 			ids = append(ids, id)
 		}
 		return ids
-	case competition.EdgeCompetitionToBuild:
-		ids := make([]ent.Value, 0, len(m.removed_CompetitionToBuild))
-		for id := range m.removed_CompetitionToBuild {
+	case competition.EdgeBuilds:
+		ids := make([]ent.Value, 0, len(m.removed_Builds))
+		for id := range m.removed_Builds {
 			ids = append(ids, id)
 		}
 		return ids
@@ -9221,14 +9221,14 @@ func (m *CompetitionMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *CompetitionMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m.cleared_CompetitionToDNS {
-		edges = append(edges, competition.EdgeCompetitionToDNS)
+	if m.cleared_DNS {
+		edges = append(edges, competition.EdgeDNS)
 	}
-	if m.cleared_CompetitionToEnvironment {
-		edges = append(edges, competition.EdgeCompetitionToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, competition.EdgeEnvironment)
 	}
-	if m.cleared_CompetitionToBuild {
-		edges = append(edges, competition.EdgeCompetitionToBuild)
+	if m.cleared_Builds {
+		edges = append(edges, competition.EdgeBuilds)
 	}
 	return edges
 }
@@ -9237,12 +9237,12 @@ func (m *CompetitionMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *CompetitionMutation) EdgeCleared(name string) bool {
 	switch name {
-	case competition.EdgeCompetitionToDNS:
-		return m.cleared_CompetitionToDNS
-	case competition.EdgeCompetitionToEnvironment:
-		return m.cleared_CompetitionToEnvironment
-	case competition.EdgeCompetitionToBuild:
-		return m.cleared_CompetitionToBuild
+	case competition.EdgeDNS:
+		return m.cleared_DNS
+	case competition.EdgeEnvironment:
+		return m.cleared_Environment
+	case competition.EdgeBuilds:
+		return m.cleared_Builds
 	}
 	return false
 }
@@ -9251,8 +9251,8 @@ func (m *CompetitionMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *CompetitionMutation) ClearEdge(name string) error {
 	switch name {
-	case competition.EdgeCompetitionToEnvironment:
-		m.ClearCompetitionToEnvironment()
+	case competition.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Competition unique edge %s", name)
@@ -9262,14 +9262,14 @@ func (m *CompetitionMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *CompetitionMutation) ResetEdge(name string) error {
 	switch name {
-	case competition.EdgeCompetitionToDNS:
-		m.ResetCompetitionToDNS()
+	case competition.EdgeDNS:
+		m.ResetDNS()
 		return nil
-	case competition.EdgeCompetitionToEnvironment:
-		m.ResetCompetitionToEnvironment()
+	case competition.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
-	case competition.EdgeCompetitionToBuild:
-		m.ResetCompetitionToBuild()
+	case competition.EdgeBuilds:
+		m.ResetBuilds()
 		return nil
 	}
 	return fmt.Errorf("unknown Competition edge %s", name)

@@ -1499,7 +1499,7 @@ func RenderScript(ctx context.Context, client *ent.Client, logger *logging.Logge
 	currentIdentities := currentEnvironment.QueryEnvironmentToIdentity().AllX(ctx)
 	agentScriptFile := currentProvisionedHost.QueryProvisionedHostToGinFileMiddleware().OnlyX(ctx)
 	// Need to Make Unique and change how it's loaded in
-	currentDNS := currentCompetition.QueryCompetitionToDNS().FirstX(ctx)
+	currentDNS := currentCompetition.QueryDNS().FirstX(ctx)
 	templateData := TempleteContext{
 		Build:                     currentBuild,
 		Competition:               currentCompetition,
@@ -1651,7 +1651,7 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 	currentIdentities := currentEnvironment.QueryEnvironmentToIdentity().AllX(ctx)
 	agentScriptFile := currentProvisionedHost.QueryProvisionedHostToGinFileMiddleware().OnlyX(ctx)
 	// Need to Make Unique and change how it's loaded in
-	currentDNS := currentCompetition.QueryCompetitionToDNS().FirstX(ctx)
+	currentDNS := currentCompetition.QueryDNS().FirstX(ctx)
 	templateData := TempleteContext{
 		Build:                     currentBuild,
 		Competition:               currentCompetition,

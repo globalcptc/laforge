@@ -89,53 +89,53 @@ func (cc *CompetitionCreate) SetNillableID(u *uuid.UUID) *CompetitionCreate {
 	return cc
 }
 
-// AddCompetitionToDNSIDs adds the "CompetitionToDNS" edge to the DNS entity by IDs.
-func (cc *CompetitionCreate) AddCompetitionToDNSIDs(ids ...uuid.UUID) *CompetitionCreate {
-	cc.mutation.AddCompetitionToDNSIDs(ids...)
+// AddDNSIDs adds the "DNS" edge to the DNS entity by IDs.
+func (cc *CompetitionCreate) AddDNSIDs(ids ...uuid.UUID) *CompetitionCreate {
+	cc.mutation.AddDNSIDs(ids...)
 	return cc
 }
 
-// AddCompetitionToDNS adds the "CompetitionToDNS" edges to the DNS entity.
-func (cc *CompetitionCreate) AddCompetitionToDNS(d ...*DNS) *CompetitionCreate {
+// AddDNS adds the "DNS" edges to the DNS entity.
+func (cc *CompetitionCreate) AddDNS(d ...*DNS) *CompetitionCreate {
 	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
-	return cc.AddCompetitionToDNSIDs(ids...)
+	return cc.AddDNSIDs(ids...)
 }
 
-// SetCompetitionToEnvironmentID sets the "CompetitionToEnvironment" edge to the Environment entity by ID.
-func (cc *CompetitionCreate) SetCompetitionToEnvironmentID(id uuid.UUID) *CompetitionCreate {
-	cc.mutation.SetCompetitionToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (cc *CompetitionCreate) SetEnvironmentID(id uuid.UUID) *CompetitionCreate {
+	cc.mutation.SetEnvironmentID(id)
 	return cc
 }
 
-// SetNillableCompetitionToEnvironmentID sets the "CompetitionToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (cc *CompetitionCreate) SetNillableCompetitionToEnvironmentID(id *uuid.UUID) *CompetitionCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (cc *CompetitionCreate) SetNillableEnvironmentID(id *uuid.UUID) *CompetitionCreate {
 	if id != nil {
-		cc = cc.SetCompetitionToEnvironmentID(*id)
+		cc = cc.SetEnvironmentID(*id)
 	}
 	return cc
 }
 
-// SetCompetitionToEnvironment sets the "CompetitionToEnvironment" edge to the Environment entity.
-func (cc *CompetitionCreate) SetCompetitionToEnvironment(e *Environment) *CompetitionCreate {
-	return cc.SetCompetitionToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (cc *CompetitionCreate) SetEnvironment(e *Environment) *CompetitionCreate {
+	return cc.SetEnvironmentID(e.ID)
 }
 
-// AddCompetitionToBuildIDs adds the "CompetitionToBuild" edge to the Build entity by IDs.
-func (cc *CompetitionCreate) AddCompetitionToBuildIDs(ids ...uuid.UUID) *CompetitionCreate {
-	cc.mutation.AddCompetitionToBuildIDs(ids...)
+// AddBuildIDs adds the "Builds" edge to the Build entity by IDs.
+func (cc *CompetitionCreate) AddBuildIDs(ids ...uuid.UUID) *CompetitionCreate {
+	cc.mutation.AddBuildIDs(ids...)
 	return cc
 }
 
-// AddCompetitionToBuild adds the "CompetitionToBuild" edges to the Build entity.
-func (cc *CompetitionCreate) AddCompetitionToBuild(b ...*Build) *CompetitionCreate {
+// AddBuilds adds the "Builds" edges to the Build entity.
+func (cc *CompetitionCreate) AddBuilds(b ...*Build) *CompetitionCreate {
 	ids := make([]uuid.UUID, len(b))
 	for i := range b {
 		ids[i] = b[i].ID
 	}
-	return cc.AddCompetitionToBuildIDs(ids...)
+	return cc.AddBuildIDs(ids...)
 }
 
 // Mutation returns the CompetitionMutation object of the builder.
@@ -319,12 +319,12 @@ func (cc *CompetitionCreate) createSpec() (*Competition, *sqlgraph.CreateSpec) {
 		})
 		_node.Tags = value
 	}
-	if nodes := cc.mutation.CompetitionToDNSIDs(); len(nodes) > 0 {
+	if nodes := cc.mutation.DNSIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   competition.CompetitionToDNSTable,
-			Columns: competition.CompetitionToDNSPrimaryKey,
+			Table:   competition.DNSTable,
+			Columns: competition.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -338,12 +338,12 @@ func (cc *CompetitionCreate) createSpec() (*Competition, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := cc.mutation.CompetitionToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := cc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   competition.CompetitionToEnvironmentTable,
-			Columns: []string{competition.CompetitionToEnvironmentColumn},
+			Table:   competition.EnvironmentTable,
+			Columns: []string{competition.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -358,12 +358,12 @@ func (cc *CompetitionCreate) createSpec() (*Competition, *sqlgraph.CreateSpec) {
 		_node.environment_environment_to_competition = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := cc.mutation.CompetitionToBuildIDs(); len(nodes) > 0 {
+	if nodes := cc.mutation.BuildsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   competition.CompetitionToBuildTable,
-			Columns: []string{competition.CompetitionToBuildColumn},
+			Table:   competition.BuildsTable,
+			Columns: []string{competition.BuildsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

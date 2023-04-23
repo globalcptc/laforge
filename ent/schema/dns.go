@@ -38,6 +38,6 @@ func (DNS) Edges() []ent.Edge {
 		edge.From("DNSToEnvironment", Environment.Type).
 			Ref("EnvironmentToDNS"),
 		edge.From("DNSToCompetition", Competition.Type).
-			Ref("CompetitionToDNS"),
+			Ref("DNS"),
 	}
 }

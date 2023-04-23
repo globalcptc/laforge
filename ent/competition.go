@@ -35,59 +35,59 @@ type Competition struct {
 	Edges CompetitionEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// CompetitionToDNS holds the value of the CompetitionToDNS edge.
-	HCLCompetitionToDNS []*DNS `json:"CompetitionToDNS,omitempty" hcl:"dns,block"`
-	// CompetitionToEnvironment holds the value of the CompetitionToEnvironment edge.
-	HCLCompetitionToEnvironment *Environment `json:"CompetitionToEnvironment,omitempty"`
-	// CompetitionToBuild holds the value of the CompetitionToBuild edge.
-	HCLCompetitionToBuild []*Build `json:"CompetitionToBuild,omitempty"`
+	// DNS holds the value of the DNS edge.
+	HCLDNS []*DNS `json:"DNS,omitempty" hcl:"dns,block"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
+	// Builds holds the value of the Builds edge.
+	HCLBuilds []*Build `json:"Builds,omitempty"`
 	//
 	environment_environment_to_competition *uuid.UUID
 }
 
 // CompetitionEdges holds the relations/edges for other nodes in the graph.
 type CompetitionEdges struct {
-	// CompetitionToDNS holds the value of the CompetitionToDNS edge.
-	CompetitionToDNS []*DNS `json:"CompetitionToDNS,omitempty" hcl:"dns,block"`
-	// CompetitionToEnvironment holds the value of the CompetitionToEnvironment edge.
-	CompetitionToEnvironment *Environment `json:"CompetitionToEnvironment,omitempty"`
-	// CompetitionToBuild holds the value of the CompetitionToBuild edge.
-	CompetitionToBuild []*Build `json:"CompetitionToBuild,omitempty"`
+	// DNS holds the value of the DNS edge.
+	DNS []*DNS `json:"DNS,omitempty" hcl:"dns,block"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
+	// Builds holds the value of the Builds edge.
+	Builds []*Build `json:"Builds,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
 }
 
-// CompetitionToDNSOrErr returns the CompetitionToDNS value or an error if the edge
+// DNSOrErr returns the DNS value or an error if the edge
 // was not loaded in eager-loading.
-func (e CompetitionEdges) CompetitionToDNSOrErr() ([]*DNS, error) {
+func (e CompetitionEdges) DNSOrErr() ([]*DNS, error) {
 	if e.loadedTypes[0] {
-		return e.CompetitionToDNS, nil
+		return e.DNS, nil
 	}
-	return nil, &NotLoadedError{edge: "CompetitionToDNS"}
+	return nil, &NotLoadedError{edge: "DNS"}
 }
 
-// CompetitionToEnvironmentOrErr returns the CompetitionToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e CompetitionEdges) CompetitionToEnvironmentOrErr() (*Environment, error) {
+func (e CompetitionEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[1] {
-		if e.CompetitionToEnvironment == nil {
-			// The edge CompetitionToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.CompetitionToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "CompetitionToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
-// CompetitionToBuildOrErr returns the CompetitionToBuild value or an error if the edge
+// BuildsOrErr returns the Builds value or an error if the edge
 // was not loaded in eager-loading.
-func (e CompetitionEdges) CompetitionToBuildOrErr() ([]*Build, error) {
+func (e CompetitionEdges) BuildsOrErr() ([]*Build, error) {
 	if e.loadedTypes[2] {
-		return e.CompetitionToBuild, nil
+		return e.Builds, nil
 	}
-	return nil, &NotLoadedError{edge: "CompetitionToBuild"}
+	return nil, &NotLoadedError{edge: "Builds"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -178,19 +178,19 @@ func (c *Competition) assignValues(columns []string, values []interface{}) error
 	return nil
 }
 
-// QueryCompetitionToDNS queries the "CompetitionToDNS" edge of the Competition entity.
-func (c *Competition) QueryCompetitionToDNS() *DNSQuery {
-	return (&CompetitionClient{config: c.config}).QueryCompetitionToDNS(c)
+// QueryDNS queries the "DNS" edge of the Competition entity.
+func (c *Competition) QueryDNS() *DNSQuery {
+	return (&CompetitionClient{config: c.config}).QueryDNS(c)
 }
 
-// QueryCompetitionToEnvironment queries the "CompetitionToEnvironment" edge of the Competition entity.
-func (c *Competition) QueryCompetitionToEnvironment() *EnvironmentQuery {
-	return (&CompetitionClient{config: c.config}).QueryCompetitionToEnvironment(c)
+// QueryEnvironment queries the "Environment" edge of the Competition entity.
+func (c *Competition) QueryEnvironment() *EnvironmentQuery {
+	return (&CompetitionClient{config: c.config}).QueryEnvironment(c)
 }
 
-// QueryCompetitionToBuild queries the "CompetitionToBuild" edge of the Competition entity.
-func (c *Competition) QueryCompetitionToBuild() *BuildQuery {
-	return (&CompetitionClient{config: c.config}).QueryCompetitionToBuild(c)
+// QueryBuilds queries the "Builds" edge of the Competition entity.
+func (c *Competition) QueryBuilds() *BuildQuery {
+	return (&CompetitionClient{config: c.config}).QueryBuilds(c)
 }
 
 // Update returns a builder for updating this Competition.
