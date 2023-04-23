@@ -10805,17 +10805,17 @@ func (m *DNSRecordMutation) ResetEdge(name string) error {
 // DiskMutation represents an operation that mutates the Disk nodes in the graph.
 type DiskMutation struct {
 	config
-	op                 Op
-	typ                string
-	id                 *uuid.UUID
-	size               *int
-	addsize            *int
-	clearedFields      map[string]struct{}
-	_DiskToHost        *uuid.UUID
-	cleared_DiskToHost bool
-	done               bool
-	oldValue           func(context.Context) (*Disk, error)
-	predicates         []predicate.Disk
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	size          *int
+	addsize       *int
+	clearedFields map[string]struct{}
+	_Host         *uuid.UUID
+	cleared_Host  bool
+	done          bool
+	oldValue      func(context.Context) (*Disk, error)
+	predicates    []predicate.Disk
 }
 
 var _ ent.Mutation = (*DiskMutation)(nil)
@@ -10978,43 +10978,43 @@ func (m *DiskMutation) ResetSize() {
 	m.addsize = nil
 }
 
-// SetDiskToHostID sets the "DiskToHost" edge to the Host entity by id.
-func (m *DiskMutation) SetDiskToHostID(id uuid.UUID) {
-	m._DiskToHost = &id
+// SetHostID sets the "Host" edge to the Host entity by id.
+func (m *DiskMutation) SetHostID(id uuid.UUID) {
+	m._Host = &id
 }
 
-// ClearDiskToHost clears the "DiskToHost" edge to the Host entity.
-func (m *DiskMutation) ClearDiskToHost() {
-	m.cleared_DiskToHost = true
+// ClearHost clears the "Host" edge to the Host entity.
+func (m *DiskMutation) ClearHost() {
+	m.cleared_Host = true
 }
 
-// DiskToHostCleared reports if the "DiskToHost" edge to the Host entity was cleared.
-func (m *DiskMutation) DiskToHostCleared() bool {
-	return m.cleared_DiskToHost
+// HostCleared reports if the "Host" edge to the Host entity was cleared.
+func (m *DiskMutation) HostCleared() bool {
+	return m.cleared_Host
 }
 
-// DiskToHostID returns the "DiskToHost" edge ID in the mutation.
-func (m *DiskMutation) DiskToHostID() (id uuid.UUID, exists bool) {
-	if m._DiskToHost != nil {
-		return *m._DiskToHost, true
+// HostID returns the "Host" edge ID in the mutation.
+func (m *DiskMutation) HostID() (id uuid.UUID, exists bool) {
+	if m._Host != nil {
+		return *m._Host, true
 	}
 	return
 }
 
-// DiskToHostIDs returns the "DiskToHost" edge IDs in the mutation.
+// HostIDs returns the "Host" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// DiskToHostID instead. It exists only for internal usage by the builders.
-func (m *DiskMutation) DiskToHostIDs() (ids []uuid.UUID) {
-	if id := m._DiskToHost; id != nil {
+// HostID instead. It exists only for internal usage by the builders.
+func (m *DiskMutation) HostIDs() (ids []uuid.UUID) {
+	if id := m._Host; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetDiskToHost resets all changes to the "DiskToHost" edge.
-func (m *DiskMutation) ResetDiskToHost() {
-	m._DiskToHost = nil
-	m.cleared_DiskToHost = false
+// ResetHost resets all changes to the "Host" edge.
+func (m *DiskMutation) ResetHost() {
+	m._Host = nil
+	m.cleared_Host = false
 }
 
 // Where appends a list predicates to the DiskMutation builder.
@@ -11151,8 +11151,8 @@ func (m *DiskMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DiskMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m._DiskToHost != nil {
-		edges = append(edges, disk.EdgeDiskToHost)
+	if m._Host != nil {
+		edges = append(edges, disk.EdgeHost)
 	}
 	return edges
 }
@@ -11161,8 +11161,8 @@ func (m *DiskMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *DiskMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case disk.EdgeDiskToHost:
-		if id := m._DiskToHost; id != nil {
+	case disk.EdgeHost:
+		if id := m._Host; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -11186,8 +11186,8 @@ func (m *DiskMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DiskMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.cleared_DiskToHost {
-		edges = append(edges, disk.EdgeDiskToHost)
+	if m.cleared_Host {
+		edges = append(edges, disk.EdgeHost)
 	}
 	return edges
 }
@@ -11196,8 +11196,8 @@ func (m *DiskMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *DiskMutation) EdgeCleared(name string) bool {
 	switch name {
-	case disk.EdgeDiskToHost:
-		return m.cleared_DiskToHost
+	case disk.EdgeHost:
+		return m.cleared_Host
 	}
 	return false
 }
@@ -11206,8 +11206,8 @@ func (m *DiskMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *DiskMutation) ClearEdge(name string) error {
 	switch name {
-	case disk.EdgeDiskToHost:
-		m.ClearDiskToHost()
+	case disk.EdgeHost:
+		m.ClearHost()
 		return nil
 	}
 	return fmt.Errorf("unknown Disk unique edge %s", name)
@@ -11217,8 +11217,8 @@ func (m *DiskMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *DiskMutation) ResetEdge(name string) error {
 	switch name {
-	case disk.EdgeDiskToHost:
-		m.ResetDiskToHost()
+	case disk.EdgeHost:
+		m.ResetHost()
 		return nil
 	}
 	return fmt.Errorf("unknown Disk edge %s", name)

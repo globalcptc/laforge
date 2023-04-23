@@ -2089,15 +2089,15 @@ func (c *DiskClient) GetX(ctx context.Context, id uuid.UUID) *Disk {
 	return obj
 }
 
-// QueryDiskToHost queries the DiskToHost edge of a Disk.
-func (c *DiskClient) QueryDiskToHost(d *Disk) *HostQuery {
+// QueryHost queries the Host edge of a Disk.
+func (c *DiskClient) QueryHost(d *Disk) *HostQuery {
 	query := &HostQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := d.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(disk.Table, disk.FieldID, id),
 			sqlgraph.To(host.Table, host.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, disk.DiskToHostTable, disk.DiskToHostColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, disk.HostTable, disk.HostColumn),
 		)
 		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
 		return fromV, nil

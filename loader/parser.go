@@ -1565,7 +1565,7 @@ func createDisk(txClient *ent.Tx, ctx context.Context, log *logging.Logger, conf
 		Query().
 		Where(
 			disk.And(
-				disk.HasDiskToHostWith(
+				disk.HasHostWith(
 					host.And(
 						host.HclIDEQ(hostHclID),
 						host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),

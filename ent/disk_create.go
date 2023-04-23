@@ -41,23 +41,23 @@ func (dc *DiskCreate) SetNillableID(u *uuid.UUID) *DiskCreate {
 	return dc
 }
 
-// SetDiskToHostID sets the "DiskToHost" edge to the Host entity by ID.
-func (dc *DiskCreate) SetDiskToHostID(id uuid.UUID) *DiskCreate {
-	dc.mutation.SetDiskToHostID(id)
+// SetHostID sets the "Host" edge to the Host entity by ID.
+func (dc *DiskCreate) SetHostID(id uuid.UUID) *DiskCreate {
+	dc.mutation.SetHostID(id)
 	return dc
 }
 
-// SetNillableDiskToHostID sets the "DiskToHost" edge to the Host entity by ID if the given value is not nil.
-func (dc *DiskCreate) SetNillableDiskToHostID(id *uuid.UUID) *DiskCreate {
+// SetNillableHostID sets the "Host" edge to the Host entity by ID if the given value is not nil.
+func (dc *DiskCreate) SetNillableHostID(id *uuid.UUID) *DiskCreate {
 	if id != nil {
-		dc = dc.SetDiskToHostID(*id)
+		dc = dc.SetHostID(*id)
 	}
 	return dc
 }
 
-// SetDiskToHost sets the "DiskToHost" edge to the Host entity.
-func (dc *DiskCreate) SetDiskToHost(h *Host) *DiskCreate {
-	return dc.SetDiskToHostID(h.ID)
+// SetHost sets the "Host" edge to the Host entity.
+func (dc *DiskCreate) SetHost(h *Host) *DiskCreate {
+	return dc.SetHostID(h.ID)
 }
 
 // Mutation returns the DiskMutation object of the builder.
@@ -197,12 +197,12 @@ func (dc *DiskCreate) createSpec() (*Disk, *sqlgraph.CreateSpec) {
 		})
 		_node.Size = value
 	}
-	if nodes := dc.mutation.DiskToHostIDs(); len(nodes) > 0 {
+	if nodes := dc.mutation.HostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   disk.DiskToHostTable,
-			Columns: []string{disk.DiskToHostColumn},
+			Table:   disk.HostTable,
+			Columns: []string{disk.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

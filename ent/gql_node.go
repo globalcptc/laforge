@@ -1239,9 +1239,9 @@ func (d *Disk) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Host",
-		Name: "DiskToHost",
+		Name: "Host",
 	}
-	err = d.QueryDiskToHost().
+	err = d.QueryHost().
 		Select(host.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {

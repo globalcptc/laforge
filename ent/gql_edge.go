@@ -316,10 +316,10 @@ func (dr *DNSRecord) DNSRecordToEnvironment(ctx context.Context) (*Environment, 
 	return result, MaskNotFound(err)
 }
 
-func (d *Disk) DiskToHost(ctx context.Context) (*Host, error) {
-	result, err := d.Edges.DiskToHostOrErr()
+func (d *Disk) Host(ctx context.Context) (*Host, error) {
+	result, err := d.Edges.HostOrErr()
 	if IsNotLoaded(err) {
-		result, err = d.QueryDiskToHost().Only(ctx)
+		result, err = d.QueryHost().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
