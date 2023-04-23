@@ -1692,9 +1692,9 @@ func (fd *FileDownload) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
-		Name: "FileDownloadToEnvironment",
+		Name: "Environment",
 	}
-	err = fd.QueryFileDownloadToEnvironment().
+	err = fd.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {

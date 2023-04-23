@@ -14317,26 +14317,26 @@ func (m *FileDeleteMutation) ResetEdge(name string) error {
 // FileDownloadMutation represents an operation that mutates the FileDownload nodes in the graph.
 type FileDownloadMutation struct {
 	config
-	op                                Op
-	typ                               string
-	id                                *uuid.UUID
-	hcl_id                            *string
-	source_type                       *string
-	source                            *string
-	destination                       *string
-	template                          *bool
-	perms                             *string
-	disabled                          *bool
-	md5                               *string
-	abs_path                          *string
-	is_txt                            *bool
-	tags                              *map[string]string
-	clearedFields                     map[string]struct{}
-	_FileDownloadToEnvironment        *uuid.UUID
-	cleared_FileDownloadToEnvironment bool
-	done                              bool
-	oldValue                          func(context.Context) (*FileDownload, error)
-	predicates                        []predicate.FileDownload
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	hcl_id              *string
+	source_type         *string
+	source              *string
+	destination         *string
+	template            *bool
+	perms               *string
+	disabled            *bool
+	md5                 *string
+	abs_path            *string
+	is_txt              *bool
+	tags                *map[string]string
+	clearedFields       map[string]struct{}
+	_Environment        *uuid.UUID
+	cleared_Environment bool
+	done                bool
+	oldValue            func(context.Context) (*FileDownload, error)
+	predicates          []predicate.FileDownload
 }
 
 var _ ent.Mutation = (*FileDownloadMutation)(nil)
@@ -14839,43 +14839,43 @@ func (m *FileDownloadMutation) ResetTags() {
 	m.tags = nil
 }
 
-// SetFileDownloadToEnvironmentID sets the "FileDownloadToEnvironment" edge to the Environment entity by id.
-func (m *FileDownloadMutation) SetFileDownloadToEnvironmentID(id uuid.UUID) {
-	m._FileDownloadToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *FileDownloadMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearFileDownloadToEnvironment clears the "FileDownloadToEnvironment" edge to the Environment entity.
-func (m *FileDownloadMutation) ClearFileDownloadToEnvironment() {
-	m.cleared_FileDownloadToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *FileDownloadMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// FileDownloadToEnvironmentCleared reports if the "FileDownloadToEnvironment" edge to the Environment entity was cleared.
-func (m *FileDownloadMutation) FileDownloadToEnvironmentCleared() bool {
-	return m.cleared_FileDownloadToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *FileDownloadMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// FileDownloadToEnvironmentID returns the "FileDownloadToEnvironment" edge ID in the mutation.
-func (m *FileDownloadMutation) FileDownloadToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._FileDownloadToEnvironment != nil {
-		return *m._FileDownloadToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *FileDownloadMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// FileDownloadToEnvironmentIDs returns the "FileDownloadToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// FileDownloadToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *FileDownloadMutation) FileDownloadToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._FileDownloadToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *FileDownloadMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetFileDownloadToEnvironment resets all changes to the "FileDownloadToEnvironment" edge.
-func (m *FileDownloadMutation) ResetFileDownloadToEnvironment() {
-	m._FileDownloadToEnvironment = nil
-	m.cleared_FileDownloadToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *FileDownloadMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
 // Where appends a list predicates to the FileDownloadMutation builder.
@@ -15167,8 +15167,8 @@ func (m *FileDownloadMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *FileDownloadMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m._FileDownloadToEnvironment != nil {
-		edges = append(edges, filedownload.EdgeFileDownloadToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, filedownload.EdgeEnvironment)
 	}
 	return edges
 }
@@ -15177,8 +15177,8 @@ func (m *FileDownloadMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *FileDownloadMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case filedownload.EdgeFileDownloadToEnvironment:
-		if id := m._FileDownloadToEnvironment; id != nil {
+	case filedownload.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -15202,8 +15202,8 @@ func (m *FileDownloadMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *FileDownloadMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.cleared_FileDownloadToEnvironment {
-		edges = append(edges, filedownload.EdgeFileDownloadToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, filedownload.EdgeEnvironment)
 	}
 	return edges
 }
@@ -15212,8 +15212,8 @@ func (m *FileDownloadMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *FileDownloadMutation) EdgeCleared(name string) bool {
 	switch name {
-	case filedownload.EdgeFileDownloadToEnvironment:
-		return m.cleared_FileDownloadToEnvironment
+	case filedownload.EdgeEnvironment:
+		return m.cleared_Environment
 	}
 	return false
 }
@@ -15222,8 +15222,8 @@ func (m *FileDownloadMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *FileDownloadMutation) ClearEdge(name string) error {
 	switch name {
-	case filedownload.EdgeFileDownloadToEnvironment:
-		m.ClearFileDownloadToEnvironment()
+	case filedownload.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown FileDownload unique edge %s", name)
@@ -15233,8 +15233,8 @@ func (m *FileDownloadMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *FileDownloadMutation) ResetEdge(name string) error {
 	switch name {
-	case filedownload.EdgeFileDownloadToEnvironment:
-		m.ResetFileDownloadToEnvironment()
+	case filedownload.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown FileDownload edge %s", name)

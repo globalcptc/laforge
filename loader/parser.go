@@ -1190,7 +1190,7 @@ func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 			Where(
 				filedownload.And(
 					filedownload.HclIDEQ(cFileDownload.HclID),
-					filedownload.HasFileDownloadToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					filedownload.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)

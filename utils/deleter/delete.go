@@ -86,7 +86,7 @@ func main() {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.FileDownload.Delete().Where(filedownload.Not(filedownload.HasFileDownloadToEnvironment())).Exec(ctx)
+	deletedCount, err = client.FileDownload.Delete().Where(filedownload.Not(filedownload.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}

@@ -2711,15 +2711,15 @@ func (c *FileDownloadClient) GetX(ctx context.Context, id uuid.UUID) *FileDownlo
 	return obj
 }
 
-// QueryFileDownloadToEnvironment queries the FileDownloadToEnvironment edge of a FileDownload.
-func (c *FileDownloadClient) QueryFileDownloadToEnvironment(fd *FileDownload) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a FileDownload.
+func (c *FileDownloadClient) QueryEnvironment(fd *FileDownload) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := fd.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(filedownload.Table, filedownload.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, filedownload.FileDownloadToEnvironmentTable, filedownload.FileDownloadToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, filedownload.EnvironmentTable, filedownload.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(fd.driver.Dialect(), step)
 		return fromV, nil

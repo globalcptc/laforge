@@ -45,33 +45,33 @@ type FileDownload struct {
 	Edges FileDownloadEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// FileDownloadToEnvironment holds the value of the FileDownloadToEnvironment edge.
-	HCLFileDownloadToEnvironment *Environment `json:"FileDownloadToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
 	environment_file_downloads *uuid.UUID
 }
 
 // FileDownloadEdges holds the relations/edges for other nodes in the graph.
 type FileDownloadEdges struct {
-	// FileDownloadToEnvironment holds the value of the FileDownloadToEnvironment edge.
-	FileDownloadToEnvironment *Environment `json:"FileDownloadToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// FileDownloadToEnvironmentOrErr returns the FileDownloadToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e FileDownloadEdges) FileDownloadToEnvironmentOrErr() (*Environment, error) {
+func (e FileDownloadEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[0] {
-		if e.FileDownloadToEnvironment == nil {
-			// The edge FileDownloadToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.FileDownloadToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "FileDownloadToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -190,9 +190,9 @@ func (fd *FileDownload) assignValues(columns []string, values []interface{}) err
 	return nil
 }
 
-// QueryFileDownloadToEnvironment queries the "FileDownloadToEnvironment" edge of the FileDownload entity.
-func (fd *FileDownload) QueryFileDownloadToEnvironment() *EnvironmentQuery {
-	return (&FileDownloadClient{config: fd.config}).QueryFileDownloadToEnvironment(fd)
+// QueryEnvironment queries the "Environment" edge of the FileDownload entity.
+func (fd *FileDownload) QueryEnvironment() *EnvironmentQuery {
+	return (&FileDownloadClient{config: fd.config}).QueryEnvironment(fd)
 }
 
 // Update returns a builder for updating this FileDownload.

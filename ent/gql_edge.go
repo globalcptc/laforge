@@ -492,10 +492,10 @@ func (fd *FileDelete) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (fd *FileDownload) FileDownloadToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := fd.Edges.FileDownloadToEnvironmentOrErr()
+func (fd *FileDownload) Environment(ctx context.Context) (*Environment, error) {
+	result, err := fd.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = fd.QueryFileDownloadToEnvironment().Only(ctx)
+		result, err = fd.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

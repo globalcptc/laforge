@@ -831,7 +831,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	// Check if step is file download
 	entFileDownload, err := client.FileDownload.Query().Where(
 		filedownload.And(
-			filedownload.HasFileDownloadToEnvironmentWith(
+			filedownload.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
 			filedownload.HclIDEQ(hclID),
@@ -1270,7 +1270,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	// Check if step is file download
 	entFileDownload, err := client.FileDownload.Query().Where(
 		filedownload.And(
-			filedownload.HasFileDownloadToEnvironmentWith(
+			filedownload.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			filedownload.HclIDEQ(entScheduledStep.Step),

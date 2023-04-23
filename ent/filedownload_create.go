@@ -109,23 +109,23 @@ func (fdc *FileDownloadCreate) SetNillableID(u *uuid.UUID) *FileDownloadCreate {
 	return fdc
 }
 
-// SetFileDownloadToEnvironmentID sets the "FileDownloadToEnvironment" edge to the Environment entity by ID.
-func (fdc *FileDownloadCreate) SetFileDownloadToEnvironmentID(id uuid.UUID) *FileDownloadCreate {
-	fdc.mutation.SetFileDownloadToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (fdc *FileDownloadCreate) SetEnvironmentID(id uuid.UUID) *FileDownloadCreate {
+	fdc.mutation.SetEnvironmentID(id)
 	return fdc
 }
 
-// SetNillableFileDownloadToEnvironmentID sets the "FileDownloadToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (fdc *FileDownloadCreate) SetNillableFileDownloadToEnvironmentID(id *uuid.UUID) *FileDownloadCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (fdc *FileDownloadCreate) SetNillableEnvironmentID(id *uuid.UUID) *FileDownloadCreate {
 	if id != nil {
-		fdc = fdc.SetFileDownloadToEnvironmentID(*id)
+		fdc = fdc.SetEnvironmentID(*id)
 	}
 	return fdc
 }
 
-// SetFileDownloadToEnvironment sets the "FileDownloadToEnvironment" edge to the Environment entity.
-func (fdc *FileDownloadCreate) SetFileDownloadToEnvironment(e *Environment) *FileDownloadCreate {
-	return fdc.SetFileDownloadToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (fdc *FileDownloadCreate) SetEnvironment(e *Environment) *FileDownloadCreate {
+	return fdc.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the FileDownloadMutation object of the builder.
@@ -374,12 +374,12 @@ func (fdc *FileDownloadCreate) createSpec() (*FileDownload, *sqlgraph.CreateSpec
 		})
 		_node.Tags = value
 	}
-	if nodes := fdc.mutation.FileDownloadToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := fdc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   filedownload.FileDownloadToEnvironmentTable,
-			Columns: []string{filedownload.FileDownloadToEnvironmentColumn},
+			Table:   filedownload.EnvironmentTable,
+			Columns: []string{filedownload.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
