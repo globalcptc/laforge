@@ -44,7 +44,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "hostdependency" package.
 	NetworkToHostDependencyInverseTable = "host_dependencies"
 	// NetworkToHostDependencyColumn is the table column denoting the NetworkToHostDependency relation/edge.
-	NetworkToHostDependencyColumn = "host_dependency_host_dependency_to_network"
+	NetworkToHostDependencyColumn = "host_dependency_network"
 	// NetworkToIncludedNetworkTable is the table that holds the NetworkToIncludedNetwork relation/edge.
 	NetworkToIncludedNetworkTable = "included_networks"
 	// NetworkToIncludedNetworkInverseTable is the table name for the IncludedNetwork entity.

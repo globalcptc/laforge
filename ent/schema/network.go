@@ -39,7 +39,7 @@ func (Network) Edges() []ent.Edge {
 			Ref("Networks").
 			Unique(),
 		edge.From("NetworkToHostDependency", HostDependency.Type).
-			Ref("HostDependencyToNetwork"),
+			Ref("Network"),
 		edge.From("NetworkToIncludedNetwork", IncludedNetwork.Type).
 			Ref("IncludedNetworkToNetwork"),
 	}

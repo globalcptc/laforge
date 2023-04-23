@@ -532,13 +532,13 @@ func (nq *NetworkQuery) loadNetworkToHostDependency(ctx context.Context, query *
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.host_dependency_host_dependency_to_network
+		fk := n.host_dependency_network
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "host_dependency_host_dependency_to_network" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "host_dependency_network" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_dependency_host_dependency_to_network" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "host_dependency_network" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

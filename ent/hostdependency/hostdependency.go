@@ -15,44 +15,44 @@ const (
 	FieldHostID = "host_id"
 	// FieldNetworkID holds the string denoting the network_id field in the database.
 	FieldNetworkID = "network_id"
-	// EdgeHostDependencyToDependOnHost holds the string denoting the hostdependencytodependonhost edge name in mutations.
-	EdgeHostDependencyToDependOnHost = "HostDependencyToDependOnHost"
-	// EdgeHostDependencyToDependByHost holds the string denoting the hostdependencytodependbyhost edge name in mutations.
-	EdgeHostDependencyToDependByHost = "HostDependencyToDependByHost"
-	// EdgeHostDependencyToNetwork holds the string denoting the hostdependencytonetwork edge name in mutations.
-	EdgeHostDependencyToNetwork = "HostDependencyToNetwork"
-	// EdgeHostDependencyToEnvironment holds the string denoting the hostdependencytoenvironment edge name in mutations.
-	EdgeHostDependencyToEnvironment = "HostDependencyToEnvironment"
+	// EdgeDependOn holds the string denoting the dependon edge name in mutations.
+	EdgeDependOn = "DependOn"
+	// EdgeRequiredBy holds the string denoting the requiredby edge name in mutations.
+	EdgeRequiredBy = "RequiredBy"
+	// EdgeNetwork holds the string denoting the network edge name in mutations.
+	EdgeNetwork = "Network"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the hostdependency in the database.
 	Table = "host_dependencies"
-	// HostDependencyToDependOnHostTable is the table that holds the HostDependencyToDependOnHost relation/edge.
-	HostDependencyToDependOnHostTable = "host_dependencies"
-	// HostDependencyToDependOnHostInverseTable is the table name for the Host entity.
+	// DependOnTable is the table that holds the DependOn relation/edge.
+	DependOnTable = "host_dependencies"
+	// DependOnInverseTable is the table name for the Host entity.
 	// It exists in this package in order to avoid circular dependency with the "host" package.
-	HostDependencyToDependOnHostInverseTable = "hosts"
-	// HostDependencyToDependOnHostColumn is the table column denoting the HostDependencyToDependOnHost relation/edge.
-	HostDependencyToDependOnHostColumn = "host_dependency_host_dependency_to_depend_on_host"
-	// HostDependencyToDependByHostTable is the table that holds the HostDependencyToDependByHost relation/edge.
-	HostDependencyToDependByHostTable = "host_dependencies"
-	// HostDependencyToDependByHostInverseTable is the table name for the Host entity.
+	DependOnInverseTable = "hosts"
+	// DependOnColumn is the table column denoting the DependOn relation/edge.
+	DependOnColumn = "host_dependency_depend_on"
+	// RequiredByTable is the table that holds the RequiredBy relation/edge.
+	RequiredByTable = "host_dependencies"
+	// RequiredByInverseTable is the table name for the Host entity.
 	// It exists in this package in order to avoid circular dependency with the "host" package.
-	HostDependencyToDependByHostInverseTable = "hosts"
-	// HostDependencyToDependByHostColumn is the table column denoting the HostDependencyToDependByHost relation/edge.
-	HostDependencyToDependByHostColumn = "host_dependency_host_dependency_to_depend_by_host"
-	// HostDependencyToNetworkTable is the table that holds the HostDependencyToNetwork relation/edge.
-	HostDependencyToNetworkTable = "host_dependencies"
-	// HostDependencyToNetworkInverseTable is the table name for the Network entity.
+	RequiredByInverseTable = "hosts"
+	// RequiredByColumn is the table column denoting the RequiredBy relation/edge.
+	RequiredByColumn = "host_dependency_required_by"
+	// NetworkTable is the table that holds the Network relation/edge.
+	NetworkTable = "host_dependencies"
+	// NetworkInverseTable is the table name for the Network entity.
 	// It exists in this package in order to avoid circular dependency with the "network" package.
-	HostDependencyToNetworkInverseTable = "networks"
-	// HostDependencyToNetworkColumn is the table column denoting the HostDependencyToNetwork relation/edge.
-	HostDependencyToNetworkColumn = "host_dependency_host_dependency_to_network"
-	// HostDependencyToEnvironmentTable is the table that holds the HostDependencyToEnvironment relation/edge.
-	HostDependencyToEnvironmentTable = "host_dependencies"
-	// HostDependencyToEnvironmentInverseTable is the table name for the Environment entity.
+	NetworkInverseTable = "networks"
+	// NetworkColumn is the table column denoting the Network relation/edge.
+	NetworkColumn = "host_dependency_network"
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "host_dependencies"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	HostDependencyToEnvironmentInverseTable = "environments"
-	// HostDependencyToEnvironmentColumn is the table column denoting the HostDependencyToEnvironment relation/edge.
-	HostDependencyToEnvironmentColumn = "environment_host_dependencies"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_host_dependencies"
 )
 
 // Columns holds all SQL columns for hostdependency fields.
@@ -66,9 +66,9 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"environment_host_dependencies",
-	"host_dependency_host_dependency_to_depend_on_host",
-	"host_dependency_host_dependency_to_depend_by_host",
-	"host_dependency_host_dependency_to_network",
+	"host_dependency_depend_on",
+	"host_dependency_required_by",
+	"host_dependency_network",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

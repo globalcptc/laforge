@@ -2137,9 +2137,9 @@ func (hd *HostDependency) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Host",
-		Name: "HostDependencyToDependOnHost",
+		Name: "DependOn",
 	}
-	err = hd.QueryHostDependencyToDependOnHost().
+	err = hd.QueryDependOn().
 		Select(host.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -2147,9 +2147,9 @@ func (hd *HostDependency) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Host",
-		Name: "HostDependencyToDependByHost",
+		Name: "RequiredBy",
 	}
-	err = hd.QueryHostDependencyToDependByHost().
+	err = hd.QueryRequiredBy().
 		Select(host.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -2157,9 +2157,9 @@ func (hd *HostDependency) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Network",
-		Name: "HostDependencyToNetwork",
+		Name: "Network",
 	}
-	err = hd.QueryHostDependencyToNetwork().
+	err = hd.QueryNetwork().
 		Select(network.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -2167,9 +2167,9 @@ func (hd *HostDependency) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "Environment",
-		Name: "HostDependencyToEnvironment",
+		Name: "Environment",
 	}
-	err = hd.QueryHostDependencyToEnvironment().
+	err = hd.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {

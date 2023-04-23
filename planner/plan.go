@@ -475,8 +475,8 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 	}
 
 	entHostDependencies, err := entHost.QueryRequiredByHostDependency().
-		WithHostDependencyToDependOnHost().
-		WithHostDependencyToNetwork().
+		WithDependOn().
+		WithNetwork().
 		All(ctx)
 
 	currentBuild := pNetwork.QueryProvisionedNetworkToBuild().WithEnvironment().OnlyX(ctx)
@@ -488,7 +488,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 				provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
 					provisionednetwork.And(
 						provisionednetwork.HasProvisionedNetworkToNetworkWith(
-							network.IDEQ(entHostDependency.Edges.HostDependencyToNetwork.ID),
+							network.IDEQ(entHostDependency.Edges.Network.ID),
 						),
 						provisionednetwork.HasProvisionedNetworkToBuildWith(
 							build.IDEQ(currentBuild.ID),
@@ -499,19 +499,19 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 					),
 				),
 				provisionedhost.HasProvisionedHostToHostWith(
-					host.IDEQ(entHostDependency.Edges.HostDependencyToDependOnHost.ID),
+					host.IDEQ(entHostDependency.Edges.DependOn.ID),
 				),
 			),
 		).WithProvisionedHostToPlan().Only(ctx)
 		if err != nil {
 			if err != err.(*ent.NotFoundError) {
-				logger.Log.Errorf("Failed to Query Depended On Host %v for Host %v. Err: %v", entHostDependency.Edges.HostDependencyToDependOnHost.HclID, entHost.HclID, err)
+				logger.Log.Errorf("Failed to Query Depended On Host %v for Host %v. Err: %v", entHostDependency.Edges.DependOn.HclID, entHost.HclID, err)
 				return nil, err
 			} else {
 				dependOnPnetwork, err := client.ProvisionedNetwork.Query().Where(
 					provisionednetwork.And(
 						provisionednetwork.HasProvisionedNetworkToNetworkWith(
-							network.IDEQ(entHostDependency.Edges.HostDependencyToNetwork.ID),
+							network.IDEQ(entHostDependency.Edges.Network.ID),
 						),
 						provisionednetwork.HasProvisionedNetworkToBuildWith(
 							build.IDEQ(currentBuild.ID),
@@ -522,14 +522,14 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 					),
 				).Only(ctx)
 				if err != nil {
-					logger.Log.Errorf("Failed to Query Provined Network %v for Depended On Host %v. Err: %v", entHostDependency.Edges.HostDependencyToNetwork.HclID, entHostDependency.Edges.HostDependencyToDependOnHost.HclID, err)
+					logger.Log.Errorf("Failed to Query Provined Network %v for Depended On Host %v. Err: %v", entHostDependency.Edges.Network.HclID, entHostDependency.Edges.DependOn.HclID, err)
 				}
 				dependOnPnetworkPlan, err := dependOnPnetwork.QueryProvisionedNetworkToPlan().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("error while retrieving plan from provisioned network: %v", err)
 					return nil, err
 				}
-				entDependsOnHost, err = createProvisionedHosts(ctx, client, laforgeConfig, logger, dependOnPnetwork, entHostDependency.Edges.HostDependencyToDependOnHost, dependOnPnetworkPlan)
+				entDependsOnHost, err = createProvisionedHosts(ctx, client, laforgeConfig, logger, dependOnPnetwork, entHostDependency.Edges.DependOn, dependOnPnetworkPlan)
 				if err != nil {
 					logger.Log.Errorf("error creating depends on host: %v", err)
 					return nil, err
@@ -538,7 +538,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		}
 		dependOnPlan, err := entDependsOnHost.QueryProvisionedHostToEndStepPlan().Only(ctx)
 		if err != nil && err != err.(*ent.NotFoundError) {
-			logger.Log.Errorf("Failed to Query Depended On Host %v Plan for Host %v. Err: %v", entHostDependency.Edges.HostDependencyToDependOnHost.HclID, entHost.HclID, err)
+			logger.Log.Errorf("Failed to Query Depended On Host %v Plan for Host %v. Err: %v", entHostDependency.Edges.DependOn.HclID, entHost.HclID, err)
 			return nil, err
 		}
 		prevPlans = append(prevPlans, dependOnPlan)

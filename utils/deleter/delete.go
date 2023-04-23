@@ -116,7 +116,7 @@ func main() {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.HostDependency.Delete().Where(hostdependency.Not(hostdependency.HasHostDependencyToEnvironment())).Exec(ctx)
+	deletedCount, err = client.HostDependency.Delete().Where(hostdependency.Not(hostdependency.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}

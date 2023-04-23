@@ -544,9 +544,9 @@ var (
 		{Name: "host_id", Type: field.TypeString},
 		{Name: "network_id", Type: field.TypeString},
 		{Name: "environment_host_dependencies", Type: field.TypeUUID, Nullable: true},
-		{Name: "host_dependency_host_dependency_to_depend_on_host", Type: field.TypeUUID, Nullable: true},
-		{Name: "host_dependency_host_dependency_to_depend_by_host", Type: field.TypeUUID, Nullable: true},
-		{Name: "host_dependency_host_dependency_to_network", Type: field.TypeUUID, Nullable: true},
+		{Name: "host_dependency_depend_on", Type: field.TypeUUID, Nullable: true},
+		{Name: "host_dependency_required_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "host_dependency_network", Type: field.TypeUUID, Nullable: true},
 	}
 	// HostDependenciesTable holds the schema information for the "host_dependencies" table.
 	HostDependenciesTable = &schema.Table{
@@ -561,19 +561,19 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "host_dependencies_hosts_HostDependencyToDependOnHost",
+				Symbol:     "host_dependencies_hosts_DependOn",
 				Columns:    []*schema.Column{HostDependenciesColumns[4]},
 				RefColumns: []*schema.Column{HostsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "host_dependencies_hosts_HostDependencyToDependByHost",
+				Symbol:     "host_dependencies_hosts_RequiredBy",
 				Columns:    []*schema.Column{HostDependenciesColumns[5]},
 				RefColumns: []*schema.Column{HostsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "host_dependencies_networks_HostDependencyToNetwork",
+				Symbol:     "host_dependencies_networks_Network",
 				Columns:    []*schema.Column{HostDependenciesColumns[6]},
 				RefColumns: []*schema.Column{NetworksColumns[0]},
 				OnDelete:   schema.SetNull,

@@ -28,19 +28,19 @@ func (HostDependency) Fields() []ent.Field {
 // Edges of the HostDependency.
 func (HostDependency) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("HostDependencyToDependOnHost", Host.Type).
+		edge.To("DependOn", Host.Type).
 			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("HostDependencyToDependByHost", Host.Type).
+		edge.To("RequiredBy", Host.Type).
 			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("HostDependencyToNetwork", Network.Type).
+		edge.To("Network", Network.Type).
 			Unique(),
-		edge.From("HostDependencyToEnvironment", Environment.Type).
+		edge.From("Environment", Environment.Type).
 			Ref("HostDependencies").
 			Unique(),
 	}
