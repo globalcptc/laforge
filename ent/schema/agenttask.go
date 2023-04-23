@@ -43,14 +43,14 @@ func (AgentTask) Fields() []ent.Field {
 // Edges of the AgentTask.
 func (AgentTask) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("AgentTaskToProvisioningStep", ProvisioningStep.Type).
+		edge.To("ProvisioningStep", ProvisioningStep.Type).
 			Unique(),
-		edge.To("AgentTaskToProvisioningScheduledStep", ProvisioningScheduledStep.Type).
+		edge.To("ProvisioningScheduledStep", ProvisioningScheduledStep.Type).
 			Unique(),
-		edge.To("AgentTaskToProvisionedHost", ProvisionedHost.Type).
+		edge.To("ProvisionedHost", ProvisionedHost.Type).
 			Required().
 			Unique(),
-		edge.From("AgentTaskToAdhocPlan", AdhocPlan.Type).
+		edge.From("AdhocPlan", AdhocPlan.Type).
 			Ref("AgentTask"),
 	}
 }

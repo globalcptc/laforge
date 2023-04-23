@@ -661,7 +661,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.agent_task_agent_task_to_provisioning_scheduled_step = &nodes[0]
+		_node.agent_task_provisioning_scheduled_step = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := pssc.mutation.PlanIDs(); len(nodes) > 0 {

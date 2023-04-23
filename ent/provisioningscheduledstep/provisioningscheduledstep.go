@@ -123,7 +123,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "agenttask" package.
 	AgentTaskInverseTable = "agent_tasks"
 	// AgentTaskColumn is the table column denoting the AgentTask relation/edge.
-	AgentTaskColumn = "agent_task_agent_task_to_provisioning_scheduled_step"
+	AgentTaskColumn = "agent_task_provisioning_scheduled_step"
 	// PlanTable is the table that holds the Plan relation/edge.
 	PlanTable = "provisioning_scheduled_steps"
 	// PlanInverseTable is the table name for the Plan entity.
@@ -150,7 +150,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provisioning_scheduled_steps"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"agent_task_agent_task_to_provisioning_scheduled_step",
+	"agent_task_provisioning_scheduled_step",
 	"gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step",
 	"plan_plan_to_provisioning_scheduled_step",
 	"provisioning_scheduled_step_scheduled_step",

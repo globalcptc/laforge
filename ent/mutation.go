@@ -2255,29 +2255,29 @@ func (m *AgentStatusMutation) ResetEdge(name string) error {
 // AgentTaskMutation represents an operation that mutates the AgentTask nodes in the graph.
 type AgentTaskMutation struct {
 	config
-	op                                           Op
-	typ                                          string
-	id                                           *uuid.UUID
-	command                                      *agenttask.Command
-	args                                         *string
-	number                                       *int
-	addnumber                                    *int
-	output                                       *string
-	state                                        *agenttask.State
-	error_message                                *string
-	clearedFields                                map[string]struct{}
-	_AgentTaskToProvisioningStep                 *uuid.UUID
-	cleared_AgentTaskToProvisioningStep          bool
-	_AgentTaskToProvisioningScheduledStep        *uuid.UUID
-	cleared_AgentTaskToProvisioningScheduledStep bool
-	_AgentTaskToProvisionedHost                  *uuid.UUID
-	cleared_AgentTaskToProvisionedHost           bool
-	_AgentTaskToAdhocPlan                        map[uuid.UUID]struct{}
-	removed_AgentTaskToAdhocPlan                 map[uuid.UUID]struct{}
-	cleared_AgentTaskToAdhocPlan                 bool
-	done                                         bool
-	oldValue                                     func(context.Context) (*AgentTask, error)
-	predicates                                   []predicate.AgentTask
+	op                                Op
+	typ                               string
+	id                                *uuid.UUID
+	command                           *agenttask.Command
+	args                              *string
+	number                            *int
+	addnumber                         *int
+	output                            *string
+	state                             *agenttask.State
+	error_message                     *string
+	clearedFields                     map[string]struct{}
+	_ProvisioningStep                 *uuid.UUID
+	cleared_ProvisioningStep          bool
+	_ProvisioningScheduledStep        *uuid.UUID
+	cleared_ProvisioningScheduledStep bool
+	_ProvisionedHost                  *uuid.UUID
+	cleared_ProvisionedHost           bool
+	_AdhocPlan                        map[uuid.UUID]struct{}
+	removed_AdhocPlan                 map[uuid.UUID]struct{}
+	cleared_AdhocPlan                 bool
+	done                              bool
+	oldValue                          func(context.Context) (*AgentTask, error)
+	predicates                        []predicate.AgentTask
 }
 
 var _ ent.Mutation = (*AgentTaskMutation)(nil)
@@ -2620,175 +2620,175 @@ func (m *AgentTaskMutation) ResetErrorMessage() {
 	m.error_message = nil
 }
 
-// SetAgentTaskToProvisioningStepID sets the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity by id.
-func (m *AgentTaskMutation) SetAgentTaskToProvisioningStepID(id uuid.UUID) {
-	m._AgentTaskToProvisioningStep = &id
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by id.
+func (m *AgentTaskMutation) SetProvisioningStepID(id uuid.UUID) {
+	m._ProvisioningStep = &id
 }
 
-// ClearAgentTaskToProvisioningStep clears the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity.
-func (m *AgentTaskMutation) ClearAgentTaskToProvisioningStep() {
-	m.cleared_AgentTaskToProvisioningStep = true
+// ClearProvisioningStep clears the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (m *AgentTaskMutation) ClearProvisioningStep() {
+	m.cleared_ProvisioningStep = true
 }
 
-// AgentTaskToProvisioningStepCleared reports if the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity was cleared.
-func (m *AgentTaskMutation) AgentTaskToProvisioningStepCleared() bool {
-	return m.cleared_AgentTaskToProvisioningStep
+// ProvisioningStepCleared reports if the "ProvisioningStep" edge to the ProvisioningStep entity was cleared.
+func (m *AgentTaskMutation) ProvisioningStepCleared() bool {
+	return m.cleared_ProvisioningStep
 }
 
-// AgentTaskToProvisioningStepID returns the "AgentTaskToProvisioningStep" edge ID in the mutation.
-func (m *AgentTaskMutation) AgentTaskToProvisioningStepID() (id uuid.UUID, exists bool) {
-	if m._AgentTaskToProvisioningStep != nil {
-		return *m._AgentTaskToProvisioningStep, true
+// ProvisioningStepID returns the "ProvisioningStep" edge ID in the mutation.
+func (m *AgentTaskMutation) ProvisioningStepID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningStep != nil {
+		return *m._ProvisioningStep, true
 	}
 	return
 }
 
-// AgentTaskToProvisioningStepIDs returns the "AgentTaskToProvisioningStep" edge IDs in the mutation.
+// ProvisioningStepIDs returns the "ProvisioningStep" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AgentTaskToProvisioningStepID instead. It exists only for internal usage by the builders.
-func (m *AgentTaskMutation) AgentTaskToProvisioningStepIDs() (ids []uuid.UUID) {
-	if id := m._AgentTaskToProvisioningStep; id != nil {
+// ProvisioningStepID instead. It exists only for internal usage by the builders.
+func (m *AgentTaskMutation) ProvisioningStepIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningStep; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetAgentTaskToProvisioningStep resets all changes to the "AgentTaskToProvisioningStep" edge.
-func (m *AgentTaskMutation) ResetAgentTaskToProvisioningStep() {
-	m._AgentTaskToProvisioningStep = nil
-	m.cleared_AgentTaskToProvisioningStep = false
+// ResetProvisioningStep resets all changes to the "ProvisioningStep" edge.
+func (m *AgentTaskMutation) ResetProvisioningStep() {
+	m._ProvisioningStep = nil
+	m.cleared_ProvisioningStep = false
 }
 
-// SetAgentTaskToProvisioningScheduledStepID sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by id.
-func (m *AgentTaskMutation) SetAgentTaskToProvisioningScheduledStepID(id uuid.UUID) {
-	m._AgentTaskToProvisioningScheduledStep = &id
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by id.
+func (m *AgentTaskMutation) SetProvisioningScheduledStepID(id uuid.UUID) {
+	m._ProvisioningScheduledStep = &id
 }
 
-// ClearAgentTaskToProvisioningScheduledStep clears the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (m *AgentTaskMutation) ClearAgentTaskToProvisioningScheduledStep() {
-	m.cleared_AgentTaskToProvisioningScheduledStep = true
+// ClearProvisioningScheduledStep clears the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (m *AgentTaskMutation) ClearProvisioningScheduledStep() {
+	m.cleared_ProvisioningScheduledStep = true
 }
 
-// AgentTaskToProvisioningScheduledStepCleared reports if the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity was cleared.
-func (m *AgentTaskMutation) AgentTaskToProvisioningScheduledStepCleared() bool {
-	return m.cleared_AgentTaskToProvisioningScheduledStep
+// ProvisioningScheduledStepCleared reports if the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity was cleared.
+func (m *AgentTaskMutation) ProvisioningScheduledStepCleared() bool {
+	return m.cleared_ProvisioningScheduledStep
 }
 
-// AgentTaskToProvisioningScheduledStepID returns the "AgentTaskToProvisioningScheduledStep" edge ID in the mutation.
-func (m *AgentTaskMutation) AgentTaskToProvisioningScheduledStepID() (id uuid.UUID, exists bool) {
-	if m._AgentTaskToProvisioningScheduledStep != nil {
-		return *m._AgentTaskToProvisioningScheduledStep, true
+// ProvisioningScheduledStepID returns the "ProvisioningScheduledStep" edge ID in the mutation.
+func (m *AgentTaskMutation) ProvisioningScheduledStepID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningScheduledStep != nil {
+		return *m._ProvisioningScheduledStep, true
 	}
 	return
 }
 
-// AgentTaskToProvisioningScheduledStepIDs returns the "AgentTaskToProvisioningScheduledStep" edge IDs in the mutation.
+// ProvisioningScheduledStepIDs returns the "ProvisioningScheduledStep" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AgentTaskToProvisioningScheduledStepID instead. It exists only for internal usage by the builders.
-func (m *AgentTaskMutation) AgentTaskToProvisioningScheduledStepIDs() (ids []uuid.UUID) {
-	if id := m._AgentTaskToProvisioningScheduledStep; id != nil {
+// ProvisioningScheduledStepID instead. It exists only for internal usage by the builders.
+func (m *AgentTaskMutation) ProvisioningScheduledStepIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningScheduledStep; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetAgentTaskToProvisioningScheduledStep resets all changes to the "AgentTaskToProvisioningScheduledStep" edge.
-func (m *AgentTaskMutation) ResetAgentTaskToProvisioningScheduledStep() {
-	m._AgentTaskToProvisioningScheduledStep = nil
-	m.cleared_AgentTaskToProvisioningScheduledStep = false
+// ResetProvisioningScheduledStep resets all changes to the "ProvisioningScheduledStep" edge.
+func (m *AgentTaskMutation) ResetProvisioningScheduledStep() {
+	m._ProvisioningScheduledStep = nil
+	m.cleared_ProvisioningScheduledStep = false
 }
 
-// SetAgentTaskToProvisionedHostID sets the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity by id.
-func (m *AgentTaskMutation) SetAgentTaskToProvisionedHostID(id uuid.UUID) {
-	m._AgentTaskToProvisionedHost = &id
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by id.
+func (m *AgentTaskMutation) SetProvisionedHostID(id uuid.UUID) {
+	m._ProvisionedHost = &id
 }
 
-// ClearAgentTaskToProvisionedHost clears the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity.
-func (m *AgentTaskMutation) ClearAgentTaskToProvisionedHost() {
-	m.cleared_AgentTaskToProvisionedHost = true
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (m *AgentTaskMutation) ClearProvisionedHost() {
+	m.cleared_ProvisionedHost = true
 }
 
-// AgentTaskToProvisionedHostCleared reports if the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity was cleared.
-func (m *AgentTaskMutation) AgentTaskToProvisionedHostCleared() bool {
-	return m.cleared_AgentTaskToProvisionedHost
+// ProvisionedHostCleared reports if the "ProvisionedHost" edge to the ProvisionedHost entity was cleared.
+func (m *AgentTaskMutation) ProvisionedHostCleared() bool {
+	return m.cleared_ProvisionedHost
 }
 
-// AgentTaskToProvisionedHostID returns the "AgentTaskToProvisionedHost" edge ID in the mutation.
-func (m *AgentTaskMutation) AgentTaskToProvisionedHostID() (id uuid.UUID, exists bool) {
-	if m._AgentTaskToProvisionedHost != nil {
-		return *m._AgentTaskToProvisionedHost, true
+// ProvisionedHostID returns the "ProvisionedHost" edge ID in the mutation.
+func (m *AgentTaskMutation) ProvisionedHostID() (id uuid.UUID, exists bool) {
+	if m._ProvisionedHost != nil {
+		return *m._ProvisionedHost, true
 	}
 	return
 }
 
-// AgentTaskToProvisionedHostIDs returns the "AgentTaskToProvisionedHost" edge IDs in the mutation.
+// ProvisionedHostIDs returns the "ProvisionedHost" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AgentTaskToProvisionedHostID instead. It exists only for internal usage by the builders.
-func (m *AgentTaskMutation) AgentTaskToProvisionedHostIDs() (ids []uuid.UUID) {
-	if id := m._AgentTaskToProvisionedHost; id != nil {
+// ProvisionedHostID instead. It exists only for internal usage by the builders.
+func (m *AgentTaskMutation) ProvisionedHostIDs() (ids []uuid.UUID) {
+	if id := m._ProvisionedHost; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetAgentTaskToProvisionedHost resets all changes to the "AgentTaskToProvisionedHost" edge.
-func (m *AgentTaskMutation) ResetAgentTaskToProvisionedHost() {
-	m._AgentTaskToProvisionedHost = nil
-	m.cleared_AgentTaskToProvisionedHost = false
+// ResetProvisionedHost resets all changes to the "ProvisionedHost" edge.
+func (m *AgentTaskMutation) ResetProvisionedHost() {
+	m._ProvisionedHost = nil
+	m.cleared_ProvisionedHost = false
 }
 
-// AddAgentTaskToAdhocPlanIDs adds the "AgentTaskToAdhocPlan" edge to the AdhocPlan entity by ids.
-func (m *AgentTaskMutation) AddAgentTaskToAdhocPlanIDs(ids ...uuid.UUID) {
-	if m._AgentTaskToAdhocPlan == nil {
-		m._AgentTaskToAdhocPlan = make(map[uuid.UUID]struct{})
+// AddAdhocPlanIDs adds the "AdhocPlan" edge to the AdhocPlan entity by ids.
+func (m *AgentTaskMutation) AddAdhocPlanIDs(ids ...uuid.UUID) {
+	if m._AdhocPlan == nil {
+		m._AdhocPlan = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._AgentTaskToAdhocPlan[ids[i]] = struct{}{}
+		m._AdhocPlan[ids[i]] = struct{}{}
 	}
 }
 
-// ClearAgentTaskToAdhocPlan clears the "AgentTaskToAdhocPlan" edge to the AdhocPlan entity.
-func (m *AgentTaskMutation) ClearAgentTaskToAdhocPlan() {
-	m.cleared_AgentTaskToAdhocPlan = true
+// ClearAdhocPlan clears the "AdhocPlan" edge to the AdhocPlan entity.
+func (m *AgentTaskMutation) ClearAdhocPlan() {
+	m.cleared_AdhocPlan = true
 }
 
-// AgentTaskToAdhocPlanCleared reports if the "AgentTaskToAdhocPlan" edge to the AdhocPlan entity was cleared.
-func (m *AgentTaskMutation) AgentTaskToAdhocPlanCleared() bool {
-	return m.cleared_AgentTaskToAdhocPlan
+// AdhocPlanCleared reports if the "AdhocPlan" edge to the AdhocPlan entity was cleared.
+func (m *AgentTaskMutation) AdhocPlanCleared() bool {
+	return m.cleared_AdhocPlan
 }
 
-// RemoveAgentTaskToAdhocPlanIDs removes the "AgentTaskToAdhocPlan" edge to the AdhocPlan entity by IDs.
-func (m *AgentTaskMutation) RemoveAgentTaskToAdhocPlanIDs(ids ...uuid.UUID) {
-	if m.removed_AgentTaskToAdhocPlan == nil {
-		m.removed_AgentTaskToAdhocPlan = make(map[uuid.UUID]struct{})
+// RemoveAdhocPlanIDs removes the "AdhocPlan" edge to the AdhocPlan entity by IDs.
+func (m *AgentTaskMutation) RemoveAdhocPlanIDs(ids ...uuid.UUID) {
+	if m.removed_AdhocPlan == nil {
+		m.removed_AdhocPlan = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._AgentTaskToAdhocPlan, ids[i])
-		m.removed_AgentTaskToAdhocPlan[ids[i]] = struct{}{}
+		delete(m._AdhocPlan, ids[i])
+		m.removed_AdhocPlan[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedAgentTaskToAdhocPlan returns the removed IDs of the "AgentTaskToAdhocPlan" edge to the AdhocPlan entity.
-func (m *AgentTaskMutation) RemovedAgentTaskToAdhocPlanIDs() (ids []uuid.UUID) {
-	for id := range m.removed_AgentTaskToAdhocPlan {
+// RemovedAdhocPlan returns the removed IDs of the "AdhocPlan" edge to the AdhocPlan entity.
+func (m *AgentTaskMutation) RemovedAdhocPlanIDs() (ids []uuid.UUID) {
+	for id := range m.removed_AdhocPlan {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// AgentTaskToAdhocPlanIDs returns the "AgentTaskToAdhocPlan" edge IDs in the mutation.
-func (m *AgentTaskMutation) AgentTaskToAdhocPlanIDs() (ids []uuid.UUID) {
-	for id := range m._AgentTaskToAdhocPlan {
+// AdhocPlanIDs returns the "AdhocPlan" edge IDs in the mutation.
+func (m *AgentTaskMutation) AdhocPlanIDs() (ids []uuid.UUID) {
+	for id := range m._AdhocPlan {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetAgentTaskToAdhocPlan resets all changes to the "AgentTaskToAdhocPlan" edge.
-func (m *AgentTaskMutation) ResetAgentTaskToAdhocPlan() {
-	m._AgentTaskToAdhocPlan = nil
-	m.cleared_AgentTaskToAdhocPlan = false
-	m.removed_AgentTaskToAdhocPlan = nil
+// ResetAdhocPlan resets all changes to the "AdhocPlan" edge.
+func (m *AgentTaskMutation) ResetAdhocPlan() {
+	m._AdhocPlan = nil
+	m.cleared_AdhocPlan = false
+	m.removed_AdhocPlan = nil
 }
 
 // Where appends a list predicates to the AgentTaskMutation builder.
@@ -3010,17 +3010,17 @@ func (m *AgentTaskMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AgentTaskMutation) AddedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m._AgentTaskToProvisioningStep != nil {
-		edges = append(edges, agenttask.EdgeAgentTaskToProvisioningStep)
+	if m._ProvisioningStep != nil {
+		edges = append(edges, agenttask.EdgeProvisioningStep)
 	}
-	if m._AgentTaskToProvisioningScheduledStep != nil {
-		edges = append(edges, agenttask.EdgeAgentTaskToProvisioningScheduledStep)
+	if m._ProvisioningScheduledStep != nil {
+		edges = append(edges, agenttask.EdgeProvisioningScheduledStep)
 	}
-	if m._AgentTaskToProvisionedHost != nil {
-		edges = append(edges, agenttask.EdgeAgentTaskToProvisionedHost)
+	if m._ProvisionedHost != nil {
+		edges = append(edges, agenttask.EdgeProvisionedHost)
 	}
-	if m._AgentTaskToAdhocPlan != nil {
-		edges = append(edges, agenttask.EdgeAgentTaskToAdhocPlan)
+	if m._AdhocPlan != nil {
+		edges = append(edges, agenttask.EdgeAdhocPlan)
 	}
 	return edges
 }
@@ -3029,21 +3029,21 @@ func (m *AgentTaskMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *AgentTaskMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case agenttask.EdgeAgentTaskToProvisioningStep:
-		if id := m._AgentTaskToProvisioningStep; id != nil {
+	case agenttask.EdgeProvisioningStep:
+		if id := m._ProvisioningStep; id != nil {
 			return []ent.Value{*id}
 		}
-	case agenttask.EdgeAgentTaskToProvisioningScheduledStep:
-		if id := m._AgentTaskToProvisioningScheduledStep; id != nil {
+	case agenttask.EdgeProvisioningScheduledStep:
+		if id := m._ProvisioningScheduledStep; id != nil {
 			return []ent.Value{*id}
 		}
-	case agenttask.EdgeAgentTaskToProvisionedHost:
-		if id := m._AgentTaskToProvisionedHost; id != nil {
+	case agenttask.EdgeProvisionedHost:
+		if id := m._ProvisionedHost; id != nil {
 			return []ent.Value{*id}
 		}
-	case agenttask.EdgeAgentTaskToAdhocPlan:
-		ids := make([]ent.Value, 0, len(m._AgentTaskToAdhocPlan))
-		for id := range m._AgentTaskToAdhocPlan {
+	case agenttask.EdgeAdhocPlan:
+		ids := make([]ent.Value, 0, len(m._AdhocPlan))
+		for id := range m._AdhocPlan {
 			ids = append(ids, id)
 		}
 		return ids
@@ -3054,8 +3054,8 @@ func (m *AgentTaskMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AgentTaskMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.removed_AgentTaskToAdhocPlan != nil {
-		edges = append(edges, agenttask.EdgeAgentTaskToAdhocPlan)
+	if m.removed_AdhocPlan != nil {
+		edges = append(edges, agenttask.EdgeAdhocPlan)
 	}
 	return edges
 }
@@ -3064,9 +3064,9 @@ func (m *AgentTaskMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *AgentTaskMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case agenttask.EdgeAgentTaskToAdhocPlan:
-		ids := make([]ent.Value, 0, len(m.removed_AgentTaskToAdhocPlan))
-		for id := range m.removed_AgentTaskToAdhocPlan {
+	case agenttask.EdgeAdhocPlan:
+		ids := make([]ent.Value, 0, len(m.removed_AdhocPlan))
+		for id := range m.removed_AdhocPlan {
 			ids = append(ids, id)
 		}
 		return ids
@@ -3077,17 +3077,17 @@ func (m *AgentTaskMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AgentTaskMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.cleared_AgentTaskToProvisioningStep {
-		edges = append(edges, agenttask.EdgeAgentTaskToProvisioningStep)
+	if m.cleared_ProvisioningStep {
+		edges = append(edges, agenttask.EdgeProvisioningStep)
 	}
-	if m.cleared_AgentTaskToProvisioningScheduledStep {
-		edges = append(edges, agenttask.EdgeAgentTaskToProvisioningScheduledStep)
+	if m.cleared_ProvisioningScheduledStep {
+		edges = append(edges, agenttask.EdgeProvisioningScheduledStep)
 	}
-	if m.cleared_AgentTaskToProvisionedHost {
-		edges = append(edges, agenttask.EdgeAgentTaskToProvisionedHost)
+	if m.cleared_ProvisionedHost {
+		edges = append(edges, agenttask.EdgeProvisionedHost)
 	}
-	if m.cleared_AgentTaskToAdhocPlan {
-		edges = append(edges, agenttask.EdgeAgentTaskToAdhocPlan)
+	if m.cleared_AdhocPlan {
+		edges = append(edges, agenttask.EdgeAdhocPlan)
 	}
 	return edges
 }
@@ -3096,14 +3096,14 @@ func (m *AgentTaskMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *AgentTaskMutation) EdgeCleared(name string) bool {
 	switch name {
-	case agenttask.EdgeAgentTaskToProvisioningStep:
-		return m.cleared_AgentTaskToProvisioningStep
-	case agenttask.EdgeAgentTaskToProvisioningScheduledStep:
-		return m.cleared_AgentTaskToProvisioningScheduledStep
-	case agenttask.EdgeAgentTaskToProvisionedHost:
-		return m.cleared_AgentTaskToProvisionedHost
-	case agenttask.EdgeAgentTaskToAdhocPlan:
-		return m.cleared_AgentTaskToAdhocPlan
+	case agenttask.EdgeProvisioningStep:
+		return m.cleared_ProvisioningStep
+	case agenttask.EdgeProvisioningScheduledStep:
+		return m.cleared_ProvisioningScheduledStep
+	case agenttask.EdgeProvisionedHost:
+		return m.cleared_ProvisionedHost
+	case agenttask.EdgeAdhocPlan:
+		return m.cleared_AdhocPlan
 	}
 	return false
 }
@@ -3112,14 +3112,14 @@ func (m *AgentTaskMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *AgentTaskMutation) ClearEdge(name string) error {
 	switch name {
-	case agenttask.EdgeAgentTaskToProvisioningStep:
-		m.ClearAgentTaskToProvisioningStep()
+	case agenttask.EdgeProvisioningStep:
+		m.ClearProvisioningStep()
 		return nil
-	case agenttask.EdgeAgentTaskToProvisioningScheduledStep:
-		m.ClearAgentTaskToProvisioningScheduledStep()
+	case agenttask.EdgeProvisioningScheduledStep:
+		m.ClearProvisioningScheduledStep()
 		return nil
-	case agenttask.EdgeAgentTaskToProvisionedHost:
-		m.ClearAgentTaskToProvisionedHost()
+	case agenttask.EdgeProvisionedHost:
+		m.ClearProvisionedHost()
 		return nil
 	}
 	return fmt.Errorf("unknown AgentTask unique edge %s", name)
@@ -3129,17 +3129,17 @@ func (m *AgentTaskMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *AgentTaskMutation) ResetEdge(name string) error {
 	switch name {
-	case agenttask.EdgeAgentTaskToProvisioningStep:
-		m.ResetAgentTaskToProvisioningStep()
+	case agenttask.EdgeProvisioningStep:
+		m.ResetProvisioningStep()
 		return nil
-	case agenttask.EdgeAgentTaskToProvisioningScheduledStep:
-		m.ResetAgentTaskToProvisioningScheduledStep()
+	case agenttask.EdgeProvisioningScheduledStep:
+		m.ResetProvisioningScheduledStep()
 		return nil
-	case agenttask.EdgeAgentTaskToProvisionedHost:
-		m.ResetAgentTaskToProvisionedHost()
+	case agenttask.EdgeProvisionedHost:
+		m.ResetProvisionedHost()
 		return nil
-	case agenttask.EdgeAgentTaskToAdhocPlan:
-		m.ResetAgentTaskToAdhocPlan()
+	case agenttask.EdgeAdhocPlan:
+		m.ResetAdhocPlan()
 		return nil
 	}
 	return fmt.Errorf("unknown AgentTask edge %s", name)

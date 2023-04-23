@@ -68,34 +68,34 @@ func (as *AgentStatus) Build(ctx context.Context) (*Build, error) {
 	return result, MaskNotFound(err)
 }
 
-func (at *AgentTask) AgentTaskToProvisioningStep(ctx context.Context) (*ProvisioningStep, error) {
-	result, err := at.Edges.AgentTaskToProvisioningStepOrErr()
+func (at *AgentTask) ProvisioningStep(ctx context.Context) (*ProvisioningStep, error) {
+	result, err := at.Edges.ProvisioningStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = at.QueryAgentTaskToProvisioningStep().Only(ctx)
+		result, err = at.QueryProvisioningStep().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (at *AgentTask) AgentTaskToProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
-	result, err := at.Edges.AgentTaskToProvisioningScheduledStepOrErr()
+func (at *AgentTask) ProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
+	result, err := at.Edges.ProvisioningScheduledStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = at.QueryAgentTaskToProvisioningScheduledStep().Only(ctx)
+		result, err = at.QueryProvisioningScheduledStep().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (at *AgentTask) AgentTaskToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
-	result, err := at.Edges.AgentTaskToProvisionedHostOrErr()
+func (at *AgentTask) ProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
+	result, err := at.Edges.ProvisionedHostOrErr()
 	if IsNotLoaded(err) {
-		result, err = at.QueryAgentTaskToProvisionedHost().Only(ctx)
+		result, err = at.QueryProvisionedHost().Only(ctx)
 	}
 	return result, err
 }
 
-func (at *AgentTask) AgentTaskToAdhocPlan(ctx context.Context) ([]*AdhocPlan, error) {
-	result, err := at.Edges.AgentTaskToAdhocPlanOrErr()
+func (at *AgentTask) AdhocPlan(ctx context.Context) ([]*AdhocPlan, error) {
+	result, err := at.Edges.AdhocPlanOrErr()
 	if IsNotLoaded(err) {
-		result, err = at.QueryAgentTaskToAdhocPlan().All(ctx)
+		result, err = at.QueryAdhocPlan().All(ctx)
 	}
 	return result, err
 }

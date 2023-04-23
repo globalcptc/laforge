@@ -90,8 +90,8 @@ var (
 		{Name: "output", Type: field.TypeString, Default: ""},
 		{Name: "state", Type: field.TypeEnum, Enums: []string{"AWAITING", "INPROGRESS", "FAILED", "COMPLETE"}},
 		{Name: "error_message", Type: field.TypeString, Default: ""},
-		{Name: "agent_task_agent_task_to_provisioning_step", Type: field.TypeUUID, Nullable: true},
-		{Name: "agent_task_agent_task_to_provisioned_host", Type: field.TypeUUID},
+		{Name: "agent_task_provisioning_step", Type: field.TypeUUID, Nullable: true},
+		{Name: "agent_task_provisioned_host", Type: field.TypeUUID},
 	}
 	// AgentTasksTable holds the schema information for the "agent_tasks" table.
 	AgentTasksTable = &schema.Table{
@@ -100,13 +100,13 @@ var (
 		PrimaryKey: []*schema.Column{AgentTasksColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "agent_tasks_provisioning_steps_AgentTaskToProvisioningStep",
+				Symbol:     "agent_tasks_provisioning_steps_ProvisioningStep",
 				Columns:    []*schema.Column{AgentTasksColumns[7]},
 				RefColumns: []*schema.Column{ProvisioningStepsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "agent_tasks_provisioned_hosts_AgentTaskToProvisionedHost",
+				Symbol:     "agent_tasks_provisioned_hosts_ProvisionedHost",
 				Columns:    []*schema.Column{AgentTasksColumns[8]},
 				RefColumns: []*schema.Column{ProvisionedHostsColumns[0]},
 				OnDelete:   schema.NoAction,
@@ -809,7 +809,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract", "Ansible"}},
 		{Name: "run_time", Type: field.TypeTime},
-		{Name: "agent_task_agent_task_to_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "agent_task_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_scheduled_step_scheduled_step", Type: field.TypeUUID},
@@ -829,7 +829,7 @@ var (
 		PrimaryKey: []*schema.Column{ProvisioningScheduledStepsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provisioning_scheduled_steps_agent_tasks_AgentTaskToProvisioningScheduledStep",
+				Symbol:     "provisioning_scheduled_steps_agent_tasks_ProvisioningScheduledStep",
 				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[3]},
 				RefColumns: []*schema.Column{AgentTasksColumns[0]},
 				OnDelete:   schema.SetNull,

@@ -65,7 +65,7 @@ func (ProvisioningScheduledStep) Edges() []ent.Edge {
 			Unique(),
 		// AgentTask
 		edge.From("AgentTask", AgentTask.Type).
-			Ref("AgentTaskToProvisioningScheduledStep").
+			Ref("ProvisioningScheduledStep").
 			Unique(),
 		// Plan
 		edge.From("Plan", Plan.Type).

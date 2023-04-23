@@ -350,9 +350,9 @@ func (at *AgentTask) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "ProvisioningStep",
-		Name: "AgentTaskToProvisioningStep",
+		Name: "ProvisioningStep",
 	}
-	err = at.QueryAgentTaskToProvisioningStep().
+	err = at.QueryProvisioningStep().
 		Select(provisioningstep.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -360,9 +360,9 @@ func (at *AgentTask) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "ProvisioningScheduledStep",
-		Name: "AgentTaskToProvisioningScheduledStep",
+		Name: "ProvisioningScheduledStep",
 	}
-	err = at.QueryAgentTaskToProvisioningScheduledStep().
+	err = at.QueryProvisioningScheduledStep().
 		Select(provisioningscheduledstep.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -370,9 +370,9 @@ func (at *AgentTask) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "ProvisionedHost",
-		Name: "AgentTaskToProvisionedHost",
+		Name: "ProvisionedHost",
 	}
-	err = at.QueryAgentTaskToProvisionedHost().
+	err = at.QueryProvisionedHost().
 		Select(provisionedhost.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -380,9 +380,9 @@ func (at *AgentTask) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "AdhocPlan",
-		Name: "AgentTaskToAdhocPlan",
+		Name: "AdhocPlan",
 	}
-	err = at.QueryAgentTaskToAdhocPlan().
+	err = at.QueryAdhocPlan().
 		Select(adhocplan.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {

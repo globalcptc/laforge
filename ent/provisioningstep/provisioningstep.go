@@ -121,7 +121,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "agenttask" package.
 	ProvisioningStepToAgentTaskInverseTable = "agent_tasks"
 	// ProvisioningStepToAgentTaskColumn is the table column denoting the ProvisioningStepToAgentTask relation/edge.
-	ProvisioningStepToAgentTaskColumn = "agent_task_agent_task_to_provisioning_step"
+	ProvisioningStepToAgentTaskColumn = "agent_task_provisioning_step"
 	// ProvisioningStepToGinFileMiddlewareTable is the table that holds the ProvisioningStepToGinFileMiddleware relation/edge.
 	ProvisioningStepToGinFileMiddlewareTable = "provisioning_steps"
 	// ProvisioningStepToGinFileMiddlewareInverseTable is the table name for the GinFileMiddleware entity.

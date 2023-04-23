@@ -107,7 +107,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "agenttask" package.
 	ProvisionedHostToAgentTaskInverseTable = "agent_tasks"
 	// ProvisionedHostToAgentTaskColumn is the table column denoting the ProvisionedHostToAgentTask relation/edge.
-	ProvisionedHostToAgentTaskColumn = "agent_task_agent_task_to_provisioned_host"
+	ProvisionedHostToAgentTaskColumn = "agent_task_provisioned_host"
 	// ProvisionedHostToPlanTable is the table that holds the ProvisionedHostToPlan relation/edge.
 	ProvisionedHostToPlanTable = "provisioned_hosts"
 	// ProvisionedHostToPlanInverseTable is the table name for the Plan entity.

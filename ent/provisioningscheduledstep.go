@@ -66,7 +66,7 @@ type ProvisioningScheduledStep struct {
 	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
 	HCLGinFileMiddleware *GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
 	//
-	agent_task_agent_task_to_provisioning_scheduled_step                   *uuid.UUID
+	agent_task_provisioning_scheduled_step                                 *uuid.UUID
 	gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step *uuid.UUID
 	plan_plan_to_provisioning_scheduled_step                               *uuid.UUID
 	provisioning_scheduled_step_scheduled_step                             *uuid.UUID
@@ -306,7 +306,7 @@ func (*ProvisioningScheduledStep) scanValues(columns []string) ([]interface{}, e
 			values[i] = new(sql.NullTime)
 		case provisioningscheduledstep.FieldID:
 			values[i] = new(uuid.UUID)
-		case provisioningscheduledstep.ForeignKeys[0]: // agent_task_agent_task_to_provisioning_scheduled_step
+		case provisioningscheduledstep.ForeignKeys[0]: // agent_task_provisioning_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisioningscheduledstep.ForeignKeys[1]: // gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -365,10 +365,10 @@ func (pss *ProvisioningScheduledStep) assignValues(columns []string, values []in
 			}
 		case provisioningscheduledstep.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field agent_task_agent_task_to_provisioning_scheduled_step", values[i])
+				return fmt.Errorf("unexpected type %T for field agent_task_provisioning_scheduled_step", values[i])
 			} else if value.Valid {
-				pss.agent_task_agent_task_to_provisioning_scheduled_step = new(uuid.UUID)
-				*pss.agent_task_agent_task_to_provisioning_scheduled_step = *value.S.(*uuid.UUID)
+				pss.agent_task_provisioning_scheduled_step = new(uuid.UUID)
+				*pss.agent_task_provisioning_scheduled_step = *value.S.(*uuid.UUID)
 			}
 		case provisioningscheduledstep.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

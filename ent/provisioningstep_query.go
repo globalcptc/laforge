@@ -1176,13 +1176,13 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToAgentTask(ctx context.Co
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_task_agent_task_to_provisioning_step
+		fk := n.agent_task_provisioning_step
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_task_agent_task_to_provisioning_step" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "agent_task_provisioning_step" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_provisioning_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_task_provisioning_step" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

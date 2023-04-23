@@ -783,15 +783,15 @@ func (c *AgentTaskClient) GetX(ctx context.Context, id uuid.UUID) *AgentTask {
 	return obj
 }
 
-// QueryAgentTaskToProvisioningStep queries the AgentTaskToProvisioningStep edge of a AgentTask.
-func (c *AgentTaskClient) QueryAgentTaskToProvisioningStep(at *AgentTask) *ProvisioningStepQuery {
+// QueryProvisioningStep queries the ProvisioningStep edge of a AgentTask.
+func (c *AgentTaskClient) QueryProvisioningStep(at *AgentTask) *ProvisioningStepQuery {
 	query := &ProvisioningStepQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := at.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, id),
 			sqlgraph.To(provisioningstep.Table, provisioningstep.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.AgentTaskToProvisioningStepTable, agenttask.AgentTaskToProvisioningStepColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.ProvisioningStepTable, agenttask.ProvisioningStepColumn),
 		)
 		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
 		return fromV, nil
@@ -799,15 +799,15 @@ func (c *AgentTaskClient) QueryAgentTaskToProvisioningStep(at *AgentTask) *Provi
 	return query
 }
 
-// QueryAgentTaskToProvisioningScheduledStep queries the AgentTaskToProvisioningScheduledStep edge of a AgentTask.
-func (c *AgentTaskClient) QueryAgentTaskToProvisioningScheduledStep(at *AgentTask) *ProvisioningScheduledStepQuery {
+// QueryProvisioningScheduledStep queries the ProvisioningScheduledStep edge of a AgentTask.
+func (c *AgentTaskClient) QueryProvisioningScheduledStep(at *AgentTask) *ProvisioningScheduledStepQuery {
 	query := &ProvisioningScheduledStepQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := at.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, id),
 			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, agenttask.AgentTaskToProvisioningScheduledStepTable, agenttask.AgentTaskToProvisioningScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, agenttask.ProvisioningScheduledStepTable, agenttask.ProvisioningScheduledStepColumn),
 		)
 		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
 		return fromV, nil
@@ -815,15 +815,15 @@ func (c *AgentTaskClient) QueryAgentTaskToProvisioningScheduledStep(at *AgentTas
 	return query
 }
 
-// QueryAgentTaskToProvisionedHost queries the AgentTaskToProvisionedHost edge of a AgentTask.
-func (c *AgentTaskClient) QueryAgentTaskToProvisionedHost(at *AgentTask) *ProvisionedHostQuery {
+// QueryProvisionedHost queries the ProvisionedHost edge of a AgentTask.
+func (c *AgentTaskClient) QueryProvisionedHost(at *AgentTask) *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := at.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, id),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.AgentTaskToProvisionedHostTable, agenttask.AgentTaskToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.ProvisionedHostTable, agenttask.ProvisionedHostColumn),
 		)
 		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
 		return fromV, nil
@@ -831,15 +831,15 @@ func (c *AgentTaskClient) QueryAgentTaskToProvisionedHost(at *AgentTask) *Provis
 	return query
 }
 
-// QueryAgentTaskToAdhocPlan queries the AgentTaskToAdhocPlan edge of a AgentTask.
-func (c *AgentTaskClient) QueryAgentTaskToAdhocPlan(at *AgentTask) *AdhocPlanQuery {
+// QueryAdhocPlan queries the AdhocPlan edge of a AgentTask.
+func (c *AgentTaskClient) QueryAdhocPlan(at *AgentTask) *AdhocPlanQuery {
 	query := &AdhocPlanQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := at.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, id),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, agenttask.AgentTaskToAdhocPlanTable, agenttask.AgentTaskToAdhocPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, agenttask.AdhocPlanTable, agenttask.AdhocPlanColumn),
 		)
 		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
 		return fromV, nil
