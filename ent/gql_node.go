@@ -108,9 +108,9 @@ func (ap *AdhocPlan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Build",
-		Name: "AdhocPlanToBuild",
+		Name: "Build",
 	}
-	err = ap.QueryAdhocPlanToBuild().
+	err = ap.QueryBuild().
 		Select(build.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -118,9 +118,9 @@ func (ap *AdhocPlan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "Status",
-		Name: "AdhocPlanToStatus",
+		Name: "Status",
 	}
-	err = ap.QueryAdhocPlanToStatus().
+	err = ap.QueryStatus().
 		Select(status.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
@@ -128,9 +128,9 @@ func (ap *AdhocPlan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[4] = &Edge{
 		Type: "AgentTask",
-		Name: "AdhocPlanToAgentTask",
+		Name: "AgentTask",
 	}
-	err = ap.QueryAdhocPlanToAgentTask().
+	err = ap.QueryAgentTask().
 		Select(agenttask.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {

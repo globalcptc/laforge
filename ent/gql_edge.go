@@ -20,26 +20,26 @@ func (ap *AdhocPlan) NextAdhocPlan(ctx context.Context) ([]*AdhocPlan, error) {
 	return result, err
 }
 
-func (ap *AdhocPlan) AdhocPlanToBuild(ctx context.Context) (*Build, error) {
-	result, err := ap.Edges.AdhocPlanToBuildOrErr()
+func (ap *AdhocPlan) Build(ctx context.Context) (*Build, error) {
+	result, err := ap.Edges.BuildOrErr()
 	if IsNotLoaded(err) {
-		result, err = ap.QueryAdhocPlanToBuild().Only(ctx)
+		result, err = ap.QueryBuild().Only(ctx)
 	}
 	return result, err
 }
 
-func (ap *AdhocPlan) AdhocPlanToStatus(ctx context.Context) (*Status, error) {
-	result, err := ap.Edges.AdhocPlanToStatusOrErr()
+func (ap *AdhocPlan) Status(ctx context.Context) (*Status, error) {
+	result, err := ap.Edges.StatusOrErr()
 	if IsNotLoaded(err) {
-		result, err = ap.QueryAdhocPlanToStatus().Only(ctx)
+		result, err = ap.QueryStatus().Only(ctx)
 	}
 	return result, err
 }
 
-func (ap *AdhocPlan) AdhocPlanToAgentTask(ctx context.Context) (*AgentTask, error) {
-	result, err := ap.Edges.AdhocPlanToAgentTaskOrErr()
+func (ap *AdhocPlan) AgentTask(ctx context.Context) (*AgentTask, error) {
+	result, err := ap.Edges.AgentTaskOrErr()
 	if IsNotLoaded(err) {
-		result, err = ap.QueryAdhocPlanToAgentTask().Only(ctx)
+		result, err = ap.QueryAgentTask().Only(ctx)
 	}
 	return result, err
 }

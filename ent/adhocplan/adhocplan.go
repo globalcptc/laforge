@@ -15,39 +15,39 @@ const (
 	EdgePrevAdhocPlan = "PrevAdhocPlan"
 	// EdgeNextAdhocPlan holds the string denoting the nextadhocplan edge name in mutations.
 	EdgeNextAdhocPlan = "NextAdhocPlan"
-	// EdgeAdhocPlanToBuild holds the string denoting the adhocplantobuild edge name in mutations.
-	EdgeAdhocPlanToBuild = "AdhocPlanToBuild"
-	// EdgeAdhocPlanToStatus holds the string denoting the adhocplantostatus edge name in mutations.
-	EdgeAdhocPlanToStatus = "AdhocPlanToStatus"
-	// EdgeAdhocPlanToAgentTask holds the string denoting the adhocplantoagenttask edge name in mutations.
-	EdgeAdhocPlanToAgentTask = "AdhocPlanToAgentTask"
+	// EdgeBuild holds the string denoting the build edge name in mutations.
+	EdgeBuild = "Build"
+	// EdgeStatus holds the string denoting the status edge name in mutations.
+	EdgeStatus = "Status"
+	// EdgeAgentTask holds the string denoting the agenttask edge name in mutations.
+	EdgeAgentTask = "AgentTask"
 	// Table holds the table name of the adhocplan in the database.
 	Table = "adhoc_plans"
 	// PrevAdhocPlanTable is the table that holds the PrevAdhocPlan relation/edge. The primary key declared below.
 	PrevAdhocPlanTable = "adhoc_plan_NextAdhocPlan"
 	// NextAdhocPlanTable is the table that holds the NextAdhocPlan relation/edge. The primary key declared below.
 	NextAdhocPlanTable = "adhoc_plan_NextAdhocPlan"
-	// AdhocPlanToBuildTable is the table that holds the AdhocPlanToBuild relation/edge.
-	AdhocPlanToBuildTable = "adhoc_plans"
-	// AdhocPlanToBuildInverseTable is the table name for the Build entity.
+	// BuildTable is the table that holds the Build relation/edge.
+	BuildTable = "adhoc_plans"
+	// BuildInverseTable is the table name for the Build entity.
 	// It exists in this package in order to avoid circular dependency with the "build" package.
-	AdhocPlanToBuildInverseTable = "builds"
-	// AdhocPlanToBuildColumn is the table column denoting the AdhocPlanToBuild relation/edge.
-	AdhocPlanToBuildColumn = "adhoc_plan_adhoc_plan_to_build"
-	// AdhocPlanToStatusTable is the table that holds the AdhocPlanToStatus relation/edge.
-	AdhocPlanToStatusTable = "status"
-	// AdhocPlanToStatusInverseTable is the table name for the Status entity.
+	BuildInverseTable = "builds"
+	// BuildColumn is the table column denoting the Build relation/edge.
+	BuildColumn = "adhoc_plan_build"
+	// StatusTable is the table that holds the Status relation/edge.
+	StatusTable = "status"
+	// StatusInverseTable is the table name for the Status entity.
 	// It exists in this package in order to avoid circular dependency with the "status" package.
-	AdhocPlanToStatusInverseTable = "status"
-	// AdhocPlanToStatusColumn is the table column denoting the AdhocPlanToStatus relation/edge.
-	AdhocPlanToStatusColumn = "adhoc_plan_adhoc_plan_to_status"
-	// AdhocPlanToAgentTaskTable is the table that holds the AdhocPlanToAgentTask relation/edge.
-	AdhocPlanToAgentTaskTable = "adhoc_plans"
-	// AdhocPlanToAgentTaskInverseTable is the table name for the AgentTask entity.
+	StatusInverseTable = "status"
+	// StatusColumn is the table column denoting the Status relation/edge.
+	StatusColumn = "adhoc_plan_status"
+	// AgentTaskTable is the table that holds the AgentTask relation/edge.
+	AgentTaskTable = "adhoc_plans"
+	// AgentTaskInverseTable is the table name for the AgentTask entity.
 	// It exists in this package in order to avoid circular dependency with the "agenttask" package.
-	AdhocPlanToAgentTaskInverseTable = "agent_tasks"
-	// AdhocPlanToAgentTaskColumn is the table column denoting the AdhocPlanToAgentTask relation/edge.
-	AdhocPlanToAgentTaskColumn = "adhoc_plan_adhoc_plan_to_agent_task"
+	AgentTaskInverseTable = "agent_tasks"
+	// AgentTaskColumn is the table column denoting the AgentTask relation/edge.
+	AgentTaskColumn = "adhoc_plan_agent_task"
 )
 
 // Columns holds all SQL columns for adhocplan fields.
@@ -58,8 +58,8 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "adhoc_plans"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"adhoc_plan_adhoc_plan_to_build",
-	"adhoc_plan_adhoc_plan_to_agent_task",
+	"adhoc_plan_build",
+	"adhoc_plan_agent_task",
 }
 
 var (

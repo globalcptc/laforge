@@ -942,10 +942,10 @@ func (sq *StatusQuery) loadStatusToAdhocPlan(ctx context.Context, query *AdhocPl
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].adhoc_plan_adhoc_plan_to_status == nil {
+		if nodes[i].adhoc_plan_status == nil {
 			continue
 		}
-		fk := *nodes[i].adhoc_plan_adhoc_plan_to_status
+		fk := *nodes[i].adhoc_plan_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -959,7 +959,7 @@ func (sq *StatusQuery) loadStatusToAdhocPlan(ctx context.Context, query *AdhocPl
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_adhoc_plan_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

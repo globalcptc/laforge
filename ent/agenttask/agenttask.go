@@ -64,7 +64,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "adhocplan" package.
 	AgentTaskToAdhocPlanInverseTable = "adhoc_plans"
 	// AgentTaskToAdhocPlanColumn is the table column denoting the AgentTaskToAdhocPlan relation/edge.
-	AgentTaskToAdhocPlanColumn = "adhoc_plan_adhoc_plan_to_agent_task"
+	AgentTaskToAdhocPlanColumn = "adhoc_plan_agent_task"
 )
 
 // Columns holds all SQL columns for agenttask fields.

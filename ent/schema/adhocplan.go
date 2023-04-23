@@ -29,16 +29,16 @@ func (AdhocPlan) Edges() []ent.Edge {
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("AdhocPlanToBuild", Build.Type).
+		edge.To("Build", Build.Type).
 			Unique().
 			Required(),
-		edge.To("AdhocPlanToStatus", Status.Type).
+		edge.To("Status", Status.Type).
 			Unique().
 			Required().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("AdhocPlanToAgentTask", AgentTask.Type).
+		edge.To("AgentTask", AgentTask.Type).
 			Unique().
 			Required(),
 	}

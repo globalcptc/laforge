@@ -108,25 +108,25 @@ const (
 // AdhocPlanMutation represents an operation that mutates the AdhocPlan nodes in the graph.
 type AdhocPlanMutation struct {
 	config
-	op                           Op
-	typ                          string
-	id                           *uuid.UUID
-	clearedFields                map[string]struct{}
-	_PrevAdhocPlan               map[uuid.UUID]struct{}
-	removed_PrevAdhocPlan        map[uuid.UUID]struct{}
-	cleared_PrevAdhocPlan        bool
-	_NextAdhocPlan               map[uuid.UUID]struct{}
-	removed_NextAdhocPlan        map[uuid.UUID]struct{}
-	cleared_NextAdhocPlan        bool
-	_AdhocPlanToBuild            *uuid.UUID
-	cleared_AdhocPlanToBuild     bool
-	_AdhocPlanToStatus           *uuid.UUID
-	cleared_AdhocPlanToStatus    bool
-	_AdhocPlanToAgentTask        *uuid.UUID
-	cleared_AdhocPlanToAgentTask bool
-	done                         bool
-	oldValue                     func(context.Context) (*AdhocPlan, error)
-	predicates                   []predicate.AdhocPlan
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	clearedFields         map[string]struct{}
+	_PrevAdhocPlan        map[uuid.UUID]struct{}
+	removed_PrevAdhocPlan map[uuid.UUID]struct{}
+	cleared_PrevAdhocPlan bool
+	_NextAdhocPlan        map[uuid.UUID]struct{}
+	removed_NextAdhocPlan map[uuid.UUID]struct{}
+	cleared_NextAdhocPlan bool
+	_Build                *uuid.UUID
+	cleared_Build         bool
+	_Status               *uuid.UUID
+	cleared_Status        bool
+	_AgentTask            *uuid.UUID
+	cleared_AgentTask     bool
+	done                  bool
+	oldValue              func(context.Context) (*AdhocPlan, error)
+	predicates            []predicate.AdhocPlan
 }
 
 var _ ent.Mutation = (*AdhocPlanMutation)(nil)
@@ -341,121 +341,121 @@ func (m *AdhocPlanMutation) ResetNextAdhocPlan() {
 	m.removed_NextAdhocPlan = nil
 }
 
-// SetAdhocPlanToBuildID sets the "AdhocPlanToBuild" edge to the Build entity by id.
-func (m *AdhocPlanMutation) SetAdhocPlanToBuildID(id uuid.UUID) {
-	m._AdhocPlanToBuild = &id
+// SetBuildID sets the "Build" edge to the Build entity by id.
+func (m *AdhocPlanMutation) SetBuildID(id uuid.UUID) {
+	m._Build = &id
 }
 
-// ClearAdhocPlanToBuild clears the "AdhocPlanToBuild" edge to the Build entity.
-func (m *AdhocPlanMutation) ClearAdhocPlanToBuild() {
-	m.cleared_AdhocPlanToBuild = true
+// ClearBuild clears the "Build" edge to the Build entity.
+func (m *AdhocPlanMutation) ClearBuild() {
+	m.cleared_Build = true
 }
 
-// AdhocPlanToBuildCleared reports if the "AdhocPlanToBuild" edge to the Build entity was cleared.
-func (m *AdhocPlanMutation) AdhocPlanToBuildCleared() bool {
-	return m.cleared_AdhocPlanToBuild
+// BuildCleared reports if the "Build" edge to the Build entity was cleared.
+func (m *AdhocPlanMutation) BuildCleared() bool {
+	return m.cleared_Build
 }
 
-// AdhocPlanToBuildID returns the "AdhocPlanToBuild" edge ID in the mutation.
-func (m *AdhocPlanMutation) AdhocPlanToBuildID() (id uuid.UUID, exists bool) {
-	if m._AdhocPlanToBuild != nil {
-		return *m._AdhocPlanToBuild, true
+// BuildID returns the "Build" edge ID in the mutation.
+func (m *AdhocPlanMutation) BuildID() (id uuid.UUID, exists bool) {
+	if m._Build != nil {
+		return *m._Build, true
 	}
 	return
 }
 
-// AdhocPlanToBuildIDs returns the "AdhocPlanToBuild" edge IDs in the mutation.
+// BuildIDs returns the "Build" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AdhocPlanToBuildID instead. It exists only for internal usage by the builders.
-func (m *AdhocPlanMutation) AdhocPlanToBuildIDs() (ids []uuid.UUID) {
-	if id := m._AdhocPlanToBuild; id != nil {
+// BuildID instead. It exists only for internal usage by the builders.
+func (m *AdhocPlanMutation) BuildIDs() (ids []uuid.UUID) {
+	if id := m._Build; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetAdhocPlanToBuild resets all changes to the "AdhocPlanToBuild" edge.
-func (m *AdhocPlanMutation) ResetAdhocPlanToBuild() {
-	m._AdhocPlanToBuild = nil
-	m.cleared_AdhocPlanToBuild = false
+// ResetBuild resets all changes to the "Build" edge.
+func (m *AdhocPlanMutation) ResetBuild() {
+	m._Build = nil
+	m.cleared_Build = false
 }
 
-// SetAdhocPlanToStatusID sets the "AdhocPlanToStatus" edge to the Status entity by id.
-func (m *AdhocPlanMutation) SetAdhocPlanToStatusID(id uuid.UUID) {
-	m._AdhocPlanToStatus = &id
+// SetStatusID sets the "Status" edge to the Status entity by id.
+func (m *AdhocPlanMutation) SetStatusID(id uuid.UUID) {
+	m._Status = &id
 }
 
-// ClearAdhocPlanToStatus clears the "AdhocPlanToStatus" edge to the Status entity.
-func (m *AdhocPlanMutation) ClearAdhocPlanToStatus() {
-	m.cleared_AdhocPlanToStatus = true
+// ClearStatus clears the "Status" edge to the Status entity.
+func (m *AdhocPlanMutation) ClearStatus() {
+	m.cleared_Status = true
 }
 
-// AdhocPlanToStatusCleared reports if the "AdhocPlanToStatus" edge to the Status entity was cleared.
-func (m *AdhocPlanMutation) AdhocPlanToStatusCleared() bool {
-	return m.cleared_AdhocPlanToStatus
+// StatusCleared reports if the "Status" edge to the Status entity was cleared.
+func (m *AdhocPlanMutation) StatusCleared() bool {
+	return m.cleared_Status
 }
 
-// AdhocPlanToStatusID returns the "AdhocPlanToStatus" edge ID in the mutation.
-func (m *AdhocPlanMutation) AdhocPlanToStatusID() (id uuid.UUID, exists bool) {
-	if m._AdhocPlanToStatus != nil {
-		return *m._AdhocPlanToStatus, true
+// StatusID returns the "Status" edge ID in the mutation.
+func (m *AdhocPlanMutation) StatusID() (id uuid.UUID, exists bool) {
+	if m._Status != nil {
+		return *m._Status, true
 	}
 	return
 }
 
-// AdhocPlanToStatusIDs returns the "AdhocPlanToStatus" edge IDs in the mutation.
+// StatusIDs returns the "Status" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AdhocPlanToStatusID instead. It exists only for internal usage by the builders.
-func (m *AdhocPlanMutation) AdhocPlanToStatusIDs() (ids []uuid.UUID) {
-	if id := m._AdhocPlanToStatus; id != nil {
+// StatusID instead. It exists only for internal usage by the builders.
+func (m *AdhocPlanMutation) StatusIDs() (ids []uuid.UUID) {
+	if id := m._Status; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetAdhocPlanToStatus resets all changes to the "AdhocPlanToStatus" edge.
-func (m *AdhocPlanMutation) ResetAdhocPlanToStatus() {
-	m._AdhocPlanToStatus = nil
-	m.cleared_AdhocPlanToStatus = false
+// ResetStatus resets all changes to the "Status" edge.
+func (m *AdhocPlanMutation) ResetStatus() {
+	m._Status = nil
+	m.cleared_Status = false
 }
 
-// SetAdhocPlanToAgentTaskID sets the "AdhocPlanToAgentTask" edge to the AgentTask entity by id.
-func (m *AdhocPlanMutation) SetAdhocPlanToAgentTaskID(id uuid.UUID) {
-	m._AdhocPlanToAgentTask = &id
+// SetAgentTaskID sets the "AgentTask" edge to the AgentTask entity by id.
+func (m *AdhocPlanMutation) SetAgentTaskID(id uuid.UUID) {
+	m._AgentTask = &id
 }
 
-// ClearAdhocPlanToAgentTask clears the "AdhocPlanToAgentTask" edge to the AgentTask entity.
-func (m *AdhocPlanMutation) ClearAdhocPlanToAgentTask() {
-	m.cleared_AdhocPlanToAgentTask = true
+// ClearAgentTask clears the "AgentTask" edge to the AgentTask entity.
+func (m *AdhocPlanMutation) ClearAgentTask() {
+	m.cleared_AgentTask = true
 }
 
-// AdhocPlanToAgentTaskCleared reports if the "AdhocPlanToAgentTask" edge to the AgentTask entity was cleared.
-func (m *AdhocPlanMutation) AdhocPlanToAgentTaskCleared() bool {
-	return m.cleared_AdhocPlanToAgentTask
+// AgentTaskCleared reports if the "AgentTask" edge to the AgentTask entity was cleared.
+func (m *AdhocPlanMutation) AgentTaskCleared() bool {
+	return m.cleared_AgentTask
 }
 
-// AdhocPlanToAgentTaskID returns the "AdhocPlanToAgentTask" edge ID in the mutation.
-func (m *AdhocPlanMutation) AdhocPlanToAgentTaskID() (id uuid.UUID, exists bool) {
-	if m._AdhocPlanToAgentTask != nil {
-		return *m._AdhocPlanToAgentTask, true
+// AgentTaskID returns the "AgentTask" edge ID in the mutation.
+func (m *AdhocPlanMutation) AgentTaskID() (id uuid.UUID, exists bool) {
+	if m._AgentTask != nil {
+		return *m._AgentTask, true
 	}
 	return
 }
 
-// AdhocPlanToAgentTaskIDs returns the "AdhocPlanToAgentTask" edge IDs in the mutation.
+// AgentTaskIDs returns the "AgentTask" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AdhocPlanToAgentTaskID instead. It exists only for internal usage by the builders.
-func (m *AdhocPlanMutation) AdhocPlanToAgentTaskIDs() (ids []uuid.UUID) {
-	if id := m._AdhocPlanToAgentTask; id != nil {
+// AgentTaskID instead. It exists only for internal usage by the builders.
+func (m *AdhocPlanMutation) AgentTaskIDs() (ids []uuid.UUID) {
+	if id := m._AgentTask; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetAdhocPlanToAgentTask resets all changes to the "AdhocPlanToAgentTask" edge.
-func (m *AdhocPlanMutation) ResetAdhocPlanToAgentTask() {
-	m._AdhocPlanToAgentTask = nil
-	m.cleared_AdhocPlanToAgentTask = false
+// ResetAgentTask resets all changes to the "AgentTask" edge.
+func (m *AdhocPlanMutation) ResetAgentTask() {
+	m._AgentTask = nil
+	m.cleared_AgentTask = false
 }
 
 // Where appends a list predicates to the AdhocPlanMutation builder.
@@ -558,14 +558,14 @@ func (m *AdhocPlanMutation) AddedEdges() []string {
 	if m._NextAdhocPlan != nil {
 		edges = append(edges, adhocplan.EdgeNextAdhocPlan)
 	}
-	if m._AdhocPlanToBuild != nil {
-		edges = append(edges, adhocplan.EdgeAdhocPlanToBuild)
+	if m._Build != nil {
+		edges = append(edges, adhocplan.EdgeBuild)
 	}
-	if m._AdhocPlanToStatus != nil {
-		edges = append(edges, adhocplan.EdgeAdhocPlanToStatus)
+	if m._Status != nil {
+		edges = append(edges, adhocplan.EdgeStatus)
 	}
-	if m._AdhocPlanToAgentTask != nil {
-		edges = append(edges, adhocplan.EdgeAdhocPlanToAgentTask)
+	if m._AgentTask != nil {
+		edges = append(edges, adhocplan.EdgeAgentTask)
 	}
 	return edges
 }
@@ -586,16 +586,16 @@ func (m *AdhocPlanMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case adhocplan.EdgeAdhocPlanToBuild:
-		if id := m._AdhocPlanToBuild; id != nil {
+	case adhocplan.EdgeBuild:
+		if id := m._Build; id != nil {
 			return []ent.Value{*id}
 		}
-	case adhocplan.EdgeAdhocPlanToStatus:
-		if id := m._AdhocPlanToStatus; id != nil {
+	case adhocplan.EdgeStatus:
+		if id := m._Status; id != nil {
 			return []ent.Value{*id}
 		}
-	case adhocplan.EdgeAdhocPlanToAgentTask:
-		if id := m._AdhocPlanToAgentTask; id != nil {
+	case adhocplan.EdgeAgentTask:
+		if id := m._AgentTask; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -643,14 +643,14 @@ func (m *AdhocPlanMutation) ClearedEdges() []string {
 	if m.cleared_NextAdhocPlan {
 		edges = append(edges, adhocplan.EdgeNextAdhocPlan)
 	}
-	if m.cleared_AdhocPlanToBuild {
-		edges = append(edges, adhocplan.EdgeAdhocPlanToBuild)
+	if m.cleared_Build {
+		edges = append(edges, adhocplan.EdgeBuild)
 	}
-	if m.cleared_AdhocPlanToStatus {
-		edges = append(edges, adhocplan.EdgeAdhocPlanToStatus)
+	if m.cleared_Status {
+		edges = append(edges, adhocplan.EdgeStatus)
 	}
-	if m.cleared_AdhocPlanToAgentTask {
-		edges = append(edges, adhocplan.EdgeAdhocPlanToAgentTask)
+	if m.cleared_AgentTask {
+		edges = append(edges, adhocplan.EdgeAgentTask)
 	}
 	return edges
 }
@@ -663,12 +663,12 @@ func (m *AdhocPlanMutation) EdgeCleared(name string) bool {
 		return m.cleared_PrevAdhocPlan
 	case adhocplan.EdgeNextAdhocPlan:
 		return m.cleared_NextAdhocPlan
-	case adhocplan.EdgeAdhocPlanToBuild:
-		return m.cleared_AdhocPlanToBuild
-	case adhocplan.EdgeAdhocPlanToStatus:
-		return m.cleared_AdhocPlanToStatus
-	case adhocplan.EdgeAdhocPlanToAgentTask:
-		return m.cleared_AdhocPlanToAgentTask
+	case adhocplan.EdgeBuild:
+		return m.cleared_Build
+	case adhocplan.EdgeStatus:
+		return m.cleared_Status
+	case adhocplan.EdgeAgentTask:
+		return m.cleared_AgentTask
 	}
 	return false
 }
@@ -677,14 +677,14 @@ func (m *AdhocPlanMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *AdhocPlanMutation) ClearEdge(name string) error {
 	switch name {
-	case adhocplan.EdgeAdhocPlanToBuild:
-		m.ClearAdhocPlanToBuild()
+	case adhocplan.EdgeBuild:
+		m.ClearBuild()
 		return nil
-	case adhocplan.EdgeAdhocPlanToStatus:
-		m.ClearAdhocPlanToStatus()
+	case adhocplan.EdgeStatus:
+		m.ClearStatus()
 		return nil
-	case adhocplan.EdgeAdhocPlanToAgentTask:
-		m.ClearAdhocPlanToAgentTask()
+	case adhocplan.EdgeAgentTask:
+		m.ClearAgentTask()
 		return nil
 	}
 	return fmt.Errorf("unknown AdhocPlan unique edge %s", name)
@@ -700,14 +700,14 @@ func (m *AdhocPlanMutation) ResetEdge(name string) error {
 	case adhocplan.EdgeNextAdhocPlan:
 		m.ResetNextAdhocPlan()
 		return nil
-	case adhocplan.EdgeAdhocPlanToBuild:
-		m.ResetAdhocPlanToBuild()
+	case adhocplan.EdgeBuild:
+		m.ResetBuild()
 		return nil
-	case adhocplan.EdgeAdhocPlanToStatus:
-		m.ResetAdhocPlanToStatus()
+	case adhocplan.EdgeStatus:
+		m.ResetStatus()
 		return nil
-	case adhocplan.EdgeAdhocPlanToAgentTask:
-		m.ResetAdhocPlanToAgentTask()
+	case adhocplan.EdgeAgentTask:
+		m.ResetAgentTask()
 		return nil
 	}
 	return fmt.Errorf("unknown AdhocPlan edge %s", name)

@@ -51,6 +51,6 @@ func (AgentTask) Edges() []ent.Edge {
 			Required().
 			Unique(),
 		edge.From("AgentTaskToAdhocPlan", AdhocPlan.Type).
-			Ref("AdhocPlanToAgentTask"),
+			Ref("AgentTask"),
 	}
 }

@@ -64,7 +64,7 @@ type Status struct {
 	// StatusToProvisioningScheduledStep holds the value of the StatusToProvisioningScheduledStep edge.
 	HCLStatusToProvisioningScheduledStep *ProvisioningScheduledStep `json:"StatusToProvisioningScheduledStep,omitempty"`
 	//
-	adhoc_plan_adhoc_plan_to_status                   *uuid.UUID
+	adhoc_plan_status                                 *uuid.UUID
 	build_build_to_status                             *uuid.UUID
 	plan_plan_to_status                               *uuid.UUID
 	provisioned_host_provisioned_host_to_status       *uuid.UUID
@@ -239,7 +239,7 @@ func (*Status) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullTime)
 		case status.FieldID:
 			values[i] = new(uuid.UUID)
-		case status.ForeignKeys[0]: // adhoc_plan_adhoc_plan_to_status
+		case status.ForeignKeys[0]: // adhoc_plan_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case status.ForeignKeys[1]: // build_build_to_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -322,10 +322,10 @@ func (s *Status) assignValues(columns []string, values []interface{}) error {
 			}
 		case status.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field adhoc_plan_adhoc_plan_to_status", values[i])
+				return fmt.Errorf("unexpected type %T for field adhoc_plan_status", values[i])
 			} else if value.Valid {
-				s.adhoc_plan_adhoc_plan_to_status = new(uuid.UUID)
-				*s.adhoc_plan_adhoc_plan_to_status = *value.S.(*uuid.UUID)
+				s.adhoc_plan_status = new(uuid.UUID)
+				*s.adhoc_plan_status = *value.S.(*uuid.UUID)
 			}
 		case status.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

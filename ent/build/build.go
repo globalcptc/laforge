@@ -114,7 +114,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "adhocplan" package.
 	BuildToAdhocPlansInverseTable = "adhoc_plans"
 	// BuildToAdhocPlansColumn is the table column denoting the BuildToAdhocPlans relation/edge.
-	BuildToAdhocPlansColumn = "adhoc_plan_adhoc_plan_to_build"
+	BuildToAdhocPlansColumn = "adhoc_plan_build"
 	// BuildToAgentStatusesTable is the table that holds the BuildToAgentStatuses relation/edge.
 	BuildToAgentStatusesTable = "agent_status"
 	// BuildToAgentStatusesInverseTable is the table name for the AgentStatus entity.

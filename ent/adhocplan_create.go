@@ -67,37 +67,37 @@ func (apc *AdhocPlanCreate) AddNextAdhocPlan(a ...*AdhocPlan) *AdhocPlanCreate {
 	return apc.AddNextAdhocPlanIDs(ids...)
 }
 
-// SetAdhocPlanToBuildID sets the "AdhocPlanToBuild" edge to the Build entity by ID.
-func (apc *AdhocPlanCreate) SetAdhocPlanToBuildID(id uuid.UUID) *AdhocPlanCreate {
-	apc.mutation.SetAdhocPlanToBuildID(id)
+// SetBuildID sets the "Build" edge to the Build entity by ID.
+func (apc *AdhocPlanCreate) SetBuildID(id uuid.UUID) *AdhocPlanCreate {
+	apc.mutation.SetBuildID(id)
 	return apc
 }
 
-// SetAdhocPlanToBuild sets the "AdhocPlanToBuild" edge to the Build entity.
-func (apc *AdhocPlanCreate) SetAdhocPlanToBuild(b *Build) *AdhocPlanCreate {
-	return apc.SetAdhocPlanToBuildID(b.ID)
+// SetBuild sets the "Build" edge to the Build entity.
+func (apc *AdhocPlanCreate) SetBuild(b *Build) *AdhocPlanCreate {
+	return apc.SetBuildID(b.ID)
 }
 
-// SetAdhocPlanToStatusID sets the "AdhocPlanToStatus" edge to the Status entity by ID.
-func (apc *AdhocPlanCreate) SetAdhocPlanToStatusID(id uuid.UUID) *AdhocPlanCreate {
-	apc.mutation.SetAdhocPlanToStatusID(id)
+// SetStatusID sets the "Status" edge to the Status entity by ID.
+func (apc *AdhocPlanCreate) SetStatusID(id uuid.UUID) *AdhocPlanCreate {
+	apc.mutation.SetStatusID(id)
 	return apc
 }
 
-// SetAdhocPlanToStatus sets the "AdhocPlanToStatus" edge to the Status entity.
-func (apc *AdhocPlanCreate) SetAdhocPlanToStatus(s *Status) *AdhocPlanCreate {
-	return apc.SetAdhocPlanToStatusID(s.ID)
+// SetStatus sets the "Status" edge to the Status entity.
+func (apc *AdhocPlanCreate) SetStatus(s *Status) *AdhocPlanCreate {
+	return apc.SetStatusID(s.ID)
 }
 
-// SetAdhocPlanToAgentTaskID sets the "AdhocPlanToAgentTask" edge to the AgentTask entity by ID.
-func (apc *AdhocPlanCreate) SetAdhocPlanToAgentTaskID(id uuid.UUID) *AdhocPlanCreate {
-	apc.mutation.SetAdhocPlanToAgentTaskID(id)
+// SetAgentTaskID sets the "AgentTask" edge to the AgentTask entity by ID.
+func (apc *AdhocPlanCreate) SetAgentTaskID(id uuid.UUID) *AdhocPlanCreate {
+	apc.mutation.SetAgentTaskID(id)
 	return apc
 }
 
-// SetAdhocPlanToAgentTask sets the "AdhocPlanToAgentTask" edge to the AgentTask entity.
-func (apc *AdhocPlanCreate) SetAdhocPlanToAgentTask(a *AgentTask) *AdhocPlanCreate {
-	return apc.SetAdhocPlanToAgentTaskID(a.ID)
+// SetAgentTask sets the "AgentTask" edge to the AgentTask entity.
+func (apc *AdhocPlanCreate) SetAgentTask(a *AgentTask) *AdhocPlanCreate {
+	return apc.SetAgentTaskID(a.ID)
 }
 
 // Mutation returns the AdhocPlanMutation object of the builder.
@@ -185,14 +185,14 @@ func (apc *AdhocPlanCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (apc *AdhocPlanCreate) check() error {
-	if _, ok := apc.mutation.AdhocPlanToBuildID(); !ok {
-		return &ValidationError{Name: "AdhocPlanToBuild", err: errors.New(`ent: missing required edge "AdhocPlan.AdhocPlanToBuild"`)}
+	if _, ok := apc.mutation.BuildID(); !ok {
+		return &ValidationError{Name: "Build", err: errors.New(`ent: missing required edge "AdhocPlan.Build"`)}
 	}
-	if _, ok := apc.mutation.AdhocPlanToStatusID(); !ok {
-		return &ValidationError{Name: "AdhocPlanToStatus", err: errors.New(`ent: missing required edge "AdhocPlan.AdhocPlanToStatus"`)}
+	if _, ok := apc.mutation.StatusID(); !ok {
+		return &ValidationError{Name: "Status", err: errors.New(`ent: missing required edge "AdhocPlan.Status"`)}
 	}
-	if _, ok := apc.mutation.AdhocPlanToAgentTaskID(); !ok {
-		return &ValidationError{Name: "AdhocPlanToAgentTask", err: errors.New(`ent: missing required edge "AdhocPlan.AdhocPlanToAgentTask"`)}
+	if _, ok := apc.mutation.AgentTaskID(); !ok {
+		return &ValidationError{Name: "AgentTask", err: errors.New(`ent: missing required edge "AdhocPlan.AgentTask"`)}
 	}
 	return nil
 }
@@ -268,12 +268,12 @@ func (apc *AdhocPlanCreate) createSpec() (*AdhocPlan, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := apc.mutation.AdhocPlanToBuildIDs(); len(nodes) > 0 {
+	if nodes := apc.mutation.BuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   adhocplan.AdhocPlanToBuildTable,
-			Columns: []string{adhocplan.AdhocPlanToBuildColumn},
+			Table:   adhocplan.BuildTable,
+			Columns: []string{adhocplan.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -285,15 +285,15 @@ func (apc *AdhocPlanCreate) createSpec() (*AdhocPlan, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.adhoc_plan_adhoc_plan_to_build = &nodes[0]
+		_node.adhoc_plan_build = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := apc.mutation.AdhocPlanToStatusIDs(); len(nodes) > 0 {
+	if nodes := apc.mutation.StatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   adhocplan.AdhocPlanToStatusTable,
-			Columns: []string{adhocplan.AdhocPlanToStatusColumn},
+			Table:   adhocplan.StatusTable,
+			Columns: []string{adhocplan.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -307,12 +307,12 @@ func (apc *AdhocPlanCreate) createSpec() (*AdhocPlan, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := apc.mutation.AdhocPlanToAgentTaskIDs(); len(nodes) > 0 {
+	if nodes := apc.mutation.AgentTaskIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   adhocplan.AdhocPlanToAgentTaskTable,
-			Columns: []string{adhocplan.AdhocPlanToAgentTaskColumn},
+			Table:   adhocplan.AgentTaskTable,
+			Columns: []string{adhocplan.AgentTaskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -324,7 +324,7 @@ func (apc *AdhocPlanCreate) createSpec() (*AdhocPlan, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.adhoc_plan_adhoc_plan_to_agent_task = &nodes[0]
+		_node.adhoc_plan_agent_task = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

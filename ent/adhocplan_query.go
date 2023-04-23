@@ -22,18 +22,18 @@ import (
 // AdhocPlanQuery is the builder for querying AdhocPlan entities.
 type AdhocPlanQuery struct {
 	config
-	limit                    *int
-	offset                   *int
-	unique                   *bool
-	order                    []OrderFunc
-	fields                   []string
-	predicates               []predicate.AdhocPlan
-	withPrevAdhocPlan        *AdhocPlanQuery
-	withNextAdhocPlan        *AdhocPlanQuery
-	withAdhocPlanToBuild     *BuildQuery
-	withAdhocPlanToStatus    *StatusQuery
-	withAdhocPlanToAgentTask *AgentTaskQuery
-	withFKs                  bool
+	limit             *int
+	offset            *int
+	unique            *bool
+	order             []OrderFunc
+	fields            []string
+	predicates        []predicate.AdhocPlan
+	withPrevAdhocPlan *AdhocPlanQuery
+	withNextAdhocPlan *AdhocPlanQuery
+	withBuild         *BuildQuery
+	withStatus        *StatusQuery
+	withAgentTask     *AgentTaskQuery
+	withFKs           bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -114,8 +114,8 @@ func (apq *AdhocPlanQuery) QueryNextAdhocPlan() *AdhocPlanQuery {
 	return query
 }
 
-// QueryAdhocPlanToBuild chains the current query on the "AdhocPlanToBuild" edge.
-func (apq *AdhocPlanQuery) QueryAdhocPlanToBuild() *BuildQuery {
+// QueryBuild chains the current query on the "Build" edge.
+func (apq *AdhocPlanQuery) QueryBuild() *BuildQuery {
 	query := &BuildQuery{config: apq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := apq.prepareQuery(ctx); err != nil {
@@ -128,7 +128,7 @@ func (apq *AdhocPlanQuery) QueryAdhocPlanToBuild() *BuildQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(adhocplan.Table, adhocplan.FieldID, selector),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, adhocplan.AdhocPlanToBuildTable, adhocplan.AdhocPlanToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, adhocplan.BuildTable, adhocplan.BuildColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(apq.driver.Dialect(), step)
 		return fromU, nil
@@ -136,8 +136,8 @@ func (apq *AdhocPlanQuery) QueryAdhocPlanToBuild() *BuildQuery {
 	return query
 }
 
-// QueryAdhocPlanToStatus chains the current query on the "AdhocPlanToStatus" edge.
-func (apq *AdhocPlanQuery) QueryAdhocPlanToStatus() *StatusQuery {
+// QueryStatus chains the current query on the "Status" edge.
+func (apq *AdhocPlanQuery) QueryStatus() *StatusQuery {
 	query := &StatusQuery{config: apq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := apq.prepareQuery(ctx); err != nil {
@@ -150,7 +150,7 @@ func (apq *AdhocPlanQuery) QueryAdhocPlanToStatus() *StatusQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(adhocplan.Table, adhocplan.FieldID, selector),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, adhocplan.AdhocPlanToStatusTable, adhocplan.AdhocPlanToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, adhocplan.StatusTable, adhocplan.StatusColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(apq.driver.Dialect(), step)
 		return fromU, nil
@@ -158,8 +158,8 @@ func (apq *AdhocPlanQuery) QueryAdhocPlanToStatus() *StatusQuery {
 	return query
 }
 
-// QueryAdhocPlanToAgentTask chains the current query on the "AdhocPlanToAgentTask" edge.
-func (apq *AdhocPlanQuery) QueryAdhocPlanToAgentTask() *AgentTaskQuery {
+// QueryAgentTask chains the current query on the "AgentTask" edge.
+func (apq *AdhocPlanQuery) QueryAgentTask() *AgentTaskQuery {
 	query := &AgentTaskQuery{config: apq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := apq.prepareQuery(ctx); err != nil {
@@ -172,7 +172,7 @@ func (apq *AdhocPlanQuery) QueryAdhocPlanToAgentTask() *AgentTaskQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(adhocplan.Table, adhocplan.FieldID, selector),
 			sqlgraph.To(agenttask.Table, agenttask.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, adhocplan.AdhocPlanToAgentTaskTable, adhocplan.AdhocPlanToAgentTaskColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, adhocplan.AgentTaskTable, adhocplan.AgentTaskColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(apq.driver.Dialect(), step)
 		return fromU, nil
@@ -356,16 +356,16 @@ func (apq *AdhocPlanQuery) Clone() *AdhocPlanQuery {
 		return nil
 	}
 	return &AdhocPlanQuery{
-		config:                   apq.config,
-		limit:                    apq.limit,
-		offset:                   apq.offset,
-		order:                    append([]OrderFunc{}, apq.order...),
-		predicates:               append([]predicate.AdhocPlan{}, apq.predicates...),
-		withPrevAdhocPlan:        apq.withPrevAdhocPlan.Clone(),
-		withNextAdhocPlan:        apq.withNextAdhocPlan.Clone(),
-		withAdhocPlanToBuild:     apq.withAdhocPlanToBuild.Clone(),
-		withAdhocPlanToStatus:    apq.withAdhocPlanToStatus.Clone(),
-		withAdhocPlanToAgentTask: apq.withAdhocPlanToAgentTask.Clone(),
+		config:            apq.config,
+		limit:             apq.limit,
+		offset:            apq.offset,
+		order:             append([]OrderFunc{}, apq.order...),
+		predicates:        append([]predicate.AdhocPlan{}, apq.predicates...),
+		withPrevAdhocPlan: apq.withPrevAdhocPlan.Clone(),
+		withNextAdhocPlan: apq.withNextAdhocPlan.Clone(),
+		withBuild:         apq.withBuild.Clone(),
+		withStatus:        apq.withStatus.Clone(),
+		withAgentTask:     apq.withAgentTask.Clone(),
 		// clone intermediate query.
 		sql:    apq.sql.Clone(),
 		path:   apq.path,
@@ -395,36 +395,36 @@ func (apq *AdhocPlanQuery) WithNextAdhocPlan(opts ...func(*AdhocPlanQuery)) *Adh
 	return apq
 }
 
-// WithAdhocPlanToBuild tells the query-builder to eager-load the nodes that are connected to
-// the "AdhocPlanToBuild" edge. The optional arguments are used to configure the query builder of the edge.
-func (apq *AdhocPlanQuery) WithAdhocPlanToBuild(opts ...func(*BuildQuery)) *AdhocPlanQuery {
+// WithBuild tells the query-builder to eager-load the nodes that are connected to
+// the "Build" edge. The optional arguments are used to configure the query builder of the edge.
+func (apq *AdhocPlanQuery) WithBuild(opts ...func(*BuildQuery)) *AdhocPlanQuery {
 	query := &BuildQuery{config: apq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	apq.withAdhocPlanToBuild = query
+	apq.withBuild = query
 	return apq
 }
 
-// WithAdhocPlanToStatus tells the query-builder to eager-load the nodes that are connected to
-// the "AdhocPlanToStatus" edge. The optional arguments are used to configure the query builder of the edge.
-func (apq *AdhocPlanQuery) WithAdhocPlanToStatus(opts ...func(*StatusQuery)) *AdhocPlanQuery {
+// WithStatus tells the query-builder to eager-load the nodes that are connected to
+// the "Status" edge. The optional arguments are used to configure the query builder of the edge.
+func (apq *AdhocPlanQuery) WithStatus(opts ...func(*StatusQuery)) *AdhocPlanQuery {
 	query := &StatusQuery{config: apq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	apq.withAdhocPlanToStatus = query
+	apq.withStatus = query
 	return apq
 }
 
-// WithAdhocPlanToAgentTask tells the query-builder to eager-load the nodes that are connected to
-// the "AdhocPlanToAgentTask" edge. The optional arguments are used to configure the query builder of the edge.
-func (apq *AdhocPlanQuery) WithAdhocPlanToAgentTask(opts ...func(*AgentTaskQuery)) *AdhocPlanQuery {
+// WithAgentTask tells the query-builder to eager-load the nodes that are connected to
+// the "AgentTask" edge. The optional arguments are used to configure the query builder of the edge.
+func (apq *AdhocPlanQuery) WithAgentTask(opts ...func(*AgentTaskQuery)) *AdhocPlanQuery {
 	query := &AgentTaskQuery{config: apq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	apq.withAdhocPlanToAgentTask = query
+	apq.withAgentTask = query
 	return apq
 }
 
@@ -478,12 +478,12 @@ func (apq *AdhocPlanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 		loadedTypes = [5]bool{
 			apq.withPrevAdhocPlan != nil,
 			apq.withNextAdhocPlan != nil,
-			apq.withAdhocPlanToBuild != nil,
-			apq.withAdhocPlanToStatus != nil,
-			apq.withAdhocPlanToAgentTask != nil,
+			apq.withBuild != nil,
+			apq.withStatus != nil,
+			apq.withAgentTask != nil,
 		}
 	)
-	if apq.withAdhocPlanToBuild != nil || apq.withAdhocPlanToAgentTask != nil {
+	if apq.withBuild != nil || apq.withAgentTask != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -521,21 +521,21 @@ func (apq *AdhocPlanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 			return nil, err
 		}
 	}
-	if query := apq.withAdhocPlanToBuild; query != nil {
-		if err := apq.loadAdhocPlanToBuild(ctx, query, nodes, nil,
-			func(n *AdhocPlan, e *Build) { n.Edges.AdhocPlanToBuild = e }); err != nil {
+	if query := apq.withBuild; query != nil {
+		if err := apq.loadBuild(ctx, query, nodes, nil,
+			func(n *AdhocPlan, e *Build) { n.Edges.Build = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := apq.withAdhocPlanToStatus; query != nil {
-		if err := apq.loadAdhocPlanToStatus(ctx, query, nodes, nil,
-			func(n *AdhocPlan, e *Status) { n.Edges.AdhocPlanToStatus = e }); err != nil {
+	if query := apq.withStatus; query != nil {
+		if err := apq.loadStatus(ctx, query, nodes, nil,
+			func(n *AdhocPlan, e *Status) { n.Edges.Status = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := apq.withAdhocPlanToAgentTask; query != nil {
-		if err := apq.loadAdhocPlanToAgentTask(ctx, query, nodes, nil,
-			func(n *AdhocPlan, e *AgentTask) { n.Edges.AdhocPlanToAgentTask = e }); err != nil {
+	if query := apq.withAgentTask; query != nil {
+		if err := apq.loadAgentTask(ctx, query, nodes, nil,
+			func(n *AdhocPlan, e *AgentTask) { n.Edges.AgentTask = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -658,14 +658,14 @@ func (apq *AdhocPlanQuery) loadNextAdhocPlan(ctx context.Context, query *AdhocPl
 	}
 	return nil
 }
-func (apq *AdhocPlanQuery) loadAdhocPlanToBuild(ctx context.Context, query *BuildQuery, nodes []*AdhocPlan, init func(*AdhocPlan), assign func(*AdhocPlan, *Build)) error {
+func (apq *AdhocPlanQuery) loadBuild(ctx context.Context, query *BuildQuery, nodes []*AdhocPlan, init func(*AdhocPlan), assign func(*AdhocPlan, *Build)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*AdhocPlan)
 	for i := range nodes {
-		if nodes[i].adhoc_plan_adhoc_plan_to_build == nil {
+		if nodes[i].adhoc_plan_build == nil {
 			continue
 		}
-		fk := *nodes[i].adhoc_plan_adhoc_plan_to_build
+		fk := *nodes[i].adhoc_plan_build
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -679,7 +679,7 @@ func (apq *AdhocPlanQuery) loadAdhocPlanToBuild(ctx context.Context, query *Buil
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_adhoc_plan_to_build" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_build" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -687,7 +687,7 @@ func (apq *AdhocPlanQuery) loadAdhocPlanToBuild(ctx context.Context, query *Buil
 	}
 	return nil
 }
-func (apq *AdhocPlanQuery) loadAdhocPlanToStatus(ctx context.Context, query *StatusQuery, nodes []*AdhocPlan, init func(*AdhocPlan), assign func(*AdhocPlan, *Status)) error {
+func (apq *AdhocPlanQuery) loadStatus(ctx context.Context, query *StatusQuery, nodes []*AdhocPlan, init func(*AdhocPlan), assign func(*AdhocPlan, *Status)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*AdhocPlan)
 	for i := range nodes {
@@ -696,33 +696,33 @@ func (apq *AdhocPlanQuery) loadAdhocPlanToStatus(ctx context.Context, query *Sta
 	}
 	query.withFKs = true
 	query.Where(predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.InValues(adhocplan.AdhocPlanToStatusColumn, fks...))
+		s.Where(sql.InValues(adhocplan.StatusColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.adhoc_plan_adhoc_plan_to_status
+		fk := n.adhoc_plan_status
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "adhoc_plan_adhoc_plan_to_status" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "adhoc_plan_status" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_adhoc_plan_to_status" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_status" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (apq *AdhocPlanQuery) loadAdhocPlanToAgentTask(ctx context.Context, query *AgentTaskQuery, nodes []*AdhocPlan, init func(*AdhocPlan), assign func(*AdhocPlan, *AgentTask)) error {
+func (apq *AdhocPlanQuery) loadAgentTask(ctx context.Context, query *AgentTaskQuery, nodes []*AdhocPlan, init func(*AdhocPlan), assign func(*AdhocPlan, *AgentTask)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*AdhocPlan)
 	for i := range nodes {
-		if nodes[i].adhoc_plan_adhoc_plan_to_agent_task == nil {
+		if nodes[i].adhoc_plan_agent_task == nil {
 			continue
 		}
-		fk := *nodes[i].adhoc_plan_adhoc_plan_to_agent_task
+		fk := *nodes[i].adhoc_plan_agent_task
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -736,7 +736,7 @@ func (apq *AdhocPlanQuery) loadAdhocPlanToAgentTask(ctx context.Context, query *
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_adhoc_plan_to_agent_task" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_agent_task" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

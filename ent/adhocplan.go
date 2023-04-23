@@ -28,15 +28,15 @@ type AdhocPlan struct {
 	HCLPrevAdhocPlan []*AdhocPlan `json:"PrevAdhocPlan,omitempty"`
 	// NextAdhocPlan holds the value of the NextAdhocPlan edge.
 	HCLNextAdhocPlan []*AdhocPlan `json:"NextAdhocPlan,omitempty"`
-	// AdhocPlanToBuild holds the value of the AdhocPlanToBuild edge.
-	HCLAdhocPlanToBuild *Build `json:"AdhocPlanToBuild,omitempty"`
-	// AdhocPlanToStatus holds the value of the AdhocPlanToStatus edge.
-	HCLAdhocPlanToStatus *Status `json:"AdhocPlanToStatus,omitempty"`
-	// AdhocPlanToAgentTask holds the value of the AdhocPlanToAgentTask edge.
-	HCLAdhocPlanToAgentTask *AgentTask `json:"AdhocPlanToAgentTask,omitempty"`
+	// Build holds the value of the Build edge.
+	HCLBuild *Build `json:"Build,omitempty"`
+	// Status holds the value of the Status edge.
+	HCLStatus *Status `json:"Status,omitempty"`
+	// AgentTask holds the value of the AgentTask edge.
+	HCLAgentTask *AgentTask `json:"AgentTask,omitempty"`
 	//
-	adhoc_plan_adhoc_plan_to_build      *uuid.UUID
-	adhoc_plan_adhoc_plan_to_agent_task *uuid.UUID
+	adhoc_plan_build      *uuid.UUID
+	adhoc_plan_agent_task *uuid.UUID
 }
 
 // AdhocPlanEdges holds the relations/edges for other nodes in the graph.
@@ -45,12 +45,12 @@ type AdhocPlanEdges struct {
 	PrevAdhocPlan []*AdhocPlan `json:"PrevAdhocPlan,omitempty"`
 	// NextAdhocPlan holds the value of the NextAdhocPlan edge.
 	NextAdhocPlan []*AdhocPlan `json:"NextAdhocPlan,omitempty"`
-	// AdhocPlanToBuild holds the value of the AdhocPlanToBuild edge.
-	AdhocPlanToBuild *Build `json:"AdhocPlanToBuild,omitempty"`
-	// AdhocPlanToStatus holds the value of the AdhocPlanToStatus edge.
-	AdhocPlanToStatus *Status `json:"AdhocPlanToStatus,omitempty"`
-	// AdhocPlanToAgentTask holds the value of the AdhocPlanToAgentTask edge.
-	AdhocPlanToAgentTask *AgentTask `json:"AdhocPlanToAgentTask,omitempty"`
+	// Build holds the value of the Build edge.
+	Build *Build `json:"Build,omitempty"`
+	// Status holds the value of the Status edge.
+	Status *Status `json:"Status,omitempty"`
+	// AgentTask holds the value of the AgentTask edge.
+	AgentTask *AgentTask `json:"AgentTask,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [5]bool
@@ -74,46 +74,46 @@ func (e AdhocPlanEdges) NextAdhocPlanOrErr() ([]*AdhocPlan, error) {
 	return nil, &NotLoadedError{edge: "NextAdhocPlan"}
 }
 
-// AdhocPlanToBuildOrErr returns the AdhocPlanToBuild value or an error if the edge
+// BuildOrErr returns the Build value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e AdhocPlanEdges) AdhocPlanToBuildOrErr() (*Build, error) {
+func (e AdhocPlanEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[2] {
-		if e.AdhocPlanToBuild == nil {
-			// The edge AdhocPlanToBuild was loaded in eager-loading,
+		if e.Build == nil {
+			// The edge Build was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
-		return e.AdhocPlanToBuild, nil
+		return e.Build, nil
 	}
-	return nil, &NotLoadedError{edge: "AdhocPlanToBuild"}
+	return nil, &NotLoadedError{edge: "Build"}
 }
 
-// AdhocPlanToStatusOrErr returns the AdhocPlanToStatus value or an error if the edge
+// StatusOrErr returns the Status value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e AdhocPlanEdges) AdhocPlanToStatusOrErr() (*Status, error) {
+func (e AdhocPlanEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[3] {
-		if e.AdhocPlanToStatus == nil {
-			// The edge AdhocPlanToStatus was loaded in eager-loading,
+		if e.Status == nil {
+			// The edge Status was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
-		return e.AdhocPlanToStatus, nil
+		return e.Status, nil
 	}
-	return nil, &NotLoadedError{edge: "AdhocPlanToStatus"}
+	return nil, &NotLoadedError{edge: "Status"}
 }
 
-// AdhocPlanToAgentTaskOrErr returns the AdhocPlanToAgentTask value or an error if the edge
+// AgentTaskOrErr returns the AgentTask value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e AdhocPlanEdges) AdhocPlanToAgentTaskOrErr() (*AgentTask, error) {
+func (e AdhocPlanEdges) AgentTaskOrErr() (*AgentTask, error) {
 	if e.loadedTypes[4] {
-		if e.AdhocPlanToAgentTask == nil {
-			// The edge AdhocPlanToAgentTask was loaded in eager-loading,
+		if e.AgentTask == nil {
+			// The edge AgentTask was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: agenttask.Label}
 		}
-		return e.AdhocPlanToAgentTask, nil
+		return e.AgentTask, nil
 	}
-	return nil, &NotLoadedError{edge: "AdhocPlanToAgentTask"}
+	return nil, &NotLoadedError{edge: "AgentTask"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -123,9 +123,9 @@ func (*AdhocPlan) scanValues(columns []string) ([]interface{}, error) {
 		switch columns[i] {
 		case adhocplan.FieldID:
 			values[i] = new(uuid.UUID)
-		case adhocplan.ForeignKeys[0]: // adhoc_plan_adhoc_plan_to_build
+		case adhocplan.ForeignKeys[0]: // adhoc_plan_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case adhocplan.ForeignKeys[1]: // adhoc_plan_adhoc_plan_to_agent_task
+		case adhocplan.ForeignKeys[1]: // adhoc_plan_agent_task
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type AdhocPlan", columns[i])
@@ -150,17 +150,17 @@ func (ap *AdhocPlan) assignValues(columns []string, values []interface{}) error 
 			}
 		case adhocplan.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field adhoc_plan_adhoc_plan_to_build", values[i])
+				return fmt.Errorf("unexpected type %T for field adhoc_plan_build", values[i])
 			} else if value.Valid {
-				ap.adhoc_plan_adhoc_plan_to_build = new(uuid.UUID)
-				*ap.adhoc_plan_adhoc_plan_to_build = *value.S.(*uuid.UUID)
+				ap.adhoc_plan_build = new(uuid.UUID)
+				*ap.adhoc_plan_build = *value.S.(*uuid.UUID)
 			}
 		case adhocplan.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field adhoc_plan_adhoc_plan_to_agent_task", values[i])
+				return fmt.Errorf("unexpected type %T for field adhoc_plan_agent_task", values[i])
 			} else if value.Valid {
-				ap.adhoc_plan_adhoc_plan_to_agent_task = new(uuid.UUID)
-				*ap.adhoc_plan_adhoc_plan_to_agent_task = *value.S.(*uuid.UUID)
+				ap.adhoc_plan_agent_task = new(uuid.UUID)
+				*ap.adhoc_plan_agent_task = *value.S.(*uuid.UUID)
 			}
 		}
 	}
@@ -177,19 +177,19 @@ func (ap *AdhocPlan) QueryNextAdhocPlan() *AdhocPlanQuery {
 	return (&AdhocPlanClient{config: ap.config}).QueryNextAdhocPlan(ap)
 }
 
-// QueryAdhocPlanToBuild queries the "AdhocPlanToBuild" edge of the AdhocPlan entity.
-func (ap *AdhocPlan) QueryAdhocPlanToBuild() *BuildQuery {
-	return (&AdhocPlanClient{config: ap.config}).QueryAdhocPlanToBuild(ap)
+// QueryBuild queries the "Build" edge of the AdhocPlan entity.
+func (ap *AdhocPlan) QueryBuild() *BuildQuery {
+	return (&AdhocPlanClient{config: ap.config}).QueryBuild(ap)
 }
 
-// QueryAdhocPlanToStatus queries the "AdhocPlanToStatus" edge of the AdhocPlan entity.
-func (ap *AdhocPlan) QueryAdhocPlanToStatus() *StatusQuery {
-	return (&AdhocPlanClient{config: ap.config}).QueryAdhocPlanToStatus(ap)
+// QueryStatus queries the "Status" edge of the AdhocPlan entity.
+func (ap *AdhocPlan) QueryStatus() *StatusQuery {
+	return (&AdhocPlanClient{config: ap.config}).QueryStatus(ap)
 }
 
-// QueryAdhocPlanToAgentTask queries the "AdhocPlanToAgentTask" edge of the AdhocPlan entity.
-func (ap *AdhocPlan) QueryAdhocPlanToAgentTask() *AgentTaskQuery {
-	return (&AdhocPlanClient{config: ap.config}).QueryAdhocPlanToAgentTask(ap)
+// QueryAgentTask queries the "AgentTask" edge of the AdhocPlan entity.
+func (ap *AdhocPlan) QueryAgentTask() *AgentTaskQuery {
+	return (&AdhocPlanClient{config: ap.config}).QueryAgentTask(ap)
 }
 
 // Update returns a builder for updating this AdhocPlan.

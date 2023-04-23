@@ -661,7 +661,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.adhoc_plan_adhoc_plan_to_status = &nodes[0]
+		_node.adhoc_plan_status = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := sc.mutation.StatusToProvisioningScheduledStepIDs(); len(nodes) > 0 {

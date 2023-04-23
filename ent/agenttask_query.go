@@ -629,13 +629,13 @@ func (atq *AgentTaskQuery) loadAgentTaskToAdhocPlan(ctx context.Context, query *
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.adhoc_plan_adhoc_plan_to_agent_task
+		fk := n.adhoc_plan_agent_task
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "adhoc_plan_adhoc_plan_to_agent_task" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "adhoc_plan_agent_task" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_adhoc_plan_to_agent_task" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_agent_task" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

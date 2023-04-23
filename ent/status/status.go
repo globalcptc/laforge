@@ -104,7 +104,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "adhocplan" package.
 	StatusToAdhocPlanInverseTable = "adhoc_plans"
 	// StatusToAdhocPlanColumn is the table column denoting the StatusToAdhocPlan relation/edge.
-	StatusToAdhocPlanColumn = "adhoc_plan_adhoc_plan_to_status"
+	StatusToAdhocPlanColumn = "adhoc_plan_status"
 	// StatusToProvisioningScheduledStepTable is the table that holds the StatusToProvisioningScheduledStep relation/edge.
 	StatusToProvisioningScheduledStepTable = "status"
 	// StatusToProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
@@ -129,7 +129,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "status"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"adhoc_plan_adhoc_plan_to_status",
+	"adhoc_plan_status",
 	"build_build_to_status",
 	"plan_plan_to_status",
 	"provisioned_host_provisioned_host_to_status",

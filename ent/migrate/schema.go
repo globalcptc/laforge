@@ -11,8 +11,8 @@ var (
 	// AdhocPlansColumns holds the columns for the "adhoc_plans" table.
 	AdhocPlansColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "adhoc_plan_adhoc_plan_to_build", Type: field.TypeUUID},
-		{Name: "adhoc_plan_adhoc_plan_to_agent_task", Type: field.TypeUUID},
+		{Name: "adhoc_plan_build", Type: field.TypeUUID},
+		{Name: "adhoc_plan_agent_task", Type: field.TypeUUID},
 	}
 	// AdhocPlansTable holds the schema information for the "adhoc_plans" table.
 	AdhocPlansTable = &schema.Table{
@@ -21,13 +21,13 @@ var (
 		PrimaryKey: []*schema.Column{AdhocPlansColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "adhoc_plans_builds_AdhocPlanToBuild",
+				Symbol:     "adhoc_plans_builds_Build",
 				Columns:    []*schema.Column{AdhocPlansColumns[1]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "adhoc_plans_agent_tasks_AdhocPlanToAgentTask",
+				Symbol:     "adhoc_plans_agent_tasks_AgentTask",
 				Columns:    []*schema.Column{AdhocPlansColumns[2]},
 				RefColumns: []*schema.Column{AgentTasksColumns[0]},
 				OnDelete:   schema.NoAction,
@@ -1141,7 +1141,7 @@ var (
 		{Name: "failed", Type: field.TypeBool, Default: false},
 		{Name: "completed", Type: field.TypeBool, Default: false},
 		{Name: "error", Type: field.TypeString, Nullable: true},
-		{Name: "adhoc_plan_adhoc_plan_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "adhoc_plan_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "build_build_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_host_provisioned_host_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
@@ -1158,7 +1158,7 @@ var (
 		PrimaryKey: []*schema.Column{StatusColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "status_adhoc_plans_AdhocPlanToStatus",
+				Symbol:     "status_adhoc_plans_Status",
 				Columns:    []*schema.Column{StatusColumns[8]},
 				RefColumns: []*schema.Column{AdhocPlansColumns[0]},
 				OnDelete:   schema.Cascade,

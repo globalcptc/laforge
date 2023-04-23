@@ -507,15 +507,15 @@ func (c *AdhocPlanClient) QueryNextAdhocPlan(ap *AdhocPlan) *AdhocPlanQuery {
 	return query
 }
 
-// QueryAdhocPlanToBuild queries the AdhocPlanToBuild edge of a AdhocPlan.
-func (c *AdhocPlanClient) QueryAdhocPlanToBuild(ap *AdhocPlan) *BuildQuery {
+// QueryBuild queries the Build edge of a AdhocPlan.
+func (c *AdhocPlanClient) QueryBuild(ap *AdhocPlan) *BuildQuery {
 	query := &BuildQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ap.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(adhocplan.Table, adhocplan.FieldID, id),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, adhocplan.AdhocPlanToBuildTable, adhocplan.AdhocPlanToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, adhocplan.BuildTable, adhocplan.BuildColumn),
 		)
 		fromV = sqlgraph.Neighbors(ap.driver.Dialect(), step)
 		return fromV, nil
@@ -523,15 +523,15 @@ func (c *AdhocPlanClient) QueryAdhocPlanToBuild(ap *AdhocPlan) *BuildQuery {
 	return query
 }
 
-// QueryAdhocPlanToStatus queries the AdhocPlanToStatus edge of a AdhocPlan.
-func (c *AdhocPlanClient) QueryAdhocPlanToStatus(ap *AdhocPlan) *StatusQuery {
+// QueryStatus queries the Status edge of a AdhocPlan.
+func (c *AdhocPlanClient) QueryStatus(ap *AdhocPlan) *StatusQuery {
 	query := &StatusQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ap.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(adhocplan.Table, adhocplan.FieldID, id),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, adhocplan.AdhocPlanToStatusTable, adhocplan.AdhocPlanToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, adhocplan.StatusTable, adhocplan.StatusColumn),
 		)
 		fromV = sqlgraph.Neighbors(ap.driver.Dialect(), step)
 		return fromV, nil
@@ -539,15 +539,15 @@ func (c *AdhocPlanClient) QueryAdhocPlanToStatus(ap *AdhocPlan) *StatusQuery {
 	return query
 }
 
-// QueryAdhocPlanToAgentTask queries the AdhocPlanToAgentTask edge of a AdhocPlan.
-func (c *AdhocPlanClient) QueryAdhocPlanToAgentTask(ap *AdhocPlan) *AgentTaskQuery {
+// QueryAgentTask queries the AgentTask edge of a AdhocPlan.
+func (c *AdhocPlanClient) QueryAgentTask(ap *AdhocPlan) *AgentTaskQuery {
 	query := &AgentTaskQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ap.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(adhocplan.Table, adhocplan.FieldID, id),
 			sqlgraph.To(agenttask.Table, agenttask.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, adhocplan.AdhocPlanToAgentTaskTable, adhocplan.AdhocPlanToAgentTaskColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, adhocplan.AgentTaskTable, adhocplan.AgentTaskColumn),
 		)
 		fromV = sqlgraph.Neighbors(ap.driver.Dialect(), step)
 		return fromV, nil
