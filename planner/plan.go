@@ -222,7 +222,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 			_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
 			return
 		}
-		err = entCommit.Update().AddBuildCommitToServerTask(serverTask).Exec(ctx)
+		err = entCommit.Update().AddServerTasks(serverTask).Exec(ctx)
 		if err != nil {
 			_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
 			return

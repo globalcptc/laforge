@@ -818,9 +818,9 @@ func (bc *BuildCommit) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Build",
-		Name: "BuildCommitToBuild",
+		Name: "Build",
 	}
-	err = bc.QueryBuildCommitToBuild().
+	err = bc.QueryBuild().
 		Select(build.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -828,9 +828,9 @@ func (bc *BuildCommit) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "ServerTask",
-		Name: "BuildCommitToServerTask",
+		Name: "ServerTasks",
 	}
-	err = bc.QueryBuildCommitToServerTask().
+	err = bc.QueryServerTasks().
 		Select(servertask.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -838,9 +838,9 @@ func (bc *BuildCommit) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "PlanDiff",
-		Name: "BuildCommitToPlanDiffs",
+		Name: "PlanDiffs",
 	}
-	err = bc.QueryBuildCommitToPlanDiffs().
+	err = bc.QueryPlanDiffs().
 		Select(plandiff.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {

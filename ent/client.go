@@ -1463,15 +1463,15 @@ func (c *BuildCommitClient) GetX(ctx context.Context, id uuid.UUID) *BuildCommit
 	return obj
 }
 
-// QueryBuildCommitToBuild queries the BuildCommitToBuild edge of a BuildCommit.
-func (c *BuildCommitClient) QueryBuildCommitToBuild(bc *BuildCommit) *BuildQuery {
+// QueryBuild queries the Build edge of a BuildCommit.
+func (c *BuildCommitClient) QueryBuild(bc *BuildCommit) *BuildQuery {
 	query := &BuildQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := bc.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(buildcommit.Table, buildcommit.FieldID, id),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, buildcommit.BuildCommitToBuildTable, buildcommit.BuildCommitToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, buildcommit.BuildTable, buildcommit.BuildColumn),
 		)
 		fromV = sqlgraph.Neighbors(bc.driver.Dialect(), step)
 		return fromV, nil
@@ -1479,15 +1479,15 @@ func (c *BuildCommitClient) QueryBuildCommitToBuild(bc *BuildCommit) *BuildQuery
 	return query
 }
 
-// QueryBuildCommitToServerTask queries the BuildCommitToServerTask edge of a BuildCommit.
-func (c *BuildCommitClient) QueryBuildCommitToServerTask(bc *BuildCommit) *ServerTaskQuery {
+// QueryServerTasks queries the ServerTasks edge of a BuildCommit.
+func (c *BuildCommitClient) QueryServerTasks(bc *BuildCommit) *ServerTaskQuery {
 	query := &ServerTaskQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := bc.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(buildcommit.Table, buildcommit.FieldID, id),
 			sqlgraph.To(servertask.Table, servertask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, buildcommit.BuildCommitToServerTaskTable, buildcommit.BuildCommitToServerTaskColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, buildcommit.ServerTasksTable, buildcommit.ServerTasksColumn),
 		)
 		fromV = sqlgraph.Neighbors(bc.driver.Dialect(), step)
 		return fromV, nil
@@ -1495,15 +1495,15 @@ func (c *BuildCommitClient) QueryBuildCommitToServerTask(bc *BuildCommit) *Serve
 	return query
 }
 
-// QueryBuildCommitToPlanDiffs queries the BuildCommitToPlanDiffs edge of a BuildCommit.
-func (c *BuildCommitClient) QueryBuildCommitToPlanDiffs(bc *BuildCommit) *PlanDiffQuery {
+// QueryPlanDiffs queries the PlanDiffs edge of a BuildCommit.
+func (c *BuildCommitClient) QueryPlanDiffs(bc *BuildCommit) *PlanDiffQuery {
 	query := &PlanDiffQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := bc.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(buildcommit.Table, buildcommit.FieldID, id),
 			sqlgraph.To(plandiff.Table, plandiff.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, buildcommit.BuildCommitToPlanDiffsTable, buildcommit.BuildCommitToPlanDiffsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, buildcommit.PlanDiffsTable, buildcommit.PlanDiffsColumn),
 		)
 		fromV = sqlgraph.Neighbors(bc.driver.Dialect(), step)
 		return fromV, nil

@@ -25,7 +25,7 @@ func CreateRootCommit(client *ent.Client, rdb *redis.Client, entBuild *ent.Build
 	rootCommit, err := client.BuildCommit.Create().
 		SetType(buildcommit.TypeROOT).
 		SetRevision(0).
-		SetBuildCommitToBuild(entBuild).
+		SetBuild(entBuild).
 		SetState(buildcommit.StatePLANNING).
 		Save(ctx)
 	if err != nil {

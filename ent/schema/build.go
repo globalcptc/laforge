@@ -53,7 +53,7 @@ func (Build) Edges() []ent.Edge {
 		edge.From("Plans", Plan.Type).
 			Ref("PlanToBuild"),
 		edge.From("BuildCommits", BuildCommit.Type).
-			Ref("BuildCommitToBuild"),
+			Ref("Build"),
 		edge.From("AdhocPlans", AdhocPlan.Type).
 			Ref("Build"),
 		edge.From("AgentStatuses", AgentStatus.Type).

@@ -30,11 +30,12 @@ func (BuildCommit) Fields() []ent.Field {
 // Edges of the BuildCommit.
 func (BuildCommit) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("BuildCommitToBuild", Build.Type).
+		edge.To("Build", Build.Type).
 			Unique().
 			Required(),
-		edge.From("BuildCommitToServerTask", ServerTask.Type).Ref("ServerTaskToBuildCommit"),
-		edge.From("BuildCommitToPlanDiffs", PlanDiff.Type).
+		edge.From("ServerTasks", ServerTask.Type).
+			Ref("ServerTaskToBuildCommit"),
+		edge.From("PlanDiffs", PlanDiff.Type).
 			Ref("PlanDiffToBuildCommit").
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,

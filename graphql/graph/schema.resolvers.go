@@ -656,7 +656,7 @@ func (r *mutationResolver) CancelCommit(ctx context.Context, commitUUID string) 
 		return false, fmt.Errorf("failed setting build commit state to cancelled: %v", err)
 	}
 	if entBuildCommit.Type == buildcommit.TypeROOT {
-		entBuild, err := entBuildCommit.QueryBuildCommitToBuild().Only(ctx)
+		entBuild, err := entBuildCommit.QueryBuild().Only(ctx)
 		if err != nil {
 			return false, fmt.Errorf("failed querying build from build commit: %v", err)
 		}
@@ -666,7 +666,7 @@ func (r *mutationResolver) CancelCommit(ctx context.Context, commitUUID string) 
 		}
 	}
 	r.rdb.Publish(ctx, "updatedBuildCommit", commitUUID)
-	entServerTasks, err := entBuildCommit.QueryBuildCommitToServerTask().WithServerTaskToStatus().All(ctx)
+	entServerTasks, err := entBuildCommit.QueryServerTasks().WithServerTaskToStatus().All(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed querying server tasks from build commit: %v", err)
 	}

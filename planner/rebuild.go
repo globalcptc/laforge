@@ -40,8 +40,8 @@ func Rebuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerC
 		SetRevision(rebuildRevision).
 		SetType(buildcommit.TypeREBUILD).
 		SetState(buildcommit.StatePLANNING).
-		SetBuildCommitToBuild(entBuild).
-		AddBuildCommitToServerTask(serverTask).
+		SetBuild(entBuild).
+		AddServerTasks(serverTask).
 		Save(ctx)
 	if err != nil {
 		spawnedRebuildSuccessfully <- false
@@ -201,7 +201,7 @@ func generateRebuildCommitPlans(client *ent.Client, ctx context.Context, rootPla
 		return err
 	}
 
-	planDiffExists, err := entBuildCommit.QueryBuildCommitToPlanDiffs().Where(plandiff.HasPlanDiffToPlanWith(plan.IDEQ(rootPlan.ID))).Exist(ctx)
+	planDiffExists, err := entBuildCommit.QueryPlanDiffs().Where(plandiff.HasPlanDiffToPlanWith(plan.IDEQ(rootPlan.ID))).Exist(ctx)
 	if err != nil {
 		return err
 	} else if !planDiffExists {
@@ -233,7 +233,7 @@ func generateRebuildCommitPreviousPlans(client *ent.Client, ctx context.Context,
 		return err
 	}
 
-	planDiffExists, err := entBuildCommit.QueryBuildCommitToPlanDiffs().Where(plandiff.HasPlanDiffToPlanWith(plan.IDEQ(rootPlan.ID))).Exist(ctx)
+	planDiffExists, err := entBuildCommit.QueryPlanDiffs().Where(plandiff.HasPlanDiffToPlanWith(plan.IDEQ(rootPlan.ID))).Exist(ctx)
 	if err != nil {
 		return err
 	} else if !planDiffExists {
@@ -275,7 +275,7 @@ func generateRebuildCommitPreviousPlans(client *ent.Client, ctx context.Context,
 }
 
 func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus status.State, entRebuildCommit *ent.BuildCommit) error {
-	entPlanDiffs, err := entRebuildCommit.QueryBuildCommitToPlanDiffs().All(ctx)
+	entPlanDiffs, err := entRebuildCommit.QueryPlanDiffs().All(ctx)
 	if err != nil {
 		return err
 	}

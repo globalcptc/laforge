@@ -33,7 +33,7 @@ func DeleteBuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.Ser
 		spawnedDelete <- false
 		return false, err
 	}
-	err = entDeleteCommit.Update().AddBuildCommitToServerTask(serverTask).Exec(deleteContext)
+	err = entDeleteCommit.Update().AddServerTasks(serverTask).Exec(deleteContext)
 	if err != nil {
 		spawnedDelete <- false
 		return false, err
@@ -205,7 +205,7 @@ func generateDeleteBuildCommit(ctx context.Context, client *ent.Client, entBuild
 		SetRevision(commitRevision).
 		SetState(buildcommit.StatePLANNING).
 		SetType(buildcommit.TypeDELETE).
-		SetBuildCommitToBuild(entBuild).
+		SetBuild(entBuild).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error creating delete build commit: %v", err)

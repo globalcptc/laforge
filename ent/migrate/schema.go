@@ -213,7 +213,7 @@ var (
 		{Name: "revision", Type: field.TypeInt},
 		{Name: "state", Type: field.TypeEnum, Enums: []string{"PLANNING", "INPROGRESS", "APPLIED", "CANCELLED", "APPROVED"}},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "build_commit_build_commit_to_build", Type: field.TypeUUID},
+		{Name: "build_commit_build", Type: field.TypeUUID},
 	}
 	// BuildCommitsTable holds the schema information for the "build_commits" table.
 	BuildCommitsTable = &schema.Table{
@@ -222,7 +222,7 @@ var (
 		PrimaryKey: []*schema.Column{BuildCommitsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "build_commits_builds_BuildCommitToBuild",
+				Symbol:     "build_commits_builds_Build",
 				Columns:    []*schema.Column{BuildCommitsColumns[5]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.NoAction,

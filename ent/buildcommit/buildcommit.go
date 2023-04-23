@@ -24,35 +24,35 @@ const (
 	FieldState = "state"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
-	// EdgeBuildCommitToBuild holds the string denoting the buildcommittobuild edge name in mutations.
-	EdgeBuildCommitToBuild = "BuildCommitToBuild"
-	// EdgeBuildCommitToServerTask holds the string denoting the buildcommittoservertask edge name in mutations.
-	EdgeBuildCommitToServerTask = "BuildCommitToServerTask"
-	// EdgeBuildCommitToPlanDiffs holds the string denoting the buildcommittoplandiffs edge name in mutations.
-	EdgeBuildCommitToPlanDiffs = "BuildCommitToPlanDiffs"
+	// EdgeBuild holds the string denoting the build edge name in mutations.
+	EdgeBuild = "Build"
+	// EdgeServerTasks holds the string denoting the servertasks edge name in mutations.
+	EdgeServerTasks = "ServerTasks"
+	// EdgePlanDiffs holds the string denoting the plandiffs edge name in mutations.
+	EdgePlanDiffs = "PlanDiffs"
 	// Table holds the table name of the buildcommit in the database.
 	Table = "build_commits"
-	// BuildCommitToBuildTable is the table that holds the BuildCommitToBuild relation/edge.
-	BuildCommitToBuildTable = "build_commits"
-	// BuildCommitToBuildInverseTable is the table name for the Build entity.
+	// BuildTable is the table that holds the Build relation/edge.
+	BuildTable = "build_commits"
+	// BuildInverseTable is the table name for the Build entity.
 	// It exists in this package in order to avoid circular dependency with the "build" package.
-	BuildCommitToBuildInverseTable = "builds"
-	// BuildCommitToBuildColumn is the table column denoting the BuildCommitToBuild relation/edge.
-	BuildCommitToBuildColumn = "build_commit_build_commit_to_build"
-	// BuildCommitToServerTaskTable is the table that holds the BuildCommitToServerTask relation/edge.
-	BuildCommitToServerTaskTable = "server_tasks"
-	// BuildCommitToServerTaskInverseTable is the table name for the ServerTask entity.
+	BuildInverseTable = "builds"
+	// BuildColumn is the table column denoting the Build relation/edge.
+	BuildColumn = "build_commit_build"
+	// ServerTasksTable is the table that holds the ServerTasks relation/edge.
+	ServerTasksTable = "server_tasks"
+	// ServerTasksInverseTable is the table name for the ServerTask entity.
 	// It exists in this package in order to avoid circular dependency with the "servertask" package.
-	BuildCommitToServerTaskInverseTable = "server_tasks"
-	// BuildCommitToServerTaskColumn is the table column denoting the BuildCommitToServerTask relation/edge.
-	BuildCommitToServerTaskColumn = "server_task_server_task_to_build_commit"
-	// BuildCommitToPlanDiffsTable is the table that holds the BuildCommitToPlanDiffs relation/edge.
-	BuildCommitToPlanDiffsTable = "plan_diffs"
-	// BuildCommitToPlanDiffsInverseTable is the table name for the PlanDiff entity.
+	ServerTasksInverseTable = "server_tasks"
+	// ServerTasksColumn is the table column denoting the ServerTasks relation/edge.
+	ServerTasksColumn = "server_task_server_task_to_build_commit"
+	// PlanDiffsTable is the table that holds the PlanDiffs relation/edge.
+	PlanDiffsTable = "plan_diffs"
+	// PlanDiffsInverseTable is the table name for the PlanDiff entity.
 	// It exists in this package in order to avoid circular dependency with the "plandiff" package.
-	BuildCommitToPlanDiffsInverseTable = "plan_diffs"
-	// BuildCommitToPlanDiffsColumn is the table column denoting the BuildCommitToPlanDiffs relation/edge.
-	BuildCommitToPlanDiffsColumn = "plan_diff_plan_diff_to_build_commit"
+	PlanDiffsInverseTable = "plan_diffs"
+	// PlanDiffsColumn is the table column denoting the PlanDiffs relation/edge.
+	PlanDiffsColumn = "plan_diff_plan_diff_to_build_commit"
 )
 
 // Columns holds all SQL columns for buildcommit fields.
@@ -67,7 +67,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "build_commits"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"build_commit_build_commit_to_build",
+	"build_commit_build",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

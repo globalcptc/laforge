@@ -107,7 +107,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "buildcommit" package.
 	BuildCommitsInverseTable = "build_commits"
 	// BuildCommitsColumn is the table column denoting the BuildCommits relation/edge.
-	BuildCommitsColumn = "build_commit_build_commit_to_build"
+	BuildCommitsColumn = "build_commit_build"
 	// AdhocPlansTable is the table that holds the AdhocPlans relation/edge.
 	AdhocPlansTable = "adhoc_plans"
 	// AdhocPlansInverseTable is the table name for the AdhocPlan entity.

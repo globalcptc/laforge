@@ -1129,13 +1129,13 @@ func (bq *BuildQuery) loadBuildCommits(ctx context.Context, query *BuildCommitQu
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.build_commit_build_commit_to_build
+		fk := n.build_commit_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "build_commit_build_commit_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "build_commit_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_commit_build_commit_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_commit_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

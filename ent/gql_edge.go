@@ -228,26 +228,26 @@ func (b *Build) ServerTasks(ctx context.Context) ([]*ServerTask, error) {
 	return result, err
 }
 
-func (bc *BuildCommit) BuildCommitToBuild(ctx context.Context) (*Build, error) {
-	result, err := bc.Edges.BuildCommitToBuildOrErr()
+func (bc *BuildCommit) Build(ctx context.Context) (*Build, error) {
+	result, err := bc.Edges.BuildOrErr()
 	if IsNotLoaded(err) {
-		result, err = bc.QueryBuildCommitToBuild().Only(ctx)
+		result, err = bc.QueryBuild().Only(ctx)
 	}
 	return result, err
 }
 
-func (bc *BuildCommit) BuildCommitToServerTask(ctx context.Context) ([]*ServerTask, error) {
-	result, err := bc.Edges.BuildCommitToServerTaskOrErr()
+func (bc *BuildCommit) ServerTasks(ctx context.Context) ([]*ServerTask, error) {
+	result, err := bc.Edges.ServerTasksOrErr()
 	if IsNotLoaded(err) {
-		result, err = bc.QueryBuildCommitToServerTask().All(ctx)
+		result, err = bc.QueryServerTasks().All(ctx)
 	}
 	return result, err
 }
 
-func (bc *BuildCommit) BuildCommitToPlanDiffs(ctx context.Context) ([]*PlanDiff, error) {
-	result, err := bc.Edges.BuildCommitToPlanDiffsOrErr()
+func (bc *BuildCommit) PlanDiffs(ctx context.Context) ([]*PlanDiff, error) {
+	result, err := bc.Edges.PlanDiffsOrErr()
 	if IsNotLoaded(err) {
-		result, err = bc.QueryBuildCommitToPlanDiffs().All(ctx)
+		result, err = bc.QueryPlanDiffs().All(ctx)
 	}
 	return result, err
 }
