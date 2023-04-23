@@ -32,6 +32,6 @@ func (IncludedNetwork) Edges() []ent.Edge {
 		edge.To("IncludedNetworkToNetwork", Network.Type).
 			Unique(),
 		edge.From("IncludedNetworkToEnvironment", Environment.Type).
-			Ref("EnvironmentToIncludedNetwork"),
+			Ref("IncludedNetworks"),
 	}
 }

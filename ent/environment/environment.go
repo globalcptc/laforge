@@ -33,180 +33,180 @@ const (
 	FieldConfig = "config"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// EdgeEnvironmentToUser holds the string denoting the environmenttouser edge name in mutations.
-	EdgeEnvironmentToUser = "EnvironmentToUser"
-	// EdgeEnvironmentToHost holds the string denoting the environmenttohost edge name in mutations.
-	EdgeEnvironmentToHost = "EnvironmentToHost"
-	// EdgeEnvironmentToCompetition holds the string denoting the environmenttocompetition edge name in mutations.
-	EdgeEnvironmentToCompetition = "EnvironmentToCompetition"
-	// EdgeEnvironmentToIdentity holds the string denoting the environmenttoidentity edge name in mutations.
-	EdgeEnvironmentToIdentity = "EnvironmentToIdentity"
-	// EdgeEnvironmentToCommand holds the string denoting the environmenttocommand edge name in mutations.
-	EdgeEnvironmentToCommand = "EnvironmentToCommand"
-	// EdgeEnvironmentToScript holds the string denoting the environmenttoscript edge name in mutations.
-	EdgeEnvironmentToScript = "EnvironmentToScript"
-	// EdgeEnvironmentToFileDownload holds the string denoting the environmenttofiledownload edge name in mutations.
-	EdgeEnvironmentToFileDownload = "EnvironmentToFileDownload"
-	// EdgeEnvironmentToFileDelete holds the string denoting the environmenttofiledelete edge name in mutations.
-	EdgeEnvironmentToFileDelete = "EnvironmentToFileDelete"
-	// EdgeEnvironmentToFileExtract holds the string denoting the environmenttofileextract edge name in mutations.
-	EdgeEnvironmentToFileExtract = "EnvironmentToFileExtract"
-	// EdgeEnvironmentToIncludedNetwork holds the string denoting the environmenttoincludednetwork edge name in mutations.
-	EdgeEnvironmentToIncludedNetwork = "EnvironmentToIncludedNetwork"
-	// EdgeEnvironmentToFinding holds the string denoting the environmenttofinding edge name in mutations.
-	EdgeEnvironmentToFinding = "EnvironmentToFinding"
-	// EdgeEnvironmentToDNSRecord holds the string denoting the environmenttodnsrecord edge name in mutations.
-	EdgeEnvironmentToDNSRecord = "EnvironmentToDNSRecord"
-	// EdgeEnvironmentToDNS holds the string denoting the environmenttodns edge name in mutations.
-	EdgeEnvironmentToDNS = "EnvironmentToDNS"
-	// EdgeEnvironmentToNetwork holds the string denoting the environmenttonetwork edge name in mutations.
-	EdgeEnvironmentToNetwork = "EnvironmentToNetwork"
-	// EdgeEnvironmentToHostDependency holds the string denoting the environmenttohostdependency edge name in mutations.
-	EdgeEnvironmentToHostDependency = "EnvironmentToHostDependency"
-	// EdgeEnvironmentToAnsible holds the string denoting the environmenttoansible edge name in mutations.
-	EdgeEnvironmentToAnsible = "EnvironmentToAnsible"
-	// EdgeEnvironmentToScheduledStep holds the string denoting the environmenttoscheduledstep edge name in mutations.
-	EdgeEnvironmentToScheduledStep = "EnvironmentToScheduledStep"
-	// EdgeEnvironmentToBuild holds the string denoting the environmenttobuild edge name in mutations.
-	EdgeEnvironmentToBuild = "EnvironmentToBuild"
-	// EdgeEnvironmentToRepository holds the string denoting the environmenttorepository edge name in mutations.
-	EdgeEnvironmentToRepository = "EnvironmentToRepository"
-	// EdgeEnvironmentToServerTask holds the string denoting the environmenttoservertask edge name in mutations.
-	EdgeEnvironmentToServerTask = "EnvironmentToServerTask"
+	// EdgeUsers holds the string denoting the users edge name in mutations.
+	EdgeUsers = "Users"
+	// EdgeHosts holds the string denoting the hosts edge name in mutations.
+	EdgeHosts = "Hosts"
+	// EdgeCompetitions holds the string denoting the competitions edge name in mutations.
+	EdgeCompetitions = "Competitions"
+	// EdgeIdentities holds the string denoting the identities edge name in mutations.
+	EdgeIdentities = "Identities"
+	// EdgeCommands holds the string denoting the commands edge name in mutations.
+	EdgeCommands = "Commands"
+	// EdgeScripts holds the string denoting the scripts edge name in mutations.
+	EdgeScripts = "Scripts"
+	// EdgeFileDownloads holds the string denoting the filedownloads edge name in mutations.
+	EdgeFileDownloads = "FileDownloads"
+	// EdgeFileDeletes holds the string denoting the filedeletes edge name in mutations.
+	EdgeFileDeletes = "FileDeletes"
+	// EdgeFileExtracts holds the string denoting the fileextracts edge name in mutations.
+	EdgeFileExtracts = "FileExtracts"
+	// EdgeIncludedNetworks holds the string denoting the includednetworks edge name in mutations.
+	EdgeIncludedNetworks = "IncludedNetworks"
+	// EdgeFindings holds the string denoting the findings edge name in mutations.
+	EdgeFindings = "Findings"
+	// EdgeDNSRecords holds the string denoting the dnsrecords edge name in mutations.
+	EdgeDNSRecords = "DNSRecords"
+	// EdgeDNS holds the string denoting the dns edge name in mutations.
+	EdgeDNS = "DNS"
+	// EdgeNetworks holds the string denoting the networks edge name in mutations.
+	EdgeNetworks = "Networks"
+	// EdgeHostDependencies holds the string denoting the hostdependencies edge name in mutations.
+	EdgeHostDependencies = "HostDependencies"
+	// EdgeAnsibles holds the string denoting the ansibles edge name in mutations.
+	EdgeAnsibles = "Ansibles"
+	// EdgeScheduledSteps holds the string denoting the scheduledsteps edge name in mutations.
+	EdgeScheduledSteps = "ScheduledSteps"
+	// EdgeBuilds holds the string denoting the builds edge name in mutations.
+	EdgeBuilds = "Builds"
+	// EdgeRepositories holds the string denoting the repositories edge name in mutations.
+	EdgeRepositories = "Repositories"
+	// EdgeServerTasks holds the string denoting the servertasks edge name in mutations.
+	EdgeServerTasks = "ServerTasks"
 	// Table holds the table name of the environment in the database.
 	Table = "environments"
-	// EnvironmentToUserTable is the table that holds the EnvironmentToUser relation/edge. The primary key declared below.
-	EnvironmentToUserTable = "environment_EnvironmentToUser"
-	// EnvironmentToUserInverseTable is the table name for the User entity.
+	// UsersTable is the table that holds the Users relation/edge. The primary key declared below.
+	UsersTable = "environment_Users"
+	// UsersInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	EnvironmentToUserInverseTable = "users"
-	// EnvironmentToHostTable is the table that holds the EnvironmentToHost relation/edge.
-	EnvironmentToHostTable = "hosts"
-	// EnvironmentToHostInverseTable is the table name for the Host entity.
+	UsersInverseTable = "users"
+	// HostsTable is the table that holds the Hosts relation/edge.
+	HostsTable = "hosts"
+	// HostsInverseTable is the table name for the Host entity.
 	// It exists in this package in order to avoid circular dependency with the "host" package.
-	EnvironmentToHostInverseTable = "hosts"
-	// EnvironmentToHostColumn is the table column denoting the EnvironmentToHost relation/edge.
-	EnvironmentToHostColumn = "environment_environment_to_host"
-	// EnvironmentToCompetitionTable is the table that holds the EnvironmentToCompetition relation/edge.
-	EnvironmentToCompetitionTable = "competitions"
-	// EnvironmentToCompetitionInverseTable is the table name for the Competition entity.
+	HostsInverseTable = "hosts"
+	// HostsColumn is the table column denoting the Hosts relation/edge.
+	HostsColumn = "environment_hosts"
+	// CompetitionsTable is the table that holds the Competitions relation/edge.
+	CompetitionsTable = "competitions"
+	// CompetitionsInverseTable is the table name for the Competition entity.
 	// It exists in this package in order to avoid circular dependency with the "competition" package.
-	EnvironmentToCompetitionInverseTable = "competitions"
-	// EnvironmentToCompetitionColumn is the table column denoting the EnvironmentToCompetition relation/edge.
-	EnvironmentToCompetitionColumn = "environment_environment_to_competition"
-	// EnvironmentToIdentityTable is the table that holds the EnvironmentToIdentity relation/edge.
-	EnvironmentToIdentityTable = "identities"
-	// EnvironmentToIdentityInverseTable is the table name for the Identity entity.
+	CompetitionsInverseTable = "competitions"
+	// CompetitionsColumn is the table column denoting the Competitions relation/edge.
+	CompetitionsColumn = "environment_competitions"
+	// IdentitiesTable is the table that holds the Identities relation/edge.
+	IdentitiesTable = "identities"
+	// IdentitiesInverseTable is the table name for the Identity entity.
 	// It exists in this package in order to avoid circular dependency with the "identity" package.
-	EnvironmentToIdentityInverseTable = "identities"
-	// EnvironmentToIdentityColumn is the table column denoting the EnvironmentToIdentity relation/edge.
-	EnvironmentToIdentityColumn = "environment_environment_to_identity"
-	// EnvironmentToCommandTable is the table that holds the EnvironmentToCommand relation/edge.
-	EnvironmentToCommandTable = "commands"
-	// EnvironmentToCommandInverseTable is the table name for the Command entity.
+	IdentitiesInverseTable = "identities"
+	// IdentitiesColumn is the table column denoting the Identities relation/edge.
+	IdentitiesColumn = "environment_identities"
+	// CommandsTable is the table that holds the Commands relation/edge.
+	CommandsTable = "commands"
+	// CommandsInverseTable is the table name for the Command entity.
 	// It exists in this package in order to avoid circular dependency with the "command" package.
-	EnvironmentToCommandInverseTable = "commands"
-	// EnvironmentToCommandColumn is the table column denoting the EnvironmentToCommand relation/edge.
-	EnvironmentToCommandColumn = "environment_environment_to_command"
-	// EnvironmentToScriptTable is the table that holds the EnvironmentToScript relation/edge.
-	EnvironmentToScriptTable = "scripts"
-	// EnvironmentToScriptInverseTable is the table name for the Script entity.
+	CommandsInverseTable = "commands"
+	// CommandsColumn is the table column denoting the Commands relation/edge.
+	CommandsColumn = "environment_commands"
+	// ScriptsTable is the table that holds the Scripts relation/edge.
+	ScriptsTable = "scripts"
+	// ScriptsInverseTable is the table name for the Script entity.
 	// It exists in this package in order to avoid circular dependency with the "script" package.
-	EnvironmentToScriptInverseTable = "scripts"
-	// EnvironmentToScriptColumn is the table column denoting the EnvironmentToScript relation/edge.
-	EnvironmentToScriptColumn = "environment_environment_to_script"
-	// EnvironmentToFileDownloadTable is the table that holds the EnvironmentToFileDownload relation/edge.
-	EnvironmentToFileDownloadTable = "file_downloads"
-	// EnvironmentToFileDownloadInverseTable is the table name for the FileDownload entity.
+	ScriptsInverseTable = "scripts"
+	// ScriptsColumn is the table column denoting the Scripts relation/edge.
+	ScriptsColumn = "environment_scripts"
+	// FileDownloadsTable is the table that holds the FileDownloads relation/edge.
+	FileDownloadsTable = "file_downloads"
+	// FileDownloadsInverseTable is the table name for the FileDownload entity.
 	// It exists in this package in order to avoid circular dependency with the "filedownload" package.
-	EnvironmentToFileDownloadInverseTable = "file_downloads"
-	// EnvironmentToFileDownloadColumn is the table column denoting the EnvironmentToFileDownload relation/edge.
-	EnvironmentToFileDownloadColumn = "environment_environment_to_file_download"
-	// EnvironmentToFileDeleteTable is the table that holds the EnvironmentToFileDelete relation/edge.
-	EnvironmentToFileDeleteTable = "file_deletes"
-	// EnvironmentToFileDeleteInverseTable is the table name for the FileDelete entity.
+	FileDownloadsInverseTable = "file_downloads"
+	// FileDownloadsColumn is the table column denoting the FileDownloads relation/edge.
+	FileDownloadsColumn = "environment_file_downloads"
+	// FileDeletesTable is the table that holds the FileDeletes relation/edge.
+	FileDeletesTable = "file_deletes"
+	// FileDeletesInverseTable is the table name for the FileDelete entity.
 	// It exists in this package in order to avoid circular dependency with the "filedelete" package.
-	EnvironmentToFileDeleteInverseTable = "file_deletes"
-	// EnvironmentToFileDeleteColumn is the table column denoting the EnvironmentToFileDelete relation/edge.
-	EnvironmentToFileDeleteColumn = "environment_environment_to_file_delete"
-	// EnvironmentToFileExtractTable is the table that holds the EnvironmentToFileExtract relation/edge.
-	EnvironmentToFileExtractTable = "file_extracts"
-	// EnvironmentToFileExtractInverseTable is the table name for the FileExtract entity.
+	FileDeletesInverseTable = "file_deletes"
+	// FileDeletesColumn is the table column denoting the FileDeletes relation/edge.
+	FileDeletesColumn = "environment_file_deletes"
+	// FileExtractsTable is the table that holds the FileExtracts relation/edge.
+	FileExtractsTable = "file_extracts"
+	// FileExtractsInverseTable is the table name for the FileExtract entity.
 	// It exists in this package in order to avoid circular dependency with the "fileextract" package.
-	EnvironmentToFileExtractInverseTable = "file_extracts"
-	// EnvironmentToFileExtractColumn is the table column denoting the EnvironmentToFileExtract relation/edge.
-	EnvironmentToFileExtractColumn = "environment_environment_to_file_extract"
-	// EnvironmentToIncludedNetworkTable is the table that holds the EnvironmentToIncludedNetwork relation/edge. The primary key declared below.
-	EnvironmentToIncludedNetworkTable = "environment_EnvironmentToIncludedNetwork"
-	// EnvironmentToIncludedNetworkInverseTable is the table name for the IncludedNetwork entity.
+	FileExtractsInverseTable = "file_extracts"
+	// FileExtractsColumn is the table column denoting the FileExtracts relation/edge.
+	FileExtractsColumn = "environment_file_extracts"
+	// IncludedNetworksTable is the table that holds the IncludedNetworks relation/edge. The primary key declared below.
+	IncludedNetworksTable = "environment_IncludedNetworks"
+	// IncludedNetworksInverseTable is the table name for the IncludedNetwork entity.
 	// It exists in this package in order to avoid circular dependency with the "includednetwork" package.
-	EnvironmentToIncludedNetworkInverseTable = "included_networks"
-	// EnvironmentToFindingTable is the table that holds the EnvironmentToFinding relation/edge.
-	EnvironmentToFindingTable = "findings"
-	// EnvironmentToFindingInverseTable is the table name for the Finding entity.
+	IncludedNetworksInverseTable = "included_networks"
+	// FindingsTable is the table that holds the Findings relation/edge.
+	FindingsTable = "findings"
+	// FindingsInverseTable is the table name for the Finding entity.
 	// It exists in this package in order to avoid circular dependency with the "finding" package.
-	EnvironmentToFindingInverseTable = "findings"
-	// EnvironmentToFindingColumn is the table column denoting the EnvironmentToFinding relation/edge.
-	EnvironmentToFindingColumn = "environment_environment_to_finding"
-	// EnvironmentToDNSRecordTable is the table that holds the EnvironmentToDNSRecord relation/edge.
-	EnvironmentToDNSRecordTable = "dns_records"
-	// EnvironmentToDNSRecordInverseTable is the table name for the DNSRecord entity.
+	FindingsInverseTable = "findings"
+	// FindingsColumn is the table column denoting the Findings relation/edge.
+	FindingsColumn = "environment_findings"
+	// DNSRecordsTable is the table that holds the DNSRecords relation/edge.
+	DNSRecordsTable = "dns_records"
+	// DNSRecordsInverseTable is the table name for the DNSRecord entity.
 	// It exists in this package in order to avoid circular dependency with the "dnsrecord" package.
-	EnvironmentToDNSRecordInverseTable = "dns_records"
-	// EnvironmentToDNSRecordColumn is the table column denoting the EnvironmentToDNSRecord relation/edge.
-	EnvironmentToDNSRecordColumn = "environment_environment_to_dns_record"
-	// EnvironmentToDNSTable is the table that holds the EnvironmentToDNS relation/edge. The primary key declared below.
-	EnvironmentToDNSTable = "environment_EnvironmentToDNS"
-	// EnvironmentToDNSInverseTable is the table name for the DNS entity.
+	DNSRecordsInverseTable = "dns_records"
+	// DNSRecordsColumn is the table column denoting the DNSRecords relation/edge.
+	DNSRecordsColumn = "environment_dns_records"
+	// DNSTable is the table that holds the DNS relation/edge. The primary key declared below.
+	DNSTable = "environment_DNS"
+	// DNSInverseTable is the table name for the DNS entity.
 	// It exists in this package in order to avoid circular dependency with the "dns" package.
-	EnvironmentToDNSInverseTable = "dn_ss"
-	// EnvironmentToNetworkTable is the table that holds the EnvironmentToNetwork relation/edge.
-	EnvironmentToNetworkTable = "networks"
-	// EnvironmentToNetworkInverseTable is the table name for the Network entity.
+	DNSInverseTable = "dn_ss"
+	// NetworksTable is the table that holds the Networks relation/edge.
+	NetworksTable = "networks"
+	// NetworksInverseTable is the table name for the Network entity.
 	// It exists in this package in order to avoid circular dependency with the "network" package.
-	EnvironmentToNetworkInverseTable = "networks"
-	// EnvironmentToNetworkColumn is the table column denoting the EnvironmentToNetwork relation/edge.
-	EnvironmentToNetworkColumn = "environment_environment_to_network"
-	// EnvironmentToHostDependencyTable is the table that holds the EnvironmentToHostDependency relation/edge.
-	EnvironmentToHostDependencyTable = "host_dependencies"
-	// EnvironmentToHostDependencyInverseTable is the table name for the HostDependency entity.
+	NetworksInverseTable = "networks"
+	// NetworksColumn is the table column denoting the Networks relation/edge.
+	NetworksColumn = "environment_networks"
+	// HostDependenciesTable is the table that holds the HostDependencies relation/edge.
+	HostDependenciesTable = "host_dependencies"
+	// HostDependenciesInverseTable is the table name for the HostDependency entity.
 	// It exists in this package in order to avoid circular dependency with the "hostdependency" package.
-	EnvironmentToHostDependencyInverseTable = "host_dependencies"
-	// EnvironmentToHostDependencyColumn is the table column denoting the EnvironmentToHostDependency relation/edge.
-	EnvironmentToHostDependencyColumn = "environment_environment_to_host_dependency"
-	// EnvironmentToAnsibleTable is the table that holds the EnvironmentToAnsible relation/edge.
-	EnvironmentToAnsibleTable = "ansibles"
-	// EnvironmentToAnsibleInverseTable is the table name for the Ansible entity.
+	HostDependenciesInverseTable = "host_dependencies"
+	// HostDependenciesColumn is the table column denoting the HostDependencies relation/edge.
+	HostDependenciesColumn = "environment_host_dependencies"
+	// AnsiblesTable is the table that holds the Ansibles relation/edge.
+	AnsiblesTable = "ansibles"
+	// AnsiblesInverseTable is the table name for the Ansible entity.
 	// It exists in this package in order to avoid circular dependency with the "ansible" package.
-	EnvironmentToAnsibleInverseTable = "ansibles"
-	// EnvironmentToAnsibleColumn is the table column denoting the EnvironmentToAnsible relation/edge.
-	EnvironmentToAnsibleColumn = "environment_environment_to_ansible"
-	// EnvironmentToScheduledStepTable is the table that holds the EnvironmentToScheduledStep relation/edge.
-	EnvironmentToScheduledStepTable = "scheduled_steps"
-	// EnvironmentToScheduledStepInverseTable is the table name for the ScheduledStep entity.
+	AnsiblesInverseTable = "ansibles"
+	// AnsiblesColumn is the table column denoting the Ansibles relation/edge.
+	AnsiblesColumn = "environment_ansibles"
+	// ScheduledStepsTable is the table that holds the ScheduledSteps relation/edge.
+	ScheduledStepsTable = "scheduled_steps"
+	// ScheduledStepsInverseTable is the table name for the ScheduledStep entity.
 	// It exists in this package in order to avoid circular dependency with the "scheduledstep" package.
-	EnvironmentToScheduledStepInverseTable = "scheduled_steps"
-	// EnvironmentToScheduledStepColumn is the table column denoting the EnvironmentToScheduledStep relation/edge.
-	EnvironmentToScheduledStepColumn = "environment_environment_to_scheduled_step"
-	// EnvironmentToBuildTable is the table that holds the EnvironmentToBuild relation/edge.
-	EnvironmentToBuildTable = "builds"
-	// EnvironmentToBuildInverseTable is the table name for the Build entity.
+	ScheduledStepsInverseTable = "scheduled_steps"
+	// ScheduledStepsColumn is the table column denoting the ScheduledSteps relation/edge.
+	ScheduledStepsColumn = "environment_scheduled_steps"
+	// BuildsTable is the table that holds the Builds relation/edge.
+	BuildsTable = "builds"
+	// BuildsInverseTable is the table name for the Build entity.
 	// It exists in this package in order to avoid circular dependency with the "build" package.
-	EnvironmentToBuildInverseTable = "builds"
-	// EnvironmentToBuildColumn is the table column denoting the EnvironmentToBuild relation/edge.
-	EnvironmentToBuildColumn = "build_environment"
-	// EnvironmentToRepositoryTable is the table that holds the EnvironmentToRepository relation/edge. The primary key declared below.
-	EnvironmentToRepositoryTable = "repository_RepositoryToEnvironment"
-	// EnvironmentToRepositoryInverseTable is the table name for the Repository entity.
+	BuildsInverseTable = "builds"
+	// BuildsColumn is the table column denoting the Builds relation/edge.
+	BuildsColumn = "build_environment"
+	// RepositoriesTable is the table that holds the Repositories relation/edge. The primary key declared below.
+	RepositoriesTable = "repository_RepositoryToEnvironment"
+	// RepositoriesInverseTable is the table name for the Repository entity.
 	// It exists in this package in order to avoid circular dependency with the "repository" package.
-	EnvironmentToRepositoryInverseTable = "repositories"
-	// EnvironmentToServerTaskTable is the table that holds the EnvironmentToServerTask relation/edge.
-	EnvironmentToServerTaskTable = "server_tasks"
-	// EnvironmentToServerTaskInverseTable is the table name for the ServerTask entity.
+	RepositoriesInverseTable = "repositories"
+	// ServerTasksTable is the table that holds the ServerTasks relation/edge.
+	ServerTasksTable = "server_tasks"
+	// ServerTasksInverseTable is the table name for the ServerTask entity.
 	// It exists in this package in order to avoid circular dependency with the "servertask" package.
-	EnvironmentToServerTaskInverseTable = "server_tasks"
-	// EnvironmentToServerTaskColumn is the table column denoting the EnvironmentToServerTask relation/edge.
-	EnvironmentToServerTaskColumn = "server_task_server_task_to_environment"
+	ServerTasksInverseTable = "server_tasks"
+	// ServerTasksColumn is the table column denoting the ServerTasks relation/edge.
+	ServerTasksColumn = "server_task_server_task_to_environment"
 )
 
 // Columns holds all SQL columns for environment fields.
@@ -226,18 +226,18 @@ var Columns = []string{
 }
 
 var (
-	// EnvironmentToUserPrimaryKey and EnvironmentToUserColumn2 are the table columns denoting the
-	// primary key for the EnvironmentToUser relation (M2M).
-	EnvironmentToUserPrimaryKey = []string{"environment_id", "user_id"}
-	// EnvironmentToIncludedNetworkPrimaryKey and EnvironmentToIncludedNetworkColumn2 are the table columns denoting the
-	// primary key for the EnvironmentToIncludedNetwork relation (M2M).
-	EnvironmentToIncludedNetworkPrimaryKey = []string{"environment_id", "included_network_id"}
-	// EnvironmentToDNSPrimaryKey and EnvironmentToDNSColumn2 are the table columns denoting the
-	// primary key for the EnvironmentToDNS relation (M2M).
-	EnvironmentToDNSPrimaryKey = []string{"environment_id", "dns_id"}
-	// EnvironmentToRepositoryPrimaryKey and EnvironmentToRepositoryColumn2 are the table columns denoting the
-	// primary key for the EnvironmentToRepository relation (M2M).
-	EnvironmentToRepositoryPrimaryKey = []string{"repository_id", "environment_id"}
+	// UsersPrimaryKey and UsersColumn2 are the table columns denoting the
+	// primary key for the Users relation (M2M).
+	UsersPrimaryKey = []string{"environment_id", "user_id"}
+	// IncludedNetworksPrimaryKey and IncludedNetworksColumn2 are the table columns denoting the
+	// primary key for the IncludedNetworks relation (M2M).
+	IncludedNetworksPrimaryKey = []string{"environment_id", "included_network_id"}
+	// DNSPrimaryKey and DNSColumn2 are the table columns denoting the
+	// primary key for the DNS relation (M2M).
+	DNSPrimaryKey = []string{"environment_id", "dns_id"}
+	// RepositoriesPrimaryKey and RepositoriesColumn2 are the table columns denoting the
+	// primary key for the Repositories relation (M2M).
+	RepositoriesPrimaryKey = []string{"repository_id", "environment_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).

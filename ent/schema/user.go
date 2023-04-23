@@ -33,6 +33,6 @@ func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("UserToTag", Tag.Type),
 		edge.From("UserToEnvironment", Environment.Type).
-			Ref("EnvironmentToUser"),
+			Ref("Users"),
 	}
 }

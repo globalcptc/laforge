@@ -395,10 +395,10 @@ func (iq *IdentityQuery) loadIdentityToEnvironment(ctx context.Context, query *E
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Identity)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_identity == nil {
+		if nodes[i].environment_identities == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_identity
+		fk := *nodes[i].environment_identities
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (iq *IdentityQuery) loadIdentityToEnvironment(ctx context.Context, query *E
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_identity" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_identities" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

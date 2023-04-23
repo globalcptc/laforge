@@ -385,7 +385,7 @@ func (ac *AnsibleCreate) createSpec() (*Ansible, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.environment_environment_to_ansible = &nodes[0]
+		_node.environment_ansibles = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

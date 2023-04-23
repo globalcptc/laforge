@@ -75,7 +75,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	HostToEnvironmentInverseTable = "environments"
 	// HostToEnvironmentColumn is the table column denoting the HostToEnvironment relation/edge.
-	HostToEnvironmentColumn = "environment_environment_to_host"
+	HostToEnvironmentColumn = "environment_hosts"
 	// HostToIncludedNetworkTable is the table that holds the HostToIncludedNetwork relation/edge. The primary key declared below.
 	HostToIncludedNetworkTable = "included_network_IncludedNetworkToHost"
 	// HostToIncludedNetworkInverseTable is the table name for the IncludedNetwork entity.
@@ -120,7 +120,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "hosts"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_host",
+	"environment_hosts",
 }
 
 var (

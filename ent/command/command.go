@@ -52,7 +52,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	EnvironmentInverseTable = "environments"
 	// EnvironmentColumn is the table column denoting the Environment relation/edge.
-	EnvironmentColumn = "environment_environment_to_command"
+	EnvironmentColumn = "environment_commands"
 )
 
 // Columns holds all SQL columns for command fields.
@@ -74,7 +74,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "commands"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_command",
+	"environment_commands",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

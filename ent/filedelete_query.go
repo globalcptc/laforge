@@ -395,10 +395,10 @@ func (fdq *FileDeleteQuery) loadFileDeleteToEnvironment(ctx context.Context, que
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*FileDelete)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_file_delete == nil {
+		if nodes[i].environment_file_deletes == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_file_delete
+		fk := *nodes[i].environment_file_deletes
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (fdq *FileDeleteQuery) loadFileDeleteToEnvironment(ctx context.Context, que
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_file_delete" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_file_deletes" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

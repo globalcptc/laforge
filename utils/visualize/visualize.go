@@ -100,7 +100,7 @@ func main() {
 	// 	fmt.Println(ph)
 	// }
 
-	// build, err := env.QueryEnvironmentToBuild().Order(ent.Desc(build.FieldRevision)).First(ctx)
+	// build, err := env.QueryBuilds().Order(ent.Desc(build.FieldRevision)).First(ctx)
 	// if err != nil {
 	// 	log.Fatalf("error w/ build: %v", err)
 	// }

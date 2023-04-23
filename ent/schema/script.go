@@ -60,7 +60,7 @@ func (Script) Edges() []ent.Edge {
 				OnDelete: entsql.Cascade,
 			}),
 		edge.From("ScriptToEnvironment", Environment.Type).
-			Ref("EnvironmentToScript").
+			Ref("Scripts").
 			Unique(),
 	}
 }

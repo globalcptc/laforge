@@ -46,7 +46,7 @@ type Ansible struct {
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
-	environment_environment_to_ansible *uuid.UUID
+	environment_ansibles *uuid.UUID
 }
 
 // AnsibleEdges holds the relations/edges for other nodes in the graph.
@@ -94,7 +94,7 @@ func (*Ansible) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case ansible.FieldID:
 			values[i] = new(uuid.UUID)
-		case ansible.ForeignKeys[0]: // environment_environment_to_ansible
+		case ansible.ForeignKeys[0]: // environment_ansibles
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Ansible", columns[i])
@@ -175,10 +175,10 @@ func (a *Ansible) assignValues(columns []string, values []interface{}) error {
 			}
 		case ansible.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_ansible", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_ansibles", values[i])
 			} else if value.Valid {
-				a.environment_environment_to_ansible = new(uuid.UUID)
-				*a.environment_environment_to_ansible = *value.S.(*uuid.UUID)
+				a.environment_ansibles = new(uuid.UUID)
+				*a.environment_ansibles = *value.S.(*uuid.UUID)
 			}
 		}
 	}

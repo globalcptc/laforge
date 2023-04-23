@@ -1348,9 +1348,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "User",
-		Name: "EnvironmentToUser",
+		Name: "Users",
 	}
-	err = e.QueryEnvironmentToUser().
+	err = e.QueryUsers().
 		Select(user.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -1358,9 +1358,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Host",
-		Name: "EnvironmentToHost",
+		Name: "Hosts",
 	}
-	err = e.QueryEnvironmentToHost().
+	err = e.QueryHosts().
 		Select(host.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -1368,9 +1368,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Competition",
-		Name: "EnvironmentToCompetition",
+		Name: "Competitions",
 	}
-	err = e.QueryEnvironmentToCompetition().
+	err = e.QueryCompetitions().
 		Select(competition.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -1378,9 +1378,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "Identity",
-		Name: "EnvironmentToIdentity",
+		Name: "Identities",
 	}
-	err = e.QueryEnvironmentToIdentity().
+	err = e.QueryIdentities().
 		Select(identity.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
@@ -1388,9 +1388,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[4] = &Edge{
 		Type: "Command",
-		Name: "EnvironmentToCommand",
+		Name: "Commands",
 	}
-	err = e.QueryEnvironmentToCommand().
+	err = e.QueryCommands().
 		Select(command.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
@@ -1398,9 +1398,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[5] = &Edge{
 		Type: "Script",
-		Name: "EnvironmentToScript",
+		Name: "Scripts",
 	}
-	err = e.QueryEnvironmentToScript().
+	err = e.QueryScripts().
 		Select(script.FieldID).
 		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
@@ -1408,9 +1408,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[6] = &Edge{
 		Type: "FileDownload",
-		Name: "EnvironmentToFileDownload",
+		Name: "FileDownloads",
 	}
-	err = e.QueryEnvironmentToFileDownload().
+	err = e.QueryFileDownloads().
 		Select(filedownload.FieldID).
 		Scan(ctx, &node.Edges[6].IDs)
 	if err != nil {
@@ -1418,9 +1418,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[7] = &Edge{
 		Type: "FileDelete",
-		Name: "EnvironmentToFileDelete",
+		Name: "FileDeletes",
 	}
-	err = e.QueryEnvironmentToFileDelete().
+	err = e.QueryFileDeletes().
 		Select(filedelete.FieldID).
 		Scan(ctx, &node.Edges[7].IDs)
 	if err != nil {
@@ -1428,9 +1428,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[8] = &Edge{
 		Type: "FileExtract",
-		Name: "EnvironmentToFileExtract",
+		Name: "FileExtracts",
 	}
-	err = e.QueryEnvironmentToFileExtract().
+	err = e.QueryFileExtracts().
 		Select(fileextract.FieldID).
 		Scan(ctx, &node.Edges[8].IDs)
 	if err != nil {
@@ -1438,9 +1438,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[9] = &Edge{
 		Type: "IncludedNetwork",
-		Name: "EnvironmentToIncludedNetwork",
+		Name: "IncludedNetworks",
 	}
-	err = e.QueryEnvironmentToIncludedNetwork().
+	err = e.QueryIncludedNetworks().
 		Select(includednetwork.FieldID).
 		Scan(ctx, &node.Edges[9].IDs)
 	if err != nil {
@@ -1448,9 +1448,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[10] = &Edge{
 		Type: "Finding",
-		Name: "EnvironmentToFinding",
+		Name: "Findings",
 	}
-	err = e.QueryEnvironmentToFinding().
+	err = e.QueryFindings().
 		Select(finding.FieldID).
 		Scan(ctx, &node.Edges[10].IDs)
 	if err != nil {
@@ -1458,9 +1458,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[11] = &Edge{
 		Type: "DNSRecord",
-		Name: "EnvironmentToDNSRecord",
+		Name: "DNSRecords",
 	}
-	err = e.QueryEnvironmentToDNSRecord().
+	err = e.QueryDNSRecords().
 		Select(dnsrecord.FieldID).
 		Scan(ctx, &node.Edges[11].IDs)
 	if err != nil {
@@ -1468,9 +1468,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[12] = &Edge{
 		Type: "DNS",
-		Name: "EnvironmentToDNS",
+		Name: "DNS",
 	}
-	err = e.QueryEnvironmentToDNS().
+	err = e.QueryDNS().
 		Select(dns.FieldID).
 		Scan(ctx, &node.Edges[12].IDs)
 	if err != nil {
@@ -1478,9 +1478,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[13] = &Edge{
 		Type: "Network",
-		Name: "EnvironmentToNetwork",
+		Name: "Networks",
 	}
-	err = e.QueryEnvironmentToNetwork().
+	err = e.QueryNetworks().
 		Select(network.FieldID).
 		Scan(ctx, &node.Edges[13].IDs)
 	if err != nil {
@@ -1488,9 +1488,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[14] = &Edge{
 		Type: "HostDependency",
-		Name: "EnvironmentToHostDependency",
+		Name: "HostDependencies",
 	}
-	err = e.QueryEnvironmentToHostDependency().
+	err = e.QueryHostDependencies().
 		Select(hostdependency.FieldID).
 		Scan(ctx, &node.Edges[14].IDs)
 	if err != nil {
@@ -1498,9 +1498,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[15] = &Edge{
 		Type: "Ansible",
-		Name: "EnvironmentToAnsible",
+		Name: "Ansibles",
 	}
-	err = e.QueryEnvironmentToAnsible().
+	err = e.QueryAnsibles().
 		Select(ansible.FieldID).
 		Scan(ctx, &node.Edges[15].IDs)
 	if err != nil {
@@ -1508,9 +1508,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[16] = &Edge{
 		Type: "ScheduledStep",
-		Name: "EnvironmentToScheduledStep",
+		Name: "ScheduledSteps",
 	}
-	err = e.QueryEnvironmentToScheduledStep().
+	err = e.QueryScheduledSteps().
 		Select(scheduledstep.FieldID).
 		Scan(ctx, &node.Edges[16].IDs)
 	if err != nil {
@@ -1518,9 +1518,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[17] = &Edge{
 		Type: "Build",
-		Name: "EnvironmentToBuild",
+		Name: "Builds",
 	}
-	err = e.QueryEnvironmentToBuild().
+	err = e.QueryBuilds().
 		Select(build.FieldID).
 		Scan(ctx, &node.Edges[17].IDs)
 	if err != nil {
@@ -1528,9 +1528,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[18] = &Edge{
 		Type: "Repository",
-		Name: "EnvironmentToRepository",
+		Name: "Repositories",
 	}
-	err = e.QueryEnvironmentToRepository().
+	err = e.QueryRepositories().
 		Select(repository.FieldID).
 		Scan(ctx, &node.Edges[18].IDs)
 	if err != nil {
@@ -1538,9 +1538,9 @@ func (e *Environment) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[19] = &Edge{
 		Type: "ServerTask",
-		Name: "EnvironmentToServerTask",
+		Name: "ServerTasks",
 	}
-	err = e.QueryEnvironmentToServerTask().
+	err = e.QueryServerTasks().
 		Select(servertask.FieldID).
 		Scan(ctx, &node.Edges[19].IDs)
 	if err != nil {

@@ -42,7 +42,7 @@ type Competition struct {
 	// Builds holds the value of the Builds edge.
 	HCLBuilds []*Build `json:"Builds,omitempty"`
 	//
-	environment_environment_to_competition *uuid.UUID
+	environment_competitions *uuid.UUID
 }
 
 // CompetitionEdges holds the relations/edges for other nodes in the graph.
@@ -103,7 +103,7 @@ func (*Competition) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case competition.FieldID:
 			values[i] = new(uuid.UUID)
-		case competition.ForeignKeys[0]: // environment_environment_to_competition
+		case competition.ForeignKeys[0]: // environment_competitions
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Competition", columns[i])
@@ -168,10 +168,10 @@ func (c *Competition) assignValues(columns []string, values []interface{}) error
 			}
 		case competition.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_competition", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_competitions", values[i])
 			} else if value.Valid {
-				c.environment_environment_to_competition = new(uuid.UUID)
-				*c.environment_environment_to_competition = *value.S.(*uuid.UUID)
+				c.environment_competitions = new(uuid.UUID)
+				*c.environment_competitions = *value.S.(*uuid.UUID)
 			}
 		}
 	}

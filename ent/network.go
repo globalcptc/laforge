@@ -42,7 +42,7 @@ type Network struct {
 	// NetworkToIncludedNetwork holds the value of the NetworkToIncludedNetwork edge.
 	HCLNetworkToIncludedNetwork []*IncludedNetwork `json:"NetworkToIncludedNetwork,omitempty"`
 	//
-	environment_environment_to_network *uuid.UUID
+	environment_networks *uuid.UUID
 }
 
 // NetworkEdges holds the relations/edges for other nodes in the graph.
@@ -103,7 +103,7 @@ func (*Network) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case network.FieldID:
 			values[i] = new(uuid.UUID)
-		case network.ForeignKeys[0]: // environment_environment_to_network
+		case network.ForeignKeys[0]: // environment_networks
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Network", columns[i])
@@ -168,10 +168,10 @@ func (n *Network) assignValues(columns []string, values []interface{}) error {
 			}
 		case network.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_network", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_networks", values[i])
 			} else if value.Valid {
-				n.environment_environment_to_network = new(uuid.UUID)
-				*n.environment_environment_to_network = *value.S.(*uuid.UUID)
+				n.environment_networks = new(uuid.UUID)
+				*n.environment_networks = *value.S.(*uuid.UUID)
 			}
 		}
 	}

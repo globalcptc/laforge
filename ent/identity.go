@@ -44,7 +44,7 @@ type Identity struct {
 	// IdentityToEnvironment holds the value of the IdentityToEnvironment edge.
 	HCLIdentityToEnvironment *Environment `json:"IdentityToEnvironment,omitempty"`
 	//
-	environment_environment_to_identity *uuid.UUID
+	environment_identities *uuid.UUID
 }
 
 // IdentityEdges holds the relations/edges for other nodes in the graph.
@@ -81,7 +81,7 @@ func (*Identity) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case identity.FieldID:
 			values[i] = new(uuid.UUID)
-		case identity.ForeignKeys[0]: // environment_environment_to_identity
+		case identity.ForeignKeys[0]: // environment_identities
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Identity", columns[i])
@@ -164,10 +164,10 @@ func (i *Identity) assignValues(columns []string, values []interface{}) error {
 			}
 		case identity.ForeignKeys[0]:
 			if value, ok := values[j].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_identity", values[j])
+				return fmt.Errorf("unexpected type %T for field environment_identities", values[j])
 			} else if value.Valid {
-				i.environment_environment_to_identity = new(uuid.UUID)
-				*i.environment_environment_to_identity = *value.S.(*uuid.UUID)
+				i.environment_identities = new(uuid.UUID)
+				*i.environment_identities = *value.S.(*uuid.UUID)
 			}
 		}
 	}

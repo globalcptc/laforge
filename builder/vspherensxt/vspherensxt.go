@@ -199,7 +199,7 @@ func (builder VSphereNSXTBuilder) DeployNetwork(ctx context.Context, provisioned
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
-	entCompetition, err := entEnvironment.QueryEnvironmentToCompetition().All(ctx)
+	entCompetition, err := entEnvironment.QueryCompetitions().All(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
 	}
@@ -457,7 +457,7 @@ func (builder VSphereNSXTBuilder) TeardownNetwork(ctx context.Context, provision
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedNetwork.Name, err)
 	}
-	entCompetition, err := entEnvironment.QueryEnvironmentToCompetition().All(ctx)
+	entCompetition, err := entEnvironment.QueryCompetitions().All(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from environment \"%s\": %v", entEnvironment.Name, err)
 	}

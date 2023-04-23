@@ -42,7 +42,7 @@ type DNSRecord struct {
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
-	environment_environment_to_dns_record *uuid.UUID
+	environment_dns_records *uuid.UUID
 }
 
 // DNSRecordEdges holds the relations/edges for other nodes in the graph.
@@ -81,7 +81,7 @@ func (*DNSRecord) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case dnsrecord.FieldID:
 			values[i] = new(uuid.UUID)
-		case dnsrecord.ForeignKeys[0]: // environment_environment_to_dns_record
+		case dnsrecord.ForeignKeys[0]: // environment_dns_records
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type DNSRecord", columns[i])
@@ -160,10 +160,10 @@ func (dr *DNSRecord) assignValues(columns []string, values []interface{}) error 
 			}
 		case dnsrecord.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_dns_record", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_dns_records", values[i])
 			} else if value.Valid {
-				dr.environment_environment_to_dns_record = new(uuid.UUID)
-				*dr.environment_environment_to_dns_record = *value.S.(*uuid.UUID)
+				dr.environment_dns_records = new(uuid.UUID)
+				*dr.environment_dns_records = *value.S.(*uuid.UUID)
 			}
 		}
 	}

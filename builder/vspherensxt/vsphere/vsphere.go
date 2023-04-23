@@ -1480,7 +1480,7 @@ func (vs *VSphere) GenerateGuestCustomization(ctx context.Context, specName stri
 	if err != nil {
 		return nil, fmt.Errorf("error while querying environment from provisioned host: %v", err)
 	}
-	comp, err := env.QueryEnvironmentToCompetition().Only(ctx)
+	comp, err := env.QueryCompetitions().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while querying competition from environment: %v", err)
 	}

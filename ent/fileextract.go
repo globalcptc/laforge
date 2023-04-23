@@ -36,7 +36,7 @@ type FileExtract struct {
 	// FileExtractToEnvironment holds the value of the FileExtractToEnvironment edge.
 	HCLFileExtractToEnvironment *Environment `json:"FileExtractToEnvironment,omitempty"`
 	//
-	environment_environment_to_file_extract *uuid.UUID
+	environment_file_extracts *uuid.UUID
 }
 
 // FileExtractEdges holds the relations/edges for other nodes in the graph.
@@ -73,7 +73,7 @@ func (*FileExtract) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case fileextract.FieldID:
 			values[i] = new(uuid.UUID)
-		case fileextract.ForeignKeys[0]: // environment_environment_to_file_extract
+		case fileextract.ForeignKeys[0]: // environment_file_extracts
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type FileExtract", columns[i])
@@ -130,10 +130,10 @@ func (fe *FileExtract) assignValues(columns []string, values []interface{}) erro
 			}
 		case fileextract.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_file_extract", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_file_extracts", values[i])
 			} else if value.Valid {
-				fe.environment_environment_to_file_extract = new(uuid.UUID)
-				*fe.environment_environment_to_file_extract = *value.S.(*uuid.UUID)
+				fe.environment_file_extracts = new(uuid.UUID)
+				*fe.environment_file_extracts = *value.S.(*uuid.UUID)
 			}
 		}
 	}

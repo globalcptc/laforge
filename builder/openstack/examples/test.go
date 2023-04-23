@@ -51,7 +51,7 @@ func main() {
 		log.Fatalf("error while creating Openstack builder: %v", err)
 	}
 
-	build, err := env.QueryEnvironmentToBuild().Only(ctx)
+	build, err := env.QueryBuilds().Only(ctx)
 	if err != nil {
 		log.Fatalf("error querying build from env: %v", err)
 	}

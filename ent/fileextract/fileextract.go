@@ -31,7 +31,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	FileExtractToEnvironmentInverseTable = "environments"
 	// FileExtractToEnvironmentColumn is the table column denoting the FileExtractToEnvironment relation/edge.
-	FileExtractToEnvironmentColumn = "environment_environment_to_file_extract"
+	FileExtractToEnvironmentColumn = "environment_file_extracts"
 )
 
 // Columns holds all SQL columns for fileextract fields.
@@ -47,7 +47,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "file_extracts"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_file_extract",
+	"environment_file_extracts",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

@@ -126,7 +126,7 @@ func main() {
 	// if err != nil {
 	// 	log.Fatalf("failed to get env: %v", err)
 	// }
-	// entBuilds, err := entEnvironment.QueryEnvironmentToBuild().All(ctx)
+	// entBuilds, err := entEnvironment.QueryBuilds().All(ctx)
 	// if err != nil {
 	// 	log.Fatalf("failed to get builds: %v", err)
 	// }

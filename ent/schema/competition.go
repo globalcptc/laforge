@@ -50,7 +50,7 @@ func (Competition) Edges() []ent.Edge {
 		edge.To("DNS", DNS.Type).
 			StructTag(`hcl:"dns,block"`),
 		edge.From("Environment", Environment.Type).
-			Ref("EnvironmentToCompetition").
+			Ref("Competitions").
 			Unique(),
 		edge.From("Builds", Build.Type).
 			Ref("Competition"),

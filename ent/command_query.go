@@ -471,10 +471,10 @@ func (cq *CommandQuery) loadEnvironment(ctx context.Context, query *EnvironmentQ
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Command)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_command == nil {
+		if nodes[i].environment_commands == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_command
+		fk := *nodes[i].environment_commands
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -488,7 +488,7 @@ func (cq *CommandQuery) loadEnvironment(ctx context.Context, query *EnvironmentQ
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_command" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_commands" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

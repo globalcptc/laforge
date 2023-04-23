@@ -429,7 +429,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 		log.Log.Debugf("Creating ENV: %v", cEnviroment.HclID)
 
 		environmentHosts := []string{}
-		for _, cIncludedNetwork := range cEnviroment.HCLEnvironmentToIncludedNetwork {
+		for _, cIncludedNetwork := range cEnviroment.HCLIncludedNetworks {
 			environmentHosts = append(environmentHosts, cIncludedNetwork.Hosts...)
 		}
 		returnedCompetitions, returnedDNS, err := createCompetitions(txClient, ctx, log, loadedConfig.Competitions, cEnviroment.HclID)
@@ -480,7 +480,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			log.Log.Errorf("Error loading in identities into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
-		returnedNetworks, err := createNetworks(txClient, ctx, log, loadedConfig.Networks, cEnviroment.HCLEnvironmentToIncludedNetwork, cEnviroment.HclID)
+		returnedNetworks, err := createNetworks(txClient, ctx, log, loadedConfig.Networks, cEnviroment.HCLIncludedNetworks, cEnviroment.HclID)
 		if err != nil {
 			err = rollback(txClient, err)
 			log.Log.Errorf("Error loading in competition into env: %v, Err: %v", cEnviroment.HclID, err)
@@ -507,7 +507,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			return nil, err
 		}
 		returnedHostIDs := getHostIDs(returnedHosts)
-		returnedIncludedNetworks, err := createIncludedNetwork(txClient, ctx, log, cEnviroment.HCLEnvironmentToIncludedNetwork, cEnviroment.HclID, returnedHostIDs, returnedNetworkIDs)
+		returnedIncludedNetworks, err := createIncludedNetwork(txClient, ctx, log, cEnviroment.HCLIncludedNetworks, cEnviroment.HclID, returnedHostIDs, returnedNetworkIDs)
 		if err != nil {
 			err = rollback(txClient, err)
 			log.Log.Errorf("Error loading in included_networks into env: %v, Err: %v", cEnviroment.HclID, err)
@@ -531,22 +531,22 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 					SetRevision(cEnviroment.Revision).
 					SetTags(cEnviroment.Tags).
 					SetTeamCount(cEnviroment.TeamCount).
-					AddEnvironmentToCompetition(returnedCompetitions...).
-					AddEnvironmentToScript(returnedScripts...).
-					AddEnvironmentToFinding(returnedFindings...).
-					AddEnvironmentToCommand(returnedCommands...).
-					AddEnvironmentToDNSRecord(returnedDNSRecords...).
-					AddEnvironmentToFileDownload(returnedFileDownloads...).
-					AddEnvironmentToFileDelete(returnedFileDeletes...).
-					AddEnvironmentToFileExtract(returnedFileExtracts...).
-					AddEnvironmentToIdentity(returnedIdentities...).
-					AddEnvironmentToNetwork(returnedNetworks...).
-					AddEnvironmentToHost(returnedHosts...).
-					AddEnvironmentToHostDependency(returnedHostDependencies...).
-					AddEnvironmentToIncludedNetwork(returnedIncludedNetworks...).
-					AddEnvironmentToDNS(returnedDNS...).
-					AddEnvironmentToAnsible(returnedAnsible...).
-					AddEnvironmentToScheduledStep(returnedScheduledSteps...).
+					AddCompetitions(returnedCompetitions...).
+					AddScripts(returnedScripts...).
+					AddFindings(returnedFindings...).
+					AddCommands(returnedCommands...).
+					AddDNSRecords(returnedDNSRecords...).
+					AddFileDownloads(returnedFileDownloads...).
+					AddFileDeletes(returnedFileDeletes...).
+					AddFileExtracts(returnedFileExtracts...).
+					AddIdentities(returnedIdentities...).
+					AddNetworks(returnedNetworks...).
+					AddHosts(returnedHosts...).
+					AddHostDependencies(returnedHostDependencies...).
+					AddIncludedNetworks(returnedIncludedNetworks...).
+					AddDNS(returnedDNS...).
+					AddAnsibles(returnedAnsible...).
+					AddScheduledSteps(returnedScheduledSteps...).
 					Save(ctx)
 				if err != nil {
 					err = rollback(txClient, err)
@@ -575,22 +575,22 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			SetRevision(entEnvironment.Revision + 1).
 			SetTags(cEnviroment.Tags).
 			SetTeamCount(cEnviroment.TeamCount).
-			ClearEnvironmentToCompetition().
-			ClearEnvironmentToScript().
-			ClearEnvironmentToFinding().
-			ClearEnvironmentToCommand().
-			ClearEnvironmentToDNSRecord().
-			ClearEnvironmentToFileDownload().
-			ClearEnvironmentToFileDelete().
-			ClearEnvironmentToFileExtract().
-			ClearEnvironmentToIdentity().
-			ClearEnvironmentToNetwork().
-			ClearEnvironmentToHostDependency().
-			ClearEnvironmentToIncludedNetwork().
-			ClearEnvironmentToDNS().
-			ClearEnvironmentToHost().
-			ClearEnvironmentToAnsible().
-			ClearEnvironmentToScheduledStep().
+			ClearCompetitions().
+			ClearScripts().
+			ClearFindings().
+			ClearCommands().
+			ClearDNSRecords().
+			ClearFileDownloads().
+			ClearFileDeletes().
+			ClearFileExtracts().
+			ClearIdentities().
+			ClearNetworks().
+			ClearHostDependencies().
+			ClearIncludedNetworks().
+			ClearDNS().
+			ClearHosts().
+			ClearAnsibles().
+			ClearScheduledSteps().
 			Save(ctx)
 		if err != nil {
 			err = rollback(txClient, err)
@@ -598,22 +598,21 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			return nil, err
 		}
 		entEnvironment, err = entEnvironment.Update().
-			AddEnvironmentToCompetition(returnedCompetitions...).
-			AddEnvironmentToScript(returnedScripts...).
-			AddEnvironmentToFinding(returnedFindings...).
-			AddEnvironmentToCommand(returnedCommands...).
-			AddEnvironmentToDNSRecord(returnedDNSRecords...).
-			AddEnvironmentToFileDownload(returnedFileDownloads...).
-			AddEnvironmentToFileDelete(returnedFileDeletes...).
-			AddEnvironmentToFileExtract(returnedFileExtracts...).
-			AddEnvironmentToIdentity(returnedIdentities...).
-			AddEnvironmentToNetwork(returnedNetworks...).
-			AddEnvironmentToHost(returnedHosts...).
-			AddEnvironmentToHostDependency(returnedHostDependencies...).
-			AddEnvironmentToIncludedNetwork(returnedIncludedNetworks...).
-			AddEnvironmentToDNS(returnedDNS...).
-			AddEnvironmentToAnsible(returnedAnsible...).
-			AddEnvironmentToAnsible(returnedAnsible...).
+			AddCompetitions(returnedCompetitions...).
+			AddScripts(returnedScripts...).
+			AddFindings(returnedFindings...).
+			AddCommands(returnedCommands...).
+			AddDNSRecords(returnedDNSRecords...).
+			AddFileDownloads(returnedFileDownloads...).
+			AddFileDeletes(returnedFileDeletes...).
+			AddFileExtracts(returnedFileExtracts...).
+			AddIdentities(returnedIdentities...).
+			AddNetworks(returnedNetworks...).
+			AddHosts(returnedHosts...).
+			AddHostDependencies(returnedHostDependencies...).
+			AddIncludedNetworks(returnedIncludedNetworks...).
+			AddDNS(returnedDNS...).
+			AddAnsibles(returnedAnsible...).
 			Save(ctx)
 		if err != nil {
 			err = rollback(txClient, err)

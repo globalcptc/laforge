@@ -36,7 +36,7 @@ func (DNS) Fields() []ent.Field {
 func (DNS) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("Environments", Environment.Type).
-			Ref("EnvironmentToDNS"),
+			Ref("DNS"),
 		edge.From("Competitions", Competition.Type).
 			Ref("DNS"),
 	}

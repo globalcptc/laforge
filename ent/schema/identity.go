@@ -42,7 +42,7 @@ func (Identity) Fields() []ent.Field {
 func (Identity) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("IdentityToEnvironment", Environment.Type).
-			Ref("EnvironmentToIdentity").
+			Ref("Identities").
 			Unique(),
 	}
 }

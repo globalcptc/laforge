@@ -44,9 +44,9 @@ type Finding struct {
 	// FindingToEnvironment holds the value of the FindingToEnvironment edge.
 	HCLFindingToEnvironment *Environment `json:"FindingToEnvironment,omitempty"`
 	//
-	environment_environment_to_finding *uuid.UUID
-	finding_finding_to_host            *uuid.UUID
-	script_script_to_finding           *uuid.UUID
+	environment_findings     *uuid.UUID
+	finding_finding_to_host  *uuid.UUID
+	script_script_to_finding *uuid.UUID
 }
 
 // FindingEdges holds the relations/edges for other nodes in the graph.
@@ -126,7 +126,7 @@ func (*Finding) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case finding.FieldID:
 			values[i] = new(uuid.UUID)
-		case finding.ForeignKeys[0]: // environment_environment_to_finding
+		case finding.ForeignKeys[0]: // environment_findings
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case finding.ForeignKeys[1]: // finding_finding_to_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -187,10 +187,10 @@ func (f *Finding) assignValues(columns []string, values []interface{}) error {
 			}
 		case finding.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_finding", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_findings", values[i])
 			} else if value.Valid {
-				f.environment_environment_to_finding = new(uuid.UUID)
-				*f.environment_environment_to_finding = *value.S.(*uuid.UUID)
+				f.environment_findings = new(uuid.UUID)
+				*f.environment_findings = *value.S.(*uuid.UUID)
 			}
 		case finding.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

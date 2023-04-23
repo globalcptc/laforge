@@ -395,10 +395,10 @@ func (fdq *FileDownloadQuery) loadFileDownloadToEnvironment(ctx context.Context,
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*FileDownload)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_file_download == nil {
+		if nodes[i].environment_file_downloads == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_file_download
+		fk := *nodes[i].environment_file_downloads
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (fdq *FileDownloadQuery) loadFileDownloadToEnvironment(ctx context.Context,
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_file_download" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_file_downloads" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

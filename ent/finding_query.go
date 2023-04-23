@@ -615,10 +615,10 @@ func (fq *FindingQuery) loadFindingToEnvironment(ctx context.Context, query *Env
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Finding)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_finding == nil {
+		if nodes[i].environment_findings == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_finding
+		fk := *nodes[i].environment_findings
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -632,7 +632,7 @@ func (fq *FindingQuery) loadFindingToEnvironment(ctx context.Context, query *Env
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_finding" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_findings" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

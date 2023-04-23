@@ -39,7 +39,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	ScheduledStepToEnvironmentInverseTable = "environments"
 	// ScheduledStepToEnvironmentColumn is the table column denoting the ScheduledStepToEnvironment relation/edge.
-	ScheduledStepToEnvironmentColumn = "environment_environment_to_scheduled_step"
+	ScheduledStepToEnvironmentColumn = "environment_scheduled_steps"
 )
 
 // Columns holds all SQL columns for scheduledstep fields.
@@ -57,7 +57,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "scheduled_steps"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_scheduled_step",
+	"environment_scheduled_steps",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

@@ -58,7 +58,7 @@ type Script struct {
 	// ScriptToEnvironment holds the value of the ScriptToEnvironment edge.
 	HCLScriptToEnvironment *Environment `json:"ScriptToEnvironment,omitempty"`
 	//
-	environment_environment_to_script *uuid.UUID
+	environment_scripts *uuid.UUID
 }
 
 // ScriptEdges holds the relations/edges for other nodes in the graph.
@@ -121,7 +121,7 @@ func (*Script) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case script.FieldID:
 			values[i] = new(uuid.UUID)
-		case script.ForeignKeys[0]: // environment_environment_to_script
+		case script.ForeignKeys[0]: // environment_scripts
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Script", columns[i])
@@ -236,10 +236,10 @@ func (s *Script) assignValues(columns []string, values []interface{}) error {
 			}
 		case script.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_script", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_scripts", values[i])
 			} else if value.Valid {
-				s.environment_environment_to_script = new(uuid.UUID)
-				*s.environment_environment_to_script = *value.S.(*uuid.UUID)
+				s.environment_scripts = new(uuid.UUID)
+				*s.environment_scripts = *value.S.(*uuid.UUID)
 			}
 		}
 	}

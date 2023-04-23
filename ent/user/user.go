@@ -33,7 +33,7 @@ const (
 	// UserToTagColumn is the table column denoting the UserToTag relation/edge.
 	UserToTagColumn = "user_user_to_tag"
 	// UserToEnvironmentTable is the table that holds the UserToEnvironment relation/edge. The primary key declared below.
-	UserToEnvironmentTable = "environment_EnvironmentToUser"
+	UserToEnvironmentTable = "environment_Users"
 	// UserToEnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	UserToEnvironmentInverseTable = "environments"

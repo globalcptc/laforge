@@ -48,7 +48,7 @@ func (Command) Edges() []ent.Edge {
 		edge.To("Users", User.Type).
 			StructTag(`hcl:"maintainer,block"`),
 		edge.From("Environment", Environment.Type).
-			Ref("EnvironmentToCommand").
+			Ref("Commands").
 			Unique(),
 	}
 }

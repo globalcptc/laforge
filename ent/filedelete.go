@@ -32,7 +32,7 @@ type FileDelete struct {
 	// FileDeleteToEnvironment holds the value of the FileDeleteToEnvironment edge.
 	HCLFileDeleteToEnvironment *Environment `json:"FileDeleteToEnvironment,omitempty"`
 	//
-	environment_environment_to_file_delete *uuid.UUID
+	environment_file_deletes *uuid.UUID
 }
 
 // FileDeleteEdges holds the relations/edges for other nodes in the graph.
@@ -69,7 +69,7 @@ func (*FileDelete) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case filedelete.FieldID:
 			values[i] = new(uuid.UUID)
-		case filedelete.ForeignKeys[0]: // environment_environment_to_file_delete
+		case filedelete.ForeignKeys[0]: // environment_file_deletes
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type FileDelete", columns[i])
@@ -114,10 +114,10 @@ func (fd *FileDelete) assignValues(columns []string, values []interface{}) error
 			}
 		case filedelete.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_file_delete", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_file_deletes", values[i])
 			} else if value.Valid {
-				fd.environment_environment_to_file_delete = new(uuid.UUID)
-				*fd.environment_environment_to_file_delete = *value.S.(*uuid.UUID)
+				fd.environment_file_deletes = new(uuid.UUID)
+				*fd.environment_file_deletes = *value.S.(*uuid.UUID)
 			}
 		}
 	}

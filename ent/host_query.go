@@ -679,10 +679,10 @@ func (hq *HostQuery) loadHostToEnvironment(ctx context.Context, query *Environme
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Host)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_host == nil {
+		if nodes[i].environment_hosts == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_host
+		fk := *nodes[i].environment_hosts
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -696,7 +696,7 @@ func (hq *HostQuery) loadHostToEnvironment(ctx context.Context, query *Environme
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_host" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_hosts" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

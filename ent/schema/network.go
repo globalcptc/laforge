@@ -36,7 +36,7 @@ func (Network) Fields() []ent.Field {
 func (Network) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("NetworkToEnvironment", Environment.Type).
-			Ref("EnvironmentToNetwork").
+			Ref("Networks").
 			Unique(),
 		edge.From("NetworkToHostDependency", HostDependency.Type).
 			Ref("HostDependencyToNetwork"),

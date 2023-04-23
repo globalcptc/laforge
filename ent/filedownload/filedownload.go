@@ -43,7 +43,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	FileDownloadToEnvironmentInverseTable = "environments"
 	// FileDownloadToEnvironmentColumn is the table column denoting the FileDownloadToEnvironment relation/edge.
-	FileDownloadToEnvironmentColumn = "environment_environment_to_file_download"
+	FileDownloadToEnvironmentColumn = "environment_file_downloads"
 )
 
 // Columns holds all SQL columns for filedownload fields.
@@ -65,7 +65,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "file_downloads"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_file_download",
+	"environment_file_downloads",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

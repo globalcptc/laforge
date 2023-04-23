@@ -47,7 +47,7 @@ func (FileDownload) Fields() []ent.Field {
 func (FileDownload) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("FileDownloadToEnvironment", Environment.Type).
-			Ref("EnvironmentToFileDownload").
+			Ref("FileDownloads").
 			Unique(),
 	}
 }

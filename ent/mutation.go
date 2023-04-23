@@ -11227,86 +11227,86 @@ func (m *DiskMutation) ResetEdge(name string) error {
 // EnvironmentMutation represents an operation that mutates the Environment nodes in the graph.
 type EnvironmentMutation struct {
 	config
-	op                                   Op
-	typ                                  string
-	id                                   *uuid.UUID
-	hcl_id                               *string
-	competition_id                       *string
-	name                                 *string
-	description                          *string
-	builder                              *string
-	team_count                           *int
-	addteam_count                        *int
-	revision                             *int
-	addrevision                          *int
-	admin_cidrs                          *[]string
-	exposed_vdi_ports                    *[]string
-	_config                              *map[string]string
-	tags                                 *map[string]string
-	clearedFields                        map[string]struct{}
-	_EnvironmentToUser                   map[uuid.UUID]struct{}
-	removed_EnvironmentToUser            map[uuid.UUID]struct{}
-	cleared_EnvironmentToUser            bool
-	_EnvironmentToHost                   map[uuid.UUID]struct{}
-	removed_EnvironmentToHost            map[uuid.UUID]struct{}
-	cleared_EnvironmentToHost            bool
-	_EnvironmentToCompetition            map[uuid.UUID]struct{}
-	removed_EnvironmentToCompetition     map[uuid.UUID]struct{}
-	cleared_EnvironmentToCompetition     bool
-	_EnvironmentToIdentity               map[uuid.UUID]struct{}
-	removed_EnvironmentToIdentity        map[uuid.UUID]struct{}
-	cleared_EnvironmentToIdentity        bool
-	_EnvironmentToCommand                map[uuid.UUID]struct{}
-	removed_EnvironmentToCommand         map[uuid.UUID]struct{}
-	cleared_EnvironmentToCommand         bool
-	_EnvironmentToScript                 map[uuid.UUID]struct{}
-	removed_EnvironmentToScript          map[uuid.UUID]struct{}
-	cleared_EnvironmentToScript          bool
-	_EnvironmentToFileDownload           map[uuid.UUID]struct{}
-	removed_EnvironmentToFileDownload    map[uuid.UUID]struct{}
-	cleared_EnvironmentToFileDownload    bool
-	_EnvironmentToFileDelete             map[uuid.UUID]struct{}
-	removed_EnvironmentToFileDelete      map[uuid.UUID]struct{}
-	cleared_EnvironmentToFileDelete      bool
-	_EnvironmentToFileExtract            map[uuid.UUID]struct{}
-	removed_EnvironmentToFileExtract     map[uuid.UUID]struct{}
-	cleared_EnvironmentToFileExtract     bool
-	_EnvironmentToIncludedNetwork        map[uuid.UUID]struct{}
-	removed_EnvironmentToIncludedNetwork map[uuid.UUID]struct{}
-	cleared_EnvironmentToIncludedNetwork bool
-	_EnvironmentToFinding                map[uuid.UUID]struct{}
-	removed_EnvironmentToFinding         map[uuid.UUID]struct{}
-	cleared_EnvironmentToFinding         bool
-	_EnvironmentToDNSRecord              map[uuid.UUID]struct{}
-	removed_EnvironmentToDNSRecord       map[uuid.UUID]struct{}
-	cleared_EnvironmentToDNSRecord       bool
-	_EnvironmentToDNS                    map[uuid.UUID]struct{}
-	removed_EnvironmentToDNS             map[uuid.UUID]struct{}
-	cleared_EnvironmentToDNS             bool
-	_EnvironmentToNetwork                map[uuid.UUID]struct{}
-	removed_EnvironmentToNetwork         map[uuid.UUID]struct{}
-	cleared_EnvironmentToNetwork         bool
-	_EnvironmentToHostDependency         map[uuid.UUID]struct{}
-	removed_EnvironmentToHostDependency  map[uuid.UUID]struct{}
-	cleared_EnvironmentToHostDependency  bool
-	_EnvironmentToAnsible                map[uuid.UUID]struct{}
-	removed_EnvironmentToAnsible         map[uuid.UUID]struct{}
-	cleared_EnvironmentToAnsible         bool
-	_EnvironmentToScheduledStep          map[uuid.UUID]struct{}
-	removed_EnvironmentToScheduledStep   map[uuid.UUID]struct{}
-	cleared_EnvironmentToScheduledStep   bool
-	_EnvironmentToBuild                  map[uuid.UUID]struct{}
-	removed_EnvironmentToBuild           map[uuid.UUID]struct{}
-	cleared_EnvironmentToBuild           bool
-	_EnvironmentToRepository             map[uuid.UUID]struct{}
-	removed_EnvironmentToRepository      map[uuid.UUID]struct{}
-	cleared_EnvironmentToRepository      bool
-	_EnvironmentToServerTask             map[uuid.UUID]struct{}
-	removed_EnvironmentToServerTask      map[uuid.UUID]struct{}
-	cleared_EnvironmentToServerTask      bool
-	done                                 bool
-	oldValue                             func(context.Context) (*Environment, error)
-	predicates                           []predicate.Environment
+	op                       Op
+	typ                      string
+	id                       *uuid.UUID
+	hcl_id                   *string
+	competition_id           *string
+	name                     *string
+	description              *string
+	builder                  *string
+	team_count               *int
+	addteam_count            *int
+	revision                 *int
+	addrevision              *int
+	admin_cidrs              *[]string
+	exposed_vdi_ports        *[]string
+	_config                  *map[string]string
+	tags                     *map[string]string
+	clearedFields            map[string]struct{}
+	_Users                   map[uuid.UUID]struct{}
+	removed_Users            map[uuid.UUID]struct{}
+	cleared_Users            bool
+	_Hosts                   map[uuid.UUID]struct{}
+	removed_Hosts            map[uuid.UUID]struct{}
+	cleared_Hosts            bool
+	_Competitions            map[uuid.UUID]struct{}
+	removed_Competitions     map[uuid.UUID]struct{}
+	cleared_Competitions     bool
+	_Identities              map[uuid.UUID]struct{}
+	removed_Identities       map[uuid.UUID]struct{}
+	cleared_Identities       bool
+	_Commands                map[uuid.UUID]struct{}
+	removed_Commands         map[uuid.UUID]struct{}
+	cleared_Commands         bool
+	_Scripts                 map[uuid.UUID]struct{}
+	removed_Scripts          map[uuid.UUID]struct{}
+	cleared_Scripts          bool
+	_FileDownloads           map[uuid.UUID]struct{}
+	removed_FileDownloads    map[uuid.UUID]struct{}
+	cleared_FileDownloads    bool
+	_FileDeletes             map[uuid.UUID]struct{}
+	removed_FileDeletes      map[uuid.UUID]struct{}
+	cleared_FileDeletes      bool
+	_FileExtracts            map[uuid.UUID]struct{}
+	removed_FileExtracts     map[uuid.UUID]struct{}
+	cleared_FileExtracts     bool
+	_IncludedNetworks        map[uuid.UUID]struct{}
+	removed_IncludedNetworks map[uuid.UUID]struct{}
+	cleared_IncludedNetworks bool
+	_Findings                map[uuid.UUID]struct{}
+	removed_Findings         map[uuid.UUID]struct{}
+	cleared_Findings         bool
+	_DNSRecords              map[uuid.UUID]struct{}
+	removed_DNSRecords       map[uuid.UUID]struct{}
+	cleared_DNSRecords       bool
+	_DNS                     map[uuid.UUID]struct{}
+	removed_DNS              map[uuid.UUID]struct{}
+	cleared_DNS              bool
+	_Networks                map[uuid.UUID]struct{}
+	removed_Networks         map[uuid.UUID]struct{}
+	cleared_Networks         bool
+	_HostDependencies        map[uuid.UUID]struct{}
+	removed_HostDependencies map[uuid.UUID]struct{}
+	cleared_HostDependencies bool
+	_Ansibles                map[uuid.UUID]struct{}
+	removed_Ansibles         map[uuid.UUID]struct{}
+	cleared_Ansibles         bool
+	_ScheduledSteps          map[uuid.UUID]struct{}
+	removed_ScheduledSteps   map[uuid.UUID]struct{}
+	cleared_ScheduledSteps   bool
+	_Builds                  map[uuid.UUID]struct{}
+	removed_Builds           map[uuid.UUID]struct{}
+	cleared_Builds           bool
+	_Repositories            map[uuid.UUID]struct{}
+	removed_Repositories     map[uuid.UUID]struct{}
+	cleared_Repositories     bool
+	_ServerTasks             map[uuid.UUID]struct{}
+	removed_ServerTasks      map[uuid.UUID]struct{}
+	cleared_ServerTasks      bool
+	done                     bool
+	oldValue                 func(context.Context) (*Environment, error)
+	predicates               []predicate.Environment
 }
 
 var _ ent.Mutation = (*EnvironmentMutation)(nil)
@@ -11849,1084 +11849,1084 @@ func (m *EnvironmentMutation) ResetTags() {
 	m.tags = nil
 }
 
-// AddEnvironmentToUserIDs adds the "EnvironmentToUser" edge to the User entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToUserIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToUser == nil {
-		m._EnvironmentToUser = make(map[uuid.UUID]struct{})
+// AddUserIDs adds the "Users" edge to the User entity by ids.
+func (m *EnvironmentMutation) AddUserIDs(ids ...uuid.UUID) {
+	if m._Users == nil {
+		m._Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToUser[ids[i]] = struct{}{}
+		m._Users[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToUser clears the "EnvironmentToUser" edge to the User entity.
-func (m *EnvironmentMutation) ClearEnvironmentToUser() {
-	m.cleared_EnvironmentToUser = true
+// ClearUsers clears the "Users" edge to the User entity.
+func (m *EnvironmentMutation) ClearUsers() {
+	m.cleared_Users = true
 }
 
-// EnvironmentToUserCleared reports if the "EnvironmentToUser" edge to the User entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToUserCleared() bool {
-	return m.cleared_EnvironmentToUser
+// UsersCleared reports if the "Users" edge to the User entity was cleared.
+func (m *EnvironmentMutation) UsersCleared() bool {
+	return m.cleared_Users
 }
 
-// RemoveEnvironmentToUserIDs removes the "EnvironmentToUser" edge to the User entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToUserIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToUser == nil {
-		m.removed_EnvironmentToUser = make(map[uuid.UUID]struct{})
+// RemoveUserIDs removes the "Users" edge to the User entity by IDs.
+func (m *EnvironmentMutation) RemoveUserIDs(ids ...uuid.UUID) {
+	if m.removed_Users == nil {
+		m.removed_Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToUser, ids[i])
-		m.removed_EnvironmentToUser[ids[i]] = struct{}{}
+		delete(m._Users, ids[i])
+		m.removed_Users[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToUser returns the removed IDs of the "EnvironmentToUser" edge to the User entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToUserIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToUser {
+// RemovedUsers returns the removed IDs of the "Users" edge to the User entity.
+func (m *EnvironmentMutation) RemovedUsersIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// EnvironmentToUserIDs returns the "EnvironmentToUser" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToUserIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToUser {
+// UsersIDs returns the "Users" edge IDs in the mutation.
+func (m *EnvironmentMutation) UsersIDs() (ids []uuid.UUID) {
+	for id := range m._Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetEnvironmentToUser resets all changes to the "EnvironmentToUser" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToUser() {
-	m._EnvironmentToUser = nil
-	m.cleared_EnvironmentToUser = false
-	m.removed_EnvironmentToUser = nil
+// ResetUsers resets all changes to the "Users" edge.
+func (m *EnvironmentMutation) ResetUsers() {
+	m._Users = nil
+	m.cleared_Users = false
+	m.removed_Users = nil
 }
 
-// AddEnvironmentToHostIDs adds the "EnvironmentToHost" edge to the Host entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToHostIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToHost == nil {
-		m._EnvironmentToHost = make(map[uuid.UUID]struct{})
+// AddHostIDs adds the "Hosts" edge to the Host entity by ids.
+func (m *EnvironmentMutation) AddHostIDs(ids ...uuid.UUID) {
+	if m._Hosts == nil {
+		m._Hosts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToHost[ids[i]] = struct{}{}
+		m._Hosts[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToHost clears the "EnvironmentToHost" edge to the Host entity.
-func (m *EnvironmentMutation) ClearEnvironmentToHost() {
-	m.cleared_EnvironmentToHost = true
+// ClearHosts clears the "Hosts" edge to the Host entity.
+func (m *EnvironmentMutation) ClearHosts() {
+	m.cleared_Hosts = true
 }
 
-// EnvironmentToHostCleared reports if the "EnvironmentToHost" edge to the Host entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToHostCleared() bool {
-	return m.cleared_EnvironmentToHost
+// HostsCleared reports if the "Hosts" edge to the Host entity was cleared.
+func (m *EnvironmentMutation) HostsCleared() bool {
+	return m.cleared_Hosts
 }
 
-// RemoveEnvironmentToHostIDs removes the "EnvironmentToHost" edge to the Host entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToHostIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToHost == nil {
-		m.removed_EnvironmentToHost = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m._EnvironmentToHost, ids[i])
-		m.removed_EnvironmentToHost[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedEnvironmentToHost returns the removed IDs of the "EnvironmentToHost" edge to the Host entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToHostIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToHost {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// EnvironmentToHostIDs returns the "EnvironmentToHost" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToHostIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToHost {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetEnvironmentToHost resets all changes to the "EnvironmentToHost" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToHost() {
-	m._EnvironmentToHost = nil
-	m.cleared_EnvironmentToHost = false
-	m.removed_EnvironmentToHost = nil
-}
-
-// AddEnvironmentToCompetitionIDs adds the "EnvironmentToCompetition" edge to the Competition entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToCompetitionIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToCompetition == nil {
-		m._EnvironmentToCompetition = make(map[uuid.UUID]struct{})
+// RemoveHostIDs removes the "Hosts" edge to the Host entity by IDs.
+func (m *EnvironmentMutation) RemoveHostIDs(ids ...uuid.UUID) {
+	if m.removed_Hosts == nil {
+		m.removed_Hosts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToCompetition[ids[i]] = struct{}{}
+		delete(m._Hosts, ids[i])
+		m.removed_Hosts[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToCompetition clears the "EnvironmentToCompetition" edge to the Competition entity.
-func (m *EnvironmentMutation) ClearEnvironmentToCompetition() {
-	m.cleared_EnvironmentToCompetition = true
+// RemovedHosts returns the removed IDs of the "Hosts" edge to the Host entity.
+func (m *EnvironmentMutation) RemovedHostsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Hosts {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToCompetitionCleared reports if the "EnvironmentToCompetition" edge to the Competition entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToCompetitionCleared() bool {
-	return m.cleared_EnvironmentToCompetition
+// HostsIDs returns the "Hosts" edge IDs in the mutation.
+func (m *EnvironmentMutation) HostsIDs() (ids []uuid.UUID) {
+	for id := range m._Hosts {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToCompetitionIDs removes the "EnvironmentToCompetition" edge to the Competition entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToCompetitionIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToCompetition == nil {
-		m.removed_EnvironmentToCompetition = make(map[uuid.UUID]struct{})
+// ResetHosts resets all changes to the "Hosts" edge.
+func (m *EnvironmentMutation) ResetHosts() {
+	m._Hosts = nil
+	m.cleared_Hosts = false
+	m.removed_Hosts = nil
+}
+
+// AddCompetitionIDs adds the "Competitions" edge to the Competition entity by ids.
+func (m *EnvironmentMutation) AddCompetitionIDs(ids ...uuid.UUID) {
+	if m._Competitions == nil {
+		m._Competitions = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToCompetition, ids[i])
-		m.removed_EnvironmentToCompetition[ids[i]] = struct{}{}
+		m._Competitions[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToCompetition returns the removed IDs of the "EnvironmentToCompetition" edge to the Competition entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToCompetitionIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToCompetition {
-		ids = append(ids, id)
-	}
-	return
+// ClearCompetitions clears the "Competitions" edge to the Competition entity.
+func (m *EnvironmentMutation) ClearCompetitions() {
+	m.cleared_Competitions = true
 }
 
-// EnvironmentToCompetitionIDs returns the "EnvironmentToCompetition" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToCompetitionIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToCompetition {
-		ids = append(ids, id)
-	}
-	return
+// CompetitionsCleared reports if the "Competitions" edge to the Competition entity was cleared.
+func (m *EnvironmentMutation) CompetitionsCleared() bool {
+	return m.cleared_Competitions
 }
 
-// ResetEnvironmentToCompetition resets all changes to the "EnvironmentToCompetition" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToCompetition() {
-	m._EnvironmentToCompetition = nil
-	m.cleared_EnvironmentToCompetition = false
-	m.removed_EnvironmentToCompetition = nil
-}
-
-// AddEnvironmentToIdentityIDs adds the "EnvironmentToIdentity" edge to the Identity entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToIdentityIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToIdentity == nil {
-		m._EnvironmentToIdentity = make(map[uuid.UUID]struct{})
+// RemoveCompetitionIDs removes the "Competitions" edge to the Competition entity by IDs.
+func (m *EnvironmentMutation) RemoveCompetitionIDs(ids ...uuid.UUID) {
+	if m.removed_Competitions == nil {
+		m.removed_Competitions = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToIdentity[ids[i]] = struct{}{}
+		delete(m._Competitions, ids[i])
+		m.removed_Competitions[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToIdentity clears the "EnvironmentToIdentity" edge to the Identity entity.
-func (m *EnvironmentMutation) ClearEnvironmentToIdentity() {
-	m.cleared_EnvironmentToIdentity = true
+// RemovedCompetitions returns the removed IDs of the "Competitions" edge to the Competition entity.
+func (m *EnvironmentMutation) RemovedCompetitionsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Competitions {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToIdentityCleared reports if the "EnvironmentToIdentity" edge to the Identity entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToIdentityCleared() bool {
-	return m.cleared_EnvironmentToIdentity
+// CompetitionsIDs returns the "Competitions" edge IDs in the mutation.
+func (m *EnvironmentMutation) CompetitionsIDs() (ids []uuid.UUID) {
+	for id := range m._Competitions {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToIdentityIDs removes the "EnvironmentToIdentity" edge to the Identity entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToIdentityIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToIdentity == nil {
-		m.removed_EnvironmentToIdentity = make(map[uuid.UUID]struct{})
+// ResetCompetitions resets all changes to the "Competitions" edge.
+func (m *EnvironmentMutation) ResetCompetitions() {
+	m._Competitions = nil
+	m.cleared_Competitions = false
+	m.removed_Competitions = nil
+}
+
+// AddIdentityIDs adds the "Identities" edge to the Identity entity by ids.
+func (m *EnvironmentMutation) AddIdentityIDs(ids ...uuid.UUID) {
+	if m._Identities == nil {
+		m._Identities = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToIdentity, ids[i])
-		m.removed_EnvironmentToIdentity[ids[i]] = struct{}{}
+		m._Identities[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToIdentity returns the removed IDs of the "EnvironmentToIdentity" edge to the Identity entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToIdentityIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToIdentity {
-		ids = append(ids, id)
-	}
-	return
+// ClearIdentities clears the "Identities" edge to the Identity entity.
+func (m *EnvironmentMutation) ClearIdentities() {
+	m.cleared_Identities = true
 }
 
-// EnvironmentToIdentityIDs returns the "EnvironmentToIdentity" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToIdentityIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToIdentity {
-		ids = append(ids, id)
-	}
-	return
+// IdentitiesCleared reports if the "Identities" edge to the Identity entity was cleared.
+func (m *EnvironmentMutation) IdentitiesCleared() bool {
+	return m.cleared_Identities
 }
 
-// ResetEnvironmentToIdentity resets all changes to the "EnvironmentToIdentity" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToIdentity() {
-	m._EnvironmentToIdentity = nil
-	m.cleared_EnvironmentToIdentity = false
-	m.removed_EnvironmentToIdentity = nil
-}
-
-// AddEnvironmentToCommandIDs adds the "EnvironmentToCommand" edge to the Command entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToCommandIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToCommand == nil {
-		m._EnvironmentToCommand = make(map[uuid.UUID]struct{})
+// RemoveIdentityIDs removes the "Identities" edge to the Identity entity by IDs.
+func (m *EnvironmentMutation) RemoveIdentityIDs(ids ...uuid.UUID) {
+	if m.removed_Identities == nil {
+		m.removed_Identities = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToCommand[ids[i]] = struct{}{}
+		delete(m._Identities, ids[i])
+		m.removed_Identities[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToCommand clears the "EnvironmentToCommand" edge to the Command entity.
-func (m *EnvironmentMutation) ClearEnvironmentToCommand() {
-	m.cleared_EnvironmentToCommand = true
+// RemovedIdentities returns the removed IDs of the "Identities" edge to the Identity entity.
+func (m *EnvironmentMutation) RemovedIdentitiesIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Identities {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToCommandCleared reports if the "EnvironmentToCommand" edge to the Command entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToCommandCleared() bool {
-	return m.cleared_EnvironmentToCommand
+// IdentitiesIDs returns the "Identities" edge IDs in the mutation.
+func (m *EnvironmentMutation) IdentitiesIDs() (ids []uuid.UUID) {
+	for id := range m._Identities {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToCommandIDs removes the "EnvironmentToCommand" edge to the Command entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToCommandIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToCommand == nil {
-		m.removed_EnvironmentToCommand = make(map[uuid.UUID]struct{})
+// ResetIdentities resets all changes to the "Identities" edge.
+func (m *EnvironmentMutation) ResetIdentities() {
+	m._Identities = nil
+	m.cleared_Identities = false
+	m.removed_Identities = nil
+}
+
+// AddCommandIDs adds the "Commands" edge to the Command entity by ids.
+func (m *EnvironmentMutation) AddCommandIDs(ids ...uuid.UUID) {
+	if m._Commands == nil {
+		m._Commands = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToCommand, ids[i])
-		m.removed_EnvironmentToCommand[ids[i]] = struct{}{}
+		m._Commands[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToCommand returns the removed IDs of the "EnvironmentToCommand" edge to the Command entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToCommandIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToCommand {
-		ids = append(ids, id)
-	}
-	return
+// ClearCommands clears the "Commands" edge to the Command entity.
+func (m *EnvironmentMutation) ClearCommands() {
+	m.cleared_Commands = true
 }
 
-// EnvironmentToCommandIDs returns the "EnvironmentToCommand" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToCommandIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToCommand {
-		ids = append(ids, id)
-	}
-	return
+// CommandsCleared reports if the "Commands" edge to the Command entity was cleared.
+func (m *EnvironmentMutation) CommandsCleared() bool {
+	return m.cleared_Commands
 }
 
-// ResetEnvironmentToCommand resets all changes to the "EnvironmentToCommand" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToCommand() {
-	m._EnvironmentToCommand = nil
-	m.cleared_EnvironmentToCommand = false
-	m.removed_EnvironmentToCommand = nil
-}
-
-// AddEnvironmentToScriptIDs adds the "EnvironmentToScript" edge to the Script entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToScriptIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToScript == nil {
-		m._EnvironmentToScript = make(map[uuid.UUID]struct{})
+// RemoveCommandIDs removes the "Commands" edge to the Command entity by IDs.
+func (m *EnvironmentMutation) RemoveCommandIDs(ids ...uuid.UUID) {
+	if m.removed_Commands == nil {
+		m.removed_Commands = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToScript[ids[i]] = struct{}{}
+		delete(m._Commands, ids[i])
+		m.removed_Commands[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToScript clears the "EnvironmentToScript" edge to the Script entity.
-func (m *EnvironmentMutation) ClearEnvironmentToScript() {
-	m.cleared_EnvironmentToScript = true
+// RemovedCommands returns the removed IDs of the "Commands" edge to the Command entity.
+func (m *EnvironmentMutation) RemovedCommandsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Commands {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToScriptCleared reports if the "EnvironmentToScript" edge to the Script entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToScriptCleared() bool {
-	return m.cleared_EnvironmentToScript
+// CommandsIDs returns the "Commands" edge IDs in the mutation.
+func (m *EnvironmentMutation) CommandsIDs() (ids []uuid.UUID) {
+	for id := range m._Commands {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToScriptIDs removes the "EnvironmentToScript" edge to the Script entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToScriptIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToScript == nil {
-		m.removed_EnvironmentToScript = make(map[uuid.UUID]struct{})
+// ResetCommands resets all changes to the "Commands" edge.
+func (m *EnvironmentMutation) ResetCommands() {
+	m._Commands = nil
+	m.cleared_Commands = false
+	m.removed_Commands = nil
+}
+
+// AddScriptIDs adds the "Scripts" edge to the Script entity by ids.
+func (m *EnvironmentMutation) AddScriptIDs(ids ...uuid.UUID) {
+	if m._Scripts == nil {
+		m._Scripts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToScript, ids[i])
-		m.removed_EnvironmentToScript[ids[i]] = struct{}{}
+		m._Scripts[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToScript returns the removed IDs of the "EnvironmentToScript" edge to the Script entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToScriptIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToScript {
-		ids = append(ids, id)
-	}
-	return
+// ClearScripts clears the "Scripts" edge to the Script entity.
+func (m *EnvironmentMutation) ClearScripts() {
+	m.cleared_Scripts = true
 }
 
-// EnvironmentToScriptIDs returns the "EnvironmentToScript" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToScriptIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToScript {
-		ids = append(ids, id)
-	}
-	return
+// ScriptsCleared reports if the "Scripts" edge to the Script entity was cleared.
+func (m *EnvironmentMutation) ScriptsCleared() bool {
+	return m.cleared_Scripts
 }
 
-// ResetEnvironmentToScript resets all changes to the "EnvironmentToScript" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToScript() {
-	m._EnvironmentToScript = nil
-	m.cleared_EnvironmentToScript = false
-	m.removed_EnvironmentToScript = nil
-}
-
-// AddEnvironmentToFileDownloadIDs adds the "EnvironmentToFileDownload" edge to the FileDownload entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToFileDownloadIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToFileDownload == nil {
-		m._EnvironmentToFileDownload = make(map[uuid.UUID]struct{})
+// RemoveScriptIDs removes the "Scripts" edge to the Script entity by IDs.
+func (m *EnvironmentMutation) RemoveScriptIDs(ids ...uuid.UUID) {
+	if m.removed_Scripts == nil {
+		m.removed_Scripts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToFileDownload[ids[i]] = struct{}{}
+		delete(m._Scripts, ids[i])
+		m.removed_Scripts[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToFileDownload clears the "EnvironmentToFileDownload" edge to the FileDownload entity.
-func (m *EnvironmentMutation) ClearEnvironmentToFileDownload() {
-	m.cleared_EnvironmentToFileDownload = true
+// RemovedScripts returns the removed IDs of the "Scripts" edge to the Script entity.
+func (m *EnvironmentMutation) RemovedScriptsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Scripts {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToFileDownloadCleared reports if the "EnvironmentToFileDownload" edge to the FileDownload entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToFileDownloadCleared() bool {
-	return m.cleared_EnvironmentToFileDownload
+// ScriptsIDs returns the "Scripts" edge IDs in the mutation.
+func (m *EnvironmentMutation) ScriptsIDs() (ids []uuid.UUID) {
+	for id := range m._Scripts {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToFileDownloadIDs removes the "EnvironmentToFileDownload" edge to the FileDownload entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToFileDownloadIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToFileDownload == nil {
-		m.removed_EnvironmentToFileDownload = make(map[uuid.UUID]struct{})
+// ResetScripts resets all changes to the "Scripts" edge.
+func (m *EnvironmentMutation) ResetScripts() {
+	m._Scripts = nil
+	m.cleared_Scripts = false
+	m.removed_Scripts = nil
+}
+
+// AddFileDownloadIDs adds the "FileDownloads" edge to the FileDownload entity by ids.
+func (m *EnvironmentMutation) AddFileDownloadIDs(ids ...uuid.UUID) {
+	if m._FileDownloads == nil {
+		m._FileDownloads = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToFileDownload, ids[i])
-		m.removed_EnvironmentToFileDownload[ids[i]] = struct{}{}
+		m._FileDownloads[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToFileDownload returns the removed IDs of the "EnvironmentToFileDownload" edge to the FileDownload entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToFileDownloadIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToFileDownload {
-		ids = append(ids, id)
-	}
-	return
+// ClearFileDownloads clears the "FileDownloads" edge to the FileDownload entity.
+func (m *EnvironmentMutation) ClearFileDownloads() {
+	m.cleared_FileDownloads = true
 }
 
-// EnvironmentToFileDownloadIDs returns the "EnvironmentToFileDownload" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToFileDownloadIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToFileDownload {
-		ids = append(ids, id)
-	}
-	return
+// FileDownloadsCleared reports if the "FileDownloads" edge to the FileDownload entity was cleared.
+func (m *EnvironmentMutation) FileDownloadsCleared() bool {
+	return m.cleared_FileDownloads
 }
 
-// ResetEnvironmentToFileDownload resets all changes to the "EnvironmentToFileDownload" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToFileDownload() {
-	m._EnvironmentToFileDownload = nil
-	m.cleared_EnvironmentToFileDownload = false
-	m.removed_EnvironmentToFileDownload = nil
-}
-
-// AddEnvironmentToFileDeleteIDs adds the "EnvironmentToFileDelete" edge to the FileDelete entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToFileDeleteIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToFileDelete == nil {
-		m._EnvironmentToFileDelete = make(map[uuid.UUID]struct{})
+// RemoveFileDownloadIDs removes the "FileDownloads" edge to the FileDownload entity by IDs.
+func (m *EnvironmentMutation) RemoveFileDownloadIDs(ids ...uuid.UUID) {
+	if m.removed_FileDownloads == nil {
+		m.removed_FileDownloads = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToFileDelete[ids[i]] = struct{}{}
+		delete(m._FileDownloads, ids[i])
+		m.removed_FileDownloads[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToFileDelete clears the "EnvironmentToFileDelete" edge to the FileDelete entity.
-func (m *EnvironmentMutation) ClearEnvironmentToFileDelete() {
-	m.cleared_EnvironmentToFileDelete = true
+// RemovedFileDownloads returns the removed IDs of the "FileDownloads" edge to the FileDownload entity.
+func (m *EnvironmentMutation) RemovedFileDownloadsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_FileDownloads {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToFileDeleteCleared reports if the "EnvironmentToFileDelete" edge to the FileDelete entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToFileDeleteCleared() bool {
-	return m.cleared_EnvironmentToFileDelete
+// FileDownloadsIDs returns the "FileDownloads" edge IDs in the mutation.
+func (m *EnvironmentMutation) FileDownloadsIDs() (ids []uuid.UUID) {
+	for id := range m._FileDownloads {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToFileDeleteIDs removes the "EnvironmentToFileDelete" edge to the FileDelete entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToFileDeleteIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToFileDelete == nil {
-		m.removed_EnvironmentToFileDelete = make(map[uuid.UUID]struct{})
+// ResetFileDownloads resets all changes to the "FileDownloads" edge.
+func (m *EnvironmentMutation) ResetFileDownloads() {
+	m._FileDownloads = nil
+	m.cleared_FileDownloads = false
+	m.removed_FileDownloads = nil
+}
+
+// AddFileDeleteIDs adds the "FileDeletes" edge to the FileDelete entity by ids.
+func (m *EnvironmentMutation) AddFileDeleteIDs(ids ...uuid.UUID) {
+	if m._FileDeletes == nil {
+		m._FileDeletes = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToFileDelete, ids[i])
-		m.removed_EnvironmentToFileDelete[ids[i]] = struct{}{}
+		m._FileDeletes[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToFileDelete returns the removed IDs of the "EnvironmentToFileDelete" edge to the FileDelete entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToFileDeleteIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToFileDelete {
-		ids = append(ids, id)
-	}
-	return
+// ClearFileDeletes clears the "FileDeletes" edge to the FileDelete entity.
+func (m *EnvironmentMutation) ClearFileDeletes() {
+	m.cleared_FileDeletes = true
 }
 
-// EnvironmentToFileDeleteIDs returns the "EnvironmentToFileDelete" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToFileDeleteIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToFileDelete {
-		ids = append(ids, id)
-	}
-	return
+// FileDeletesCleared reports if the "FileDeletes" edge to the FileDelete entity was cleared.
+func (m *EnvironmentMutation) FileDeletesCleared() bool {
+	return m.cleared_FileDeletes
 }
 
-// ResetEnvironmentToFileDelete resets all changes to the "EnvironmentToFileDelete" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToFileDelete() {
-	m._EnvironmentToFileDelete = nil
-	m.cleared_EnvironmentToFileDelete = false
-	m.removed_EnvironmentToFileDelete = nil
-}
-
-// AddEnvironmentToFileExtractIDs adds the "EnvironmentToFileExtract" edge to the FileExtract entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToFileExtractIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToFileExtract == nil {
-		m._EnvironmentToFileExtract = make(map[uuid.UUID]struct{})
+// RemoveFileDeleteIDs removes the "FileDeletes" edge to the FileDelete entity by IDs.
+func (m *EnvironmentMutation) RemoveFileDeleteIDs(ids ...uuid.UUID) {
+	if m.removed_FileDeletes == nil {
+		m.removed_FileDeletes = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToFileExtract[ids[i]] = struct{}{}
+		delete(m._FileDeletes, ids[i])
+		m.removed_FileDeletes[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToFileExtract clears the "EnvironmentToFileExtract" edge to the FileExtract entity.
-func (m *EnvironmentMutation) ClearEnvironmentToFileExtract() {
-	m.cleared_EnvironmentToFileExtract = true
+// RemovedFileDeletes returns the removed IDs of the "FileDeletes" edge to the FileDelete entity.
+func (m *EnvironmentMutation) RemovedFileDeletesIDs() (ids []uuid.UUID) {
+	for id := range m.removed_FileDeletes {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToFileExtractCleared reports if the "EnvironmentToFileExtract" edge to the FileExtract entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToFileExtractCleared() bool {
-	return m.cleared_EnvironmentToFileExtract
+// FileDeletesIDs returns the "FileDeletes" edge IDs in the mutation.
+func (m *EnvironmentMutation) FileDeletesIDs() (ids []uuid.UUID) {
+	for id := range m._FileDeletes {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToFileExtractIDs removes the "EnvironmentToFileExtract" edge to the FileExtract entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToFileExtractIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToFileExtract == nil {
-		m.removed_EnvironmentToFileExtract = make(map[uuid.UUID]struct{})
+// ResetFileDeletes resets all changes to the "FileDeletes" edge.
+func (m *EnvironmentMutation) ResetFileDeletes() {
+	m._FileDeletes = nil
+	m.cleared_FileDeletes = false
+	m.removed_FileDeletes = nil
+}
+
+// AddFileExtractIDs adds the "FileExtracts" edge to the FileExtract entity by ids.
+func (m *EnvironmentMutation) AddFileExtractIDs(ids ...uuid.UUID) {
+	if m._FileExtracts == nil {
+		m._FileExtracts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToFileExtract, ids[i])
-		m.removed_EnvironmentToFileExtract[ids[i]] = struct{}{}
+		m._FileExtracts[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToFileExtract returns the removed IDs of the "EnvironmentToFileExtract" edge to the FileExtract entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToFileExtractIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToFileExtract {
-		ids = append(ids, id)
-	}
-	return
+// ClearFileExtracts clears the "FileExtracts" edge to the FileExtract entity.
+func (m *EnvironmentMutation) ClearFileExtracts() {
+	m.cleared_FileExtracts = true
 }
 
-// EnvironmentToFileExtractIDs returns the "EnvironmentToFileExtract" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToFileExtractIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToFileExtract {
-		ids = append(ids, id)
-	}
-	return
+// FileExtractsCleared reports if the "FileExtracts" edge to the FileExtract entity was cleared.
+func (m *EnvironmentMutation) FileExtractsCleared() bool {
+	return m.cleared_FileExtracts
 }
 
-// ResetEnvironmentToFileExtract resets all changes to the "EnvironmentToFileExtract" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToFileExtract() {
-	m._EnvironmentToFileExtract = nil
-	m.cleared_EnvironmentToFileExtract = false
-	m.removed_EnvironmentToFileExtract = nil
-}
-
-// AddEnvironmentToIncludedNetworkIDs adds the "EnvironmentToIncludedNetwork" edge to the IncludedNetwork entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToIncludedNetworkIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToIncludedNetwork == nil {
-		m._EnvironmentToIncludedNetwork = make(map[uuid.UUID]struct{})
+// RemoveFileExtractIDs removes the "FileExtracts" edge to the FileExtract entity by IDs.
+func (m *EnvironmentMutation) RemoveFileExtractIDs(ids ...uuid.UUID) {
+	if m.removed_FileExtracts == nil {
+		m.removed_FileExtracts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToIncludedNetwork[ids[i]] = struct{}{}
+		delete(m._FileExtracts, ids[i])
+		m.removed_FileExtracts[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToIncludedNetwork clears the "EnvironmentToIncludedNetwork" edge to the IncludedNetwork entity.
-func (m *EnvironmentMutation) ClearEnvironmentToIncludedNetwork() {
-	m.cleared_EnvironmentToIncludedNetwork = true
+// RemovedFileExtracts returns the removed IDs of the "FileExtracts" edge to the FileExtract entity.
+func (m *EnvironmentMutation) RemovedFileExtractsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_FileExtracts {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToIncludedNetworkCleared reports if the "EnvironmentToIncludedNetwork" edge to the IncludedNetwork entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToIncludedNetworkCleared() bool {
-	return m.cleared_EnvironmentToIncludedNetwork
+// FileExtractsIDs returns the "FileExtracts" edge IDs in the mutation.
+func (m *EnvironmentMutation) FileExtractsIDs() (ids []uuid.UUID) {
+	for id := range m._FileExtracts {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToIncludedNetworkIDs removes the "EnvironmentToIncludedNetwork" edge to the IncludedNetwork entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToIncludedNetworkIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToIncludedNetwork == nil {
-		m.removed_EnvironmentToIncludedNetwork = make(map[uuid.UUID]struct{})
+// ResetFileExtracts resets all changes to the "FileExtracts" edge.
+func (m *EnvironmentMutation) ResetFileExtracts() {
+	m._FileExtracts = nil
+	m.cleared_FileExtracts = false
+	m.removed_FileExtracts = nil
+}
+
+// AddIncludedNetworkIDs adds the "IncludedNetworks" edge to the IncludedNetwork entity by ids.
+func (m *EnvironmentMutation) AddIncludedNetworkIDs(ids ...uuid.UUID) {
+	if m._IncludedNetworks == nil {
+		m._IncludedNetworks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToIncludedNetwork, ids[i])
-		m.removed_EnvironmentToIncludedNetwork[ids[i]] = struct{}{}
+		m._IncludedNetworks[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToIncludedNetwork returns the removed IDs of the "EnvironmentToIncludedNetwork" edge to the IncludedNetwork entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToIncludedNetworkIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToIncludedNetwork {
-		ids = append(ids, id)
-	}
-	return
+// ClearIncludedNetworks clears the "IncludedNetworks" edge to the IncludedNetwork entity.
+func (m *EnvironmentMutation) ClearIncludedNetworks() {
+	m.cleared_IncludedNetworks = true
 }
 
-// EnvironmentToIncludedNetworkIDs returns the "EnvironmentToIncludedNetwork" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToIncludedNetworkIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToIncludedNetwork {
-		ids = append(ids, id)
-	}
-	return
+// IncludedNetworksCleared reports if the "IncludedNetworks" edge to the IncludedNetwork entity was cleared.
+func (m *EnvironmentMutation) IncludedNetworksCleared() bool {
+	return m.cleared_IncludedNetworks
 }
 
-// ResetEnvironmentToIncludedNetwork resets all changes to the "EnvironmentToIncludedNetwork" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToIncludedNetwork() {
-	m._EnvironmentToIncludedNetwork = nil
-	m.cleared_EnvironmentToIncludedNetwork = false
-	m.removed_EnvironmentToIncludedNetwork = nil
-}
-
-// AddEnvironmentToFindingIDs adds the "EnvironmentToFinding" edge to the Finding entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToFindingIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToFinding == nil {
-		m._EnvironmentToFinding = make(map[uuid.UUID]struct{})
+// RemoveIncludedNetworkIDs removes the "IncludedNetworks" edge to the IncludedNetwork entity by IDs.
+func (m *EnvironmentMutation) RemoveIncludedNetworkIDs(ids ...uuid.UUID) {
+	if m.removed_IncludedNetworks == nil {
+		m.removed_IncludedNetworks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToFinding[ids[i]] = struct{}{}
+		delete(m._IncludedNetworks, ids[i])
+		m.removed_IncludedNetworks[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToFinding clears the "EnvironmentToFinding" edge to the Finding entity.
-func (m *EnvironmentMutation) ClearEnvironmentToFinding() {
-	m.cleared_EnvironmentToFinding = true
+// RemovedIncludedNetworks returns the removed IDs of the "IncludedNetworks" edge to the IncludedNetwork entity.
+func (m *EnvironmentMutation) RemovedIncludedNetworksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_IncludedNetworks {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToFindingCleared reports if the "EnvironmentToFinding" edge to the Finding entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToFindingCleared() bool {
-	return m.cleared_EnvironmentToFinding
+// IncludedNetworksIDs returns the "IncludedNetworks" edge IDs in the mutation.
+func (m *EnvironmentMutation) IncludedNetworksIDs() (ids []uuid.UUID) {
+	for id := range m._IncludedNetworks {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToFindingIDs removes the "EnvironmentToFinding" edge to the Finding entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToFindingIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToFinding == nil {
-		m.removed_EnvironmentToFinding = make(map[uuid.UUID]struct{})
+// ResetIncludedNetworks resets all changes to the "IncludedNetworks" edge.
+func (m *EnvironmentMutation) ResetIncludedNetworks() {
+	m._IncludedNetworks = nil
+	m.cleared_IncludedNetworks = false
+	m.removed_IncludedNetworks = nil
+}
+
+// AddFindingIDs adds the "Findings" edge to the Finding entity by ids.
+func (m *EnvironmentMutation) AddFindingIDs(ids ...uuid.UUID) {
+	if m._Findings == nil {
+		m._Findings = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToFinding, ids[i])
-		m.removed_EnvironmentToFinding[ids[i]] = struct{}{}
+		m._Findings[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToFinding returns the removed IDs of the "EnvironmentToFinding" edge to the Finding entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToFindingIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToFinding {
-		ids = append(ids, id)
-	}
-	return
+// ClearFindings clears the "Findings" edge to the Finding entity.
+func (m *EnvironmentMutation) ClearFindings() {
+	m.cleared_Findings = true
 }
 
-// EnvironmentToFindingIDs returns the "EnvironmentToFinding" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToFindingIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToFinding {
-		ids = append(ids, id)
-	}
-	return
+// FindingsCleared reports if the "Findings" edge to the Finding entity was cleared.
+func (m *EnvironmentMutation) FindingsCleared() bool {
+	return m.cleared_Findings
 }
 
-// ResetEnvironmentToFinding resets all changes to the "EnvironmentToFinding" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToFinding() {
-	m._EnvironmentToFinding = nil
-	m.cleared_EnvironmentToFinding = false
-	m.removed_EnvironmentToFinding = nil
-}
-
-// AddEnvironmentToDNSRecordIDs adds the "EnvironmentToDNSRecord" edge to the DNSRecord entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToDNSRecordIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToDNSRecord == nil {
-		m._EnvironmentToDNSRecord = make(map[uuid.UUID]struct{})
+// RemoveFindingIDs removes the "Findings" edge to the Finding entity by IDs.
+func (m *EnvironmentMutation) RemoveFindingIDs(ids ...uuid.UUID) {
+	if m.removed_Findings == nil {
+		m.removed_Findings = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToDNSRecord[ids[i]] = struct{}{}
+		delete(m._Findings, ids[i])
+		m.removed_Findings[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToDNSRecord clears the "EnvironmentToDNSRecord" edge to the DNSRecord entity.
-func (m *EnvironmentMutation) ClearEnvironmentToDNSRecord() {
-	m.cleared_EnvironmentToDNSRecord = true
+// RemovedFindings returns the removed IDs of the "Findings" edge to the Finding entity.
+func (m *EnvironmentMutation) RemovedFindingsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Findings {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToDNSRecordCleared reports if the "EnvironmentToDNSRecord" edge to the DNSRecord entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToDNSRecordCleared() bool {
-	return m.cleared_EnvironmentToDNSRecord
+// FindingsIDs returns the "Findings" edge IDs in the mutation.
+func (m *EnvironmentMutation) FindingsIDs() (ids []uuid.UUID) {
+	for id := range m._Findings {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToDNSRecordIDs removes the "EnvironmentToDNSRecord" edge to the DNSRecord entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToDNSRecordIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToDNSRecord == nil {
-		m.removed_EnvironmentToDNSRecord = make(map[uuid.UUID]struct{})
+// ResetFindings resets all changes to the "Findings" edge.
+func (m *EnvironmentMutation) ResetFindings() {
+	m._Findings = nil
+	m.cleared_Findings = false
+	m.removed_Findings = nil
+}
+
+// AddDNSRecordIDs adds the "DNSRecords" edge to the DNSRecord entity by ids.
+func (m *EnvironmentMutation) AddDNSRecordIDs(ids ...uuid.UUID) {
+	if m._DNSRecords == nil {
+		m._DNSRecords = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToDNSRecord, ids[i])
-		m.removed_EnvironmentToDNSRecord[ids[i]] = struct{}{}
+		m._DNSRecords[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToDNSRecord returns the removed IDs of the "EnvironmentToDNSRecord" edge to the DNSRecord entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToDNSRecordIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToDNSRecord {
-		ids = append(ids, id)
-	}
-	return
+// ClearDNSRecords clears the "DNSRecords" edge to the DNSRecord entity.
+func (m *EnvironmentMutation) ClearDNSRecords() {
+	m.cleared_DNSRecords = true
 }
 
-// EnvironmentToDNSRecordIDs returns the "EnvironmentToDNSRecord" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToDNSRecordIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToDNSRecord {
-		ids = append(ids, id)
-	}
-	return
+// DNSRecordsCleared reports if the "DNSRecords" edge to the DNSRecord entity was cleared.
+func (m *EnvironmentMutation) DNSRecordsCleared() bool {
+	return m.cleared_DNSRecords
 }
 
-// ResetEnvironmentToDNSRecord resets all changes to the "EnvironmentToDNSRecord" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToDNSRecord() {
-	m._EnvironmentToDNSRecord = nil
-	m.cleared_EnvironmentToDNSRecord = false
-	m.removed_EnvironmentToDNSRecord = nil
-}
-
-// AddEnvironmentToDNSIDs adds the "EnvironmentToDNS" edge to the DNS entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToDNSIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToDNS == nil {
-		m._EnvironmentToDNS = make(map[uuid.UUID]struct{})
+// RemoveDNSRecordIDs removes the "DNSRecords" edge to the DNSRecord entity by IDs.
+func (m *EnvironmentMutation) RemoveDNSRecordIDs(ids ...uuid.UUID) {
+	if m.removed_DNSRecords == nil {
+		m.removed_DNSRecords = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToDNS[ids[i]] = struct{}{}
+		delete(m._DNSRecords, ids[i])
+		m.removed_DNSRecords[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToDNS clears the "EnvironmentToDNS" edge to the DNS entity.
-func (m *EnvironmentMutation) ClearEnvironmentToDNS() {
-	m.cleared_EnvironmentToDNS = true
+// RemovedDNSRecords returns the removed IDs of the "DNSRecords" edge to the DNSRecord entity.
+func (m *EnvironmentMutation) RemovedDNSRecordsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_DNSRecords {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToDNSCleared reports if the "EnvironmentToDNS" edge to the DNS entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToDNSCleared() bool {
-	return m.cleared_EnvironmentToDNS
+// DNSRecordsIDs returns the "DNSRecords" edge IDs in the mutation.
+func (m *EnvironmentMutation) DNSRecordsIDs() (ids []uuid.UUID) {
+	for id := range m._DNSRecords {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToDNSIDs removes the "EnvironmentToDNS" edge to the DNS entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToDNSIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToDNS == nil {
-		m.removed_EnvironmentToDNS = make(map[uuid.UUID]struct{})
+// ResetDNSRecords resets all changes to the "DNSRecords" edge.
+func (m *EnvironmentMutation) ResetDNSRecords() {
+	m._DNSRecords = nil
+	m.cleared_DNSRecords = false
+	m.removed_DNSRecords = nil
+}
+
+// AddDNSIDs adds the "DNS" edge to the DNS entity by ids.
+func (m *EnvironmentMutation) AddDNSIDs(ids ...uuid.UUID) {
+	if m._DNS == nil {
+		m._DNS = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToDNS, ids[i])
-		m.removed_EnvironmentToDNS[ids[i]] = struct{}{}
+		m._DNS[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToDNS returns the removed IDs of the "EnvironmentToDNS" edge to the DNS entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToDNSIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToDNS {
-		ids = append(ids, id)
-	}
-	return
+// ClearDNS clears the "DNS" edge to the DNS entity.
+func (m *EnvironmentMutation) ClearDNS() {
+	m.cleared_DNS = true
 }
 
-// EnvironmentToDNSIDs returns the "EnvironmentToDNS" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToDNSIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToDNS {
-		ids = append(ids, id)
-	}
-	return
+// DNSCleared reports if the "DNS" edge to the DNS entity was cleared.
+func (m *EnvironmentMutation) DNSCleared() bool {
+	return m.cleared_DNS
 }
 
-// ResetEnvironmentToDNS resets all changes to the "EnvironmentToDNS" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToDNS() {
-	m._EnvironmentToDNS = nil
-	m.cleared_EnvironmentToDNS = false
-	m.removed_EnvironmentToDNS = nil
-}
-
-// AddEnvironmentToNetworkIDs adds the "EnvironmentToNetwork" edge to the Network entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToNetworkIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToNetwork == nil {
-		m._EnvironmentToNetwork = make(map[uuid.UUID]struct{})
+// RemoveDNSIDs removes the "DNS" edge to the DNS entity by IDs.
+func (m *EnvironmentMutation) RemoveDNSIDs(ids ...uuid.UUID) {
+	if m.removed_DNS == nil {
+		m.removed_DNS = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToNetwork[ids[i]] = struct{}{}
+		delete(m._DNS, ids[i])
+		m.removed_DNS[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToNetwork clears the "EnvironmentToNetwork" edge to the Network entity.
-func (m *EnvironmentMutation) ClearEnvironmentToNetwork() {
-	m.cleared_EnvironmentToNetwork = true
+// RemovedDNS returns the removed IDs of the "DNS" edge to the DNS entity.
+func (m *EnvironmentMutation) RemovedDNSIDs() (ids []uuid.UUID) {
+	for id := range m.removed_DNS {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToNetworkCleared reports if the "EnvironmentToNetwork" edge to the Network entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToNetworkCleared() bool {
-	return m.cleared_EnvironmentToNetwork
+// DNSIDs returns the "DNS" edge IDs in the mutation.
+func (m *EnvironmentMutation) DNSIDs() (ids []uuid.UUID) {
+	for id := range m._DNS {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToNetworkIDs removes the "EnvironmentToNetwork" edge to the Network entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToNetworkIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToNetwork == nil {
-		m.removed_EnvironmentToNetwork = make(map[uuid.UUID]struct{})
+// ResetDNS resets all changes to the "DNS" edge.
+func (m *EnvironmentMutation) ResetDNS() {
+	m._DNS = nil
+	m.cleared_DNS = false
+	m.removed_DNS = nil
+}
+
+// AddNetworkIDs adds the "Networks" edge to the Network entity by ids.
+func (m *EnvironmentMutation) AddNetworkIDs(ids ...uuid.UUID) {
+	if m._Networks == nil {
+		m._Networks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToNetwork, ids[i])
-		m.removed_EnvironmentToNetwork[ids[i]] = struct{}{}
+		m._Networks[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToNetwork returns the removed IDs of the "EnvironmentToNetwork" edge to the Network entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToNetworkIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToNetwork {
-		ids = append(ids, id)
-	}
-	return
+// ClearNetworks clears the "Networks" edge to the Network entity.
+func (m *EnvironmentMutation) ClearNetworks() {
+	m.cleared_Networks = true
 }
 
-// EnvironmentToNetworkIDs returns the "EnvironmentToNetwork" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToNetworkIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToNetwork {
-		ids = append(ids, id)
-	}
-	return
+// NetworksCleared reports if the "Networks" edge to the Network entity was cleared.
+func (m *EnvironmentMutation) NetworksCleared() bool {
+	return m.cleared_Networks
 }
 
-// ResetEnvironmentToNetwork resets all changes to the "EnvironmentToNetwork" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToNetwork() {
-	m._EnvironmentToNetwork = nil
-	m.cleared_EnvironmentToNetwork = false
-	m.removed_EnvironmentToNetwork = nil
-}
-
-// AddEnvironmentToHostDependencyIDs adds the "EnvironmentToHostDependency" edge to the HostDependency entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToHostDependencyIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToHostDependency == nil {
-		m._EnvironmentToHostDependency = make(map[uuid.UUID]struct{})
+// RemoveNetworkIDs removes the "Networks" edge to the Network entity by IDs.
+func (m *EnvironmentMutation) RemoveNetworkIDs(ids ...uuid.UUID) {
+	if m.removed_Networks == nil {
+		m.removed_Networks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToHostDependency[ids[i]] = struct{}{}
+		delete(m._Networks, ids[i])
+		m.removed_Networks[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToHostDependency clears the "EnvironmentToHostDependency" edge to the HostDependency entity.
-func (m *EnvironmentMutation) ClearEnvironmentToHostDependency() {
-	m.cleared_EnvironmentToHostDependency = true
+// RemovedNetworks returns the removed IDs of the "Networks" edge to the Network entity.
+func (m *EnvironmentMutation) RemovedNetworksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Networks {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToHostDependencyCleared reports if the "EnvironmentToHostDependency" edge to the HostDependency entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToHostDependencyCleared() bool {
-	return m.cleared_EnvironmentToHostDependency
+// NetworksIDs returns the "Networks" edge IDs in the mutation.
+func (m *EnvironmentMutation) NetworksIDs() (ids []uuid.UUID) {
+	for id := range m._Networks {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToHostDependencyIDs removes the "EnvironmentToHostDependency" edge to the HostDependency entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToHostDependencyIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToHostDependency == nil {
-		m.removed_EnvironmentToHostDependency = make(map[uuid.UUID]struct{})
+// ResetNetworks resets all changes to the "Networks" edge.
+func (m *EnvironmentMutation) ResetNetworks() {
+	m._Networks = nil
+	m.cleared_Networks = false
+	m.removed_Networks = nil
+}
+
+// AddHostDependencyIDs adds the "HostDependencies" edge to the HostDependency entity by ids.
+func (m *EnvironmentMutation) AddHostDependencyIDs(ids ...uuid.UUID) {
+	if m._HostDependencies == nil {
+		m._HostDependencies = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToHostDependency, ids[i])
-		m.removed_EnvironmentToHostDependency[ids[i]] = struct{}{}
+		m._HostDependencies[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToHostDependency returns the removed IDs of the "EnvironmentToHostDependency" edge to the HostDependency entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToHostDependencyIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToHostDependency {
-		ids = append(ids, id)
-	}
-	return
+// ClearHostDependencies clears the "HostDependencies" edge to the HostDependency entity.
+func (m *EnvironmentMutation) ClearHostDependencies() {
+	m.cleared_HostDependencies = true
 }
 
-// EnvironmentToHostDependencyIDs returns the "EnvironmentToHostDependency" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToHostDependencyIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToHostDependency {
-		ids = append(ids, id)
-	}
-	return
+// HostDependenciesCleared reports if the "HostDependencies" edge to the HostDependency entity was cleared.
+func (m *EnvironmentMutation) HostDependenciesCleared() bool {
+	return m.cleared_HostDependencies
 }
 
-// ResetEnvironmentToHostDependency resets all changes to the "EnvironmentToHostDependency" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToHostDependency() {
-	m._EnvironmentToHostDependency = nil
-	m.cleared_EnvironmentToHostDependency = false
-	m.removed_EnvironmentToHostDependency = nil
-}
-
-// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToAnsible == nil {
-		m._EnvironmentToAnsible = make(map[uuid.UUID]struct{})
+// RemoveHostDependencyIDs removes the "HostDependencies" edge to the HostDependency entity by IDs.
+func (m *EnvironmentMutation) RemoveHostDependencyIDs(ids ...uuid.UUID) {
+	if m.removed_HostDependencies == nil {
+		m.removed_HostDependencies = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToAnsible[ids[i]] = struct{}{}
+		delete(m._HostDependencies, ids[i])
+		m.removed_HostDependencies[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToAnsible clears the "EnvironmentToAnsible" edge to the Ansible entity.
-func (m *EnvironmentMutation) ClearEnvironmentToAnsible() {
-	m.cleared_EnvironmentToAnsible = true
+// RemovedHostDependencies returns the removed IDs of the "HostDependencies" edge to the HostDependency entity.
+func (m *EnvironmentMutation) RemovedHostDependenciesIDs() (ids []uuid.UUID) {
+	for id := range m.removed_HostDependencies {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToAnsibleCleared reports if the "EnvironmentToAnsible" edge to the Ansible entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToAnsibleCleared() bool {
-	return m.cleared_EnvironmentToAnsible
+// HostDependenciesIDs returns the "HostDependencies" edge IDs in the mutation.
+func (m *EnvironmentMutation) HostDependenciesIDs() (ids []uuid.UUID) {
+	for id := range m._HostDependencies {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToAnsibleIDs removes the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToAnsibleIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToAnsible == nil {
-		m.removed_EnvironmentToAnsible = make(map[uuid.UUID]struct{})
+// ResetHostDependencies resets all changes to the "HostDependencies" edge.
+func (m *EnvironmentMutation) ResetHostDependencies() {
+	m._HostDependencies = nil
+	m.cleared_HostDependencies = false
+	m.removed_HostDependencies = nil
+}
+
+// AddAnsibleIDs adds the "Ansibles" edge to the Ansible entity by ids.
+func (m *EnvironmentMutation) AddAnsibleIDs(ids ...uuid.UUID) {
+	if m._Ansibles == nil {
+		m._Ansibles = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToAnsible, ids[i])
-		m.removed_EnvironmentToAnsible[ids[i]] = struct{}{}
+		m._Ansibles[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToAnsible returns the removed IDs of the "EnvironmentToAnsible" edge to the Ansible entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToAnsibleIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToAnsible {
-		ids = append(ids, id)
-	}
-	return
+// ClearAnsibles clears the "Ansibles" edge to the Ansible entity.
+func (m *EnvironmentMutation) ClearAnsibles() {
+	m.cleared_Ansibles = true
 }
 
-// EnvironmentToAnsibleIDs returns the "EnvironmentToAnsible" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToAnsibleIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToAnsible {
-		ids = append(ids, id)
-	}
-	return
+// AnsiblesCleared reports if the "Ansibles" edge to the Ansible entity was cleared.
+func (m *EnvironmentMutation) AnsiblesCleared() bool {
+	return m.cleared_Ansibles
 }
 
-// ResetEnvironmentToAnsible resets all changes to the "EnvironmentToAnsible" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToAnsible() {
-	m._EnvironmentToAnsible = nil
-	m.cleared_EnvironmentToAnsible = false
-	m.removed_EnvironmentToAnsible = nil
-}
-
-// AddEnvironmentToScheduledStepIDs adds the "EnvironmentToScheduledStep" edge to the ScheduledStep entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToScheduledStepIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToScheduledStep == nil {
-		m._EnvironmentToScheduledStep = make(map[uuid.UUID]struct{})
+// RemoveAnsibleIDs removes the "Ansibles" edge to the Ansible entity by IDs.
+func (m *EnvironmentMutation) RemoveAnsibleIDs(ids ...uuid.UUID) {
+	if m.removed_Ansibles == nil {
+		m.removed_Ansibles = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToScheduledStep[ids[i]] = struct{}{}
+		delete(m._Ansibles, ids[i])
+		m.removed_Ansibles[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToScheduledStep clears the "EnvironmentToScheduledStep" edge to the ScheduledStep entity.
-func (m *EnvironmentMutation) ClearEnvironmentToScheduledStep() {
-	m.cleared_EnvironmentToScheduledStep = true
+// RemovedAnsibles returns the removed IDs of the "Ansibles" edge to the Ansible entity.
+func (m *EnvironmentMutation) RemovedAnsiblesIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Ansibles {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToScheduledStepCleared reports if the "EnvironmentToScheduledStep" edge to the ScheduledStep entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToScheduledStepCleared() bool {
-	return m.cleared_EnvironmentToScheduledStep
+// AnsiblesIDs returns the "Ansibles" edge IDs in the mutation.
+func (m *EnvironmentMutation) AnsiblesIDs() (ids []uuid.UUID) {
+	for id := range m._Ansibles {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToScheduledStepIDs removes the "EnvironmentToScheduledStep" edge to the ScheduledStep entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToScheduledStepIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToScheduledStep == nil {
-		m.removed_EnvironmentToScheduledStep = make(map[uuid.UUID]struct{})
+// ResetAnsibles resets all changes to the "Ansibles" edge.
+func (m *EnvironmentMutation) ResetAnsibles() {
+	m._Ansibles = nil
+	m.cleared_Ansibles = false
+	m.removed_Ansibles = nil
+}
+
+// AddScheduledStepIDs adds the "ScheduledSteps" edge to the ScheduledStep entity by ids.
+func (m *EnvironmentMutation) AddScheduledStepIDs(ids ...uuid.UUID) {
+	if m._ScheduledSteps == nil {
+		m._ScheduledSteps = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToScheduledStep, ids[i])
-		m.removed_EnvironmentToScheduledStep[ids[i]] = struct{}{}
+		m._ScheduledSteps[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToScheduledStep returns the removed IDs of the "EnvironmentToScheduledStep" edge to the ScheduledStep entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToScheduledStepIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToScheduledStep {
-		ids = append(ids, id)
-	}
-	return
+// ClearScheduledSteps clears the "ScheduledSteps" edge to the ScheduledStep entity.
+func (m *EnvironmentMutation) ClearScheduledSteps() {
+	m.cleared_ScheduledSteps = true
 }
 
-// EnvironmentToScheduledStepIDs returns the "EnvironmentToScheduledStep" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToScheduledStepIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToScheduledStep {
-		ids = append(ids, id)
-	}
-	return
+// ScheduledStepsCleared reports if the "ScheduledSteps" edge to the ScheduledStep entity was cleared.
+func (m *EnvironmentMutation) ScheduledStepsCleared() bool {
+	return m.cleared_ScheduledSteps
 }
 
-// ResetEnvironmentToScheduledStep resets all changes to the "EnvironmentToScheduledStep" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToScheduledStep() {
-	m._EnvironmentToScheduledStep = nil
-	m.cleared_EnvironmentToScheduledStep = false
-	m.removed_EnvironmentToScheduledStep = nil
-}
-
-// AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToBuildIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToBuild == nil {
-		m._EnvironmentToBuild = make(map[uuid.UUID]struct{})
+// RemoveScheduledStepIDs removes the "ScheduledSteps" edge to the ScheduledStep entity by IDs.
+func (m *EnvironmentMutation) RemoveScheduledStepIDs(ids ...uuid.UUID) {
+	if m.removed_ScheduledSteps == nil {
+		m.removed_ScheduledSteps = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToBuild[ids[i]] = struct{}{}
+		delete(m._ScheduledSteps, ids[i])
+		m.removed_ScheduledSteps[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToBuild clears the "EnvironmentToBuild" edge to the Build entity.
-func (m *EnvironmentMutation) ClearEnvironmentToBuild() {
-	m.cleared_EnvironmentToBuild = true
+// RemovedScheduledSteps returns the removed IDs of the "ScheduledSteps" edge to the ScheduledStep entity.
+func (m *EnvironmentMutation) RemovedScheduledStepsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ScheduledSteps {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToBuildCleared reports if the "EnvironmentToBuild" edge to the Build entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToBuildCleared() bool {
-	return m.cleared_EnvironmentToBuild
+// ScheduledStepsIDs returns the "ScheduledSteps" edge IDs in the mutation.
+func (m *EnvironmentMutation) ScheduledStepsIDs() (ids []uuid.UUID) {
+	for id := range m._ScheduledSteps {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToBuildIDs removes the "EnvironmentToBuild" edge to the Build entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToBuildIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToBuild == nil {
-		m.removed_EnvironmentToBuild = make(map[uuid.UUID]struct{})
+// ResetScheduledSteps resets all changes to the "ScheduledSteps" edge.
+func (m *EnvironmentMutation) ResetScheduledSteps() {
+	m._ScheduledSteps = nil
+	m.cleared_ScheduledSteps = false
+	m.removed_ScheduledSteps = nil
+}
+
+// AddBuildIDs adds the "Builds" edge to the Build entity by ids.
+func (m *EnvironmentMutation) AddBuildIDs(ids ...uuid.UUID) {
+	if m._Builds == nil {
+		m._Builds = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToBuild, ids[i])
-		m.removed_EnvironmentToBuild[ids[i]] = struct{}{}
+		m._Builds[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToBuild returns the removed IDs of the "EnvironmentToBuild" edge to the Build entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToBuildIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToBuild {
-		ids = append(ids, id)
-	}
-	return
+// ClearBuilds clears the "Builds" edge to the Build entity.
+func (m *EnvironmentMutation) ClearBuilds() {
+	m.cleared_Builds = true
 }
 
-// EnvironmentToBuildIDs returns the "EnvironmentToBuild" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToBuildIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToBuild {
-		ids = append(ids, id)
-	}
-	return
+// BuildsCleared reports if the "Builds" edge to the Build entity was cleared.
+func (m *EnvironmentMutation) BuildsCleared() bool {
+	return m.cleared_Builds
 }
 
-// ResetEnvironmentToBuild resets all changes to the "EnvironmentToBuild" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToBuild() {
-	m._EnvironmentToBuild = nil
-	m.cleared_EnvironmentToBuild = false
-	m.removed_EnvironmentToBuild = nil
-}
-
-// AddEnvironmentToRepositoryIDs adds the "EnvironmentToRepository" edge to the Repository entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToRepositoryIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToRepository == nil {
-		m._EnvironmentToRepository = make(map[uuid.UUID]struct{})
+// RemoveBuildIDs removes the "Builds" edge to the Build entity by IDs.
+func (m *EnvironmentMutation) RemoveBuildIDs(ids ...uuid.UUID) {
+	if m.removed_Builds == nil {
+		m.removed_Builds = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToRepository[ids[i]] = struct{}{}
+		delete(m._Builds, ids[i])
+		m.removed_Builds[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToRepository clears the "EnvironmentToRepository" edge to the Repository entity.
-func (m *EnvironmentMutation) ClearEnvironmentToRepository() {
-	m.cleared_EnvironmentToRepository = true
+// RemovedBuilds returns the removed IDs of the "Builds" edge to the Build entity.
+func (m *EnvironmentMutation) RemovedBuildsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Builds {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToRepositoryCleared reports if the "EnvironmentToRepository" edge to the Repository entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToRepositoryCleared() bool {
-	return m.cleared_EnvironmentToRepository
+// BuildsIDs returns the "Builds" edge IDs in the mutation.
+func (m *EnvironmentMutation) BuildsIDs() (ids []uuid.UUID) {
+	for id := range m._Builds {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToRepositoryIDs removes the "EnvironmentToRepository" edge to the Repository entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToRepositoryIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToRepository == nil {
-		m.removed_EnvironmentToRepository = make(map[uuid.UUID]struct{})
+// ResetBuilds resets all changes to the "Builds" edge.
+func (m *EnvironmentMutation) ResetBuilds() {
+	m._Builds = nil
+	m.cleared_Builds = false
+	m.removed_Builds = nil
+}
+
+// AddRepositoryIDs adds the "Repositories" edge to the Repository entity by ids.
+func (m *EnvironmentMutation) AddRepositoryIDs(ids ...uuid.UUID) {
+	if m._Repositories == nil {
+		m._Repositories = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToRepository, ids[i])
-		m.removed_EnvironmentToRepository[ids[i]] = struct{}{}
+		m._Repositories[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToRepository returns the removed IDs of the "EnvironmentToRepository" edge to the Repository entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToRepositoryIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToRepository {
-		ids = append(ids, id)
-	}
-	return
+// ClearRepositories clears the "Repositories" edge to the Repository entity.
+func (m *EnvironmentMutation) ClearRepositories() {
+	m.cleared_Repositories = true
 }
 
-// EnvironmentToRepositoryIDs returns the "EnvironmentToRepository" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToRepositoryIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToRepository {
-		ids = append(ids, id)
-	}
-	return
+// RepositoriesCleared reports if the "Repositories" edge to the Repository entity was cleared.
+func (m *EnvironmentMutation) RepositoriesCleared() bool {
+	return m.cleared_Repositories
 }
 
-// ResetEnvironmentToRepository resets all changes to the "EnvironmentToRepository" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToRepository() {
-	m._EnvironmentToRepository = nil
-	m.cleared_EnvironmentToRepository = false
-	m.removed_EnvironmentToRepository = nil
-}
-
-// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by ids.
-func (m *EnvironmentMutation) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) {
-	if m._EnvironmentToServerTask == nil {
-		m._EnvironmentToServerTask = make(map[uuid.UUID]struct{})
+// RemoveRepositoryIDs removes the "Repositories" edge to the Repository entity by IDs.
+func (m *EnvironmentMutation) RemoveRepositoryIDs(ids ...uuid.UUID) {
+	if m.removed_Repositories == nil {
+		m.removed_Repositories = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._EnvironmentToServerTask[ids[i]] = struct{}{}
+		delete(m._Repositories, ids[i])
+		m.removed_Repositories[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEnvironmentToServerTask clears the "EnvironmentToServerTask" edge to the ServerTask entity.
-func (m *EnvironmentMutation) ClearEnvironmentToServerTask() {
-	m.cleared_EnvironmentToServerTask = true
+// RemovedRepositories returns the removed IDs of the "Repositories" edge to the Repository entity.
+func (m *EnvironmentMutation) RemovedRepositoriesIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Repositories {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// EnvironmentToServerTaskCleared reports if the "EnvironmentToServerTask" edge to the ServerTask entity was cleared.
-func (m *EnvironmentMutation) EnvironmentToServerTaskCleared() bool {
-	return m.cleared_EnvironmentToServerTask
+// RepositoriesIDs returns the "Repositories" edge IDs in the mutation.
+func (m *EnvironmentMutation) RepositoriesIDs() (ids []uuid.UUID) {
+	for id := range m._Repositories {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveEnvironmentToServerTaskIDs removes the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
-func (m *EnvironmentMutation) RemoveEnvironmentToServerTaskIDs(ids ...uuid.UUID) {
-	if m.removed_EnvironmentToServerTask == nil {
-		m.removed_EnvironmentToServerTask = make(map[uuid.UUID]struct{})
+// ResetRepositories resets all changes to the "Repositories" edge.
+func (m *EnvironmentMutation) ResetRepositories() {
+	m._Repositories = nil
+	m.cleared_Repositories = false
+	m.removed_Repositories = nil
+}
+
+// AddServerTaskIDs adds the "ServerTasks" edge to the ServerTask entity by ids.
+func (m *EnvironmentMutation) AddServerTaskIDs(ids ...uuid.UUID) {
+	if m._ServerTasks == nil {
+		m._ServerTasks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._EnvironmentToServerTask, ids[i])
-		m.removed_EnvironmentToServerTask[ids[i]] = struct{}{}
+		m._ServerTasks[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEnvironmentToServerTask returns the removed IDs of the "EnvironmentToServerTask" edge to the ServerTask entity.
-func (m *EnvironmentMutation) RemovedEnvironmentToServerTaskIDs() (ids []uuid.UUID) {
-	for id := range m.removed_EnvironmentToServerTask {
+// ClearServerTasks clears the "ServerTasks" edge to the ServerTask entity.
+func (m *EnvironmentMutation) ClearServerTasks() {
+	m.cleared_ServerTasks = true
+}
+
+// ServerTasksCleared reports if the "ServerTasks" edge to the ServerTask entity was cleared.
+func (m *EnvironmentMutation) ServerTasksCleared() bool {
+	return m.cleared_ServerTasks
+}
+
+// RemoveServerTaskIDs removes the "ServerTasks" edge to the ServerTask entity by IDs.
+func (m *EnvironmentMutation) RemoveServerTaskIDs(ids ...uuid.UUID) {
+	if m.removed_ServerTasks == nil {
+		m.removed_ServerTasks = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._ServerTasks, ids[i])
+		m.removed_ServerTasks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedServerTasks returns the removed IDs of the "ServerTasks" edge to the ServerTask entity.
+func (m *EnvironmentMutation) RemovedServerTasksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ServerTasks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// EnvironmentToServerTaskIDs returns the "EnvironmentToServerTask" edge IDs in the mutation.
-func (m *EnvironmentMutation) EnvironmentToServerTaskIDs() (ids []uuid.UUID) {
-	for id := range m._EnvironmentToServerTask {
+// ServerTasksIDs returns the "ServerTasks" edge IDs in the mutation.
+func (m *EnvironmentMutation) ServerTasksIDs() (ids []uuid.UUID) {
+	for id := range m._ServerTasks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetEnvironmentToServerTask resets all changes to the "EnvironmentToServerTask" edge.
-func (m *EnvironmentMutation) ResetEnvironmentToServerTask() {
-	m._EnvironmentToServerTask = nil
-	m.cleared_EnvironmentToServerTask = false
-	m.removed_EnvironmentToServerTask = nil
+// ResetServerTasks resets all changes to the "ServerTasks" edge.
+func (m *EnvironmentMutation) ResetServerTasks() {
+	m._ServerTasks = nil
+	m.cleared_ServerTasks = false
+	m.removed_ServerTasks = nil
 }
 
 // Where appends a list predicates to the EnvironmentMutation builder.
@@ -13245,65 +13245,65 @@ func (m *EnvironmentMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EnvironmentMutation) AddedEdges() []string {
 	edges := make([]string, 0, 20)
-	if m._EnvironmentToUser != nil {
-		edges = append(edges, environment.EdgeEnvironmentToUser)
+	if m._Users != nil {
+		edges = append(edges, environment.EdgeUsers)
 	}
-	if m._EnvironmentToHost != nil {
-		edges = append(edges, environment.EdgeEnvironmentToHost)
+	if m._Hosts != nil {
+		edges = append(edges, environment.EdgeHosts)
 	}
-	if m._EnvironmentToCompetition != nil {
-		edges = append(edges, environment.EdgeEnvironmentToCompetition)
+	if m._Competitions != nil {
+		edges = append(edges, environment.EdgeCompetitions)
 	}
-	if m._EnvironmentToIdentity != nil {
-		edges = append(edges, environment.EdgeEnvironmentToIdentity)
+	if m._Identities != nil {
+		edges = append(edges, environment.EdgeIdentities)
 	}
-	if m._EnvironmentToCommand != nil {
-		edges = append(edges, environment.EdgeEnvironmentToCommand)
+	if m._Commands != nil {
+		edges = append(edges, environment.EdgeCommands)
 	}
-	if m._EnvironmentToScript != nil {
-		edges = append(edges, environment.EdgeEnvironmentToScript)
+	if m._Scripts != nil {
+		edges = append(edges, environment.EdgeScripts)
 	}
-	if m._EnvironmentToFileDownload != nil {
-		edges = append(edges, environment.EdgeEnvironmentToFileDownload)
+	if m._FileDownloads != nil {
+		edges = append(edges, environment.EdgeFileDownloads)
 	}
-	if m._EnvironmentToFileDelete != nil {
-		edges = append(edges, environment.EdgeEnvironmentToFileDelete)
+	if m._FileDeletes != nil {
+		edges = append(edges, environment.EdgeFileDeletes)
 	}
-	if m._EnvironmentToFileExtract != nil {
-		edges = append(edges, environment.EdgeEnvironmentToFileExtract)
+	if m._FileExtracts != nil {
+		edges = append(edges, environment.EdgeFileExtracts)
 	}
-	if m._EnvironmentToIncludedNetwork != nil {
-		edges = append(edges, environment.EdgeEnvironmentToIncludedNetwork)
+	if m._IncludedNetworks != nil {
+		edges = append(edges, environment.EdgeIncludedNetworks)
 	}
-	if m._EnvironmentToFinding != nil {
-		edges = append(edges, environment.EdgeEnvironmentToFinding)
+	if m._Findings != nil {
+		edges = append(edges, environment.EdgeFindings)
 	}
-	if m._EnvironmentToDNSRecord != nil {
-		edges = append(edges, environment.EdgeEnvironmentToDNSRecord)
+	if m._DNSRecords != nil {
+		edges = append(edges, environment.EdgeDNSRecords)
 	}
-	if m._EnvironmentToDNS != nil {
-		edges = append(edges, environment.EdgeEnvironmentToDNS)
+	if m._DNS != nil {
+		edges = append(edges, environment.EdgeDNS)
 	}
-	if m._EnvironmentToNetwork != nil {
-		edges = append(edges, environment.EdgeEnvironmentToNetwork)
+	if m._Networks != nil {
+		edges = append(edges, environment.EdgeNetworks)
 	}
-	if m._EnvironmentToHostDependency != nil {
-		edges = append(edges, environment.EdgeEnvironmentToHostDependency)
+	if m._HostDependencies != nil {
+		edges = append(edges, environment.EdgeHostDependencies)
 	}
-	if m._EnvironmentToAnsible != nil {
-		edges = append(edges, environment.EdgeEnvironmentToAnsible)
+	if m._Ansibles != nil {
+		edges = append(edges, environment.EdgeAnsibles)
 	}
-	if m._EnvironmentToScheduledStep != nil {
-		edges = append(edges, environment.EdgeEnvironmentToScheduledStep)
+	if m._ScheduledSteps != nil {
+		edges = append(edges, environment.EdgeScheduledSteps)
 	}
-	if m._EnvironmentToBuild != nil {
-		edges = append(edges, environment.EdgeEnvironmentToBuild)
+	if m._Builds != nil {
+		edges = append(edges, environment.EdgeBuilds)
 	}
-	if m._EnvironmentToRepository != nil {
-		edges = append(edges, environment.EdgeEnvironmentToRepository)
+	if m._Repositories != nil {
+		edges = append(edges, environment.EdgeRepositories)
 	}
-	if m._EnvironmentToServerTask != nil {
-		edges = append(edges, environment.EdgeEnvironmentToServerTask)
+	if m._ServerTasks != nil {
+		edges = append(edges, environment.EdgeServerTasks)
 	}
 	return edges
 }
@@ -13312,123 +13312,123 @@ func (m *EnvironmentMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *EnvironmentMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case environment.EdgeEnvironmentToUser:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToUser))
-		for id := range m._EnvironmentToUser {
+	case environment.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m._Users))
+		for id := range m._Users {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToHost:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToHost))
-		for id := range m._EnvironmentToHost {
+	case environment.EdgeHosts:
+		ids := make([]ent.Value, 0, len(m._Hosts))
+		for id := range m._Hosts {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToCompetition:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToCompetition))
-		for id := range m._EnvironmentToCompetition {
+	case environment.EdgeCompetitions:
+		ids := make([]ent.Value, 0, len(m._Competitions))
+		for id := range m._Competitions {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToIdentity:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToIdentity))
-		for id := range m._EnvironmentToIdentity {
+	case environment.EdgeIdentities:
+		ids := make([]ent.Value, 0, len(m._Identities))
+		for id := range m._Identities {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToCommand:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToCommand))
-		for id := range m._EnvironmentToCommand {
+	case environment.EdgeCommands:
+		ids := make([]ent.Value, 0, len(m._Commands))
+		for id := range m._Commands {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToScript:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToScript))
-		for id := range m._EnvironmentToScript {
+	case environment.EdgeScripts:
+		ids := make([]ent.Value, 0, len(m._Scripts))
+		for id := range m._Scripts {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToFileDownload:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToFileDownload))
-		for id := range m._EnvironmentToFileDownload {
+	case environment.EdgeFileDownloads:
+		ids := make([]ent.Value, 0, len(m._FileDownloads))
+		for id := range m._FileDownloads {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToFileDelete:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToFileDelete))
-		for id := range m._EnvironmentToFileDelete {
+	case environment.EdgeFileDeletes:
+		ids := make([]ent.Value, 0, len(m._FileDeletes))
+		for id := range m._FileDeletes {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToFileExtract:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToFileExtract))
-		for id := range m._EnvironmentToFileExtract {
+	case environment.EdgeFileExtracts:
+		ids := make([]ent.Value, 0, len(m._FileExtracts))
+		for id := range m._FileExtracts {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToIncludedNetwork:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToIncludedNetwork))
-		for id := range m._EnvironmentToIncludedNetwork {
+	case environment.EdgeIncludedNetworks:
+		ids := make([]ent.Value, 0, len(m._IncludedNetworks))
+		for id := range m._IncludedNetworks {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToFinding:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToFinding))
-		for id := range m._EnvironmentToFinding {
+	case environment.EdgeFindings:
+		ids := make([]ent.Value, 0, len(m._Findings))
+		for id := range m._Findings {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToDNSRecord:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToDNSRecord))
-		for id := range m._EnvironmentToDNSRecord {
+	case environment.EdgeDNSRecords:
+		ids := make([]ent.Value, 0, len(m._DNSRecords))
+		for id := range m._DNSRecords {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToDNS:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToDNS))
-		for id := range m._EnvironmentToDNS {
+	case environment.EdgeDNS:
+		ids := make([]ent.Value, 0, len(m._DNS))
+		for id := range m._DNS {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToNetwork:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToNetwork))
-		for id := range m._EnvironmentToNetwork {
+	case environment.EdgeNetworks:
+		ids := make([]ent.Value, 0, len(m._Networks))
+		for id := range m._Networks {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToHostDependency:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToHostDependency))
-		for id := range m._EnvironmentToHostDependency {
+	case environment.EdgeHostDependencies:
+		ids := make([]ent.Value, 0, len(m._HostDependencies))
+		for id := range m._HostDependencies {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToAnsible:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToAnsible))
-		for id := range m._EnvironmentToAnsible {
+	case environment.EdgeAnsibles:
+		ids := make([]ent.Value, 0, len(m._Ansibles))
+		for id := range m._Ansibles {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToScheduledStep:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToScheduledStep))
-		for id := range m._EnvironmentToScheduledStep {
+	case environment.EdgeScheduledSteps:
+		ids := make([]ent.Value, 0, len(m._ScheduledSteps))
+		for id := range m._ScheduledSteps {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToBuild:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToBuild))
-		for id := range m._EnvironmentToBuild {
+	case environment.EdgeBuilds:
+		ids := make([]ent.Value, 0, len(m._Builds))
+		for id := range m._Builds {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToRepository:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToRepository))
-		for id := range m._EnvironmentToRepository {
+	case environment.EdgeRepositories:
+		ids := make([]ent.Value, 0, len(m._Repositories))
+		for id := range m._Repositories {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToServerTask:
-		ids := make([]ent.Value, 0, len(m._EnvironmentToServerTask))
-		for id := range m._EnvironmentToServerTask {
+	case environment.EdgeServerTasks:
+		ids := make([]ent.Value, 0, len(m._ServerTasks))
+		for id := range m._ServerTasks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -13439,65 +13439,65 @@ func (m *EnvironmentMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EnvironmentMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 20)
-	if m.removed_EnvironmentToUser != nil {
-		edges = append(edges, environment.EdgeEnvironmentToUser)
+	if m.removed_Users != nil {
+		edges = append(edges, environment.EdgeUsers)
 	}
-	if m.removed_EnvironmentToHost != nil {
-		edges = append(edges, environment.EdgeEnvironmentToHost)
+	if m.removed_Hosts != nil {
+		edges = append(edges, environment.EdgeHosts)
 	}
-	if m.removed_EnvironmentToCompetition != nil {
-		edges = append(edges, environment.EdgeEnvironmentToCompetition)
+	if m.removed_Competitions != nil {
+		edges = append(edges, environment.EdgeCompetitions)
 	}
-	if m.removed_EnvironmentToIdentity != nil {
-		edges = append(edges, environment.EdgeEnvironmentToIdentity)
+	if m.removed_Identities != nil {
+		edges = append(edges, environment.EdgeIdentities)
 	}
-	if m.removed_EnvironmentToCommand != nil {
-		edges = append(edges, environment.EdgeEnvironmentToCommand)
+	if m.removed_Commands != nil {
+		edges = append(edges, environment.EdgeCommands)
 	}
-	if m.removed_EnvironmentToScript != nil {
-		edges = append(edges, environment.EdgeEnvironmentToScript)
+	if m.removed_Scripts != nil {
+		edges = append(edges, environment.EdgeScripts)
 	}
-	if m.removed_EnvironmentToFileDownload != nil {
-		edges = append(edges, environment.EdgeEnvironmentToFileDownload)
+	if m.removed_FileDownloads != nil {
+		edges = append(edges, environment.EdgeFileDownloads)
 	}
-	if m.removed_EnvironmentToFileDelete != nil {
-		edges = append(edges, environment.EdgeEnvironmentToFileDelete)
+	if m.removed_FileDeletes != nil {
+		edges = append(edges, environment.EdgeFileDeletes)
 	}
-	if m.removed_EnvironmentToFileExtract != nil {
-		edges = append(edges, environment.EdgeEnvironmentToFileExtract)
+	if m.removed_FileExtracts != nil {
+		edges = append(edges, environment.EdgeFileExtracts)
 	}
-	if m.removed_EnvironmentToIncludedNetwork != nil {
-		edges = append(edges, environment.EdgeEnvironmentToIncludedNetwork)
+	if m.removed_IncludedNetworks != nil {
+		edges = append(edges, environment.EdgeIncludedNetworks)
 	}
-	if m.removed_EnvironmentToFinding != nil {
-		edges = append(edges, environment.EdgeEnvironmentToFinding)
+	if m.removed_Findings != nil {
+		edges = append(edges, environment.EdgeFindings)
 	}
-	if m.removed_EnvironmentToDNSRecord != nil {
-		edges = append(edges, environment.EdgeEnvironmentToDNSRecord)
+	if m.removed_DNSRecords != nil {
+		edges = append(edges, environment.EdgeDNSRecords)
 	}
-	if m.removed_EnvironmentToDNS != nil {
-		edges = append(edges, environment.EdgeEnvironmentToDNS)
+	if m.removed_DNS != nil {
+		edges = append(edges, environment.EdgeDNS)
 	}
-	if m.removed_EnvironmentToNetwork != nil {
-		edges = append(edges, environment.EdgeEnvironmentToNetwork)
+	if m.removed_Networks != nil {
+		edges = append(edges, environment.EdgeNetworks)
 	}
-	if m.removed_EnvironmentToHostDependency != nil {
-		edges = append(edges, environment.EdgeEnvironmentToHostDependency)
+	if m.removed_HostDependencies != nil {
+		edges = append(edges, environment.EdgeHostDependencies)
 	}
-	if m.removed_EnvironmentToAnsible != nil {
-		edges = append(edges, environment.EdgeEnvironmentToAnsible)
+	if m.removed_Ansibles != nil {
+		edges = append(edges, environment.EdgeAnsibles)
 	}
-	if m.removed_EnvironmentToScheduledStep != nil {
-		edges = append(edges, environment.EdgeEnvironmentToScheduledStep)
+	if m.removed_ScheduledSteps != nil {
+		edges = append(edges, environment.EdgeScheduledSteps)
 	}
-	if m.removed_EnvironmentToBuild != nil {
-		edges = append(edges, environment.EdgeEnvironmentToBuild)
+	if m.removed_Builds != nil {
+		edges = append(edges, environment.EdgeBuilds)
 	}
-	if m.removed_EnvironmentToRepository != nil {
-		edges = append(edges, environment.EdgeEnvironmentToRepository)
+	if m.removed_Repositories != nil {
+		edges = append(edges, environment.EdgeRepositories)
 	}
-	if m.removed_EnvironmentToServerTask != nil {
-		edges = append(edges, environment.EdgeEnvironmentToServerTask)
+	if m.removed_ServerTasks != nil {
+		edges = append(edges, environment.EdgeServerTasks)
 	}
 	return edges
 }
@@ -13506,123 +13506,123 @@ func (m *EnvironmentMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *EnvironmentMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case environment.EdgeEnvironmentToUser:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToUser))
-		for id := range m.removed_EnvironmentToUser {
+	case environment.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m.removed_Users))
+		for id := range m.removed_Users {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToHost:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToHost))
-		for id := range m.removed_EnvironmentToHost {
+	case environment.EdgeHosts:
+		ids := make([]ent.Value, 0, len(m.removed_Hosts))
+		for id := range m.removed_Hosts {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToCompetition:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToCompetition))
-		for id := range m.removed_EnvironmentToCompetition {
+	case environment.EdgeCompetitions:
+		ids := make([]ent.Value, 0, len(m.removed_Competitions))
+		for id := range m.removed_Competitions {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToIdentity:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToIdentity))
-		for id := range m.removed_EnvironmentToIdentity {
+	case environment.EdgeIdentities:
+		ids := make([]ent.Value, 0, len(m.removed_Identities))
+		for id := range m.removed_Identities {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToCommand:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToCommand))
-		for id := range m.removed_EnvironmentToCommand {
+	case environment.EdgeCommands:
+		ids := make([]ent.Value, 0, len(m.removed_Commands))
+		for id := range m.removed_Commands {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToScript:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToScript))
-		for id := range m.removed_EnvironmentToScript {
+	case environment.EdgeScripts:
+		ids := make([]ent.Value, 0, len(m.removed_Scripts))
+		for id := range m.removed_Scripts {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToFileDownload:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToFileDownload))
-		for id := range m.removed_EnvironmentToFileDownload {
+	case environment.EdgeFileDownloads:
+		ids := make([]ent.Value, 0, len(m.removed_FileDownloads))
+		for id := range m.removed_FileDownloads {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToFileDelete:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToFileDelete))
-		for id := range m.removed_EnvironmentToFileDelete {
+	case environment.EdgeFileDeletes:
+		ids := make([]ent.Value, 0, len(m.removed_FileDeletes))
+		for id := range m.removed_FileDeletes {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToFileExtract:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToFileExtract))
-		for id := range m.removed_EnvironmentToFileExtract {
+	case environment.EdgeFileExtracts:
+		ids := make([]ent.Value, 0, len(m.removed_FileExtracts))
+		for id := range m.removed_FileExtracts {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToIncludedNetwork:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToIncludedNetwork))
-		for id := range m.removed_EnvironmentToIncludedNetwork {
+	case environment.EdgeIncludedNetworks:
+		ids := make([]ent.Value, 0, len(m.removed_IncludedNetworks))
+		for id := range m.removed_IncludedNetworks {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToFinding:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToFinding))
-		for id := range m.removed_EnvironmentToFinding {
+	case environment.EdgeFindings:
+		ids := make([]ent.Value, 0, len(m.removed_Findings))
+		for id := range m.removed_Findings {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToDNSRecord:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToDNSRecord))
-		for id := range m.removed_EnvironmentToDNSRecord {
+	case environment.EdgeDNSRecords:
+		ids := make([]ent.Value, 0, len(m.removed_DNSRecords))
+		for id := range m.removed_DNSRecords {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToDNS:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToDNS))
-		for id := range m.removed_EnvironmentToDNS {
+	case environment.EdgeDNS:
+		ids := make([]ent.Value, 0, len(m.removed_DNS))
+		for id := range m.removed_DNS {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToNetwork:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToNetwork))
-		for id := range m.removed_EnvironmentToNetwork {
+	case environment.EdgeNetworks:
+		ids := make([]ent.Value, 0, len(m.removed_Networks))
+		for id := range m.removed_Networks {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToHostDependency:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToHostDependency))
-		for id := range m.removed_EnvironmentToHostDependency {
+	case environment.EdgeHostDependencies:
+		ids := make([]ent.Value, 0, len(m.removed_HostDependencies))
+		for id := range m.removed_HostDependencies {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToAnsible:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToAnsible))
-		for id := range m.removed_EnvironmentToAnsible {
+	case environment.EdgeAnsibles:
+		ids := make([]ent.Value, 0, len(m.removed_Ansibles))
+		for id := range m.removed_Ansibles {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToScheduledStep:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToScheduledStep))
-		for id := range m.removed_EnvironmentToScheduledStep {
+	case environment.EdgeScheduledSteps:
+		ids := make([]ent.Value, 0, len(m.removed_ScheduledSteps))
+		for id := range m.removed_ScheduledSteps {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToBuild:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToBuild))
-		for id := range m.removed_EnvironmentToBuild {
+	case environment.EdgeBuilds:
+		ids := make([]ent.Value, 0, len(m.removed_Builds))
+		for id := range m.removed_Builds {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToRepository:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToRepository))
-		for id := range m.removed_EnvironmentToRepository {
+	case environment.EdgeRepositories:
+		ids := make([]ent.Value, 0, len(m.removed_Repositories))
+		for id := range m.removed_Repositories {
 			ids = append(ids, id)
 		}
 		return ids
-	case environment.EdgeEnvironmentToServerTask:
-		ids := make([]ent.Value, 0, len(m.removed_EnvironmentToServerTask))
-		for id := range m.removed_EnvironmentToServerTask {
+	case environment.EdgeServerTasks:
+		ids := make([]ent.Value, 0, len(m.removed_ServerTasks))
+		for id := range m.removed_ServerTasks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -13633,65 +13633,65 @@ func (m *EnvironmentMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EnvironmentMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 20)
-	if m.cleared_EnvironmentToUser {
-		edges = append(edges, environment.EdgeEnvironmentToUser)
+	if m.cleared_Users {
+		edges = append(edges, environment.EdgeUsers)
 	}
-	if m.cleared_EnvironmentToHost {
-		edges = append(edges, environment.EdgeEnvironmentToHost)
+	if m.cleared_Hosts {
+		edges = append(edges, environment.EdgeHosts)
 	}
-	if m.cleared_EnvironmentToCompetition {
-		edges = append(edges, environment.EdgeEnvironmentToCompetition)
+	if m.cleared_Competitions {
+		edges = append(edges, environment.EdgeCompetitions)
 	}
-	if m.cleared_EnvironmentToIdentity {
-		edges = append(edges, environment.EdgeEnvironmentToIdentity)
+	if m.cleared_Identities {
+		edges = append(edges, environment.EdgeIdentities)
 	}
-	if m.cleared_EnvironmentToCommand {
-		edges = append(edges, environment.EdgeEnvironmentToCommand)
+	if m.cleared_Commands {
+		edges = append(edges, environment.EdgeCommands)
 	}
-	if m.cleared_EnvironmentToScript {
-		edges = append(edges, environment.EdgeEnvironmentToScript)
+	if m.cleared_Scripts {
+		edges = append(edges, environment.EdgeScripts)
 	}
-	if m.cleared_EnvironmentToFileDownload {
-		edges = append(edges, environment.EdgeEnvironmentToFileDownload)
+	if m.cleared_FileDownloads {
+		edges = append(edges, environment.EdgeFileDownloads)
 	}
-	if m.cleared_EnvironmentToFileDelete {
-		edges = append(edges, environment.EdgeEnvironmentToFileDelete)
+	if m.cleared_FileDeletes {
+		edges = append(edges, environment.EdgeFileDeletes)
 	}
-	if m.cleared_EnvironmentToFileExtract {
-		edges = append(edges, environment.EdgeEnvironmentToFileExtract)
+	if m.cleared_FileExtracts {
+		edges = append(edges, environment.EdgeFileExtracts)
 	}
-	if m.cleared_EnvironmentToIncludedNetwork {
-		edges = append(edges, environment.EdgeEnvironmentToIncludedNetwork)
+	if m.cleared_IncludedNetworks {
+		edges = append(edges, environment.EdgeIncludedNetworks)
 	}
-	if m.cleared_EnvironmentToFinding {
-		edges = append(edges, environment.EdgeEnvironmentToFinding)
+	if m.cleared_Findings {
+		edges = append(edges, environment.EdgeFindings)
 	}
-	if m.cleared_EnvironmentToDNSRecord {
-		edges = append(edges, environment.EdgeEnvironmentToDNSRecord)
+	if m.cleared_DNSRecords {
+		edges = append(edges, environment.EdgeDNSRecords)
 	}
-	if m.cleared_EnvironmentToDNS {
-		edges = append(edges, environment.EdgeEnvironmentToDNS)
+	if m.cleared_DNS {
+		edges = append(edges, environment.EdgeDNS)
 	}
-	if m.cleared_EnvironmentToNetwork {
-		edges = append(edges, environment.EdgeEnvironmentToNetwork)
+	if m.cleared_Networks {
+		edges = append(edges, environment.EdgeNetworks)
 	}
-	if m.cleared_EnvironmentToHostDependency {
-		edges = append(edges, environment.EdgeEnvironmentToHostDependency)
+	if m.cleared_HostDependencies {
+		edges = append(edges, environment.EdgeHostDependencies)
 	}
-	if m.cleared_EnvironmentToAnsible {
-		edges = append(edges, environment.EdgeEnvironmentToAnsible)
+	if m.cleared_Ansibles {
+		edges = append(edges, environment.EdgeAnsibles)
 	}
-	if m.cleared_EnvironmentToScheduledStep {
-		edges = append(edges, environment.EdgeEnvironmentToScheduledStep)
+	if m.cleared_ScheduledSteps {
+		edges = append(edges, environment.EdgeScheduledSteps)
 	}
-	if m.cleared_EnvironmentToBuild {
-		edges = append(edges, environment.EdgeEnvironmentToBuild)
+	if m.cleared_Builds {
+		edges = append(edges, environment.EdgeBuilds)
 	}
-	if m.cleared_EnvironmentToRepository {
-		edges = append(edges, environment.EdgeEnvironmentToRepository)
+	if m.cleared_Repositories {
+		edges = append(edges, environment.EdgeRepositories)
 	}
-	if m.cleared_EnvironmentToServerTask {
-		edges = append(edges, environment.EdgeEnvironmentToServerTask)
+	if m.cleared_ServerTasks {
+		edges = append(edges, environment.EdgeServerTasks)
 	}
 	return edges
 }
@@ -13700,46 +13700,46 @@ func (m *EnvironmentMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *EnvironmentMutation) EdgeCleared(name string) bool {
 	switch name {
-	case environment.EdgeEnvironmentToUser:
-		return m.cleared_EnvironmentToUser
-	case environment.EdgeEnvironmentToHost:
-		return m.cleared_EnvironmentToHost
-	case environment.EdgeEnvironmentToCompetition:
-		return m.cleared_EnvironmentToCompetition
-	case environment.EdgeEnvironmentToIdentity:
-		return m.cleared_EnvironmentToIdentity
-	case environment.EdgeEnvironmentToCommand:
-		return m.cleared_EnvironmentToCommand
-	case environment.EdgeEnvironmentToScript:
-		return m.cleared_EnvironmentToScript
-	case environment.EdgeEnvironmentToFileDownload:
-		return m.cleared_EnvironmentToFileDownload
-	case environment.EdgeEnvironmentToFileDelete:
-		return m.cleared_EnvironmentToFileDelete
-	case environment.EdgeEnvironmentToFileExtract:
-		return m.cleared_EnvironmentToFileExtract
-	case environment.EdgeEnvironmentToIncludedNetwork:
-		return m.cleared_EnvironmentToIncludedNetwork
-	case environment.EdgeEnvironmentToFinding:
-		return m.cleared_EnvironmentToFinding
-	case environment.EdgeEnvironmentToDNSRecord:
-		return m.cleared_EnvironmentToDNSRecord
-	case environment.EdgeEnvironmentToDNS:
-		return m.cleared_EnvironmentToDNS
-	case environment.EdgeEnvironmentToNetwork:
-		return m.cleared_EnvironmentToNetwork
-	case environment.EdgeEnvironmentToHostDependency:
-		return m.cleared_EnvironmentToHostDependency
-	case environment.EdgeEnvironmentToAnsible:
-		return m.cleared_EnvironmentToAnsible
-	case environment.EdgeEnvironmentToScheduledStep:
-		return m.cleared_EnvironmentToScheduledStep
-	case environment.EdgeEnvironmentToBuild:
-		return m.cleared_EnvironmentToBuild
-	case environment.EdgeEnvironmentToRepository:
-		return m.cleared_EnvironmentToRepository
-	case environment.EdgeEnvironmentToServerTask:
-		return m.cleared_EnvironmentToServerTask
+	case environment.EdgeUsers:
+		return m.cleared_Users
+	case environment.EdgeHosts:
+		return m.cleared_Hosts
+	case environment.EdgeCompetitions:
+		return m.cleared_Competitions
+	case environment.EdgeIdentities:
+		return m.cleared_Identities
+	case environment.EdgeCommands:
+		return m.cleared_Commands
+	case environment.EdgeScripts:
+		return m.cleared_Scripts
+	case environment.EdgeFileDownloads:
+		return m.cleared_FileDownloads
+	case environment.EdgeFileDeletes:
+		return m.cleared_FileDeletes
+	case environment.EdgeFileExtracts:
+		return m.cleared_FileExtracts
+	case environment.EdgeIncludedNetworks:
+		return m.cleared_IncludedNetworks
+	case environment.EdgeFindings:
+		return m.cleared_Findings
+	case environment.EdgeDNSRecords:
+		return m.cleared_DNSRecords
+	case environment.EdgeDNS:
+		return m.cleared_DNS
+	case environment.EdgeNetworks:
+		return m.cleared_Networks
+	case environment.EdgeHostDependencies:
+		return m.cleared_HostDependencies
+	case environment.EdgeAnsibles:
+		return m.cleared_Ansibles
+	case environment.EdgeScheduledSteps:
+		return m.cleared_ScheduledSteps
+	case environment.EdgeBuilds:
+		return m.cleared_Builds
+	case environment.EdgeRepositories:
+		return m.cleared_Repositories
+	case environment.EdgeServerTasks:
+		return m.cleared_ServerTasks
 	}
 	return false
 }
@@ -13756,65 +13756,65 @@ func (m *EnvironmentMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *EnvironmentMutation) ResetEdge(name string) error {
 	switch name {
-	case environment.EdgeEnvironmentToUser:
-		m.ResetEnvironmentToUser()
+	case environment.EdgeUsers:
+		m.ResetUsers()
 		return nil
-	case environment.EdgeEnvironmentToHost:
-		m.ResetEnvironmentToHost()
+	case environment.EdgeHosts:
+		m.ResetHosts()
 		return nil
-	case environment.EdgeEnvironmentToCompetition:
-		m.ResetEnvironmentToCompetition()
+	case environment.EdgeCompetitions:
+		m.ResetCompetitions()
 		return nil
-	case environment.EdgeEnvironmentToIdentity:
-		m.ResetEnvironmentToIdentity()
+	case environment.EdgeIdentities:
+		m.ResetIdentities()
 		return nil
-	case environment.EdgeEnvironmentToCommand:
-		m.ResetEnvironmentToCommand()
+	case environment.EdgeCommands:
+		m.ResetCommands()
 		return nil
-	case environment.EdgeEnvironmentToScript:
-		m.ResetEnvironmentToScript()
+	case environment.EdgeScripts:
+		m.ResetScripts()
 		return nil
-	case environment.EdgeEnvironmentToFileDownload:
-		m.ResetEnvironmentToFileDownload()
+	case environment.EdgeFileDownloads:
+		m.ResetFileDownloads()
 		return nil
-	case environment.EdgeEnvironmentToFileDelete:
-		m.ResetEnvironmentToFileDelete()
+	case environment.EdgeFileDeletes:
+		m.ResetFileDeletes()
 		return nil
-	case environment.EdgeEnvironmentToFileExtract:
-		m.ResetEnvironmentToFileExtract()
+	case environment.EdgeFileExtracts:
+		m.ResetFileExtracts()
 		return nil
-	case environment.EdgeEnvironmentToIncludedNetwork:
-		m.ResetEnvironmentToIncludedNetwork()
+	case environment.EdgeIncludedNetworks:
+		m.ResetIncludedNetworks()
 		return nil
-	case environment.EdgeEnvironmentToFinding:
-		m.ResetEnvironmentToFinding()
+	case environment.EdgeFindings:
+		m.ResetFindings()
 		return nil
-	case environment.EdgeEnvironmentToDNSRecord:
-		m.ResetEnvironmentToDNSRecord()
+	case environment.EdgeDNSRecords:
+		m.ResetDNSRecords()
 		return nil
-	case environment.EdgeEnvironmentToDNS:
-		m.ResetEnvironmentToDNS()
+	case environment.EdgeDNS:
+		m.ResetDNS()
 		return nil
-	case environment.EdgeEnvironmentToNetwork:
-		m.ResetEnvironmentToNetwork()
+	case environment.EdgeNetworks:
+		m.ResetNetworks()
 		return nil
-	case environment.EdgeEnvironmentToHostDependency:
-		m.ResetEnvironmentToHostDependency()
+	case environment.EdgeHostDependencies:
+		m.ResetHostDependencies()
 		return nil
-	case environment.EdgeEnvironmentToAnsible:
-		m.ResetEnvironmentToAnsible()
+	case environment.EdgeAnsibles:
+		m.ResetAnsibles()
 		return nil
-	case environment.EdgeEnvironmentToScheduledStep:
-		m.ResetEnvironmentToScheduledStep()
+	case environment.EdgeScheduledSteps:
+		m.ResetScheduledSteps()
 		return nil
-	case environment.EdgeEnvironmentToBuild:
-		m.ResetEnvironmentToBuild()
+	case environment.EdgeBuilds:
+		m.ResetBuilds()
 		return nil
-	case environment.EdgeEnvironmentToRepository:
-		m.ResetEnvironmentToRepository()
+	case environment.EdgeRepositories:
+		m.ResetRepositories()
 		return nil
-	case environment.EdgeEnvironmentToServerTask:
-		m.ResetEnvironmentToServerTask()
+	case environment.EdgeServerTasks:
+		m.ResetServerTasks()
 		return nil
 	}
 	return fmt.Errorf("unknown Environment edge %s", name)

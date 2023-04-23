@@ -37,7 +37,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	NetworkToEnvironmentInverseTable = "environments"
 	// NetworkToEnvironmentColumn is the table column denoting the NetworkToEnvironment relation/edge.
-	NetworkToEnvironmentColumn = "environment_environment_to_network"
+	NetworkToEnvironmentColumn = "environment_networks"
 	// NetworkToHostDependencyTable is the table that holds the NetworkToHostDependency relation/edge.
 	NetworkToHostDependencyTable = "host_dependencies"
 	// NetworkToHostDependencyInverseTable is the table name for the HostDependency entity.
@@ -68,7 +68,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "networks"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_network",
+	"environment_networks",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

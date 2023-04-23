@@ -30,7 +30,7 @@ const (
 	// Table holds the table name of the dns in the database.
 	Table = "dn_ss"
 	// EnvironmentsTable is the table that holds the Environments relation/edge. The primary key declared below.
-	EnvironmentsTable = "environment_EnvironmentToDNS"
+	EnvironmentsTable = "environment_DNS"
 	// EnvironmentsInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	EnvironmentsInverseTable = "environments"

@@ -40,7 +40,7 @@ func (ScheduledStep) Fields() []ent.Field {
 func (ScheduledStep) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("ScheduledStepToEnvironment", Environment.Type).
-			Ref("EnvironmentToScheduledStep").
+			Ref("ScheduledSteps").
 			Unique(),
 	}
 }

@@ -67,7 +67,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	ScriptToEnvironmentInverseTable = "environments"
 	// ScriptToEnvironmentColumn is the table column denoting the ScriptToEnvironment relation/edge.
-	ScriptToEnvironmentColumn = "environment_environment_to_script"
+	ScriptToEnvironmentColumn = "environment_scripts"
 )
 
 // Columns holds all SQL columns for script fields.
@@ -92,7 +92,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "scripts"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_script",
+	"environment_scripts",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

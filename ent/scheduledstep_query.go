@@ -395,10 +395,10 @@ func (ssq *ScheduledStepQuery) loadScheduledStepToEnvironment(ctx context.Contex
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ScheduledStep)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_scheduled_step == nil {
+		if nodes[i].environment_scheduled_steps == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_scheduled_step
+		fk := *nodes[i].environment_scheduled_steps
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (ssq *ScheduledStepQuery) loadScheduledStepToEnvironment(ctx context.Contex
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_scheduled_step" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_scheduled_steps" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

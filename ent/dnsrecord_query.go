@@ -395,10 +395,10 @@ func (drq *DNSRecordQuery) loadEnvironment(ctx context.Context, query *Environme
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*DNSRecord)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_dns_record == nil {
+		if nodes[i].environment_dns_records == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_dns_record
+		fk := *nodes[i].environment_dns_records
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (drq *DNSRecordQuery) loadEnvironment(ctx context.Context, query *Environme
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_dns_record" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_dns_records" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

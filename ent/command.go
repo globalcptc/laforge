@@ -50,7 +50,7 @@ type Command struct {
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
-	environment_environment_to_command *uuid.UUID
+	environment_commands *uuid.UUID
 }
 
 // CommandEdges holds the relations/edges for other nodes in the graph.
@@ -102,7 +102,7 @@ func (*Command) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case command.FieldID:
 			values[i] = new(uuid.UUID)
-		case command.ForeignKeys[0]: // environment_environment_to_command
+		case command.ForeignKeys[0]: // environment_commands
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Command", columns[i])
@@ -199,10 +199,10 @@ func (c *Command) assignValues(columns []string, values []interface{}) error {
 			}
 		case command.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_command", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_commands", values[i])
 			} else if value.Valid {
-				c.environment_environment_to_command = new(uuid.UUID)
-				*c.environment_environment_to_command = *value.S.(*uuid.UUID)
+				c.environment_commands = new(uuid.UUID)
+				*c.environment_commands = *value.S.(*uuid.UUID)
 			}
 		}
 	}

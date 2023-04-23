@@ -62,7 +62,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	FindingToEnvironmentInverseTable = "environments"
 	// FindingToEnvironmentColumn is the table column denoting the FindingToEnvironment relation/edge.
-	FindingToEnvironmentColumn = "environment_environment_to_finding"
+	FindingToEnvironmentColumn = "environment_findings"
 )
 
 // Columns holds all SQL columns for finding fields.
@@ -78,7 +78,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "findings"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_finding",
+	"environment_findings",
 	"finding_finding_to_host",
 	"script_script_to_finding",
 }

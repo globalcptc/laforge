@@ -394,7 +394,7 @@ func (r *mutationResolver) CreateBuild(ctx context.Context, envUUID string, rend
 		return nil, fmt.Errorf("failed casting UUID to UUID: %v", err)
 	}
 
-	entEnvironment, err := r.client.Environment.Query().Where(environment.IDEQ(uuid)).WithEnvironmentToBuild().Only(ctx)
+	entEnvironment, err := r.client.Environment.Query().Where(environment.IDEQ(uuid)).WithBuilds().Only(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed querying Environment: %v", err)
@@ -864,7 +864,7 @@ func (r *mutationResolver) UpdateEnviromentViaPull(ctx context.Context, envUUID 
 		return nil, err
 	}
 
-	entRepo, err := entEnvironment.QueryEnvironmentToRepository().WithRepositoryToRepoCommit().Only(ctx)
+	entRepo, err := entEnvironment.QueryRepositories().WithRepositoryToRepoCommit().Only(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1315,7 +1315,7 @@ func (r *queryResolver) Plan(ctx context.Context, planUUID string) (*ent.Plan, e
 }
 
 func (r *queryResolver) GetBuilds(ctx context.Context) ([]*ent.Build, error) {
-	builds, err := r.client.Environment.Query().Order(ent.Asc(environment.FieldID)).QueryEnvironmentToBuild().All(ctx)
+	builds, err := r.client.Environment.Query().Order(ent.Asc(environment.FieldID)).QueryBuilds().All(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed querying Builds: %v", err)
@@ -1347,7 +1347,7 @@ func (r *queryResolver) GetBuildCommits(ctx context.Context, envUUID string) ([]
 		return nil, fmt.Errorf("failed casting envUUID to UUID: %v", err)
 	}
 
-	buildCommits, err := r.client.Environment.Query().Where(environment.IDEQ(uuid)).QueryEnvironmentToBuild().QueryBuildCommits().All(ctx)
+	buildCommits, err := r.client.Environment.Query().Where(environment.IDEQ(uuid)).QueryBuilds().QueryBuildCommits().All(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed querying BuildCommits from Environment: %v", err)

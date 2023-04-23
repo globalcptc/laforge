@@ -471,10 +471,10 @@ func (aq *AnsibleQuery) loadEnvironment(ctx context.Context, query *EnvironmentQ
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Ansible)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_ansible == nil {
+		if nodes[i].environment_ansibles == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_ansible
+		fk := *nodes[i].environment_ansibles
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -488,7 +488,7 @@ func (aq *AnsibleQuery) loadEnvironment(ctx context.Context, query *EnvironmentQ
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_ansible" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_ansibles" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

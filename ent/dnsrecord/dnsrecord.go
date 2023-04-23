@@ -37,7 +37,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	EnvironmentInverseTable = "environments"
 	// EnvironmentColumn is the table column denoting the Environment relation/edge.
-	EnvironmentColumn = "environment_environment_to_dns_record"
+	EnvironmentColumn = "environment_dns_records"
 )
 
 // Columns holds all SQL columns for dnsrecord fields.
@@ -56,7 +56,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "dns_records"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_dns_record",
+	"environment_dns_records",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

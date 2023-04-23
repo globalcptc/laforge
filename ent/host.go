@@ -67,7 +67,7 @@ type Host struct {
 	// DependByHostToHostDependency holds the value of the DependByHostToHostDependency edge.
 	HCLDependByHostToHostDependency []*HostDependency `json:"DependByHostToHostDependency,omitempty"`
 	//
-	environment_environment_to_host *uuid.UUID
+	environment_hosts *uuid.UUID
 }
 
 // HostEdges holds the relations/edges for other nodes in the graph.
@@ -168,7 +168,7 @@ func (*Host) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case host.FieldID:
 			values[i] = new(uuid.UUID)
-		case host.ForeignKeys[0]: // environment_environment_to_host
+		case host.ForeignKeys[0]: // environment_hosts
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Host", columns[i])
@@ -297,10 +297,10 @@ func (h *Host) assignValues(columns []string, values []interface{}) error {
 			}
 		case host.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_host", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_hosts", values[i])
 			} else if value.Valid {
-				h.environment_environment_to_host = new(uuid.UUID)
-				*h.environment_environment_to_host = *value.S.(*uuid.UUID)
+				h.environment_hosts = new(uuid.UUID)
+				*h.environment_hosts = *value.S.(*uuid.UUID)
 			}
 		}
 	}

@@ -326,7 +326,7 @@ func (ssc *ScheduledStepCreate) createSpec() (*ScheduledStep, *sqlgraph.CreateSp
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.environment_environment_to_scheduled_step = &nodes[0]
+		_node.environment_scheduled_steps = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -45,7 +45,7 @@ func (Ansible) Edges() []ent.Edge {
 		edge.To("Users", User.Type).
 			StructTag(`hcl:"maintainer,block"`),
 		edge.From("Environment", Environment.Type).
-			Ref("EnvironmentToAnsible").
+			Ref("Ansibles").
 			Unique(),
 	}
 }

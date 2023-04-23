@@ -27,7 +27,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	FileDeleteToEnvironmentInverseTable = "environments"
 	// FileDeleteToEnvironmentColumn is the table column denoting the FileDeleteToEnvironment relation/edge.
-	FileDeleteToEnvironmentColumn = "environment_environment_to_file_delete"
+	FileDeleteToEnvironmentColumn = "environment_file_deletes"
 )
 
 // Columns holds all SQL columns for filedelete fields.
@@ -41,7 +41,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "file_deletes"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_file_delete",
+	"environment_file_deletes",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

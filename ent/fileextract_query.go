@@ -395,10 +395,10 @@ func (feq *FileExtractQuery) loadFileExtractToEnvironment(ctx context.Context, q
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*FileExtract)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_file_extract == nil {
+		if nodes[i].environment_file_extracts == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_file_extract
+		fk := *nodes[i].environment_file_extracts
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (feq *FileExtractQuery) loadFileExtractToEnvironment(ctx context.Context, q
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_file_extract" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_file_extracts" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

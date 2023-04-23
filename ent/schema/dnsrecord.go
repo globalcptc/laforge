@@ -40,7 +40,7 @@ func (DNSRecord) Fields() []ent.Field {
 func (DNSRecord) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("Environment", Environment.Type).
-			Ref("EnvironmentToDNSRecord").
+			Ref("DNSRecords").
 			Unique(),
 	}
 }

@@ -48,7 +48,7 @@ type FileDownload struct {
 	// FileDownloadToEnvironment holds the value of the FileDownloadToEnvironment edge.
 	HCLFileDownloadToEnvironment *Environment `json:"FileDownloadToEnvironment,omitempty"`
 	//
-	environment_environment_to_file_download *uuid.UUID
+	environment_file_downloads *uuid.UUID
 }
 
 // FileDownloadEdges holds the relations/edges for other nodes in the graph.
@@ -87,7 +87,7 @@ func (*FileDownload) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case filedownload.FieldID:
 			values[i] = new(uuid.UUID)
-		case filedownload.ForeignKeys[0]: // environment_environment_to_file_download
+		case filedownload.ForeignKeys[0]: // environment_file_downloads
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type FileDownload", columns[i])
@@ -180,10 +180,10 @@ func (fd *FileDownload) assignValues(columns []string, values []interface{}) err
 			}
 		case filedownload.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_file_download", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_file_downloads", values[i])
 			} else if value.Valid {
-				fd.environment_environment_to_file_download = new(uuid.UUID)
-				*fd.environment_environment_to_file_download = *value.S.(*uuid.UUID)
+				fd.environment_file_downloads = new(uuid.UUID)
+				*fd.environment_file_downloads = *value.S.(*uuid.UUID)
 			}
 		}
 	}

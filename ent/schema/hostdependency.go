@@ -41,7 +41,7 @@ func (HostDependency) Edges() []ent.Edge {
 		edge.To("HostDependencyToNetwork", Network.Type).
 			Unique(),
 		edge.From("HostDependencyToEnvironment", Environment.Type).
-			Ref("EnvironmentToHostDependency").
+			Ref("HostDependencies").
 			Unique(),
 	}
 }

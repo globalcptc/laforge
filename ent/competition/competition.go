@@ -42,7 +42,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	EnvironmentInverseTable = "environments"
 	// EnvironmentColumn is the table column denoting the Environment relation/edge.
-	EnvironmentColumn = "environment_environment_to_competition"
+	EnvironmentColumn = "environment_competitions"
 	// BuildsTable is the table that holds the Builds relation/edge.
 	BuildsTable = "builds"
 	// BuildsInverseTable is the table name for the Build entity.
@@ -66,7 +66,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "competitions"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_competition",
+	"environment_competitions",
 }
 
 var (

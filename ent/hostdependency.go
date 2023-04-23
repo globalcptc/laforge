@@ -37,7 +37,7 @@ type HostDependency struct {
 	// HostDependencyToEnvironment holds the value of the HostDependencyToEnvironment edge.
 	HCLHostDependencyToEnvironment *Environment `json:"HostDependencyToEnvironment,omitempty"`
 	//
-	environment_environment_to_host_dependency        *uuid.UUID
+	environment_host_dependencies                     *uuid.UUID
 	host_dependency_host_dependency_to_depend_on_host *uuid.UUID
 	host_dependency_host_dependency_to_depend_by_host *uuid.UUID
 	host_dependency_host_dependency_to_network        *uuid.UUID
@@ -123,7 +123,7 @@ func (*HostDependency) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case hostdependency.FieldID:
 			values[i] = new(uuid.UUID)
-		case hostdependency.ForeignKeys[0]: // environment_environment_to_host_dependency
+		case hostdependency.ForeignKeys[0]: // environment_host_dependencies
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case hostdependency.ForeignKeys[1]: // host_dependency_host_dependency_to_depend_on_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -166,10 +166,10 @@ func (hd *HostDependency) assignValues(columns []string, values []interface{}) e
 			}
 		case hostdependency.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_host_dependency", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_host_dependencies", values[i])
 			} else if value.Valid {
-				hd.environment_environment_to_host_dependency = new(uuid.UUID)
-				*hd.environment_environment_to_host_dependency = *value.S.(*uuid.UUID)
+				hd.environment_host_dependencies = new(uuid.UUID)
+				*hd.environment_host_dependencies = *value.S.(*uuid.UUID)
 			}
 		case hostdependency.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

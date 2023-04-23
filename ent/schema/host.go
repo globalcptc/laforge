@@ -63,7 +63,7 @@ func (Host) Edges() []ent.Edge {
 		edge.To("HostToUser", User.Type).
 			StructTag(`hcl:"maintainer,block"`),
 		edge.From("HostToEnvironment", Environment.Type).
-			Ref("EnvironmentToHost").
+			Ref("Hosts").
 			Unique(),
 		edge.From("HostToIncludedNetwork", IncludedNetwork.Type).
 			Ref("IncludedNetworkToHost"),

@@ -45,7 +45,7 @@ const (
 	// IncludedNetworkToNetworkColumn is the table column denoting the IncludedNetworkToNetwork relation/edge.
 	IncludedNetworkToNetworkColumn = "included_network_included_network_to_network"
 	// IncludedNetworkToEnvironmentTable is the table that holds the IncludedNetworkToEnvironment relation/edge. The primary key declared below.
-	IncludedNetworkToEnvironmentTable = "environment_EnvironmentToIncludedNetwork"
+	IncludedNetworkToEnvironmentTable = "environment_IncludedNetworks"
 	// IncludedNetworkToEnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	IncludedNetworkToEnvironmentInverseTable = "environments"

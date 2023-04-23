@@ -324,162 +324,162 @@ func (d *Disk) Host(ctx context.Context) (*Host, error) {
 	return result, MaskNotFound(err)
 }
 
-func (e *Environment) EnvironmentToUser(ctx context.Context) ([]*User, error) {
-	result, err := e.Edges.EnvironmentToUserOrErr()
+func (e *Environment) Users(ctx context.Context) ([]*User, error) {
+	result, err := e.Edges.UsersOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToUser().All(ctx)
+		result, err = e.QueryUsers().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToHost(ctx context.Context) ([]*Host, error) {
-	result, err := e.Edges.EnvironmentToHostOrErr()
+func (e *Environment) Hosts(ctx context.Context) ([]*Host, error) {
+	result, err := e.Edges.HostsOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToHost().All(ctx)
+		result, err = e.QueryHosts().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToCompetition(ctx context.Context) ([]*Competition, error) {
-	result, err := e.Edges.EnvironmentToCompetitionOrErr()
+func (e *Environment) Competitions(ctx context.Context) ([]*Competition, error) {
+	result, err := e.Edges.CompetitionsOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToCompetition().All(ctx)
+		result, err = e.QueryCompetitions().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToIdentity(ctx context.Context) ([]*Identity, error) {
-	result, err := e.Edges.EnvironmentToIdentityOrErr()
+func (e *Environment) Identities(ctx context.Context) ([]*Identity, error) {
+	result, err := e.Edges.IdentitiesOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToIdentity().All(ctx)
+		result, err = e.QueryIdentities().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToCommand(ctx context.Context) ([]*Command, error) {
-	result, err := e.Edges.EnvironmentToCommandOrErr()
+func (e *Environment) Commands(ctx context.Context) ([]*Command, error) {
+	result, err := e.Edges.CommandsOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToCommand().All(ctx)
+		result, err = e.QueryCommands().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToScript(ctx context.Context) ([]*Script, error) {
-	result, err := e.Edges.EnvironmentToScriptOrErr()
+func (e *Environment) Scripts(ctx context.Context) ([]*Script, error) {
+	result, err := e.Edges.ScriptsOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToScript().All(ctx)
+		result, err = e.QueryScripts().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToFileDownload(ctx context.Context) ([]*FileDownload, error) {
-	result, err := e.Edges.EnvironmentToFileDownloadOrErr()
+func (e *Environment) FileDownloads(ctx context.Context) ([]*FileDownload, error) {
+	result, err := e.Edges.FileDownloadsOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToFileDownload().All(ctx)
+		result, err = e.QueryFileDownloads().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToFileDelete(ctx context.Context) ([]*FileDelete, error) {
-	result, err := e.Edges.EnvironmentToFileDeleteOrErr()
+func (e *Environment) FileDeletes(ctx context.Context) ([]*FileDelete, error) {
+	result, err := e.Edges.FileDeletesOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToFileDelete().All(ctx)
+		result, err = e.QueryFileDeletes().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToFileExtract(ctx context.Context) ([]*FileExtract, error) {
-	result, err := e.Edges.EnvironmentToFileExtractOrErr()
+func (e *Environment) FileExtracts(ctx context.Context) ([]*FileExtract, error) {
+	result, err := e.Edges.FileExtractsOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToFileExtract().All(ctx)
+		result, err = e.QueryFileExtracts().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToIncludedNetwork(ctx context.Context) ([]*IncludedNetwork, error) {
-	result, err := e.Edges.EnvironmentToIncludedNetworkOrErr()
+func (e *Environment) IncludedNetworks(ctx context.Context) ([]*IncludedNetwork, error) {
+	result, err := e.Edges.IncludedNetworksOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToIncludedNetwork().All(ctx)
+		result, err = e.QueryIncludedNetworks().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToFinding(ctx context.Context) ([]*Finding, error) {
-	result, err := e.Edges.EnvironmentToFindingOrErr()
+func (e *Environment) Findings(ctx context.Context) ([]*Finding, error) {
+	result, err := e.Edges.FindingsOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToFinding().All(ctx)
+		result, err = e.QueryFindings().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToDNSRecord(ctx context.Context) ([]*DNSRecord, error) {
-	result, err := e.Edges.EnvironmentToDNSRecordOrErr()
+func (e *Environment) DNSRecords(ctx context.Context) ([]*DNSRecord, error) {
+	result, err := e.Edges.DNSRecordsOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToDNSRecord().All(ctx)
+		result, err = e.QueryDNSRecords().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToDNS(ctx context.Context) ([]*DNS, error) {
-	result, err := e.Edges.EnvironmentToDNSOrErr()
+func (e *Environment) DNS(ctx context.Context) ([]*DNS, error) {
+	result, err := e.Edges.DNSOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToDNS().All(ctx)
+		result, err = e.QueryDNS().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToNetwork(ctx context.Context) ([]*Network, error) {
-	result, err := e.Edges.EnvironmentToNetworkOrErr()
+func (e *Environment) Networks(ctx context.Context) ([]*Network, error) {
+	result, err := e.Edges.NetworksOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToNetwork().All(ctx)
+		result, err = e.QueryNetworks().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToHostDependency(ctx context.Context) ([]*HostDependency, error) {
-	result, err := e.Edges.EnvironmentToHostDependencyOrErr()
+func (e *Environment) HostDependencies(ctx context.Context) ([]*HostDependency, error) {
+	result, err := e.Edges.HostDependenciesOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToHostDependency().All(ctx)
+		result, err = e.QueryHostDependencies().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToAnsible(ctx context.Context) ([]*Ansible, error) {
-	result, err := e.Edges.EnvironmentToAnsibleOrErr()
+func (e *Environment) Ansibles(ctx context.Context) ([]*Ansible, error) {
+	result, err := e.Edges.AnsiblesOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToAnsible().All(ctx)
+		result, err = e.QueryAnsibles().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToScheduledStep(ctx context.Context) ([]*ScheduledStep, error) {
-	result, err := e.Edges.EnvironmentToScheduledStepOrErr()
+func (e *Environment) ScheduledSteps(ctx context.Context) ([]*ScheduledStep, error) {
+	result, err := e.Edges.ScheduledStepsOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToScheduledStep().All(ctx)
+		result, err = e.QueryScheduledSteps().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToBuild(ctx context.Context) ([]*Build, error) {
-	result, err := e.Edges.EnvironmentToBuildOrErr()
+func (e *Environment) Builds(ctx context.Context) ([]*Build, error) {
+	result, err := e.Edges.BuildsOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToBuild().All(ctx)
+		result, err = e.QueryBuilds().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToRepository(ctx context.Context) ([]*Repository, error) {
-	result, err := e.Edges.EnvironmentToRepositoryOrErr()
+func (e *Environment) Repositories(ctx context.Context) ([]*Repository, error) {
+	result, err := e.Edges.RepositoriesOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToRepository().All(ctx)
+		result, err = e.QueryRepositories().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) EnvironmentToServerTask(ctx context.Context) ([]*ServerTask, error) {
-	result, err := e.Edges.EnvironmentToServerTaskOrErr()
+func (e *Environment) ServerTasks(ctx context.Context) ([]*ServerTask, error) {
+	result, err := e.Edges.ServerTasksOrErr()
 	if IsNotLoaded(err) {
-		result, err = e.QueryEnvironmentToServerTask().All(ctx)
+		result, err = e.QueryServerTasks().All(ctx)
 	}
 	return result, err
 }

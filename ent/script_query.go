@@ -546,10 +546,10 @@ func (sq *ScriptQuery) loadScriptToEnvironment(ctx context.Context, query *Envir
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Script)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_script == nil {
+		if nodes[i].environment_scripts == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_script
+		fk := *nodes[i].environment_scripts
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -563,7 +563,7 @@ func (sq *ScriptQuery) loadScriptToEnvironment(ctx context.Context, query *Envir
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_script" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_scripts" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

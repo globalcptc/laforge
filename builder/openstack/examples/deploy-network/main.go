@@ -60,7 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	build, err := env.QueryEnvironmentToBuild().Order(ent.Desc(build.FieldRevision)).First(ctx)
+	build, err := env.QueryBuilds().Order(ent.Desc(build.FieldRevision)).First(ctx)
 	if err != nil {
 		log.Fatalf("error querying build from env: %v", err)
 	}

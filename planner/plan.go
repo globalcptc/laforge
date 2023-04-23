@@ -69,7 +69,7 @@ var RenderFilesTaskStatus *ent.Status = nil
 // 		logrus.Errorf("Unable to parse UUID %v. Err: %v", uuidString, err)
 // 	}
 
-// 	entEnvironment, err := client.Environment.Query().Where(environment.ID(envID)).WithEnvironmentToBuild().Only(ctx)
+// 	entEnvironment, err := client.Environment.Query().Where(environment.ID(envID)).WithBuilds().Only(ctx)
 // 	if err != nil {
 // 		logrus.Errorf("Failed to find Environment %v. Err: %v", uuidString, err)
 // 	}
@@ -127,7 +127,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		}
 		return nil, err
 	}
-	entCompetition, err := entEnvironment.QueryEnvironmentToCompetition().Where(competition.HclIDEQ(entEnvironment.CompetitionID)).Only(ctx)
+	entCompetition, err := entEnvironment.QueryCompetitions().Where(competition.HclIDEQ(entEnvironment.CompetitionID)).Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Competition %v for Environment %v. Err: %v", len(entEnvironment.CompetitionID), entEnvironment.HclID, err)
 		_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
@@ -136,7 +136,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		}
 		return nil, err
 	}
-	entRepoCommit, err := entEnvironment.QueryEnvironmentToRepository().QueryRepositoryToRepoCommit().Order(ent.Desc(repocommit.FieldRevision)).First(ctx)
+	entRepoCommit, err := entEnvironment.QueryRepositories().QueryRepositoryToRepoCommit().Order(ent.Desc(repocommit.FieldRevision)).First(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Repository from Environment %v. Err: %v", entEnvironment.HclID, err)
 		_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
@@ -146,7 +146,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		return nil, err
 	}
 	entBuild, err := client.Build.Create().
-		SetRevision(len(entEnvironment.Edges.EnvironmentToBuild)).
+		SetRevision(len(entEnvironment.Edges.Builds)).
 		SetEnvironmentRevision(entEnvironment.Revision).
 		SetRepoCommits(entRepoCommit).
 		SetEnvironment(entEnvironment).
@@ -155,7 +155,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		SetVars(map[string]string{}).
 		Save(ctx)
 	if err != nil {
-		logger.Log.Errorf("Failed to create Build %v for Environment %v. Err: %v", len(entEnvironment.Edges.EnvironmentToBuild), entEnvironment.HclID, err)
+		logger.Log.Errorf("Failed to create Build %v for Environment %v. Err: %v", len(entEnvironment.Edges.Builds), entEnvironment.HclID, err)
 		_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
 		if err != nil {
 			return nil, fmt.Errorf("error failing server task: %v", err)
@@ -352,7 +352,7 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 		logger.Log.Errorf("Failed to create Plan Node for Team %v. Err: %v", teamNumber, err)
 		return nil, err
 	}
-	buildNetworks, err := entBuild.QueryEnvironment().QueryEnvironmentToNetwork().All(ctx)
+	buildNetworks, err := entBuild.QueryEnvironment().QueryNetworks().All(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Environment for Build %v. Err: %v", entBuild.ID, err)
 		return nil, err
@@ -1492,11 +1492,11 @@ func RenderScript(ctx context.Context, client *ent.Client, logger *logging.Logge
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
-	currentIncludedNetwork := currentEnvironment.QueryEnvironmentToIncludedNetwork().WithIncludedNetworkToHost().WithIncludedNetworkToNetwork().AllX(ctx)
+	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithIncludedNetworkToHost().WithIncludedNetworkToNetwork().AllX(ctx)
 	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)
 	currentNetwork := currentProvisionedNetwork.QueryProvisionedNetworkToNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
-	currentIdentities := currentEnvironment.QueryEnvironmentToIdentity().AllX(ctx)
+	currentIdentities := currentEnvironment.QueryIdentities().AllX(ctx)
 	agentScriptFile := currentProvisionedHost.QueryProvisionedHostToGinFileMiddleware().OnlyX(ctx)
 	// Need to Make Unique and change how it's loaded in
 	currentDNS := currentCompetition.QueryDNS().FirstX(ctx)
@@ -1644,11 +1644,11 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
-	currentIncludedNetwork := currentEnvironment.QueryEnvironmentToIncludedNetwork().WithIncludedNetworkToHost().WithIncludedNetworkToNetwork().AllX(ctx)
+	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithIncludedNetworkToHost().WithIncludedNetworkToNetwork().AllX(ctx)
 	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)
 	currentNetwork := currentProvisionedNetwork.QueryProvisionedNetworkToNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
-	currentIdentities := currentEnvironment.QueryEnvironmentToIdentity().AllX(ctx)
+	currentIdentities := currentEnvironment.QueryIdentities().AllX(ctx)
 	agentScriptFile := currentProvisionedHost.QueryProvisionedHostToGinFileMiddleware().OnlyX(ctx)
 	// Need to Make Unique and change how it's loaded in
 	currentDNS := currentCompetition.QueryDNS().FirstX(ctx)

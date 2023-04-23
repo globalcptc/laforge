@@ -488,10 +488,10 @@ func (nq *NetworkQuery) loadNetworkToEnvironment(ctx context.Context, query *Env
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Network)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_network == nil {
+		if nodes[i].environment_networks == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_network
+		fk := *nodes[i].environment_networks
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -505,7 +505,7 @@ func (nq *NetworkQuery) loadNetworkToEnvironment(ctx context.Context, query *Env
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_network" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_networks" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

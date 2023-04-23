@@ -52,7 +52,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
 	HostDependencyToEnvironmentInverseTable = "environments"
 	// HostDependencyToEnvironmentColumn is the table column denoting the HostDependencyToEnvironment relation/edge.
-	HostDependencyToEnvironmentColumn = "environment_environment_to_host_dependency"
+	HostDependencyToEnvironmentColumn = "environment_host_dependencies"
 )
 
 // Columns holds all SQL columns for hostdependency fields.
@@ -65,7 +65,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "host_dependencies"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_host_dependency",
+	"environment_host_dependencies",
 	"host_dependency_host_dependency_to_depend_on_host",
 	"host_dependency_host_dependency_to_depend_by_host",
 	"host_dependency_host_dependency_to_network",
