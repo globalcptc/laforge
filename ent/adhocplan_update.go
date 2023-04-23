@@ -46,14 +46,14 @@ func (apu *AdhocPlanUpdate) AddPrevAdhocPlan(a ...*AdhocPlan) *AdhocPlanUpdate {
 	return apu.AddPrevAdhocPlanIDs(ids...)
 }
 
-// AddNextAdhocPlanIDs adds the "NextAdhocPlan" edge to the AdhocPlan entity by IDs.
+// AddNextAdhocPlanIDs adds the "NextAdhocPlans" edge to the AdhocPlan entity by IDs.
 func (apu *AdhocPlanUpdate) AddNextAdhocPlanIDs(ids ...uuid.UUID) *AdhocPlanUpdate {
 	apu.mutation.AddNextAdhocPlanIDs(ids...)
 	return apu
 }
 
-// AddNextAdhocPlan adds the "NextAdhocPlan" edges to the AdhocPlan entity.
-func (apu *AdhocPlanUpdate) AddNextAdhocPlan(a ...*AdhocPlan) *AdhocPlanUpdate {
+// AddNextAdhocPlans adds the "NextAdhocPlans" edges to the AdhocPlan entity.
+func (apu *AdhocPlanUpdate) AddNextAdhocPlans(a ...*AdhocPlan) *AdhocPlanUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -120,20 +120,20 @@ func (apu *AdhocPlanUpdate) RemovePrevAdhocPlan(a ...*AdhocPlan) *AdhocPlanUpdat
 	return apu.RemovePrevAdhocPlanIDs(ids...)
 }
 
-// ClearNextAdhocPlan clears all "NextAdhocPlan" edges to the AdhocPlan entity.
-func (apu *AdhocPlanUpdate) ClearNextAdhocPlan() *AdhocPlanUpdate {
-	apu.mutation.ClearNextAdhocPlan()
+// ClearNextAdhocPlans clears all "NextAdhocPlans" edges to the AdhocPlan entity.
+func (apu *AdhocPlanUpdate) ClearNextAdhocPlans() *AdhocPlanUpdate {
+	apu.mutation.ClearNextAdhocPlans()
 	return apu
 }
 
-// RemoveNextAdhocPlanIDs removes the "NextAdhocPlan" edge to AdhocPlan entities by IDs.
+// RemoveNextAdhocPlanIDs removes the "NextAdhocPlans" edge to AdhocPlan entities by IDs.
 func (apu *AdhocPlanUpdate) RemoveNextAdhocPlanIDs(ids ...uuid.UUID) *AdhocPlanUpdate {
 	apu.mutation.RemoveNextAdhocPlanIDs(ids...)
 	return apu
 }
 
-// RemoveNextAdhocPlan removes "NextAdhocPlan" edges to AdhocPlan entities.
-func (apu *AdhocPlanUpdate) RemoveNextAdhocPlan(a ...*AdhocPlan) *AdhocPlanUpdate {
+// RemoveNextAdhocPlans removes "NextAdhocPlans" edges to AdhocPlan entities.
+func (apu *AdhocPlanUpdate) RemoveNextAdhocPlans(a ...*AdhocPlan) *AdhocPlanUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -305,12 +305,12 @@ func (apu *AdhocPlanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if apu.mutation.NextAdhocPlanCleared() {
+	if apu.mutation.NextAdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   adhocplan.NextAdhocPlanTable,
-			Columns: adhocplan.NextAdhocPlanPrimaryKey,
+			Table:   adhocplan.NextAdhocPlansTable,
+			Columns: adhocplan.NextAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -321,12 +321,12 @@ func (apu *AdhocPlanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := apu.mutation.RemovedNextAdhocPlanIDs(); len(nodes) > 0 && !apu.mutation.NextAdhocPlanCleared() {
+	if nodes := apu.mutation.RemovedNextAdhocPlansIDs(); len(nodes) > 0 && !apu.mutation.NextAdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   adhocplan.NextAdhocPlanTable,
-			Columns: adhocplan.NextAdhocPlanPrimaryKey,
+			Table:   adhocplan.NextAdhocPlansTable,
+			Columns: adhocplan.NextAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -340,12 +340,12 @@ func (apu *AdhocPlanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := apu.mutation.NextAdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := apu.mutation.NextAdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   adhocplan.NextAdhocPlanTable,
-			Columns: adhocplan.NextAdhocPlanPrimaryKey,
+			Table:   adhocplan.NextAdhocPlansTable,
+			Columns: adhocplan.NextAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -498,14 +498,14 @@ func (apuo *AdhocPlanUpdateOne) AddPrevAdhocPlan(a ...*AdhocPlan) *AdhocPlanUpda
 	return apuo.AddPrevAdhocPlanIDs(ids...)
 }
 
-// AddNextAdhocPlanIDs adds the "NextAdhocPlan" edge to the AdhocPlan entity by IDs.
+// AddNextAdhocPlanIDs adds the "NextAdhocPlans" edge to the AdhocPlan entity by IDs.
 func (apuo *AdhocPlanUpdateOne) AddNextAdhocPlanIDs(ids ...uuid.UUID) *AdhocPlanUpdateOne {
 	apuo.mutation.AddNextAdhocPlanIDs(ids...)
 	return apuo
 }
 
-// AddNextAdhocPlan adds the "NextAdhocPlan" edges to the AdhocPlan entity.
-func (apuo *AdhocPlanUpdateOne) AddNextAdhocPlan(a ...*AdhocPlan) *AdhocPlanUpdateOne {
+// AddNextAdhocPlans adds the "NextAdhocPlans" edges to the AdhocPlan entity.
+func (apuo *AdhocPlanUpdateOne) AddNextAdhocPlans(a ...*AdhocPlan) *AdhocPlanUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -572,20 +572,20 @@ func (apuo *AdhocPlanUpdateOne) RemovePrevAdhocPlan(a ...*AdhocPlan) *AdhocPlanU
 	return apuo.RemovePrevAdhocPlanIDs(ids...)
 }
 
-// ClearNextAdhocPlan clears all "NextAdhocPlan" edges to the AdhocPlan entity.
-func (apuo *AdhocPlanUpdateOne) ClearNextAdhocPlan() *AdhocPlanUpdateOne {
-	apuo.mutation.ClearNextAdhocPlan()
+// ClearNextAdhocPlans clears all "NextAdhocPlans" edges to the AdhocPlan entity.
+func (apuo *AdhocPlanUpdateOne) ClearNextAdhocPlans() *AdhocPlanUpdateOne {
+	apuo.mutation.ClearNextAdhocPlans()
 	return apuo
 }
 
-// RemoveNextAdhocPlanIDs removes the "NextAdhocPlan" edge to AdhocPlan entities by IDs.
+// RemoveNextAdhocPlanIDs removes the "NextAdhocPlans" edge to AdhocPlan entities by IDs.
 func (apuo *AdhocPlanUpdateOne) RemoveNextAdhocPlanIDs(ids ...uuid.UUID) *AdhocPlanUpdateOne {
 	apuo.mutation.RemoveNextAdhocPlanIDs(ids...)
 	return apuo
 }
 
-// RemoveNextAdhocPlan removes "NextAdhocPlan" edges to AdhocPlan entities.
-func (apuo *AdhocPlanUpdateOne) RemoveNextAdhocPlan(a ...*AdhocPlan) *AdhocPlanUpdateOne {
+// RemoveNextAdhocPlans removes "NextAdhocPlans" edges to AdhocPlan entities.
+func (apuo *AdhocPlanUpdateOne) RemoveNextAdhocPlans(a ...*AdhocPlan) *AdhocPlanUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -787,12 +787,12 @@ func (apuo *AdhocPlanUpdateOne) sqlSave(ctx context.Context) (_node *AdhocPlan, 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if apuo.mutation.NextAdhocPlanCleared() {
+	if apuo.mutation.NextAdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   adhocplan.NextAdhocPlanTable,
-			Columns: adhocplan.NextAdhocPlanPrimaryKey,
+			Table:   adhocplan.NextAdhocPlansTable,
+			Columns: adhocplan.NextAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -803,12 +803,12 @@ func (apuo *AdhocPlanUpdateOne) sqlSave(ctx context.Context) (_node *AdhocPlan, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := apuo.mutation.RemovedNextAdhocPlanIDs(); len(nodes) > 0 && !apuo.mutation.NextAdhocPlanCleared() {
+	if nodes := apuo.mutation.RemovedNextAdhocPlansIDs(); len(nodes) > 0 && !apuo.mutation.NextAdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   adhocplan.NextAdhocPlanTable,
-			Columns: adhocplan.NextAdhocPlanPrimaryKey,
+			Table:   adhocplan.NextAdhocPlansTable,
+			Columns: adhocplan.NextAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -822,12 +822,12 @@ func (apuo *AdhocPlanUpdateOne) sqlSave(ctx context.Context) (_node *AdhocPlan, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := apuo.mutation.NextAdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := apuo.mutation.NextAdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   adhocplan.NextAdhocPlanTable,
-			Columns: adhocplan.NextAdhocPlanPrimaryKey,
+			Table:   adhocplan.NextAdhocPlansTable,
+			Columns: adhocplan.NextAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

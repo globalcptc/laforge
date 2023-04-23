@@ -395,10 +395,10 @@ func (tq *TokenQuery) loadTokenToAuthUser(ctx context.Context, query *AuthUserQu
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Token)
 	for i := range nodes {
-		if nodes[i].auth_user_auth_user_to_token == nil {
+		if nodes[i].auth_user_tokens == nil {
 			continue
 		}
-		fk := *nodes[i].auth_user_auth_user_to_token
+		fk := *nodes[i].auth_user_tokens
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (tq *TokenQuery) loadTokenToAuthUser(ctx context.Context, query *AuthUserQu
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "auth_user_auth_user_to_token" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "auth_user_tokens" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

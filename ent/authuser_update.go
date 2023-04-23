@@ -152,34 +152,34 @@ func (auu *AuthUserUpdate) SetProvider(a authuser.Provider) *AuthUserUpdate {
 	return auu
 }
 
-// AddAuthUserToTokenIDs adds the "AuthUserToToken" edge to the Token entity by IDs.
-func (auu *AuthUserUpdate) AddAuthUserToTokenIDs(ids ...uuid.UUID) *AuthUserUpdate {
-	auu.mutation.AddAuthUserToTokenIDs(ids...)
+// AddTokenIDs adds the "Tokens" edge to the Token entity by IDs.
+func (auu *AuthUserUpdate) AddTokenIDs(ids ...uuid.UUID) *AuthUserUpdate {
+	auu.mutation.AddTokenIDs(ids...)
 	return auu
 }
 
-// AddAuthUserToToken adds the "AuthUserToToken" edges to the Token entity.
-func (auu *AuthUserUpdate) AddAuthUserToToken(t ...*Token) *AuthUserUpdate {
+// AddTokens adds the "Tokens" edges to the Token entity.
+func (auu *AuthUserUpdate) AddTokens(t ...*Token) *AuthUserUpdate {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return auu.AddAuthUserToTokenIDs(ids...)
+	return auu.AddTokenIDs(ids...)
 }
 
-// AddAuthUserToServerTaskIDs adds the "AuthUserToServerTasks" edge to the ServerTask entity by IDs.
-func (auu *AuthUserUpdate) AddAuthUserToServerTaskIDs(ids ...uuid.UUID) *AuthUserUpdate {
-	auu.mutation.AddAuthUserToServerTaskIDs(ids...)
+// AddServerTaskIDs adds the "ServerTasks" edge to the ServerTask entity by IDs.
+func (auu *AuthUserUpdate) AddServerTaskIDs(ids ...uuid.UUID) *AuthUserUpdate {
+	auu.mutation.AddServerTaskIDs(ids...)
 	return auu
 }
 
-// AddAuthUserToServerTasks adds the "AuthUserToServerTasks" edges to the ServerTask entity.
-func (auu *AuthUserUpdate) AddAuthUserToServerTasks(s ...*ServerTask) *AuthUserUpdate {
+// AddServerTasks adds the "ServerTasks" edges to the ServerTask entity.
+func (auu *AuthUserUpdate) AddServerTasks(s ...*ServerTask) *AuthUserUpdate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return auu.AddAuthUserToServerTaskIDs(ids...)
+	return auu.AddServerTaskIDs(ids...)
 }
 
 // Mutation returns the AuthUserMutation object of the builder.
@@ -187,46 +187,46 @@ func (auu *AuthUserUpdate) Mutation() *AuthUserMutation {
 	return auu.mutation
 }
 
-// ClearAuthUserToToken clears all "AuthUserToToken" edges to the Token entity.
-func (auu *AuthUserUpdate) ClearAuthUserToToken() *AuthUserUpdate {
-	auu.mutation.ClearAuthUserToToken()
+// ClearTokens clears all "Tokens" edges to the Token entity.
+func (auu *AuthUserUpdate) ClearTokens() *AuthUserUpdate {
+	auu.mutation.ClearTokens()
 	return auu
 }
 
-// RemoveAuthUserToTokenIDs removes the "AuthUserToToken" edge to Token entities by IDs.
-func (auu *AuthUserUpdate) RemoveAuthUserToTokenIDs(ids ...uuid.UUID) *AuthUserUpdate {
-	auu.mutation.RemoveAuthUserToTokenIDs(ids...)
+// RemoveTokenIDs removes the "Tokens" edge to Token entities by IDs.
+func (auu *AuthUserUpdate) RemoveTokenIDs(ids ...uuid.UUID) *AuthUserUpdate {
+	auu.mutation.RemoveTokenIDs(ids...)
 	return auu
 }
 
-// RemoveAuthUserToToken removes "AuthUserToToken" edges to Token entities.
-func (auu *AuthUserUpdate) RemoveAuthUserToToken(t ...*Token) *AuthUserUpdate {
+// RemoveTokens removes "Tokens" edges to Token entities.
+func (auu *AuthUserUpdate) RemoveTokens(t ...*Token) *AuthUserUpdate {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return auu.RemoveAuthUserToTokenIDs(ids...)
+	return auu.RemoveTokenIDs(ids...)
 }
 
-// ClearAuthUserToServerTasks clears all "AuthUserToServerTasks" edges to the ServerTask entity.
-func (auu *AuthUserUpdate) ClearAuthUserToServerTasks() *AuthUserUpdate {
-	auu.mutation.ClearAuthUserToServerTasks()
+// ClearServerTasks clears all "ServerTasks" edges to the ServerTask entity.
+func (auu *AuthUserUpdate) ClearServerTasks() *AuthUserUpdate {
+	auu.mutation.ClearServerTasks()
 	return auu
 }
 
-// RemoveAuthUserToServerTaskIDs removes the "AuthUserToServerTasks" edge to ServerTask entities by IDs.
-func (auu *AuthUserUpdate) RemoveAuthUserToServerTaskIDs(ids ...uuid.UUID) *AuthUserUpdate {
-	auu.mutation.RemoveAuthUserToServerTaskIDs(ids...)
+// RemoveServerTaskIDs removes the "ServerTasks" edge to ServerTask entities by IDs.
+func (auu *AuthUserUpdate) RemoveServerTaskIDs(ids ...uuid.UUID) *AuthUserUpdate {
+	auu.mutation.RemoveServerTaskIDs(ids...)
 	return auu
 }
 
-// RemoveAuthUserToServerTasks removes "AuthUserToServerTasks" edges to ServerTask entities.
-func (auu *AuthUserUpdate) RemoveAuthUserToServerTasks(s ...*ServerTask) *AuthUserUpdate {
+// RemoveServerTasks removes "ServerTasks" edges to ServerTask entities.
+func (auu *AuthUserUpdate) RemoveServerTasks(s ...*ServerTask) *AuthUserUpdate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return auu.RemoveAuthUserToServerTaskIDs(ids...)
+	return auu.RemoveServerTaskIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -399,12 +399,12 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: authuser.FieldProvider,
 		})
 	}
-	if auu.mutation.AuthUserToTokenCleared() {
+	if auu.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   authuser.AuthUserToTokenTable,
-			Columns: []string{authuser.AuthUserToTokenColumn},
+			Table:   authuser.TokensTable,
+			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -415,12 +415,12 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := auu.mutation.RemovedAuthUserToTokenIDs(); len(nodes) > 0 && !auu.mutation.AuthUserToTokenCleared() {
+	if nodes := auu.mutation.RemovedTokensIDs(); len(nodes) > 0 && !auu.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   authuser.AuthUserToTokenTable,
-			Columns: []string{authuser.AuthUserToTokenColumn},
+			Table:   authuser.TokensTable,
+			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -434,12 +434,12 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := auu.mutation.AuthUserToTokenIDs(); len(nodes) > 0 {
+	if nodes := auu.mutation.TokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   authuser.AuthUserToTokenTable,
-			Columns: []string{authuser.AuthUserToTokenColumn},
+			Table:   authuser.TokensTable,
+			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -453,12 +453,12 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if auu.mutation.AuthUserToServerTasksCleared() {
+	if auu.mutation.ServerTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   authuser.AuthUserToServerTasksTable,
-			Columns: []string{authuser.AuthUserToServerTasksColumn},
+			Table:   authuser.ServerTasksTable,
+			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -469,12 +469,12 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := auu.mutation.RemovedAuthUserToServerTasksIDs(); len(nodes) > 0 && !auu.mutation.AuthUserToServerTasksCleared() {
+	if nodes := auu.mutation.RemovedServerTasksIDs(); len(nodes) > 0 && !auu.mutation.ServerTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   authuser.AuthUserToServerTasksTable,
-			Columns: []string{authuser.AuthUserToServerTasksColumn},
+			Table:   authuser.ServerTasksTable,
+			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -488,12 +488,12 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := auu.mutation.AuthUserToServerTasksIDs(); len(nodes) > 0 {
+	if nodes := auu.mutation.ServerTasksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   authuser.AuthUserToServerTasksTable,
-			Columns: []string{authuser.AuthUserToServerTasksColumn},
+			Table:   authuser.ServerTasksTable,
+			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -648,34 +648,34 @@ func (auuo *AuthUserUpdateOne) SetProvider(a authuser.Provider) *AuthUserUpdateO
 	return auuo
 }
 
-// AddAuthUserToTokenIDs adds the "AuthUserToToken" edge to the Token entity by IDs.
-func (auuo *AuthUserUpdateOne) AddAuthUserToTokenIDs(ids ...uuid.UUID) *AuthUserUpdateOne {
-	auuo.mutation.AddAuthUserToTokenIDs(ids...)
+// AddTokenIDs adds the "Tokens" edge to the Token entity by IDs.
+func (auuo *AuthUserUpdateOne) AddTokenIDs(ids ...uuid.UUID) *AuthUserUpdateOne {
+	auuo.mutation.AddTokenIDs(ids...)
 	return auuo
 }
 
-// AddAuthUserToToken adds the "AuthUserToToken" edges to the Token entity.
-func (auuo *AuthUserUpdateOne) AddAuthUserToToken(t ...*Token) *AuthUserUpdateOne {
+// AddTokens adds the "Tokens" edges to the Token entity.
+func (auuo *AuthUserUpdateOne) AddTokens(t ...*Token) *AuthUserUpdateOne {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return auuo.AddAuthUserToTokenIDs(ids...)
+	return auuo.AddTokenIDs(ids...)
 }
 
-// AddAuthUserToServerTaskIDs adds the "AuthUserToServerTasks" edge to the ServerTask entity by IDs.
-func (auuo *AuthUserUpdateOne) AddAuthUserToServerTaskIDs(ids ...uuid.UUID) *AuthUserUpdateOne {
-	auuo.mutation.AddAuthUserToServerTaskIDs(ids...)
+// AddServerTaskIDs adds the "ServerTasks" edge to the ServerTask entity by IDs.
+func (auuo *AuthUserUpdateOne) AddServerTaskIDs(ids ...uuid.UUID) *AuthUserUpdateOne {
+	auuo.mutation.AddServerTaskIDs(ids...)
 	return auuo
 }
 
-// AddAuthUserToServerTasks adds the "AuthUserToServerTasks" edges to the ServerTask entity.
-func (auuo *AuthUserUpdateOne) AddAuthUserToServerTasks(s ...*ServerTask) *AuthUserUpdateOne {
+// AddServerTasks adds the "ServerTasks" edges to the ServerTask entity.
+func (auuo *AuthUserUpdateOne) AddServerTasks(s ...*ServerTask) *AuthUserUpdateOne {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return auuo.AddAuthUserToServerTaskIDs(ids...)
+	return auuo.AddServerTaskIDs(ids...)
 }
 
 // Mutation returns the AuthUserMutation object of the builder.
@@ -683,46 +683,46 @@ func (auuo *AuthUserUpdateOne) Mutation() *AuthUserMutation {
 	return auuo.mutation
 }
 
-// ClearAuthUserToToken clears all "AuthUserToToken" edges to the Token entity.
-func (auuo *AuthUserUpdateOne) ClearAuthUserToToken() *AuthUserUpdateOne {
-	auuo.mutation.ClearAuthUserToToken()
+// ClearTokens clears all "Tokens" edges to the Token entity.
+func (auuo *AuthUserUpdateOne) ClearTokens() *AuthUserUpdateOne {
+	auuo.mutation.ClearTokens()
 	return auuo
 }
 
-// RemoveAuthUserToTokenIDs removes the "AuthUserToToken" edge to Token entities by IDs.
-func (auuo *AuthUserUpdateOne) RemoveAuthUserToTokenIDs(ids ...uuid.UUID) *AuthUserUpdateOne {
-	auuo.mutation.RemoveAuthUserToTokenIDs(ids...)
+// RemoveTokenIDs removes the "Tokens" edge to Token entities by IDs.
+func (auuo *AuthUserUpdateOne) RemoveTokenIDs(ids ...uuid.UUID) *AuthUserUpdateOne {
+	auuo.mutation.RemoveTokenIDs(ids...)
 	return auuo
 }
 
-// RemoveAuthUserToToken removes "AuthUserToToken" edges to Token entities.
-func (auuo *AuthUserUpdateOne) RemoveAuthUserToToken(t ...*Token) *AuthUserUpdateOne {
+// RemoveTokens removes "Tokens" edges to Token entities.
+func (auuo *AuthUserUpdateOne) RemoveTokens(t ...*Token) *AuthUserUpdateOne {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return auuo.RemoveAuthUserToTokenIDs(ids...)
+	return auuo.RemoveTokenIDs(ids...)
 }
 
-// ClearAuthUserToServerTasks clears all "AuthUserToServerTasks" edges to the ServerTask entity.
-func (auuo *AuthUserUpdateOne) ClearAuthUserToServerTasks() *AuthUserUpdateOne {
-	auuo.mutation.ClearAuthUserToServerTasks()
+// ClearServerTasks clears all "ServerTasks" edges to the ServerTask entity.
+func (auuo *AuthUserUpdateOne) ClearServerTasks() *AuthUserUpdateOne {
+	auuo.mutation.ClearServerTasks()
 	return auuo
 }
 
-// RemoveAuthUserToServerTaskIDs removes the "AuthUserToServerTasks" edge to ServerTask entities by IDs.
-func (auuo *AuthUserUpdateOne) RemoveAuthUserToServerTaskIDs(ids ...uuid.UUID) *AuthUserUpdateOne {
-	auuo.mutation.RemoveAuthUserToServerTaskIDs(ids...)
+// RemoveServerTaskIDs removes the "ServerTasks" edge to ServerTask entities by IDs.
+func (auuo *AuthUserUpdateOne) RemoveServerTaskIDs(ids ...uuid.UUID) *AuthUserUpdateOne {
+	auuo.mutation.RemoveServerTaskIDs(ids...)
 	return auuo
 }
 
-// RemoveAuthUserToServerTasks removes "AuthUserToServerTasks" edges to ServerTask entities.
-func (auuo *AuthUserUpdateOne) RemoveAuthUserToServerTasks(s ...*ServerTask) *AuthUserUpdateOne {
+// RemoveServerTasks removes "ServerTasks" edges to ServerTask entities.
+func (auuo *AuthUserUpdateOne) RemoveServerTasks(s ...*ServerTask) *AuthUserUpdateOne {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return auuo.RemoveAuthUserToServerTaskIDs(ids...)
+	return auuo.RemoveServerTaskIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -925,12 +925,12 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 			Column: authuser.FieldProvider,
 		})
 	}
-	if auuo.mutation.AuthUserToTokenCleared() {
+	if auuo.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   authuser.AuthUserToTokenTable,
-			Columns: []string{authuser.AuthUserToTokenColumn},
+			Table:   authuser.TokensTable,
+			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -941,12 +941,12 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := auuo.mutation.RemovedAuthUserToTokenIDs(); len(nodes) > 0 && !auuo.mutation.AuthUserToTokenCleared() {
+	if nodes := auuo.mutation.RemovedTokensIDs(); len(nodes) > 0 && !auuo.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   authuser.AuthUserToTokenTable,
-			Columns: []string{authuser.AuthUserToTokenColumn},
+			Table:   authuser.TokensTable,
+			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -960,12 +960,12 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := auuo.mutation.AuthUserToTokenIDs(); len(nodes) > 0 {
+	if nodes := auuo.mutation.TokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   authuser.AuthUserToTokenTable,
-			Columns: []string{authuser.AuthUserToTokenColumn},
+			Table:   authuser.TokensTable,
+			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -979,12 +979,12 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if auuo.mutation.AuthUserToServerTasksCleared() {
+	if auuo.mutation.ServerTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   authuser.AuthUserToServerTasksTable,
-			Columns: []string{authuser.AuthUserToServerTasksColumn},
+			Table:   authuser.ServerTasksTable,
+			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -995,12 +995,12 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := auuo.mutation.RemovedAuthUserToServerTasksIDs(); len(nodes) > 0 && !auuo.mutation.AuthUserToServerTasksCleared() {
+	if nodes := auuo.mutation.RemovedServerTasksIDs(); len(nodes) > 0 && !auuo.mutation.ServerTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   authuser.AuthUserToServerTasksTable,
-			Columns: []string{authuser.AuthUserToServerTasksColumn},
+			Table:   authuser.ServerTasksTable,
+			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1014,12 +1014,12 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := auuo.mutation.AuthUserToServerTasksIDs(); len(nodes) > 0 {
+	if nodes := auuo.mutation.ServerTasksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   authuser.AuthUserToServerTasksTable,
-			Columns: []string{authuser.AuthUserToServerTasksColumn},
+			Table:   authuser.ServerTasksTable,
+			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

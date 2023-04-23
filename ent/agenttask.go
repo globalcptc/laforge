@@ -42,8 +42,8 @@ type AgentTask struct {
 	HCLProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
 	// ProvisionedHost holds the value of the ProvisionedHost edge.
 	HCLProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
-	// AdhocPlan holds the value of the AdhocPlan edge.
-	HCLAdhocPlan []*AdhocPlan `json:"AdhocPlan,omitempty"`
+	// AdhocPlans holds the value of the AdhocPlans edge.
+	HCLAdhocPlans []*AdhocPlan `json:"AdhocPlans,omitempty"`
 	//
 	agent_task_provisioning_step *uuid.UUID
 	agent_task_provisioned_host  *uuid.UUID
@@ -57,8 +57,8 @@ type AgentTaskEdges struct {
 	ProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
 	// ProvisionedHost holds the value of the ProvisionedHost edge.
 	ProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
-	// AdhocPlan holds the value of the AdhocPlan edge.
-	AdhocPlan []*AdhocPlan `json:"AdhocPlan,omitempty"`
+	// AdhocPlans holds the value of the AdhocPlans edge.
+	AdhocPlans []*AdhocPlan `json:"AdhocPlans,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [4]bool
@@ -106,13 +106,13 @@ func (e AgentTaskEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	return nil, &NotLoadedError{edge: "ProvisionedHost"}
 }
 
-// AdhocPlanOrErr returns the AdhocPlan value or an error if the edge
+// AdhocPlansOrErr returns the AdhocPlans value or an error if the edge
 // was not loaded in eager-loading.
-func (e AgentTaskEdges) AdhocPlanOrErr() ([]*AdhocPlan, error) {
+func (e AgentTaskEdges) AdhocPlansOrErr() ([]*AdhocPlan, error) {
 	if e.loadedTypes[3] {
-		return e.AdhocPlan, nil
+		return e.AdhocPlans, nil
 	}
-	return nil, &NotLoadedError{edge: "AdhocPlan"}
+	return nil, &NotLoadedError{edge: "AdhocPlans"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -221,9 +221,9 @@ func (at *AgentTask) QueryProvisionedHost() *ProvisionedHostQuery {
 	return (&AgentTaskClient{config: at.config}).QueryProvisionedHost(at)
 }
 
-// QueryAdhocPlan queries the "AdhocPlan" edge of the AgentTask entity.
-func (at *AgentTask) QueryAdhocPlan() *AdhocPlanQuery {
-	return (&AgentTaskClient{config: at.config}).QueryAdhocPlan(at)
+// QueryAdhocPlans queries the "AdhocPlans" edge of the AgentTask entity.
+func (at *AgentTask) QueryAdhocPlans() *AdhocPlanQuery {
+	return (&AgentTaskClient{config: at.config}).QueryAdhocPlans(at)
 }
 
 // Update returns a builder for updating this AgentTask.

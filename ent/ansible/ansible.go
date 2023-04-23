@@ -33,19 +33,19 @@ const (
 	FieldAbsPath = "abs_path"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// EdgeUser holds the string denoting the user edge name in mutations.
-	EdgeUser = "User"
+	// EdgeUsers holds the string denoting the users edge name in mutations.
+	EdgeUsers = "Users"
 	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
 	EdgeEnvironment = "Environment"
 	// Table holds the table name of the ansible in the database.
 	Table = "ansibles"
-	// UserTable is the table that holds the User relation/edge.
-	UserTable = "users"
-	// UserInverseTable is the table name for the User entity.
+	// UsersTable is the table that holds the Users relation/edge.
+	UsersTable = "users"
+	// UsersInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	UserInverseTable = "users"
-	// UserColumn is the table column denoting the User relation/edge.
-	UserColumn = "ansible_user"
+	UsersInverseTable = "users"
+	// UsersColumn is the table column denoting the Users relation/edge.
+	UsersColumn = "ansible_users"
 	// EnvironmentTable is the table that holds the Environment relation/edge.
 	EnvironmentTable = "ansibles"
 	// EnvironmentInverseTable is the table name for the Environment entity.

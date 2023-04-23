@@ -24,7 +24,7 @@ func (AdhocPlan) Fields() []ent.Field {
 // Edges of the AdhocPlan.
 func (AdhocPlan) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("NextAdhocPlan", AdhocPlan.Type).
+		edge.To("NextAdhocPlans", AdhocPlan.Type).
 			From("PrevAdhocPlan").
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,

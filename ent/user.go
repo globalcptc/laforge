@@ -34,7 +34,7 @@ type User struct {
 	// UserToEnvironment holds the value of the UserToEnvironment edge.
 	HCLUserToEnvironment []*Environment `json:"UserToEnvironment,omitempty"`
 	//
-	ansible_user            *uuid.UUID
+	ansible_users           *uuid.UUID
 	command_command_to_user *uuid.UUID
 	finding_finding_to_user *uuid.UUID
 	host_host_to_user       *uuid.UUID
@@ -79,7 +79,7 @@ func (*User) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case user.FieldID:
 			values[i] = new(uuid.UUID)
-		case user.ForeignKeys[0]: // ansible_user
+		case user.ForeignKeys[0]: // ansible_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case user.ForeignKeys[1]: // command_command_to_user
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -136,10 +136,10 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 			}
 		case user.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field ansible_user", values[i])
+				return fmt.Errorf("unexpected type %T for field ansible_users", values[i])
 			} else if value.Valid {
-				u.ansible_user = new(uuid.UUID)
-				*u.ansible_user = *value.S.(*uuid.UUID)
+				u.ansible_users = new(uuid.UUID)
+				*u.ansible_users = *value.S.(*uuid.UUID)
 			}
 		case user.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

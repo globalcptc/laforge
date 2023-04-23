@@ -108,25 +108,25 @@ const (
 // AdhocPlanMutation represents an operation that mutates the AdhocPlan nodes in the graph.
 type AdhocPlanMutation struct {
 	config
-	op                    Op
-	typ                   string
-	id                    *uuid.UUID
-	clearedFields         map[string]struct{}
-	_PrevAdhocPlan        map[uuid.UUID]struct{}
-	removed_PrevAdhocPlan map[uuid.UUID]struct{}
-	cleared_PrevAdhocPlan bool
-	_NextAdhocPlan        map[uuid.UUID]struct{}
-	removed_NextAdhocPlan map[uuid.UUID]struct{}
-	cleared_NextAdhocPlan bool
-	_Build                *uuid.UUID
-	cleared_Build         bool
-	_Status               *uuid.UUID
-	cleared_Status        bool
-	_AgentTask            *uuid.UUID
-	cleared_AgentTask     bool
-	done                  bool
-	oldValue              func(context.Context) (*AdhocPlan, error)
-	predicates            []predicate.AdhocPlan
+	op                     Op
+	typ                    string
+	id                     *uuid.UUID
+	clearedFields          map[string]struct{}
+	_PrevAdhocPlan         map[uuid.UUID]struct{}
+	removed_PrevAdhocPlan  map[uuid.UUID]struct{}
+	cleared_PrevAdhocPlan  bool
+	_NextAdhocPlans        map[uuid.UUID]struct{}
+	removed_NextAdhocPlans map[uuid.UUID]struct{}
+	cleared_NextAdhocPlans bool
+	_Build                 *uuid.UUID
+	cleared_Build          bool
+	_Status                *uuid.UUID
+	cleared_Status         bool
+	_AgentTask             *uuid.UUID
+	cleared_AgentTask      bool
+	done                   bool
+	oldValue               func(context.Context) (*AdhocPlan, error)
+	predicates             []predicate.AdhocPlan
 }
 
 var _ ent.Mutation = (*AdhocPlanMutation)(nil)
@@ -287,58 +287,58 @@ func (m *AdhocPlanMutation) ResetPrevAdhocPlan() {
 	m.removed_PrevAdhocPlan = nil
 }
 
-// AddNextAdhocPlanIDs adds the "NextAdhocPlan" edge to the AdhocPlan entity by ids.
+// AddNextAdhocPlanIDs adds the "NextAdhocPlans" edge to the AdhocPlan entity by ids.
 func (m *AdhocPlanMutation) AddNextAdhocPlanIDs(ids ...uuid.UUID) {
-	if m._NextAdhocPlan == nil {
-		m._NextAdhocPlan = make(map[uuid.UUID]struct{})
+	if m._NextAdhocPlans == nil {
+		m._NextAdhocPlans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._NextAdhocPlan[ids[i]] = struct{}{}
+		m._NextAdhocPlans[ids[i]] = struct{}{}
 	}
 }
 
-// ClearNextAdhocPlan clears the "NextAdhocPlan" edge to the AdhocPlan entity.
-func (m *AdhocPlanMutation) ClearNextAdhocPlan() {
-	m.cleared_NextAdhocPlan = true
+// ClearNextAdhocPlans clears the "NextAdhocPlans" edge to the AdhocPlan entity.
+func (m *AdhocPlanMutation) ClearNextAdhocPlans() {
+	m.cleared_NextAdhocPlans = true
 }
 
-// NextAdhocPlanCleared reports if the "NextAdhocPlan" edge to the AdhocPlan entity was cleared.
-func (m *AdhocPlanMutation) NextAdhocPlanCleared() bool {
-	return m.cleared_NextAdhocPlan
+// NextAdhocPlansCleared reports if the "NextAdhocPlans" edge to the AdhocPlan entity was cleared.
+func (m *AdhocPlanMutation) NextAdhocPlansCleared() bool {
+	return m.cleared_NextAdhocPlans
 }
 
-// RemoveNextAdhocPlanIDs removes the "NextAdhocPlan" edge to the AdhocPlan entity by IDs.
+// RemoveNextAdhocPlanIDs removes the "NextAdhocPlans" edge to the AdhocPlan entity by IDs.
 func (m *AdhocPlanMutation) RemoveNextAdhocPlanIDs(ids ...uuid.UUID) {
-	if m.removed_NextAdhocPlan == nil {
-		m.removed_NextAdhocPlan = make(map[uuid.UUID]struct{})
+	if m.removed_NextAdhocPlans == nil {
+		m.removed_NextAdhocPlans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._NextAdhocPlan, ids[i])
-		m.removed_NextAdhocPlan[ids[i]] = struct{}{}
+		delete(m._NextAdhocPlans, ids[i])
+		m.removed_NextAdhocPlans[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedNextAdhocPlan returns the removed IDs of the "NextAdhocPlan" edge to the AdhocPlan entity.
-func (m *AdhocPlanMutation) RemovedNextAdhocPlanIDs() (ids []uuid.UUID) {
-	for id := range m.removed_NextAdhocPlan {
+// RemovedNextAdhocPlans returns the removed IDs of the "NextAdhocPlans" edge to the AdhocPlan entity.
+func (m *AdhocPlanMutation) RemovedNextAdhocPlansIDs() (ids []uuid.UUID) {
+	for id := range m.removed_NextAdhocPlans {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// NextAdhocPlanIDs returns the "NextAdhocPlan" edge IDs in the mutation.
-func (m *AdhocPlanMutation) NextAdhocPlanIDs() (ids []uuid.UUID) {
-	for id := range m._NextAdhocPlan {
+// NextAdhocPlansIDs returns the "NextAdhocPlans" edge IDs in the mutation.
+func (m *AdhocPlanMutation) NextAdhocPlansIDs() (ids []uuid.UUID) {
+	for id := range m._NextAdhocPlans {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetNextAdhocPlan resets all changes to the "NextAdhocPlan" edge.
-func (m *AdhocPlanMutation) ResetNextAdhocPlan() {
-	m._NextAdhocPlan = nil
-	m.cleared_NextAdhocPlan = false
-	m.removed_NextAdhocPlan = nil
+// ResetNextAdhocPlans resets all changes to the "NextAdhocPlans" edge.
+func (m *AdhocPlanMutation) ResetNextAdhocPlans() {
+	m._NextAdhocPlans = nil
+	m.cleared_NextAdhocPlans = false
+	m.removed_NextAdhocPlans = nil
 }
 
 // SetBuildID sets the "Build" edge to the Build entity by id.
@@ -555,8 +555,8 @@ func (m *AdhocPlanMutation) AddedEdges() []string {
 	if m._PrevAdhocPlan != nil {
 		edges = append(edges, adhocplan.EdgePrevAdhocPlan)
 	}
-	if m._NextAdhocPlan != nil {
-		edges = append(edges, adhocplan.EdgeNextAdhocPlan)
+	if m._NextAdhocPlans != nil {
+		edges = append(edges, adhocplan.EdgeNextAdhocPlans)
 	}
 	if m._Build != nil {
 		edges = append(edges, adhocplan.EdgeBuild)
@@ -580,9 +580,9 @@ func (m *AdhocPlanMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case adhocplan.EdgeNextAdhocPlan:
-		ids := make([]ent.Value, 0, len(m._NextAdhocPlan))
-		for id := range m._NextAdhocPlan {
+	case adhocplan.EdgeNextAdhocPlans:
+		ids := make([]ent.Value, 0, len(m._NextAdhocPlans))
+		for id := range m._NextAdhocPlans {
 			ids = append(ids, id)
 		}
 		return ids
@@ -608,8 +608,8 @@ func (m *AdhocPlanMutation) RemovedEdges() []string {
 	if m.removed_PrevAdhocPlan != nil {
 		edges = append(edges, adhocplan.EdgePrevAdhocPlan)
 	}
-	if m.removed_NextAdhocPlan != nil {
-		edges = append(edges, adhocplan.EdgeNextAdhocPlan)
+	if m.removed_NextAdhocPlans != nil {
+		edges = append(edges, adhocplan.EdgeNextAdhocPlans)
 	}
 	return edges
 }
@@ -624,9 +624,9 @@ func (m *AdhocPlanMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case adhocplan.EdgeNextAdhocPlan:
-		ids := make([]ent.Value, 0, len(m.removed_NextAdhocPlan))
-		for id := range m.removed_NextAdhocPlan {
+	case adhocplan.EdgeNextAdhocPlans:
+		ids := make([]ent.Value, 0, len(m.removed_NextAdhocPlans))
+		for id := range m.removed_NextAdhocPlans {
 			ids = append(ids, id)
 		}
 		return ids
@@ -640,8 +640,8 @@ func (m *AdhocPlanMutation) ClearedEdges() []string {
 	if m.cleared_PrevAdhocPlan {
 		edges = append(edges, adhocplan.EdgePrevAdhocPlan)
 	}
-	if m.cleared_NextAdhocPlan {
-		edges = append(edges, adhocplan.EdgeNextAdhocPlan)
+	if m.cleared_NextAdhocPlans {
+		edges = append(edges, adhocplan.EdgeNextAdhocPlans)
 	}
 	if m.cleared_Build {
 		edges = append(edges, adhocplan.EdgeBuild)
@@ -661,8 +661,8 @@ func (m *AdhocPlanMutation) EdgeCleared(name string) bool {
 	switch name {
 	case adhocplan.EdgePrevAdhocPlan:
 		return m.cleared_PrevAdhocPlan
-	case adhocplan.EdgeNextAdhocPlan:
-		return m.cleared_NextAdhocPlan
+	case adhocplan.EdgeNextAdhocPlans:
+		return m.cleared_NextAdhocPlans
 	case adhocplan.EdgeBuild:
 		return m.cleared_Build
 	case adhocplan.EdgeStatus:
@@ -697,8 +697,8 @@ func (m *AdhocPlanMutation) ResetEdge(name string) error {
 	case adhocplan.EdgePrevAdhocPlan:
 		m.ResetPrevAdhocPlan()
 		return nil
-	case adhocplan.EdgeNextAdhocPlan:
-		m.ResetNextAdhocPlan()
+	case adhocplan.EdgeNextAdhocPlans:
+		m.ResetNextAdhocPlans()
 		return nil
 	case adhocplan.EdgeBuild:
 		m.ResetBuild()
@@ -2272,9 +2272,9 @@ type AgentTaskMutation struct {
 	cleared_ProvisioningScheduledStep bool
 	_ProvisionedHost                  *uuid.UUID
 	cleared_ProvisionedHost           bool
-	_AdhocPlan                        map[uuid.UUID]struct{}
-	removed_AdhocPlan                 map[uuid.UUID]struct{}
-	cleared_AdhocPlan                 bool
+	_AdhocPlans                       map[uuid.UUID]struct{}
+	removed_AdhocPlans                map[uuid.UUID]struct{}
+	cleared_AdhocPlans                bool
 	done                              bool
 	oldValue                          func(context.Context) (*AgentTask, error)
 	predicates                        []predicate.AgentTask
@@ -2737,58 +2737,58 @@ func (m *AgentTaskMutation) ResetProvisionedHost() {
 	m.cleared_ProvisionedHost = false
 }
 
-// AddAdhocPlanIDs adds the "AdhocPlan" edge to the AdhocPlan entity by ids.
+// AddAdhocPlanIDs adds the "AdhocPlans" edge to the AdhocPlan entity by ids.
 func (m *AgentTaskMutation) AddAdhocPlanIDs(ids ...uuid.UUID) {
-	if m._AdhocPlan == nil {
-		m._AdhocPlan = make(map[uuid.UUID]struct{})
+	if m._AdhocPlans == nil {
+		m._AdhocPlans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._AdhocPlan[ids[i]] = struct{}{}
+		m._AdhocPlans[ids[i]] = struct{}{}
 	}
 }
 
-// ClearAdhocPlan clears the "AdhocPlan" edge to the AdhocPlan entity.
-func (m *AgentTaskMutation) ClearAdhocPlan() {
-	m.cleared_AdhocPlan = true
+// ClearAdhocPlans clears the "AdhocPlans" edge to the AdhocPlan entity.
+func (m *AgentTaskMutation) ClearAdhocPlans() {
+	m.cleared_AdhocPlans = true
 }
 
-// AdhocPlanCleared reports if the "AdhocPlan" edge to the AdhocPlan entity was cleared.
-func (m *AgentTaskMutation) AdhocPlanCleared() bool {
-	return m.cleared_AdhocPlan
+// AdhocPlansCleared reports if the "AdhocPlans" edge to the AdhocPlan entity was cleared.
+func (m *AgentTaskMutation) AdhocPlansCleared() bool {
+	return m.cleared_AdhocPlans
 }
 
-// RemoveAdhocPlanIDs removes the "AdhocPlan" edge to the AdhocPlan entity by IDs.
+// RemoveAdhocPlanIDs removes the "AdhocPlans" edge to the AdhocPlan entity by IDs.
 func (m *AgentTaskMutation) RemoveAdhocPlanIDs(ids ...uuid.UUID) {
-	if m.removed_AdhocPlan == nil {
-		m.removed_AdhocPlan = make(map[uuid.UUID]struct{})
+	if m.removed_AdhocPlans == nil {
+		m.removed_AdhocPlans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._AdhocPlan, ids[i])
-		m.removed_AdhocPlan[ids[i]] = struct{}{}
+		delete(m._AdhocPlans, ids[i])
+		m.removed_AdhocPlans[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedAdhocPlan returns the removed IDs of the "AdhocPlan" edge to the AdhocPlan entity.
-func (m *AgentTaskMutation) RemovedAdhocPlanIDs() (ids []uuid.UUID) {
-	for id := range m.removed_AdhocPlan {
+// RemovedAdhocPlans returns the removed IDs of the "AdhocPlans" edge to the AdhocPlan entity.
+func (m *AgentTaskMutation) RemovedAdhocPlansIDs() (ids []uuid.UUID) {
+	for id := range m.removed_AdhocPlans {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// AdhocPlanIDs returns the "AdhocPlan" edge IDs in the mutation.
-func (m *AgentTaskMutation) AdhocPlanIDs() (ids []uuid.UUID) {
-	for id := range m._AdhocPlan {
+// AdhocPlansIDs returns the "AdhocPlans" edge IDs in the mutation.
+func (m *AgentTaskMutation) AdhocPlansIDs() (ids []uuid.UUID) {
+	for id := range m._AdhocPlans {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetAdhocPlan resets all changes to the "AdhocPlan" edge.
-func (m *AgentTaskMutation) ResetAdhocPlan() {
-	m._AdhocPlan = nil
-	m.cleared_AdhocPlan = false
-	m.removed_AdhocPlan = nil
+// ResetAdhocPlans resets all changes to the "AdhocPlans" edge.
+func (m *AgentTaskMutation) ResetAdhocPlans() {
+	m._AdhocPlans = nil
+	m.cleared_AdhocPlans = false
+	m.removed_AdhocPlans = nil
 }
 
 // Where appends a list predicates to the AgentTaskMutation builder.
@@ -3019,8 +3019,8 @@ func (m *AgentTaskMutation) AddedEdges() []string {
 	if m._ProvisionedHost != nil {
 		edges = append(edges, agenttask.EdgeProvisionedHost)
 	}
-	if m._AdhocPlan != nil {
-		edges = append(edges, agenttask.EdgeAdhocPlan)
+	if m._AdhocPlans != nil {
+		edges = append(edges, agenttask.EdgeAdhocPlans)
 	}
 	return edges
 }
@@ -3041,9 +3041,9 @@ func (m *AgentTaskMutation) AddedIDs(name string) []ent.Value {
 		if id := m._ProvisionedHost; id != nil {
 			return []ent.Value{*id}
 		}
-	case agenttask.EdgeAdhocPlan:
-		ids := make([]ent.Value, 0, len(m._AdhocPlan))
-		for id := range m._AdhocPlan {
+	case agenttask.EdgeAdhocPlans:
+		ids := make([]ent.Value, 0, len(m._AdhocPlans))
+		for id := range m._AdhocPlans {
 			ids = append(ids, id)
 		}
 		return ids
@@ -3054,8 +3054,8 @@ func (m *AgentTaskMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AgentTaskMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.removed_AdhocPlan != nil {
-		edges = append(edges, agenttask.EdgeAdhocPlan)
+	if m.removed_AdhocPlans != nil {
+		edges = append(edges, agenttask.EdgeAdhocPlans)
 	}
 	return edges
 }
@@ -3064,9 +3064,9 @@ func (m *AgentTaskMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *AgentTaskMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case agenttask.EdgeAdhocPlan:
-		ids := make([]ent.Value, 0, len(m.removed_AdhocPlan))
-		for id := range m.removed_AdhocPlan {
+	case agenttask.EdgeAdhocPlans:
+		ids := make([]ent.Value, 0, len(m.removed_AdhocPlans))
+		for id := range m.removed_AdhocPlans {
 			ids = append(ids, id)
 		}
 		return ids
@@ -3086,8 +3086,8 @@ func (m *AgentTaskMutation) ClearedEdges() []string {
 	if m.cleared_ProvisionedHost {
 		edges = append(edges, agenttask.EdgeProvisionedHost)
 	}
-	if m.cleared_AdhocPlan {
-		edges = append(edges, agenttask.EdgeAdhocPlan)
+	if m.cleared_AdhocPlans {
+		edges = append(edges, agenttask.EdgeAdhocPlans)
 	}
 	return edges
 }
@@ -3102,8 +3102,8 @@ func (m *AgentTaskMutation) EdgeCleared(name string) bool {
 		return m.cleared_ProvisioningScheduledStep
 	case agenttask.EdgeProvisionedHost:
 		return m.cleared_ProvisionedHost
-	case agenttask.EdgeAdhocPlan:
-		return m.cleared_AdhocPlan
+	case agenttask.EdgeAdhocPlans:
+		return m.cleared_AdhocPlans
 	}
 	return false
 }
@@ -3138,8 +3138,8 @@ func (m *AgentTaskMutation) ResetEdge(name string) error {
 	case agenttask.EdgeProvisionedHost:
 		m.ResetProvisionedHost()
 		return nil
-	case agenttask.EdgeAdhocPlan:
-		m.ResetAdhocPlan()
+	case agenttask.EdgeAdhocPlans:
+		m.ResetAdhocPlans()
 		return nil
 	}
 	return fmt.Errorf("unknown AgentTask edge %s", name)
@@ -3161,9 +3161,9 @@ type AnsibleMutation struct {
 	abs_path            *string
 	tags                *map[string]string
 	clearedFields       map[string]struct{}
-	_User               map[uuid.UUID]struct{}
-	removed_User        map[uuid.UUID]struct{}
-	cleared_User        bool
+	_Users              map[uuid.UUID]struct{}
+	removed_Users       map[uuid.UUID]struct{}
+	cleared_Users       bool
 	_Environment        *uuid.UUID
 	cleared_Environment bool
 	done                bool
@@ -3599,58 +3599,58 @@ func (m *AnsibleMutation) ResetTags() {
 	m.tags = nil
 }
 
-// AddUserIDs adds the "User" edge to the User entity by ids.
+// AddUserIDs adds the "Users" edge to the User entity by ids.
 func (m *AnsibleMutation) AddUserIDs(ids ...uuid.UUID) {
-	if m._User == nil {
-		m._User = make(map[uuid.UUID]struct{})
+	if m._Users == nil {
+		m._Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._User[ids[i]] = struct{}{}
+		m._Users[ids[i]] = struct{}{}
 	}
 }
 
-// ClearUser clears the "User" edge to the User entity.
-func (m *AnsibleMutation) ClearUser() {
-	m.cleared_User = true
+// ClearUsers clears the "Users" edge to the User entity.
+func (m *AnsibleMutation) ClearUsers() {
+	m.cleared_Users = true
 }
 
-// UserCleared reports if the "User" edge to the User entity was cleared.
-func (m *AnsibleMutation) UserCleared() bool {
-	return m.cleared_User
+// UsersCleared reports if the "Users" edge to the User entity was cleared.
+func (m *AnsibleMutation) UsersCleared() bool {
+	return m.cleared_Users
 }
 
-// RemoveUserIDs removes the "User" edge to the User entity by IDs.
+// RemoveUserIDs removes the "Users" edge to the User entity by IDs.
 func (m *AnsibleMutation) RemoveUserIDs(ids ...uuid.UUID) {
-	if m.removed_User == nil {
-		m.removed_User = make(map[uuid.UUID]struct{})
+	if m.removed_Users == nil {
+		m.removed_Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._User, ids[i])
-		m.removed_User[ids[i]] = struct{}{}
+		delete(m._Users, ids[i])
+		m.removed_Users[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedUser returns the removed IDs of the "User" edge to the User entity.
-func (m *AnsibleMutation) RemovedUserIDs() (ids []uuid.UUID) {
-	for id := range m.removed_User {
+// RemovedUsers returns the removed IDs of the "Users" edge to the User entity.
+func (m *AnsibleMutation) RemovedUsersIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// UserIDs returns the "User" edge IDs in the mutation.
-func (m *AnsibleMutation) UserIDs() (ids []uuid.UUID) {
-	for id := range m._User {
+// UsersIDs returns the "Users" edge IDs in the mutation.
+func (m *AnsibleMutation) UsersIDs() (ids []uuid.UUID) {
+	for id := range m._Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetUser resets all changes to the "User" edge.
-func (m *AnsibleMutation) ResetUser() {
-	m._User = nil
-	m.cleared_User = false
-	m.removed_User = nil
+// ResetUsers resets all changes to the "Users" edge.
+func (m *AnsibleMutation) ResetUsers() {
+	m._Users = nil
+	m.cleared_Users = false
+	m.removed_Users = nil
 }
 
 // SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
@@ -3947,8 +3947,8 @@ func (m *AnsibleMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AnsibleMutation) AddedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m._User != nil {
-		edges = append(edges, ansible.EdgeUser)
+	if m._Users != nil {
+		edges = append(edges, ansible.EdgeUsers)
 	}
 	if m._Environment != nil {
 		edges = append(edges, ansible.EdgeEnvironment)
@@ -3960,9 +3960,9 @@ func (m *AnsibleMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *AnsibleMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case ansible.EdgeUser:
-		ids := make([]ent.Value, 0, len(m._User))
-		for id := range m._User {
+	case ansible.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m._Users))
+		for id := range m._Users {
 			ids = append(ids, id)
 		}
 		return ids
@@ -3977,8 +3977,8 @@ func (m *AnsibleMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AnsibleMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.removed_User != nil {
-		edges = append(edges, ansible.EdgeUser)
+	if m.removed_Users != nil {
+		edges = append(edges, ansible.EdgeUsers)
 	}
 	return edges
 }
@@ -3987,9 +3987,9 @@ func (m *AnsibleMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *AnsibleMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case ansible.EdgeUser:
-		ids := make([]ent.Value, 0, len(m.removed_User))
-		for id := range m.removed_User {
+	case ansible.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m.removed_Users))
+		for id := range m.removed_Users {
 			ids = append(ids, id)
 		}
 		return ids
@@ -4000,8 +4000,8 @@ func (m *AnsibleMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AnsibleMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.cleared_User {
-		edges = append(edges, ansible.EdgeUser)
+	if m.cleared_Users {
+		edges = append(edges, ansible.EdgeUsers)
 	}
 	if m.cleared_Environment {
 		edges = append(edges, ansible.EdgeEnvironment)
@@ -4013,8 +4013,8 @@ func (m *AnsibleMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *AnsibleMutation) EdgeCleared(name string) bool {
 	switch name {
-	case ansible.EdgeUser:
-		return m.cleared_User
+	case ansible.EdgeUsers:
+		return m.cleared_Users
 	case ansible.EdgeEnvironment:
 		return m.cleared_Environment
 	}
@@ -4036,8 +4036,8 @@ func (m *AnsibleMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *AnsibleMutation) ResetEdge(name string) error {
 	switch name {
-	case ansible.EdgeUser:
-		m.ResetUser()
+	case ansible.EdgeUsers:
+		m.ResetUsers()
 		return nil
 	case ansible.EdgeEnvironment:
 		m.ResetEnvironment()
@@ -4049,30 +4049,30 @@ func (m *AnsibleMutation) ResetEdge(name string) error {
 // AuthUserMutation represents an operation that mutates the AuthUser nodes in the graph.
 type AuthUserMutation struct {
 	config
-	op                            Op
-	typ                           string
-	id                            *uuid.UUID
-	username                      *string
-	password                      *string
-	first_name                    *string
-	last_name                     *string
-	email                         *string
-	phone                         *string
-	company                       *string
-	occupation                    *string
-	private_key_path              *string
-	role                          *authuser.Role
-	provider                      *authuser.Provider
-	clearedFields                 map[string]struct{}
-	_AuthUserToToken              map[uuid.UUID]struct{}
-	removed_AuthUserToToken       map[uuid.UUID]struct{}
-	cleared_AuthUserToToken       bool
-	_AuthUserToServerTasks        map[uuid.UUID]struct{}
-	removed_AuthUserToServerTasks map[uuid.UUID]struct{}
-	cleared_AuthUserToServerTasks bool
-	done                          bool
-	oldValue                      func(context.Context) (*AuthUser, error)
-	predicates                    []predicate.AuthUser
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	username            *string
+	password            *string
+	first_name          *string
+	last_name           *string
+	email               *string
+	phone               *string
+	company             *string
+	occupation          *string
+	private_key_path    *string
+	role                *authuser.Role
+	provider            *authuser.Provider
+	clearedFields       map[string]struct{}
+	_Tokens             map[uuid.UUID]struct{}
+	removed_Tokens      map[uuid.UUID]struct{}
+	cleared_Tokens      bool
+	_ServerTasks        map[uuid.UUID]struct{}
+	removed_ServerTasks map[uuid.UUID]struct{}
+	cleared_ServerTasks bool
+	done                bool
+	oldValue            func(context.Context) (*AuthUser, error)
+	predicates          []predicate.AuthUser
 }
 
 var _ ent.Mutation = (*AuthUserMutation)(nil)
@@ -4575,112 +4575,112 @@ func (m *AuthUserMutation) ResetProvider() {
 	m.provider = nil
 }
 
-// AddAuthUserToTokenIDs adds the "AuthUserToToken" edge to the Token entity by ids.
-func (m *AuthUserMutation) AddAuthUserToTokenIDs(ids ...uuid.UUID) {
-	if m._AuthUserToToken == nil {
-		m._AuthUserToToken = make(map[uuid.UUID]struct{})
+// AddTokenIDs adds the "Tokens" edge to the Token entity by ids.
+func (m *AuthUserMutation) AddTokenIDs(ids ...uuid.UUID) {
+	if m._Tokens == nil {
+		m._Tokens = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._AuthUserToToken[ids[i]] = struct{}{}
+		m._Tokens[ids[i]] = struct{}{}
 	}
 }
 
-// ClearAuthUserToToken clears the "AuthUserToToken" edge to the Token entity.
-func (m *AuthUserMutation) ClearAuthUserToToken() {
-	m.cleared_AuthUserToToken = true
+// ClearTokens clears the "Tokens" edge to the Token entity.
+func (m *AuthUserMutation) ClearTokens() {
+	m.cleared_Tokens = true
 }
 
-// AuthUserToTokenCleared reports if the "AuthUserToToken" edge to the Token entity was cleared.
-func (m *AuthUserMutation) AuthUserToTokenCleared() bool {
-	return m.cleared_AuthUserToToken
+// TokensCleared reports if the "Tokens" edge to the Token entity was cleared.
+func (m *AuthUserMutation) TokensCleared() bool {
+	return m.cleared_Tokens
 }
 
-// RemoveAuthUserToTokenIDs removes the "AuthUserToToken" edge to the Token entity by IDs.
-func (m *AuthUserMutation) RemoveAuthUserToTokenIDs(ids ...uuid.UUID) {
-	if m.removed_AuthUserToToken == nil {
-		m.removed_AuthUserToToken = make(map[uuid.UUID]struct{})
+// RemoveTokenIDs removes the "Tokens" edge to the Token entity by IDs.
+func (m *AuthUserMutation) RemoveTokenIDs(ids ...uuid.UUID) {
+	if m.removed_Tokens == nil {
+		m.removed_Tokens = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._AuthUserToToken, ids[i])
-		m.removed_AuthUserToToken[ids[i]] = struct{}{}
+		delete(m._Tokens, ids[i])
+		m.removed_Tokens[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedAuthUserToToken returns the removed IDs of the "AuthUserToToken" edge to the Token entity.
-func (m *AuthUserMutation) RemovedAuthUserToTokenIDs() (ids []uuid.UUID) {
-	for id := range m.removed_AuthUserToToken {
+// RemovedTokens returns the removed IDs of the "Tokens" edge to the Token entity.
+func (m *AuthUserMutation) RemovedTokensIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// AuthUserToTokenIDs returns the "AuthUserToToken" edge IDs in the mutation.
-func (m *AuthUserMutation) AuthUserToTokenIDs() (ids []uuid.UUID) {
-	for id := range m._AuthUserToToken {
+// TokensIDs returns the "Tokens" edge IDs in the mutation.
+func (m *AuthUserMutation) TokensIDs() (ids []uuid.UUID) {
+	for id := range m._Tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetAuthUserToToken resets all changes to the "AuthUserToToken" edge.
-func (m *AuthUserMutation) ResetAuthUserToToken() {
-	m._AuthUserToToken = nil
-	m.cleared_AuthUserToToken = false
-	m.removed_AuthUserToToken = nil
+// ResetTokens resets all changes to the "Tokens" edge.
+func (m *AuthUserMutation) ResetTokens() {
+	m._Tokens = nil
+	m.cleared_Tokens = false
+	m.removed_Tokens = nil
 }
 
-// AddAuthUserToServerTaskIDs adds the "AuthUserToServerTasks" edge to the ServerTask entity by ids.
-func (m *AuthUserMutation) AddAuthUserToServerTaskIDs(ids ...uuid.UUID) {
-	if m._AuthUserToServerTasks == nil {
-		m._AuthUserToServerTasks = make(map[uuid.UUID]struct{})
+// AddServerTaskIDs adds the "ServerTasks" edge to the ServerTask entity by ids.
+func (m *AuthUserMutation) AddServerTaskIDs(ids ...uuid.UUID) {
+	if m._ServerTasks == nil {
+		m._ServerTasks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._AuthUserToServerTasks[ids[i]] = struct{}{}
+		m._ServerTasks[ids[i]] = struct{}{}
 	}
 }
 
-// ClearAuthUserToServerTasks clears the "AuthUserToServerTasks" edge to the ServerTask entity.
-func (m *AuthUserMutation) ClearAuthUserToServerTasks() {
-	m.cleared_AuthUserToServerTasks = true
+// ClearServerTasks clears the "ServerTasks" edge to the ServerTask entity.
+func (m *AuthUserMutation) ClearServerTasks() {
+	m.cleared_ServerTasks = true
 }
 
-// AuthUserToServerTasksCleared reports if the "AuthUserToServerTasks" edge to the ServerTask entity was cleared.
-func (m *AuthUserMutation) AuthUserToServerTasksCleared() bool {
-	return m.cleared_AuthUserToServerTasks
+// ServerTasksCleared reports if the "ServerTasks" edge to the ServerTask entity was cleared.
+func (m *AuthUserMutation) ServerTasksCleared() bool {
+	return m.cleared_ServerTasks
 }
 
-// RemoveAuthUserToServerTaskIDs removes the "AuthUserToServerTasks" edge to the ServerTask entity by IDs.
-func (m *AuthUserMutation) RemoveAuthUserToServerTaskIDs(ids ...uuid.UUID) {
-	if m.removed_AuthUserToServerTasks == nil {
-		m.removed_AuthUserToServerTasks = make(map[uuid.UUID]struct{})
+// RemoveServerTaskIDs removes the "ServerTasks" edge to the ServerTask entity by IDs.
+func (m *AuthUserMutation) RemoveServerTaskIDs(ids ...uuid.UUID) {
+	if m.removed_ServerTasks == nil {
+		m.removed_ServerTasks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._AuthUserToServerTasks, ids[i])
-		m.removed_AuthUserToServerTasks[ids[i]] = struct{}{}
+		delete(m._ServerTasks, ids[i])
+		m.removed_ServerTasks[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedAuthUserToServerTasks returns the removed IDs of the "AuthUserToServerTasks" edge to the ServerTask entity.
-func (m *AuthUserMutation) RemovedAuthUserToServerTasksIDs() (ids []uuid.UUID) {
-	for id := range m.removed_AuthUserToServerTasks {
+// RemovedServerTasks returns the removed IDs of the "ServerTasks" edge to the ServerTask entity.
+func (m *AuthUserMutation) RemovedServerTasksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ServerTasks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// AuthUserToServerTasksIDs returns the "AuthUserToServerTasks" edge IDs in the mutation.
-func (m *AuthUserMutation) AuthUserToServerTasksIDs() (ids []uuid.UUID) {
-	for id := range m._AuthUserToServerTasks {
+// ServerTasksIDs returns the "ServerTasks" edge IDs in the mutation.
+func (m *AuthUserMutation) ServerTasksIDs() (ids []uuid.UUID) {
+	for id := range m._ServerTasks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetAuthUserToServerTasks resets all changes to the "AuthUserToServerTasks" edge.
-func (m *AuthUserMutation) ResetAuthUserToServerTasks() {
-	m._AuthUserToServerTasks = nil
-	m.cleared_AuthUserToServerTasks = false
-	m.removed_AuthUserToServerTasks = nil
+// ResetServerTasks resets all changes to the "ServerTasks" edge.
+func (m *AuthUserMutation) ResetServerTasks() {
+	m._ServerTasks = nil
+	m.cleared_ServerTasks = false
+	m.removed_ServerTasks = nil
 }
 
 // Where appends a list predicates to the AuthUserMutation builder.
@@ -4972,11 +4972,11 @@ func (m *AuthUserMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AuthUserMutation) AddedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m._AuthUserToToken != nil {
-		edges = append(edges, authuser.EdgeAuthUserToToken)
+	if m._Tokens != nil {
+		edges = append(edges, authuser.EdgeTokens)
 	}
-	if m._AuthUserToServerTasks != nil {
-		edges = append(edges, authuser.EdgeAuthUserToServerTasks)
+	if m._ServerTasks != nil {
+		edges = append(edges, authuser.EdgeServerTasks)
 	}
 	return edges
 }
@@ -4985,15 +4985,15 @@ func (m *AuthUserMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *AuthUserMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case authuser.EdgeAuthUserToToken:
-		ids := make([]ent.Value, 0, len(m._AuthUserToToken))
-		for id := range m._AuthUserToToken {
+	case authuser.EdgeTokens:
+		ids := make([]ent.Value, 0, len(m._Tokens))
+		for id := range m._Tokens {
 			ids = append(ids, id)
 		}
 		return ids
-	case authuser.EdgeAuthUserToServerTasks:
-		ids := make([]ent.Value, 0, len(m._AuthUserToServerTasks))
-		for id := range m._AuthUserToServerTasks {
+	case authuser.EdgeServerTasks:
+		ids := make([]ent.Value, 0, len(m._ServerTasks))
+		for id := range m._ServerTasks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -5004,11 +5004,11 @@ func (m *AuthUserMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AuthUserMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.removed_AuthUserToToken != nil {
-		edges = append(edges, authuser.EdgeAuthUserToToken)
+	if m.removed_Tokens != nil {
+		edges = append(edges, authuser.EdgeTokens)
 	}
-	if m.removed_AuthUserToServerTasks != nil {
-		edges = append(edges, authuser.EdgeAuthUserToServerTasks)
+	if m.removed_ServerTasks != nil {
+		edges = append(edges, authuser.EdgeServerTasks)
 	}
 	return edges
 }
@@ -5017,15 +5017,15 @@ func (m *AuthUserMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *AuthUserMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case authuser.EdgeAuthUserToToken:
-		ids := make([]ent.Value, 0, len(m.removed_AuthUserToToken))
-		for id := range m.removed_AuthUserToToken {
+	case authuser.EdgeTokens:
+		ids := make([]ent.Value, 0, len(m.removed_Tokens))
+		for id := range m.removed_Tokens {
 			ids = append(ids, id)
 		}
 		return ids
-	case authuser.EdgeAuthUserToServerTasks:
-		ids := make([]ent.Value, 0, len(m.removed_AuthUserToServerTasks))
-		for id := range m.removed_AuthUserToServerTasks {
+	case authuser.EdgeServerTasks:
+		ids := make([]ent.Value, 0, len(m.removed_ServerTasks))
+		for id := range m.removed_ServerTasks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -5036,11 +5036,11 @@ func (m *AuthUserMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AuthUserMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.cleared_AuthUserToToken {
-		edges = append(edges, authuser.EdgeAuthUserToToken)
+	if m.cleared_Tokens {
+		edges = append(edges, authuser.EdgeTokens)
 	}
-	if m.cleared_AuthUserToServerTasks {
-		edges = append(edges, authuser.EdgeAuthUserToServerTasks)
+	if m.cleared_ServerTasks {
+		edges = append(edges, authuser.EdgeServerTasks)
 	}
 	return edges
 }
@@ -5049,10 +5049,10 @@ func (m *AuthUserMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *AuthUserMutation) EdgeCleared(name string) bool {
 	switch name {
-	case authuser.EdgeAuthUserToToken:
-		return m.cleared_AuthUserToToken
-	case authuser.EdgeAuthUserToServerTasks:
-		return m.cleared_AuthUserToServerTasks
+	case authuser.EdgeTokens:
+		return m.cleared_Tokens
+	case authuser.EdgeServerTasks:
+		return m.cleared_ServerTasks
 	}
 	return false
 }
@@ -5069,11 +5069,11 @@ func (m *AuthUserMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *AuthUserMutation) ResetEdge(name string) error {
 	switch name {
-	case authuser.EdgeAuthUserToToken:
-		m.ResetAuthUserToToken()
+	case authuser.EdgeTokens:
+		m.ResetTokens()
 		return nil
-	case authuser.EdgeAuthUserToServerTasks:
-		m.ResetAuthUserToServerTasks()
+	case authuser.EdgeServerTasks:
+		m.ResetServerTasks()
 		return nil
 	}
 	return fmt.Errorf("unknown AuthUser edge %s", name)

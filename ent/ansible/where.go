@@ -858,25 +858,25 @@ func AbsPathContainsFold(v string) predicate.Ansible {
 	})
 }
 
-// HasUser applies the HasEdge predicate on the "User" edge.
-func HasUser() predicate.Ansible {
+// HasUsers applies the HasEdge predicate on the "Users" edge.
+func HasUsers() predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UserTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, UserTable, UserColumn),
+			sqlgraph.To(UsersTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasUserWith applies the HasEdge predicate on the "User" edge with a given conditions (other predicates).
-func HasUserWith(preds ...predicate.User) predicate.Ansible {
+// HasUsersWith applies the HasEdge predicate on the "Users" edge with a given conditions (other predicates).
+func HasUsersWith(preds ...predicate.User) predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UserInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, UserTable, UserColumn),
+			sqlgraph.To(UsersInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

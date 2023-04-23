@@ -33,8 +33,8 @@ const (
 	EdgeProvisioningScheduledStep = "ProvisioningScheduledStep"
 	// EdgeProvisionedHost holds the string denoting the provisionedhost edge name in mutations.
 	EdgeProvisionedHost = "ProvisionedHost"
-	// EdgeAdhocPlan holds the string denoting the adhocplan edge name in mutations.
-	EdgeAdhocPlan = "AdhocPlan"
+	// EdgeAdhocPlans holds the string denoting the adhocplans edge name in mutations.
+	EdgeAdhocPlans = "AdhocPlans"
 	// Table holds the table name of the agenttask in the database.
 	Table = "agent_tasks"
 	// ProvisioningStepTable is the table that holds the ProvisioningStep relation/edge.
@@ -58,13 +58,13 @@ const (
 	ProvisionedHostInverseTable = "provisioned_hosts"
 	// ProvisionedHostColumn is the table column denoting the ProvisionedHost relation/edge.
 	ProvisionedHostColumn = "agent_task_provisioned_host"
-	// AdhocPlanTable is the table that holds the AdhocPlan relation/edge.
-	AdhocPlanTable = "adhoc_plans"
-	// AdhocPlanInverseTable is the table name for the AdhocPlan entity.
+	// AdhocPlansTable is the table that holds the AdhocPlans relation/edge.
+	AdhocPlansTable = "adhoc_plans"
+	// AdhocPlansInverseTable is the table name for the AdhocPlan entity.
 	// It exists in this package in order to avoid circular dependency with the "adhocplan" package.
-	AdhocPlanInverseTable = "adhoc_plans"
-	// AdhocPlanColumn is the table column denoting the AdhocPlan relation/edge.
-	AdhocPlanColumn = "adhoc_plan_agent_task"
+	AdhocPlansInverseTable = "adhoc_plans"
+	// AdhocPlansColumn is the table column denoting the AdhocPlans relation/edge.
+	AdhocPlansColumn = "adhoc_plan_agent_task"
 )
 
 // Columns holds all SQL columns for agenttask fields.

@@ -1275,7 +1275,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "token", Type: field.TypeString},
 		{Name: "expire_at", Type: field.TypeInt64},
-		{Name: "auth_user_auth_user_to_token", Type: field.TypeUUID},
+		{Name: "auth_user_tokens", Type: field.TypeUUID},
 	}
 	// TokensTable holds the schema information for the "tokens" table.
 	TokensTable = &schema.Table{
@@ -1284,7 +1284,7 @@ var (
 		PrimaryKey: []*schema.Column{TokensColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "tokens_auth_users_AuthUserToToken",
+				Symbol:     "tokens_auth_users_Tokens",
 				Columns:    []*schema.Column{TokensColumns[3]},
 				RefColumns: []*schema.Column{AuthUsersColumns[0]},
 				OnDelete:   schema.Cascade,
@@ -1298,7 +1298,7 @@ var (
 		{Name: "uuid", Type: field.TypeString},
 		{Name: "email", Type: field.TypeString},
 		{Name: "hcl_id", Type: field.TypeString},
-		{Name: "ansible_user", Type: field.TypeUUID, Nullable: true},
+		{Name: "ansible_users", Type: field.TypeUUID, Nullable: true},
 		{Name: "command_command_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "finding_finding_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "host_host_to_user", Type: field.TypeUUID, Nullable: true},
@@ -1311,7 +1311,7 @@ var (
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "users_ansibles_User",
+				Symbol:     "users_ansibles_Users",
 				Columns:    []*schema.Column{UsersColumns[5]},
 				RefColumns: []*schema.Column{AnsiblesColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -1342,26 +1342,26 @@ var (
 			},
 		},
 	}
-	// AdhocPlanNextAdhocPlanColumns holds the columns for the "adhoc_plan_NextAdhocPlan" table.
-	AdhocPlanNextAdhocPlanColumns = []*schema.Column{
+	// AdhocPlanNextAdhocPlansColumns holds the columns for the "adhoc_plan_NextAdhocPlans" table.
+	AdhocPlanNextAdhocPlansColumns = []*schema.Column{
 		{Name: "adhoc_plan_id", Type: field.TypeUUID},
 		{Name: "PrevAdhocPlan_id", Type: field.TypeUUID},
 	}
-	// AdhocPlanNextAdhocPlanTable holds the schema information for the "adhoc_plan_NextAdhocPlan" table.
-	AdhocPlanNextAdhocPlanTable = &schema.Table{
-		Name:       "adhoc_plan_NextAdhocPlan",
-		Columns:    AdhocPlanNextAdhocPlanColumns,
-		PrimaryKey: []*schema.Column{AdhocPlanNextAdhocPlanColumns[0], AdhocPlanNextAdhocPlanColumns[1]},
+	// AdhocPlanNextAdhocPlansTable holds the schema information for the "adhoc_plan_NextAdhocPlans" table.
+	AdhocPlanNextAdhocPlansTable = &schema.Table{
+		Name:       "adhoc_plan_NextAdhocPlans",
+		Columns:    AdhocPlanNextAdhocPlansColumns,
+		PrimaryKey: []*schema.Column{AdhocPlanNextAdhocPlansColumns[0], AdhocPlanNextAdhocPlansColumns[1]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "adhoc_plan_NextAdhocPlan_adhoc_plan_id",
-				Columns:    []*schema.Column{AdhocPlanNextAdhocPlanColumns[0]},
+				Symbol:     "adhoc_plan_NextAdhocPlans_adhoc_plan_id",
+				Columns:    []*schema.Column{AdhocPlanNextAdhocPlansColumns[0]},
 				RefColumns: []*schema.Column{AdhocPlansColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "adhoc_plan_NextAdhocPlan_PrevAdhocPlan_id",
-				Columns:    []*schema.Column{AdhocPlanNextAdhocPlanColumns[1]},
+				Symbol:     "adhoc_plan_NextAdhocPlans_PrevAdhocPlan_id",
+				Columns:    []*schema.Column{AdhocPlanNextAdhocPlansColumns[1]},
 				RefColumns: []*schema.Column{AdhocPlansColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1583,7 +1583,7 @@ var (
 		TeamsTable,
 		TokensTable,
 		UsersTable,
-		AdhocPlanNextAdhocPlanTable,
+		AdhocPlanNextAdhocPlansTable,
 		CompetitionCompetitionToDNSTable,
 		EnvironmentEnvironmentToUserTable,
 		EnvironmentEnvironmentToIncludedNetworkTable,
@@ -1688,8 +1688,8 @@ func init() {
 	UsersTable.ForeignKeys[2].RefTable = FindingsTable
 	UsersTable.ForeignKeys[3].RefTable = HostsTable
 	UsersTable.ForeignKeys[4].RefTable = ScriptsTable
-	AdhocPlanNextAdhocPlanTable.ForeignKeys[0].RefTable = AdhocPlansTable
-	AdhocPlanNextAdhocPlanTable.ForeignKeys[1].RefTable = AdhocPlansTable
+	AdhocPlanNextAdhocPlansTable.ForeignKeys[0].RefTable = AdhocPlansTable
+	AdhocPlanNextAdhocPlansTable.ForeignKeys[1].RefTable = AdhocPlansTable
 	CompetitionCompetitionToDNSTable.ForeignKeys[0].RefTable = CompetitionsTable
 	CompetitionCompetitionToDNSTable.ForeignKeys[1].RefTable = DnSsTable
 	EnvironmentEnvironmentToUserTable.ForeignKeys[0].RefTable = EnvironmentsTable

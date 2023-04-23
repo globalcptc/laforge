@@ -41,8 +41,8 @@ type Ansible struct {
 	Edges AnsibleEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// User holds the value of the User edge.
-	HCLUser []*User `json:"User,omitempty" hcl:"maintainer,block"`
+	// Users holds the value of the Users edge.
+	HCLUsers []*User `json:"Users,omitempty" hcl:"maintainer,block"`
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
@@ -51,8 +51,8 @@ type Ansible struct {
 
 // AnsibleEdges holds the relations/edges for other nodes in the graph.
 type AnsibleEdges struct {
-	// User holds the value of the User edge.
-	User []*User `json:"User,omitempty" hcl:"maintainer,block"`
+	// Users holds the value of the Users edge.
+	Users []*User `json:"Users,omitempty" hcl:"maintainer,block"`
 	// Environment holds the value of the Environment edge.
 	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
@@ -60,13 +60,13 @@ type AnsibleEdges struct {
 	loadedTypes [2]bool
 }
 
-// UserOrErr returns the User value or an error if the edge
+// UsersOrErr returns the Users value or an error if the edge
 // was not loaded in eager-loading.
-func (e AnsibleEdges) UserOrErr() ([]*User, error) {
+func (e AnsibleEdges) UsersOrErr() ([]*User, error) {
 	if e.loadedTypes[0] {
-		return e.User, nil
+		return e.Users, nil
 	}
-	return nil, &NotLoadedError{edge: "User"}
+	return nil, &NotLoadedError{edge: "Users"}
 }
 
 // EnvironmentOrErr returns the Environment value or an error if the edge
@@ -185,9 +185,9 @@ func (a *Ansible) assignValues(columns []string, values []interface{}) error {
 	return nil
 }
 
-// QueryUser queries the "User" edge of the Ansible entity.
-func (a *Ansible) QueryUser() *UserQuery {
-	return (&AnsibleClient{config: a.config}).QueryUser(a)
+// QueryUsers queries the "Users" edge of the Ansible entity.
+func (a *Ansible) QueryUsers() *UserQuery {
+	return (&AnsibleClient{config: a.config}).QueryUsers(a)
 }
 
 // QueryEnvironment queries the "Environment" edge of the Ansible entity.

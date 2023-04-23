@@ -98,9 +98,9 @@ func (ap *AdhocPlan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "AdhocPlan",
-		Name: "NextAdhocPlan",
+		Name: "NextAdhocPlans",
 	}
-	err = ap.QueryNextAdhocPlan().
+	err = ap.QueryNextAdhocPlans().
 		Select(adhocplan.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -380,9 +380,9 @@ func (at *AgentTask) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "AdhocPlan",
-		Name: "AdhocPlan",
+		Name: "AdhocPlans",
 	}
-	err = at.QueryAdhocPlan().
+	err = at.QueryAdhocPlans().
 		Select(adhocplan.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
@@ -473,9 +473,9 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "User",
-		Name: "User",
+		Name: "Users",
 	}
-	err = a.QueryUser().
+	err = a.QueryUsers().
 		Select(user.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -592,9 +592,9 @@ func (au *AuthUser) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Token",
-		Name: "AuthUserToToken",
+		Name: "Tokens",
 	}
-	err = au.QueryAuthUserToToken().
+	err = au.QueryTokens().
 		Select(token.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -602,9 +602,9 @@ func (au *AuthUser) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "ServerTask",
-		Name: "AuthUserToServerTasks",
+		Name: "ServerTasks",
 	}
-	err = au.QueryAuthUserToServerTasks().
+	err = au.QueryServerTasks().
 		Select(servertask.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {

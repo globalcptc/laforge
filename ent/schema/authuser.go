@@ -35,11 +35,11 @@ func (AuthUser) Fields() []ent.Field {
 // Edges of the AuthUser.
 func (AuthUser) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("AuthUserToToken", Token.Type).
+		edge.To("Tokens", Token.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.From("AuthUserToServerTasks", ServerTask.Type).
+		edge.From("ServerTasks", ServerTask.Type).
 			Ref("ServerTaskToAuthUser").
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,

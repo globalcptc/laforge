@@ -140,14 +140,14 @@ func (atu *AgentTaskUpdate) SetProvisionedHost(p *ProvisionedHost) *AgentTaskUpd
 	return atu.SetProvisionedHostID(p.ID)
 }
 
-// AddAdhocPlanIDs adds the "AdhocPlan" edge to the AdhocPlan entity by IDs.
+// AddAdhocPlanIDs adds the "AdhocPlans" edge to the AdhocPlan entity by IDs.
 func (atu *AgentTaskUpdate) AddAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdate {
 	atu.mutation.AddAdhocPlanIDs(ids...)
 	return atu
 }
 
-// AddAdhocPlan adds the "AdhocPlan" edges to the AdhocPlan entity.
-func (atu *AgentTaskUpdate) AddAdhocPlan(a ...*AdhocPlan) *AgentTaskUpdate {
+// AddAdhocPlans adds the "AdhocPlans" edges to the AdhocPlan entity.
+func (atu *AgentTaskUpdate) AddAdhocPlans(a ...*AdhocPlan) *AgentTaskUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -178,20 +178,20 @@ func (atu *AgentTaskUpdate) ClearProvisionedHost() *AgentTaskUpdate {
 	return atu
 }
 
-// ClearAdhocPlan clears all "AdhocPlan" edges to the AdhocPlan entity.
-func (atu *AgentTaskUpdate) ClearAdhocPlan() *AgentTaskUpdate {
-	atu.mutation.ClearAdhocPlan()
+// ClearAdhocPlans clears all "AdhocPlans" edges to the AdhocPlan entity.
+func (atu *AgentTaskUpdate) ClearAdhocPlans() *AgentTaskUpdate {
+	atu.mutation.ClearAdhocPlans()
 	return atu
 }
 
-// RemoveAdhocPlanIDs removes the "AdhocPlan" edge to AdhocPlan entities by IDs.
+// RemoveAdhocPlanIDs removes the "AdhocPlans" edge to AdhocPlan entities by IDs.
 func (atu *AgentTaskUpdate) RemoveAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdate {
 	atu.mutation.RemoveAdhocPlanIDs(ids...)
 	return atu
 }
 
-// RemoveAdhocPlan removes "AdhocPlan" edges to AdhocPlan entities.
-func (atu *AgentTaskUpdate) RemoveAdhocPlan(a ...*AdhocPlan) *AgentTaskUpdate {
+// RemoveAdhocPlans removes "AdhocPlans" edges to AdhocPlan entities.
+func (atu *AgentTaskUpdate) RemoveAdhocPlans(a ...*AdhocPlan) *AgentTaskUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -449,12 +449,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if atu.mutation.AdhocPlanCleared() {
+	if atu.mutation.AdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AdhocPlanTable,
-			Columns: []string{agenttask.AdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -465,12 +465,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atu.mutation.RemovedAdhocPlanIDs(); len(nodes) > 0 && !atu.mutation.AdhocPlanCleared() {
+	if nodes := atu.mutation.RemovedAdhocPlansIDs(); len(nodes) > 0 && !atu.mutation.AdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AdhocPlanTable,
-			Columns: []string{agenttask.AdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -484,12 +484,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atu.mutation.AdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := atu.mutation.AdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AdhocPlanTable,
-			Columns: []string{agenttask.AdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -630,14 +630,14 @@ func (atuo *AgentTaskUpdateOne) SetProvisionedHost(p *ProvisionedHost) *AgentTas
 	return atuo.SetProvisionedHostID(p.ID)
 }
 
-// AddAdhocPlanIDs adds the "AdhocPlan" edge to the AdhocPlan entity by IDs.
+// AddAdhocPlanIDs adds the "AdhocPlans" edge to the AdhocPlan entity by IDs.
 func (atuo *AgentTaskUpdateOne) AddAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdateOne {
 	atuo.mutation.AddAdhocPlanIDs(ids...)
 	return atuo
 }
 
-// AddAdhocPlan adds the "AdhocPlan" edges to the AdhocPlan entity.
-func (atuo *AgentTaskUpdateOne) AddAdhocPlan(a ...*AdhocPlan) *AgentTaskUpdateOne {
+// AddAdhocPlans adds the "AdhocPlans" edges to the AdhocPlan entity.
+func (atuo *AgentTaskUpdateOne) AddAdhocPlans(a ...*AdhocPlan) *AgentTaskUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -668,20 +668,20 @@ func (atuo *AgentTaskUpdateOne) ClearProvisionedHost() *AgentTaskUpdateOne {
 	return atuo
 }
 
-// ClearAdhocPlan clears all "AdhocPlan" edges to the AdhocPlan entity.
-func (atuo *AgentTaskUpdateOne) ClearAdhocPlan() *AgentTaskUpdateOne {
-	atuo.mutation.ClearAdhocPlan()
+// ClearAdhocPlans clears all "AdhocPlans" edges to the AdhocPlan entity.
+func (atuo *AgentTaskUpdateOne) ClearAdhocPlans() *AgentTaskUpdateOne {
+	atuo.mutation.ClearAdhocPlans()
 	return atuo
 }
 
-// RemoveAdhocPlanIDs removes the "AdhocPlan" edge to AdhocPlan entities by IDs.
+// RemoveAdhocPlanIDs removes the "AdhocPlans" edge to AdhocPlan entities by IDs.
 func (atuo *AgentTaskUpdateOne) RemoveAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdateOne {
 	atuo.mutation.RemoveAdhocPlanIDs(ids...)
 	return atuo
 }
 
-// RemoveAdhocPlan removes "AdhocPlan" edges to AdhocPlan entities.
-func (atuo *AgentTaskUpdateOne) RemoveAdhocPlan(a ...*AdhocPlan) *AgentTaskUpdateOne {
+// RemoveAdhocPlans removes "AdhocPlans" edges to AdhocPlan entities.
+func (atuo *AgentTaskUpdateOne) RemoveAdhocPlans(a ...*AdhocPlan) *AgentTaskUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -969,12 +969,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if atuo.mutation.AdhocPlanCleared() {
+	if atuo.mutation.AdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AdhocPlanTable,
-			Columns: []string{agenttask.AdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -985,12 +985,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atuo.mutation.RemovedAdhocPlanIDs(); len(nodes) > 0 && !atuo.mutation.AdhocPlanCleared() {
+	if nodes := atuo.mutation.RemovedAdhocPlansIDs(); len(nodes) > 0 && !atuo.mutation.AdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AdhocPlanTable,
-			Columns: []string{agenttask.AdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1004,12 +1004,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atuo.mutation.AdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := atuo.mutation.AdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AdhocPlanTable,
-			Columns: []string{agenttask.AdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

@@ -29,7 +29,7 @@ type Token struct {
 	// TokenToAuthUser holds the value of the TokenToAuthUser edge.
 	HCLTokenToAuthUser *AuthUser `json:"TokenToAuthUser,omitempty"`
 	//
-	auth_user_auth_user_to_token *uuid.UUID
+	auth_user_tokens *uuid.UUID
 }
 
 // TokenEdges holds the relations/edges for other nodes in the graph.
@@ -66,7 +66,7 @@ func (*Token) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case token.FieldID:
 			values[i] = new(uuid.UUID)
-		case token.ForeignKeys[0]: // auth_user_auth_user_to_token
+		case token.ForeignKeys[0]: // auth_user_tokens
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Token", columns[i])
@@ -103,10 +103,10 @@ func (t *Token) assignValues(columns []string, values []interface{}) error {
 			}
 		case token.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field auth_user_auth_user_to_token", values[i])
+				return fmt.Errorf("unexpected type %T for field auth_user_tokens", values[i])
 			} else if value.Valid {
-				t.auth_user_auth_user_to_token = new(uuid.UUID)
-				*t.auth_user_auth_user_to_token = *value.S.(*uuid.UUID)
+				t.auth_user_tokens = new(uuid.UUID)
+				*t.auth_user_tokens = *value.S.(*uuid.UUID)
 			}
 		}
 	}

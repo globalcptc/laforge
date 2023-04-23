@@ -32,7 +32,7 @@ type AgentTaskQuery struct {
 	withProvisioningStep          *ProvisioningStepQuery
 	withProvisioningScheduledStep *ProvisioningScheduledStepQuery
 	withProvisionedHost           *ProvisionedHostQuery
-	withAdhocPlan                 *AdhocPlanQuery
+	withAdhocPlans                *AdhocPlanQuery
 	withFKs                       bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -136,8 +136,8 @@ func (atq *AgentTaskQuery) QueryProvisionedHost() *ProvisionedHostQuery {
 	return query
 }
 
-// QueryAdhocPlan chains the current query on the "AdhocPlan" edge.
-func (atq *AgentTaskQuery) QueryAdhocPlan() *AdhocPlanQuery {
+// QueryAdhocPlans chains the current query on the "AdhocPlans" edge.
+func (atq *AgentTaskQuery) QueryAdhocPlans() *AdhocPlanQuery {
 	query := &AdhocPlanQuery{config: atq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := atq.prepareQuery(ctx); err != nil {
@@ -150,7 +150,7 @@ func (atq *AgentTaskQuery) QueryAdhocPlan() *AdhocPlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, agenttask.AdhocPlanTable, agenttask.AdhocPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, agenttask.AdhocPlansTable, agenttask.AdhocPlansColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
 		return fromU, nil
@@ -342,7 +342,7 @@ func (atq *AgentTaskQuery) Clone() *AgentTaskQuery {
 		withProvisioningStep:          atq.withProvisioningStep.Clone(),
 		withProvisioningScheduledStep: atq.withProvisioningScheduledStep.Clone(),
 		withProvisionedHost:           atq.withProvisionedHost.Clone(),
-		withAdhocPlan:                 atq.withAdhocPlan.Clone(),
+		withAdhocPlans:                atq.withAdhocPlans.Clone(),
 		// clone intermediate query.
 		sql:    atq.sql.Clone(),
 		path:   atq.path,
@@ -383,14 +383,14 @@ func (atq *AgentTaskQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuer
 	return atq
 }
 
-// WithAdhocPlan tells the query-builder to eager-load the nodes that are connected to
-// the "AdhocPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (atq *AgentTaskQuery) WithAdhocPlan(opts ...func(*AdhocPlanQuery)) *AgentTaskQuery {
+// WithAdhocPlans tells the query-builder to eager-load the nodes that are connected to
+// the "AdhocPlans" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *AgentTaskQuery) WithAdhocPlans(opts ...func(*AdhocPlanQuery)) *AgentTaskQuery {
 	query := &AdhocPlanQuery{config: atq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	atq.withAdhocPlan = query
+	atq.withAdhocPlans = query
 	return atq
 }
 
@@ -467,7 +467,7 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 			atq.withProvisioningStep != nil,
 			atq.withProvisioningScheduledStep != nil,
 			atq.withProvisionedHost != nil,
-			atq.withAdhocPlan != nil,
+			atq.withAdhocPlans != nil,
 		}
 	)
 	if atq.withProvisioningStep != nil || atq.withProvisionedHost != nil {
@@ -512,10 +512,10 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 			return nil, err
 		}
 	}
-	if query := atq.withAdhocPlan; query != nil {
-		if err := atq.loadAdhocPlan(ctx, query, nodes,
-			func(n *AgentTask) { n.Edges.AdhocPlan = []*AdhocPlan{} },
-			func(n *AgentTask, e *AdhocPlan) { n.Edges.AdhocPlan = append(n.Edges.AdhocPlan, e) }); err != nil {
+	if query := atq.withAdhocPlans; query != nil {
+		if err := atq.loadAdhocPlans(ctx, query, nodes,
+			func(n *AgentTask) { n.Edges.AdhocPlans = []*AdhocPlan{} },
+			func(n *AgentTask, e *AdhocPlan) { n.Edges.AdhocPlans = append(n.Edges.AdhocPlans, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -608,7 +608,7 @@ func (atq *AgentTaskQuery) loadProvisionedHost(ctx context.Context, query *Provi
 	}
 	return nil
 }
-func (atq *AgentTaskQuery) loadAdhocPlan(ctx context.Context, query *AdhocPlanQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *AdhocPlan)) error {
+func (atq *AgentTaskQuery) loadAdhocPlans(ctx context.Context, query *AdhocPlanQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *AdhocPlan)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*AgentTask)
 	for i := range nodes {
@@ -620,7 +620,7 @@ func (atq *AgentTaskQuery) loadAdhocPlan(ctx context.Context, query *AdhocPlanQu
 	}
 	query.withFKs = true
 	query.Where(predicate.AdhocPlan(func(s *sql.Selector) {
-		s.Where(sql.InValues(agenttask.AdhocPlanColumn, fks...))
+		s.Where(sql.InValues(agenttask.AdhocPlansColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

@@ -139,14 +139,14 @@ func (atc *AgentTaskCreate) SetProvisionedHost(p *ProvisionedHost) *AgentTaskCre
 	return atc.SetProvisionedHostID(p.ID)
 }
 
-// AddAdhocPlanIDs adds the "AdhocPlan" edge to the AdhocPlan entity by IDs.
+// AddAdhocPlanIDs adds the "AdhocPlans" edge to the AdhocPlan entity by IDs.
 func (atc *AgentTaskCreate) AddAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskCreate {
 	atc.mutation.AddAdhocPlanIDs(ids...)
 	return atc
 }
 
-// AddAdhocPlan adds the "AdhocPlan" edges to the AdhocPlan entity.
-func (atc *AgentTaskCreate) AddAdhocPlan(a ...*AdhocPlan) *AgentTaskCreate {
+// AddAdhocPlans adds the "AdhocPlans" edges to the AdhocPlan entity.
+func (atc *AgentTaskCreate) AddAdhocPlans(a ...*AdhocPlan) *AgentTaskCreate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -421,12 +421,12 @@ func (atc *AgentTaskCreate) createSpec() (*AgentTask, *sqlgraph.CreateSpec) {
 		_node.agent_task_provisioned_host = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := atc.mutation.AdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := atc.mutation.AdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AdhocPlanTable,
-			Columns: []string{agenttask.AdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

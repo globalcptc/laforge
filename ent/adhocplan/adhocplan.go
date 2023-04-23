@@ -13,8 +13,8 @@ const (
 	FieldID = "id"
 	// EdgePrevAdhocPlan holds the string denoting the prevadhocplan edge name in mutations.
 	EdgePrevAdhocPlan = "PrevAdhocPlan"
-	// EdgeNextAdhocPlan holds the string denoting the nextadhocplan edge name in mutations.
-	EdgeNextAdhocPlan = "NextAdhocPlan"
+	// EdgeNextAdhocPlans holds the string denoting the nextadhocplans edge name in mutations.
+	EdgeNextAdhocPlans = "NextAdhocPlans"
 	// EdgeBuild holds the string denoting the build edge name in mutations.
 	EdgeBuild = "Build"
 	// EdgeStatus holds the string denoting the status edge name in mutations.
@@ -24,9 +24,9 @@ const (
 	// Table holds the table name of the adhocplan in the database.
 	Table = "adhoc_plans"
 	// PrevAdhocPlanTable is the table that holds the PrevAdhocPlan relation/edge. The primary key declared below.
-	PrevAdhocPlanTable = "adhoc_plan_NextAdhocPlan"
-	// NextAdhocPlanTable is the table that holds the NextAdhocPlan relation/edge. The primary key declared below.
-	NextAdhocPlanTable = "adhoc_plan_NextAdhocPlan"
+	PrevAdhocPlanTable = "adhoc_plan_NextAdhocPlans"
+	// NextAdhocPlansTable is the table that holds the NextAdhocPlans relation/edge. The primary key declared below.
+	NextAdhocPlansTable = "adhoc_plan_NextAdhocPlans"
 	// BuildTable is the table that holds the Build relation/edge.
 	BuildTable = "adhoc_plans"
 	// BuildInverseTable is the table name for the Build entity.
@@ -66,9 +66,9 @@ var (
 	// PrevAdhocPlanPrimaryKey and PrevAdhocPlanColumn2 are the table columns denoting the
 	// primary key for the PrevAdhocPlan relation (M2M).
 	PrevAdhocPlanPrimaryKey = []string{"adhoc_plan_id", "PrevAdhocPlan_id"}
-	// NextAdhocPlanPrimaryKey and NextAdhocPlanColumn2 are the table columns denoting the
-	// primary key for the NextAdhocPlan relation (M2M).
-	NextAdhocPlanPrimaryKey = []string{"adhoc_plan_id", "PrevAdhocPlan_id"}
+	// NextAdhocPlansPrimaryKey and NextAdhocPlansColumn2 are the table columns denoting the
+	// primary key for the NextAdhocPlans relation (M2M).
+	NextAdhocPlansPrimaryKey = []string{"adhoc_plan_id", "PrevAdhocPlan_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).

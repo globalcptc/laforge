@@ -50,7 +50,7 @@ func (AgentTask) Edges() []ent.Edge {
 		edge.To("ProvisionedHost", ProvisionedHost.Type).
 			Required().
 			Unique(),
-		edge.From("AdhocPlan", AdhocPlan.Type).
+		edge.From("AdhocPlans", AdhocPlan.Type).
 			Ref("AgentTask"),
 	}
 }

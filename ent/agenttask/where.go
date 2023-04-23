@@ -625,25 +625,25 @@ func HasProvisionedHostWith(preds ...predicate.ProvisionedHost) predicate.AgentT
 	})
 }
 
-// HasAdhocPlan applies the HasEdge predicate on the "AdhocPlan" edge.
-func HasAdhocPlan() predicate.AgentTask {
+// HasAdhocPlans applies the HasEdge predicate on the "AdhocPlans" edge.
+func HasAdhocPlans() predicate.AgentTask {
 	return predicate.AgentTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AdhocPlanTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, AdhocPlanTable, AdhocPlanColumn),
+			sqlgraph.To(AdhocPlansTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, AdhocPlansTable, AdhocPlansColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAdhocPlanWith applies the HasEdge predicate on the "AdhocPlan" edge with a given conditions (other predicates).
-func HasAdhocPlanWith(preds ...predicate.AdhocPlan) predicate.AgentTask {
+// HasAdhocPlansWith applies the HasEdge predicate on the "AdhocPlans" edge with a given conditions (other predicates).
+func HasAdhocPlansWith(preds ...predicate.AdhocPlan) predicate.AgentTask {
 	return predicate.AgentTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AdhocPlanInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, AdhocPlanTable, AdhocPlanColumn),
+			sqlgraph.To(AdhocPlansInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, AdhocPlansTable, AdhocPlansColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

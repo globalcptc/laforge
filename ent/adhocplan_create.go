@@ -52,14 +52,14 @@ func (apc *AdhocPlanCreate) AddPrevAdhocPlan(a ...*AdhocPlan) *AdhocPlanCreate {
 	return apc.AddPrevAdhocPlanIDs(ids...)
 }
 
-// AddNextAdhocPlanIDs adds the "NextAdhocPlan" edge to the AdhocPlan entity by IDs.
+// AddNextAdhocPlanIDs adds the "NextAdhocPlans" edge to the AdhocPlan entity by IDs.
 func (apc *AdhocPlanCreate) AddNextAdhocPlanIDs(ids ...uuid.UUID) *AdhocPlanCreate {
 	apc.mutation.AddNextAdhocPlanIDs(ids...)
 	return apc
 }
 
-// AddNextAdhocPlan adds the "NextAdhocPlan" edges to the AdhocPlan entity.
-func (apc *AdhocPlanCreate) AddNextAdhocPlan(a ...*AdhocPlan) *AdhocPlanCreate {
+// AddNextAdhocPlans adds the "NextAdhocPlans" edges to the AdhocPlan entity.
+func (apc *AdhocPlanCreate) AddNextAdhocPlans(a ...*AdhocPlan) *AdhocPlanCreate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -249,12 +249,12 @@ func (apc *AdhocPlanCreate) createSpec() (*AdhocPlan, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := apc.mutation.NextAdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := apc.mutation.NextAdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   adhocplan.NextAdhocPlanTable,
-			Columns: adhocplan.NextAdhocPlanPrimaryKey,
+			Table:   adhocplan.NextAdhocPlansTable,
+			Columns: adhocplan.NextAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

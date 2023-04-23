@@ -90,14 +90,14 @@ func (ac *AnsibleCreate) SetNillableID(u *uuid.UUID) *AnsibleCreate {
 	return ac
 }
 
-// AddUserIDs adds the "User" edge to the User entity by IDs.
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
 func (ac *AnsibleCreate) AddUserIDs(ids ...uuid.UUID) *AnsibleCreate {
 	ac.mutation.AddUserIDs(ids...)
 	return ac
 }
 
-// AddUser adds the "User" edges to the User entity.
-func (ac *AnsibleCreate) AddUser(u ...*User) *AnsibleCreate {
+// AddUsers adds the "Users" edges to the User entity.
+func (ac *AnsibleCreate) AddUsers(u ...*User) *AnsibleCreate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
@@ -349,12 +349,12 @@ func (ac *AnsibleCreate) createSpec() (*Ansible, *sqlgraph.CreateSpec) {
 		})
 		_node.Tags = value
 	}
-	if nodes := ac.mutation.UserIDs(); len(nodes) > 0 {
+	if nodes := ac.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   ansible.UserTable,
-			Columns: []string{ansible.UserColumn},
+			Table:   ansible.UsersTable,
+			Columns: []string{ansible.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

@@ -84,14 +84,14 @@ func (au *AnsibleUpdate) SetTags(m map[string]string) *AnsibleUpdate {
 	return au
 }
 
-// AddUserIDs adds the "User" edge to the User entity by IDs.
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
 func (au *AnsibleUpdate) AddUserIDs(ids ...uuid.UUID) *AnsibleUpdate {
 	au.mutation.AddUserIDs(ids...)
 	return au
 }
 
-// AddUser adds the "User" edges to the User entity.
-func (au *AnsibleUpdate) AddUser(u ...*User) *AnsibleUpdate {
+// AddUsers adds the "Users" edges to the User entity.
+func (au *AnsibleUpdate) AddUsers(u ...*User) *AnsibleUpdate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
@@ -123,20 +123,20 @@ func (au *AnsibleUpdate) Mutation() *AnsibleMutation {
 	return au.mutation
 }
 
-// ClearUser clears all "User" edges to the User entity.
-func (au *AnsibleUpdate) ClearUser() *AnsibleUpdate {
-	au.mutation.ClearUser()
+// ClearUsers clears all "Users" edges to the User entity.
+func (au *AnsibleUpdate) ClearUsers() *AnsibleUpdate {
+	au.mutation.ClearUsers()
 	return au
 }
 
-// RemoveUserIDs removes the "User" edge to User entities by IDs.
+// RemoveUserIDs removes the "Users" edge to User entities by IDs.
 func (au *AnsibleUpdate) RemoveUserIDs(ids ...uuid.UUID) *AnsibleUpdate {
 	au.mutation.RemoveUserIDs(ids...)
 	return au
 }
 
-// RemoveUser removes "User" edges to User entities.
-func (au *AnsibleUpdate) RemoveUser(u ...*User) *AnsibleUpdate {
+// RemoveUsers removes "Users" edges to User entities.
+func (au *AnsibleUpdate) RemoveUsers(u ...*User) *AnsibleUpdate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
@@ -301,12 +301,12 @@ func (au *AnsibleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: ansible.FieldTags,
 		})
 	}
-	if au.mutation.UserCleared() {
+	if au.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   ansible.UserTable,
-			Columns: []string{ansible.UserColumn},
+			Table:   ansible.UsersTable,
+			Columns: []string{ansible.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -317,12 +317,12 @@ func (au *AnsibleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := au.mutation.RemovedUserIDs(); len(nodes) > 0 && !au.mutation.UserCleared() {
+	if nodes := au.mutation.RemovedUsersIDs(); len(nodes) > 0 && !au.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   ansible.UserTable,
-			Columns: []string{ansible.UserColumn},
+			Table:   ansible.UsersTable,
+			Columns: []string{ansible.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -336,12 +336,12 @@ func (au *AnsibleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := au.mutation.UserIDs(); len(nodes) > 0 {
+	if nodes := au.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   ansible.UserTable,
-			Columns: []string{ansible.UserColumn},
+			Table:   ansible.UsersTable,
+			Columns: []string{ansible.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -463,14 +463,14 @@ func (auo *AnsibleUpdateOne) SetTags(m map[string]string) *AnsibleUpdateOne {
 	return auo
 }
 
-// AddUserIDs adds the "User" edge to the User entity by IDs.
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
 func (auo *AnsibleUpdateOne) AddUserIDs(ids ...uuid.UUID) *AnsibleUpdateOne {
 	auo.mutation.AddUserIDs(ids...)
 	return auo
 }
 
-// AddUser adds the "User" edges to the User entity.
-func (auo *AnsibleUpdateOne) AddUser(u ...*User) *AnsibleUpdateOne {
+// AddUsers adds the "Users" edges to the User entity.
+func (auo *AnsibleUpdateOne) AddUsers(u ...*User) *AnsibleUpdateOne {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
@@ -502,20 +502,20 @@ func (auo *AnsibleUpdateOne) Mutation() *AnsibleMutation {
 	return auo.mutation
 }
 
-// ClearUser clears all "User" edges to the User entity.
-func (auo *AnsibleUpdateOne) ClearUser() *AnsibleUpdateOne {
-	auo.mutation.ClearUser()
+// ClearUsers clears all "Users" edges to the User entity.
+func (auo *AnsibleUpdateOne) ClearUsers() *AnsibleUpdateOne {
+	auo.mutation.ClearUsers()
 	return auo
 }
 
-// RemoveUserIDs removes the "User" edge to User entities by IDs.
+// RemoveUserIDs removes the "Users" edge to User entities by IDs.
 func (auo *AnsibleUpdateOne) RemoveUserIDs(ids ...uuid.UUID) *AnsibleUpdateOne {
 	auo.mutation.RemoveUserIDs(ids...)
 	return auo
 }
 
-// RemoveUser removes "User" edges to User entities.
-func (auo *AnsibleUpdateOne) RemoveUser(u ...*User) *AnsibleUpdateOne {
+// RemoveUsers removes "Users" edges to User entities.
+func (auo *AnsibleUpdateOne) RemoveUsers(u ...*User) *AnsibleUpdateOne {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
@@ -710,12 +710,12 @@ func (auo *AnsibleUpdateOne) sqlSave(ctx context.Context) (_node *Ansible, err e
 			Column: ansible.FieldTags,
 		})
 	}
-	if auo.mutation.UserCleared() {
+	if auo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   ansible.UserTable,
-			Columns: []string{ansible.UserColumn},
+			Table:   ansible.UsersTable,
+			Columns: []string{ansible.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -726,12 +726,12 @@ func (auo *AnsibleUpdateOne) sqlSave(ctx context.Context) (_node *Ansible, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := auo.mutation.RemovedUserIDs(); len(nodes) > 0 && !auo.mutation.UserCleared() {
+	if nodes := auo.mutation.RemovedUsersIDs(); len(nodes) > 0 && !auo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   ansible.UserTable,
-			Columns: []string{ansible.UserColumn},
+			Table:   ansible.UsersTable,
+			Columns: []string{ansible.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -745,12 +745,12 @@ func (auo *AnsibleUpdateOne) sqlSave(ctx context.Context) (_node *Ansible, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := auo.mutation.UserIDs(); len(nodes) > 0 {
+	if nodes := auo.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   ansible.UserTable,
-			Columns: []string{ansible.UserColumn},
+			Table:   ansible.UsersTable,
+			Columns: []string{ansible.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

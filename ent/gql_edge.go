@@ -12,10 +12,10 @@ func (ap *AdhocPlan) PrevAdhocPlan(ctx context.Context) ([]*AdhocPlan, error) {
 	return result, err
 }
 
-func (ap *AdhocPlan) NextAdhocPlan(ctx context.Context) ([]*AdhocPlan, error) {
-	result, err := ap.Edges.NextAdhocPlanOrErr()
+func (ap *AdhocPlan) NextAdhocPlans(ctx context.Context) ([]*AdhocPlan, error) {
+	result, err := ap.Edges.NextAdhocPlansOrErr()
 	if IsNotLoaded(err) {
-		result, err = ap.QueryNextAdhocPlan().All(ctx)
+		result, err = ap.QueryNextAdhocPlans().All(ctx)
 	}
 	return result, err
 }
@@ -92,18 +92,18 @@ func (at *AgentTask) ProvisionedHost(ctx context.Context) (*ProvisionedHost, err
 	return result, err
 }
 
-func (at *AgentTask) AdhocPlan(ctx context.Context) ([]*AdhocPlan, error) {
-	result, err := at.Edges.AdhocPlanOrErr()
+func (at *AgentTask) AdhocPlans(ctx context.Context) ([]*AdhocPlan, error) {
+	result, err := at.Edges.AdhocPlansOrErr()
 	if IsNotLoaded(err) {
-		result, err = at.QueryAdhocPlan().All(ctx)
+		result, err = at.QueryAdhocPlans().All(ctx)
 	}
 	return result, err
 }
 
-func (a *Ansible) User(ctx context.Context) ([]*User, error) {
-	result, err := a.Edges.UserOrErr()
+func (a *Ansible) Users(ctx context.Context) ([]*User, error) {
+	result, err := a.Edges.UsersOrErr()
 	if IsNotLoaded(err) {
-		result, err = a.QueryUser().All(ctx)
+		result, err = a.QueryUsers().All(ctx)
 	}
 	return result, err
 }
@@ -116,18 +116,18 @@ func (a *Ansible) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (au *AuthUser) AuthUserToToken(ctx context.Context) ([]*Token, error) {
-	result, err := au.Edges.AuthUserToTokenOrErr()
+func (au *AuthUser) Tokens(ctx context.Context) ([]*Token, error) {
+	result, err := au.Edges.TokensOrErr()
 	if IsNotLoaded(err) {
-		result, err = au.QueryAuthUserToToken().All(ctx)
+		result, err = au.QueryTokens().All(ctx)
 	}
 	return result, err
 }
 
-func (au *AuthUser) AuthUserToServerTasks(ctx context.Context) ([]*ServerTask, error) {
-	result, err := au.Edges.AuthUserToServerTasksOrErr()
+func (au *AuthUser) ServerTasks(ctx context.Context) ([]*ServerTask, error) {
+	result, err := au.Edges.ServerTasksOrErr()
 	if IsNotLoaded(err) {
-		result, err = au.QueryAuthUserToServerTasks().All(ctx)
+		result, err = au.QueryServerTasks().All(ctx)
 	}
 	return result, err
 }

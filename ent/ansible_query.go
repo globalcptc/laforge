@@ -27,7 +27,7 @@ type AnsibleQuery struct {
 	order           []OrderFunc
 	fields          []string
 	predicates      []predicate.Ansible
-	withUser        *UserQuery
+	withUsers       *UserQuery
 	withEnvironment *EnvironmentQuery
 	withFKs         bool
 	// intermediate query (i.e. traversal path).
@@ -66,8 +66,8 @@ func (aq *AnsibleQuery) Order(o ...OrderFunc) *AnsibleQuery {
 	return aq
 }
 
-// QueryUser chains the current query on the "User" edge.
-func (aq *AnsibleQuery) QueryUser() *UserQuery {
+// QueryUsers chains the current query on the "Users" edge.
+func (aq *AnsibleQuery) QueryUsers() *UserQuery {
 	query := &UserQuery{config: aq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := aq.prepareQuery(ctx); err != nil {
@@ -80,7 +80,7 @@ func (aq *AnsibleQuery) QueryUser() *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ansible.Table, ansible.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ansible.UserTable, ansible.UserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, ansible.UsersTable, ansible.UsersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
 		return fromU, nil
@@ -291,7 +291,7 @@ func (aq *AnsibleQuery) Clone() *AnsibleQuery {
 		offset:          aq.offset,
 		order:           append([]OrderFunc{}, aq.order...),
 		predicates:      append([]predicate.Ansible{}, aq.predicates...),
-		withUser:        aq.withUser.Clone(),
+		withUsers:       aq.withUsers.Clone(),
 		withEnvironment: aq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    aq.sql.Clone(),
@@ -300,14 +300,14 @@ func (aq *AnsibleQuery) Clone() *AnsibleQuery {
 	}
 }
 
-// WithUser tells the query-builder to eager-load the nodes that are connected to
-// the "User" edge. The optional arguments are used to configure the query builder of the edge.
-func (aq *AnsibleQuery) WithUser(opts ...func(*UserQuery)) *AnsibleQuery {
+// WithUsers tells the query-builder to eager-load the nodes that are connected to
+// the "Users" edge. The optional arguments are used to configure the query builder of the edge.
+func (aq *AnsibleQuery) WithUsers(opts ...func(*UserQuery)) *AnsibleQuery {
 	query := &UserQuery{config: aq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	aq.withUser = query
+	aq.withUsers = query
 	return aq
 }
 
@@ -392,7 +392,7 @@ func (aq *AnsibleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ansi
 		withFKs     = aq.withFKs
 		_spec       = aq.querySpec()
 		loadedTypes = [2]bool{
-			aq.withUser != nil,
+			aq.withUsers != nil,
 			aq.withEnvironment != nil,
 		}
 	)
@@ -420,10 +420,10 @@ func (aq *AnsibleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ansi
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := aq.withUser; query != nil {
-		if err := aq.loadUser(ctx, query, nodes,
-			func(n *Ansible) { n.Edges.User = []*User{} },
-			func(n *Ansible, e *User) { n.Edges.User = append(n.Edges.User, e) }); err != nil {
+	if query := aq.withUsers; query != nil {
+		if err := aq.loadUsers(ctx, query, nodes,
+			func(n *Ansible) { n.Edges.Users = []*User{} },
+			func(n *Ansible, e *User) { n.Edges.Users = append(n.Edges.Users, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -436,7 +436,7 @@ func (aq *AnsibleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ansi
 	return nodes, nil
 }
 
-func (aq *AnsibleQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*Ansible, init func(*Ansible), assign func(*Ansible, *User)) error {
+func (aq *AnsibleQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*Ansible, init func(*Ansible), assign func(*Ansible, *User)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Ansible)
 	for i := range nodes {
@@ -448,20 +448,20 @@ func (aq *AnsibleQuery) loadUser(ctx context.Context, query *UserQuery, nodes []
 	}
 	query.withFKs = true
 	query.Where(predicate.User(func(s *sql.Selector) {
-		s.Where(sql.InValues(ansible.UserColumn, fks...))
+		s.Where(sql.InValues(ansible.UsersColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.ansible_user
+		fk := n.ansible_users
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "ansible_user" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "ansible_users" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "ansible_user" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "ansible_users" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

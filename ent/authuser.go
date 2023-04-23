@@ -43,41 +43,41 @@ type AuthUser struct {
 	Edges AuthUserEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// AuthUserToToken holds the value of the AuthUserToToken edge.
-	HCLAuthUserToToken []*Token `json:"AuthUserToToken,omitempty"`
-	// AuthUserToServerTasks holds the value of the AuthUserToServerTasks edge.
-	HCLAuthUserToServerTasks []*ServerTask `json:"AuthUserToServerTasks,omitempty"`
+	// Tokens holds the value of the Tokens edge.
+	HCLTokens []*Token `json:"Tokens,omitempty"`
+	// ServerTasks holds the value of the ServerTasks edge.
+	HCLServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
 	//
 
 }
 
 // AuthUserEdges holds the relations/edges for other nodes in the graph.
 type AuthUserEdges struct {
-	// AuthUserToToken holds the value of the AuthUserToToken edge.
-	AuthUserToToken []*Token `json:"AuthUserToToken,omitempty"`
-	// AuthUserToServerTasks holds the value of the AuthUserToServerTasks edge.
-	AuthUserToServerTasks []*ServerTask `json:"AuthUserToServerTasks,omitempty"`
+	// Tokens holds the value of the Tokens edge.
+	Tokens []*Token `json:"Tokens,omitempty"`
+	// ServerTasks holds the value of the ServerTasks edge.
+	ServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
 }
 
-// AuthUserToTokenOrErr returns the AuthUserToToken value or an error if the edge
+// TokensOrErr returns the Tokens value or an error if the edge
 // was not loaded in eager-loading.
-func (e AuthUserEdges) AuthUserToTokenOrErr() ([]*Token, error) {
+func (e AuthUserEdges) TokensOrErr() ([]*Token, error) {
 	if e.loadedTypes[0] {
-		return e.AuthUserToToken, nil
+		return e.Tokens, nil
 	}
-	return nil, &NotLoadedError{edge: "AuthUserToToken"}
+	return nil, &NotLoadedError{edge: "Tokens"}
 }
 
-// AuthUserToServerTasksOrErr returns the AuthUserToServerTasks value or an error if the edge
+// ServerTasksOrErr returns the ServerTasks value or an error if the edge
 // was not loaded in eager-loading.
-func (e AuthUserEdges) AuthUserToServerTasksOrErr() ([]*ServerTask, error) {
+func (e AuthUserEdges) ServerTasksOrErr() ([]*ServerTask, error) {
 	if e.loadedTypes[1] {
-		return e.AuthUserToServerTasks, nil
+		return e.ServerTasks, nil
 	}
-	return nil, &NotLoadedError{edge: "AuthUserToServerTasks"}
+	return nil, &NotLoadedError{edge: "ServerTasks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -181,14 +181,14 @@ func (au *AuthUser) assignValues(columns []string, values []interface{}) error {
 	return nil
 }
 
-// QueryAuthUserToToken queries the "AuthUserToToken" edge of the AuthUser entity.
-func (au *AuthUser) QueryAuthUserToToken() *TokenQuery {
-	return (&AuthUserClient{config: au.config}).QueryAuthUserToToken(au)
+// QueryTokens queries the "Tokens" edge of the AuthUser entity.
+func (au *AuthUser) QueryTokens() *TokenQuery {
+	return (&AuthUserClient{config: au.config}).QueryTokens(au)
 }
 
-// QueryAuthUserToServerTasks queries the "AuthUserToServerTasks" edge of the AuthUser entity.
-func (au *AuthUser) QueryAuthUserToServerTasks() *ServerTaskQuery {
-	return (&AuthUserClient{config: au.config}).QueryAuthUserToServerTasks(au)
+// QueryServerTasks queries the "ServerTasks" edge of the AuthUser entity.
+func (au *AuthUser) QueryServerTasks() *ServerTaskQuery {
+	return (&AuthUserClient{config: au.config}).QueryServerTasks(au)
 }
 
 // Update returns a builder for updating this AuthUser.

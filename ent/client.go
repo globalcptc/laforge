@@ -491,15 +491,15 @@ func (c *AdhocPlanClient) QueryPrevAdhocPlan(ap *AdhocPlan) *AdhocPlanQuery {
 	return query
 }
 
-// QueryNextAdhocPlan queries the NextAdhocPlan edge of a AdhocPlan.
-func (c *AdhocPlanClient) QueryNextAdhocPlan(ap *AdhocPlan) *AdhocPlanQuery {
+// QueryNextAdhocPlans queries the NextAdhocPlans edge of a AdhocPlan.
+func (c *AdhocPlanClient) QueryNextAdhocPlans(ap *AdhocPlan) *AdhocPlanQuery {
 	query := &AdhocPlanQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ap.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(adhocplan.Table, adhocplan.FieldID, id),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, adhocplan.NextAdhocPlanTable, adhocplan.NextAdhocPlanPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, adhocplan.NextAdhocPlansTable, adhocplan.NextAdhocPlansPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(ap.driver.Dialect(), step)
 		return fromV, nil
@@ -831,15 +831,15 @@ func (c *AgentTaskClient) QueryProvisionedHost(at *AgentTask) *ProvisionedHostQu
 	return query
 }
 
-// QueryAdhocPlan queries the AdhocPlan edge of a AgentTask.
-func (c *AgentTaskClient) QueryAdhocPlan(at *AgentTask) *AdhocPlanQuery {
+// QueryAdhocPlans queries the AdhocPlans edge of a AgentTask.
+func (c *AgentTaskClient) QueryAdhocPlans(at *AgentTask) *AdhocPlanQuery {
 	query := &AdhocPlanQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := at.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, id),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, agenttask.AdhocPlanTable, agenttask.AdhocPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, agenttask.AdhocPlansTable, agenttask.AdhocPlansColumn),
 		)
 		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
 		return fromV, nil
@@ -937,15 +937,15 @@ func (c *AnsibleClient) GetX(ctx context.Context, id uuid.UUID) *Ansible {
 	return obj
 }
 
-// QueryUser queries the User edge of a Ansible.
-func (c *AnsibleClient) QueryUser(a *Ansible) *UserQuery {
+// QueryUsers queries the Users edge of a Ansible.
+func (c *AnsibleClient) QueryUsers(a *Ansible) *UserQuery {
 	query := &UserQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := a.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ansible.Table, ansible.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ansible.UserTable, ansible.UserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, ansible.UsersTable, ansible.UsersColumn),
 		)
 		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
 		return fromV, nil
@@ -1059,15 +1059,15 @@ func (c *AuthUserClient) GetX(ctx context.Context, id uuid.UUID) *AuthUser {
 	return obj
 }
 
-// QueryAuthUserToToken queries the AuthUserToToken edge of a AuthUser.
-func (c *AuthUserClient) QueryAuthUserToToken(au *AuthUser) *TokenQuery {
+// QueryTokens queries the Tokens edge of a AuthUser.
+func (c *AuthUserClient) QueryTokens(au *AuthUser) *TokenQuery {
 	query := &TokenQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := au.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(authuser.Table, authuser.FieldID, id),
 			sqlgraph.To(token.Table, token.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, authuser.AuthUserToTokenTable, authuser.AuthUserToTokenColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, authuser.TokensTable, authuser.TokensColumn),
 		)
 		fromV = sqlgraph.Neighbors(au.driver.Dialect(), step)
 		return fromV, nil
@@ -1075,15 +1075,15 @@ func (c *AuthUserClient) QueryAuthUserToToken(au *AuthUser) *TokenQuery {
 	return query
 }
 
-// QueryAuthUserToServerTasks queries the AuthUserToServerTasks edge of a AuthUser.
-func (c *AuthUserClient) QueryAuthUserToServerTasks(au *AuthUser) *ServerTaskQuery {
+// QueryServerTasks queries the ServerTasks edge of a AuthUser.
+func (c *AuthUserClient) QueryServerTasks(au *AuthUser) *ServerTaskQuery {
 	query := &ServerTaskQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := au.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(authuser.Table, authuser.FieldID, id),
 			sqlgraph.To(servertask.Table, servertask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, authuser.AuthUserToServerTasksTable, authuser.AuthUserToServerTasksColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, authuser.ServerTasksTable, authuser.ServerTasksColumn),
 		)
 		fromV = sqlgraph.Neighbors(au.driver.Dialect(), step)
 		return fromV, nil
