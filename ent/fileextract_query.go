@@ -19,14 +19,14 @@ import (
 // FileExtractQuery is the builder for querying FileExtract entities.
 type FileExtractQuery struct {
 	config
-	limit                        *int
-	offset                       *int
-	unique                       *bool
-	order                        []OrderFunc
-	fields                       []string
-	predicates                   []predicate.FileExtract
-	withFileExtractToEnvironment *EnvironmentQuery
-	withFKs                      bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.FileExtract
+	withEnvironment *EnvironmentQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,8 +63,8 @@ func (feq *FileExtractQuery) Order(o ...OrderFunc) *FileExtractQuery {
 	return feq
 }
 
-// QueryFileExtractToEnvironment chains the current query on the "FileExtractToEnvironment" edge.
-func (feq *FileExtractQuery) QueryFileExtractToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (feq *FileExtractQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: feq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := feq.prepareQuery(ctx); err != nil {
@@ -77,7 +77,7 @@ func (feq *FileExtractQuery) QueryFileExtractToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(fileextract.Table, fileextract.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, fileextract.FileExtractToEnvironmentTable, fileextract.FileExtractToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, fileextract.EnvironmentTable, fileextract.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(feq.driver.Dialect(), step)
 		return fromU, nil
@@ -261,12 +261,12 @@ func (feq *FileExtractQuery) Clone() *FileExtractQuery {
 		return nil
 	}
 	return &FileExtractQuery{
-		config:                       feq.config,
-		limit:                        feq.limit,
-		offset:                       feq.offset,
-		order:                        append([]OrderFunc{}, feq.order...),
-		predicates:                   append([]predicate.FileExtract{}, feq.predicates...),
-		withFileExtractToEnvironment: feq.withFileExtractToEnvironment.Clone(),
+		config:          feq.config,
+		limit:           feq.limit,
+		offset:          feq.offset,
+		order:           append([]OrderFunc{}, feq.order...),
+		predicates:      append([]predicate.FileExtract{}, feq.predicates...),
+		withEnvironment: feq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    feq.sql.Clone(),
 		path:   feq.path,
@@ -274,14 +274,14 @@ func (feq *FileExtractQuery) Clone() *FileExtractQuery {
 	}
 }
 
-// WithFileExtractToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "FileExtractToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (feq *FileExtractQuery) WithFileExtractToEnvironment(opts ...func(*EnvironmentQuery)) *FileExtractQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (feq *FileExtractQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *FileExtractQuery {
 	query := &EnvironmentQuery{config: feq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	feq.withFileExtractToEnvironment = query
+	feq.withEnvironment = query
 	return feq
 }
 
@@ -355,10 +355,10 @@ func (feq *FileExtractQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 		withFKs     = feq.withFKs
 		_spec       = feq.querySpec()
 		loadedTypes = [1]bool{
-			feq.withFileExtractToEnvironment != nil,
+			feq.withEnvironment != nil,
 		}
 	)
-	if feq.withFileExtractToEnvironment != nil {
+	if feq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -382,16 +382,16 @@ func (feq *FileExtractQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := feq.withFileExtractToEnvironment; query != nil {
-		if err := feq.loadFileExtractToEnvironment(ctx, query, nodes, nil,
-			func(n *FileExtract, e *Environment) { n.Edges.FileExtractToEnvironment = e }); err != nil {
+	if query := feq.withEnvironment; query != nil {
+		if err := feq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *FileExtract, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (feq *FileExtractQuery) loadFileExtractToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*FileExtract, init func(*FileExtract), assign func(*FileExtract, *Environment)) error {
+func (feq *FileExtractQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*FileExtract, init func(*FileExtract), assign func(*FileExtract, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*FileExtract)
 	for i := range nodes {

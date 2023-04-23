@@ -21,17 +21,17 @@ const (
 	FieldType = "type"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// EdgeFileExtractToEnvironment holds the string denoting the fileextracttoenvironment edge name in mutations.
-	EdgeFileExtractToEnvironment = "FileExtractToEnvironment"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the fileextract in the database.
 	Table = "file_extracts"
-	// FileExtractToEnvironmentTable is the table that holds the FileExtractToEnvironment relation/edge.
-	FileExtractToEnvironmentTable = "file_extracts"
-	// FileExtractToEnvironmentInverseTable is the table name for the Environment entity.
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "file_extracts"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	FileExtractToEnvironmentInverseTable = "environments"
-	// FileExtractToEnvironmentColumn is the table column denoting the FileExtractToEnvironment relation/edge.
-	FileExtractToEnvironmentColumn = "environment_file_extracts"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_file_extracts"
 )
 
 // Columns holds all SQL columns for fileextract fields.

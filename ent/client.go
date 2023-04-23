@@ -2817,15 +2817,15 @@ func (c *FileExtractClient) GetX(ctx context.Context, id uuid.UUID) *FileExtract
 	return obj
 }
 
-// QueryFileExtractToEnvironment queries the FileExtractToEnvironment edge of a FileExtract.
-func (c *FileExtractClient) QueryFileExtractToEnvironment(fe *FileExtract) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a FileExtract.
+func (c *FileExtractClient) QueryEnvironment(fe *FileExtract) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := fe.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(fileextract.Table, fileextract.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, fileextract.FileExtractToEnvironmentTable, fileextract.FileExtractToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, fileextract.EnvironmentTable, fileextract.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(fe.driver.Dialect(), step)
 		return fromV, nil

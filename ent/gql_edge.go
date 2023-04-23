@@ -500,10 +500,10 @@ func (fd *FileDownload) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (fe *FileExtract) FileExtractToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := fe.Edges.FileExtractToEnvironmentOrErr()
+func (fe *FileExtract) Environment(ctx context.Context) (*Environment, error) {
+	result, err := fe.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = fe.QueryFileExtractToEnvironment().Only(ctx)
+		result, err = fe.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

@@ -15243,20 +15243,20 @@ func (m *FileDownloadMutation) ResetEdge(name string) error {
 // FileExtractMutation represents an operation that mutates the FileExtract nodes in the graph.
 type FileExtractMutation struct {
 	config
-	op                               Op
-	typ                              string
-	id                               *uuid.UUID
-	hcl_id                           *string
-	source                           *string
-	destination                      *string
-	_type                            *string
-	tags                             *map[string]string
-	clearedFields                    map[string]struct{}
-	_FileExtractToEnvironment        *uuid.UUID
-	cleared_FileExtractToEnvironment bool
-	done                             bool
-	oldValue                         func(context.Context) (*FileExtract, error)
-	predicates                       []predicate.FileExtract
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	hcl_id              *string
+	source              *string
+	destination         *string
+	_type               *string
+	tags                *map[string]string
+	clearedFields       map[string]struct{}
+	_Environment        *uuid.UUID
+	cleared_Environment bool
+	done                bool
+	oldValue            func(context.Context) (*FileExtract, error)
+	predicates          []predicate.FileExtract
 }
 
 var _ ent.Mutation = (*FileExtractMutation)(nil)
@@ -15543,43 +15543,43 @@ func (m *FileExtractMutation) ResetTags() {
 	m.tags = nil
 }
 
-// SetFileExtractToEnvironmentID sets the "FileExtractToEnvironment" edge to the Environment entity by id.
-func (m *FileExtractMutation) SetFileExtractToEnvironmentID(id uuid.UUID) {
-	m._FileExtractToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *FileExtractMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearFileExtractToEnvironment clears the "FileExtractToEnvironment" edge to the Environment entity.
-func (m *FileExtractMutation) ClearFileExtractToEnvironment() {
-	m.cleared_FileExtractToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *FileExtractMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// FileExtractToEnvironmentCleared reports if the "FileExtractToEnvironment" edge to the Environment entity was cleared.
-func (m *FileExtractMutation) FileExtractToEnvironmentCleared() bool {
-	return m.cleared_FileExtractToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *FileExtractMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// FileExtractToEnvironmentID returns the "FileExtractToEnvironment" edge ID in the mutation.
-func (m *FileExtractMutation) FileExtractToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._FileExtractToEnvironment != nil {
-		return *m._FileExtractToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *FileExtractMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// FileExtractToEnvironmentIDs returns the "FileExtractToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// FileExtractToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *FileExtractMutation) FileExtractToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._FileExtractToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *FileExtractMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetFileExtractToEnvironment resets all changes to the "FileExtractToEnvironment" edge.
-func (m *FileExtractMutation) ResetFileExtractToEnvironment() {
-	m._FileExtractToEnvironment = nil
-	m.cleared_FileExtractToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *FileExtractMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
 // Where appends a list predicates to the FileExtractMutation builder.
@@ -15769,8 +15769,8 @@ func (m *FileExtractMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *FileExtractMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m._FileExtractToEnvironment != nil {
-		edges = append(edges, fileextract.EdgeFileExtractToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, fileextract.EdgeEnvironment)
 	}
 	return edges
 }
@@ -15779,8 +15779,8 @@ func (m *FileExtractMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *FileExtractMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case fileextract.EdgeFileExtractToEnvironment:
-		if id := m._FileExtractToEnvironment; id != nil {
+	case fileextract.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -15804,8 +15804,8 @@ func (m *FileExtractMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *FileExtractMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.cleared_FileExtractToEnvironment {
-		edges = append(edges, fileextract.EdgeFileExtractToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, fileextract.EdgeEnvironment)
 	}
 	return edges
 }
@@ -15814,8 +15814,8 @@ func (m *FileExtractMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *FileExtractMutation) EdgeCleared(name string) bool {
 	switch name {
-	case fileextract.EdgeFileExtractToEnvironment:
-		return m.cleared_FileExtractToEnvironment
+	case fileextract.EdgeEnvironment:
+		return m.cleared_Environment
 	}
 	return false
 }
@@ -15824,8 +15824,8 @@ func (m *FileExtractMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *FileExtractMutation) ClearEdge(name string) error {
 	switch name {
-	case fileextract.EdgeFileExtractToEnvironment:
-		m.ClearFileExtractToEnvironment()
+	case fileextract.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown FileExtract unique edge %s", name)
@@ -15835,8 +15835,8 @@ func (m *FileExtractMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *FileExtractMutation) ResetEdge(name string) error {
 	switch name {
-	case fileextract.EdgeFileExtractToEnvironment:
-		m.ResetFileExtractToEnvironment()
+	case fileextract.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown FileExtract edge %s", name)

@@ -1753,9 +1753,9 @@ func (fe *FileExtract) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
-		Name: "FileExtractToEnvironment",
+		Name: "Environment",
 	}
-	err = fe.QueryFileExtractToEnvironment().
+	err = fe.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {

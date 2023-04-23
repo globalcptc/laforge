@@ -223,7 +223,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	// Check if step is file extract
 	entFileExtract, err := client.FileExtract.Query().Where(
 		fileextract.And(
-			fileextract.HasFileExtractToEnvironmentWith(
+			fileextract.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			fileextract.HclIDEQ(entScheduledStep.Step),

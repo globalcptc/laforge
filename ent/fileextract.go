@@ -33,33 +33,33 @@ type FileExtract struct {
 	Edges FileExtractEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// FileExtractToEnvironment holds the value of the FileExtractToEnvironment edge.
-	HCLFileExtractToEnvironment *Environment `json:"FileExtractToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
 	environment_file_extracts *uuid.UUID
 }
 
 // FileExtractEdges holds the relations/edges for other nodes in the graph.
 type FileExtractEdges struct {
-	// FileExtractToEnvironment holds the value of the FileExtractToEnvironment edge.
-	FileExtractToEnvironment *Environment `json:"FileExtractToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// FileExtractToEnvironmentOrErr returns the FileExtractToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e FileExtractEdges) FileExtractToEnvironmentOrErr() (*Environment, error) {
+func (e FileExtractEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[0] {
-		if e.FileExtractToEnvironment == nil {
-			// The edge FileExtractToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.FileExtractToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "FileExtractToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -140,9 +140,9 @@ func (fe *FileExtract) assignValues(columns []string, values []interface{}) erro
 	return nil
 }
 
-// QueryFileExtractToEnvironment queries the "FileExtractToEnvironment" edge of the FileExtract entity.
-func (fe *FileExtract) QueryFileExtractToEnvironment() *EnvironmentQuery {
-	return (&FileExtractClient{config: fe.config}).QueryFileExtractToEnvironment(fe)
+// QueryEnvironment queries the "Environment" edge of the FileExtract entity.
+func (fe *FileExtract) QueryEnvironment() *EnvironmentQuery {
+	return (&FileExtractClient{config: fe.config}).QueryEnvironment(fe)
 }
 
 // Update returns a builder for updating this FileExtract.

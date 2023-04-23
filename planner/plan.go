@@ -881,7 +881,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	// Check if step is file extract
 	entFileExtract, err := client.FileExtract.Query().Where(
 		fileextract.And(
-			fileextract.HasFileExtractToEnvironmentWith(
+			fileextract.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
 			fileextract.HclIDEQ(hclID),
@@ -1287,7 +1287,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	// Check if step is file extract
 	entFileExtract, err := client.FileExtract.Query().Where(
 		fileextract.And(
-			fileextract.HasFileExtractToEnvironmentWith(
+			fileextract.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			fileextract.HclIDEQ(entScheduledStep.Step),

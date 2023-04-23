@@ -1300,7 +1300,7 @@ func createFileExtract(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 			Where(
 				fileextract.And(
 					fileextract.HclIDEQ(cFileExtract.HclID),
-					fileextract.HasFileExtractToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					fileextract.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)
