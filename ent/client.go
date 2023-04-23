@@ -1601,15 +1601,15 @@ func (c *CommandClient) GetX(ctx context.Context, id uuid.UUID) *Command {
 	return obj
 }
 
-// QueryCommandToUser queries the CommandToUser edge of a Command.
-func (c *CommandClient) QueryCommandToUser(co *Command) *UserQuery {
+// QueryUsers queries the Users edge of a Command.
+func (c *CommandClient) QueryUsers(co *Command) *UserQuery {
 	query := &UserQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := co.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(command.Table, command.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, command.CommandToUserTable, command.CommandToUserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, command.UsersTable, command.UsersColumn),
 		)
 		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
 		return fromV, nil
@@ -1617,15 +1617,15 @@ func (c *CommandClient) QueryCommandToUser(co *Command) *UserQuery {
 	return query
 }
 
-// QueryCommandToEnvironment queries the CommandToEnvironment edge of a Command.
-func (c *CommandClient) QueryCommandToEnvironment(co *Command) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a Command.
+func (c *CommandClient) QueryEnvironment(co *Command) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := co.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(command.Table, command.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, command.CommandToEnvironmentTable, command.CommandToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, command.EnvironmentTable, command.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
 		return fromV, nil

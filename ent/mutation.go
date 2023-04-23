@@ -7266,31 +7266,31 @@ func (m *BuildCommitMutation) ResetEdge(name string) error {
 // CommandMutation represents an operation that mutates the Command nodes in the graph.
 type CommandMutation struct {
 	config
-	op                           Op
-	typ                          string
-	id                           *uuid.UUID
-	hcl_id                       *string
-	name                         *string
-	description                  *string
-	program                      *string
-	args                         *[]string
-	ignore_errors                *bool
-	disabled                     *bool
-	cooldown                     *int
-	addcooldown                  *int
-	timeout                      *int
-	addtimeout                   *int
-	vars                         *map[string]string
-	tags                         *map[string]string
-	clearedFields                map[string]struct{}
-	_CommandToUser               map[uuid.UUID]struct{}
-	removed_CommandToUser        map[uuid.UUID]struct{}
-	cleared_CommandToUser        bool
-	_CommandToEnvironment        *uuid.UUID
-	cleared_CommandToEnvironment bool
-	done                         bool
-	oldValue                     func(context.Context) (*Command, error)
-	predicates                   []predicate.Command
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	hcl_id              *string
+	name                *string
+	description         *string
+	program             *string
+	args                *[]string
+	ignore_errors       *bool
+	disabled            *bool
+	cooldown            *int
+	addcooldown         *int
+	timeout             *int
+	addtimeout          *int
+	vars                *map[string]string
+	tags                *map[string]string
+	clearedFields       map[string]struct{}
+	_Users              map[uuid.UUID]struct{}
+	removed_Users       map[uuid.UUID]struct{}
+	cleared_Users       bool
+	_Environment        *uuid.UUID
+	cleared_Environment bool
+	done                bool
+	oldValue            func(context.Context) (*Command, error)
+	predicates          []predicate.Command
 }
 
 var _ ent.Mutation = (*CommandMutation)(nil)
@@ -7833,97 +7833,97 @@ func (m *CommandMutation) ResetTags() {
 	m.tags = nil
 }
 
-// AddCommandToUserIDs adds the "CommandToUser" edge to the User entity by ids.
-func (m *CommandMutation) AddCommandToUserIDs(ids ...uuid.UUID) {
-	if m._CommandToUser == nil {
-		m._CommandToUser = make(map[uuid.UUID]struct{})
+// AddUserIDs adds the "Users" edge to the User entity by ids.
+func (m *CommandMutation) AddUserIDs(ids ...uuid.UUID) {
+	if m._Users == nil {
+		m._Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._CommandToUser[ids[i]] = struct{}{}
+		m._Users[ids[i]] = struct{}{}
 	}
 }
 
-// ClearCommandToUser clears the "CommandToUser" edge to the User entity.
-func (m *CommandMutation) ClearCommandToUser() {
-	m.cleared_CommandToUser = true
+// ClearUsers clears the "Users" edge to the User entity.
+func (m *CommandMutation) ClearUsers() {
+	m.cleared_Users = true
 }
 
-// CommandToUserCleared reports if the "CommandToUser" edge to the User entity was cleared.
-func (m *CommandMutation) CommandToUserCleared() bool {
-	return m.cleared_CommandToUser
+// UsersCleared reports if the "Users" edge to the User entity was cleared.
+func (m *CommandMutation) UsersCleared() bool {
+	return m.cleared_Users
 }
 
-// RemoveCommandToUserIDs removes the "CommandToUser" edge to the User entity by IDs.
-func (m *CommandMutation) RemoveCommandToUserIDs(ids ...uuid.UUID) {
-	if m.removed_CommandToUser == nil {
-		m.removed_CommandToUser = make(map[uuid.UUID]struct{})
+// RemoveUserIDs removes the "Users" edge to the User entity by IDs.
+func (m *CommandMutation) RemoveUserIDs(ids ...uuid.UUID) {
+	if m.removed_Users == nil {
+		m.removed_Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._CommandToUser, ids[i])
-		m.removed_CommandToUser[ids[i]] = struct{}{}
+		delete(m._Users, ids[i])
+		m.removed_Users[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedCommandToUser returns the removed IDs of the "CommandToUser" edge to the User entity.
-func (m *CommandMutation) RemovedCommandToUserIDs() (ids []uuid.UUID) {
-	for id := range m.removed_CommandToUser {
+// RemovedUsers returns the removed IDs of the "Users" edge to the User entity.
+func (m *CommandMutation) RemovedUsersIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// CommandToUserIDs returns the "CommandToUser" edge IDs in the mutation.
-func (m *CommandMutation) CommandToUserIDs() (ids []uuid.UUID) {
-	for id := range m._CommandToUser {
+// UsersIDs returns the "Users" edge IDs in the mutation.
+func (m *CommandMutation) UsersIDs() (ids []uuid.UUID) {
+	for id := range m._Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetCommandToUser resets all changes to the "CommandToUser" edge.
-func (m *CommandMutation) ResetCommandToUser() {
-	m._CommandToUser = nil
-	m.cleared_CommandToUser = false
-	m.removed_CommandToUser = nil
+// ResetUsers resets all changes to the "Users" edge.
+func (m *CommandMutation) ResetUsers() {
+	m._Users = nil
+	m.cleared_Users = false
+	m.removed_Users = nil
 }
 
-// SetCommandToEnvironmentID sets the "CommandToEnvironment" edge to the Environment entity by id.
-func (m *CommandMutation) SetCommandToEnvironmentID(id uuid.UUID) {
-	m._CommandToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *CommandMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearCommandToEnvironment clears the "CommandToEnvironment" edge to the Environment entity.
-func (m *CommandMutation) ClearCommandToEnvironment() {
-	m.cleared_CommandToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *CommandMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// CommandToEnvironmentCleared reports if the "CommandToEnvironment" edge to the Environment entity was cleared.
-func (m *CommandMutation) CommandToEnvironmentCleared() bool {
-	return m.cleared_CommandToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *CommandMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// CommandToEnvironmentID returns the "CommandToEnvironment" edge ID in the mutation.
-func (m *CommandMutation) CommandToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._CommandToEnvironment != nil {
-		return *m._CommandToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *CommandMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// CommandToEnvironmentIDs returns the "CommandToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// CommandToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *CommandMutation) CommandToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._CommandToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *CommandMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetCommandToEnvironment resets all changes to the "CommandToEnvironment" edge.
-func (m *CommandMutation) ResetCommandToEnvironment() {
-	m._CommandToEnvironment = nil
-	m.cleared_CommandToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *CommandMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
 // Where appends a list predicates to the CommandMutation builder.
@@ -8242,11 +8242,11 @@ func (m *CommandMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *CommandMutation) AddedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m._CommandToUser != nil {
-		edges = append(edges, command.EdgeCommandToUser)
+	if m._Users != nil {
+		edges = append(edges, command.EdgeUsers)
 	}
-	if m._CommandToEnvironment != nil {
-		edges = append(edges, command.EdgeCommandToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, command.EdgeEnvironment)
 	}
 	return edges
 }
@@ -8255,14 +8255,14 @@ func (m *CommandMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *CommandMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case command.EdgeCommandToUser:
-		ids := make([]ent.Value, 0, len(m._CommandToUser))
-		for id := range m._CommandToUser {
+	case command.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m._Users))
+		for id := range m._Users {
 			ids = append(ids, id)
 		}
 		return ids
-	case command.EdgeCommandToEnvironment:
-		if id := m._CommandToEnvironment; id != nil {
+	case command.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -8272,8 +8272,8 @@ func (m *CommandMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CommandMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.removed_CommandToUser != nil {
-		edges = append(edges, command.EdgeCommandToUser)
+	if m.removed_Users != nil {
+		edges = append(edges, command.EdgeUsers)
 	}
 	return edges
 }
@@ -8282,9 +8282,9 @@ func (m *CommandMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *CommandMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case command.EdgeCommandToUser:
-		ids := make([]ent.Value, 0, len(m.removed_CommandToUser))
-		for id := range m.removed_CommandToUser {
+	case command.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m.removed_Users))
+		for id := range m.removed_Users {
 			ids = append(ids, id)
 		}
 		return ids
@@ -8295,11 +8295,11 @@ func (m *CommandMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *CommandMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.cleared_CommandToUser {
-		edges = append(edges, command.EdgeCommandToUser)
+	if m.cleared_Users {
+		edges = append(edges, command.EdgeUsers)
 	}
-	if m.cleared_CommandToEnvironment {
-		edges = append(edges, command.EdgeCommandToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, command.EdgeEnvironment)
 	}
 	return edges
 }
@@ -8308,10 +8308,10 @@ func (m *CommandMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *CommandMutation) EdgeCleared(name string) bool {
 	switch name {
-	case command.EdgeCommandToUser:
-		return m.cleared_CommandToUser
-	case command.EdgeCommandToEnvironment:
-		return m.cleared_CommandToEnvironment
+	case command.EdgeUsers:
+		return m.cleared_Users
+	case command.EdgeEnvironment:
+		return m.cleared_Environment
 	}
 	return false
 }
@@ -8320,8 +8320,8 @@ func (m *CommandMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *CommandMutation) ClearEdge(name string) error {
 	switch name {
-	case command.EdgeCommandToEnvironment:
-		m.ClearCommandToEnvironment()
+	case command.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Command unique edge %s", name)
@@ -8331,11 +8331,11 @@ func (m *CommandMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *CommandMutation) ResetEdge(name string) error {
 	switch name {
-	case command.EdgeCommandToUser:
-		m.ResetCommandToUser()
+	case command.EdgeUsers:
+		m.ResetUsers()
 		return nil
-	case command.EdgeCommandToEnvironment:
-		m.ResetCommandToEnvironment()
+	case command.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Command edge %s", name)

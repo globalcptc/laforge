@@ -947,9 +947,9 @@ func (c *Command) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "User",
-		Name: "CommandToUser",
+		Name: "Users",
 	}
-	err = c.QueryCommandToUser().
+	err = c.QueryUsers().
 		Select(user.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -957,9 +957,9 @@ func (c *Command) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Environment",
-		Name: "CommandToEnvironment",
+		Name: "Environment",
 	}
-	err = c.QueryCommandToEnvironment().
+	err = c.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {

@@ -1299,7 +1299,7 @@ var (
 		{Name: "email", Type: field.TypeString},
 		{Name: "hcl_id", Type: field.TypeString},
 		{Name: "ansible_users", Type: field.TypeUUID, Nullable: true},
-		{Name: "command_command_to_user", Type: field.TypeUUID, Nullable: true},
+		{Name: "command_users", Type: field.TypeUUID, Nullable: true},
 		{Name: "finding_finding_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "host_host_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "script_script_to_user", Type: field.TypeUUID, Nullable: true},
@@ -1317,7 +1317,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "users_commands_CommandToUser",
+				Symbol:     "users_commands_Users",
 				Columns:    []*schema.Column{UsersColumns[6]},
 				RefColumns: []*schema.Column{CommandsColumns[0]},
 				OnDelete:   schema.SetNull,

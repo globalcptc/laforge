@@ -252,18 +252,18 @@ func (bc *BuildCommit) PlanDiffs(ctx context.Context) ([]*PlanDiff, error) {
 	return result, err
 }
 
-func (c *Command) CommandToUser(ctx context.Context) ([]*User, error) {
-	result, err := c.Edges.CommandToUserOrErr()
+func (c *Command) Users(ctx context.Context) ([]*User, error) {
+	result, err := c.Edges.UsersOrErr()
 	if IsNotLoaded(err) {
-		result, err = c.QueryCommandToUser().All(ctx)
+		result, err = c.QueryUsers().All(ctx)
 	}
 	return result, err
 }
 
-func (c *Command) CommandToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := c.Edges.CommandToEnvironmentOrErr()
+func (c *Command) Environment(ctx context.Context) (*Environment, error) {
+	result, err := c.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = c.QueryCommandToEnvironment().Only(ctx)
+		result, err = c.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

@@ -21,15 +21,15 @@ import (
 // CommandQuery is the builder for querying Command entities.
 type CommandQuery struct {
 	config
-	limit                    *int
-	offset                   *int
-	unique                   *bool
-	order                    []OrderFunc
-	fields                   []string
-	predicates               []predicate.Command
-	withCommandToUser        *UserQuery
-	withCommandToEnvironment *EnvironmentQuery
-	withFKs                  bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.Command
+	withUsers       *UserQuery
+	withEnvironment *EnvironmentQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -66,8 +66,8 @@ func (cq *CommandQuery) Order(o ...OrderFunc) *CommandQuery {
 	return cq
 }
 
-// QueryCommandToUser chains the current query on the "CommandToUser" edge.
-func (cq *CommandQuery) QueryCommandToUser() *UserQuery {
+// QueryUsers chains the current query on the "Users" edge.
+func (cq *CommandQuery) QueryUsers() *UserQuery {
 	query := &UserQuery{config: cq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
@@ -80,7 +80,7 @@ func (cq *CommandQuery) QueryCommandToUser() *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(command.Table, command.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, command.CommandToUserTable, command.CommandToUserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, command.UsersTable, command.UsersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
 		return fromU, nil
@@ -88,8 +88,8 @@ func (cq *CommandQuery) QueryCommandToUser() *UserQuery {
 	return query
 }
 
-// QueryCommandToEnvironment chains the current query on the "CommandToEnvironment" edge.
-func (cq *CommandQuery) QueryCommandToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (cq *CommandQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: cq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
@@ -102,7 +102,7 @@ func (cq *CommandQuery) QueryCommandToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(command.Table, command.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, command.CommandToEnvironmentTable, command.CommandToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, command.EnvironmentTable, command.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
 		return fromU, nil
@@ -286,13 +286,13 @@ func (cq *CommandQuery) Clone() *CommandQuery {
 		return nil
 	}
 	return &CommandQuery{
-		config:                   cq.config,
-		limit:                    cq.limit,
-		offset:                   cq.offset,
-		order:                    append([]OrderFunc{}, cq.order...),
-		predicates:               append([]predicate.Command{}, cq.predicates...),
-		withCommandToUser:        cq.withCommandToUser.Clone(),
-		withCommandToEnvironment: cq.withCommandToEnvironment.Clone(),
+		config:          cq.config,
+		limit:           cq.limit,
+		offset:          cq.offset,
+		order:           append([]OrderFunc{}, cq.order...),
+		predicates:      append([]predicate.Command{}, cq.predicates...),
+		withUsers:       cq.withUsers.Clone(),
+		withEnvironment: cq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    cq.sql.Clone(),
 		path:   cq.path,
@@ -300,25 +300,25 @@ func (cq *CommandQuery) Clone() *CommandQuery {
 	}
 }
 
-// WithCommandToUser tells the query-builder to eager-load the nodes that are connected to
-// the "CommandToUser" edge. The optional arguments are used to configure the query builder of the edge.
-func (cq *CommandQuery) WithCommandToUser(opts ...func(*UserQuery)) *CommandQuery {
+// WithUsers tells the query-builder to eager-load the nodes that are connected to
+// the "Users" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CommandQuery) WithUsers(opts ...func(*UserQuery)) *CommandQuery {
 	query := &UserQuery{config: cq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	cq.withCommandToUser = query
+	cq.withUsers = query
 	return cq
 }
 
-// WithCommandToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "CommandToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (cq *CommandQuery) WithCommandToEnvironment(opts ...func(*EnvironmentQuery)) *CommandQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CommandQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *CommandQuery {
 	query := &EnvironmentQuery{config: cq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	cq.withCommandToEnvironment = query
+	cq.withEnvironment = query
 	return cq
 }
 
@@ -392,11 +392,11 @@ func (cq *CommandQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Comm
 		withFKs     = cq.withFKs
 		_spec       = cq.querySpec()
 		loadedTypes = [2]bool{
-			cq.withCommandToUser != nil,
-			cq.withCommandToEnvironment != nil,
+			cq.withUsers != nil,
+			cq.withEnvironment != nil,
 		}
 	)
-	if cq.withCommandToEnvironment != nil {
+	if cq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -420,23 +420,23 @@ func (cq *CommandQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Comm
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := cq.withCommandToUser; query != nil {
-		if err := cq.loadCommandToUser(ctx, query, nodes,
-			func(n *Command) { n.Edges.CommandToUser = []*User{} },
-			func(n *Command, e *User) { n.Edges.CommandToUser = append(n.Edges.CommandToUser, e) }); err != nil {
+	if query := cq.withUsers; query != nil {
+		if err := cq.loadUsers(ctx, query, nodes,
+			func(n *Command) { n.Edges.Users = []*User{} },
+			func(n *Command, e *User) { n.Edges.Users = append(n.Edges.Users, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := cq.withCommandToEnvironment; query != nil {
-		if err := cq.loadCommandToEnvironment(ctx, query, nodes, nil,
-			func(n *Command, e *Environment) { n.Edges.CommandToEnvironment = e }); err != nil {
+	if query := cq.withEnvironment; query != nil {
+		if err := cq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *Command, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (cq *CommandQuery) loadCommandToUser(ctx context.Context, query *UserQuery, nodes []*Command, init func(*Command), assign func(*Command, *User)) error {
+func (cq *CommandQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*Command, init func(*Command), assign func(*Command, *User)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Command)
 	for i := range nodes {
@@ -448,26 +448,26 @@ func (cq *CommandQuery) loadCommandToUser(ctx context.Context, query *UserQuery,
 	}
 	query.withFKs = true
 	query.Where(predicate.User(func(s *sql.Selector) {
-		s.Where(sql.InValues(command.CommandToUserColumn, fks...))
+		s.Where(sql.InValues(command.UsersColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.command_command_to_user
+		fk := n.command_users
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "command_command_to_user" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "command_users" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "command_command_to_user" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "command_users" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (cq *CommandQuery) loadCommandToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Command, init func(*Command), assign func(*Command, *Environment)) error {
+func (cq *CommandQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Command, init func(*Command), assign func(*Command, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Command)
 	for i := range nodes {

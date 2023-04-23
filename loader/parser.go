@@ -1071,7 +1071,7 @@ func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 			Where(
 				command.And(
 					command.HclIDEQ(cCommand.HclID),
-					command.HasCommandToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					command.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)

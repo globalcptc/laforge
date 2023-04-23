@@ -189,7 +189,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	// Check if step is command
 	entCommand, err := client.Command.Query().Where(
 		command.And(
-			command.HasCommandToEnvironmentWith(
+			command.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			command.HclIDEQ(entScheduledStep.Step),

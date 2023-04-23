@@ -52,7 +52,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"ansible_users",
-	"command_command_to_user",
+	"command_users",
 	"finding_finding_to_user",
 	"host_host_to_user",
 	"script_script_to_user",
