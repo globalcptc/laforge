@@ -90,38 +90,38 @@ func (ac *AnsibleCreate) SetNillableID(u *uuid.UUID) *AnsibleCreate {
 	return ac
 }
 
-// AddAnsibleToUserIDs adds the "AnsibleToUser" edge to the User entity by IDs.
-func (ac *AnsibleCreate) AddAnsibleToUserIDs(ids ...uuid.UUID) *AnsibleCreate {
-	ac.mutation.AddAnsibleToUserIDs(ids...)
+// AddUserIDs adds the "User" edge to the User entity by IDs.
+func (ac *AnsibleCreate) AddUserIDs(ids ...uuid.UUID) *AnsibleCreate {
+	ac.mutation.AddUserIDs(ids...)
 	return ac
 }
 
-// AddAnsibleToUser adds the "AnsibleToUser" edges to the User entity.
-func (ac *AnsibleCreate) AddAnsibleToUser(u ...*User) *AnsibleCreate {
+// AddUser adds the "User" edges to the User entity.
+func (ac *AnsibleCreate) AddUser(u ...*User) *AnsibleCreate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return ac.AddAnsibleToUserIDs(ids...)
+	return ac.AddUserIDs(ids...)
 }
 
-// SetAnsibleFromEnvironmentID sets the "AnsibleFromEnvironment" edge to the Environment entity by ID.
-func (ac *AnsibleCreate) SetAnsibleFromEnvironmentID(id uuid.UUID) *AnsibleCreate {
-	ac.mutation.SetAnsibleFromEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (ac *AnsibleCreate) SetEnvironmentID(id uuid.UUID) *AnsibleCreate {
+	ac.mutation.SetEnvironmentID(id)
 	return ac
 }
 
-// SetNillableAnsibleFromEnvironmentID sets the "AnsibleFromEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (ac *AnsibleCreate) SetNillableAnsibleFromEnvironmentID(id *uuid.UUID) *AnsibleCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (ac *AnsibleCreate) SetNillableEnvironmentID(id *uuid.UUID) *AnsibleCreate {
 	if id != nil {
-		ac = ac.SetAnsibleFromEnvironmentID(*id)
+		ac = ac.SetEnvironmentID(*id)
 	}
 	return ac
 }
 
-// SetAnsibleFromEnvironment sets the "AnsibleFromEnvironment" edge to the Environment entity.
-func (ac *AnsibleCreate) SetAnsibleFromEnvironment(e *Environment) *AnsibleCreate {
-	return ac.SetAnsibleFromEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (ac *AnsibleCreate) SetEnvironment(e *Environment) *AnsibleCreate {
+	return ac.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the AnsibleMutation object of the builder.
@@ -349,12 +349,12 @@ func (ac *AnsibleCreate) createSpec() (*Ansible, *sqlgraph.CreateSpec) {
 		})
 		_node.Tags = value
 	}
-	if nodes := ac.mutation.AnsibleToUserIDs(); len(nodes) > 0 {
+	if nodes := ac.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   ansible.AnsibleToUserTable,
-			Columns: []string{ansible.AnsibleToUserColumn},
+			Table:   ansible.UserTable,
+			Columns: []string{ansible.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -368,12 +368,12 @@ func (ac *AnsibleCreate) createSpec() (*Ansible, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ac.mutation.AnsibleFromEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := ac.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   ansible.AnsibleFromEnvironmentTable,
-			Columns: []string{ansible.AnsibleFromEnvironmentColumn},
+			Table:   ansible.EnvironmentTable,
+			Columns: []string{ansible.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

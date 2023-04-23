@@ -41,46 +41,46 @@ type Ansible struct {
 	Edges AnsibleEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// AnsibleToUser holds the value of the AnsibleToUser edge.
-	HCLAnsibleToUser []*User `json:"AnsibleToUser,omitempty" hcl:"maintainer,block"`
-	// AnsibleFromEnvironment holds the value of the AnsibleFromEnvironment edge.
-	HCLAnsibleFromEnvironment *Environment `json:"AnsibleFromEnvironment,omitempty"`
+	// User holds the value of the User edge.
+	HCLUser []*User `json:"User,omitempty" hcl:"maintainer,block"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
 	environment_environment_to_ansible *uuid.UUID
 }
 
 // AnsibleEdges holds the relations/edges for other nodes in the graph.
 type AnsibleEdges struct {
-	// AnsibleToUser holds the value of the AnsibleToUser edge.
-	AnsibleToUser []*User `json:"AnsibleToUser,omitempty" hcl:"maintainer,block"`
-	// AnsibleFromEnvironment holds the value of the AnsibleFromEnvironment edge.
-	AnsibleFromEnvironment *Environment `json:"AnsibleFromEnvironment,omitempty"`
+	// User holds the value of the User edge.
+	User []*User `json:"User,omitempty" hcl:"maintainer,block"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
 }
 
-// AnsibleToUserOrErr returns the AnsibleToUser value or an error if the edge
+// UserOrErr returns the User value or an error if the edge
 // was not loaded in eager-loading.
-func (e AnsibleEdges) AnsibleToUserOrErr() ([]*User, error) {
+func (e AnsibleEdges) UserOrErr() ([]*User, error) {
 	if e.loadedTypes[0] {
-		return e.AnsibleToUser, nil
+		return e.User, nil
 	}
-	return nil, &NotLoadedError{edge: "AnsibleToUser"}
+	return nil, &NotLoadedError{edge: "User"}
 }
 
-// AnsibleFromEnvironmentOrErr returns the AnsibleFromEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e AnsibleEdges) AnsibleFromEnvironmentOrErr() (*Environment, error) {
+func (e AnsibleEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[1] {
-		if e.AnsibleFromEnvironment == nil {
-			// The edge AnsibleFromEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.AnsibleFromEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "AnsibleFromEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -185,14 +185,14 @@ func (a *Ansible) assignValues(columns []string, values []interface{}) error {
 	return nil
 }
 
-// QueryAnsibleToUser queries the "AnsibleToUser" edge of the Ansible entity.
-func (a *Ansible) QueryAnsibleToUser() *UserQuery {
-	return (&AnsibleClient{config: a.config}).QueryAnsibleToUser(a)
+// QueryUser queries the "User" edge of the Ansible entity.
+func (a *Ansible) QueryUser() *UserQuery {
+	return (&AnsibleClient{config: a.config}).QueryUser(a)
 }
 
-// QueryAnsibleFromEnvironment queries the "AnsibleFromEnvironment" edge of the Ansible entity.
-func (a *Ansible) QueryAnsibleFromEnvironment() *EnvironmentQuery {
-	return (&AnsibleClient{config: a.config}).QueryAnsibleFromEnvironment(a)
+// QueryEnvironment queries the "Environment" edge of the Ansible entity.
+func (a *Ansible) QueryEnvironment() *EnvironmentQuery {
+	return (&AnsibleClient{config: a.config}).QueryEnvironment(a)
 }
 
 // Update returns a builder for updating this Ansible.

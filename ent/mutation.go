@@ -3148,27 +3148,27 @@ func (m *AgentTaskMutation) ResetEdge(name string) error {
 // AnsibleMutation represents an operation that mutates the Ansible nodes in the graph.
 type AnsibleMutation struct {
 	config
-	op                             Op
-	typ                            string
-	id                             *uuid.UUID
-	name                           *string
-	hcl_id                         *string
-	description                    *string
-	source                         *string
-	playbook_name                  *string
-	method                         *ansible.Method
-	inventory                      *string
-	abs_path                       *string
-	tags                           *map[string]string
-	clearedFields                  map[string]struct{}
-	_AnsibleToUser                 map[uuid.UUID]struct{}
-	removed_AnsibleToUser          map[uuid.UUID]struct{}
-	cleared_AnsibleToUser          bool
-	_AnsibleFromEnvironment        *uuid.UUID
-	cleared_AnsibleFromEnvironment bool
-	done                           bool
-	oldValue                       func(context.Context) (*Ansible, error)
-	predicates                     []predicate.Ansible
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	name                *string
+	hcl_id              *string
+	description         *string
+	source              *string
+	playbook_name       *string
+	method              *ansible.Method
+	inventory           *string
+	abs_path            *string
+	tags                *map[string]string
+	clearedFields       map[string]struct{}
+	_User               map[uuid.UUID]struct{}
+	removed_User        map[uuid.UUID]struct{}
+	cleared_User        bool
+	_Environment        *uuid.UUID
+	cleared_Environment bool
+	done                bool
+	oldValue            func(context.Context) (*Ansible, error)
+	predicates          []predicate.Ansible
 }
 
 var _ ent.Mutation = (*AnsibleMutation)(nil)
@@ -3599,97 +3599,97 @@ func (m *AnsibleMutation) ResetTags() {
 	m.tags = nil
 }
 
-// AddAnsibleToUserIDs adds the "AnsibleToUser" edge to the User entity by ids.
-func (m *AnsibleMutation) AddAnsibleToUserIDs(ids ...uuid.UUID) {
-	if m._AnsibleToUser == nil {
-		m._AnsibleToUser = make(map[uuid.UUID]struct{})
+// AddUserIDs adds the "User" edge to the User entity by ids.
+func (m *AnsibleMutation) AddUserIDs(ids ...uuid.UUID) {
+	if m._User == nil {
+		m._User = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._AnsibleToUser[ids[i]] = struct{}{}
+		m._User[ids[i]] = struct{}{}
 	}
 }
 
-// ClearAnsibleToUser clears the "AnsibleToUser" edge to the User entity.
-func (m *AnsibleMutation) ClearAnsibleToUser() {
-	m.cleared_AnsibleToUser = true
+// ClearUser clears the "User" edge to the User entity.
+func (m *AnsibleMutation) ClearUser() {
+	m.cleared_User = true
 }
 
-// AnsibleToUserCleared reports if the "AnsibleToUser" edge to the User entity was cleared.
-func (m *AnsibleMutation) AnsibleToUserCleared() bool {
-	return m.cleared_AnsibleToUser
+// UserCleared reports if the "User" edge to the User entity was cleared.
+func (m *AnsibleMutation) UserCleared() bool {
+	return m.cleared_User
 }
 
-// RemoveAnsibleToUserIDs removes the "AnsibleToUser" edge to the User entity by IDs.
-func (m *AnsibleMutation) RemoveAnsibleToUserIDs(ids ...uuid.UUID) {
-	if m.removed_AnsibleToUser == nil {
-		m.removed_AnsibleToUser = make(map[uuid.UUID]struct{})
+// RemoveUserIDs removes the "User" edge to the User entity by IDs.
+func (m *AnsibleMutation) RemoveUserIDs(ids ...uuid.UUID) {
+	if m.removed_User == nil {
+		m.removed_User = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._AnsibleToUser, ids[i])
-		m.removed_AnsibleToUser[ids[i]] = struct{}{}
+		delete(m._User, ids[i])
+		m.removed_User[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedAnsibleToUser returns the removed IDs of the "AnsibleToUser" edge to the User entity.
-func (m *AnsibleMutation) RemovedAnsibleToUserIDs() (ids []uuid.UUID) {
-	for id := range m.removed_AnsibleToUser {
+// RemovedUser returns the removed IDs of the "User" edge to the User entity.
+func (m *AnsibleMutation) RemovedUserIDs() (ids []uuid.UUID) {
+	for id := range m.removed_User {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// AnsibleToUserIDs returns the "AnsibleToUser" edge IDs in the mutation.
-func (m *AnsibleMutation) AnsibleToUserIDs() (ids []uuid.UUID) {
-	for id := range m._AnsibleToUser {
+// UserIDs returns the "User" edge IDs in the mutation.
+func (m *AnsibleMutation) UserIDs() (ids []uuid.UUID) {
+	for id := range m._User {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetAnsibleToUser resets all changes to the "AnsibleToUser" edge.
-func (m *AnsibleMutation) ResetAnsibleToUser() {
-	m._AnsibleToUser = nil
-	m.cleared_AnsibleToUser = false
-	m.removed_AnsibleToUser = nil
+// ResetUser resets all changes to the "User" edge.
+func (m *AnsibleMutation) ResetUser() {
+	m._User = nil
+	m.cleared_User = false
+	m.removed_User = nil
 }
 
-// SetAnsibleFromEnvironmentID sets the "AnsibleFromEnvironment" edge to the Environment entity by id.
-func (m *AnsibleMutation) SetAnsibleFromEnvironmentID(id uuid.UUID) {
-	m._AnsibleFromEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *AnsibleMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearAnsibleFromEnvironment clears the "AnsibleFromEnvironment" edge to the Environment entity.
-func (m *AnsibleMutation) ClearAnsibleFromEnvironment() {
-	m.cleared_AnsibleFromEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *AnsibleMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// AnsibleFromEnvironmentCleared reports if the "AnsibleFromEnvironment" edge to the Environment entity was cleared.
-func (m *AnsibleMutation) AnsibleFromEnvironmentCleared() bool {
-	return m.cleared_AnsibleFromEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *AnsibleMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// AnsibleFromEnvironmentID returns the "AnsibleFromEnvironment" edge ID in the mutation.
-func (m *AnsibleMutation) AnsibleFromEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._AnsibleFromEnvironment != nil {
-		return *m._AnsibleFromEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *AnsibleMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// AnsibleFromEnvironmentIDs returns the "AnsibleFromEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AnsibleFromEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *AnsibleMutation) AnsibleFromEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._AnsibleFromEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *AnsibleMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetAnsibleFromEnvironment resets all changes to the "AnsibleFromEnvironment" edge.
-func (m *AnsibleMutation) ResetAnsibleFromEnvironment() {
-	m._AnsibleFromEnvironment = nil
-	m.cleared_AnsibleFromEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *AnsibleMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
 // Where appends a list predicates to the AnsibleMutation builder.
@@ -3947,11 +3947,11 @@ func (m *AnsibleMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AnsibleMutation) AddedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m._AnsibleToUser != nil {
-		edges = append(edges, ansible.EdgeAnsibleToUser)
+	if m._User != nil {
+		edges = append(edges, ansible.EdgeUser)
 	}
-	if m._AnsibleFromEnvironment != nil {
-		edges = append(edges, ansible.EdgeAnsibleFromEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, ansible.EdgeEnvironment)
 	}
 	return edges
 }
@@ -3960,14 +3960,14 @@ func (m *AnsibleMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *AnsibleMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case ansible.EdgeAnsibleToUser:
-		ids := make([]ent.Value, 0, len(m._AnsibleToUser))
-		for id := range m._AnsibleToUser {
+	case ansible.EdgeUser:
+		ids := make([]ent.Value, 0, len(m._User))
+		for id := range m._User {
 			ids = append(ids, id)
 		}
 		return ids
-	case ansible.EdgeAnsibleFromEnvironment:
-		if id := m._AnsibleFromEnvironment; id != nil {
+	case ansible.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -3977,8 +3977,8 @@ func (m *AnsibleMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AnsibleMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.removed_AnsibleToUser != nil {
-		edges = append(edges, ansible.EdgeAnsibleToUser)
+	if m.removed_User != nil {
+		edges = append(edges, ansible.EdgeUser)
 	}
 	return edges
 }
@@ -3987,9 +3987,9 @@ func (m *AnsibleMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *AnsibleMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case ansible.EdgeAnsibleToUser:
-		ids := make([]ent.Value, 0, len(m.removed_AnsibleToUser))
-		for id := range m.removed_AnsibleToUser {
+	case ansible.EdgeUser:
+		ids := make([]ent.Value, 0, len(m.removed_User))
+		for id := range m.removed_User {
 			ids = append(ids, id)
 		}
 		return ids
@@ -4000,11 +4000,11 @@ func (m *AnsibleMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AnsibleMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.cleared_AnsibleToUser {
-		edges = append(edges, ansible.EdgeAnsibleToUser)
+	if m.cleared_User {
+		edges = append(edges, ansible.EdgeUser)
 	}
-	if m.cleared_AnsibleFromEnvironment {
-		edges = append(edges, ansible.EdgeAnsibleFromEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, ansible.EdgeEnvironment)
 	}
 	return edges
 }
@@ -4013,10 +4013,10 @@ func (m *AnsibleMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *AnsibleMutation) EdgeCleared(name string) bool {
 	switch name {
-	case ansible.EdgeAnsibleToUser:
-		return m.cleared_AnsibleToUser
-	case ansible.EdgeAnsibleFromEnvironment:
-		return m.cleared_AnsibleFromEnvironment
+	case ansible.EdgeUser:
+		return m.cleared_User
+	case ansible.EdgeEnvironment:
+		return m.cleared_Environment
 	}
 	return false
 }
@@ -4025,8 +4025,8 @@ func (m *AnsibleMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *AnsibleMutation) ClearEdge(name string) error {
 	switch name {
-	case ansible.EdgeAnsibleFromEnvironment:
-		m.ClearAnsibleFromEnvironment()
+	case ansible.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Ansible unique edge %s", name)
@@ -4036,11 +4036,11 @@ func (m *AnsibleMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *AnsibleMutation) ResetEdge(name string) error {
 	switch name {
-	case ansible.EdgeAnsibleToUser:
-		m.ResetAnsibleToUser()
+	case ansible.EdgeUser:
+		m.ResetUser()
 		return nil
-	case ansible.EdgeAnsibleFromEnvironment:
-		m.ResetAnsibleFromEnvironment()
+	case ansible.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Ansible edge %s", name)

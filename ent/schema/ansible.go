@@ -42,9 +42,9 @@ func (Ansible) Fields() []ent.Field {
 // Edges of the Ansible.
 func (Ansible) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("AnsibleToUser", User.Type).
+		edge.To("User", User.Type).
 			StructTag(`hcl:"maintainer,block"`),
-		edge.From("AnsibleFromEnvironment", Environment.Type).
+		edge.From("Environment", Environment.Type).
 			Ref("EnvironmentToAnsible").
 			Unique(),
 	}

@@ -937,15 +937,15 @@ func (c *AnsibleClient) GetX(ctx context.Context, id uuid.UUID) *Ansible {
 	return obj
 }
 
-// QueryAnsibleToUser queries the AnsibleToUser edge of a Ansible.
-func (c *AnsibleClient) QueryAnsibleToUser(a *Ansible) *UserQuery {
+// QueryUser queries the User edge of a Ansible.
+func (c *AnsibleClient) QueryUser(a *Ansible) *UserQuery {
 	query := &UserQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := a.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ansible.Table, ansible.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ansible.AnsibleToUserTable, ansible.AnsibleToUserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, ansible.UserTable, ansible.UserColumn),
 		)
 		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
 		return fromV, nil
@@ -953,15 +953,15 @@ func (c *AnsibleClient) QueryAnsibleToUser(a *Ansible) *UserQuery {
 	return query
 }
 
-// QueryAnsibleFromEnvironment queries the AnsibleFromEnvironment edge of a Ansible.
-func (c *AnsibleClient) QueryAnsibleFromEnvironment(a *Ansible) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a Ansible.
+func (c *AnsibleClient) QueryEnvironment(a *Ansible) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := a.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ansible.Table, ansible.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ansible.AnsibleFromEnvironmentTable, ansible.AnsibleFromEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, ansible.EnvironmentTable, ansible.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
 		return fromV, nil

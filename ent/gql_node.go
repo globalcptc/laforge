@@ -473,9 +473,9 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "User",
-		Name: "AnsibleToUser",
+		Name: "User",
 	}
-	err = a.QueryAnsibleToUser().
+	err = a.QueryUser().
 		Select(user.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -483,9 +483,9 @@ func (a *Ansible) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Environment",
-		Name: "AnsibleFromEnvironment",
+		Name: "Environment",
 	}
-	err = a.QueryAnsibleFromEnvironment().
+	err = a.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {

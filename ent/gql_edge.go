@@ -100,18 +100,18 @@ func (at *AgentTask) AdhocPlan(ctx context.Context) ([]*AdhocPlan, error) {
 	return result, err
 }
 
-func (a *Ansible) AnsibleToUser(ctx context.Context) ([]*User, error) {
-	result, err := a.Edges.AnsibleToUserOrErr()
+func (a *Ansible) User(ctx context.Context) ([]*User, error) {
+	result, err := a.Edges.UserOrErr()
 	if IsNotLoaded(err) {
-		result, err = a.QueryAnsibleToUser().All(ctx)
+		result, err = a.QueryUser().All(ctx)
 	}
 	return result, err
 }
 
-func (a *Ansible) AnsibleFromEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := a.Edges.AnsibleFromEnvironmentOrErr()
+func (a *Ansible) Environment(ctx context.Context) (*Environment, error) {
+	result, err := a.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = a.QueryAnsibleFromEnvironment().Only(ctx)
+		result, err = a.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

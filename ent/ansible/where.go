@@ -858,25 +858,25 @@ func AbsPathContainsFold(v string) predicate.Ansible {
 	})
 }
 
-// HasAnsibleToUser applies the HasEdge predicate on the "AnsibleToUser" edge.
-func HasAnsibleToUser() predicate.Ansible {
+// HasUser applies the HasEdge predicate on the "User" edge.
+func HasUser() predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AnsibleToUserTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, AnsibleToUserTable, AnsibleToUserColumn),
+			sqlgraph.To(UserTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UserTable, UserColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAnsibleToUserWith applies the HasEdge predicate on the "AnsibleToUser" edge with a given conditions (other predicates).
-func HasAnsibleToUserWith(preds ...predicate.User) predicate.Ansible {
+// HasUserWith applies the HasEdge predicate on the "User" edge with a given conditions (other predicates).
+func HasUserWith(preds ...predicate.User) predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AnsibleToUserInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, AnsibleToUserTable, AnsibleToUserColumn),
+			sqlgraph.To(UserInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UserTable, UserColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -886,25 +886,25 @@ func HasAnsibleToUserWith(preds ...predicate.User) predicate.Ansible {
 	})
 }
 
-// HasAnsibleFromEnvironment applies the HasEdge predicate on the "AnsibleFromEnvironment" edge.
-func HasAnsibleFromEnvironment() predicate.Ansible {
+// HasEnvironment applies the HasEdge predicate on the "Environment" edge.
+func HasEnvironment() predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AnsibleFromEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, AnsibleFromEnvironmentTable, AnsibleFromEnvironmentColumn),
+			sqlgraph.To(EnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAnsibleFromEnvironmentWith applies the HasEdge predicate on the "AnsibleFromEnvironment" edge with a given conditions (other predicates).
-func HasAnsibleFromEnvironmentWith(preds ...predicate.Environment) predicate.Ansible {
+// HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
+func HasEnvironmentWith(preds ...predicate.Environment) predicate.Ansible {
 	return predicate.Ansible(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AnsibleFromEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, AnsibleFromEnvironmentTable, AnsibleFromEnvironmentColumn),
+			sqlgraph.To(EnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

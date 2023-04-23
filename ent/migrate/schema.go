@@ -1298,7 +1298,7 @@ var (
 		{Name: "uuid", Type: field.TypeString},
 		{Name: "email", Type: field.TypeString},
 		{Name: "hcl_id", Type: field.TypeString},
-		{Name: "ansible_ansible_to_user", Type: field.TypeUUID, Nullable: true},
+		{Name: "ansible_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "command_command_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "finding_finding_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "host_host_to_user", Type: field.TypeUUID, Nullable: true},
@@ -1311,7 +1311,7 @@ var (
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "users_ansibles_AnsibleToUser",
+				Symbol:     "users_ansibles_User",
 				Columns:    []*schema.Column{UsersColumns[5]},
 				RefColumns: []*schema.Column{AnsiblesColumns[0]},
 				OnDelete:   schema.SetNull,

@@ -33,26 +33,26 @@ const (
 	FieldAbsPath = "abs_path"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// EdgeAnsibleToUser holds the string denoting the ansibletouser edge name in mutations.
-	EdgeAnsibleToUser = "AnsibleToUser"
-	// EdgeAnsibleFromEnvironment holds the string denoting the ansiblefromenvironment edge name in mutations.
-	EdgeAnsibleFromEnvironment = "AnsibleFromEnvironment"
+	// EdgeUser holds the string denoting the user edge name in mutations.
+	EdgeUser = "User"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the ansible in the database.
 	Table = "ansibles"
-	// AnsibleToUserTable is the table that holds the AnsibleToUser relation/edge.
-	AnsibleToUserTable = "users"
-	// AnsibleToUserInverseTable is the table name for the User entity.
+	// UserTable is the table that holds the User relation/edge.
+	UserTable = "users"
+	// UserInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	AnsibleToUserInverseTable = "users"
-	// AnsibleToUserColumn is the table column denoting the AnsibleToUser relation/edge.
-	AnsibleToUserColumn = "ansible_ansible_to_user"
-	// AnsibleFromEnvironmentTable is the table that holds the AnsibleFromEnvironment relation/edge.
-	AnsibleFromEnvironmentTable = "ansibles"
-	// AnsibleFromEnvironmentInverseTable is the table name for the Environment entity.
+	UserInverseTable = "users"
+	// UserColumn is the table column denoting the User relation/edge.
+	UserColumn = "ansible_user"
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "ansibles"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	AnsibleFromEnvironmentInverseTable = "environments"
-	// AnsibleFromEnvironmentColumn is the table column denoting the AnsibleFromEnvironment relation/edge.
-	AnsibleFromEnvironmentColumn = "environment_environment_to_ansible"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_environment_to_ansible"
 )
 
 // Columns holds all SQL columns for ansible fields.
