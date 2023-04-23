@@ -53,7 +53,7 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"ansible_users",
 	"command_users",
-	"finding_finding_to_user",
+	"finding_users",
 	"host_host_to_user",
 	"script_script_to_user",
 }

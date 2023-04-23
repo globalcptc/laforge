@@ -15845,27 +15845,27 @@ func (m *FileExtractMutation) ResetEdge(name string) error {
 // FindingMutation represents an operation that mutates the Finding nodes in the graph.
 type FindingMutation struct {
 	config
-	op                           Op
-	typ                          string
-	id                           *uuid.UUID
-	name                         *string
-	description                  *string
-	severity                     *finding.Severity
-	difficulty                   *finding.Difficulty
-	tags                         *map[string]string
-	clearedFields                map[string]struct{}
-	_FindingToUser               map[uuid.UUID]struct{}
-	removed_FindingToUser        map[uuid.UUID]struct{}
-	cleared_FindingToUser        bool
-	_FindingToHost               *uuid.UUID
-	cleared_FindingToHost        bool
-	_FindingToScript             *uuid.UUID
-	cleared_FindingToScript      bool
-	_FindingToEnvironment        *uuid.UUID
-	cleared_FindingToEnvironment bool
-	done                         bool
-	oldValue                     func(context.Context) (*Finding, error)
-	predicates                   []predicate.Finding
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	name                *string
+	description         *string
+	severity            *finding.Severity
+	difficulty          *finding.Difficulty
+	tags                *map[string]string
+	clearedFields       map[string]struct{}
+	_Users              map[uuid.UUID]struct{}
+	removed_Users       map[uuid.UUID]struct{}
+	cleared_Users       bool
+	_Host               *uuid.UUID
+	cleared_Host        bool
+	_Script             *uuid.UUID
+	cleared_Script      bool
+	_Environment        *uuid.UUID
+	cleared_Environment bool
+	done                bool
+	oldValue            func(context.Context) (*Finding, error)
+	predicates          []predicate.Finding
 }
 
 var _ ent.Mutation = (*FindingMutation)(nil)
@@ -16152,175 +16152,175 @@ func (m *FindingMutation) ResetTags() {
 	m.tags = nil
 }
 
-// AddFindingToUserIDs adds the "FindingToUser" edge to the User entity by ids.
-func (m *FindingMutation) AddFindingToUserIDs(ids ...uuid.UUID) {
-	if m._FindingToUser == nil {
-		m._FindingToUser = make(map[uuid.UUID]struct{})
+// AddUserIDs adds the "Users" edge to the User entity by ids.
+func (m *FindingMutation) AddUserIDs(ids ...uuid.UUID) {
+	if m._Users == nil {
+		m._Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._FindingToUser[ids[i]] = struct{}{}
+		m._Users[ids[i]] = struct{}{}
 	}
 }
 
-// ClearFindingToUser clears the "FindingToUser" edge to the User entity.
-func (m *FindingMutation) ClearFindingToUser() {
-	m.cleared_FindingToUser = true
+// ClearUsers clears the "Users" edge to the User entity.
+func (m *FindingMutation) ClearUsers() {
+	m.cleared_Users = true
 }
 
-// FindingToUserCleared reports if the "FindingToUser" edge to the User entity was cleared.
-func (m *FindingMutation) FindingToUserCleared() bool {
-	return m.cleared_FindingToUser
+// UsersCleared reports if the "Users" edge to the User entity was cleared.
+func (m *FindingMutation) UsersCleared() bool {
+	return m.cleared_Users
 }
 
-// RemoveFindingToUserIDs removes the "FindingToUser" edge to the User entity by IDs.
-func (m *FindingMutation) RemoveFindingToUserIDs(ids ...uuid.UUID) {
-	if m.removed_FindingToUser == nil {
-		m.removed_FindingToUser = make(map[uuid.UUID]struct{})
+// RemoveUserIDs removes the "Users" edge to the User entity by IDs.
+func (m *FindingMutation) RemoveUserIDs(ids ...uuid.UUID) {
+	if m.removed_Users == nil {
+		m.removed_Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._FindingToUser, ids[i])
-		m.removed_FindingToUser[ids[i]] = struct{}{}
+		delete(m._Users, ids[i])
+		m.removed_Users[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedFindingToUser returns the removed IDs of the "FindingToUser" edge to the User entity.
-func (m *FindingMutation) RemovedFindingToUserIDs() (ids []uuid.UUID) {
-	for id := range m.removed_FindingToUser {
+// RemovedUsers returns the removed IDs of the "Users" edge to the User entity.
+func (m *FindingMutation) RemovedUsersIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// FindingToUserIDs returns the "FindingToUser" edge IDs in the mutation.
-func (m *FindingMutation) FindingToUserIDs() (ids []uuid.UUID) {
-	for id := range m._FindingToUser {
+// UsersIDs returns the "Users" edge IDs in the mutation.
+func (m *FindingMutation) UsersIDs() (ids []uuid.UUID) {
+	for id := range m._Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetFindingToUser resets all changes to the "FindingToUser" edge.
-func (m *FindingMutation) ResetFindingToUser() {
-	m._FindingToUser = nil
-	m.cleared_FindingToUser = false
-	m.removed_FindingToUser = nil
+// ResetUsers resets all changes to the "Users" edge.
+func (m *FindingMutation) ResetUsers() {
+	m._Users = nil
+	m.cleared_Users = false
+	m.removed_Users = nil
 }
 
-// SetFindingToHostID sets the "FindingToHost" edge to the Host entity by id.
-func (m *FindingMutation) SetFindingToHostID(id uuid.UUID) {
-	m._FindingToHost = &id
+// SetHostID sets the "Host" edge to the Host entity by id.
+func (m *FindingMutation) SetHostID(id uuid.UUID) {
+	m._Host = &id
 }
 
-// ClearFindingToHost clears the "FindingToHost" edge to the Host entity.
-func (m *FindingMutation) ClearFindingToHost() {
-	m.cleared_FindingToHost = true
+// ClearHost clears the "Host" edge to the Host entity.
+func (m *FindingMutation) ClearHost() {
+	m.cleared_Host = true
 }
 
-// FindingToHostCleared reports if the "FindingToHost" edge to the Host entity was cleared.
-func (m *FindingMutation) FindingToHostCleared() bool {
-	return m.cleared_FindingToHost
+// HostCleared reports if the "Host" edge to the Host entity was cleared.
+func (m *FindingMutation) HostCleared() bool {
+	return m.cleared_Host
 }
 
-// FindingToHostID returns the "FindingToHost" edge ID in the mutation.
-func (m *FindingMutation) FindingToHostID() (id uuid.UUID, exists bool) {
-	if m._FindingToHost != nil {
-		return *m._FindingToHost, true
+// HostID returns the "Host" edge ID in the mutation.
+func (m *FindingMutation) HostID() (id uuid.UUID, exists bool) {
+	if m._Host != nil {
+		return *m._Host, true
 	}
 	return
 }
 
-// FindingToHostIDs returns the "FindingToHost" edge IDs in the mutation.
+// HostIDs returns the "Host" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// FindingToHostID instead. It exists only for internal usage by the builders.
-func (m *FindingMutation) FindingToHostIDs() (ids []uuid.UUID) {
-	if id := m._FindingToHost; id != nil {
+// HostID instead. It exists only for internal usage by the builders.
+func (m *FindingMutation) HostIDs() (ids []uuid.UUID) {
+	if id := m._Host; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetFindingToHost resets all changes to the "FindingToHost" edge.
-func (m *FindingMutation) ResetFindingToHost() {
-	m._FindingToHost = nil
-	m.cleared_FindingToHost = false
+// ResetHost resets all changes to the "Host" edge.
+func (m *FindingMutation) ResetHost() {
+	m._Host = nil
+	m.cleared_Host = false
 }
 
-// SetFindingToScriptID sets the "FindingToScript" edge to the Script entity by id.
-func (m *FindingMutation) SetFindingToScriptID(id uuid.UUID) {
-	m._FindingToScript = &id
+// SetScriptID sets the "Script" edge to the Script entity by id.
+func (m *FindingMutation) SetScriptID(id uuid.UUID) {
+	m._Script = &id
 }
 
-// ClearFindingToScript clears the "FindingToScript" edge to the Script entity.
-func (m *FindingMutation) ClearFindingToScript() {
-	m.cleared_FindingToScript = true
+// ClearScript clears the "Script" edge to the Script entity.
+func (m *FindingMutation) ClearScript() {
+	m.cleared_Script = true
 }
 
-// FindingToScriptCleared reports if the "FindingToScript" edge to the Script entity was cleared.
-func (m *FindingMutation) FindingToScriptCleared() bool {
-	return m.cleared_FindingToScript
+// ScriptCleared reports if the "Script" edge to the Script entity was cleared.
+func (m *FindingMutation) ScriptCleared() bool {
+	return m.cleared_Script
 }
 
-// FindingToScriptID returns the "FindingToScript" edge ID in the mutation.
-func (m *FindingMutation) FindingToScriptID() (id uuid.UUID, exists bool) {
-	if m._FindingToScript != nil {
-		return *m._FindingToScript, true
+// ScriptID returns the "Script" edge ID in the mutation.
+func (m *FindingMutation) ScriptID() (id uuid.UUID, exists bool) {
+	if m._Script != nil {
+		return *m._Script, true
 	}
 	return
 }
 
-// FindingToScriptIDs returns the "FindingToScript" edge IDs in the mutation.
+// ScriptIDs returns the "Script" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// FindingToScriptID instead. It exists only for internal usage by the builders.
-func (m *FindingMutation) FindingToScriptIDs() (ids []uuid.UUID) {
-	if id := m._FindingToScript; id != nil {
+// ScriptID instead. It exists only for internal usage by the builders.
+func (m *FindingMutation) ScriptIDs() (ids []uuid.UUID) {
+	if id := m._Script; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetFindingToScript resets all changes to the "FindingToScript" edge.
-func (m *FindingMutation) ResetFindingToScript() {
-	m._FindingToScript = nil
-	m.cleared_FindingToScript = false
+// ResetScript resets all changes to the "Script" edge.
+func (m *FindingMutation) ResetScript() {
+	m._Script = nil
+	m.cleared_Script = false
 }
 
-// SetFindingToEnvironmentID sets the "FindingToEnvironment" edge to the Environment entity by id.
-func (m *FindingMutation) SetFindingToEnvironmentID(id uuid.UUID) {
-	m._FindingToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *FindingMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearFindingToEnvironment clears the "FindingToEnvironment" edge to the Environment entity.
-func (m *FindingMutation) ClearFindingToEnvironment() {
-	m.cleared_FindingToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *FindingMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// FindingToEnvironmentCleared reports if the "FindingToEnvironment" edge to the Environment entity was cleared.
-func (m *FindingMutation) FindingToEnvironmentCleared() bool {
-	return m.cleared_FindingToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *FindingMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// FindingToEnvironmentID returns the "FindingToEnvironment" edge ID in the mutation.
-func (m *FindingMutation) FindingToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._FindingToEnvironment != nil {
-		return *m._FindingToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *FindingMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// FindingToEnvironmentIDs returns the "FindingToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// FindingToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *FindingMutation) FindingToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._FindingToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *FindingMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetFindingToEnvironment resets all changes to the "FindingToEnvironment" edge.
-func (m *FindingMutation) ResetFindingToEnvironment() {
-	m._FindingToEnvironment = nil
-	m.cleared_FindingToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *FindingMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
 // Where appends a list predicates to the FindingMutation builder.
@@ -16510,17 +16510,17 @@ func (m *FindingMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *FindingMutation) AddedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m._FindingToUser != nil {
-		edges = append(edges, finding.EdgeFindingToUser)
+	if m._Users != nil {
+		edges = append(edges, finding.EdgeUsers)
 	}
-	if m._FindingToHost != nil {
-		edges = append(edges, finding.EdgeFindingToHost)
+	if m._Host != nil {
+		edges = append(edges, finding.EdgeHost)
 	}
-	if m._FindingToScript != nil {
-		edges = append(edges, finding.EdgeFindingToScript)
+	if m._Script != nil {
+		edges = append(edges, finding.EdgeScript)
 	}
-	if m._FindingToEnvironment != nil {
-		edges = append(edges, finding.EdgeFindingToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, finding.EdgeEnvironment)
 	}
 	return edges
 }
@@ -16529,22 +16529,22 @@ func (m *FindingMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *FindingMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case finding.EdgeFindingToUser:
-		ids := make([]ent.Value, 0, len(m._FindingToUser))
-		for id := range m._FindingToUser {
+	case finding.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m._Users))
+		for id := range m._Users {
 			ids = append(ids, id)
 		}
 		return ids
-	case finding.EdgeFindingToHost:
-		if id := m._FindingToHost; id != nil {
+	case finding.EdgeHost:
+		if id := m._Host; id != nil {
 			return []ent.Value{*id}
 		}
-	case finding.EdgeFindingToScript:
-		if id := m._FindingToScript; id != nil {
+	case finding.EdgeScript:
+		if id := m._Script; id != nil {
 			return []ent.Value{*id}
 		}
-	case finding.EdgeFindingToEnvironment:
-		if id := m._FindingToEnvironment; id != nil {
+	case finding.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -16554,8 +16554,8 @@ func (m *FindingMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *FindingMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.removed_FindingToUser != nil {
-		edges = append(edges, finding.EdgeFindingToUser)
+	if m.removed_Users != nil {
+		edges = append(edges, finding.EdgeUsers)
 	}
 	return edges
 }
@@ -16564,9 +16564,9 @@ func (m *FindingMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *FindingMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case finding.EdgeFindingToUser:
-		ids := make([]ent.Value, 0, len(m.removed_FindingToUser))
-		for id := range m.removed_FindingToUser {
+	case finding.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m.removed_Users))
+		for id := range m.removed_Users {
 			ids = append(ids, id)
 		}
 		return ids
@@ -16577,17 +16577,17 @@ func (m *FindingMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *FindingMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.cleared_FindingToUser {
-		edges = append(edges, finding.EdgeFindingToUser)
+	if m.cleared_Users {
+		edges = append(edges, finding.EdgeUsers)
 	}
-	if m.cleared_FindingToHost {
-		edges = append(edges, finding.EdgeFindingToHost)
+	if m.cleared_Host {
+		edges = append(edges, finding.EdgeHost)
 	}
-	if m.cleared_FindingToScript {
-		edges = append(edges, finding.EdgeFindingToScript)
+	if m.cleared_Script {
+		edges = append(edges, finding.EdgeScript)
 	}
-	if m.cleared_FindingToEnvironment {
-		edges = append(edges, finding.EdgeFindingToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, finding.EdgeEnvironment)
 	}
 	return edges
 }
@@ -16596,14 +16596,14 @@ func (m *FindingMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *FindingMutation) EdgeCleared(name string) bool {
 	switch name {
-	case finding.EdgeFindingToUser:
-		return m.cleared_FindingToUser
-	case finding.EdgeFindingToHost:
-		return m.cleared_FindingToHost
-	case finding.EdgeFindingToScript:
-		return m.cleared_FindingToScript
-	case finding.EdgeFindingToEnvironment:
-		return m.cleared_FindingToEnvironment
+	case finding.EdgeUsers:
+		return m.cleared_Users
+	case finding.EdgeHost:
+		return m.cleared_Host
+	case finding.EdgeScript:
+		return m.cleared_Script
+	case finding.EdgeEnvironment:
+		return m.cleared_Environment
 	}
 	return false
 }
@@ -16612,14 +16612,14 @@ func (m *FindingMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *FindingMutation) ClearEdge(name string) error {
 	switch name {
-	case finding.EdgeFindingToHost:
-		m.ClearFindingToHost()
+	case finding.EdgeHost:
+		m.ClearHost()
 		return nil
-	case finding.EdgeFindingToScript:
-		m.ClearFindingToScript()
+	case finding.EdgeScript:
+		m.ClearScript()
 		return nil
-	case finding.EdgeFindingToEnvironment:
-		m.ClearFindingToEnvironment()
+	case finding.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Finding unique edge %s", name)
@@ -16629,17 +16629,17 @@ func (m *FindingMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *FindingMutation) ResetEdge(name string) error {
 	switch name {
-	case finding.EdgeFindingToUser:
-		m.ResetFindingToUser()
+	case finding.EdgeUsers:
+		m.ResetUsers()
 		return nil
-	case finding.EdgeFindingToHost:
-		m.ResetFindingToHost()
+	case finding.EdgeHost:
+		m.ResetHost()
 		return nil
-	case finding.EdgeFindingToScript:
-		m.ResetFindingToScript()
+	case finding.EdgeScript:
+		m.ResetScript()
 		return nil
-	case finding.EdgeFindingToEnvironment:
-		m.ResetFindingToEnvironment()
+	case finding.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Finding edge %s", name)

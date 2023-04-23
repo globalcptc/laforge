@@ -1410,8 +1410,8 @@ func createFindings(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 			Where(
 				finding.And(
 					finding.Name(cFinding.Name),
-					finding.HasFindingToEnvironmentWith(environment.HclIDEQ(envHclID)),
-					finding.HasFindingToScriptWith(script.HclID(entScriptID)),
+					finding.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
+					finding.HasScriptWith(script.HclID(entScriptID)),
 				),
 			).
 			Only(ctx)

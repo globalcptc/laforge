@@ -508,34 +508,34 @@ func (fe *FileExtract) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (f *Finding) FindingToUser(ctx context.Context) ([]*User, error) {
-	result, err := f.Edges.FindingToUserOrErr()
+func (f *Finding) Users(ctx context.Context) ([]*User, error) {
+	result, err := f.Edges.UsersOrErr()
 	if IsNotLoaded(err) {
-		result, err = f.QueryFindingToUser().All(ctx)
+		result, err = f.QueryUsers().All(ctx)
 	}
 	return result, err
 }
 
-func (f *Finding) FindingToHost(ctx context.Context) (*Host, error) {
-	result, err := f.Edges.FindingToHostOrErr()
+func (f *Finding) Host(ctx context.Context) (*Host, error) {
+	result, err := f.Edges.HostOrErr()
 	if IsNotLoaded(err) {
-		result, err = f.QueryFindingToHost().Only(ctx)
+		result, err = f.QueryHost().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (f *Finding) FindingToScript(ctx context.Context) (*Script, error) {
-	result, err := f.Edges.FindingToScriptOrErr()
+func (f *Finding) Script(ctx context.Context) (*Script, error) {
+	result, err := f.Edges.ScriptOrErr()
 	if IsNotLoaded(err) {
-		result, err = f.QueryFindingToScript().Only(ctx)
+		result, err = f.QueryScript().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (f *Finding) FindingToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := f.Edges.FindingToEnvironmentOrErr()
+func (f *Finding) Environment(ctx context.Context) (*Environment, error) {
+	result, err := f.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = f.QueryFindingToEnvironment().Only(ctx)
+		result, err = f.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

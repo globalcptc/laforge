@@ -2923,15 +2923,15 @@ func (c *FindingClient) GetX(ctx context.Context, id uuid.UUID) *Finding {
 	return obj
 }
 
-// QueryFindingToUser queries the FindingToUser edge of a Finding.
-func (c *FindingClient) QueryFindingToUser(f *Finding) *UserQuery {
+// QueryUsers queries the Users edge of a Finding.
+func (c *FindingClient) QueryUsers(f *Finding) *UserQuery {
 	query := &UserQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := f.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(finding.Table, finding.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, finding.FindingToUserTable, finding.FindingToUserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, finding.UsersTable, finding.UsersColumn),
 		)
 		fromV = sqlgraph.Neighbors(f.driver.Dialect(), step)
 		return fromV, nil
@@ -2939,15 +2939,15 @@ func (c *FindingClient) QueryFindingToUser(f *Finding) *UserQuery {
 	return query
 }
 
-// QueryFindingToHost queries the FindingToHost edge of a Finding.
-func (c *FindingClient) QueryFindingToHost(f *Finding) *HostQuery {
+// QueryHost queries the Host edge of a Finding.
+func (c *FindingClient) QueryHost(f *Finding) *HostQuery {
 	query := &HostQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := f.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(finding.Table, finding.FieldID, id),
 			sqlgraph.To(host.Table, host.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, finding.FindingToHostTable, finding.FindingToHostColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, finding.HostTable, finding.HostColumn),
 		)
 		fromV = sqlgraph.Neighbors(f.driver.Dialect(), step)
 		return fromV, nil
@@ -2955,15 +2955,15 @@ func (c *FindingClient) QueryFindingToHost(f *Finding) *HostQuery {
 	return query
 }
 
-// QueryFindingToScript queries the FindingToScript edge of a Finding.
-func (c *FindingClient) QueryFindingToScript(f *Finding) *ScriptQuery {
+// QueryScript queries the Script edge of a Finding.
+func (c *FindingClient) QueryScript(f *Finding) *ScriptQuery {
 	query := &ScriptQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := f.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(finding.Table, finding.FieldID, id),
 			sqlgraph.To(script.Table, script.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, finding.FindingToScriptTable, finding.FindingToScriptColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, finding.ScriptTable, finding.ScriptColumn),
 		)
 		fromV = sqlgraph.Neighbors(f.driver.Dialect(), step)
 		return fromV, nil
@@ -2971,15 +2971,15 @@ func (c *FindingClient) QueryFindingToScript(f *Finding) *ScriptQuery {
 	return query
 }
 
-// QueryFindingToEnvironment queries the FindingToEnvironment edge of a Finding.
-func (c *FindingClient) QueryFindingToEnvironment(f *Finding) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a Finding.
+func (c *FindingClient) QueryEnvironment(f *Finding) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := f.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(finding.Table, finding.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, finding.FindingToEnvironmentTable, finding.FindingToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, finding.EnvironmentTable, finding.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(f.driver.Dialect(), step)
 		return fromV, nil

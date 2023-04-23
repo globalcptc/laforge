@@ -96,7 +96,7 @@ func main() {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.Finding.Delete().Where(finding.Not(finding.HasFindingToEnvironment())).Exec(ctx)
+	deletedCount, err = client.Finding.Delete().Where(finding.Not(finding.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}

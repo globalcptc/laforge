@@ -453,7 +453,7 @@ var (
 		{Name: "difficulty", Type: field.TypeEnum, Enums: []string{"ZeroDifficulty", "NoviceDifficulty", "AdvancedDifficulty", "ExpertDifficulty", "NullDifficulty"}},
 		{Name: "tags", Type: field.TypeJSON},
 		{Name: "environment_findings", Type: field.TypeUUID, Nullable: true},
-		{Name: "finding_finding_to_host", Type: field.TypeUUID, Nullable: true},
+		{Name: "finding_host", Type: field.TypeUUID, Nullable: true},
 		{Name: "script_script_to_finding", Type: field.TypeUUID, Nullable: true},
 	}
 	// FindingsTable holds the schema information for the "findings" table.
@@ -469,7 +469,7 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "findings_hosts_FindingToHost",
+				Symbol:     "findings_hosts_Host",
 				Columns:    []*schema.Column{FindingsColumns[7]},
 				RefColumns: []*schema.Column{HostsColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -1300,7 +1300,7 @@ var (
 		{Name: "hcl_id", Type: field.TypeString},
 		{Name: "ansible_users", Type: field.TypeUUID, Nullable: true},
 		{Name: "command_users", Type: field.TypeUUID, Nullable: true},
-		{Name: "finding_finding_to_user", Type: field.TypeUUID, Nullable: true},
+		{Name: "finding_users", Type: field.TypeUUID, Nullable: true},
 		{Name: "host_host_to_user", Type: field.TypeUUID, Nullable: true},
 		{Name: "script_script_to_user", Type: field.TypeUUID, Nullable: true},
 	}
@@ -1323,7 +1323,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "users_findings_FindingToUser",
+				Symbol:     "users_findings_Users",
 				Columns:    []*schema.Column{UsersColumns[7]},
 				RefColumns: []*schema.Column{FindingsColumns[0]},
 				OnDelete:   schema.SetNull,

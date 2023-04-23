@@ -25,44 +25,44 @@ const (
 	FieldDifficulty = "difficulty"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// EdgeFindingToUser holds the string denoting the findingtouser edge name in mutations.
-	EdgeFindingToUser = "FindingToUser"
-	// EdgeFindingToHost holds the string denoting the findingtohost edge name in mutations.
-	EdgeFindingToHost = "FindingToHost"
-	// EdgeFindingToScript holds the string denoting the findingtoscript edge name in mutations.
-	EdgeFindingToScript = "FindingToScript"
-	// EdgeFindingToEnvironment holds the string denoting the findingtoenvironment edge name in mutations.
-	EdgeFindingToEnvironment = "FindingToEnvironment"
+	// EdgeUsers holds the string denoting the users edge name in mutations.
+	EdgeUsers = "Users"
+	// EdgeHost holds the string denoting the host edge name in mutations.
+	EdgeHost = "Host"
+	// EdgeScript holds the string denoting the script edge name in mutations.
+	EdgeScript = "Script"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the finding in the database.
 	Table = "findings"
-	// FindingToUserTable is the table that holds the FindingToUser relation/edge.
-	FindingToUserTable = "users"
-	// FindingToUserInverseTable is the table name for the User entity.
+	// UsersTable is the table that holds the Users relation/edge.
+	UsersTable = "users"
+	// UsersInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	FindingToUserInverseTable = "users"
-	// FindingToUserColumn is the table column denoting the FindingToUser relation/edge.
-	FindingToUserColumn = "finding_finding_to_user"
-	// FindingToHostTable is the table that holds the FindingToHost relation/edge.
-	FindingToHostTable = "findings"
-	// FindingToHostInverseTable is the table name for the Host entity.
+	UsersInverseTable = "users"
+	// UsersColumn is the table column denoting the Users relation/edge.
+	UsersColumn = "finding_users"
+	// HostTable is the table that holds the Host relation/edge.
+	HostTable = "findings"
+	// HostInverseTable is the table name for the Host entity.
 	// It exists in this package in order to avoid circular dependency with the "host" package.
-	FindingToHostInverseTable = "hosts"
-	// FindingToHostColumn is the table column denoting the FindingToHost relation/edge.
-	FindingToHostColumn = "finding_finding_to_host"
-	// FindingToScriptTable is the table that holds the FindingToScript relation/edge.
-	FindingToScriptTable = "findings"
-	// FindingToScriptInverseTable is the table name for the Script entity.
+	HostInverseTable = "hosts"
+	// HostColumn is the table column denoting the Host relation/edge.
+	HostColumn = "finding_host"
+	// ScriptTable is the table that holds the Script relation/edge.
+	ScriptTable = "findings"
+	// ScriptInverseTable is the table name for the Script entity.
 	// It exists in this package in order to avoid circular dependency with the "script" package.
-	FindingToScriptInverseTable = "scripts"
-	// FindingToScriptColumn is the table column denoting the FindingToScript relation/edge.
-	FindingToScriptColumn = "script_script_to_finding"
-	// FindingToEnvironmentTable is the table that holds the FindingToEnvironment relation/edge.
-	FindingToEnvironmentTable = "findings"
-	// FindingToEnvironmentInverseTable is the table name for the Environment entity.
+	ScriptInverseTable = "scripts"
+	// ScriptColumn is the table column denoting the Script relation/edge.
+	ScriptColumn = "script_script_to_finding"
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "findings"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	FindingToEnvironmentInverseTable = "environments"
-	// FindingToEnvironmentColumn is the table column denoting the FindingToEnvironment relation/edge.
-	FindingToEnvironmentColumn = "environment_findings"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_findings"
 )
 
 // Columns holds all SQL columns for finding fields.
@@ -79,7 +79,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"environment_findings",
-	"finding_finding_to_host",
+	"finding_host",
 	"script_script_to_finding",
 }
 

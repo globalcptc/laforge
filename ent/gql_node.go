@@ -1814,9 +1814,9 @@ func (f *Finding) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "User",
-		Name: "FindingToUser",
+		Name: "Users",
 	}
-	err = f.QueryFindingToUser().
+	err = f.QueryUsers().
 		Select(user.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -1824,9 +1824,9 @@ func (f *Finding) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Host",
-		Name: "FindingToHost",
+		Name: "Host",
 	}
-	err = f.QueryFindingToHost().
+	err = f.QueryHost().
 		Select(host.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -1834,9 +1834,9 @@ func (f *Finding) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Script",
-		Name: "FindingToScript",
+		Name: "Script",
 	}
-	err = f.QueryFindingToScript().
+	err = f.QueryScript().
 		Select(script.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -1844,9 +1844,9 @@ func (f *Finding) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "Environment",
-		Name: "FindingToEnvironment",
+		Name: "Environment",
 	}
-	err = f.QueryFindingToEnvironment().
+	err = f.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
