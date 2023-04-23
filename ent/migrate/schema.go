@@ -51,9 +51,9 @@ var (
 		{Name: "free_mem", Type: field.TypeInt64},
 		{Name: "used_mem", Type: field.TypeInt64},
 		{Name: "timestamp", Type: field.TypeInt64},
-		{Name: "agent_status_agent_status_to_provisioned_host", Type: field.TypeUUID, Nullable: true},
-		{Name: "agent_status_agent_status_to_provisioned_network", Type: field.TypeUUID, Nullable: true},
-		{Name: "agent_status_agent_status_to_build", Type: field.TypeUUID, Nullable: true},
+		{Name: "agent_status_provisioned_host", Type: field.TypeUUID, Nullable: true},
+		{Name: "agent_status_provisioned_network", Type: field.TypeUUID, Nullable: true},
+		{Name: "agent_status_build", Type: field.TypeUUID, Nullable: true},
 	}
 	// AgentStatusTable holds the schema information for the "agent_status" table.
 	AgentStatusTable = &schema.Table{
@@ -62,19 +62,19 @@ var (
 		PrimaryKey: []*schema.Column{AgentStatusColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "agent_status_provisioned_hosts_AgentStatusToProvisionedHost",
+				Symbol:     "agent_status_provisioned_hosts_ProvisionedHost",
 				Columns:    []*schema.Column{AgentStatusColumns[15]},
 				RefColumns: []*schema.Column{ProvisionedHostsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "agent_status_provisioned_networks_AgentStatusToProvisionedNetwork",
+				Symbol:     "agent_status_provisioned_networks_ProvisionedNetwork",
 				Columns:    []*schema.Column{AgentStatusColumns[16]},
 				RefColumns: []*schema.Column{ProvisionedNetworksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "agent_status_builds_AgentStatusToBuild",
+				Symbol:     "agent_status_builds_Build",
 				Columns:    []*schema.Column{AgentStatusColumns[17]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.SetNull,

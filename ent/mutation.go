@@ -716,43 +716,43 @@ func (m *AdhocPlanMutation) ResetEdge(name string) error {
 // AgentStatusMutation represents an operation that mutates the AgentStatus nodes in the graph.
 type AgentStatusMutation struct {
 	config
-	op                                      Op
-	typ                                     string
-	id                                      *uuid.UUID
-	_ClientID                               *string
-	_Hostname                               *string
-	_UpTime                                 *int64
-	add_UpTime                              *int64
-	_BootTime                               *int64
-	add_BootTime                            *int64
-	_NumProcs                               *int64
-	add_NumProcs                            *int64
-	_Os                                     *string
-	_HostID                                 *string
-	_Load1                                  *float64
-	add_Load1                               *float64
-	_Load5                                  *float64
-	add_Load5                               *float64
-	_Load15                                 *float64
-	add_Load15                              *float64
-	_TotalMem                               *int64
-	add_TotalMem                            *int64
-	_FreeMem                                *int64
-	add_FreeMem                             *int64
-	_UsedMem                                *int64
-	add_UsedMem                             *int64
-	_Timestamp                              *int64
-	add_Timestamp                           *int64
-	clearedFields                           map[string]struct{}
-	_AgentStatusToProvisionedHost           *uuid.UUID
-	cleared_AgentStatusToProvisionedHost    bool
-	_AgentStatusToProvisionedNetwork        *uuid.UUID
-	cleared_AgentStatusToProvisionedNetwork bool
-	_AgentStatusToBuild                     *uuid.UUID
-	cleared_AgentStatusToBuild              bool
-	done                                    bool
-	oldValue                                func(context.Context) (*AgentStatus, error)
-	predicates                              []predicate.AgentStatus
+	op                         Op
+	typ                        string
+	id                         *uuid.UUID
+	_ClientID                  *string
+	_Hostname                  *string
+	_UpTime                    *int64
+	add_UpTime                 *int64
+	_BootTime                  *int64
+	add_BootTime               *int64
+	_NumProcs                  *int64
+	add_NumProcs               *int64
+	_Os                        *string
+	_HostID                    *string
+	_Load1                     *float64
+	add_Load1                  *float64
+	_Load5                     *float64
+	add_Load5                  *float64
+	_Load15                    *float64
+	add_Load15                 *float64
+	_TotalMem                  *int64
+	add_TotalMem               *int64
+	_FreeMem                   *int64
+	add_FreeMem                *int64
+	_UsedMem                   *int64
+	add_UsedMem                *int64
+	_Timestamp                 *int64
+	add_Timestamp              *int64
+	clearedFields              map[string]struct{}
+	_ProvisionedHost           *uuid.UUID
+	cleared_ProvisionedHost    bool
+	_ProvisionedNetwork        *uuid.UUID
+	cleared_ProvisionedNetwork bool
+	_Build                     *uuid.UUID
+	cleared_Build              bool
+	done                       bool
+	oldValue                   func(context.Context) (*AgentStatus, error)
+	predicates                 []predicate.AgentStatus
 }
 
 var _ ent.Mutation = (*AgentStatusMutation)(nil)
@@ -1563,121 +1563,121 @@ func (m *AgentStatusMutation) ResetTimestamp() {
 	m.add_Timestamp = nil
 }
 
-// SetAgentStatusToProvisionedHostID sets the "AgentStatusToProvisionedHost" edge to the ProvisionedHost entity by id.
-func (m *AgentStatusMutation) SetAgentStatusToProvisionedHostID(id uuid.UUID) {
-	m._AgentStatusToProvisionedHost = &id
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by id.
+func (m *AgentStatusMutation) SetProvisionedHostID(id uuid.UUID) {
+	m._ProvisionedHost = &id
 }
 
-// ClearAgentStatusToProvisionedHost clears the "AgentStatusToProvisionedHost" edge to the ProvisionedHost entity.
-func (m *AgentStatusMutation) ClearAgentStatusToProvisionedHost() {
-	m.cleared_AgentStatusToProvisionedHost = true
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (m *AgentStatusMutation) ClearProvisionedHost() {
+	m.cleared_ProvisionedHost = true
 }
 
-// AgentStatusToProvisionedHostCleared reports if the "AgentStatusToProvisionedHost" edge to the ProvisionedHost entity was cleared.
-func (m *AgentStatusMutation) AgentStatusToProvisionedHostCleared() bool {
-	return m.cleared_AgentStatusToProvisionedHost
+// ProvisionedHostCleared reports if the "ProvisionedHost" edge to the ProvisionedHost entity was cleared.
+func (m *AgentStatusMutation) ProvisionedHostCleared() bool {
+	return m.cleared_ProvisionedHost
 }
 
-// AgentStatusToProvisionedHostID returns the "AgentStatusToProvisionedHost" edge ID in the mutation.
-func (m *AgentStatusMutation) AgentStatusToProvisionedHostID() (id uuid.UUID, exists bool) {
-	if m._AgentStatusToProvisionedHost != nil {
-		return *m._AgentStatusToProvisionedHost, true
+// ProvisionedHostID returns the "ProvisionedHost" edge ID in the mutation.
+func (m *AgentStatusMutation) ProvisionedHostID() (id uuid.UUID, exists bool) {
+	if m._ProvisionedHost != nil {
+		return *m._ProvisionedHost, true
 	}
 	return
 }
 
-// AgentStatusToProvisionedHostIDs returns the "AgentStatusToProvisionedHost" edge IDs in the mutation.
+// ProvisionedHostIDs returns the "ProvisionedHost" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AgentStatusToProvisionedHostID instead. It exists only for internal usage by the builders.
-func (m *AgentStatusMutation) AgentStatusToProvisionedHostIDs() (ids []uuid.UUID) {
-	if id := m._AgentStatusToProvisionedHost; id != nil {
+// ProvisionedHostID instead. It exists only for internal usage by the builders.
+func (m *AgentStatusMutation) ProvisionedHostIDs() (ids []uuid.UUID) {
+	if id := m._ProvisionedHost; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetAgentStatusToProvisionedHost resets all changes to the "AgentStatusToProvisionedHost" edge.
-func (m *AgentStatusMutation) ResetAgentStatusToProvisionedHost() {
-	m._AgentStatusToProvisionedHost = nil
-	m.cleared_AgentStatusToProvisionedHost = false
+// ResetProvisionedHost resets all changes to the "ProvisionedHost" edge.
+func (m *AgentStatusMutation) ResetProvisionedHost() {
+	m._ProvisionedHost = nil
+	m.cleared_ProvisionedHost = false
 }
 
-// SetAgentStatusToProvisionedNetworkID sets the "AgentStatusToProvisionedNetwork" edge to the ProvisionedNetwork entity by id.
-func (m *AgentStatusMutation) SetAgentStatusToProvisionedNetworkID(id uuid.UUID) {
-	m._AgentStatusToProvisionedNetwork = &id
+// SetProvisionedNetworkID sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity by id.
+func (m *AgentStatusMutation) SetProvisionedNetworkID(id uuid.UUID) {
+	m._ProvisionedNetwork = &id
 }
 
-// ClearAgentStatusToProvisionedNetwork clears the "AgentStatusToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (m *AgentStatusMutation) ClearAgentStatusToProvisionedNetwork() {
-	m.cleared_AgentStatusToProvisionedNetwork = true
+// ClearProvisionedNetwork clears the "ProvisionedNetwork" edge to the ProvisionedNetwork entity.
+func (m *AgentStatusMutation) ClearProvisionedNetwork() {
+	m.cleared_ProvisionedNetwork = true
 }
 
-// AgentStatusToProvisionedNetworkCleared reports if the "AgentStatusToProvisionedNetwork" edge to the ProvisionedNetwork entity was cleared.
-func (m *AgentStatusMutation) AgentStatusToProvisionedNetworkCleared() bool {
-	return m.cleared_AgentStatusToProvisionedNetwork
+// ProvisionedNetworkCleared reports if the "ProvisionedNetwork" edge to the ProvisionedNetwork entity was cleared.
+func (m *AgentStatusMutation) ProvisionedNetworkCleared() bool {
+	return m.cleared_ProvisionedNetwork
 }
 
-// AgentStatusToProvisionedNetworkID returns the "AgentStatusToProvisionedNetwork" edge ID in the mutation.
-func (m *AgentStatusMutation) AgentStatusToProvisionedNetworkID() (id uuid.UUID, exists bool) {
-	if m._AgentStatusToProvisionedNetwork != nil {
-		return *m._AgentStatusToProvisionedNetwork, true
+// ProvisionedNetworkID returns the "ProvisionedNetwork" edge ID in the mutation.
+func (m *AgentStatusMutation) ProvisionedNetworkID() (id uuid.UUID, exists bool) {
+	if m._ProvisionedNetwork != nil {
+		return *m._ProvisionedNetwork, true
 	}
 	return
 }
 
-// AgentStatusToProvisionedNetworkIDs returns the "AgentStatusToProvisionedNetwork" edge IDs in the mutation.
+// ProvisionedNetworkIDs returns the "ProvisionedNetwork" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AgentStatusToProvisionedNetworkID instead. It exists only for internal usage by the builders.
-func (m *AgentStatusMutation) AgentStatusToProvisionedNetworkIDs() (ids []uuid.UUID) {
-	if id := m._AgentStatusToProvisionedNetwork; id != nil {
+// ProvisionedNetworkID instead. It exists only for internal usage by the builders.
+func (m *AgentStatusMutation) ProvisionedNetworkIDs() (ids []uuid.UUID) {
+	if id := m._ProvisionedNetwork; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetAgentStatusToProvisionedNetwork resets all changes to the "AgentStatusToProvisionedNetwork" edge.
-func (m *AgentStatusMutation) ResetAgentStatusToProvisionedNetwork() {
-	m._AgentStatusToProvisionedNetwork = nil
-	m.cleared_AgentStatusToProvisionedNetwork = false
+// ResetProvisionedNetwork resets all changes to the "ProvisionedNetwork" edge.
+func (m *AgentStatusMutation) ResetProvisionedNetwork() {
+	m._ProvisionedNetwork = nil
+	m.cleared_ProvisionedNetwork = false
 }
 
-// SetAgentStatusToBuildID sets the "AgentStatusToBuild" edge to the Build entity by id.
-func (m *AgentStatusMutation) SetAgentStatusToBuildID(id uuid.UUID) {
-	m._AgentStatusToBuild = &id
+// SetBuildID sets the "Build" edge to the Build entity by id.
+func (m *AgentStatusMutation) SetBuildID(id uuid.UUID) {
+	m._Build = &id
 }
 
-// ClearAgentStatusToBuild clears the "AgentStatusToBuild" edge to the Build entity.
-func (m *AgentStatusMutation) ClearAgentStatusToBuild() {
-	m.cleared_AgentStatusToBuild = true
+// ClearBuild clears the "Build" edge to the Build entity.
+func (m *AgentStatusMutation) ClearBuild() {
+	m.cleared_Build = true
 }
 
-// AgentStatusToBuildCleared reports if the "AgentStatusToBuild" edge to the Build entity was cleared.
-func (m *AgentStatusMutation) AgentStatusToBuildCleared() bool {
-	return m.cleared_AgentStatusToBuild
+// BuildCleared reports if the "Build" edge to the Build entity was cleared.
+func (m *AgentStatusMutation) BuildCleared() bool {
+	return m.cleared_Build
 }
 
-// AgentStatusToBuildID returns the "AgentStatusToBuild" edge ID in the mutation.
-func (m *AgentStatusMutation) AgentStatusToBuildID() (id uuid.UUID, exists bool) {
-	if m._AgentStatusToBuild != nil {
-		return *m._AgentStatusToBuild, true
+// BuildID returns the "Build" edge ID in the mutation.
+func (m *AgentStatusMutation) BuildID() (id uuid.UUID, exists bool) {
+	if m._Build != nil {
+		return *m._Build, true
 	}
 	return
 }
 
-// AgentStatusToBuildIDs returns the "AgentStatusToBuild" edge IDs in the mutation.
+// BuildIDs returns the "Build" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AgentStatusToBuildID instead. It exists only for internal usage by the builders.
-func (m *AgentStatusMutation) AgentStatusToBuildIDs() (ids []uuid.UUID) {
-	if id := m._AgentStatusToBuild; id != nil {
+// BuildID instead. It exists only for internal usage by the builders.
+func (m *AgentStatusMutation) BuildIDs() (ids []uuid.UUID) {
+	if id := m._Build; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetAgentStatusToBuild resets all changes to the "AgentStatusToBuild" edge.
-func (m *AgentStatusMutation) ResetAgentStatusToBuild() {
-	m._AgentStatusToBuild = nil
-	m.cleared_AgentStatusToBuild = false
+// ResetBuild resets all changes to the "Build" edge.
+func (m *AgentStatusMutation) ResetBuild() {
+	m._Build = nil
+	m.cleared_Build = false
 }
 
 // Where appends a list predicates to the AgentStatusMutation builder.
@@ -2143,14 +2143,14 @@ func (m *AgentStatusMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AgentStatusMutation) AddedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m._AgentStatusToProvisionedHost != nil {
-		edges = append(edges, agentstatus.EdgeAgentStatusToProvisionedHost)
+	if m._ProvisionedHost != nil {
+		edges = append(edges, agentstatus.EdgeProvisionedHost)
 	}
-	if m._AgentStatusToProvisionedNetwork != nil {
-		edges = append(edges, agentstatus.EdgeAgentStatusToProvisionedNetwork)
+	if m._ProvisionedNetwork != nil {
+		edges = append(edges, agentstatus.EdgeProvisionedNetwork)
 	}
-	if m._AgentStatusToBuild != nil {
-		edges = append(edges, agentstatus.EdgeAgentStatusToBuild)
+	if m._Build != nil {
+		edges = append(edges, agentstatus.EdgeBuild)
 	}
 	return edges
 }
@@ -2159,16 +2159,16 @@ func (m *AgentStatusMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *AgentStatusMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case agentstatus.EdgeAgentStatusToProvisionedHost:
-		if id := m._AgentStatusToProvisionedHost; id != nil {
+	case agentstatus.EdgeProvisionedHost:
+		if id := m._ProvisionedHost; id != nil {
 			return []ent.Value{*id}
 		}
-	case agentstatus.EdgeAgentStatusToProvisionedNetwork:
-		if id := m._AgentStatusToProvisionedNetwork; id != nil {
+	case agentstatus.EdgeProvisionedNetwork:
+		if id := m._ProvisionedNetwork; id != nil {
 			return []ent.Value{*id}
 		}
-	case agentstatus.EdgeAgentStatusToBuild:
-		if id := m._AgentStatusToBuild; id != nil {
+	case agentstatus.EdgeBuild:
+		if id := m._Build; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -2192,14 +2192,14 @@ func (m *AgentStatusMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AgentStatusMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m.cleared_AgentStatusToProvisionedHost {
-		edges = append(edges, agentstatus.EdgeAgentStatusToProvisionedHost)
+	if m.cleared_ProvisionedHost {
+		edges = append(edges, agentstatus.EdgeProvisionedHost)
 	}
-	if m.cleared_AgentStatusToProvisionedNetwork {
-		edges = append(edges, agentstatus.EdgeAgentStatusToProvisionedNetwork)
+	if m.cleared_ProvisionedNetwork {
+		edges = append(edges, agentstatus.EdgeProvisionedNetwork)
 	}
-	if m.cleared_AgentStatusToBuild {
-		edges = append(edges, agentstatus.EdgeAgentStatusToBuild)
+	if m.cleared_Build {
+		edges = append(edges, agentstatus.EdgeBuild)
 	}
 	return edges
 }
@@ -2208,12 +2208,12 @@ func (m *AgentStatusMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *AgentStatusMutation) EdgeCleared(name string) bool {
 	switch name {
-	case agentstatus.EdgeAgentStatusToProvisionedHost:
-		return m.cleared_AgentStatusToProvisionedHost
-	case agentstatus.EdgeAgentStatusToProvisionedNetwork:
-		return m.cleared_AgentStatusToProvisionedNetwork
-	case agentstatus.EdgeAgentStatusToBuild:
-		return m.cleared_AgentStatusToBuild
+	case agentstatus.EdgeProvisionedHost:
+		return m.cleared_ProvisionedHost
+	case agentstatus.EdgeProvisionedNetwork:
+		return m.cleared_ProvisionedNetwork
+	case agentstatus.EdgeBuild:
+		return m.cleared_Build
 	}
 	return false
 }
@@ -2222,14 +2222,14 @@ func (m *AgentStatusMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *AgentStatusMutation) ClearEdge(name string) error {
 	switch name {
-	case agentstatus.EdgeAgentStatusToProvisionedHost:
-		m.ClearAgentStatusToProvisionedHost()
+	case agentstatus.EdgeProvisionedHost:
+		m.ClearProvisionedHost()
 		return nil
-	case agentstatus.EdgeAgentStatusToProvisionedNetwork:
-		m.ClearAgentStatusToProvisionedNetwork()
+	case agentstatus.EdgeProvisionedNetwork:
+		m.ClearProvisionedNetwork()
 		return nil
-	case agentstatus.EdgeAgentStatusToBuild:
-		m.ClearAgentStatusToBuild()
+	case agentstatus.EdgeBuild:
+		m.ClearBuild()
 		return nil
 	}
 	return fmt.Errorf("unknown AgentStatus unique edge %s", name)
@@ -2239,14 +2239,14 @@ func (m *AgentStatusMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *AgentStatusMutation) ResetEdge(name string) error {
 	switch name {
-	case agentstatus.EdgeAgentStatusToProvisionedHost:
-		m.ResetAgentStatusToProvisionedHost()
+	case agentstatus.EdgeProvisionedHost:
+		m.ResetProvisionedHost()
 		return nil
-	case agentstatus.EdgeAgentStatusToProvisionedNetwork:
-		m.ResetAgentStatusToProvisionedNetwork()
+	case agentstatus.EdgeProvisionedNetwork:
+		m.ResetProvisionedNetwork()
 		return nil
-	case agentstatus.EdgeAgentStatusToBuild:
-		m.ResetAgentStatusToBuild()
+	case agentstatus.EdgeBuild:
+		m.ResetBuild()
 		return nil
 	}
 	return fmt.Errorf("unknown AgentStatus edge %s", name)

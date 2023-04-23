@@ -645,15 +645,15 @@ func (c *AgentStatusClient) GetX(ctx context.Context, id uuid.UUID) *AgentStatus
 	return obj
 }
 
-// QueryAgentStatusToProvisionedHost queries the AgentStatusToProvisionedHost edge of a AgentStatus.
-func (c *AgentStatusClient) QueryAgentStatusToProvisionedHost(as *AgentStatus) *ProvisionedHostQuery {
+// QueryProvisionedHost queries the ProvisionedHost edge of a AgentStatus.
+func (c *AgentStatusClient) QueryProvisionedHost(as *AgentStatus) *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := as.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agentstatus.Table, agentstatus.FieldID, id),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, agentstatus.AgentStatusToProvisionedHostTable, agentstatus.AgentStatusToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, agentstatus.ProvisionedHostTable, agentstatus.ProvisionedHostColumn),
 		)
 		fromV = sqlgraph.Neighbors(as.driver.Dialect(), step)
 		return fromV, nil
@@ -661,15 +661,15 @@ func (c *AgentStatusClient) QueryAgentStatusToProvisionedHost(as *AgentStatus) *
 	return query
 }
 
-// QueryAgentStatusToProvisionedNetwork queries the AgentStatusToProvisionedNetwork edge of a AgentStatus.
-func (c *AgentStatusClient) QueryAgentStatusToProvisionedNetwork(as *AgentStatus) *ProvisionedNetworkQuery {
+// QueryProvisionedNetwork queries the ProvisionedNetwork edge of a AgentStatus.
+func (c *AgentStatusClient) QueryProvisionedNetwork(as *AgentStatus) *ProvisionedNetworkQuery {
 	query := &ProvisionedNetworkQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := as.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agentstatus.Table, agentstatus.FieldID, id),
 			sqlgraph.To(provisionednetwork.Table, provisionednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, agentstatus.AgentStatusToProvisionedNetworkTable, agentstatus.AgentStatusToProvisionedNetworkColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, agentstatus.ProvisionedNetworkTable, agentstatus.ProvisionedNetworkColumn),
 		)
 		fromV = sqlgraph.Neighbors(as.driver.Dialect(), step)
 		return fromV, nil
@@ -677,15 +677,15 @@ func (c *AgentStatusClient) QueryAgentStatusToProvisionedNetwork(as *AgentStatus
 	return query
 }
 
-// QueryAgentStatusToBuild queries the AgentStatusToBuild edge of a AgentStatus.
-func (c *AgentStatusClient) QueryAgentStatusToBuild(as *AgentStatus) *BuildQuery {
+// QueryBuild queries the Build edge of a AgentStatus.
+func (c *AgentStatusClient) QueryBuild(as *AgentStatus) *BuildQuery {
 	query := &BuildQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := as.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agentstatus.Table, agentstatus.FieldID, id),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, agentstatus.AgentStatusToBuildTable, agentstatus.AgentStatusToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, agentstatus.BuildTable, agentstatus.BuildColumn),
 		)
 		fromV = sqlgraph.Neighbors(as.driver.Dialect(), step)
 		return fromV, nil

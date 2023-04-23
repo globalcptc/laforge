@@ -121,7 +121,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "agentstatus" package.
 	BuildToAgentStatusesInverseTable = "agent_status"
 	// BuildToAgentStatusesColumn is the table column denoting the BuildToAgentStatuses relation/edge.
-	BuildToAgentStatusesColumn = "agent_status_agent_status_to_build"
+	BuildToAgentStatusesColumn = "agent_status_build"
 	// BuildToServerTasksTable is the table that holds the BuildToServerTasks relation/edge.
 	BuildToServerTasksTable = "server_tasks"
 	// BuildToServerTasksInverseTable is the table name for the ServerTask entity.

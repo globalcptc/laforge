@@ -100,7 +100,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "agentstatus" package.
 	ProvisionedHostToAgentStatusInverseTable = "agent_status"
 	// ProvisionedHostToAgentStatusColumn is the table column denoting the ProvisionedHostToAgentStatus relation/edge.
-	ProvisionedHostToAgentStatusColumn = "agent_status_agent_status_to_provisioned_host"
+	ProvisionedHostToAgentStatusColumn = "agent_status_provisioned_host"
 	// ProvisionedHostToAgentTaskTable is the table that holds the ProvisionedHostToAgentTask relation/edge.
 	ProvisionedHostToAgentTaskTable = "agent_tasks"
 	// ProvisionedHostToAgentTaskInverseTable is the table name for the AgentTask entity.

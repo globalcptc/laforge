@@ -1060,13 +1060,13 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToAgentStatus(ctx context.Co
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_status_agent_status_to_provisioned_host
+		fk := n.agent_status_provisioned_host
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_status_agent_status_to_provisioned_host" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "agent_status_provisioned_host" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_status_agent_status_to_provisioned_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_status_provisioned_host" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

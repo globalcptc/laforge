@@ -1191,13 +1191,13 @@ func (bq *BuildQuery) loadBuildToAgentStatuses(ctx context.Context, query *Agent
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_status_agent_status_to_build
+		fk := n.agent_status_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_status_agent_status_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "agent_status_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_status_agent_status_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_status_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

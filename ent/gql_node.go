@@ -261,9 +261,9 @@ func (as *AgentStatus) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "ProvisionedHost",
-		Name: "AgentStatusToProvisionedHost",
+		Name: "ProvisionedHost",
 	}
-	err = as.QueryAgentStatusToProvisionedHost().
+	err = as.QueryProvisionedHost().
 		Select(provisionedhost.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -271,9 +271,9 @@ func (as *AgentStatus) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "ProvisionedNetwork",
-		Name: "AgentStatusToProvisionedNetwork",
+		Name: "ProvisionedNetwork",
 	}
-	err = as.QueryAgentStatusToProvisionedNetwork().
+	err = as.QueryProvisionedNetwork().
 		Select(provisionednetwork.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -281,9 +281,9 @@ func (as *AgentStatus) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Build",
-		Name: "AgentStatusToBuild",
+		Name: "Build",
 	}
-	err = as.QueryAgentStatusToBuild().
+	err = as.QueryBuild().
 		Select(build.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {

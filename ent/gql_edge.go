@@ -44,26 +44,26 @@ func (ap *AdhocPlan) AgentTask(ctx context.Context) (*AgentTask, error) {
 	return result, err
 }
 
-func (as *AgentStatus) AgentStatusToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
-	result, err := as.Edges.AgentStatusToProvisionedHostOrErr()
+func (as *AgentStatus) ProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
+	result, err := as.Edges.ProvisionedHostOrErr()
 	if IsNotLoaded(err) {
-		result, err = as.QueryAgentStatusToProvisionedHost().Only(ctx)
+		result, err = as.QueryProvisionedHost().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (as *AgentStatus) AgentStatusToProvisionedNetwork(ctx context.Context) (*ProvisionedNetwork, error) {
-	result, err := as.Edges.AgentStatusToProvisionedNetworkOrErr()
+func (as *AgentStatus) ProvisionedNetwork(ctx context.Context) (*ProvisionedNetwork, error) {
+	result, err := as.Edges.ProvisionedNetworkOrErr()
 	if IsNotLoaded(err) {
-		result, err = as.QueryAgentStatusToProvisionedNetwork().Only(ctx)
+		result, err = as.QueryProvisionedNetwork().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (as *AgentStatus) AgentStatusToBuild(ctx context.Context) (*Build, error) {
-	result, err := as.Edges.AgentStatusToBuildOrErr()
+func (as *AgentStatus) Build(ctx context.Context) (*Build, error) {
+	result, err := as.Edges.BuildOrErr()
 	if IsNotLoaded(err) {
-		result, err = as.QueryAgentStatusToBuild().Only(ctx)
+		result, err = as.QueryBuild().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
