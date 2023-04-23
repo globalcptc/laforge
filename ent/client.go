@@ -1983,15 +1983,15 @@ func (c *DNSRecordClient) GetX(ctx context.Context, id uuid.UUID) *DNSRecord {
 	return obj
 }
 
-// QueryDNSRecordToEnvironment queries the DNSRecordToEnvironment edge of a DNSRecord.
-func (c *DNSRecordClient) QueryDNSRecordToEnvironment(dr *DNSRecord) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a DNSRecord.
+func (c *DNSRecordClient) QueryEnvironment(dr *DNSRecord) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := dr.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(dnsrecord.Table, dnsrecord.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, dnsrecord.DNSRecordToEnvironmentTable, dnsrecord.DNSRecordToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, dnsrecord.EnvironmentTable, dnsrecord.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(dr.driver.Dialect(), step)
 		return fromV, nil

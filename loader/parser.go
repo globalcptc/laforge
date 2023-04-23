@@ -1134,7 +1134,7 @@ func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 			Where(
 				dnsrecord.And(
 					dnsrecord.HclIDEQ(cDNSRecord.HclID),
-					dnsrecord.HasDNSRecordToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					dnsrecord.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)

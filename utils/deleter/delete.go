@@ -101,7 +101,7 @@ func main() {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.DNSRecord.Delete().Where(dnsrecord.Not(dnsrecord.HasDNSRecordToEnvironment())).Exec(ctx)
+	deletedCount, err = client.DNSRecord.Delete().Where(dnsrecord.Not(dnsrecord.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}

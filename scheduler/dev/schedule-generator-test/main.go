@@ -257,7 +257,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	// Check if step is dns record
 	entDNSRecord, err := client.DNSRecord.Query().Where(
 		dnsrecord.And(
-			dnsrecord.HasDNSRecordToEnvironmentWith(
+			dnsrecord.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			dnsrecord.HclIDEQ(entScheduledStep.Step),

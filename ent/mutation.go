@@ -10041,23 +10041,23 @@ func (m *DNSMutation) ResetEdge(name string) error {
 // DNSRecordMutation represents an operation that mutates the DNSRecord nodes in the graph.
 type DNSRecordMutation struct {
 	config
-	op                             Op
-	typ                            string
-	id                             *uuid.UUID
-	hcl_id                         *string
-	name                           *string
-	values                         *[]string
-	_type                          *string
-	zone                           *string
-	vars                           *map[string]string
-	disabled                       *bool
-	tags                           *map[string]string
-	clearedFields                  map[string]struct{}
-	_DNSRecordToEnvironment        *uuid.UUID
-	cleared_DNSRecordToEnvironment bool
-	done                           bool
-	oldValue                       func(context.Context) (*DNSRecord, error)
-	predicates                     []predicate.DNSRecord
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	hcl_id              *string
+	name                *string
+	values              *[]string
+	_type               *string
+	zone                *string
+	vars                *map[string]string
+	disabled            *bool
+	tags                *map[string]string
+	clearedFields       map[string]struct{}
+	_Environment        *uuid.UUID
+	cleared_Environment bool
+	done                bool
+	oldValue            func(context.Context) (*DNSRecord, error)
+	predicates          []predicate.DNSRecord
 }
 
 var _ ent.Mutation = (*DNSRecordMutation)(nil)
@@ -10452,43 +10452,43 @@ func (m *DNSRecordMutation) ResetTags() {
 	m.tags = nil
 }
 
-// SetDNSRecordToEnvironmentID sets the "DNSRecordToEnvironment" edge to the Environment entity by id.
-func (m *DNSRecordMutation) SetDNSRecordToEnvironmentID(id uuid.UUID) {
-	m._DNSRecordToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *DNSRecordMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearDNSRecordToEnvironment clears the "DNSRecordToEnvironment" edge to the Environment entity.
-func (m *DNSRecordMutation) ClearDNSRecordToEnvironment() {
-	m.cleared_DNSRecordToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *DNSRecordMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// DNSRecordToEnvironmentCleared reports if the "DNSRecordToEnvironment" edge to the Environment entity was cleared.
-func (m *DNSRecordMutation) DNSRecordToEnvironmentCleared() bool {
-	return m.cleared_DNSRecordToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *DNSRecordMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// DNSRecordToEnvironmentID returns the "DNSRecordToEnvironment" edge ID in the mutation.
-func (m *DNSRecordMutation) DNSRecordToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._DNSRecordToEnvironment != nil {
-		return *m._DNSRecordToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *DNSRecordMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// DNSRecordToEnvironmentIDs returns the "DNSRecordToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// DNSRecordToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *DNSRecordMutation) DNSRecordToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._DNSRecordToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *DNSRecordMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetDNSRecordToEnvironment resets all changes to the "DNSRecordToEnvironment" edge.
-func (m *DNSRecordMutation) ResetDNSRecordToEnvironment() {
-	m._DNSRecordToEnvironment = nil
-	m.cleared_DNSRecordToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *DNSRecordMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
 // Where appends a list predicates to the DNSRecordMutation builder.
@@ -10729,8 +10729,8 @@ func (m *DNSRecordMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DNSRecordMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m._DNSRecordToEnvironment != nil {
-		edges = append(edges, dnsrecord.EdgeDNSRecordToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, dnsrecord.EdgeEnvironment)
 	}
 	return edges
 }
@@ -10739,8 +10739,8 @@ func (m *DNSRecordMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *DNSRecordMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case dnsrecord.EdgeDNSRecordToEnvironment:
-		if id := m._DNSRecordToEnvironment; id != nil {
+	case dnsrecord.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -10764,8 +10764,8 @@ func (m *DNSRecordMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DNSRecordMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.cleared_DNSRecordToEnvironment {
-		edges = append(edges, dnsrecord.EdgeDNSRecordToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, dnsrecord.EdgeEnvironment)
 	}
 	return edges
 }
@@ -10774,8 +10774,8 @@ func (m *DNSRecordMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *DNSRecordMutation) EdgeCleared(name string) bool {
 	switch name {
-	case dnsrecord.EdgeDNSRecordToEnvironment:
-		return m.cleared_DNSRecordToEnvironment
+	case dnsrecord.EdgeEnvironment:
+		return m.cleared_Environment
 	}
 	return false
 }
@@ -10784,8 +10784,8 @@ func (m *DNSRecordMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *DNSRecordMutation) ClearEdge(name string) error {
 	switch name {
-	case dnsrecord.EdgeDNSRecordToEnvironment:
-		m.ClearDNSRecordToEnvironment()
+	case dnsrecord.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown DNSRecord unique edge %s", name)
@@ -10795,8 +10795,8 @@ func (m *DNSRecordMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *DNSRecordMutation) ResetEdge(name string) error {
 	switch name {
-	case dnsrecord.EdgeDNSRecordToEnvironment:
-		m.ResetDNSRecordToEnvironment()
+	case dnsrecord.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown DNSRecord edge %s", name)

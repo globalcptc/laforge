@@ -308,10 +308,10 @@ func (d *DNS) Competitions(ctx context.Context) ([]*Competition, error) {
 	return result, err
 }
 
-func (dr *DNSRecord) DNSRecordToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := dr.Edges.DNSRecordToEnvironmentOrErr()
+func (dr *DNSRecord) Environment(ctx context.Context) (*Environment, error) {
+	result, err := dr.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = dr.QueryDNSRecordToEnvironment().Only(ctx)
+		result, err = dr.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

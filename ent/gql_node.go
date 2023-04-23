@@ -1210,9 +1210,9 @@ func (dr *DNSRecord) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
-		Name: "DNSRecordToEnvironment",
+		Name: "Environment",
 	}
-	err = dr.QueryDNSRecordToEnvironment().
+	err = dr.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {

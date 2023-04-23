@@ -972,7 +972,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	// Check if step is dns record
 	entDNSRecord, err := client.DNSRecord.Query().Where(
 		dnsrecord.And(
-			dnsrecord.HasDNSRecordToEnvironmentWith(
+			dnsrecord.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
 			dnsrecord.HclIDEQ(hclID),
@@ -1321,7 +1321,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	// Check if step is dns record
 	entDNSRecord, err := client.DNSRecord.Query().Where(
 		dnsrecord.And(
-			dnsrecord.HasDNSRecordToEnvironmentWith(
+			dnsrecord.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			dnsrecord.HclIDEQ(entScheduledStep.Step),
