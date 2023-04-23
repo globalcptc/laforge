@@ -1889,9 +1889,9 @@ func (gfm *GinFileMiddleware) Node(ctx context.Context) (node *Node, err error) 
 	}
 	node.Edges[0] = &Edge{
 		Type: "ProvisionedHost",
-		Name: "GinFileMiddlewareToProvisionedHost",
+		Name: "ProvisionedHost",
 	}
-	err = gfm.QueryGinFileMiddlewareToProvisionedHost().
+	err = gfm.QueryProvisionedHost().
 		Select(provisionedhost.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -1899,9 +1899,9 @@ func (gfm *GinFileMiddleware) Node(ctx context.Context) (node *Node, err error) 
 	}
 	node.Edges[1] = &Edge{
 		Type: "ProvisioningStep",
-		Name: "GinFileMiddlewareToProvisioningStep",
+		Name: "ProvisioningStep",
 	}
-	err = gfm.QueryGinFileMiddlewareToProvisioningStep().
+	err = gfm.QueryProvisioningStep().
 		Select(provisioningstep.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -1909,9 +1909,9 @@ func (gfm *GinFileMiddleware) Node(ctx context.Context) (node *Node, err error) 
 	}
 	node.Edges[2] = &Edge{
 		Type: "ProvisioningScheduledStep",
-		Name: "GinFileMiddlewareToProvisioningScheduledStep",
+		Name: "ProvisioningScheduledStep",
 	}
-	err = gfm.QueryGinFileMiddlewareToProvisioningScheduledStep().
+	err = gfm.QueryProvisioningScheduledStep().
 		Select(provisioningscheduledstep.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {

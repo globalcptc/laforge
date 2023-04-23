@@ -540,26 +540,26 @@ func (f *Finding) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (gfm *GinFileMiddleware) GinFileMiddlewareToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
-	result, err := gfm.Edges.GinFileMiddlewareToProvisionedHostOrErr()
+func (gfm *GinFileMiddleware) ProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
+	result, err := gfm.Edges.ProvisionedHostOrErr()
 	if IsNotLoaded(err) {
-		result, err = gfm.QueryGinFileMiddlewareToProvisionedHost().Only(ctx)
+		result, err = gfm.QueryProvisionedHost().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (gfm *GinFileMiddleware) GinFileMiddlewareToProvisioningStep(ctx context.Context) (*ProvisioningStep, error) {
-	result, err := gfm.Edges.GinFileMiddlewareToProvisioningStepOrErr()
+func (gfm *GinFileMiddleware) ProvisioningStep(ctx context.Context) (*ProvisioningStep, error) {
+	result, err := gfm.Edges.ProvisioningStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = gfm.QueryGinFileMiddlewareToProvisioningStep().Only(ctx)
+		result, err = gfm.QueryProvisioningStep().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (gfm *GinFileMiddleware) GinFileMiddlewareToProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
-	result, err := gfm.Edges.GinFileMiddlewareToProvisioningScheduledStepOrErr()
+func (gfm *GinFileMiddleware) ProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
+	result, err := gfm.Edges.ProvisioningScheduledStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = gfm.QueryGinFileMiddlewareToProvisioningScheduledStep().Only(ctx)
+		result, err = gfm.QueryProvisioningScheduledStep().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

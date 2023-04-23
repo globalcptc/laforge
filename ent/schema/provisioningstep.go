@@ -62,7 +62,7 @@ func (ProvisioningStep) Edges() []ent.Edge {
 		edge.From("ProvisioningStepToAgentTask", AgentTask.Type).
 			Ref("ProvisioningStep"),
 		edge.From("ProvisioningStepToGinFileMiddleware", GinFileMiddleware.Type).
-			Ref("GinFileMiddlewareToProvisioningStep").
+			Ref("ProvisioningStep").
 			Unique(),
 	}
 }

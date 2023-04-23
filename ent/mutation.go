@@ -16648,22 +16648,22 @@ func (m *FindingMutation) ResetEdge(name string) error {
 // GinFileMiddlewareMutation represents an operation that mutates the GinFileMiddleware nodes in the graph.
 type GinFileMiddlewareMutation struct {
 	config
-	op                                                   Op
-	typ                                                  string
-	id                                                   *uuid.UUID
-	url_id                                               *string
-	file_path                                            *string
-	accessed                                             *bool
-	clearedFields                                        map[string]struct{}
-	_GinFileMiddlewareToProvisionedHost                  *uuid.UUID
-	cleared_GinFileMiddlewareToProvisionedHost           bool
-	_GinFileMiddlewareToProvisioningStep                 *uuid.UUID
-	cleared_GinFileMiddlewareToProvisioningStep          bool
-	_GinFileMiddlewareToProvisioningScheduledStep        *uuid.UUID
-	cleared_GinFileMiddlewareToProvisioningScheduledStep bool
-	done                                                 bool
-	oldValue                                             func(context.Context) (*GinFileMiddleware, error)
-	predicates                                           []predicate.GinFileMiddleware
+	op                                Op
+	typ                               string
+	id                                *uuid.UUID
+	url_id                            *string
+	file_path                         *string
+	accessed                          *bool
+	clearedFields                     map[string]struct{}
+	_ProvisionedHost                  *uuid.UUID
+	cleared_ProvisionedHost           bool
+	_ProvisioningStep                 *uuid.UUID
+	cleared_ProvisioningStep          bool
+	_ProvisioningScheduledStep        *uuid.UUID
+	cleared_ProvisioningScheduledStep bool
+	done                              bool
+	oldValue                          func(context.Context) (*GinFileMiddleware, error)
+	predicates                        []predicate.GinFileMiddleware
 }
 
 var _ ent.Mutation = (*GinFileMiddlewareMutation)(nil)
@@ -16878,121 +16878,121 @@ func (m *GinFileMiddlewareMutation) ResetAccessed() {
 	m.accessed = nil
 }
 
-// SetGinFileMiddlewareToProvisionedHostID sets the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity by id.
-func (m *GinFileMiddlewareMutation) SetGinFileMiddlewareToProvisionedHostID(id uuid.UUID) {
-	m._GinFileMiddlewareToProvisionedHost = &id
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by id.
+func (m *GinFileMiddlewareMutation) SetProvisionedHostID(id uuid.UUID) {
+	m._ProvisionedHost = &id
 }
 
-// ClearGinFileMiddlewareToProvisionedHost clears the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity.
-func (m *GinFileMiddlewareMutation) ClearGinFileMiddlewareToProvisionedHost() {
-	m.cleared_GinFileMiddlewareToProvisionedHost = true
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (m *GinFileMiddlewareMutation) ClearProvisionedHost() {
+	m.cleared_ProvisionedHost = true
 }
 
-// GinFileMiddlewareToProvisionedHostCleared reports if the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity was cleared.
-func (m *GinFileMiddlewareMutation) GinFileMiddlewareToProvisionedHostCleared() bool {
-	return m.cleared_GinFileMiddlewareToProvisionedHost
+// ProvisionedHostCleared reports if the "ProvisionedHost" edge to the ProvisionedHost entity was cleared.
+func (m *GinFileMiddlewareMutation) ProvisionedHostCleared() bool {
+	return m.cleared_ProvisionedHost
 }
 
-// GinFileMiddlewareToProvisionedHostID returns the "GinFileMiddlewareToProvisionedHost" edge ID in the mutation.
-func (m *GinFileMiddlewareMutation) GinFileMiddlewareToProvisionedHostID() (id uuid.UUID, exists bool) {
-	if m._GinFileMiddlewareToProvisionedHost != nil {
-		return *m._GinFileMiddlewareToProvisionedHost, true
+// ProvisionedHostID returns the "ProvisionedHost" edge ID in the mutation.
+func (m *GinFileMiddlewareMutation) ProvisionedHostID() (id uuid.UUID, exists bool) {
+	if m._ProvisionedHost != nil {
+		return *m._ProvisionedHost, true
 	}
 	return
 }
 
-// GinFileMiddlewareToProvisionedHostIDs returns the "GinFileMiddlewareToProvisionedHost" edge IDs in the mutation.
+// ProvisionedHostIDs returns the "ProvisionedHost" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// GinFileMiddlewareToProvisionedHostID instead. It exists only for internal usage by the builders.
-func (m *GinFileMiddlewareMutation) GinFileMiddlewareToProvisionedHostIDs() (ids []uuid.UUID) {
-	if id := m._GinFileMiddlewareToProvisionedHost; id != nil {
+// ProvisionedHostID instead. It exists only for internal usage by the builders.
+func (m *GinFileMiddlewareMutation) ProvisionedHostIDs() (ids []uuid.UUID) {
+	if id := m._ProvisionedHost; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetGinFileMiddlewareToProvisionedHost resets all changes to the "GinFileMiddlewareToProvisionedHost" edge.
-func (m *GinFileMiddlewareMutation) ResetGinFileMiddlewareToProvisionedHost() {
-	m._GinFileMiddlewareToProvisionedHost = nil
-	m.cleared_GinFileMiddlewareToProvisionedHost = false
+// ResetProvisionedHost resets all changes to the "ProvisionedHost" edge.
+func (m *GinFileMiddlewareMutation) ResetProvisionedHost() {
+	m._ProvisionedHost = nil
+	m.cleared_ProvisionedHost = false
 }
 
-// SetGinFileMiddlewareToProvisioningStepID sets the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity by id.
-func (m *GinFileMiddlewareMutation) SetGinFileMiddlewareToProvisioningStepID(id uuid.UUID) {
-	m._GinFileMiddlewareToProvisioningStep = &id
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by id.
+func (m *GinFileMiddlewareMutation) SetProvisioningStepID(id uuid.UUID) {
+	m._ProvisioningStep = &id
 }
 
-// ClearGinFileMiddlewareToProvisioningStep clears the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity.
-func (m *GinFileMiddlewareMutation) ClearGinFileMiddlewareToProvisioningStep() {
-	m.cleared_GinFileMiddlewareToProvisioningStep = true
+// ClearProvisioningStep clears the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (m *GinFileMiddlewareMutation) ClearProvisioningStep() {
+	m.cleared_ProvisioningStep = true
 }
 
-// GinFileMiddlewareToProvisioningStepCleared reports if the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity was cleared.
-func (m *GinFileMiddlewareMutation) GinFileMiddlewareToProvisioningStepCleared() bool {
-	return m.cleared_GinFileMiddlewareToProvisioningStep
+// ProvisioningStepCleared reports if the "ProvisioningStep" edge to the ProvisioningStep entity was cleared.
+func (m *GinFileMiddlewareMutation) ProvisioningStepCleared() bool {
+	return m.cleared_ProvisioningStep
 }
 
-// GinFileMiddlewareToProvisioningStepID returns the "GinFileMiddlewareToProvisioningStep" edge ID in the mutation.
-func (m *GinFileMiddlewareMutation) GinFileMiddlewareToProvisioningStepID() (id uuid.UUID, exists bool) {
-	if m._GinFileMiddlewareToProvisioningStep != nil {
-		return *m._GinFileMiddlewareToProvisioningStep, true
+// ProvisioningStepID returns the "ProvisioningStep" edge ID in the mutation.
+func (m *GinFileMiddlewareMutation) ProvisioningStepID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningStep != nil {
+		return *m._ProvisioningStep, true
 	}
 	return
 }
 
-// GinFileMiddlewareToProvisioningStepIDs returns the "GinFileMiddlewareToProvisioningStep" edge IDs in the mutation.
+// ProvisioningStepIDs returns the "ProvisioningStep" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// GinFileMiddlewareToProvisioningStepID instead. It exists only for internal usage by the builders.
-func (m *GinFileMiddlewareMutation) GinFileMiddlewareToProvisioningStepIDs() (ids []uuid.UUID) {
-	if id := m._GinFileMiddlewareToProvisioningStep; id != nil {
+// ProvisioningStepID instead. It exists only for internal usage by the builders.
+func (m *GinFileMiddlewareMutation) ProvisioningStepIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningStep; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetGinFileMiddlewareToProvisioningStep resets all changes to the "GinFileMiddlewareToProvisioningStep" edge.
-func (m *GinFileMiddlewareMutation) ResetGinFileMiddlewareToProvisioningStep() {
-	m._GinFileMiddlewareToProvisioningStep = nil
-	m.cleared_GinFileMiddlewareToProvisioningStep = false
+// ResetProvisioningStep resets all changes to the "ProvisioningStep" edge.
+func (m *GinFileMiddlewareMutation) ResetProvisioningStep() {
+	m._ProvisioningStep = nil
+	m.cleared_ProvisioningStep = false
 }
 
-// SetGinFileMiddlewareToProvisioningScheduledStepID sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by id.
-func (m *GinFileMiddlewareMutation) SetGinFileMiddlewareToProvisioningScheduledStepID(id uuid.UUID) {
-	m._GinFileMiddlewareToProvisioningScheduledStep = &id
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by id.
+func (m *GinFileMiddlewareMutation) SetProvisioningScheduledStepID(id uuid.UUID) {
+	m._ProvisioningScheduledStep = &id
 }
 
-// ClearGinFileMiddlewareToProvisioningScheduledStep clears the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (m *GinFileMiddlewareMutation) ClearGinFileMiddlewareToProvisioningScheduledStep() {
-	m.cleared_GinFileMiddlewareToProvisioningScheduledStep = true
+// ClearProvisioningScheduledStep clears the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (m *GinFileMiddlewareMutation) ClearProvisioningScheduledStep() {
+	m.cleared_ProvisioningScheduledStep = true
 }
 
-// GinFileMiddlewareToProvisioningScheduledStepCleared reports if the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity was cleared.
-func (m *GinFileMiddlewareMutation) GinFileMiddlewareToProvisioningScheduledStepCleared() bool {
-	return m.cleared_GinFileMiddlewareToProvisioningScheduledStep
+// ProvisioningScheduledStepCleared reports if the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity was cleared.
+func (m *GinFileMiddlewareMutation) ProvisioningScheduledStepCleared() bool {
+	return m.cleared_ProvisioningScheduledStep
 }
 
-// GinFileMiddlewareToProvisioningScheduledStepID returns the "GinFileMiddlewareToProvisioningScheduledStep" edge ID in the mutation.
-func (m *GinFileMiddlewareMutation) GinFileMiddlewareToProvisioningScheduledStepID() (id uuid.UUID, exists bool) {
-	if m._GinFileMiddlewareToProvisioningScheduledStep != nil {
-		return *m._GinFileMiddlewareToProvisioningScheduledStep, true
+// ProvisioningScheduledStepID returns the "ProvisioningScheduledStep" edge ID in the mutation.
+func (m *GinFileMiddlewareMutation) ProvisioningScheduledStepID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningScheduledStep != nil {
+		return *m._ProvisioningScheduledStep, true
 	}
 	return
 }
 
-// GinFileMiddlewareToProvisioningScheduledStepIDs returns the "GinFileMiddlewareToProvisioningScheduledStep" edge IDs in the mutation.
+// ProvisioningScheduledStepIDs returns the "ProvisioningScheduledStep" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// GinFileMiddlewareToProvisioningScheduledStepID instead. It exists only for internal usage by the builders.
-func (m *GinFileMiddlewareMutation) GinFileMiddlewareToProvisioningScheduledStepIDs() (ids []uuid.UUID) {
-	if id := m._GinFileMiddlewareToProvisioningScheduledStep; id != nil {
+// ProvisioningScheduledStepID instead. It exists only for internal usage by the builders.
+func (m *GinFileMiddlewareMutation) ProvisioningScheduledStepIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningScheduledStep; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetGinFileMiddlewareToProvisioningScheduledStep resets all changes to the "GinFileMiddlewareToProvisioningScheduledStep" edge.
-func (m *GinFileMiddlewareMutation) ResetGinFileMiddlewareToProvisioningScheduledStep() {
-	m._GinFileMiddlewareToProvisioningScheduledStep = nil
-	m.cleared_GinFileMiddlewareToProvisioningScheduledStep = false
+// ResetProvisioningScheduledStep resets all changes to the "ProvisioningScheduledStep" edge.
+func (m *GinFileMiddlewareMutation) ResetProvisioningScheduledStep() {
+	m._ProvisioningScheduledStep = nil
+	m.cleared_ProvisioningScheduledStep = false
 }
 
 // Where appends a list predicates to the GinFileMiddlewareMutation builder.
@@ -17148,14 +17148,14 @@ func (m *GinFileMiddlewareMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *GinFileMiddlewareMutation) AddedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m._GinFileMiddlewareToProvisionedHost != nil {
-		edges = append(edges, ginfilemiddleware.EdgeGinFileMiddlewareToProvisionedHost)
+	if m._ProvisionedHost != nil {
+		edges = append(edges, ginfilemiddleware.EdgeProvisionedHost)
 	}
-	if m._GinFileMiddlewareToProvisioningStep != nil {
-		edges = append(edges, ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningStep)
+	if m._ProvisioningStep != nil {
+		edges = append(edges, ginfilemiddleware.EdgeProvisioningStep)
 	}
-	if m._GinFileMiddlewareToProvisioningScheduledStep != nil {
-		edges = append(edges, ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningScheduledStep)
+	if m._ProvisioningScheduledStep != nil {
+		edges = append(edges, ginfilemiddleware.EdgeProvisioningScheduledStep)
 	}
 	return edges
 }
@@ -17164,16 +17164,16 @@ func (m *GinFileMiddlewareMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *GinFileMiddlewareMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisionedHost:
-		if id := m._GinFileMiddlewareToProvisionedHost; id != nil {
+	case ginfilemiddleware.EdgeProvisionedHost:
+		if id := m._ProvisionedHost; id != nil {
 			return []ent.Value{*id}
 		}
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningStep:
-		if id := m._GinFileMiddlewareToProvisioningStep; id != nil {
+	case ginfilemiddleware.EdgeProvisioningStep:
+		if id := m._ProvisioningStep; id != nil {
 			return []ent.Value{*id}
 		}
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningScheduledStep:
-		if id := m._GinFileMiddlewareToProvisioningScheduledStep; id != nil {
+	case ginfilemiddleware.EdgeProvisioningScheduledStep:
+		if id := m._ProvisioningScheduledStep; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -17197,14 +17197,14 @@ func (m *GinFileMiddlewareMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *GinFileMiddlewareMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m.cleared_GinFileMiddlewareToProvisionedHost {
-		edges = append(edges, ginfilemiddleware.EdgeGinFileMiddlewareToProvisionedHost)
+	if m.cleared_ProvisionedHost {
+		edges = append(edges, ginfilemiddleware.EdgeProvisionedHost)
 	}
-	if m.cleared_GinFileMiddlewareToProvisioningStep {
-		edges = append(edges, ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningStep)
+	if m.cleared_ProvisioningStep {
+		edges = append(edges, ginfilemiddleware.EdgeProvisioningStep)
 	}
-	if m.cleared_GinFileMiddlewareToProvisioningScheduledStep {
-		edges = append(edges, ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningScheduledStep)
+	if m.cleared_ProvisioningScheduledStep {
+		edges = append(edges, ginfilemiddleware.EdgeProvisioningScheduledStep)
 	}
 	return edges
 }
@@ -17213,12 +17213,12 @@ func (m *GinFileMiddlewareMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *GinFileMiddlewareMutation) EdgeCleared(name string) bool {
 	switch name {
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisionedHost:
-		return m.cleared_GinFileMiddlewareToProvisionedHost
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningStep:
-		return m.cleared_GinFileMiddlewareToProvisioningStep
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningScheduledStep:
-		return m.cleared_GinFileMiddlewareToProvisioningScheduledStep
+	case ginfilemiddleware.EdgeProvisionedHost:
+		return m.cleared_ProvisionedHost
+	case ginfilemiddleware.EdgeProvisioningStep:
+		return m.cleared_ProvisioningStep
+	case ginfilemiddleware.EdgeProvisioningScheduledStep:
+		return m.cleared_ProvisioningScheduledStep
 	}
 	return false
 }
@@ -17227,14 +17227,14 @@ func (m *GinFileMiddlewareMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *GinFileMiddlewareMutation) ClearEdge(name string) error {
 	switch name {
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisionedHost:
-		m.ClearGinFileMiddlewareToProvisionedHost()
+	case ginfilemiddleware.EdgeProvisionedHost:
+		m.ClearProvisionedHost()
 		return nil
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningStep:
-		m.ClearGinFileMiddlewareToProvisioningStep()
+	case ginfilemiddleware.EdgeProvisioningStep:
+		m.ClearProvisioningStep()
 		return nil
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningScheduledStep:
-		m.ClearGinFileMiddlewareToProvisioningScheduledStep()
+	case ginfilemiddleware.EdgeProvisioningScheduledStep:
+		m.ClearProvisioningScheduledStep()
 		return nil
 	}
 	return fmt.Errorf("unknown GinFileMiddleware unique edge %s", name)
@@ -17244,14 +17244,14 @@ func (m *GinFileMiddlewareMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *GinFileMiddlewareMutation) ResetEdge(name string) error {
 	switch name {
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisionedHost:
-		m.ResetGinFileMiddlewareToProvisionedHost()
+	case ginfilemiddleware.EdgeProvisionedHost:
+		m.ResetProvisionedHost()
 		return nil
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningStep:
-		m.ResetGinFileMiddlewareToProvisioningStep()
+	case ginfilemiddleware.EdgeProvisioningStep:
+		m.ResetProvisioningStep()
 		return nil
-	case ginfilemiddleware.EdgeGinFileMiddlewareToProvisioningScheduledStep:
-		m.ResetGinFileMiddlewareToProvisioningScheduledStep()
+	case ginfilemiddleware.EdgeProvisioningScheduledStep:
+		m.ResetProvisioningScheduledStep()
 		return nil
 	}
 	return fmt.Errorf("unknown GinFileMiddleware edge %s", name)

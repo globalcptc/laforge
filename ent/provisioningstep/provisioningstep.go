@@ -128,7 +128,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "ginfilemiddleware" package.
 	ProvisioningStepToGinFileMiddlewareInverseTable = "gin_file_middlewares"
 	// ProvisioningStepToGinFileMiddlewareColumn is the table column denoting the ProvisioningStepToGinFileMiddleware relation/edge.
-	ProvisioningStepToGinFileMiddlewareColumn = "gin_file_middleware_gin_file_middleware_to_provisioning_step"
+	ProvisioningStepToGinFileMiddlewareColumn = "gin_file_middleware_provisioning_step"
 )
 
 // Columns holds all SQL columns for provisioningstep fields.
@@ -141,7 +141,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provisioning_steps"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"gin_file_middleware_gin_file_middleware_to_provisioning_step",
+	"gin_file_middleware_provisioning_step",
 	"plan_plan_to_provisioning_step",
 	"provisioning_step_provisioning_step_to_provisioned_host",
 	"provisioning_step_provisioning_step_to_script",

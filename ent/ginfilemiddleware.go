@@ -30,69 +30,69 @@ type GinFileMiddleware struct {
 	Edges GinFileMiddlewareEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// GinFileMiddlewareToProvisionedHost holds the value of the GinFileMiddlewareToProvisionedHost edge.
-	HCLGinFileMiddlewareToProvisionedHost *ProvisionedHost `json:"GinFileMiddlewareToProvisionedHost,omitempty"`
-	// GinFileMiddlewareToProvisioningStep holds the value of the GinFileMiddlewareToProvisioningStep edge.
-	HCLGinFileMiddlewareToProvisioningStep *ProvisioningStep `json:"GinFileMiddlewareToProvisioningStep,omitempty"`
-	// GinFileMiddlewareToProvisioningScheduledStep holds the value of the GinFileMiddlewareToProvisioningScheduledStep edge.
-	HCLGinFileMiddlewareToProvisioningScheduledStep *ProvisioningScheduledStep `json:"GinFileMiddlewareToProvisioningScheduledStep,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	HCLProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// ProvisioningStep holds the value of the ProvisioningStep edge.
+	HCLProvisioningStep *ProvisioningStep `json:"ProvisioningStep,omitempty"`
+	// ProvisioningScheduledStep holds the value of the ProvisioningScheduledStep edge.
+	HCLProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
 	//
 	server_task_server_task_to_gin_file_middleware *uuid.UUID
 }
 
 // GinFileMiddlewareEdges holds the relations/edges for other nodes in the graph.
 type GinFileMiddlewareEdges struct {
-	// GinFileMiddlewareToProvisionedHost holds the value of the GinFileMiddlewareToProvisionedHost edge.
-	GinFileMiddlewareToProvisionedHost *ProvisionedHost `json:"GinFileMiddlewareToProvisionedHost,omitempty"`
-	// GinFileMiddlewareToProvisioningStep holds the value of the GinFileMiddlewareToProvisioningStep edge.
-	GinFileMiddlewareToProvisioningStep *ProvisioningStep `json:"GinFileMiddlewareToProvisioningStep,omitempty"`
-	// GinFileMiddlewareToProvisioningScheduledStep holds the value of the GinFileMiddlewareToProvisioningScheduledStep edge.
-	GinFileMiddlewareToProvisioningScheduledStep *ProvisioningScheduledStep `json:"GinFileMiddlewareToProvisioningScheduledStep,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	ProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// ProvisioningStep holds the value of the ProvisioningStep edge.
+	ProvisioningStep *ProvisioningStep `json:"ProvisioningStep,omitempty"`
+	// ProvisioningScheduledStep holds the value of the ProvisioningScheduledStep edge.
+	ProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
 }
 
-// GinFileMiddlewareToProvisionedHostOrErr returns the GinFileMiddlewareToProvisionedHost value or an error if the edge
+// ProvisionedHostOrErr returns the ProvisionedHost value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e GinFileMiddlewareEdges) GinFileMiddlewareToProvisionedHostOrErr() (*ProvisionedHost, error) {
+func (e GinFileMiddlewareEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[0] {
-		if e.GinFileMiddlewareToProvisionedHost == nil {
-			// The edge GinFileMiddlewareToProvisionedHost was loaded in eager-loading,
+		if e.ProvisionedHost == nil {
+			// The edge ProvisionedHost was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
-		return e.GinFileMiddlewareToProvisionedHost, nil
+		return e.ProvisionedHost, nil
 	}
-	return nil, &NotLoadedError{edge: "GinFileMiddlewareToProvisionedHost"}
+	return nil, &NotLoadedError{edge: "ProvisionedHost"}
 }
 
-// GinFileMiddlewareToProvisioningStepOrErr returns the GinFileMiddlewareToProvisioningStep value or an error if the edge
+// ProvisioningStepOrErr returns the ProvisioningStep value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e GinFileMiddlewareEdges) GinFileMiddlewareToProvisioningStepOrErr() (*ProvisioningStep, error) {
+func (e GinFileMiddlewareEdges) ProvisioningStepOrErr() (*ProvisioningStep, error) {
 	if e.loadedTypes[1] {
-		if e.GinFileMiddlewareToProvisioningStep == nil {
-			// The edge GinFileMiddlewareToProvisioningStep was loaded in eager-loading,
+		if e.ProvisioningStep == nil {
+			// The edge ProvisioningStep was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisioningstep.Label}
 		}
-		return e.GinFileMiddlewareToProvisioningStep, nil
+		return e.ProvisioningStep, nil
 	}
-	return nil, &NotLoadedError{edge: "GinFileMiddlewareToProvisioningStep"}
+	return nil, &NotLoadedError{edge: "ProvisioningStep"}
 }
 
-// GinFileMiddlewareToProvisioningScheduledStepOrErr returns the GinFileMiddlewareToProvisioningScheduledStep value or an error if the edge
+// ProvisioningScheduledStepOrErr returns the ProvisioningScheduledStep value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e GinFileMiddlewareEdges) GinFileMiddlewareToProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
+func (e GinFileMiddlewareEdges) ProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
 	if e.loadedTypes[2] {
-		if e.GinFileMiddlewareToProvisioningScheduledStep == nil {
-			// The edge GinFileMiddlewareToProvisioningScheduledStep was loaded in eager-loading,
+		if e.ProvisioningScheduledStep == nil {
+			// The edge ProvisioningScheduledStep was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisioningscheduledstep.Label}
 		}
-		return e.GinFileMiddlewareToProvisioningScheduledStep, nil
+		return e.ProvisioningScheduledStep, nil
 	}
-	return nil, &NotLoadedError{edge: "GinFileMiddlewareToProvisioningScheduledStep"}
+	return nil, &NotLoadedError{edge: "ProvisioningScheduledStep"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -159,19 +159,19 @@ func (gfm *GinFileMiddleware) assignValues(columns []string, values []interface{
 	return nil
 }
 
-// QueryGinFileMiddlewareToProvisionedHost queries the "GinFileMiddlewareToProvisionedHost" edge of the GinFileMiddleware entity.
-func (gfm *GinFileMiddleware) QueryGinFileMiddlewareToProvisionedHost() *ProvisionedHostQuery {
-	return (&GinFileMiddlewareClient{config: gfm.config}).QueryGinFileMiddlewareToProvisionedHost(gfm)
+// QueryProvisionedHost queries the "ProvisionedHost" edge of the GinFileMiddleware entity.
+func (gfm *GinFileMiddleware) QueryProvisionedHost() *ProvisionedHostQuery {
+	return (&GinFileMiddlewareClient{config: gfm.config}).QueryProvisionedHost(gfm)
 }
 
-// QueryGinFileMiddlewareToProvisioningStep queries the "GinFileMiddlewareToProvisioningStep" edge of the GinFileMiddleware entity.
-func (gfm *GinFileMiddleware) QueryGinFileMiddlewareToProvisioningStep() *ProvisioningStepQuery {
-	return (&GinFileMiddlewareClient{config: gfm.config}).QueryGinFileMiddlewareToProvisioningStep(gfm)
+// QueryProvisioningStep queries the "ProvisioningStep" edge of the GinFileMiddleware entity.
+func (gfm *GinFileMiddleware) QueryProvisioningStep() *ProvisioningStepQuery {
+	return (&GinFileMiddlewareClient{config: gfm.config}).QueryProvisioningStep(gfm)
 }
 
-// QueryGinFileMiddlewareToProvisioningScheduledStep queries the "GinFileMiddlewareToProvisioningScheduledStep" edge of the GinFileMiddleware entity.
-func (gfm *GinFileMiddleware) QueryGinFileMiddlewareToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
-	return (&GinFileMiddlewareClient{config: gfm.config}).QueryGinFileMiddlewareToProvisioningScheduledStep(gfm)
+// QueryProvisioningScheduledStep queries the "ProvisioningScheduledStep" edge of the GinFileMiddleware entity.
+func (gfm *GinFileMiddleware) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+	return (&GinFileMiddlewareClient{config: gfm.config}).QueryProvisioningScheduledStep(gfm)
 }
 
 // Update returns a builder for updating this GinFileMiddleware.

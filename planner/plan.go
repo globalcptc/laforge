@@ -625,7 +625,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		if err != nil {
 			return nil, err
 		}
-		_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisionedHost(entProvisionedHost).Save(ctx)
+		_, err = entTmpUrl.Update().SetProvisionedHost(entProvisionedHost).Save(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -1400,9 +1400,9 @@ func renderFiles(ctx context.Context, client *ent.Client, logger *logging.Logger
 		}
 		entTmpUrlUpdate := entTmpUrl.Update()
 		if entProvisioningStep != nil {
-			entTmpUrlUpdate = entTmpUrlUpdate.SetGinFileMiddlewareToProvisioningStep(entProvisioningStep)
+			entTmpUrlUpdate = entTmpUrlUpdate.SetProvisioningStep(entProvisioningStep)
 		} else if entProvisioningScheduledStep != nil {
-			entTmpUrlUpdate = entTmpUrlUpdate.SetGinFileMiddlewareToProvisioningScheduledStep(entProvisioningScheduledStep)
+			entTmpUrlUpdate = entTmpUrlUpdate.SetProvisioningScheduledStep(entProvisioningScheduledStep)
 		}
 		err = entTmpUrlUpdate.Exec(ctx)
 		if err != nil {

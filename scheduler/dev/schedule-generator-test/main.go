@@ -147,7 +147,7 @@ func createProvisioningScheduleStep(ctx context.Context, client *ent.Client, ent
 			// 	if err != nil {
 			// 		return nil, err
 			// 	}
-			// 	_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
+			// 	_, err = entTmpUrl.Update().SetProvisioningStep(entProvisioningStep).Save(ctx)
 			// 	if err != nil {
 			// 		return nil, err
 			// 	}

@@ -57,12 +57,12 @@ type ProvisionedHost struct {
 	// ProvisionedHostToGinFileMiddleware holds the value of the ProvisionedHostToGinFileMiddleware edge.
 	HCLProvisionedHostToGinFileMiddleware *GinFileMiddleware `json:"ProvisionedHostToGinFileMiddleware,omitempty"`
 	//
-	gin_file_middleware_gin_file_middleware_to_provisioned_host *uuid.UUID
-	plan_plan_to_provisioned_host                               *uuid.UUID
-	provisioned_host_provisioned_host_to_provisioned_network    *uuid.UUID
-	provisioned_host_provisioned_host_to_host                   *uuid.UUID
-	provisioned_host_provisioned_host_to_end_step_plan          *uuid.UUID
-	provisioned_host_provisioned_host_to_build                  *uuid.UUID
+	gin_file_middleware_provisioned_host                     *uuid.UUID
+	plan_plan_to_provisioned_host                            *uuid.UUID
+	provisioned_host_provisioned_host_to_provisioned_network *uuid.UUID
+	provisioned_host_provisioned_host_to_host                *uuid.UUID
+	provisioned_host_provisioned_host_to_end_step_plan       *uuid.UUID
+	provisioned_host_provisioned_host_to_build               *uuid.UUID
 }
 
 // ProvisionedHostEdges holds the relations/edges for other nodes in the graph.
@@ -239,7 +239,7 @@ func (*ProvisionedHost) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case provisionedhost.FieldID:
 			values[i] = new(uuid.UUID)
-		case provisionedhost.ForeignKeys[0]: // gin_file_middleware_gin_file_middleware_to_provisioned_host
+		case provisionedhost.ForeignKeys[0]: // gin_file_middleware_provisioned_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisionedhost.ForeignKeys[1]: // plan_plan_to_provisioned_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -295,10 +295,10 @@ func (ph *ProvisionedHost) assignValues(columns []string, values []interface{}) 
 			}
 		case provisionedhost.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field gin_file_middleware_gin_file_middleware_to_provisioned_host", values[i])
+				return fmt.Errorf("unexpected type %T for field gin_file_middleware_provisioned_host", values[i])
 			} else if value.Valid {
-				ph.gin_file_middleware_gin_file_middleware_to_provisioned_host = new(uuid.UUID)
-				*ph.gin_file_middleware_gin_file_middleware_to_provisioned_host = *value.S.(*uuid.UUID)
+				ph.gin_file_middleware_provisioned_host = new(uuid.UUID)
+				*ph.gin_file_middleware_provisioned_host = *value.S.(*uuid.UUID)
 			}
 		case provisionedhost.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

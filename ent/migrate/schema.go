@@ -710,7 +710,7 @@ var (
 		{Name: "subnet_ip", Type: field.TypeString},
 		{Name: "addon_type", Type: field.TypeEnum, Nullable: true, Enums: []string{"DNS"}},
 		{Name: "vars", Type: field.TypeJSON},
-		{Name: "gin_file_middleware_gin_file_middleware_to_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "gin_file_middleware_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_host_provisioned_host_to_provisioned_network", Type: field.TypeUUID},
 		{Name: "provisioned_host_provisioned_host_to_host", Type: field.TypeUUID},
@@ -724,7 +724,7 @@ var (
 		PrimaryKey: []*schema.Column{ProvisionedHostsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provisioned_hosts_gin_file_middlewares_GinFileMiddlewareToProvisionedHost",
+				Symbol:     "provisioned_hosts_gin_file_middlewares_ProvisionedHost",
 				Columns:    []*schema.Column{ProvisionedHostsColumns[4]},
 				RefColumns: []*schema.Column{GinFileMiddlewaresColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -810,7 +810,7 @@ var (
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract", "Ansible"}},
 		{Name: "run_time", Type: field.TypeTime},
 		{Name: "agent_task_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "gin_file_middleware_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_scheduled_step_scheduled_step", Type: field.TypeUUID},
 		{Name: "provisioning_scheduled_step_provisioned_host", Type: field.TypeUUID},
@@ -835,7 +835,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "provisioning_scheduled_steps_gin_file_middlewares_GinFileMiddlewareToProvisioningScheduledStep",
+				Symbol:     "provisioning_scheduled_steps_gin_file_middlewares_ProvisioningScheduledStep",
 				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[4]},
 				RefColumns: []*schema.Column{GinFileMiddlewaresColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -907,7 +907,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract", "Ansible"}},
 		{Name: "step_number", Type: field.TypeInt},
-		{Name: "gin_file_middleware_gin_file_middleware_to_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "gin_file_middleware_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_provisioned_host", Type: field.TypeUUID, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_script", Type: field.TypeUUID, Nullable: true},
@@ -925,7 +925,7 @@ var (
 		PrimaryKey: []*schema.Column{ProvisioningStepsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provisioning_steps_gin_file_middlewares_GinFileMiddlewareToProvisioningStep",
+				Symbol:     "provisioning_steps_gin_file_middlewares_ProvisioningStep",
 				Columns:    []*schema.Column{ProvisioningStepsColumns[3]},
 				RefColumns: []*schema.Column{GinFileMiddlewaresColumns[0]},
 				OnDelete:   schema.SetNull,

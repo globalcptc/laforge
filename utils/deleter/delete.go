@@ -132,7 +132,7 @@ func main() {
 	// }
 	// for _, entBuild := range entBuilds {
 	// 	amountDeleted, err := client.GinFileMiddleware.Delete().Where(
-	// 		ginfilemiddleware.HasGinFileMiddlewareToProvisionedHostWith(
+	// 		ginfilemiddleware.HasProvisionedHostWith(
 	// 			provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
 	// 				provisionednetwork.HasProvisionedNetworkToBuildWith(
 	// 					build.IDEQ(entBuild.ID),

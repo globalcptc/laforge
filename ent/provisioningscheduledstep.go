@@ -66,18 +66,18 @@ type ProvisioningScheduledStep struct {
 	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
 	HCLGinFileMiddleware *GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
 	//
-	agent_task_provisioning_scheduled_step                                 *uuid.UUID
-	gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step *uuid.UUID
-	plan_plan_to_provisioning_scheduled_step                               *uuid.UUID
-	provisioning_scheduled_step_scheduled_step                             *uuid.UUID
-	provisioning_scheduled_step_provisioned_host                           *uuid.UUID
-	provisioning_scheduled_step_script                                     *uuid.UUID
-	provisioning_scheduled_step_command                                    *uuid.UUID
-	provisioning_scheduled_step_dns_record                                 *uuid.UUID
-	provisioning_scheduled_step_file_delete                                *uuid.UUID
-	provisioning_scheduled_step_file_download                              *uuid.UUID
-	provisioning_scheduled_step_file_extract                               *uuid.UUID
-	provisioning_scheduled_step_ansible                                    *uuid.UUID
+	agent_task_provisioning_scheduled_step          *uuid.UUID
+	gin_file_middleware_provisioning_scheduled_step *uuid.UUID
+	plan_plan_to_provisioning_scheduled_step        *uuid.UUID
+	provisioning_scheduled_step_scheduled_step      *uuid.UUID
+	provisioning_scheduled_step_provisioned_host    *uuid.UUID
+	provisioning_scheduled_step_script              *uuid.UUID
+	provisioning_scheduled_step_command             *uuid.UUID
+	provisioning_scheduled_step_dns_record          *uuid.UUID
+	provisioning_scheduled_step_file_delete         *uuid.UUID
+	provisioning_scheduled_step_file_download       *uuid.UUID
+	provisioning_scheduled_step_file_extract        *uuid.UUID
+	provisioning_scheduled_step_ansible             *uuid.UUID
 }
 
 // ProvisioningScheduledStepEdges holds the relations/edges for other nodes in the graph.
@@ -308,7 +308,7 @@ func (*ProvisioningScheduledStep) scanValues(columns []string) ([]interface{}, e
 			values[i] = new(uuid.UUID)
 		case provisioningscheduledstep.ForeignKeys[0]: // agent_task_provisioning_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[1]: // gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step
+		case provisioningscheduledstep.ForeignKeys[1]: // gin_file_middleware_provisioning_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisioningscheduledstep.ForeignKeys[2]: // plan_plan_to_provisioning_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -372,10 +372,10 @@ func (pss *ProvisioningScheduledStep) assignValues(columns []string, values []in
 			}
 		case provisioningscheduledstep.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step", values[i])
+				return fmt.Errorf("unexpected type %T for field gin_file_middleware_provisioning_scheduled_step", values[i])
 			} else if value.Valid {
-				pss.gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step = new(uuid.UUID)
-				*pss.gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step = *value.S.(*uuid.UUID)
+				pss.gin_file_middleware_provisioning_scheduled_step = new(uuid.UUID)
+				*pss.gin_file_middleware_provisioning_scheduled_step = *value.S.(*uuid.UUID)
 			}
 		case provisioningscheduledstep.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

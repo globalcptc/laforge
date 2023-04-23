@@ -61,16 +61,16 @@ type ProvisioningStep struct {
 	// ProvisioningStepToGinFileMiddleware holds the value of the ProvisioningStepToGinFileMiddleware edge.
 	HCLProvisioningStepToGinFileMiddleware *GinFileMiddleware `json:"ProvisioningStepToGinFileMiddleware,omitempty"`
 	//
-	gin_file_middleware_gin_file_middleware_to_provisioning_step *uuid.UUID
-	plan_plan_to_provisioning_step                               *uuid.UUID
-	provisioning_step_provisioning_step_to_provisioned_host      *uuid.UUID
-	provisioning_step_provisioning_step_to_script                *uuid.UUID
-	provisioning_step_provisioning_step_to_command               *uuid.UUID
-	provisioning_step_provisioning_step_to_dns_record            *uuid.UUID
-	provisioning_step_provisioning_step_to_file_delete           *uuid.UUID
-	provisioning_step_provisioning_step_to_file_download         *uuid.UUID
-	provisioning_step_provisioning_step_to_file_extract          *uuid.UUID
-	provisioning_step_provisioning_step_to_ansible               *uuid.UUID
+	gin_file_middleware_provisioning_step                   *uuid.UUID
+	plan_plan_to_provisioning_step                          *uuid.UUID
+	provisioning_step_provisioning_step_to_provisioned_host *uuid.UUID
+	provisioning_step_provisioning_step_to_script           *uuid.UUID
+	provisioning_step_provisioning_step_to_command          *uuid.UUID
+	provisioning_step_provisioning_step_to_dns_record       *uuid.UUID
+	provisioning_step_provisioning_step_to_file_delete      *uuid.UUID
+	provisioning_step_provisioning_step_to_file_download    *uuid.UUID
+	provisioning_step_provisioning_step_to_file_extract     *uuid.UUID
+	provisioning_step_provisioning_step_to_ansible          *uuid.UUID
 }
 
 // ProvisioningStepEdges holds the relations/edges for other nodes in the graph.
@@ -278,7 +278,7 @@ func (*ProvisioningStep) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case provisioningstep.FieldID:
 			values[i] = new(uuid.UUID)
-		case provisioningstep.ForeignKeys[0]: // gin_file_middleware_gin_file_middleware_to_provisioning_step
+		case provisioningstep.ForeignKeys[0]: // gin_file_middleware_provisioning_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisioningstep.ForeignKeys[1]: // plan_plan_to_provisioning_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -333,10 +333,10 @@ func (ps *ProvisioningStep) assignValues(columns []string, values []interface{})
 			}
 		case provisioningstep.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field gin_file_middleware_gin_file_middleware_to_provisioning_step", values[i])
+				return fmt.Errorf("unexpected type %T for field gin_file_middleware_provisioning_step", values[i])
 			} else if value.Valid {
-				ps.gin_file_middleware_gin_file_middleware_to_provisioning_step = new(uuid.UUID)
-				*ps.gin_file_middleware_gin_file_middleware_to_provisioning_step = *value.S.(*uuid.UUID)
+				ps.gin_file_middleware_provisioning_step = new(uuid.UUID)
+				*ps.gin_file_middleware_provisioning_step = *value.S.(*uuid.UUID)
 			}
 		case provisioningstep.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

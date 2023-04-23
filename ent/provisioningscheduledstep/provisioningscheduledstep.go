@@ -137,7 +137,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "ginfilemiddleware" package.
 	GinFileMiddlewareInverseTable = "gin_file_middlewares"
 	// GinFileMiddlewareColumn is the table column denoting the GinFileMiddleware relation/edge.
-	GinFileMiddlewareColumn = "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step"
+	GinFileMiddlewareColumn = "gin_file_middleware_provisioning_scheduled_step"
 )
 
 // Columns holds all SQL columns for provisioningscheduledstep fields.
@@ -151,7 +151,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"agent_task_provisioning_scheduled_step",
-	"gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step",
+	"gin_file_middleware_provisioning_scheduled_step",
 	"plan_plan_to_provisioning_scheduled_step",
 	"provisioning_scheduled_step_scheduled_step",
 	"provisioning_scheduled_step_provisioned_host",

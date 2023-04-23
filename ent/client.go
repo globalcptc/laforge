@@ -3077,15 +3077,15 @@ func (c *GinFileMiddlewareClient) GetX(ctx context.Context, id uuid.UUID) *GinFi
 	return obj
 }
 
-// QueryGinFileMiddlewareToProvisionedHost queries the GinFileMiddlewareToProvisionedHost edge of a GinFileMiddleware.
-func (c *GinFileMiddlewareClient) QueryGinFileMiddlewareToProvisionedHost(gfm *GinFileMiddleware) *ProvisionedHostQuery {
+// QueryProvisionedHost queries the ProvisionedHost edge of a GinFileMiddleware.
+func (c *GinFileMiddlewareClient) QueryProvisionedHost(gfm *GinFileMiddleware) *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := gfm.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ginfilemiddleware.Table, ginfilemiddleware.FieldID, id),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.GinFileMiddlewareToProvisionedHostTable, ginfilemiddleware.GinFileMiddlewareToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.ProvisionedHostTable, ginfilemiddleware.ProvisionedHostColumn),
 		)
 		fromV = sqlgraph.Neighbors(gfm.driver.Dialect(), step)
 		return fromV, nil
@@ -3093,15 +3093,15 @@ func (c *GinFileMiddlewareClient) QueryGinFileMiddlewareToProvisionedHost(gfm *G
 	return query
 }
 
-// QueryGinFileMiddlewareToProvisioningStep queries the GinFileMiddlewareToProvisioningStep edge of a GinFileMiddleware.
-func (c *GinFileMiddlewareClient) QueryGinFileMiddlewareToProvisioningStep(gfm *GinFileMiddleware) *ProvisioningStepQuery {
+// QueryProvisioningStep queries the ProvisioningStep edge of a GinFileMiddleware.
+func (c *GinFileMiddlewareClient) QueryProvisioningStep(gfm *GinFileMiddleware) *ProvisioningStepQuery {
 	query := &ProvisioningStepQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := gfm.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ginfilemiddleware.Table, ginfilemiddleware.FieldID, id),
 			sqlgraph.To(provisioningstep.Table, provisioningstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.GinFileMiddlewareToProvisioningStepTable, ginfilemiddleware.GinFileMiddlewareToProvisioningStepColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.ProvisioningStepTable, ginfilemiddleware.ProvisioningStepColumn),
 		)
 		fromV = sqlgraph.Neighbors(gfm.driver.Dialect(), step)
 		return fromV, nil
@@ -3109,15 +3109,15 @@ func (c *GinFileMiddlewareClient) QueryGinFileMiddlewareToProvisioningStep(gfm *
 	return query
 }
 
-// QueryGinFileMiddlewareToProvisioningScheduledStep queries the GinFileMiddlewareToProvisioningScheduledStep edge of a GinFileMiddleware.
-func (c *GinFileMiddlewareClient) QueryGinFileMiddlewareToProvisioningScheduledStep(gfm *GinFileMiddleware) *ProvisioningScheduledStepQuery {
+// QueryProvisioningScheduledStep queries the ProvisioningScheduledStep edge of a GinFileMiddleware.
+func (c *GinFileMiddlewareClient) QueryProvisioningScheduledStep(gfm *GinFileMiddleware) *ProvisioningScheduledStepQuery {
 	query := &ProvisioningScheduledStepQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := gfm.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ginfilemiddleware.Table, ginfilemiddleware.FieldID, id),
 			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepTable, ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.ProvisioningScheduledStepTable, ginfilemiddleware.ProvisioningScheduledStepColumn),
 		)
 		fromV = sqlgraph.Neighbors(gfm.driver.Dialect(), step)
 		return fromV, nil

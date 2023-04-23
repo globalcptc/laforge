@@ -121,7 +121,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "ginfilemiddleware" package.
 	ProvisionedHostToGinFileMiddlewareInverseTable = "gin_file_middlewares"
 	// ProvisionedHostToGinFileMiddlewareColumn is the table column denoting the ProvisionedHostToGinFileMiddleware relation/edge.
-	ProvisionedHostToGinFileMiddlewareColumn = "gin_file_middleware_gin_file_middleware_to_provisioned_host"
+	ProvisionedHostToGinFileMiddlewareColumn = "gin_file_middleware_provisioned_host"
 )
 
 // Columns holds all SQL columns for provisionedhost fields.
@@ -135,7 +135,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provisioned_hosts"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"gin_file_middleware_gin_file_middleware_to_provisioned_host",
+	"gin_file_middleware_provisioned_host",
 	"plan_plan_to_provisioned_host",
 	"provisioned_host_provisioned_host_to_provisioned_network",
 	"provisioned_host_provisioned_host_to_host",

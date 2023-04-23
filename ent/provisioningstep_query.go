@@ -1192,10 +1192,10 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToGinFileMiddleware(ctx co
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningStep)
 	for i := range nodes {
-		if nodes[i].gin_file_middleware_gin_file_middleware_to_provisioning_step == nil {
+		if nodes[i].gin_file_middleware_provisioning_step == nil {
 			continue
 		}
-		fk := *nodes[i].gin_file_middleware_gin_file_middleware_to_provisioning_step
+		fk := *nodes[i].gin_file_middleware_provisioning_step
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1209,7 +1209,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToGinFileMiddleware(ctx co
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_gin_file_middleware_to_provisioning_step" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_provisioning_step" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

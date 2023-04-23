@@ -17,35 +17,35 @@ const (
 	FieldFilePath = "file_path"
 	// FieldAccessed holds the string denoting the accessed field in the database.
 	FieldAccessed = "accessed"
-	// EdgeGinFileMiddlewareToProvisionedHost holds the string denoting the ginfilemiddlewaretoprovisionedhost edge name in mutations.
-	EdgeGinFileMiddlewareToProvisionedHost = "GinFileMiddlewareToProvisionedHost"
-	// EdgeGinFileMiddlewareToProvisioningStep holds the string denoting the ginfilemiddlewaretoprovisioningstep edge name in mutations.
-	EdgeGinFileMiddlewareToProvisioningStep = "GinFileMiddlewareToProvisioningStep"
-	// EdgeGinFileMiddlewareToProvisioningScheduledStep holds the string denoting the ginfilemiddlewaretoprovisioningscheduledstep edge name in mutations.
-	EdgeGinFileMiddlewareToProvisioningScheduledStep = "GinFileMiddlewareToProvisioningScheduledStep"
+	// EdgeProvisionedHost holds the string denoting the provisionedhost edge name in mutations.
+	EdgeProvisionedHost = "ProvisionedHost"
+	// EdgeProvisioningStep holds the string denoting the provisioningstep edge name in mutations.
+	EdgeProvisioningStep = "ProvisioningStep"
+	// EdgeProvisioningScheduledStep holds the string denoting the provisioningscheduledstep edge name in mutations.
+	EdgeProvisioningScheduledStep = "ProvisioningScheduledStep"
 	// Table holds the table name of the ginfilemiddleware in the database.
 	Table = "gin_file_middlewares"
-	// GinFileMiddlewareToProvisionedHostTable is the table that holds the GinFileMiddlewareToProvisionedHost relation/edge.
-	GinFileMiddlewareToProvisionedHostTable = "provisioned_hosts"
-	// GinFileMiddlewareToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
+	// ProvisionedHostTable is the table that holds the ProvisionedHost relation/edge.
+	ProvisionedHostTable = "provisioned_hosts"
+	// ProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
-	GinFileMiddlewareToProvisionedHostInverseTable = "provisioned_hosts"
-	// GinFileMiddlewareToProvisionedHostColumn is the table column denoting the GinFileMiddlewareToProvisionedHost relation/edge.
-	GinFileMiddlewareToProvisionedHostColumn = "gin_file_middleware_gin_file_middleware_to_provisioned_host"
-	// GinFileMiddlewareToProvisioningStepTable is the table that holds the GinFileMiddlewareToProvisioningStep relation/edge.
-	GinFileMiddlewareToProvisioningStepTable = "provisioning_steps"
-	// GinFileMiddlewareToProvisioningStepInverseTable is the table name for the ProvisioningStep entity.
+	ProvisionedHostInverseTable = "provisioned_hosts"
+	// ProvisionedHostColumn is the table column denoting the ProvisionedHost relation/edge.
+	ProvisionedHostColumn = "gin_file_middleware_provisioned_host"
+	// ProvisioningStepTable is the table that holds the ProvisioningStep relation/edge.
+	ProvisioningStepTable = "provisioning_steps"
+	// ProvisioningStepInverseTable is the table name for the ProvisioningStep entity.
 	// It exists in this package in order to avoid circular dependency with the "provisioningstep" package.
-	GinFileMiddlewareToProvisioningStepInverseTable = "provisioning_steps"
-	// GinFileMiddlewareToProvisioningStepColumn is the table column denoting the GinFileMiddlewareToProvisioningStep relation/edge.
-	GinFileMiddlewareToProvisioningStepColumn = "gin_file_middleware_gin_file_middleware_to_provisioning_step"
-	// GinFileMiddlewareToProvisioningScheduledStepTable is the table that holds the GinFileMiddlewareToProvisioningScheduledStep relation/edge.
-	GinFileMiddlewareToProvisioningScheduledStepTable = "provisioning_scheduled_steps"
-	// GinFileMiddlewareToProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
+	ProvisioningStepInverseTable = "provisioning_steps"
+	// ProvisioningStepColumn is the table column denoting the ProvisioningStep relation/edge.
+	ProvisioningStepColumn = "gin_file_middleware_provisioning_step"
+	// ProvisioningScheduledStepTable is the table that holds the ProvisioningScheduledStep relation/edge.
+	ProvisioningScheduledStepTable = "provisioning_scheduled_steps"
+	// ProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
 	// It exists in this package in order to avoid circular dependency with the "provisioningscheduledstep" package.
-	GinFileMiddlewareToProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
-	// GinFileMiddlewareToProvisioningScheduledStepColumn is the table column denoting the GinFileMiddlewareToProvisioningScheduledStep relation/edge.
-	GinFileMiddlewareToProvisioningScheduledStepColumn = "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step"
+	ProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
+	// ProvisioningScheduledStepColumn is the table column denoting the ProvisioningScheduledStep relation/edge.
+	ProvisioningScheduledStepColumn = "gin_file_middleware_provisioning_scheduled_step"
 )
 
 // Columns holds all SQL columns for ginfilemiddleware fields.

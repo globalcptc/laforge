@@ -701,7 +701,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step = &nodes[0]
+		_node.gin_file_middleware_provisioning_scheduled_step = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

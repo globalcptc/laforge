@@ -59,7 +59,7 @@ func (ProvisionedHost) Edges() []ent.Edge {
 			Ref("PlanToProvisionedHost").
 			Unique(),
 		edge.From("ProvisionedHostToGinFileMiddleware", GinFileMiddleware.Type).
-			Ref("GinFileMiddlewareToProvisionedHost").
+			Ref("ProvisionedHost").
 			Unique(),
 	}
 }
