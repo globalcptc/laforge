@@ -35,9 +35,9 @@ func (DNS) Fields() []ent.Field {
 // Edges of the DNS.
 func (DNS) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("DNSToEnvironment", Environment.Type).
+		edge.From("Environments", Environment.Type).
 			Ref("EnvironmentToDNS"),
-		edge.From("DNSToCompetition", Competition.Type).
+		edge.From("Competitions", Competition.Type).
 			Ref("DNS"),
 	}
 }

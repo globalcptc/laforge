@@ -1115,9 +1115,9 @@ func (d *DNS) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
-		Name: "DNSToEnvironment",
+		Name: "Environments",
 	}
-	err = d.QueryDNSToEnvironment().
+	err = d.QueryEnvironments().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -1125,9 +1125,9 @@ func (d *DNS) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Competition",
-		Name: "DNSToCompetition",
+		Name: "Competitions",
 	}
-	err = d.QueryDNSToCompetition().
+	err = d.QueryCompetitions().
 		Select(competition.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {

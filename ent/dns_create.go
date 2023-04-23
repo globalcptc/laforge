@@ -72,34 +72,34 @@ func (dc *DNSCreate) SetNillableID(u *uuid.UUID) *DNSCreate {
 	return dc
 }
 
-// AddDNSToEnvironmentIDs adds the "DNSToEnvironment" edge to the Environment entity by IDs.
-func (dc *DNSCreate) AddDNSToEnvironmentIDs(ids ...uuid.UUID) *DNSCreate {
-	dc.mutation.AddDNSToEnvironmentIDs(ids...)
+// AddEnvironmentIDs adds the "Environments" edge to the Environment entity by IDs.
+func (dc *DNSCreate) AddEnvironmentIDs(ids ...uuid.UUID) *DNSCreate {
+	dc.mutation.AddEnvironmentIDs(ids...)
 	return dc
 }
 
-// AddDNSToEnvironment adds the "DNSToEnvironment" edges to the Environment entity.
-func (dc *DNSCreate) AddDNSToEnvironment(e ...*Environment) *DNSCreate {
+// AddEnvironments adds the "Environments" edges to the Environment entity.
+func (dc *DNSCreate) AddEnvironments(e ...*Environment) *DNSCreate {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return dc.AddDNSToEnvironmentIDs(ids...)
+	return dc.AddEnvironmentIDs(ids...)
 }
 
-// AddDNSToCompetitionIDs adds the "DNSToCompetition" edge to the Competition entity by IDs.
-func (dc *DNSCreate) AddDNSToCompetitionIDs(ids ...uuid.UUID) *DNSCreate {
-	dc.mutation.AddDNSToCompetitionIDs(ids...)
+// AddCompetitionIDs adds the "Competitions" edge to the Competition entity by IDs.
+func (dc *DNSCreate) AddCompetitionIDs(ids ...uuid.UUID) *DNSCreate {
+	dc.mutation.AddCompetitionIDs(ids...)
 	return dc
 }
 
-// AddDNSToCompetition adds the "DNSToCompetition" edges to the Competition entity.
-func (dc *DNSCreate) AddDNSToCompetition(c ...*Competition) *DNSCreate {
+// AddCompetitions adds the "Competitions" edges to the Competition entity.
+func (dc *DNSCreate) AddCompetitions(c ...*Competition) *DNSCreate {
 	ids := make([]uuid.UUID, len(c))
 	for i := range c {
 		ids[i] = c[i].ID
 	}
-	return dc.AddDNSToCompetitionIDs(ids...)
+	return dc.AddCompetitionIDs(ids...)
 }
 
 // Mutation returns the DNSMutation object of the builder.
@@ -289,12 +289,12 @@ func (dc *DNSCreate) createSpec() (*DNS, *sqlgraph.CreateSpec) {
 		})
 		_node.Config = value
 	}
-	if nodes := dc.mutation.DNSToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := dc.mutation.EnvironmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   dns.DNSToEnvironmentTable,
-			Columns: dns.DNSToEnvironmentPrimaryKey,
+			Table:   dns.EnvironmentsTable,
+			Columns: dns.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -308,12 +308,12 @@ func (dc *DNSCreate) createSpec() (*DNS, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := dc.mutation.DNSToCompetitionIDs(); len(nodes) > 0 {
+	if nodes := dc.mutation.CompetitionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   dns.DNSToCompetitionTable,
-			Columns: dns.DNSToCompetitionPrimaryKey,
+			Table:   dns.CompetitionsTable,
+			Columns: dns.CompetitionsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

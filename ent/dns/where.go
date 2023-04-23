@@ -398,25 +398,25 @@ func RootDomainContainsFold(v string) predicate.DNS {
 	})
 }
 
-// HasDNSToEnvironment applies the HasEdge predicate on the "DNSToEnvironment" edge.
-func HasDNSToEnvironment() predicate.DNS {
+// HasEnvironments applies the HasEdge predicate on the "Environments" edge.
+func HasEnvironments() predicate.DNS {
 	return predicate.DNS(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DNSToEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, DNSToEnvironmentTable, DNSToEnvironmentPrimaryKey...),
+			sqlgraph.To(EnvironmentsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, EnvironmentsTable, EnvironmentsPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasDNSToEnvironmentWith applies the HasEdge predicate on the "DNSToEnvironment" edge with a given conditions (other predicates).
-func HasDNSToEnvironmentWith(preds ...predicate.Environment) predicate.DNS {
+// HasEnvironmentsWith applies the HasEdge predicate on the "Environments" edge with a given conditions (other predicates).
+func HasEnvironmentsWith(preds ...predicate.Environment) predicate.DNS {
 	return predicate.DNS(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DNSToEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, DNSToEnvironmentTable, DNSToEnvironmentPrimaryKey...),
+			sqlgraph.To(EnvironmentsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, EnvironmentsTable, EnvironmentsPrimaryKey...),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -426,25 +426,25 @@ func HasDNSToEnvironmentWith(preds ...predicate.Environment) predicate.DNS {
 	})
 }
 
-// HasDNSToCompetition applies the HasEdge predicate on the "DNSToCompetition" edge.
-func HasDNSToCompetition() predicate.DNS {
+// HasCompetitions applies the HasEdge predicate on the "Competitions" edge.
+func HasCompetitions() predicate.DNS {
 	return predicate.DNS(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DNSToCompetitionTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, DNSToCompetitionTable, DNSToCompetitionPrimaryKey...),
+			sqlgraph.To(CompetitionsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, CompetitionsTable, CompetitionsPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasDNSToCompetitionWith applies the HasEdge predicate on the "DNSToCompetition" edge with a given conditions (other predicates).
-func HasDNSToCompetitionWith(preds ...predicate.Competition) predicate.DNS {
+// HasCompetitionsWith applies the HasEdge predicate on the "Competitions" edge with a given conditions (other predicates).
+func HasCompetitionsWith(preds ...predicate.Competition) predicate.DNS {
 	return predicate.DNS(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DNSToCompetitionInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, DNSToCompetitionTable, DNSToCompetitionPrimaryKey...),
+			sqlgraph.To(CompetitionsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, CompetitionsTable, CompetitionsPrimaryKey...),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

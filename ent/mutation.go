@@ -9278,25 +9278,25 @@ func (m *CompetitionMutation) ResetEdge(name string) error {
 // DNSMutation represents an operation that mutates the DNS nodes in the graph.
 type DNSMutation struct {
 	config
-	op                       Op
-	typ                      string
-	id                       *uuid.UUID
-	hcl_id                   *string
-	_type                    *string
-	root_domain              *string
-	dns_servers              *[]string
-	ntp_servers              *[]string
-	_config                  *map[string]string
-	clearedFields            map[string]struct{}
-	_DNSToEnvironment        map[uuid.UUID]struct{}
-	removed_DNSToEnvironment map[uuid.UUID]struct{}
-	cleared_DNSToEnvironment bool
-	_DNSToCompetition        map[uuid.UUID]struct{}
-	removed_DNSToCompetition map[uuid.UUID]struct{}
-	cleared_DNSToCompetition bool
-	done                     bool
-	oldValue                 func(context.Context) (*DNS, error)
-	predicates               []predicate.DNS
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	hcl_id               *string
+	_type                *string
+	root_domain          *string
+	dns_servers          *[]string
+	ntp_servers          *[]string
+	_config              *map[string]string
+	clearedFields        map[string]struct{}
+	_Environments        map[uuid.UUID]struct{}
+	removed_Environments map[uuid.UUID]struct{}
+	cleared_Environments bool
+	_Competitions        map[uuid.UUID]struct{}
+	removed_Competitions map[uuid.UUID]struct{}
+	cleared_Competitions bool
+	done                 bool
+	oldValue             func(context.Context) (*DNS, error)
+	predicates           []predicate.DNS
 }
 
 var _ ent.Mutation = (*DNSMutation)(nil)
@@ -9619,112 +9619,112 @@ func (m *DNSMutation) ResetConfig() {
 	m._config = nil
 }
 
-// AddDNSToEnvironmentIDs adds the "DNSToEnvironment" edge to the Environment entity by ids.
-func (m *DNSMutation) AddDNSToEnvironmentIDs(ids ...uuid.UUID) {
-	if m._DNSToEnvironment == nil {
-		m._DNSToEnvironment = make(map[uuid.UUID]struct{})
+// AddEnvironmentIDs adds the "Environments" edge to the Environment entity by ids.
+func (m *DNSMutation) AddEnvironmentIDs(ids ...uuid.UUID) {
+	if m._Environments == nil {
+		m._Environments = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._DNSToEnvironment[ids[i]] = struct{}{}
+		m._Environments[ids[i]] = struct{}{}
 	}
 }
 
-// ClearDNSToEnvironment clears the "DNSToEnvironment" edge to the Environment entity.
-func (m *DNSMutation) ClearDNSToEnvironment() {
-	m.cleared_DNSToEnvironment = true
+// ClearEnvironments clears the "Environments" edge to the Environment entity.
+func (m *DNSMutation) ClearEnvironments() {
+	m.cleared_Environments = true
 }
 
-// DNSToEnvironmentCleared reports if the "DNSToEnvironment" edge to the Environment entity was cleared.
-func (m *DNSMutation) DNSToEnvironmentCleared() bool {
-	return m.cleared_DNSToEnvironment
+// EnvironmentsCleared reports if the "Environments" edge to the Environment entity was cleared.
+func (m *DNSMutation) EnvironmentsCleared() bool {
+	return m.cleared_Environments
 }
 
-// RemoveDNSToEnvironmentIDs removes the "DNSToEnvironment" edge to the Environment entity by IDs.
-func (m *DNSMutation) RemoveDNSToEnvironmentIDs(ids ...uuid.UUID) {
-	if m.removed_DNSToEnvironment == nil {
-		m.removed_DNSToEnvironment = make(map[uuid.UUID]struct{})
+// RemoveEnvironmentIDs removes the "Environments" edge to the Environment entity by IDs.
+func (m *DNSMutation) RemoveEnvironmentIDs(ids ...uuid.UUID) {
+	if m.removed_Environments == nil {
+		m.removed_Environments = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._DNSToEnvironment, ids[i])
-		m.removed_DNSToEnvironment[ids[i]] = struct{}{}
+		delete(m._Environments, ids[i])
+		m.removed_Environments[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedDNSToEnvironment returns the removed IDs of the "DNSToEnvironment" edge to the Environment entity.
-func (m *DNSMutation) RemovedDNSToEnvironmentIDs() (ids []uuid.UUID) {
-	for id := range m.removed_DNSToEnvironment {
+// RemovedEnvironments returns the removed IDs of the "Environments" edge to the Environment entity.
+func (m *DNSMutation) RemovedEnvironmentsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Environments {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// DNSToEnvironmentIDs returns the "DNSToEnvironment" edge IDs in the mutation.
-func (m *DNSMutation) DNSToEnvironmentIDs() (ids []uuid.UUID) {
-	for id := range m._DNSToEnvironment {
+// EnvironmentsIDs returns the "Environments" edge IDs in the mutation.
+func (m *DNSMutation) EnvironmentsIDs() (ids []uuid.UUID) {
+	for id := range m._Environments {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetDNSToEnvironment resets all changes to the "DNSToEnvironment" edge.
-func (m *DNSMutation) ResetDNSToEnvironment() {
-	m._DNSToEnvironment = nil
-	m.cleared_DNSToEnvironment = false
-	m.removed_DNSToEnvironment = nil
+// ResetEnvironments resets all changes to the "Environments" edge.
+func (m *DNSMutation) ResetEnvironments() {
+	m._Environments = nil
+	m.cleared_Environments = false
+	m.removed_Environments = nil
 }
 
-// AddDNSToCompetitionIDs adds the "DNSToCompetition" edge to the Competition entity by ids.
-func (m *DNSMutation) AddDNSToCompetitionIDs(ids ...uuid.UUID) {
-	if m._DNSToCompetition == nil {
-		m._DNSToCompetition = make(map[uuid.UUID]struct{})
+// AddCompetitionIDs adds the "Competitions" edge to the Competition entity by ids.
+func (m *DNSMutation) AddCompetitionIDs(ids ...uuid.UUID) {
+	if m._Competitions == nil {
+		m._Competitions = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._DNSToCompetition[ids[i]] = struct{}{}
+		m._Competitions[ids[i]] = struct{}{}
 	}
 }
 
-// ClearDNSToCompetition clears the "DNSToCompetition" edge to the Competition entity.
-func (m *DNSMutation) ClearDNSToCompetition() {
-	m.cleared_DNSToCompetition = true
+// ClearCompetitions clears the "Competitions" edge to the Competition entity.
+func (m *DNSMutation) ClearCompetitions() {
+	m.cleared_Competitions = true
 }
 
-// DNSToCompetitionCleared reports if the "DNSToCompetition" edge to the Competition entity was cleared.
-func (m *DNSMutation) DNSToCompetitionCleared() bool {
-	return m.cleared_DNSToCompetition
+// CompetitionsCleared reports if the "Competitions" edge to the Competition entity was cleared.
+func (m *DNSMutation) CompetitionsCleared() bool {
+	return m.cleared_Competitions
 }
 
-// RemoveDNSToCompetitionIDs removes the "DNSToCompetition" edge to the Competition entity by IDs.
-func (m *DNSMutation) RemoveDNSToCompetitionIDs(ids ...uuid.UUID) {
-	if m.removed_DNSToCompetition == nil {
-		m.removed_DNSToCompetition = make(map[uuid.UUID]struct{})
+// RemoveCompetitionIDs removes the "Competitions" edge to the Competition entity by IDs.
+func (m *DNSMutation) RemoveCompetitionIDs(ids ...uuid.UUID) {
+	if m.removed_Competitions == nil {
+		m.removed_Competitions = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._DNSToCompetition, ids[i])
-		m.removed_DNSToCompetition[ids[i]] = struct{}{}
+		delete(m._Competitions, ids[i])
+		m.removed_Competitions[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedDNSToCompetition returns the removed IDs of the "DNSToCompetition" edge to the Competition entity.
-func (m *DNSMutation) RemovedDNSToCompetitionIDs() (ids []uuid.UUID) {
-	for id := range m.removed_DNSToCompetition {
+// RemovedCompetitions returns the removed IDs of the "Competitions" edge to the Competition entity.
+func (m *DNSMutation) RemovedCompetitionsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Competitions {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// DNSToCompetitionIDs returns the "DNSToCompetition" edge IDs in the mutation.
-func (m *DNSMutation) DNSToCompetitionIDs() (ids []uuid.UUID) {
-	for id := range m._DNSToCompetition {
+// CompetitionsIDs returns the "Competitions" edge IDs in the mutation.
+func (m *DNSMutation) CompetitionsIDs() (ids []uuid.UUID) {
+	for id := range m._Competitions {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetDNSToCompetition resets all changes to the "DNSToCompetition" edge.
-func (m *DNSMutation) ResetDNSToCompetition() {
-	m._DNSToCompetition = nil
-	m.cleared_DNSToCompetition = false
-	m.removed_DNSToCompetition = nil
+// ResetCompetitions resets all changes to the "Competitions" edge.
+func (m *DNSMutation) ResetCompetitions() {
+	m._Competitions = nil
+	m.cleared_Competitions = false
+	m.removed_Competitions = nil
 }
 
 // Where appends a list predicates to the DNSMutation builder.
@@ -9931,11 +9931,11 @@ func (m *DNSMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DNSMutation) AddedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m._DNSToEnvironment != nil {
-		edges = append(edges, dns.EdgeDNSToEnvironment)
+	if m._Environments != nil {
+		edges = append(edges, dns.EdgeEnvironments)
 	}
-	if m._DNSToCompetition != nil {
-		edges = append(edges, dns.EdgeDNSToCompetition)
+	if m._Competitions != nil {
+		edges = append(edges, dns.EdgeCompetitions)
 	}
 	return edges
 }
@@ -9944,15 +9944,15 @@ func (m *DNSMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *DNSMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case dns.EdgeDNSToEnvironment:
-		ids := make([]ent.Value, 0, len(m._DNSToEnvironment))
-		for id := range m._DNSToEnvironment {
+	case dns.EdgeEnvironments:
+		ids := make([]ent.Value, 0, len(m._Environments))
+		for id := range m._Environments {
 			ids = append(ids, id)
 		}
 		return ids
-	case dns.EdgeDNSToCompetition:
-		ids := make([]ent.Value, 0, len(m._DNSToCompetition))
-		for id := range m._DNSToCompetition {
+	case dns.EdgeCompetitions:
+		ids := make([]ent.Value, 0, len(m._Competitions))
+		for id := range m._Competitions {
 			ids = append(ids, id)
 		}
 		return ids
@@ -9963,11 +9963,11 @@ func (m *DNSMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *DNSMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.removed_DNSToEnvironment != nil {
-		edges = append(edges, dns.EdgeDNSToEnvironment)
+	if m.removed_Environments != nil {
+		edges = append(edges, dns.EdgeEnvironments)
 	}
-	if m.removed_DNSToCompetition != nil {
-		edges = append(edges, dns.EdgeDNSToCompetition)
+	if m.removed_Competitions != nil {
+		edges = append(edges, dns.EdgeCompetitions)
 	}
 	return edges
 }
@@ -9976,15 +9976,15 @@ func (m *DNSMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *DNSMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case dns.EdgeDNSToEnvironment:
-		ids := make([]ent.Value, 0, len(m.removed_DNSToEnvironment))
-		for id := range m.removed_DNSToEnvironment {
+	case dns.EdgeEnvironments:
+		ids := make([]ent.Value, 0, len(m.removed_Environments))
+		for id := range m.removed_Environments {
 			ids = append(ids, id)
 		}
 		return ids
-	case dns.EdgeDNSToCompetition:
-		ids := make([]ent.Value, 0, len(m.removed_DNSToCompetition))
-		for id := range m.removed_DNSToCompetition {
+	case dns.EdgeCompetitions:
+		ids := make([]ent.Value, 0, len(m.removed_Competitions))
+		for id := range m.removed_Competitions {
 			ids = append(ids, id)
 		}
 		return ids
@@ -9995,11 +9995,11 @@ func (m *DNSMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DNSMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.cleared_DNSToEnvironment {
-		edges = append(edges, dns.EdgeDNSToEnvironment)
+	if m.cleared_Environments {
+		edges = append(edges, dns.EdgeEnvironments)
 	}
-	if m.cleared_DNSToCompetition {
-		edges = append(edges, dns.EdgeDNSToCompetition)
+	if m.cleared_Competitions {
+		edges = append(edges, dns.EdgeCompetitions)
 	}
 	return edges
 }
@@ -10008,10 +10008,10 @@ func (m *DNSMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *DNSMutation) EdgeCleared(name string) bool {
 	switch name {
-	case dns.EdgeDNSToEnvironment:
-		return m.cleared_DNSToEnvironment
-	case dns.EdgeDNSToCompetition:
-		return m.cleared_DNSToCompetition
+	case dns.EdgeEnvironments:
+		return m.cleared_Environments
+	case dns.EdgeCompetitions:
+		return m.cleared_Competitions
 	}
 	return false
 }
@@ -10028,11 +10028,11 @@ func (m *DNSMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *DNSMutation) ResetEdge(name string) error {
 	switch name {
-	case dns.EdgeDNSToEnvironment:
-		m.ResetDNSToEnvironment()
+	case dns.EdgeEnvironments:
+		m.ResetEnvironments()
 		return nil
-	case dns.EdgeDNSToCompetition:
-		m.ResetDNSToCompetition()
+	case dns.EdgeCompetitions:
+		m.ResetCompetitions()
 		return nil
 	}
 	return fmt.Errorf("unknown DNS edge %s", name)

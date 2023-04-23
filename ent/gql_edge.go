@@ -292,18 +292,18 @@ func (c *Competition) Builds(ctx context.Context) ([]*Build, error) {
 	return result, err
 }
 
-func (d *DNS) DNSToEnvironment(ctx context.Context) ([]*Environment, error) {
-	result, err := d.Edges.DNSToEnvironmentOrErr()
+func (d *DNS) Environments(ctx context.Context) ([]*Environment, error) {
+	result, err := d.Edges.EnvironmentsOrErr()
 	if IsNotLoaded(err) {
-		result, err = d.QueryDNSToEnvironment().All(ctx)
+		result, err = d.QueryEnvironments().All(ctx)
 	}
 	return result, err
 }
 
-func (d *DNS) DNSToCompetition(ctx context.Context) ([]*Competition, error) {
-	result, err := d.Edges.DNSToCompetitionOrErr()
+func (d *DNS) Competitions(ctx context.Context) ([]*Competition, error) {
+	result, err := d.Edges.CompetitionsOrErr()
 	if IsNotLoaded(err) {
-		result, err = d.QueryDNSToCompetition().All(ctx)
+		result, err = d.QueryCompetitions().All(ctx)
 	}
 	return result, err
 }

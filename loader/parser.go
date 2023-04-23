@@ -1518,7 +1518,7 @@ func createDNS(txClient *ent.Tx, ctx context.Context, log *logging.Logger, confi
 			Where(
 				dns.And(
 					dns.HclIDEQ(cDNS.HclID),
-					dns.HasDNSToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					dns.HasEnvironmentsWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)
