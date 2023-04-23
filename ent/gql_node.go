@@ -1583,9 +1583,9 @@ func (fd *FileDelete) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
-		Name: "FileDeleteToEnvironment",
+		Name: "Environment",
 	}
-	err = fd.QueryFileDeleteToEnvironment().
+	err = fd.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {

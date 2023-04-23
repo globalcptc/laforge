@@ -2605,15 +2605,15 @@ func (c *FileDeleteClient) GetX(ctx context.Context, id uuid.UUID) *FileDelete {
 	return obj
 }
 
-// QueryFileDeleteToEnvironment queries the FileDeleteToEnvironment edge of a FileDelete.
-func (c *FileDeleteClient) QueryFileDeleteToEnvironment(fd *FileDelete) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a FileDelete.
+func (c *FileDeleteClient) QueryEnvironment(fd *FileDelete) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := fd.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(filedelete.Table, filedelete.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, filedelete.FileDeleteToEnvironmentTable, filedelete.FileDeleteToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, filedelete.EnvironmentTable, filedelete.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(fd.driver.Dialect(), step)
 		return fromV, nil

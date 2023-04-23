@@ -13823,18 +13823,18 @@ func (m *EnvironmentMutation) ResetEdge(name string) error {
 // FileDeleteMutation represents an operation that mutates the FileDelete nodes in the graph.
 type FileDeleteMutation struct {
 	config
-	op                              Op
-	typ                             string
-	id                              *uuid.UUID
-	hcl_id                          *string
-	_path                           *string
-	tags                            *map[string]string
-	clearedFields                   map[string]struct{}
-	_FileDeleteToEnvironment        *uuid.UUID
-	cleared_FileDeleteToEnvironment bool
-	done                            bool
-	oldValue                        func(context.Context) (*FileDelete, error)
-	predicates                      []predicate.FileDelete
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	hcl_id              *string
+	_path               *string
+	tags                *map[string]string
+	clearedFields       map[string]struct{}
+	_Environment        *uuid.UUID
+	cleared_Environment bool
+	done                bool
+	oldValue            func(context.Context) (*FileDelete, error)
+	predicates          []predicate.FileDelete
 }
 
 var _ ent.Mutation = (*FileDeleteMutation)(nil)
@@ -14049,43 +14049,43 @@ func (m *FileDeleteMutation) ResetTags() {
 	m.tags = nil
 }
 
-// SetFileDeleteToEnvironmentID sets the "FileDeleteToEnvironment" edge to the Environment entity by id.
-func (m *FileDeleteMutation) SetFileDeleteToEnvironmentID(id uuid.UUID) {
-	m._FileDeleteToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *FileDeleteMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearFileDeleteToEnvironment clears the "FileDeleteToEnvironment" edge to the Environment entity.
-func (m *FileDeleteMutation) ClearFileDeleteToEnvironment() {
-	m.cleared_FileDeleteToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *FileDeleteMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// FileDeleteToEnvironmentCleared reports if the "FileDeleteToEnvironment" edge to the Environment entity was cleared.
-func (m *FileDeleteMutation) FileDeleteToEnvironmentCleared() bool {
-	return m.cleared_FileDeleteToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *FileDeleteMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// FileDeleteToEnvironmentID returns the "FileDeleteToEnvironment" edge ID in the mutation.
-func (m *FileDeleteMutation) FileDeleteToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._FileDeleteToEnvironment != nil {
-		return *m._FileDeleteToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *FileDeleteMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// FileDeleteToEnvironmentIDs returns the "FileDeleteToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// FileDeleteToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *FileDeleteMutation) FileDeleteToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._FileDeleteToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *FileDeleteMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetFileDeleteToEnvironment resets all changes to the "FileDeleteToEnvironment" edge.
-func (m *FileDeleteMutation) ResetFileDeleteToEnvironment() {
-	m._FileDeleteToEnvironment = nil
-	m.cleared_FileDeleteToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *FileDeleteMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
 // Where appends a list predicates to the FileDeleteMutation builder.
@@ -14241,8 +14241,8 @@ func (m *FileDeleteMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *FileDeleteMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m._FileDeleteToEnvironment != nil {
-		edges = append(edges, filedelete.EdgeFileDeleteToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, filedelete.EdgeEnvironment)
 	}
 	return edges
 }
@@ -14251,8 +14251,8 @@ func (m *FileDeleteMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *FileDeleteMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case filedelete.EdgeFileDeleteToEnvironment:
-		if id := m._FileDeleteToEnvironment; id != nil {
+	case filedelete.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -14276,8 +14276,8 @@ func (m *FileDeleteMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *FileDeleteMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.cleared_FileDeleteToEnvironment {
-		edges = append(edges, filedelete.EdgeFileDeleteToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, filedelete.EdgeEnvironment)
 	}
 	return edges
 }
@@ -14286,8 +14286,8 @@ func (m *FileDeleteMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *FileDeleteMutation) EdgeCleared(name string) bool {
 	switch name {
-	case filedelete.EdgeFileDeleteToEnvironment:
-		return m.cleared_FileDeleteToEnvironment
+	case filedelete.EdgeEnvironment:
+		return m.cleared_Environment
 	}
 	return false
 }
@@ -14296,8 +14296,8 @@ func (m *FileDeleteMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *FileDeleteMutation) ClearEdge(name string) error {
 	switch name {
-	case filedelete.EdgeFileDeleteToEnvironment:
-		m.ClearFileDeleteToEnvironment()
+	case filedelete.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown FileDelete unique edge %s", name)
@@ -14307,8 +14307,8 @@ func (m *FileDeleteMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *FileDeleteMutation) ResetEdge(name string) error {
 	switch name {
-	case filedelete.EdgeFileDeleteToEnvironment:
-		m.ResetFileDeleteToEnvironment()
+	case filedelete.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown FileDelete edge %s", name)

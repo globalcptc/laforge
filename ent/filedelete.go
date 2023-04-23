@@ -29,33 +29,33 @@ type FileDelete struct {
 	Edges FileDeleteEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// FileDeleteToEnvironment holds the value of the FileDeleteToEnvironment edge.
-	HCLFileDeleteToEnvironment *Environment `json:"FileDeleteToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
 	environment_file_deletes *uuid.UUID
 }
 
 // FileDeleteEdges holds the relations/edges for other nodes in the graph.
 type FileDeleteEdges struct {
-	// FileDeleteToEnvironment holds the value of the FileDeleteToEnvironment edge.
-	FileDeleteToEnvironment *Environment `json:"FileDeleteToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// FileDeleteToEnvironmentOrErr returns the FileDeleteToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e FileDeleteEdges) FileDeleteToEnvironmentOrErr() (*Environment, error) {
+func (e FileDeleteEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[0] {
-		if e.FileDeleteToEnvironment == nil {
-			// The edge FileDeleteToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.FileDeleteToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "FileDeleteToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -124,9 +124,9 @@ func (fd *FileDelete) assignValues(columns []string, values []interface{}) error
 	return nil
 }
 
-// QueryFileDeleteToEnvironment queries the "FileDeleteToEnvironment" edge of the FileDelete entity.
-func (fd *FileDelete) QueryFileDeleteToEnvironment() *EnvironmentQuery {
-	return (&FileDeleteClient{config: fd.config}).QueryFileDeleteToEnvironment(fd)
+// QueryEnvironment queries the "Environment" edge of the FileDelete entity.
+func (fd *FileDelete) QueryEnvironment() *EnvironmentQuery {
+	return (&FileDeleteClient{config: fd.config}).QueryEnvironment(fd)
 }
 
 // Update returns a builder for updating this FileDelete.

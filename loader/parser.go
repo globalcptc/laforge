@@ -1253,7 +1253,7 @@ func createFileDelete(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 			Where(
 				filedelete.And(
 					filedelete.HclIDEQ(cFileDelete.HclID),
-					filedelete.HasFileDeleteToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					filedelete.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)

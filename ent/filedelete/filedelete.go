@@ -17,17 +17,17 @@ const (
 	FieldPath = "path"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// EdgeFileDeleteToEnvironment holds the string denoting the filedeletetoenvironment edge name in mutations.
-	EdgeFileDeleteToEnvironment = "FileDeleteToEnvironment"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the filedelete in the database.
 	Table = "file_deletes"
-	// FileDeleteToEnvironmentTable is the table that holds the FileDeleteToEnvironment relation/edge.
-	FileDeleteToEnvironmentTable = "file_deletes"
-	// FileDeleteToEnvironmentInverseTable is the table name for the Environment entity.
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "file_deletes"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	FileDeleteToEnvironmentInverseTable = "environments"
-	// FileDeleteToEnvironmentColumn is the table column denoting the FileDeleteToEnvironment relation/edge.
-	FileDeleteToEnvironmentColumn = "environment_file_deletes"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_file_deletes"
 )
 
 // Columns holds all SQL columns for filedelete fields.

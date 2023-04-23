@@ -927,7 +927,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	// Check if step is file delete
 	entFileDelete, err := client.FileDelete.Query().Where(
 		filedelete.And(
-			filedelete.HasFileDeleteToEnvironmentWith(
+			filedelete.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
 			filedelete.HclIDEQ(hclID),
@@ -1304,7 +1304,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	// Check if step is file delete
 	entFileDelete, err := client.FileDelete.Query().Where(
 		filedelete.And(
-			filedelete.HasFileDeleteToEnvironmentWith(
+			filedelete.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			filedelete.HclIDEQ(entScheduledStep.Step),

@@ -484,10 +484,10 @@ func (e *Environment) ServerTasks(ctx context.Context) ([]*ServerTask, error) {
 	return result, err
 }
 
-func (fd *FileDelete) FileDeleteToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := fd.Edges.FileDeleteToEnvironmentOrErr()
+func (fd *FileDelete) Environment(ctx context.Context) (*Environment, error) {
+	result, err := fd.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = fd.QueryFileDeleteToEnvironment().Only(ctx)
+		result, err = fd.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
