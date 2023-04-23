@@ -35,59 +35,59 @@ type Network struct {
 	Edges NetworkEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// NetworkToEnvironment holds the value of the NetworkToEnvironment edge.
-	HCLNetworkToEnvironment *Environment `json:"NetworkToEnvironment,omitempty"`
-	// NetworkToHostDependency holds the value of the NetworkToHostDependency edge.
-	HCLNetworkToHostDependency []*HostDependency `json:"NetworkToHostDependency,omitempty"`
-	// NetworkToIncludedNetwork holds the value of the NetworkToIncludedNetwork edge.
-	HCLNetworkToIncludedNetwork []*IncludedNetwork `json:"NetworkToIncludedNetwork,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
+	// HostDependencies holds the value of the HostDependencies edge.
+	HCLHostDependencies []*HostDependency `json:"HostDependencies,omitempty"`
+	// IncludedNetworks holds the value of the IncludedNetworks edge.
+	HCLIncludedNetworks []*IncludedNetwork `json:"IncludedNetworks,omitempty"`
 	//
 	environment_networks *uuid.UUID
 }
 
 // NetworkEdges holds the relations/edges for other nodes in the graph.
 type NetworkEdges struct {
-	// NetworkToEnvironment holds the value of the NetworkToEnvironment edge.
-	NetworkToEnvironment *Environment `json:"NetworkToEnvironment,omitempty"`
-	// NetworkToHostDependency holds the value of the NetworkToHostDependency edge.
-	NetworkToHostDependency []*HostDependency `json:"NetworkToHostDependency,omitempty"`
-	// NetworkToIncludedNetwork holds the value of the NetworkToIncludedNetwork edge.
-	NetworkToIncludedNetwork []*IncludedNetwork `json:"NetworkToIncludedNetwork,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
+	// HostDependencies holds the value of the HostDependencies edge.
+	HostDependencies []*HostDependency `json:"HostDependencies,omitempty"`
+	// IncludedNetworks holds the value of the IncludedNetworks edge.
+	IncludedNetworks []*IncludedNetwork `json:"IncludedNetworks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
 }
 
-// NetworkToEnvironmentOrErr returns the NetworkToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e NetworkEdges) NetworkToEnvironmentOrErr() (*Environment, error) {
+func (e NetworkEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[0] {
-		if e.NetworkToEnvironment == nil {
-			// The edge NetworkToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.NetworkToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "NetworkToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
-// NetworkToHostDependencyOrErr returns the NetworkToHostDependency value or an error if the edge
+// HostDependenciesOrErr returns the HostDependencies value or an error if the edge
 // was not loaded in eager-loading.
-func (e NetworkEdges) NetworkToHostDependencyOrErr() ([]*HostDependency, error) {
+func (e NetworkEdges) HostDependenciesOrErr() ([]*HostDependency, error) {
 	if e.loadedTypes[1] {
-		return e.NetworkToHostDependency, nil
+		return e.HostDependencies, nil
 	}
-	return nil, &NotLoadedError{edge: "NetworkToHostDependency"}
+	return nil, &NotLoadedError{edge: "HostDependencies"}
 }
 
-// NetworkToIncludedNetworkOrErr returns the NetworkToIncludedNetwork value or an error if the edge
+// IncludedNetworksOrErr returns the IncludedNetworks value or an error if the edge
 // was not loaded in eager-loading.
-func (e NetworkEdges) NetworkToIncludedNetworkOrErr() ([]*IncludedNetwork, error) {
+func (e NetworkEdges) IncludedNetworksOrErr() ([]*IncludedNetwork, error) {
 	if e.loadedTypes[2] {
-		return e.NetworkToIncludedNetwork, nil
+		return e.IncludedNetworks, nil
 	}
-	return nil, &NotLoadedError{edge: "NetworkToIncludedNetwork"}
+	return nil, &NotLoadedError{edge: "IncludedNetworks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -178,19 +178,19 @@ func (n *Network) assignValues(columns []string, values []interface{}) error {
 	return nil
 }
 
-// QueryNetworkToEnvironment queries the "NetworkToEnvironment" edge of the Network entity.
-func (n *Network) QueryNetworkToEnvironment() *EnvironmentQuery {
-	return (&NetworkClient{config: n.config}).QueryNetworkToEnvironment(n)
+// QueryEnvironment queries the "Environment" edge of the Network entity.
+func (n *Network) QueryEnvironment() *EnvironmentQuery {
+	return (&NetworkClient{config: n.config}).QueryEnvironment(n)
 }
 
-// QueryNetworkToHostDependency queries the "NetworkToHostDependency" edge of the Network entity.
-func (n *Network) QueryNetworkToHostDependency() *HostDependencyQuery {
-	return (&NetworkClient{config: n.config}).QueryNetworkToHostDependency(n)
+// QueryHostDependencies queries the "HostDependencies" edge of the Network entity.
+func (n *Network) QueryHostDependencies() *HostDependencyQuery {
+	return (&NetworkClient{config: n.config}).QueryHostDependencies(n)
 }
 
-// QueryNetworkToIncludedNetwork queries the "NetworkToIncludedNetwork" edge of the Network entity.
-func (n *Network) QueryNetworkToIncludedNetwork() *IncludedNetworkQuery {
-	return (&NetworkClient{config: n.config}).QueryNetworkToIncludedNetwork(n)
+// QueryIncludedNetworks queries the "IncludedNetworks" edge of the Network entity.
+func (n *Network) QueryIncludedNetworks() *IncludedNetworkQuery {
+	return (&NetworkClient{config: n.config}).QueryIncludedNetworks(n)
 }
 
 // Update returns a builder for updating this Network.

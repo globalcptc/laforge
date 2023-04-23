@@ -3815,15 +3815,15 @@ func (c *NetworkClient) GetX(ctx context.Context, id uuid.UUID) *Network {
 	return obj
 }
 
-// QueryNetworkToEnvironment queries the NetworkToEnvironment edge of a Network.
-func (c *NetworkClient) QueryNetworkToEnvironment(n *Network) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a Network.
+func (c *NetworkClient) QueryEnvironment(n *Network) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := n.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(network.Table, network.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, network.NetworkToEnvironmentTable, network.NetworkToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, network.EnvironmentTable, network.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(n.driver.Dialect(), step)
 		return fromV, nil
@@ -3831,15 +3831,15 @@ func (c *NetworkClient) QueryNetworkToEnvironment(n *Network) *EnvironmentQuery 
 	return query
 }
 
-// QueryNetworkToHostDependency queries the NetworkToHostDependency edge of a Network.
-func (c *NetworkClient) QueryNetworkToHostDependency(n *Network) *HostDependencyQuery {
+// QueryHostDependencies queries the HostDependencies edge of a Network.
+func (c *NetworkClient) QueryHostDependencies(n *Network) *HostDependencyQuery {
 	query := &HostDependencyQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := n.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(network.Table, network.FieldID, id),
 			sqlgraph.To(hostdependency.Table, hostdependency.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, network.NetworkToHostDependencyTable, network.NetworkToHostDependencyColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, network.HostDependenciesTable, network.HostDependenciesColumn),
 		)
 		fromV = sqlgraph.Neighbors(n.driver.Dialect(), step)
 		return fromV, nil
@@ -3847,15 +3847,15 @@ func (c *NetworkClient) QueryNetworkToHostDependency(n *Network) *HostDependency
 	return query
 }
 
-// QueryNetworkToIncludedNetwork queries the NetworkToIncludedNetwork edge of a Network.
-func (c *NetworkClient) QueryNetworkToIncludedNetwork(n *Network) *IncludedNetworkQuery {
+// QueryIncludedNetworks queries the IncludedNetworks edge of a Network.
+func (c *NetworkClient) QueryIncludedNetworks(n *Network) *IncludedNetworkQuery {
 	query := &IncludedNetworkQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := n.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(network.Table, network.FieldID, id),
 			sqlgraph.To(includednetwork.Table, includednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, network.NetworkToIncludedNetworkTable, network.NetworkToIncludedNetworkColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, network.IncludedNetworksTable, network.IncludedNetworksColumn),
 		)
 		fromV = sqlgraph.Neighbors(n.driver.Dialect(), step)
 		return fromV, nil

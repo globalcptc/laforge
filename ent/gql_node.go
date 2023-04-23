@@ -2396,9 +2396,9 @@ func (n *Network) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
-		Name: "NetworkToEnvironment",
+		Name: "Environment",
 	}
-	err = n.QueryNetworkToEnvironment().
+	err = n.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -2406,9 +2406,9 @@ func (n *Network) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "HostDependency",
-		Name: "NetworkToHostDependency",
+		Name: "HostDependencies",
 	}
-	err = n.QueryNetworkToHostDependency().
+	err = n.QueryHostDependencies().
 		Select(hostdependency.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -2416,9 +2416,9 @@ func (n *Network) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "IncludedNetwork",
-		Name: "NetworkToIncludedNetwork",
+		Name: "IncludedNetworks",
 	}
-	err = n.QueryNetworkToIncludedNetwork().
+	err = n.QueryIncludedNetworks().
 		Select(includednetwork.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {

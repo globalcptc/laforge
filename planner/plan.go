@@ -369,7 +369,7 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	for _, pNetwork := range createProvisonedNetworks {
 		entHosts, err := pNetwork.
 			QueryProvisionedNetworkToNetwork().
-			QueryNetworkToIncludedNetwork().
+			QueryIncludedNetworks().
 			QueryHosts().
 			All(ctx)
 		if err != nil {

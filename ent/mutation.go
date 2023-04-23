@@ -20994,27 +20994,27 @@ func (m *IncludedNetworkMutation) ResetEdge(name string) error {
 // NetworkMutation represents an operation that mutates the Network nodes in the graph.
 type NetworkMutation struct {
 	config
-	op                               Op
-	typ                              string
-	id                               *uuid.UUID
-	hcl_id                           *string
-	name                             *string
-	cidr                             *string
-	vdi_visible                      *bool
-	vars                             *map[string]string
-	tags                             *map[string]string
-	clearedFields                    map[string]struct{}
-	_NetworkToEnvironment            *uuid.UUID
-	cleared_NetworkToEnvironment     bool
-	_NetworkToHostDependency         map[uuid.UUID]struct{}
-	removed_NetworkToHostDependency  map[uuid.UUID]struct{}
-	cleared_NetworkToHostDependency  bool
-	_NetworkToIncludedNetwork        map[uuid.UUID]struct{}
-	removed_NetworkToIncludedNetwork map[uuid.UUID]struct{}
-	cleared_NetworkToIncludedNetwork bool
-	done                             bool
-	oldValue                         func(context.Context) (*Network, error)
-	predicates                       []predicate.Network
+	op                       Op
+	typ                      string
+	id                       *uuid.UUID
+	hcl_id                   *string
+	name                     *string
+	cidr                     *string
+	vdi_visible              *bool
+	vars                     *map[string]string
+	tags                     *map[string]string
+	clearedFields            map[string]struct{}
+	_Environment             *uuid.UUID
+	cleared_Environment      bool
+	_HostDependencies        map[uuid.UUID]struct{}
+	removed_HostDependencies map[uuid.UUID]struct{}
+	cleared_HostDependencies bool
+	_IncludedNetworks        map[uuid.UUID]struct{}
+	removed_IncludedNetworks map[uuid.UUID]struct{}
+	cleared_IncludedNetworks bool
+	done                     bool
+	oldValue                 func(context.Context) (*Network, error)
+	predicates               []predicate.Network
 }
 
 var _ ent.Mutation = (*NetworkMutation)(nil)
@@ -21337,151 +21337,151 @@ func (m *NetworkMutation) ResetTags() {
 	m.tags = nil
 }
 
-// SetNetworkToEnvironmentID sets the "NetworkToEnvironment" edge to the Environment entity by id.
-func (m *NetworkMutation) SetNetworkToEnvironmentID(id uuid.UUID) {
-	m._NetworkToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *NetworkMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearNetworkToEnvironment clears the "NetworkToEnvironment" edge to the Environment entity.
-func (m *NetworkMutation) ClearNetworkToEnvironment() {
-	m.cleared_NetworkToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *NetworkMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// NetworkToEnvironmentCleared reports if the "NetworkToEnvironment" edge to the Environment entity was cleared.
-func (m *NetworkMutation) NetworkToEnvironmentCleared() bool {
-	return m.cleared_NetworkToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *NetworkMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// NetworkToEnvironmentID returns the "NetworkToEnvironment" edge ID in the mutation.
-func (m *NetworkMutation) NetworkToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._NetworkToEnvironment != nil {
-		return *m._NetworkToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *NetworkMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// NetworkToEnvironmentIDs returns the "NetworkToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// NetworkToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *NetworkMutation) NetworkToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._NetworkToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *NetworkMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetNetworkToEnvironment resets all changes to the "NetworkToEnvironment" edge.
-func (m *NetworkMutation) ResetNetworkToEnvironment() {
-	m._NetworkToEnvironment = nil
-	m.cleared_NetworkToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *NetworkMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
-// AddNetworkToHostDependencyIDs adds the "NetworkToHostDependency" edge to the HostDependency entity by ids.
-func (m *NetworkMutation) AddNetworkToHostDependencyIDs(ids ...uuid.UUID) {
-	if m._NetworkToHostDependency == nil {
-		m._NetworkToHostDependency = make(map[uuid.UUID]struct{})
+// AddHostDependencyIDs adds the "HostDependencies" edge to the HostDependency entity by ids.
+func (m *NetworkMutation) AddHostDependencyIDs(ids ...uuid.UUID) {
+	if m._HostDependencies == nil {
+		m._HostDependencies = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._NetworkToHostDependency[ids[i]] = struct{}{}
+		m._HostDependencies[ids[i]] = struct{}{}
 	}
 }
 
-// ClearNetworkToHostDependency clears the "NetworkToHostDependency" edge to the HostDependency entity.
-func (m *NetworkMutation) ClearNetworkToHostDependency() {
-	m.cleared_NetworkToHostDependency = true
+// ClearHostDependencies clears the "HostDependencies" edge to the HostDependency entity.
+func (m *NetworkMutation) ClearHostDependencies() {
+	m.cleared_HostDependencies = true
 }
 
-// NetworkToHostDependencyCleared reports if the "NetworkToHostDependency" edge to the HostDependency entity was cleared.
-func (m *NetworkMutation) NetworkToHostDependencyCleared() bool {
-	return m.cleared_NetworkToHostDependency
+// HostDependenciesCleared reports if the "HostDependencies" edge to the HostDependency entity was cleared.
+func (m *NetworkMutation) HostDependenciesCleared() bool {
+	return m.cleared_HostDependencies
 }
 
-// RemoveNetworkToHostDependencyIDs removes the "NetworkToHostDependency" edge to the HostDependency entity by IDs.
-func (m *NetworkMutation) RemoveNetworkToHostDependencyIDs(ids ...uuid.UUID) {
-	if m.removed_NetworkToHostDependency == nil {
-		m.removed_NetworkToHostDependency = make(map[uuid.UUID]struct{})
+// RemoveHostDependencyIDs removes the "HostDependencies" edge to the HostDependency entity by IDs.
+func (m *NetworkMutation) RemoveHostDependencyIDs(ids ...uuid.UUID) {
+	if m.removed_HostDependencies == nil {
+		m.removed_HostDependencies = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._NetworkToHostDependency, ids[i])
-		m.removed_NetworkToHostDependency[ids[i]] = struct{}{}
+		delete(m._HostDependencies, ids[i])
+		m.removed_HostDependencies[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedNetworkToHostDependency returns the removed IDs of the "NetworkToHostDependency" edge to the HostDependency entity.
-func (m *NetworkMutation) RemovedNetworkToHostDependencyIDs() (ids []uuid.UUID) {
-	for id := range m.removed_NetworkToHostDependency {
+// RemovedHostDependencies returns the removed IDs of the "HostDependencies" edge to the HostDependency entity.
+func (m *NetworkMutation) RemovedHostDependenciesIDs() (ids []uuid.UUID) {
+	for id := range m.removed_HostDependencies {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// NetworkToHostDependencyIDs returns the "NetworkToHostDependency" edge IDs in the mutation.
-func (m *NetworkMutation) NetworkToHostDependencyIDs() (ids []uuid.UUID) {
-	for id := range m._NetworkToHostDependency {
+// HostDependenciesIDs returns the "HostDependencies" edge IDs in the mutation.
+func (m *NetworkMutation) HostDependenciesIDs() (ids []uuid.UUID) {
+	for id := range m._HostDependencies {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetNetworkToHostDependency resets all changes to the "NetworkToHostDependency" edge.
-func (m *NetworkMutation) ResetNetworkToHostDependency() {
-	m._NetworkToHostDependency = nil
-	m.cleared_NetworkToHostDependency = false
-	m.removed_NetworkToHostDependency = nil
+// ResetHostDependencies resets all changes to the "HostDependencies" edge.
+func (m *NetworkMutation) ResetHostDependencies() {
+	m._HostDependencies = nil
+	m.cleared_HostDependencies = false
+	m.removed_HostDependencies = nil
 }
 
-// AddNetworkToIncludedNetworkIDs adds the "NetworkToIncludedNetwork" edge to the IncludedNetwork entity by ids.
-func (m *NetworkMutation) AddNetworkToIncludedNetworkIDs(ids ...uuid.UUID) {
-	if m._NetworkToIncludedNetwork == nil {
-		m._NetworkToIncludedNetwork = make(map[uuid.UUID]struct{})
+// AddIncludedNetworkIDs adds the "IncludedNetworks" edge to the IncludedNetwork entity by ids.
+func (m *NetworkMutation) AddIncludedNetworkIDs(ids ...uuid.UUID) {
+	if m._IncludedNetworks == nil {
+		m._IncludedNetworks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._NetworkToIncludedNetwork[ids[i]] = struct{}{}
+		m._IncludedNetworks[ids[i]] = struct{}{}
 	}
 }
 
-// ClearNetworkToIncludedNetwork clears the "NetworkToIncludedNetwork" edge to the IncludedNetwork entity.
-func (m *NetworkMutation) ClearNetworkToIncludedNetwork() {
-	m.cleared_NetworkToIncludedNetwork = true
+// ClearIncludedNetworks clears the "IncludedNetworks" edge to the IncludedNetwork entity.
+func (m *NetworkMutation) ClearIncludedNetworks() {
+	m.cleared_IncludedNetworks = true
 }
 
-// NetworkToIncludedNetworkCleared reports if the "NetworkToIncludedNetwork" edge to the IncludedNetwork entity was cleared.
-func (m *NetworkMutation) NetworkToIncludedNetworkCleared() bool {
-	return m.cleared_NetworkToIncludedNetwork
+// IncludedNetworksCleared reports if the "IncludedNetworks" edge to the IncludedNetwork entity was cleared.
+func (m *NetworkMutation) IncludedNetworksCleared() bool {
+	return m.cleared_IncludedNetworks
 }
 
-// RemoveNetworkToIncludedNetworkIDs removes the "NetworkToIncludedNetwork" edge to the IncludedNetwork entity by IDs.
-func (m *NetworkMutation) RemoveNetworkToIncludedNetworkIDs(ids ...uuid.UUID) {
-	if m.removed_NetworkToIncludedNetwork == nil {
-		m.removed_NetworkToIncludedNetwork = make(map[uuid.UUID]struct{})
+// RemoveIncludedNetworkIDs removes the "IncludedNetworks" edge to the IncludedNetwork entity by IDs.
+func (m *NetworkMutation) RemoveIncludedNetworkIDs(ids ...uuid.UUID) {
+	if m.removed_IncludedNetworks == nil {
+		m.removed_IncludedNetworks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._NetworkToIncludedNetwork, ids[i])
-		m.removed_NetworkToIncludedNetwork[ids[i]] = struct{}{}
+		delete(m._IncludedNetworks, ids[i])
+		m.removed_IncludedNetworks[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedNetworkToIncludedNetwork returns the removed IDs of the "NetworkToIncludedNetwork" edge to the IncludedNetwork entity.
-func (m *NetworkMutation) RemovedNetworkToIncludedNetworkIDs() (ids []uuid.UUID) {
-	for id := range m.removed_NetworkToIncludedNetwork {
+// RemovedIncludedNetworks returns the removed IDs of the "IncludedNetworks" edge to the IncludedNetwork entity.
+func (m *NetworkMutation) RemovedIncludedNetworksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_IncludedNetworks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// NetworkToIncludedNetworkIDs returns the "NetworkToIncludedNetwork" edge IDs in the mutation.
-func (m *NetworkMutation) NetworkToIncludedNetworkIDs() (ids []uuid.UUID) {
-	for id := range m._NetworkToIncludedNetwork {
+// IncludedNetworksIDs returns the "IncludedNetworks" edge IDs in the mutation.
+func (m *NetworkMutation) IncludedNetworksIDs() (ids []uuid.UUID) {
+	for id := range m._IncludedNetworks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetNetworkToIncludedNetwork resets all changes to the "NetworkToIncludedNetwork" edge.
-func (m *NetworkMutation) ResetNetworkToIncludedNetwork() {
-	m._NetworkToIncludedNetwork = nil
-	m.cleared_NetworkToIncludedNetwork = false
-	m.removed_NetworkToIncludedNetwork = nil
+// ResetIncludedNetworks resets all changes to the "IncludedNetworks" edge.
+func (m *NetworkMutation) ResetIncludedNetworks() {
+	m._IncludedNetworks = nil
+	m.cleared_IncludedNetworks = false
+	m.removed_IncludedNetworks = nil
 }
 
 // Where appends a list predicates to the NetworkMutation builder.
@@ -21688,14 +21688,14 @@ func (m *NetworkMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *NetworkMutation) AddedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m._NetworkToEnvironment != nil {
-		edges = append(edges, network.EdgeNetworkToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, network.EdgeEnvironment)
 	}
-	if m._NetworkToHostDependency != nil {
-		edges = append(edges, network.EdgeNetworkToHostDependency)
+	if m._HostDependencies != nil {
+		edges = append(edges, network.EdgeHostDependencies)
 	}
-	if m._NetworkToIncludedNetwork != nil {
-		edges = append(edges, network.EdgeNetworkToIncludedNetwork)
+	if m._IncludedNetworks != nil {
+		edges = append(edges, network.EdgeIncludedNetworks)
 	}
 	return edges
 }
@@ -21704,19 +21704,19 @@ func (m *NetworkMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *NetworkMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case network.EdgeNetworkToEnvironment:
-		if id := m._NetworkToEnvironment; id != nil {
+	case network.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
-	case network.EdgeNetworkToHostDependency:
-		ids := make([]ent.Value, 0, len(m._NetworkToHostDependency))
-		for id := range m._NetworkToHostDependency {
+	case network.EdgeHostDependencies:
+		ids := make([]ent.Value, 0, len(m._HostDependencies))
+		for id := range m._HostDependencies {
 			ids = append(ids, id)
 		}
 		return ids
-	case network.EdgeNetworkToIncludedNetwork:
-		ids := make([]ent.Value, 0, len(m._NetworkToIncludedNetwork))
-		for id := range m._NetworkToIncludedNetwork {
+	case network.EdgeIncludedNetworks:
+		ids := make([]ent.Value, 0, len(m._IncludedNetworks))
+		for id := range m._IncludedNetworks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -21727,11 +21727,11 @@ func (m *NetworkMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *NetworkMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m.removed_NetworkToHostDependency != nil {
-		edges = append(edges, network.EdgeNetworkToHostDependency)
+	if m.removed_HostDependencies != nil {
+		edges = append(edges, network.EdgeHostDependencies)
 	}
-	if m.removed_NetworkToIncludedNetwork != nil {
-		edges = append(edges, network.EdgeNetworkToIncludedNetwork)
+	if m.removed_IncludedNetworks != nil {
+		edges = append(edges, network.EdgeIncludedNetworks)
 	}
 	return edges
 }
@@ -21740,15 +21740,15 @@ func (m *NetworkMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *NetworkMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case network.EdgeNetworkToHostDependency:
-		ids := make([]ent.Value, 0, len(m.removed_NetworkToHostDependency))
-		for id := range m.removed_NetworkToHostDependency {
+	case network.EdgeHostDependencies:
+		ids := make([]ent.Value, 0, len(m.removed_HostDependencies))
+		for id := range m.removed_HostDependencies {
 			ids = append(ids, id)
 		}
 		return ids
-	case network.EdgeNetworkToIncludedNetwork:
-		ids := make([]ent.Value, 0, len(m.removed_NetworkToIncludedNetwork))
-		for id := range m.removed_NetworkToIncludedNetwork {
+	case network.EdgeIncludedNetworks:
+		ids := make([]ent.Value, 0, len(m.removed_IncludedNetworks))
+		for id := range m.removed_IncludedNetworks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -21759,14 +21759,14 @@ func (m *NetworkMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *NetworkMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m.cleared_NetworkToEnvironment {
-		edges = append(edges, network.EdgeNetworkToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, network.EdgeEnvironment)
 	}
-	if m.cleared_NetworkToHostDependency {
-		edges = append(edges, network.EdgeNetworkToHostDependency)
+	if m.cleared_HostDependencies {
+		edges = append(edges, network.EdgeHostDependencies)
 	}
-	if m.cleared_NetworkToIncludedNetwork {
-		edges = append(edges, network.EdgeNetworkToIncludedNetwork)
+	if m.cleared_IncludedNetworks {
+		edges = append(edges, network.EdgeIncludedNetworks)
 	}
 	return edges
 }
@@ -21775,12 +21775,12 @@ func (m *NetworkMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *NetworkMutation) EdgeCleared(name string) bool {
 	switch name {
-	case network.EdgeNetworkToEnvironment:
-		return m.cleared_NetworkToEnvironment
-	case network.EdgeNetworkToHostDependency:
-		return m.cleared_NetworkToHostDependency
-	case network.EdgeNetworkToIncludedNetwork:
-		return m.cleared_NetworkToIncludedNetwork
+	case network.EdgeEnvironment:
+		return m.cleared_Environment
+	case network.EdgeHostDependencies:
+		return m.cleared_HostDependencies
+	case network.EdgeIncludedNetworks:
+		return m.cleared_IncludedNetworks
 	}
 	return false
 }
@@ -21789,8 +21789,8 @@ func (m *NetworkMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *NetworkMutation) ClearEdge(name string) error {
 	switch name {
-	case network.EdgeNetworkToEnvironment:
-		m.ClearNetworkToEnvironment()
+	case network.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Network unique edge %s", name)
@@ -21800,14 +21800,14 @@ func (m *NetworkMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *NetworkMutation) ResetEdge(name string) error {
 	switch name {
-	case network.EdgeNetworkToEnvironment:
-		m.ResetNetworkToEnvironment()
+	case network.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
-	case network.EdgeNetworkToHostDependency:
-		m.ResetNetworkToHostDependency()
+	case network.EdgeHostDependencies:
+		m.ResetHostDependencies()
 		return nil
-	case network.EdgeNetworkToIncludedNetwork:
-		m.ResetNetworkToIncludedNetwork()
+	case network.EdgeIncludedNetworks:
+		m.ResetIncludedNetworks()
 		return nil
 	}
 	return fmt.Errorf("unknown Network edge %s", name)

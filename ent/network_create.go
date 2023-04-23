@@ -73,53 +73,53 @@ func (nc *NetworkCreate) SetNillableID(u *uuid.UUID) *NetworkCreate {
 	return nc
 }
 
-// SetNetworkToEnvironmentID sets the "NetworkToEnvironment" edge to the Environment entity by ID.
-func (nc *NetworkCreate) SetNetworkToEnvironmentID(id uuid.UUID) *NetworkCreate {
-	nc.mutation.SetNetworkToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (nc *NetworkCreate) SetEnvironmentID(id uuid.UUID) *NetworkCreate {
+	nc.mutation.SetEnvironmentID(id)
 	return nc
 }
 
-// SetNillableNetworkToEnvironmentID sets the "NetworkToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (nc *NetworkCreate) SetNillableNetworkToEnvironmentID(id *uuid.UUID) *NetworkCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (nc *NetworkCreate) SetNillableEnvironmentID(id *uuid.UUID) *NetworkCreate {
 	if id != nil {
-		nc = nc.SetNetworkToEnvironmentID(*id)
+		nc = nc.SetEnvironmentID(*id)
 	}
 	return nc
 }
 
-// SetNetworkToEnvironment sets the "NetworkToEnvironment" edge to the Environment entity.
-func (nc *NetworkCreate) SetNetworkToEnvironment(e *Environment) *NetworkCreate {
-	return nc.SetNetworkToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (nc *NetworkCreate) SetEnvironment(e *Environment) *NetworkCreate {
+	return nc.SetEnvironmentID(e.ID)
 }
 
-// AddNetworkToHostDependencyIDs adds the "NetworkToHostDependency" edge to the HostDependency entity by IDs.
-func (nc *NetworkCreate) AddNetworkToHostDependencyIDs(ids ...uuid.UUID) *NetworkCreate {
-	nc.mutation.AddNetworkToHostDependencyIDs(ids...)
+// AddHostDependencyIDs adds the "HostDependencies" edge to the HostDependency entity by IDs.
+func (nc *NetworkCreate) AddHostDependencyIDs(ids ...uuid.UUID) *NetworkCreate {
+	nc.mutation.AddHostDependencyIDs(ids...)
 	return nc
 }
 
-// AddNetworkToHostDependency adds the "NetworkToHostDependency" edges to the HostDependency entity.
-func (nc *NetworkCreate) AddNetworkToHostDependency(h ...*HostDependency) *NetworkCreate {
+// AddHostDependencies adds the "HostDependencies" edges to the HostDependency entity.
+func (nc *NetworkCreate) AddHostDependencies(h ...*HostDependency) *NetworkCreate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return nc.AddNetworkToHostDependencyIDs(ids...)
+	return nc.AddHostDependencyIDs(ids...)
 }
 
-// AddNetworkToIncludedNetworkIDs adds the "NetworkToIncludedNetwork" edge to the IncludedNetwork entity by IDs.
-func (nc *NetworkCreate) AddNetworkToIncludedNetworkIDs(ids ...uuid.UUID) *NetworkCreate {
-	nc.mutation.AddNetworkToIncludedNetworkIDs(ids...)
+// AddIncludedNetworkIDs adds the "IncludedNetworks" edge to the IncludedNetwork entity by IDs.
+func (nc *NetworkCreate) AddIncludedNetworkIDs(ids ...uuid.UUID) *NetworkCreate {
+	nc.mutation.AddIncludedNetworkIDs(ids...)
 	return nc
 }
 
-// AddNetworkToIncludedNetwork adds the "NetworkToIncludedNetwork" edges to the IncludedNetwork entity.
-func (nc *NetworkCreate) AddNetworkToIncludedNetwork(i ...*IncludedNetwork) *NetworkCreate {
+// AddIncludedNetworks adds the "IncludedNetworks" edges to the IncludedNetwork entity.
+func (nc *NetworkCreate) AddIncludedNetworks(i ...*IncludedNetwork) *NetworkCreate {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return nc.AddNetworkToIncludedNetworkIDs(ids...)
+	return nc.AddIncludedNetworkIDs(ids...)
 }
 
 // Mutation returns the NetworkMutation object of the builder.
@@ -309,12 +309,12 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 		})
 		_node.Tags = value
 	}
-	if nodes := nc.mutation.NetworkToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := nc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   network.NetworkToEnvironmentTable,
-			Columns: []string{network.NetworkToEnvironmentColumn},
+			Table:   network.EnvironmentTable,
+			Columns: []string{network.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -329,12 +329,12 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 		_node.environment_networks = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := nc.mutation.NetworkToHostDependencyIDs(); len(nodes) > 0 {
+	if nodes := nc.mutation.HostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   network.NetworkToHostDependencyTable,
-			Columns: []string{network.NetworkToHostDependencyColumn},
+			Table:   network.HostDependenciesTable,
+			Columns: []string{network.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -348,12 +348,12 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := nc.mutation.NetworkToIncludedNetworkIDs(); len(nodes) > 0 {
+	if nodes := nc.mutation.IncludedNetworksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   network.NetworkToIncludedNetworkTable,
-			Columns: []string{network.NetworkToIncludedNetworkColumn},
+			Table:   network.IncludedNetworksTable,
+			Columns: []string{network.IncludedNetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

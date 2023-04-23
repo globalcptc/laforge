@@ -825,7 +825,7 @@ func createNetworks(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 			Where(
 				network.And(
 					network.HclIDEQ(cNetwork.HclID),
-					network.HasNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					network.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)
@@ -1603,8 +1603,8 @@ func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.L
 				network.HclIDEQ(cIncludedNetwork.Name),
 				network.IDIn(returnedNetworkIDS...),
 				// network.Or(
-				// 	network.Not(network.HasNetworkToEnvironment()),
-				// 	network.HasNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
+				// 	network.Not(network.HasEnvironment()),
+				// 	network.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				// ),
 			),
 		).Only(ctx)
@@ -1687,7 +1687,7 @@ func validateHostDependencies(txClient *ent.Tx, ctx context.Context, log *loggin
 		entNetwork, err := txClient.Network.Query().Where(
 			network.And(
 				network.HclIDEQ(uncheckedHostDependency.NetworkID),
-				network.HasNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
+				network.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 			),
 		).Only(ctx)
 		if err != nil {
