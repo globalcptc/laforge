@@ -27,7 +27,7 @@ type Disk struct {
 	// Host holds the value of the Host edge.
 	HCLHost *Host `json:"Host,omitempty"`
 	//
-	host_host_to_disk *uuid.UUID
+	host_disk *uuid.UUID
 }
 
 // DiskEdges holds the relations/edges for other nodes in the graph.
@@ -62,7 +62,7 @@ func (*Disk) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullInt64)
 		case disk.FieldID:
 			values[i] = new(uuid.UUID)
-		case disk.ForeignKeys[0]: // host_host_to_disk
+		case disk.ForeignKeys[0]: // host_disk
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Disk", columns[i])
@@ -93,10 +93,10 @@ func (d *Disk) assignValues(columns []string, values []interface{}) error {
 			}
 		case disk.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field host_host_to_disk", values[i])
+				return fmt.Errorf("unexpected type %T for field host_disk", values[i])
 			} else if value.Valid {
-				d.host_host_to_disk = new(uuid.UUID)
-				*d.host_host_to_disk = *value.S.(*uuid.UUID)
+				d.host_disk = new(uuid.UUID)
+				*d.host_disk = *value.S.(*uuid.UUID)
 			}
 		}
 	}

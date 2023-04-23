@@ -474,7 +474,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		return entProvisionedHost, nil
 	}
 
-	entHostDependencies, err := entHost.QueryDependByHostToHostDependency().
+	entHostDependencies, err := entHost.QueryRequiredByHostDependency().
 		WithHostDependencyToDependOnHost().
 		WithHostDependencyToNetwork().
 		All(ctx)
@@ -638,7 +638,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 	}
 	userDataScriptID, ok := entHost.Vars["user_data_script_id"]
 	if ok {
-		currentEnvironment, err := entProvisionedHost.QueryProvisionedHostToHost().QueryHostToEnvironment().Only(ctx)
+		currentEnvironment, err := entProvisionedHost.QueryProvisionedHostToHost().QueryEnvironment().Only(ctx)
 		userDataScript, err := client.Script.Query().Where(
 			script.And(
 				script.HasScriptToEnvironmentWith(
@@ -720,7 +720,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		"prevPlan.StepNumber": prevPlan.StepNumber,
 	}).Debug("creating provisioned step")
 	var entProvisioningStep *ent.ProvisioningStep
-	currentEnvironment, err := pHost.QueryProvisionedHostToHost().QueryHostToEnvironment().Only(ctx)
+	currentEnvironment, err := pHost.QueryProvisionedHostToHost().QueryEnvironment().Only(ctx)
 	currentBuild := pHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToBuild().WithEnvironment().OnlyX(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Current Environment for Provisoned Host %v. Err: %v", pHost.ID, err)

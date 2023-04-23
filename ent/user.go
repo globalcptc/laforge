@@ -37,7 +37,7 @@ type User struct {
 	ansible_users         *uuid.UUID
 	command_users         *uuid.UUID
 	finding_users         *uuid.UUID
-	host_host_to_user     *uuid.UUID
+	host_users            *uuid.UUID
 	script_script_to_user *uuid.UUID
 }
 
@@ -85,7 +85,7 @@ func (*User) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case user.ForeignKeys[2]: // finding_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case user.ForeignKeys[3]: // host_host_to_user
+		case user.ForeignKeys[3]: // host_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case user.ForeignKeys[4]: // script_script_to_user
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -157,10 +157,10 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 			}
 		case user.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field host_host_to_user", values[i])
+				return fmt.Errorf("unexpected type %T for field host_users", values[i])
 			} else if value.Valid {
-				u.host_host_to_user = new(uuid.UUID)
-				*u.host_host_to_user = *value.S.(*uuid.UUID)
+				u.host_users = new(uuid.UUID)
+				*u.host_users = *value.S.(*uuid.UUID)
 			}
 		case user.ForeignKeys[4]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

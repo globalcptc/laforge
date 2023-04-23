@@ -725,7 +725,7 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 			log.Log.Errorf("Host %v was not defined in the Enviroment %v", cHostID, envHclID)
 			return nil, nil, fmt.Errorf("err: Host %v was not defined in the Enviroment %v", cHostID, envHclID)
 		}
-		returnedDisk, err := createDisk(txClient, ctx, log, cHost.HCLHostToDisk, cHost.HclID, envHclID)
+		returnedDisk, err := createDisk(txClient, ctx, log, cHost.HCLDisk, cHost.HclID, envHclID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -734,7 +734,7 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 			Where(
 				host.And(
 					host.HclIDEQ(cHost.HclID),
-					host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					host.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)
@@ -756,7 +756,7 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 					SetTags(cHost.Tags).
 					SetUserGroups(cHost.UserGroups).
 					SetVars(cHost.Vars).
-					SetHostToDisk(returnedDisk).
+					SetDisk(returnedDisk).
 					Save(ctx)
 				if err != nil {
 					log.Log.Errorf("Failed to Create Host %v. Err: %v", cHost.HclID, err)
@@ -782,13 +782,13 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 				SetTags(cHost.Tags).
 				SetUserGroups(cHost.UserGroups).
 				SetVars(cHost.Vars).
-				ClearHostToDisk().
+				ClearDisk().
 				Save(ctx)
 			if err != nil {
 				log.Log.Errorf("Failed to Update Host %v. Err: %v", cHost.HclID, err)
 				return nil, nil, err
 			}
-			_, err = entHost.Update().SetHostToDisk(returnedDisk).Save(ctx)
+			_, err = entHost.Update().SetDisk(returnedDisk).Save(ctx)
 			if err != nil {
 				log.Log.Errorf("Failed to Update Disk to Host %v. Err: %v", cHost.HclID, err)
 				return nil, nil, err
@@ -796,7 +796,7 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 		}
 
 		returnedHosts = append(returnedHosts, entHost)
-		returnedHostDependencies, err := createHostDependencies(txClient, ctx, log, cHost.HCLDependOnHostToHostDependency, envHclID, entHost)
+		returnedHostDependencies, err := createHostDependencies(txClient, ctx, log, cHost.HCLDependOnHostDependency, envHclID, entHost)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1567,7 +1567,7 @@ func createDisk(txClient *ent.Tx, ctx context.Context, log *logging.Logger, conf
 				disk.HasHostWith(
 					host.And(
 						host.HclIDEQ(hostHclID),
-						host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),
+						host.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 					),
 				),
 			),
@@ -1619,8 +1619,8 @@ func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.L
 					host.HclIDEQ(cHostHclID),
 					host.IDIn(returnedHostIDs...),
 					// host.Or(
-					// 	host.Not(host.HasHostToEnvironment()),
-					// 	host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					// 	host.Not(host.HasEnvironment()),
+					// 	host.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 					// ),
 				),
 			).Only(ctx)
@@ -1696,7 +1696,7 @@ func validateHostDependencies(txClient *ent.Tx, ctx context.Context, log *loggin
 		}
 		entHost, err := txClient.Host.Query().Where(
 			host.And(
-				host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),
+				host.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				host.HclIDEQ(uncheckedHostDependency.HostID),
 			),
 		).Only(ctx)

@@ -26,7 +26,7 @@ func (Disk) Fields() []ent.Field {
 func (Disk) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("Host", Host.Type).
-			Ref("HostToDisk").
+			Ref("Disk").
 			Unique(),
 	}
 }

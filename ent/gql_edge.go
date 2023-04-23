@@ -564,50 +564,50 @@ func (gfm *GinFileMiddleware) ProvisioningScheduledStep(ctx context.Context) (*P
 	return result, MaskNotFound(err)
 }
 
-func (h *Host) HostToDisk(ctx context.Context) (*Disk, error) {
-	result, err := h.Edges.HostToDiskOrErr()
+func (h *Host) Disk(ctx context.Context) (*Disk, error) {
+	result, err := h.Edges.DiskOrErr()
 	if IsNotLoaded(err) {
-		result, err = h.QueryHostToDisk().Only(ctx)
+		result, err = h.QueryDisk().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (h *Host) HostToUser(ctx context.Context) ([]*User, error) {
-	result, err := h.Edges.HostToUserOrErr()
+func (h *Host) Users(ctx context.Context) ([]*User, error) {
+	result, err := h.Edges.UsersOrErr()
 	if IsNotLoaded(err) {
-		result, err = h.QueryHostToUser().All(ctx)
+		result, err = h.QueryUsers().All(ctx)
 	}
 	return result, err
 }
 
-func (h *Host) HostToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := h.Edges.HostToEnvironmentOrErr()
+func (h *Host) Environment(ctx context.Context) (*Environment, error) {
+	result, err := h.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = h.QueryHostToEnvironment().Only(ctx)
+		result, err = h.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (h *Host) HostToIncludedNetwork(ctx context.Context) ([]*IncludedNetwork, error) {
-	result, err := h.Edges.HostToIncludedNetworkOrErr()
+func (h *Host) IncludedNetworks(ctx context.Context) ([]*IncludedNetwork, error) {
+	result, err := h.Edges.IncludedNetworksOrErr()
 	if IsNotLoaded(err) {
-		result, err = h.QueryHostToIncludedNetwork().All(ctx)
+		result, err = h.QueryIncludedNetworks().All(ctx)
 	}
 	return result, err
 }
 
-func (h *Host) DependOnHostToHostDependency(ctx context.Context) ([]*HostDependency, error) {
-	result, err := h.Edges.DependOnHostToHostDependencyOrErr()
+func (h *Host) DependOnHostDependency(ctx context.Context) ([]*HostDependency, error) {
+	result, err := h.Edges.DependOnHostDependencyOrErr()
 	if IsNotLoaded(err) {
-		result, err = h.QueryDependOnHostToHostDependency().All(ctx)
+		result, err = h.QueryDependOnHostDependency().All(ctx)
 	}
 	return result, err
 }
 
-func (h *Host) DependByHostToHostDependency(ctx context.Context) ([]*HostDependency, error) {
-	result, err := h.Edges.DependByHostToHostDependencyOrErr()
+func (h *Host) RequiredByHostDependency(ctx context.Context) ([]*HostDependency, error) {
+	result, err := h.Edges.RequiredByHostDependencyOrErr()
 	if IsNotLoaded(err) {
-		result, err = h.QueryDependByHostToHostDependency().All(ctx)
+		result, err = h.QueryRequiredByHostDependency().All(ctx)
 	}
 	return result, err
 }

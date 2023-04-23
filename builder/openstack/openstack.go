@@ -151,7 +151,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	if err != nil {
 		return fmt.Errorf("failed querying host from provisioned host: %v", err)
 	}
-	entDisk, err := entHost.QueryHostToDisk().Only(ctx)
+	entDisk, err := entHost.QueryDisk().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed querying disk from host: %v", err)
 	}

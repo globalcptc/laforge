@@ -54,23 +54,23 @@ func (Host) Fields() []ent.Field {
 // Edges of the Host.
 func (Host) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("HostToDisk", Disk.Type).
+		edge.To("Disk", Disk.Type).
 			StructTag(`hcl:"disk,block"`).
 			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("HostToUser", User.Type).
+		edge.To("Users", User.Type).
 			StructTag(`hcl:"maintainer,block"`),
-		edge.From("HostToEnvironment", Environment.Type).
+		edge.From("Environment", Environment.Type).
 			Ref("Hosts").
 			Unique(),
-		edge.From("HostToIncludedNetwork", IncludedNetwork.Type).
+		edge.From("IncludedNetworks", IncludedNetwork.Type).
 			Ref("IncludedNetworkToHost"),
-		edge.From("DependOnHostToHostDependency", HostDependency.Type).
+		edge.From("DependOnHostDependency", HostDependency.Type).
 			Ref("HostDependencyToDependOnHost").
 			StructTag(`hcl:"depends_on,block"`),
-		edge.From("DependByHostToHostDependency", HostDependency.Type).
+		edge.From("RequiredByHostDependency", HostDependency.Type).
 			Ref("HostDependencyToDependByHost"),
 	}
 }

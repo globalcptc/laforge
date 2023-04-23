@@ -395,10 +395,10 @@ func (dq *DiskQuery) loadHost(ctx context.Context, query *HostQuery, nodes []*Di
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Disk)
 	for i := range nodes {
-		if nodes[i].host_host_to_disk == nil {
+		if nodes[i].host_disk == nil {
 			continue
 		}
-		fk := *nodes[i].host_host_to_disk
+		fk := *nodes[i].host_disk
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (dq *DiskQuery) loadHost(ctx context.Context, query *HostQuery, nodes []*Di
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_host_to_disk" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "host_disk" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

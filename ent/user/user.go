@@ -54,7 +54,7 @@ var ForeignKeys = []string{
 	"ansible_users",
 	"command_users",
 	"finding_users",
-	"host_host_to_user",
+	"host_users",
 	"script_script_to_user",
 }
 

@@ -61,7 +61,7 @@ func main() {
 	//Build --
 	//Enviroment --
 
-	deletedCount, err := client.Host.Delete().Where(host.Not(host.HasHostToEnvironment())).Exec(ctx)
+	deletedCount, err := client.Host.Delete().Where(host.Not(host.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}

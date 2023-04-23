@@ -89,7 +89,7 @@ func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Bu
 				if err != nil {
 					return "", err
 				}
-				entDisk, err := entHost.QueryHostToDisk().Only(ctx)
+				entDisk, err := entHost.QueryDisk().Only(ctx)
 				if err != nil {
 					return "", err
 				}

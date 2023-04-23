@@ -23,7 +23,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "host" package.
 	HostInverseTable = "hosts"
 	// HostColumn is the table column denoting the Host relation/edge.
-	HostColumn = "host_host_to_disk"
+	HostColumn = "host_disk"
 )
 
 // Columns holds all SQL columns for disk fields.
@@ -35,7 +35,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "disks"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"host_host_to_disk",
+	"host_disk",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

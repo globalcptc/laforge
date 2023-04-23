@@ -17260,45 +17260,45 @@ func (m *GinFileMiddlewareMutation) ResetEdge(name string) error {
 // HostMutation represents an operation that mutates the Host nodes in the graph.
 type HostMutation struct {
 	config
-	op                                   Op
-	typ                                  string
-	id                                   *uuid.UUID
-	hcl_id                               *string
-	hostname                             *string
-	description                          *string
-	_OS                                  *string
-	last_octet                           *int
-	addlast_octet                        *int
-	instance_size                        *string
-	allow_mac_changes                    *bool
-	exposed_tcp_ports                    *[]string
-	exposed_udp_ports                    *[]string
-	override_password                    *string
-	vars                                 *map[string]string
-	user_groups                          *[]string
-	provision_steps                      *[]string
-	scheduled_steps                      *[]string
-	tags                                 *map[string]string
-	clearedFields                        map[string]struct{}
-	_HostToDisk                          *uuid.UUID
-	cleared_HostToDisk                   bool
-	_HostToUser                          map[uuid.UUID]struct{}
-	removed_HostToUser                   map[uuid.UUID]struct{}
-	cleared_HostToUser                   bool
-	_HostToEnvironment                   *uuid.UUID
-	cleared_HostToEnvironment            bool
-	_HostToIncludedNetwork               map[uuid.UUID]struct{}
-	removed_HostToIncludedNetwork        map[uuid.UUID]struct{}
-	cleared_HostToIncludedNetwork        bool
-	_DependOnHostToHostDependency        map[uuid.UUID]struct{}
-	removed_DependOnHostToHostDependency map[uuid.UUID]struct{}
-	cleared_DependOnHostToHostDependency bool
-	_DependByHostToHostDependency        map[uuid.UUID]struct{}
-	removed_DependByHostToHostDependency map[uuid.UUID]struct{}
-	cleared_DependByHostToHostDependency bool
-	done                                 bool
-	oldValue                             func(context.Context) (*Host, error)
-	predicates                           []predicate.Host
+	op                               Op
+	typ                              string
+	id                               *uuid.UUID
+	hcl_id                           *string
+	hostname                         *string
+	description                      *string
+	_OS                              *string
+	last_octet                       *int
+	addlast_octet                    *int
+	instance_size                    *string
+	allow_mac_changes                *bool
+	exposed_tcp_ports                *[]string
+	exposed_udp_ports                *[]string
+	override_password                *string
+	vars                             *map[string]string
+	user_groups                      *[]string
+	provision_steps                  *[]string
+	scheduled_steps                  *[]string
+	tags                             *map[string]string
+	clearedFields                    map[string]struct{}
+	_Disk                            *uuid.UUID
+	cleared_Disk                     bool
+	_Users                           map[uuid.UUID]struct{}
+	removed_Users                    map[uuid.UUID]struct{}
+	cleared_Users                    bool
+	_Environment                     *uuid.UUID
+	cleared_Environment              bool
+	_IncludedNetworks                map[uuid.UUID]struct{}
+	removed_IncludedNetworks         map[uuid.UUID]struct{}
+	cleared_IncludedNetworks         bool
+	_DependOnHostDependency          map[uuid.UUID]struct{}
+	removed_DependOnHostDependency   map[uuid.UUID]struct{}
+	cleared_DependOnHostDependency   bool
+	_RequiredByHostDependency        map[uuid.UUID]struct{}
+	removed_RequiredByHostDependency map[uuid.UUID]struct{}
+	cleared_RequiredByHostDependency bool
+	done                             bool
+	oldValue                         func(context.Context) (*Host, error)
+	predicates                       []predicate.Host
 }
 
 var _ ent.Mutation = (*HostMutation)(nil)
@@ -17991,298 +17991,298 @@ func (m *HostMutation) ResetTags() {
 	m.tags = nil
 }
 
-// SetHostToDiskID sets the "HostToDisk" edge to the Disk entity by id.
-func (m *HostMutation) SetHostToDiskID(id uuid.UUID) {
-	m._HostToDisk = &id
+// SetDiskID sets the "Disk" edge to the Disk entity by id.
+func (m *HostMutation) SetDiskID(id uuid.UUID) {
+	m._Disk = &id
 }
 
-// ClearHostToDisk clears the "HostToDisk" edge to the Disk entity.
-func (m *HostMutation) ClearHostToDisk() {
-	m.cleared_HostToDisk = true
+// ClearDisk clears the "Disk" edge to the Disk entity.
+func (m *HostMutation) ClearDisk() {
+	m.cleared_Disk = true
 }
 
-// HostToDiskCleared reports if the "HostToDisk" edge to the Disk entity was cleared.
-func (m *HostMutation) HostToDiskCleared() bool {
-	return m.cleared_HostToDisk
+// DiskCleared reports if the "Disk" edge to the Disk entity was cleared.
+func (m *HostMutation) DiskCleared() bool {
+	return m.cleared_Disk
 }
 
-// HostToDiskID returns the "HostToDisk" edge ID in the mutation.
-func (m *HostMutation) HostToDiskID() (id uuid.UUID, exists bool) {
-	if m._HostToDisk != nil {
-		return *m._HostToDisk, true
+// DiskID returns the "Disk" edge ID in the mutation.
+func (m *HostMutation) DiskID() (id uuid.UUID, exists bool) {
+	if m._Disk != nil {
+		return *m._Disk, true
 	}
 	return
 }
 
-// HostToDiskIDs returns the "HostToDisk" edge IDs in the mutation.
+// DiskIDs returns the "Disk" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// HostToDiskID instead. It exists only for internal usage by the builders.
-func (m *HostMutation) HostToDiskIDs() (ids []uuid.UUID) {
-	if id := m._HostToDisk; id != nil {
+// DiskID instead. It exists only for internal usage by the builders.
+func (m *HostMutation) DiskIDs() (ids []uuid.UUID) {
+	if id := m._Disk; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetHostToDisk resets all changes to the "HostToDisk" edge.
-func (m *HostMutation) ResetHostToDisk() {
-	m._HostToDisk = nil
-	m.cleared_HostToDisk = false
+// ResetDisk resets all changes to the "Disk" edge.
+func (m *HostMutation) ResetDisk() {
+	m._Disk = nil
+	m.cleared_Disk = false
 }
 
-// AddHostToUserIDs adds the "HostToUser" edge to the User entity by ids.
-func (m *HostMutation) AddHostToUserIDs(ids ...uuid.UUID) {
-	if m._HostToUser == nil {
-		m._HostToUser = make(map[uuid.UUID]struct{})
+// AddUserIDs adds the "Users" edge to the User entity by ids.
+func (m *HostMutation) AddUserIDs(ids ...uuid.UUID) {
+	if m._Users == nil {
+		m._Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._HostToUser[ids[i]] = struct{}{}
+		m._Users[ids[i]] = struct{}{}
 	}
 }
 
-// ClearHostToUser clears the "HostToUser" edge to the User entity.
-func (m *HostMutation) ClearHostToUser() {
-	m.cleared_HostToUser = true
+// ClearUsers clears the "Users" edge to the User entity.
+func (m *HostMutation) ClearUsers() {
+	m.cleared_Users = true
 }
 
-// HostToUserCleared reports if the "HostToUser" edge to the User entity was cleared.
-func (m *HostMutation) HostToUserCleared() bool {
-	return m.cleared_HostToUser
+// UsersCleared reports if the "Users" edge to the User entity was cleared.
+func (m *HostMutation) UsersCleared() bool {
+	return m.cleared_Users
 }
 
-// RemoveHostToUserIDs removes the "HostToUser" edge to the User entity by IDs.
-func (m *HostMutation) RemoveHostToUserIDs(ids ...uuid.UUID) {
-	if m.removed_HostToUser == nil {
-		m.removed_HostToUser = make(map[uuid.UUID]struct{})
+// RemoveUserIDs removes the "Users" edge to the User entity by IDs.
+func (m *HostMutation) RemoveUserIDs(ids ...uuid.UUID) {
+	if m.removed_Users == nil {
+		m.removed_Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._HostToUser, ids[i])
-		m.removed_HostToUser[ids[i]] = struct{}{}
+		delete(m._Users, ids[i])
+		m.removed_Users[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedHostToUser returns the removed IDs of the "HostToUser" edge to the User entity.
-func (m *HostMutation) RemovedHostToUserIDs() (ids []uuid.UUID) {
-	for id := range m.removed_HostToUser {
+// RemovedUsers returns the removed IDs of the "Users" edge to the User entity.
+func (m *HostMutation) RemovedUsersIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// HostToUserIDs returns the "HostToUser" edge IDs in the mutation.
-func (m *HostMutation) HostToUserIDs() (ids []uuid.UUID) {
-	for id := range m._HostToUser {
+// UsersIDs returns the "Users" edge IDs in the mutation.
+func (m *HostMutation) UsersIDs() (ids []uuid.UUID) {
+	for id := range m._Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetHostToUser resets all changes to the "HostToUser" edge.
-func (m *HostMutation) ResetHostToUser() {
-	m._HostToUser = nil
-	m.cleared_HostToUser = false
-	m.removed_HostToUser = nil
+// ResetUsers resets all changes to the "Users" edge.
+func (m *HostMutation) ResetUsers() {
+	m._Users = nil
+	m.cleared_Users = false
+	m.removed_Users = nil
 }
 
-// SetHostToEnvironmentID sets the "HostToEnvironment" edge to the Environment entity by id.
-func (m *HostMutation) SetHostToEnvironmentID(id uuid.UUID) {
-	m._HostToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *HostMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearHostToEnvironment clears the "HostToEnvironment" edge to the Environment entity.
-func (m *HostMutation) ClearHostToEnvironment() {
-	m.cleared_HostToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *HostMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// HostToEnvironmentCleared reports if the "HostToEnvironment" edge to the Environment entity was cleared.
-func (m *HostMutation) HostToEnvironmentCleared() bool {
-	return m.cleared_HostToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *HostMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// HostToEnvironmentID returns the "HostToEnvironment" edge ID in the mutation.
-func (m *HostMutation) HostToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._HostToEnvironment != nil {
-		return *m._HostToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *HostMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// HostToEnvironmentIDs returns the "HostToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// HostToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *HostMutation) HostToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._HostToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *HostMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetHostToEnvironment resets all changes to the "HostToEnvironment" edge.
-func (m *HostMutation) ResetHostToEnvironment() {
-	m._HostToEnvironment = nil
-	m.cleared_HostToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *HostMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
-// AddHostToIncludedNetworkIDs adds the "HostToIncludedNetwork" edge to the IncludedNetwork entity by ids.
-func (m *HostMutation) AddHostToIncludedNetworkIDs(ids ...uuid.UUID) {
-	if m._HostToIncludedNetwork == nil {
-		m._HostToIncludedNetwork = make(map[uuid.UUID]struct{})
+// AddIncludedNetworkIDs adds the "IncludedNetworks" edge to the IncludedNetwork entity by ids.
+func (m *HostMutation) AddIncludedNetworkIDs(ids ...uuid.UUID) {
+	if m._IncludedNetworks == nil {
+		m._IncludedNetworks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._HostToIncludedNetwork[ids[i]] = struct{}{}
+		m._IncludedNetworks[ids[i]] = struct{}{}
 	}
 }
 
-// ClearHostToIncludedNetwork clears the "HostToIncludedNetwork" edge to the IncludedNetwork entity.
-func (m *HostMutation) ClearHostToIncludedNetwork() {
-	m.cleared_HostToIncludedNetwork = true
+// ClearIncludedNetworks clears the "IncludedNetworks" edge to the IncludedNetwork entity.
+func (m *HostMutation) ClearIncludedNetworks() {
+	m.cleared_IncludedNetworks = true
 }
 
-// HostToIncludedNetworkCleared reports if the "HostToIncludedNetwork" edge to the IncludedNetwork entity was cleared.
-func (m *HostMutation) HostToIncludedNetworkCleared() bool {
-	return m.cleared_HostToIncludedNetwork
+// IncludedNetworksCleared reports if the "IncludedNetworks" edge to the IncludedNetwork entity was cleared.
+func (m *HostMutation) IncludedNetworksCleared() bool {
+	return m.cleared_IncludedNetworks
 }
 
-// RemoveHostToIncludedNetworkIDs removes the "HostToIncludedNetwork" edge to the IncludedNetwork entity by IDs.
-func (m *HostMutation) RemoveHostToIncludedNetworkIDs(ids ...uuid.UUID) {
-	if m.removed_HostToIncludedNetwork == nil {
-		m.removed_HostToIncludedNetwork = make(map[uuid.UUID]struct{})
+// RemoveIncludedNetworkIDs removes the "IncludedNetworks" edge to the IncludedNetwork entity by IDs.
+func (m *HostMutation) RemoveIncludedNetworkIDs(ids ...uuid.UUID) {
+	if m.removed_IncludedNetworks == nil {
+		m.removed_IncludedNetworks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._HostToIncludedNetwork, ids[i])
-		m.removed_HostToIncludedNetwork[ids[i]] = struct{}{}
+		delete(m._IncludedNetworks, ids[i])
+		m.removed_IncludedNetworks[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedHostToIncludedNetwork returns the removed IDs of the "HostToIncludedNetwork" edge to the IncludedNetwork entity.
-func (m *HostMutation) RemovedHostToIncludedNetworkIDs() (ids []uuid.UUID) {
-	for id := range m.removed_HostToIncludedNetwork {
+// RemovedIncludedNetworks returns the removed IDs of the "IncludedNetworks" edge to the IncludedNetwork entity.
+func (m *HostMutation) RemovedIncludedNetworksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_IncludedNetworks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// HostToIncludedNetworkIDs returns the "HostToIncludedNetwork" edge IDs in the mutation.
-func (m *HostMutation) HostToIncludedNetworkIDs() (ids []uuid.UUID) {
-	for id := range m._HostToIncludedNetwork {
+// IncludedNetworksIDs returns the "IncludedNetworks" edge IDs in the mutation.
+func (m *HostMutation) IncludedNetworksIDs() (ids []uuid.UUID) {
+	for id := range m._IncludedNetworks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetHostToIncludedNetwork resets all changes to the "HostToIncludedNetwork" edge.
-func (m *HostMutation) ResetHostToIncludedNetwork() {
-	m._HostToIncludedNetwork = nil
-	m.cleared_HostToIncludedNetwork = false
-	m.removed_HostToIncludedNetwork = nil
+// ResetIncludedNetworks resets all changes to the "IncludedNetworks" edge.
+func (m *HostMutation) ResetIncludedNetworks() {
+	m._IncludedNetworks = nil
+	m.cleared_IncludedNetworks = false
+	m.removed_IncludedNetworks = nil
 }
 
-// AddDependOnHostToHostDependencyIDs adds the "DependOnHostToHostDependency" edge to the HostDependency entity by ids.
-func (m *HostMutation) AddDependOnHostToHostDependencyIDs(ids ...uuid.UUID) {
-	if m._DependOnHostToHostDependency == nil {
-		m._DependOnHostToHostDependency = make(map[uuid.UUID]struct{})
+// AddDependOnHostDependencyIDs adds the "DependOnHostDependency" edge to the HostDependency entity by ids.
+func (m *HostMutation) AddDependOnHostDependencyIDs(ids ...uuid.UUID) {
+	if m._DependOnHostDependency == nil {
+		m._DependOnHostDependency = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._DependOnHostToHostDependency[ids[i]] = struct{}{}
+		m._DependOnHostDependency[ids[i]] = struct{}{}
 	}
 }
 
-// ClearDependOnHostToHostDependency clears the "DependOnHostToHostDependency" edge to the HostDependency entity.
-func (m *HostMutation) ClearDependOnHostToHostDependency() {
-	m.cleared_DependOnHostToHostDependency = true
+// ClearDependOnHostDependency clears the "DependOnHostDependency" edge to the HostDependency entity.
+func (m *HostMutation) ClearDependOnHostDependency() {
+	m.cleared_DependOnHostDependency = true
 }
 
-// DependOnHostToHostDependencyCleared reports if the "DependOnHostToHostDependency" edge to the HostDependency entity was cleared.
-func (m *HostMutation) DependOnHostToHostDependencyCleared() bool {
-	return m.cleared_DependOnHostToHostDependency
+// DependOnHostDependencyCleared reports if the "DependOnHostDependency" edge to the HostDependency entity was cleared.
+func (m *HostMutation) DependOnHostDependencyCleared() bool {
+	return m.cleared_DependOnHostDependency
 }
 
-// RemoveDependOnHostToHostDependencyIDs removes the "DependOnHostToHostDependency" edge to the HostDependency entity by IDs.
-func (m *HostMutation) RemoveDependOnHostToHostDependencyIDs(ids ...uuid.UUID) {
-	if m.removed_DependOnHostToHostDependency == nil {
-		m.removed_DependOnHostToHostDependency = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m._DependOnHostToHostDependency, ids[i])
-		m.removed_DependOnHostToHostDependency[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedDependOnHostToHostDependency returns the removed IDs of the "DependOnHostToHostDependency" edge to the HostDependency entity.
-func (m *HostMutation) RemovedDependOnHostToHostDependencyIDs() (ids []uuid.UUID) {
-	for id := range m.removed_DependOnHostToHostDependency {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// DependOnHostToHostDependencyIDs returns the "DependOnHostToHostDependency" edge IDs in the mutation.
-func (m *HostMutation) DependOnHostToHostDependencyIDs() (ids []uuid.UUID) {
-	for id := range m._DependOnHostToHostDependency {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetDependOnHostToHostDependency resets all changes to the "DependOnHostToHostDependency" edge.
-func (m *HostMutation) ResetDependOnHostToHostDependency() {
-	m._DependOnHostToHostDependency = nil
-	m.cleared_DependOnHostToHostDependency = false
-	m.removed_DependOnHostToHostDependency = nil
-}
-
-// AddDependByHostToHostDependencyIDs adds the "DependByHostToHostDependency" edge to the HostDependency entity by ids.
-func (m *HostMutation) AddDependByHostToHostDependencyIDs(ids ...uuid.UUID) {
-	if m._DependByHostToHostDependency == nil {
-		m._DependByHostToHostDependency = make(map[uuid.UUID]struct{})
+// RemoveDependOnHostDependencyIDs removes the "DependOnHostDependency" edge to the HostDependency entity by IDs.
+func (m *HostMutation) RemoveDependOnHostDependencyIDs(ids ...uuid.UUID) {
+	if m.removed_DependOnHostDependency == nil {
+		m.removed_DependOnHostDependency = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._DependByHostToHostDependency[ids[i]] = struct{}{}
+		delete(m._DependOnHostDependency, ids[i])
+		m.removed_DependOnHostDependency[ids[i]] = struct{}{}
 	}
 }
 
-// ClearDependByHostToHostDependency clears the "DependByHostToHostDependency" edge to the HostDependency entity.
-func (m *HostMutation) ClearDependByHostToHostDependency() {
-	m.cleared_DependByHostToHostDependency = true
+// RemovedDependOnHostDependency returns the removed IDs of the "DependOnHostDependency" edge to the HostDependency entity.
+func (m *HostMutation) RemovedDependOnHostDependencyIDs() (ids []uuid.UUID) {
+	for id := range m.removed_DependOnHostDependency {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// DependByHostToHostDependencyCleared reports if the "DependByHostToHostDependency" edge to the HostDependency entity was cleared.
-func (m *HostMutation) DependByHostToHostDependencyCleared() bool {
-	return m.cleared_DependByHostToHostDependency
+// DependOnHostDependencyIDs returns the "DependOnHostDependency" edge IDs in the mutation.
+func (m *HostMutation) DependOnHostDependencyIDs() (ids []uuid.UUID) {
+	for id := range m._DependOnHostDependency {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveDependByHostToHostDependencyIDs removes the "DependByHostToHostDependency" edge to the HostDependency entity by IDs.
-func (m *HostMutation) RemoveDependByHostToHostDependencyIDs(ids ...uuid.UUID) {
-	if m.removed_DependByHostToHostDependency == nil {
-		m.removed_DependByHostToHostDependency = make(map[uuid.UUID]struct{})
+// ResetDependOnHostDependency resets all changes to the "DependOnHostDependency" edge.
+func (m *HostMutation) ResetDependOnHostDependency() {
+	m._DependOnHostDependency = nil
+	m.cleared_DependOnHostDependency = false
+	m.removed_DependOnHostDependency = nil
+}
+
+// AddRequiredByHostDependencyIDs adds the "RequiredByHostDependency" edge to the HostDependency entity by ids.
+func (m *HostMutation) AddRequiredByHostDependencyIDs(ids ...uuid.UUID) {
+	if m._RequiredByHostDependency == nil {
+		m._RequiredByHostDependency = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._DependByHostToHostDependency, ids[i])
-		m.removed_DependByHostToHostDependency[ids[i]] = struct{}{}
+		m._RequiredByHostDependency[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedDependByHostToHostDependency returns the removed IDs of the "DependByHostToHostDependency" edge to the HostDependency entity.
-func (m *HostMutation) RemovedDependByHostToHostDependencyIDs() (ids []uuid.UUID) {
-	for id := range m.removed_DependByHostToHostDependency {
+// ClearRequiredByHostDependency clears the "RequiredByHostDependency" edge to the HostDependency entity.
+func (m *HostMutation) ClearRequiredByHostDependency() {
+	m.cleared_RequiredByHostDependency = true
+}
+
+// RequiredByHostDependencyCleared reports if the "RequiredByHostDependency" edge to the HostDependency entity was cleared.
+func (m *HostMutation) RequiredByHostDependencyCleared() bool {
+	return m.cleared_RequiredByHostDependency
+}
+
+// RemoveRequiredByHostDependencyIDs removes the "RequiredByHostDependency" edge to the HostDependency entity by IDs.
+func (m *HostMutation) RemoveRequiredByHostDependencyIDs(ids ...uuid.UUID) {
+	if m.removed_RequiredByHostDependency == nil {
+		m.removed_RequiredByHostDependency = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._RequiredByHostDependency, ids[i])
+		m.removed_RequiredByHostDependency[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedRequiredByHostDependency returns the removed IDs of the "RequiredByHostDependency" edge to the HostDependency entity.
+func (m *HostMutation) RemovedRequiredByHostDependencyIDs() (ids []uuid.UUID) {
+	for id := range m.removed_RequiredByHostDependency {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// DependByHostToHostDependencyIDs returns the "DependByHostToHostDependency" edge IDs in the mutation.
-func (m *HostMutation) DependByHostToHostDependencyIDs() (ids []uuid.UUID) {
-	for id := range m._DependByHostToHostDependency {
+// RequiredByHostDependencyIDs returns the "RequiredByHostDependency" edge IDs in the mutation.
+func (m *HostMutation) RequiredByHostDependencyIDs() (ids []uuid.UUID) {
+	for id := range m._RequiredByHostDependency {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetDependByHostToHostDependency resets all changes to the "DependByHostToHostDependency" edge.
-func (m *HostMutation) ResetDependByHostToHostDependency() {
-	m._DependByHostToHostDependency = nil
-	m.cleared_DependByHostToHostDependency = false
-	m.removed_DependByHostToHostDependency = nil
+// ResetRequiredByHostDependency resets all changes to the "RequiredByHostDependency" edge.
+func (m *HostMutation) ResetRequiredByHostDependency() {
+	m._RequiredByHostDependency = nil
+	m.cleared_RequiredByHostDependency = false
+	m.removed_RequiredByHostDependency = nil
 }
 
 // Where appends a list predicates to the HostMutation builder.
@@ -18672,23 +18672,23 @@ func (m *HostMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *HostMutation) AddedEdges() []string {
 	edges := make([]string, 0, 6)
-	if m._HostToDisk != nil {
-		edges = append(edges, host.EdgeHostToDisk)
+	if m._Disk != nil {
+		edges = append(edges, host.EdgeDisk)
 	}
-	if m._HostToUser != nil {
-		edges = append(edges, host.EdgeHostToUser)
+	if m._Users != nil {
+		edges = append(edges, host.EdgeUsers)
 	}
-	if m._HostToEnvironment != nil {
-		edges = append(edges, host.EdgeHostToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, host.EdgeEnvironment)
 	}
-	if m._HostToIncludedNetwork != nil {
-		edges = append(edges, host.EdgeHostToIncludedNetwork)
+	if m._IncludedNetworks != nil {
+		edges = append(edges, host.EdgeIncludedNetworks)
 	}
-	if m._DependOnHostToHostDependency != nil {
-		edges = append(edges, host.EdgeDependOnHostToHostDependency)
+	if m._DependOnHostDependency != nil {
+		edges = append(edges, host.EdgeDependOnHostDependency)
 	}
-	if m._DependByHostToHostDependency != nil {
-		edges = append(edges, host.EdgeDependByHostToHostDependency)
+	if m._RequiredByHostDependency != nil {
+		edges = append(edges, host.EdgeRequiredByHostDependency)
 	}
 	return edges
 }
@@ -18697,35 +18697,35 @@ func (m *HostMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *HostMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case host.EdgeHostToDisk:
-		if id := m._HostToDisk; id != nil {
+	case host.EdgeDisk:
+		if id := m._Disk; id != nil {
 			return []ent.Value{*id}
 		}
-	case host.EdgeHostToUser:
-		ids := make([]ent.Value, 0, len(m._HostToUser))
-		for id := range m._HostToUser {
+	case host.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m._Users))
+		for id := range m._Users {
 			ids = append(ids, id)
 		}
 		return ids
-	case host.EdgeHostToEnvironment:
-		if id := m._HostToEnvironment; id != nil {
+	case host.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
-	case host.EdgeHostToIncludedNetwork:
-		ids := make([]ent.Value, 0, len(m._HostToIncludedNetwork))
-		for id := range m._HostToIncludedNetwork {
+	case host.EdgeIncludedNetworks:
+		ids := make([]ent.Value, 0, len(m._IncludedNetworks))
+		for id := range m._IncludedNetworks {
 			ids = append(ids, id)
 		}
 		return ids
-	case host.EdgeDependOnHostToHostDependency:
-		ids := make([]ent.Value, 0, len(m._DependOnHostToHostDependency))
-		for id := range m._DependOnHostToHostDependency {
+	case host.EdgeDependOnHostDependency:
+		ids := make([]ent.Value, 0, len(m._DependOnHostDependency))
+		for id := range m._DependOnHostDependency {
 			ids = append(ids, id)
 		}
 		return ids
-	case host.EdgeDependByHostToHostDependency:
-		ids := make([]ent.Value, 0, len(m._DependByHostToHostDependency))
-		for id := range m._DependByHostToHostDependency {
+	case host.EdgeRequiredByHostDependency:
+		ids := make([]ent.Value, 0, len(m._RequiredByHostDependency))
+		for id := range m._RequiredByHostDependency {
 			ids = append(ids, id)
 		}
 		return ids
@@ -18736,17 +18736,17 @@ func (m *HostMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *HostMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 6)
-	if m.removed_HostToUser != nil {
-		edges = append(edges, host.EdgeHostToUser)
+	if m.removed_Users != nil {
+		edges = append(edges, host.EdgeUsers)
 	}
-	if m.removed_HostToIncludedNetwork != nil {
-		edges = append(edges, host.EdgeHostToIncludedNetwork)
+	if m.removed_IncludedNetworks != nil {
+		edges = append(edges, host.EdgeIncludedNetworks)
 	}
-	if m.removed_DependOnHostToHostDependency != nil {
-		edges = append(edges, host.EdgeDependOnHostToHostDependency)
+	if m.removed_DependOnHostDependency != nil {
+		edges = append(edges, host.EdgeDependOnHostDependency)
 	}
-	if m.removed_DependByHostToHostDependency != nil {
-		edges = append(edges, host.EdgeDependByHostToHostDependency)
+	if m.removed_RequiredByHostDependency != nil {
+		edges = append(edges, host.EdgeRequiredByHostDependency)
 	}
 	return edges
 }
@@ -18755,27 +18755,27 @@ func (m *HostMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *HostMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case host.EdgeHostToUser:
-		ids := make([]ent.Value, 0, len(m.removed_HostToUser))
-		for id := range m.removed_HostToUser {
+	case host.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m.removed_Users))
+		for id := range m.removed_Users {
 			ids = append(ids, id)
 		}
 		return ids
-	case host.EdgeHostToIncludedNetwork:
-		ids := make([]ent.Value, 0, len(m.removed_HostToIncludedNetwork))
-		for id := range m.removed_HostToIncludedNetwork {
+	case host.EdgeIncludedNetworks:
+		ids := make([]ent.Value, 0, len(m.removed_IncludedNetworks))
+		for id := range m.removed_IncludedNetworks {
 			ids = append(ids, id)
 		}
 		return ids
-	case host.EdgeDependOnHostToHostDependency:
-		ids := make([]ent.Value, 0, len(m.removed_DependOnHostToHostDependency))
-		for id := range m.removed_DependOnHostToHostDependency {
+	case host.EdgeDependOnHostDependency:
+		ids := make([]ent.Value, 0, len(m.removed_DependOnHostDependency))
+		for id := range m.removed_DependOnHostDependency {
 			ids = append(ids, id)
 		}
 		return ids
-	case host.EdgeDependByHostToHostDependency:
-		ids := make([]ent.Value, 0, len(m.removed_DependByHostToHostDependency))
-		for id := range m.removed_DependByHostToHostDependency {
+	case host.EdgeRequiredByHostDependency:
+		ids := make([]ent.Value, 0, len(m.removed_RequiredByHostDependency))
+		for id := range m.removed_RequiredByHostDependency {
 			ids = append(ids, id)
 		}
 		return ids
@@ -18786,23 +18786,23 @@ func (m *HostMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *HostMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 6)
-	if m.cleared_HostToDisk {
-		edges = append(edges, host.EdgeHostToDisk)
+	if m.cleared_Disk {
+		edges = append(edges, host.EdgeDisk)
 	}
-	if m.cleared_HostToUser {
-		edges = append(edges, host.EdgeHostToUser)
+	if m.cleared_Users {
+		edges = append(edges, host.EdgeUsers)
 	}
-	if m.cleared_HostToEnvironment {
-		edges = append(edges, host.EdgeHostToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, host.EdgeEnvironment)
 	}
-	if m.cleared_HostToIncludedNetwork {
-		edges = append(edges, host.EdgeHostToIncludedNetwork)
+	if m.cleared_IncludedNetworks {
+		edges = append(edges, host.EdgeIncludedNetworks)
 	}
-	if m.cleared_DependOnHostToHostDependency {
-		edges = append(edges, host.EdgeDependOnHostToHostDependency)
+	if m.cleared_DependOnHostDependency {
+		edges = append(edges, host.EdgeDependOnHostDependency)
 	}
-	if m.cleared_DependByHostToHostDependency {
-		edges = append(edges, host.EdgeDependByHostToHostDependency)
+	if m.cleared_RequiredByHostDependency {
+		edges = append(edges, host.EdgeRequiredByHostDependency)
 	}
 	return edges
 }
@@ -18811,18 +18811,18 @@ func (m *HostMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *HostMutation) EdgeCleared(name string) bool {
 	switch name {
-	case host.EdgeHostToDisk:
-		return m.cleared_HostToDisk
-	case host.EdgeHostToUser:
-		return m.cleared_HostToUser
-	case host.EdgeHostToEnvironment:
-		return m.cleared_HostToEnvironment
-	case host.EdgeHostToIncludedNetwork:
-		return m.cleared_HostToIncludedNetwork
-	case host.EdgeDependOnHostToHostDependency:
-		return m.cleared_DependOnHostToHostDependency
-	case host.EdgeDependByHostToHostDependency:
-		return m.cleared_DependByHostToHostDependency
+	case host.EdgeDisk:
+		return m.cleared_Disk
+	case host.EdgeUsers:
+		return m.cleared_Users
+	case host.EdgeEnvironment:
+		return m.cleared_Environment
+	case host.EdgeIncludedNetworks:
+		return m.cleared_IncludedNetworks
+	case host.EdgeDependOnHostDependency:
+		return m.cleared_DependOnHostDependency
+	case host.EdgeRequiredByHostDependency:
+		return m.cleared_RequiredByHostDependency
 	}
 	return false
 }
@@ -18831,11 +18831,11 @@ func (m *HostMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *HostMutation) ClearEdge(name string) error {
 	switch name {
-	case host.EdgeHostToDisk:
-		m.ClearHostToDisk()
+	case host.EdgeDisk:
+		m.ClearDisk()
 		return nil
-	case host.EdgeHostToEnvironment:
-		m.ClearHostToEnvironment()
+	case host.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Host unique edge %s", name)
@@ -18845,23 +18845,23 @@ func (m *HostMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *HostMutation) ResetEdge(name string) error {
 	switch name {
-	case host.EdgeHostToDisk:
-		m.ResetHostToDisk()
+	case host.EdgeDisk:
+		m.ResetDisk()
 		return nil
-	case host.EdgeHostToUser:
-		m.ResetHostToUser()
+	case host.EdgeUsers:
+		m.ResetUsers()
 		return nil
-	case host.EdgeHostToEnvironment:
-		m.ResetHostToEnvironment()
+	case host.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
-	case host.EdgeHostToIncludedNetwork:
-		m.ResetHostToIncludedNetwork()
+	case host.EdgeIncludedNetworks:
+		m.ResetIncludedNetworks()
 		return nil
-	case host.EdgeDependOnHostToHostDependency:
-		m.ResetDependOnHostToHostDependency()
+	case host.EdgeDependOnHostDependency:
+		m.ResetDependOnHostDependency()
 		return nil
-	case host.EdgeDependByHostToHostDependency:
-		m.ResetDependByHostToHostDependency()
+	case host.EdgeRequiredByHostDependency:
+		m.ResetRequiredByHostDependency()
 		return nil
 	}
 	return fmt.Errorf("unknown Host edge %s", name)

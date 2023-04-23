@@ -331,7 +331,7 @@ var (
 	DisksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "size", Type: field.TypeInt},
-		{Name: "host_host_to_disk", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "host_disk", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
 	// DisksTable holds the schema information for the "disks" table.
 	DisksTable = &schema.Table{
@@ -340,7 +340,7 @@ var (
 		PrimaryKey: []*schema.Column{DisksColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "disks_hosts_HostToDisk",
+				Symbol:     "disks_hosts_Disk",
 				Columns:    []*schema.Column{DisksColumns[2]},
 				RefColumns: []*schema.Column{HostsColumns[0]},
 				OnDelete:   schema.Cascade,
@@ -1301,7 +1301,7 @@ var (
 		{Name: "ansible_users", Type: field.TypeUUID, Nullable: true},
 		{Name: "command_users", Type: field.TypeUUID, Nullable: true},
 		{Name: "finding_users", Type: field.TypeUUID, Nullable: true},
-		{Name: "host_host_to_user", Type: field.TypeUUID, Nullable: true},
+		{Name: "host_users", Type: field.TypeUUID, Nullable: true},
 		{Name: "script_script_to_user", Type: field.TypeUUID, Nullable: true},
 	}
 	// UsersTable holds the schema information for the "users" table.
@@ -1329,7 +1329,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "users_hosts_HostToUser",
+				Symbol:     "users_hosts_Users",
 				Columns:    []*schema.Column{UsersColumns[8]},
 				RefColumns: []*schema.Column{HostsColumns[0]},
 				OnDelete:   schema.SetNull,

@@ -2050,9 +2050,9 @@ func (h *Host) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Disk",
-		Name: "HostToDisk",
+		Name: "Disk",
 	}
-	err = h.QueryHostToDisk().
+	err = h.QueryDisk().
 		Select(disk.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -2060,9 +2060,9 @@ func (h *Host) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "User",
-		Name: "HostToUser",
+		Name: "Users",
 	}
-	err = h.QueryHostToUser().
+	err = h.QueryUsers().
 		Select(user.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -2070,9 +2070,9 @@ func (h *Host) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Environment",
-		Name: "HostToEnvironment",
+		Name: "Environment",
 	}
-	err = h.QueryHostToEnvironment().
+	err = h.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -2080,9 +2080,9 @@ func (h *Host) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "IncludedNetwork",
-		Name: "HostToIncludedNetwork",
+		Name: "IncludedNetworks",
 	}
-	err = h.QueryHostToIncludedNetwork().
+	err = h.QueryIncludedNetworks().
 		Select(includednetwork.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
@@ -2090,9 +2090,9 @@ func (h *Host) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[4] = &Edge{
 		Type: "HostDependency",
-		Name: "DependOnHostToHostDependency",
+		Name: "DependOnHostDependency",
 	}
-	err = h.QueryDependOnHostToHostDependency().
+	err = h.QueryDependOnHostDependency().
 		Select(hostdependency.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
@@ -2100,9 +2100,9 @@ func (h *Host) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[5] = &Edge{
 		Type: "HostDependency",
-		Name: "DependByHostToHostDependency",
+		Name: "RequiredByHostDependency",
 	}
-	err = h.QueryDependByHostToHostDependency().
+	err = h.QueryRequiredByHostDependency().
 		Select(hostdependency.FieldID).
 		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
