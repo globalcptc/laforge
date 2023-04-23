@@ -169,10 +169,10 @@ var (
 		{Name: "environment_revision", Type: field.TypeInt},
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "completed_plan", Type: field.TypeBool, Default: false},
-		{Name: "build_build_to_environment", Type: field.TypeUUID},
-		{Name: "build_build_to_competition", Type: field.TypeUUID},
-		{Name: "build_build_to_latest_build_commit", Type: field.TypeUUID, Nullable: true},
-		{Name: "build_build_to_repo_commit", Type: field.TypeUUID, Nullable: true},
+		{Name: "build_environment", Type: field.TypeUUID},
+		{Name: "build_competition", Type: field.TypeUUID},
+		{Name: "build_latest_build_commit", Type: field.TypeUUID, Nullable: true},
+		{Name: "build_repo_commits", Type: field.TypeUUID, Nullable: true},
 	}
 	// BuildsTable holds the schema information for the "builds" table.
 	BuildsTable = &schema.Table{
@@ -181,25 +181,25 @@ var (
 		PrimaryKey: []*schema.Column{BuildsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "builds_environments_BuildToEnvironment",
+				Symbol:     "builds_environments_Environment",
 				Columns:    []*schema.Column{BuildsColumns[5]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "builds_competitions_BuildToCompetition",
+				Symbol:     "builds_competitions_Competition",
 				Columns:    []*schema.Column{BuildsColumns[6]},
 				RefColumns: []*schema.Column{CompetitionsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "builds_build_commits_BuildToLatestBuildCommit",
+				Symbol:     "builds_build_commits_LatestBuildCommit",
 				Columns:    []*schema.Column{BuildsColumns[7]},
 				RefColumns: []*schema.Column{BuildCommitsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "builds_repo_commits_BuildToRepoCommit",
+				Symbol:     "builds_repo_commits_RepoCommits",
 				Columns:    []*schema.Column{BuildsColumns[8]},
 				RefColumns: []*schema.Column{RepoCommitsColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -1142,7 +1142,7 @@ var (
 		{Name: "completed", Type: field.TypeBool, Default: false},
 		{Name: "error", Type: field.TypeString, Nullable: true},
 		{Name: "adhoc_plan_status", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "build_build_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "build_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_plan_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_host_provisioned_host_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_network_provisioned_network_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
@@ -1164,7 +1164,7 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "status_builds_BuildToStatus",
+				Symbol:     "status_builds_Status",
 				Columns:    []*schema.Column{StatusColumns[9]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.Cascade,

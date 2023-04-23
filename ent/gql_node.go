@@ -655,9 +655,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Status",
-		Name: "BuildToStatus",
+		Name: "Status",
 	}
-	err = b.QueryBuildToStatus().
+	err = b.QueryStatus().
 		Select(status.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -665,9 +665,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Environment",
-		Name: "BuildToEnvironment",
+		Name: "Environment",
 	}
-	err = b.QueryBuildToEnvironment().
+	err = b.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -675,9 +675,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Competition",
-		Name: "BuildToCompetition",
+		Name: "Competition",
 	}
-	err = b.QueryBuildToCompetition().
+	err = b.QueryCompetition().
 		Select(competition.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -685,9 +685,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "BuildCommit",
-		Name: "BuildToLatestBuildCommit",
+		Name: "LatestBuildCommit",
 	}
-	err = b.QueryBuildToLatestBuildCommit().
+	err = b.QueryLatestBuildCommit().
 		Select(buildcommit.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
@@ -695,9 +695,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[4] = &Edge{
 		Type: "RepoCommit",
-		Name: "BuildToRepoCommit",
+		Name: "RepoCommits",
 	}
-	err = b.QueryBuildToRepoCommit().
+	err = b.QueryRepoCommits().
 		Select(repocommit.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
@@ -705,9 +705,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[5] = &Edge{
 		Type: "ProvisionedNetwork",
-		Name: "BuildToProvisionedNetwork",
+		Name: "ProvisionedNetworks",
 	}
-	err = b.QueryBuildToProvisionedNetwork().
+	err = b.QueryProvisionedNetworks().
 		Select(provisionednetwork.FieldID).
 		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
@@ -715,9 +715,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[6] = &Edge{
 		Type: "Team",
-		Name: "BuildToTeam",
+		Name: "Teams",
 	}
-	err = b.QueryBuildToTeam().
+	err = b.QueryTeams().
 		Select(team.FieldID).
 		Scan(ctx, &node.Edges[6].IDs)
 	if err != nil {
@@ -725,9 +725,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[7] = &Edge{
 		Type: "Plan",
-		Name: "BuildToPlan",
+		Name: "Plans",
 	}
-	err = b.QueryBuildToPlan().
+	err = b.QueryPlans().
 		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[7].IDs)
 	if err != nil {
@@ -735,9 +735,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[8] = &Edge{
 		Type: "BuildCommit",
-		Name: "BuildToBuildCommits",
+		Name: "BuildCommits",
 	}
-	err = b.QueryBuildToBuildCommits().
+	err = b.QueryBuildCommits().
 		Select(buildcommit.FieldID).
 		Scan(ctx, &node.Edges[8].IDs)
 	if err != nil {
@@ -745,9 +745,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[9] = &Edge{
 		Type: "AdhocPlan",
-		Name: "BuildToAdhocPlans",
+		Name: "AdhocPlans",
 	}
-	err = b.QueryBuildToAdhocPlans().
+	err = b.QueryAdhocPlans().
 		Select(adhocplan.FieldID).
 		Scan(ctx, &node.Edges[9].IDs)
 	if err != nil {
@@ -755,9 +755,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[10] = &Edge{
 		Type: "AgentStatus",
-		Name: "BuildToAgentStatuses",
+		Name: "AgentStatuses",
 	}
-	err = b.QueryBuildToAgentStatuses().
+	err = b.QueryAgentStatuses().
 		Select(agentstatus.FieldID).
 		Scan(ctx, &node.Edges[10].IDs)
 	if err != nil {
@@ -765,9 +765,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[11] = &Edge{
 		Type: "ServerTask",
-		Name: "BuildToServerTasks",
+		Name: "ServerTasks",
 	}
-	err = b.QueryBuildToServerTasks().
+	err = b.QueryServerTasks().
 		Select(servertask.FieldID).
 		Scan(ctx, &node.Edges[11].IDs)
 	if err != nil {

@@ -49,7 +49,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "build" package.
 	CompetitionToBuildInverseTable = "builds"
 	// CompetitionToBuildColumn is the table column denoting the CompetitionToBuild relation/edge.
-	CompetitionToBuildColumn = "build_build_to_competition"
+	CompetitionToBuildColumn = "build_competition"
 )
 
 // Columns holds all SQL columns for competition fields.

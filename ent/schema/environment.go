@@ -127,7 +127,7 @@ func (Environment) Edges() []ent.Edge {
 				OnDelete: entsql.Cascade,
 			}),
 		edge.From("EnvironmentToBuild", Build.Type).
-			Ref("BuildToEnvironment"),
+			Ref("Environment"),
 		edge.From("EnvironmentToRepository", Repository.Type).
 			Ref("RepositoryToEnvironment"),
 		edge.From("EnvironmentToServerTask", ServerTask.Type).

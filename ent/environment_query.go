@@ -1878,13 +1878,13 @@ func (eq *EnvironmentQuery) loadEnvironmentToBuild(ctx context.Context, query *B
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.build_build_to_environment
+		fk := n.build_environment
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "build_build_to_environment" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "build_environment" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_build_to_environment" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_environment" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

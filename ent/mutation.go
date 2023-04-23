@@ -5082,50 +5082,50 @@ func (m *AuthUserMutation) ResetEdge(name string) error {
 // BuildMutation represents an operation that mutates the Build nodes in the graph.
 type BuildMutation struct {
 	config
-	op                                Op
-	typ                               string
-	id                                *uuid.UUID
-	revision                          *int
-	addrevision                       *int
-	environment_revision              *int
-	addenvironment_revision           *int
-	vars                              *map[string]string
-	completed_plan                    *bool
-	clearedFields                     map[string]struct{}
-	_BuildToStatus                    *uuid.UUID
-	cleared_BuildToStatus             bool
-	_BuildToEnvironment               *uuid.UUID
-	cleared_BuildToEnvironment        bool
-	_BuildToCompetition               *uuid.UUID
-	cleared_BuildToCompetition        bool
-	_BuildToLatestBuildCommit         *uuid.UUID
-	cleared_BuildToLatestBuildCommit  bool
-	_BuildToRepoCommit                *uuid.UUID
-	cleared_BuildToRepoCommit         bool
-	_BuildToProvisionedNetwork        map[uuid.UUID]struct{}
-	removed_BuildToProvisionedNetwork map[uuid.UUID]struct{}
-	cleared_BuildToProvisionedNetwork bool
-	_BuildToTeam                      map[uuid.UUID]struct{}
-	removed_BuildToTeam               map[uuid.UUID]struct{}
-	cleared_BuildToTeam               bool
-	_BuildToPlan                      map[uuid.UUID]struct{}
-	removed_BuildToPlan               map[uuid.UUID]struct{}
-	cleared_BuildToPlan               bool
-	_BuildToBuildCommits              map[uuid.UUID]struct{}
-	removed_BuildToBuildCommits       map[uuid.UUID]struct{}
-	cleared_BuildToBuildCommits       bool
-	_BuildToAdhocPlans                map[uuid.UUID]struct{}
-	removed_BuildToAdhocPlans         map[uuid.UUID]struct{}
-	cleared_BuildToAdhocPlans         bool
-	_BuildToAgentStatuses             map[uuid.UUID]struct{}
-	removed_BuildToAgentStatuses      map[uuid.UUID]struct{}
-	cleared_BuildToAgentStatuses      bool
-	_BuildToServerTasks               map[uuid.UUID]struct{}
-	removed_BuildToServerTasks        map[uuid.UUID]struct{}
-	cleared_BuildToServerTasks        bool
-	done                              bool
-	oldValue                          func(context.Context) (*Build, error)
-	predicates                        []predicate.Build
+	op                          Op
+	typ                         string
+	id                          *uuid.UUID
+	revision                    *int
+	addrevision                 *int
+	environment_revision        *int
+	addenvironment_revision     *int
+	vars                        *map[string]string
+	completed_plan              *bool
+	clearedFields               map[string]struct{}
+	_Status                     *uuid.UUID
+	cleared_Status              bool
+	_Environment                *uuid.UUID
+	cleared_Environment         bool
+	_Competition                *uuid.UUID
+	cleared_Competition         bool
+	_LatestBuildCommit          *uuid.UUID
+	cleared_LatestBuildCommit   bool
+	_RepoCommits                *uuid.UUID
+	cleared_RepoCommits         bool
+	_ProvisionedNetworks        map[uuid.UUID]struct{}
+	removed_ProvisionedNetworks map[uuid.UUID]struct{}
+	cleared_ProvisionedNetworks bool
+	_Teams                      map[uuid.UUID]struct{}
+	removed_Teams               map[uuid.UUID]struct{}
+	cleared_Teams               bool
+	_Plans                      map[uuid.UUID]struct{}
+	removed_Plans               map[uuid.UUID]struct{}
+	cleared_Plans               bool
+	_BuildCommits               map[uuid.UUID]struct{}
+	removed_BuildCommits        map[uuid.UUID]struct{}
+	cleared_BuildCommits        bool
+	_AdhocPlans                 map[uuid.UUID]struct{}
+	removed_AdhocPlans          map[uuid.UUID]struct{}
+	cleared_AdhocPlans          bool
+	_AgentStatuses              map[uuid.UUID]struct{}
+	removed_AgentStatuses       map[uuid.UUID]struct{}
+	cleared_AgentStatuses       bool
+	_ServerTasks                map[uuid.UUID]struct{}
+	removed_ServerTasks         map[uuid.UUID]struct{}
+	cleared_ServerTasks         bool
+	done                        bool
+	oldValue                    func(context.Context) (*Build, error)
+	predicates                  []predicate.Build
 }
 
 var _ ent.Mutation = (*BuildMutation)(nil)
@@ -5416,577 +5416,577 @@ func (m *BuildMutation) ResetCompletedPlan() {
 	m.completed_plan = nil
 }
 
-// SetBuildToStatusID sets the "BuildToStatus" edge to the Status entity by id.
-func (m *BuildMutation) SetBuildToStatusID(id uuid.UUID) {
-	m._BuildToStatus = &id
+// SetStatusID sets the "Status" edge to the Status entity by id.
+func (m *BuildMutation) SetStatusID(id uuid.UUID) {
+	m._Status = &id
 }
 
-// ClearBuildToStatus clears the "BuildToStatus" edge to the Status entity.
-func (m *BuildMutation) ClearBuildToStatus() {
-	m.cleared_BuildToStatus = true
+// ClearStatus clears the "Status" edge to the Status entity.
+func (m *BuildMutation) ClearStatus() {
+	m.cleared_Status = true
 }
 
-// BuildToStatusCleared reports if the "BuildToStatus" edge to the Status entity was cleared.
-func (m *BuildMutation) BuildToStatusCleared() bool {
-	return m.cleared_BuildToStatus
+// StatusCleared reports if the "Status" edge to the Status entity was cleared.
+func (m *BuildMutation) StatusCleared() bool {
+	return m.cleared_Status
 }
 
-// BuildToStatusID returns the "BuildToStatus" edge ID in the mutation.
-func (m *BuildMutation) BuildToStatusID() (id uuid.UUID, exists bool) {
-	if m._BuildToStatus != nil {
-		return *m._BuildToStatus, true
+// StatusID returns the "Status" edge ID in the mutation.
+func (m *BuildMutation) StatusID() (id uuid.UUID, exists bool) {
+	if m._Status != nil {
+		return *m._Status, true
 	}
 	return
 }
 
-// BuildToStatusIDs returns the "BuildToStatus" edge IDs in the mutation.
+// StatusIDs returns the "Status" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// BuildToStatusID instead. It exists only for internal usage by the builders.
-func (m *BuildMutation) BuildToStatusIDs() (ids []uuid.UUID) {
-	if id := m._BuildToStatus; id != nil {
+// StatusID instead. It exists only for internal usage by the builders.
+func (m *BuildMutation) StatusIDs() (ids []uuid.UUID) {
+	if id := m._Status; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetBuildToStatus resets all changes to the "BuildToStatus" edge.
-func (m *BuildMutation) ResetBuildToStatus() {
-	m._BuildToStatus = nil
-	m.cleared_BuildToStatus = false
+// ResetStatus resets all changes to the "Status" edge.
+func (m *BuildMutation) ResetStatus() {
+	m._Status = nil
+	m.cleared_Status = false
 }
 
-// SetBuildToEnvironmentID sets the "BuildToEnvironment" edge to the Environment entity by id.
-func (m *BuildMutation) SetBuildToEnvironmentID(id uuid.UUID) {
-	m._BuildToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *BuildMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearBuildToEnvironment clears the "BuildToEnvironment" edge to the Environment entity.
-func (m *BuildMutation) ClearBuildToEnvironment() {
-	m.cleared_BuildToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *BuildMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// BuildToEnvironmentCleared reports if the "BuildToEnvironment" edge to the Environment entity was cleared.
-func (m *BuildMutation) BuildToEnvironmentCleared() bool {
-	return m.cleared_BuildToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *BuildMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// BuildToEnvironmentID returns the "BuildToEnvironment" edge ID in the mutation.
-func (m *BuildMutation) BuildToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._BuildToEnvironment != nil {
-		return *m._BuildToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *BuildMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// BuildToEnvironmentIDs returns the "BuildToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// BuildToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *BuildMutation) BuildToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._BuildToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *BuildMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetBuildToEnvironment resets all changes to the "BuildToEnvironment" edge.
-func (m *BuildMutation) ResetBuildToEnvironment() {
-	m._BuildToEnvironment = nil
-	m.cleared_BuildToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *BuildMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
-// SetBuildToCompetitionID sets the "BuildToCompetition" edge to the Competition entity by id.
-func (m *BuildMutation) SetBuildToCompetitionID(id uuid.UUID) {
-	m._BuildToCompetition = &id
+// SetCompetitionID sets the "Competition" edge to the Competition entity by id.
+func (m *BuildMutation) SetCompetitionID(id uuid.UUID) {
+	m._Competition = &id
 }
 
-// ClearBuildToCompetition clears the "BuildToCompetition" edge to the Competition entity.
-func (m *BuildMutation) ClearBuildToCompetition() {
-	m.cleared_BuildToCompetition = true
+// ClearCompetition clears the "Competition" edge to the Competition entity.
+func (m *BuildMutation) ClearCompetition() {
+	m.cleared_Competition = true
 }
 
-// BuildToCompetitionCleared reports if the "BuildToCompetition" edge to the Competition entity was cleared.
-func (m *BuildMutation) BuildToCompetitionCleared() bool {
-	return m.cleared_BuildToCompetition
+// CompetitionCleared reports if the "Competition" edge to the Competition entity was cleared.
+func (m *BuildMutation) CompetitionCleared() bool {
+	return m.cleared_Competition
 }
 
-// BuildToCompetitionID returns the "BuildToCompetition" edge ID in the mutation.
-func (m *BuildMutation) BuildToCompetitionID() (id uuid.UUID, exists bool) {
-	if m._BuildToCompetition != nil {
-		return *m._BuildToCompetition, true
+// CompetitionID returns the "Competition" edge ID in the mutation.
+func (m *BuildMutation) CompetitionID() (id uuid.UUID, exists bool) {
+	if m._Competition != nil {
+		return *m._Competition, true
 	}
 	return
 }
 
-// BuildToCompetitionIDs returns the "BuildToCompetition" edge IDs in the mutation.
+// CompetitionIDs returns the "Competition" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// BuildToCompetitionID instead. It exists only for internal usage by the builders.
-func (m *BuildMutation) BuildToCompetitionIDs() (ids []uuid.UUID) {
-	if id := m._BuildToCompetition; id != nil {
+// CompetitionID instead. It exists only for internal usage by the builders.
+func (m *BuildMutation) CompetitionIDs() (ids []uuid.UUID) {
+	if id := m._Competition; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetBuildToCompetition resets all changes to the "BuildToCompetition" edge.
-func (m *BuildMutation) ResetBuildToCompetition() {
-	m._BuildToCompetition = nil
-	m.cleared_BuildToCompetition = false
+// ResetCompetition resets all changes to the "Competition" edge.
+func (m *BuildMutation) ResetCompetition() {
+	m._Competition = nil
+	m.cleared_Competition = false
 }
 
-// SetBuildToLatestBuildCommitID sets the "BuildToLatestBuildCommit" edge to the BuildCommit entity by id.
-func (m *BuildMutation) SetBuildToLatestBuildCommitID(id uuid.UUID) {
-	m._BuildToLatestBuildCommit = &id
+// SetLatestBuildCommitID sets the "LatestBuildCommit" edge to the BuildCommit entity by id.
+func (m *BuildMutation) SetLatestBuildCommitID(id uuid.UUID) {
+	m._LatestBuildCommit = &id
 }
 
-// ClearBuildToLatestBuildCommit clears the "BuildToLatestBuildCommit" edge to the BuildCommit entity.
-func (m *BuildMutation) ClearBuildToLatestBuildCommit() {
-	m.cleared_BuildToLatestBuildCommit = true
+// ClearLatestBuildCommit clears the "LatestBuildCommit" edge to the BuildCommit entity.
+func (m *BuildMutation) ClearLatestBuildCommit() {
+	m.cleared_LatestBuildCommit = true
 }
 
-// BuildToLatestBuildCommitCleared reports if the "BuildToLatestBuildCommit" edge to the BuildCommit entity was cleared.
-func (m *BuildMutation) BuildToLatestBuildCommitCleared() bool {
-	return m.cleared_BuildToLatestBuildCommit
+// LatestBuildCommitCleared reports if the "LatestBuildCommit" edge to the BuildCommit entity was cleared.
+func (m *BuildMutation) LatestBuildCommitCleared() bool {
+	return m.cleared_LatestBuildCommit
 }
 
-// BuildToLatestBuildCommitID returns the "BuildToLatestBuildCommit" edge ID in the mutation.
-func (m *BuildMutation) BuildToLatestBuildCommitID() (id uuid.UUID, exists bool) {
-	if m._BuildToLatestBuildCommit != nil {
-		return *m._BuildToLatestBuildCommit, true
+// LatestBuildCommitID returns the "LatestBuildCommit" edge ID in the mutation.
+func (m *BuildMutation) LatestBuildCommitID() (id uuid.UUID, exists bool) {
+	if m._LatestBuildCommit != nil {
+		return *m._LatestBuildCommit, true
 	}
 	return
 }
 
-// BuildToLatestBuildCommitIDs returns the "BuildToLatestBuildCommit" edge IDs in the mutation.
+// LatestBuildCommitIDs returns the "LatestBuildCommit" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// BuildToLatestBuildCommitID instead. It exists only for internal usage by the builders.
-func (m *BuildMutation) BuildToLatestBuildCommitIDs() (ids []uuid.UUID) {
-	if id := m._BuildToLatestBuildCommit; id != nil {
+// LatestBuildCommitID instead. It exists only for internal usage by the builders.
+func (m *BuildMutation) LatestBuildCommitIDs() (ids []uuid.UUID) {
+	if id := m._LatestBuildCommit; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetBuildToLatestBuildCommit resets all changes to the "BuildToLatestBuildCommit" edge.
-func (m *BuildMutation) ResetBuildToLatestBuildCommit() {
-	m._BuildToLatestBuildCommit = nil
-	m.cleared_BuildToLatestBuildCommit = false
+// ResetLatestBuildCommit resets all changes to the "LatestBuildCommit" edge.
+func (m *BuildMutation) ResetLatestBuildCommit() {
+	m._LatestBuildCommit = nil
+	m.cleared_LatestBuildCommit = false
 }
 
-// SetBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by id.
-func (m *BuildMutation) SetBuildToRepoCommitID(id uuid.UUID) {
-	m._BuildToRepoCommit = &id
+// SetRepoCommitsID sets the "RepoCommits" edge to the RepoCommit entity by id.
+func (m *BuildMutation) SetRepoCommitsID(id uuid.UUID) {
+	m._RepoCommits = &id
 }
 
-// ClearBuildToRepoCommit clears the "BuildToRepoCommit" edge to the RepoCommit entity.
-func (m *BuildMutation) ClearBuildToRepoCommit() {
-	m.cleared_BuildToRepoCommit = true
+// ClearRepoCommits clears the "RepoCommits" edge to the RepoCommit entity.
+func (m *BuildMutation) ClearRepoCommits() {
+	m.cleared_RepoCommits = true
 }
 
-// BuildToRepoCommitCleared reports if the "BuildToRepoCommit" edge to the RepoCommit entity was cleared.
-func (m *BuildMutation) BuildToRepoCommitCleared() bool {
-	return m.cleared_BuildToRepoCommit
+// RepoCommitsCleared reports if the "RepoCommits" edge to the RepoCommit entity was cleared.
+func (m *BuildMutation) RepoCommitsCleared() bool {
+	return m.cleared_RepoCommits
 }
 
-// BuildToRepoCommitID returns the "BuildToRepoCommit" edge ID in the mutation.
-func (m *BuildMutation) BuildToRepoCommitID() (id uuid.UUID, exists bool) {
-	if m._BuildToRepoCommit != nil {
-		return *m._BuildToRepoCommit, true
+// RepoCommitsID returns the "RepoCommits" edge ID in the mutation.
+func (m *BuildMutation) RepoCommitsID() (id uuid.UUID, exists bool) {
+	if m._RepoCommits != nil {
+		return *m._RepoCommits, true
 	}
 	return
 }
 
-// BuildToRepoCommitIDs returns the "BuildToRepoCommit" edge IDs in the mutation.
+// RepoCommitsIDs returns the "RepoCommits" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// BuildToRepoCommitID instead. It exists only for internal usage by the builders.
-func (m *BuildMutation) BuildToRepoCommitIDs() (ids []uuid.UUID) {
-	if id := m._BuildToRepoCommit; id != nil {
+// RepoCommitsID instead. It exists only for internal usage by the builders.
+func (m *BuildMutation) RepoCommitsIDs() (ids []uuid.UUID) {
+	if id := m._RepoCommits; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetBuildToRepoCommit resets all changes to the "BuildToRepoCommit" edge.
-func (m *BuildMutation) ResetBuildToRepoCommit() {
-	m._BuildToRepoCommit = nil
-	m.cleared_BuildToRepoCommit = false
+// ResetRepoCommits resets all changes to the "RepoCommits" edge.
+func (m *BuildMutation) ResetRepoCommits() {
+	m._RepoCommits = nil
+	m.cleared_RepoCommits = false
 }
 
-// AddBuildToProvisionedNetworkIDs adds the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity by ids.
-func (m *BuildMutation) AddBuildToProvisionedNetworkIDs(ids ...uuid.UUID) {
-	if m._BuildToProvisionedNetwork == nil {
-		m._BuildToProvisionedNetwork = make(map[uuid.UUID]struct{})
+// AddProvisionedNetworkIDs adds the "ProvisionedNetworks" edge to the ProvisionedNetwork entity by ids.
+func (m *BuildMutation) AddProvisionedNetworkIDs(ids ...uuid.UUID) {
+	if m._ProvisionedNetworks == nil {
+		m._ProvisionedNetworks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._BuildToProvisionedNetwork[ids[i]] = struct{}{}
+		m._ProvisionedNetworks[ids[i]] = struct{}{}
 	}
 }
 
-// ClearBuildToProvisionedNetwork clears the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (m *BuildMutation) ClearBuildToProvisionedNetwork() {
-	m.cleared_BuildToProvisionedNetwork = true
+// ClearProvisionedNetworks clears the "ProvisionedNetworks" edge to the ProvisionedNetwork entity.
+func (m *BuildMutation) ClearProvisionedNetworks() {
+	m.cleared_ProvisionedNetworks = true
 }
 
-// BuildToProvisionedNetworkCleared reports if the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity was cleared.
-func (m *BuildMutation) BuildToProvisionedNetworkCleared() bool {
-	return m.cleared_BuildToProvisionedNetwork
+// ProvisionedNetworksCleared reports if the "ProvisionedNetworks" edge to the ProvisionedNetwork entity was cleared.
+func (m *BuildMutation) ProvisionedNetworksCleared() bool {
+	return m.cleared_ProvisionedNetworks
 }
 
-// RemoveBuildToProvisionedNetworkIDs removes the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity by IDs.
-func (m *BuildMutation) RemoveBuildToProvisionedNetworkIDs(ids ...uuid.UUID) {
-	if m.removed_BuildToProvisionedNetwork == nil {
-		m.removed_BuildToProvisionedNetwork = make(map[uuid.UUID]struct{})
+// RemoveProvisionedNetworkIDs removes the "ProvisionedNetworks" edge to the ProvisionedNetwork entity by IDs.
+func (m *BuildMutation) RemoveProvisionedNetworkIDs(ids ...uuid.UUID) {
+	if m.removed_ProvisionedNetworks == nil {
+		m.removed_ProvisionedNetworks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._BuildToProvisionedNetwork, ids[i])
-		m.removed_BuildToProvisionedNetwork[ids[i]] = struct{}{}
+		delete(m._ProvisionedNetworks, ids[i])
+		m.removed_ProvisionedNetworks[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedBuildToProvisionedNetwork returns the removed IDs of the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (m *BuildMutation) RemovedBuildToProvisionedNetworkIDs() (ids []uuid.UUID) {
-	for id := range m.removed_BuildToProvisionedNetwork {
+// RemovedProvisionedNetworks returns the removed IDs of the "ProvisionedNetworks" edge to the ProvisionedNetwork entity.
+func (m *BuildMutation) RemovedProvisionedNetworksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ProvisionedNetworks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// BuildToProvisionedNetworkIDs returns the "BuildToProvisionedNetwork" edge IDs in the mutation.
-func (m *BuildMutation) BuildToProvisionedNetworkIDs() (ids []uuid.UUID) {
-	for id := range m._BuildToProvisionedNetwork {
+// ProvisionedNetworksIDs returns the "ProvisionedNetworks" edge IDs in the mutation.
+func (m *BuildMutation) ProvisionedNetworksIDs() (ids []uuid.UUID) {
+	for id := range m._ProvisionedNetworks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetBuildToProvisionedNetwork resets all changes to the "BuildToProvisionedNetwork" edge.
-func (m *BuildMutation) ResetBuildToProvisionedNetwork() {
-	m._BuildToProvisionedNetwork = nil
-	m.cleared_BuildToProvisionedNetwork = false
-	m.removed_BuildToProvisionedNetwork = nil
+// ResetProvisionedNetworks resets all changes to the "ProvisionedNetworks" edge.
+func (m *BuildMutation) ResetProvisionedNetworks() {
+	m._ProvisionedNetworks = nil
+	m.cleared_ProvisionedNetworks = false
+	m.removed_ProvisionedNetworks = nil
 }
 
-// AddBuildToTeamIDs adds the "BuildToTeam" edge to the Team entity by ids.
-func (m *BuildMutation) AddBuildToTeamIDs(ids ...uuid.UUID) {
-	if m._BuildToTeam == nil {
-		m._BuildToTeam = make(map[uuid.UUID]struct{})
+// AddTeamIDs adds the "Teams" edge to the Team entity by ids.
+func (m *BuildMutation) AddTeamIDs(ids ...uuid.UUID) {
+	if m._Teams == nil {
+		m._Teams = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._BuildToTeam[ids[i]] = struct{}{}
+		m._Teams[ids[i]] = struct{}{}
 	}
 }
 
-// ClearBuildToTeam clears the "BuildToTeam" edge to the Team entity.
-func (m *BuildMutation) ClearBuildToTeam() {
-	m.cleared_BuildToTeam = true
+// ClearTeams clears the "Teams" edge to the Team entity.
+func (m *BuildMutation) ClearTeams() {
+	m.cleared_Teams = true
 }
 
-// BuildToTeamCleared reports if the "BuildToTeam" edge to the Team entity was cleared.
-func (m *BuildMutation) BuildToTeamCleared() bool {
-	return m.cleared_BuildToTeam
+// TeamsCleared reports if the "Teams" edge to the Team entity was cleared.
+func (m *BuildMutation) TeamsCleared() bool {
+	return m.cleared_Teams
 }
 
-// RemoveBuildToTeamIDs removes the "BuildToTeam" edge to the Team entity by IDs.
-func (m *BuildMutation) RemoveBuildToTeamIDs(ids ...uuid.UUID) {
-	if m.removed_BuildToTeam == nil {
-		m.removed_BuildToTeam = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m._BuildToTeam, ids[i])
-		m.removed_BuildToTeam[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedBuildToTeam returns the removed IDs of the "BuildToTeam" edge to the Team entity.
-func (m *BuildMutation) RemovedBuildToTeamIDs() (ids []uuid.UUID) {
-	for id := range m.removed_BuildToTeam {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// BuildToTeamIDs returns the "BuildToTeam" edge IDs in the mutation.
-func (m *BuildMutation) BuildToTeamIDs() (ids []uuid.UUID) {
-	for id := range m._BuildToTeam {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetBuildToTeam resets all changes to the "BuildToTeam" edge.
-func (m *BuildMutation) ResetBuildToTeam() {
-	m._BuildToTeam = nil
-	m.cleared_BuildToTeam = false
-	m.removed_BuildToTeam = nil
-}
-
-// AddBuildToPlanIDs adds the "BuildToPlan" edge to the Plan entity by ids.
-func (m *BuildMutation) AddBuildToPlanIDs(ids ...uuid.UUID) {
-	if m._BuildToPlan == nil {
-		m._BuildToPlan = make(map[uuid.UUID]struct{})
+// RemoveTeamIDs removes the "Teams" edge to the Team entity by IDs.
+func (m *BuildMutation) RemoveTeamIDs(ids ...uuid.UUID) {
+	if m.removed_Teams == nil {
+		m.removed_Teams = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._BuildToPlan[ids[i]] = struct{}{}
+		delete(m._Teams, ids[i])
+		m.removed_Teams[ids[i]] = struct{}{}
 	}
 }
 
-// ClearBuildToPlan clears the "BuildToPlan" edge to the Plan entity.
-func (m *BuildMutation) ClearBuildToPlan() {
-	m.cleared_BuildToPlan = true
+// RemovedTeams returns the removed IDs of the "Teams" edge to the Team entity.
+func (m *BuildMutation) RemovedTeamsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Teams {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// BuildToPlanCleared reports if the "BuildToPlan" edge to the Plan entity was cleared.
-func (m *BuildMutation) BuildToPlanCleared() bool {
-	return m.cleared_BuildToPlan
+// TeamsIDs returns the "Teams" edge IDs in the mutation.
+func (m *BuildMutation) TeamsIDs() (ids []uuid.UUID) {
+	for id := range m._Teams {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveBuildToPlanIDs removes the "BuildToPlan" edge to the Plan entity by IDs.
-func (m *BuildMutation) RemoveBuildToPlanIDs(ids ...uuid.UUID) {
-	if m.removed_BuildToPlan == nil {
-		m.removed_BuildToPlan = make(map[uuid.UUID]struct{})
+// ResetTeams resets all changes to the "Teams" edge.
+func (m *BuildMutation) ResetTeams() {
+	m._Teams = nil
+	m.cleared_Teams = false
+	m.removed_Teams = nil
+}
+
+// AddPlanIDs adds the "Plans" edge to the Plan entity by ids.
+func (m *BuildMutation) AddPlanIDs(ids ...uuid.UUID) {
+	if m._Plans == nil {
+		m._Plans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._BuildToPlan, ids[i])
-		m.removed_BuildToPlan[ids[i]] = struct{}{}
+		m._Plans[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedBuildToPlan returns the removed IDs of the "BuildToPlan" edge to the Plan entity.
-func (m *BuildMutation) RemovedBuildToPlanIDs() (ids []uuid.UUID) {
-	for id := range m.removed_BuildToPlan {
-		ids = append(ids, id)
-	}
-	return
+// ClearPlans clears the "Plans" edge to the Plan entity.
+func (m *BuildMutation) ClearPlans() {
+	m.cleared_Plans = true
 }
 
-// BuildToPlanIDs returns the "BuildToPlan" edge IDs in the mutation.
-func (m *BuildMutation) BuildToPlanIDs() (ids []uuid.UUID) {
-	for id := range m._BuildToPlan {
-		ids = append(ids, id)
-	}
-	return
+// PlansCleared reports if the "Plans" edge to the Plan entity was cleared.
+func (m *BuildMutation) PlansCleared() bool {
+	return m.cleared_Plans
 }
 
-// ResetBuildToPlan resets all changes to the "BuildToPlan" edge.
-func (m *BuildMutation) ResetBuildToPlan() {
-	m._BuildToPlan = nil
-	m.cleared_BuildToPlan = false
-	m.removed_BuildToPlan = nil
-}
-
-// AddBuildToBuildCommitIDs adds the "BuildToBuildCommits" edge to the BuildCommit entity by ids.
-func (m *BuildMutation) AddBuildToBuildCommitIDs(ids ...uuid.UUID) {
-	if m._BuildToBuildCommits == nil {
-		m._BuildToBuildCommits = make(map[uuid.UUID]struct{})
+// RemovePlanIDs removes the "Plans" edge to the Plan entity by IDs.
+func (m *BuildMutation) RemovePlanIDs(ids ...uuid.UUID) {
+	if m.removed_Plans == nil {
+		m.removed_Plans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._BuildToBuildCommits[ids[i]] = struct{}{}
+		delete(m._Plans, ids[i])
+		m.removed_Plans[ids[i]] = struct{}{}
 	}
 }
 
-// ClearBuildToBuildCommits clears the "BuildToBuildCommits" edge to the BuildCommit entity.
-func (m *BuildMutation) ClearBuildToBuildCommits() {
-	m.cleared_BuildToBuildCommits = true
+// RemovedPlans returns the removed IDs of the "Plans" edge to the Plan entity.
+func (m *BuildMutation) RemovedPlansIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Plans {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// BuildToBuildCommitsCleared reports if the "BuildToBuildCommits" edge to the BuildCommit entity was cleared.
-func (m *BuildMutation) BuildToBuildCommitsCleared() bool {
-	return m.cleared_BuildToBuildCommits
+// PlansIDs returns the "Plans" edge IDs in the mutation.
+func (m *BuildMutation) PlansIDs() (ids []uuid.UUID) {
+	for id := range m._Plans {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveBuildToBuildCommitIDs removes the "BuildToBuildCommits" edge to the BuildCommit entity by IDs.
-func (m *BuildMutation) RemoveBuildToBuildCommitIDs(ids ...uuid.UUID) {
-	if m.removed_BuildToBuildCommits == nil {
-		m.removed_BuildToBuildCommits = make(map[uuid.UUID]struct{})
+// ResetPlans resets all changes to the "Plans" edge.
+func (m *BuildMutation) ResetPlans() {
+	m._Plans = nil
+	m.cleared_Plans = false
+	m.removed_Plans = nil
+}
+
+// AddBuildCommitIDs adds the "BuildCommits" edge to the BuildCommit entity by ids.
+func (m *BuildMutation) AddBuildCommitIDs(ids ...uuid.UUID) {
+	if m._BuildCommits == nil {
+		m._BuildCommits = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._BuildToBuildCommits, ids[i])
-		m.removed_BuildToBuildCommits[ids[i]] = struct{}{}
+		m._BuildCommits[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedBuildToBuildCommits returns the removed IDs of the "BuildToBuildCommits" edge to the BuildCommit entity.
-func (m *BuildMutation) RemovedBuildToBuildCommitsIDs() (ids []uuid.UUID) {
-	for id := range m.removed_BuildToBuildCommits {
-		ids = append(ids, id)
-	}
-	return
+// ClearBuildCommits clears the "BuildCommits" edge to the BuildCommit entity.
+func (m *BuildMutation) ClearBuildCommits() {
+	m.cleared_BuildCommits = true
 }
 
-// BuildToBuildCommitsIDs returns the "BuildToBuildCommits" edge IDs in the mutation.
-func (m *BuildMutation) BuildToBuildCommitsIDs() (ids []uuid.UUID) {
-	for id := range m._BuildToBuildCommits {
-		ids = append(ids, id)
-	}
-	return
+// BuildCommitsCleared reports if the "BuildCommits" edge to the BuildCommit entity was cleared.
+func (m *BuildMutation) BuildCommitsCleared() bool {
+	return m.cleared_BuildCommits
 }
 
-// ResetBuildToBuildCommits resets all changes to the "BuildToBuildCommits" edge.
-func (m *BuildMutation) ResetBuildToBuildCommits() {
-	m._BuildToBuildCommits = nil
-	m.cleared_BuildToBuildCommits = false
-	m.removed_BuildToBuildCommits = nil
-}
-
-// AddBuildToAdhocPlanIDs adds the "BuildToAdhocPlans" edge to the AdhocPlan entity by ids.
-func (m *BuildMutation) AddBuildToAdhocPlanIDs(ids ...uuid.UUID) {
-	if m._BuildToAdhocPlans == nil {
-		m._BuildToAdhocPlans = make(map[uuid.UUID]struct{})
+// RemoveBuildCommitIDs removes the "BuildCommits" edge to the BuildCommit entity by IDs.
+func (m *BuildMutation) RemoveBuildCommitIDs(ids ...uuid.UUID) {
+	if m.removed_BuildCommits == nil {
+		m.removed_BuildCommits = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._BuildToAdhocPlans[ids[i]] = struct{}{}
+		delete(m._BuildCommits, ids[i])
+		m.removed_BuildCommits[ids[i]] = struct{}{}
 	}
 }
 
-// ClearBuildToAdhocPlans clears the "BuildToAdhocPlans" edge to the AdhocPlan entity.
-func (m *BuildMutation) ClearBuildToAdhocPlans() {
-	m.cleared_BuildToAdhocPlans = true
+// RemovedBuildCommits returns the removed IDs of the "BuildCommits" edge to the BuildCommit entity.
+func (m *BuildMutation) RemovedBuildCommitsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_BuildCommits {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// BuildToAdhocPlansCleared reports if the "BuildToAdhocPlans" edge to the AdhocPlan entity was cleared.
-func (m *BuildMutation) BuildToAdhocPlansCleared() bool {
-	return m.cleared_BuildToAdhocPlans
+// BuildCommitsIDs returns the "BuildCommits" edge IDs in the mutation.
+func (m *BuildMutation) BuildCommitsIDs() (ids []uuid.UUID) {
+	for id := range m._BuildCommits {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveBuildToAdhocPlanIDs removes the "BuildToAdhocPlans" edge to the AdhocPlan entity by IDs.
-func (m *BuildMutation) RemoveBuildToAdhocPlanIDs(ids ...uuid.UUID) {
-	if m.removed_BuildToAdhocPlans == nil {
-		m.removed_BuildToAdhocPlans = make(map[uuid.UUID]struct{})
+// ResetBuildCommits resets all changes to the "BuildCommits" edge.
+func (m *BuildMutation) ResetBuildCommits() {
+	m._BuildCommits = nil
+	m.cleared_BuildCommits = false
+	m.removed_BuildCommits = nil
+}
+
+// AddAdhocPlanIDs adds the "AdhocPlans" edge to the AdhocPlan entity by ids.
+func (m *BuildMutation) AddAdhocPlanIDs(ids ...uuid.UUID) {
+	if m._AdhocPlans == nil {
+		m._AdhocPlans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._BuildToAdhocPlans, ids[i])
-		m.removed_BuildToAdhocPlans[ids[i]] = struct{}{}
+		m._AdhocPlans[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedBuildToAdhocPlans returns the removed IDs of the "BuildToAdhocPlans" edge to the AdhocPlan entity.
-func (m *BuildMutation) RemovedBuildToAdhocPlansIDs() (ids []uuid.UUID) {
-	for id := range m.removed_BuildToAdhocPlans {
-		ids = append(ids, id)
-	}
-	return
+// ClearAdhocPlans clears the "AdhocPlans" edge to the AdhocPlan entity.
+func (m *BuildMutation) ClearAdhocPlans() {
+	m.cleared_AdhocPlans = true
 }
 
-// BuildToAdhocPlansIDs returns the "BuildToAdhocPlans" edge IDs in the mutation.
-func (m *BuildMutation) BuildToAdhocPlansIDs() (ids []uuid.UUID) {
-	for id := range m._BuildToAdhocPlans {
-		ids = append(ids, id)
-	}
-	return
+// AdhocPlansCleared reports if the "AdhocPlans" edge to the AdhocPlan entity was cleared.
+func (m *BuildMutation) AdhocPlansCleared() bool {
+	return m.cleared_AdhocPlans
 }
 
-// ResetBuildToAdhocPlans resets all changes to the "BuildToAdhocPlans" edge.
-func (m *BuildMutation) ResetBuildToAdhocPlans() {
-	m._BuildToAdhocPlans = nil
-	m.cleared_BuildToAdhocPlans = false
-	m.removed_BuildToAdhocPlans = nil
-}
-
-// AddBuildToAgentStatuseIDs adds the "BuildToAgentStatuses" edge to the AgentStatus entity by ids.
-func (m *BuildMutation) AddBuildToAgentStatuseIDs(ids ...uuid.UUID) {
-	if m._BuildToAgentStatuses == nil {
-		m._BuildToAgentStatuses = make(map[uuid.UUID]struct{})
+// RemoveAdhocPlanIDs removes the "AdhocPlans" edge to the AdhocPlan entity by IDs.
+func (m *BuildMutation) RemoveAdhocPlanIDs(ids ...uuid.UUID) {
+	if m.removed_AdhocPlans == nil {
+		m.removed_AdhocPlans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._BuildToAgentStatuses[ids[i]] = struct{}{}
+		delete(m._AdhocPlans, ids[i])
+		m.removed_AdhocPlans[ids[i]] = struct{}{}
 	}
 }
 
-// ClearBuildToAgentStatuses clears the "BuildToAgentStatuses" edge to the AgentStatus entity.
-func (m *BuildMutation) ClearBuildToAgentStatuses() {
-	m.cleared_BuildToAgentStatuses = true
+// RemovedAdhocPlans returns the removed IDs of the "AdhocPlans" edge to the AdhocPlan entity.
+func (m *BuildMutation) RemovedAdhocPlansIDs() (ids []uuid.UUID) {
+	for id := range m.removed_AdhocPlans {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// BuildToAgentStatusesCleared reports if the "BuildToAgentStatuses" edge to the AgentStatus entity was cleared.
-func (m *BuildMutation) BuildToAgentStatusesCleared() bool {
-	return m.cleared_BuildToAgentStatuses
+// AdhocPlansIDs returns the "AdhocPlans" edge IDs in the mutation.
+func (m *BuildMutation) AdhocPlansIDs() (ids []uuid.UUID) {
+	for id := range m._AdhocPlans {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveBuildToAgentStatuseIDs removes the "BuildToAgentStatuses" edge to the AgentStatus entity by IDs.
-func (m *BuildMutation) RemoveBuildToAgentStatuseIDs(ids ...uuid.UUID) {
-	if m.removed_BuildToAgentStatuses == nil {
-		m.removed_BuildToAgentStatuses = make(map[uuid.UUID]struct{})
+// ResetAdhocPlans resets all changes to the "AdhocPlans" edge.
+func (m *BuildMutation) ResetAdhocPlans() {
+	m._AdhocPlans = nil
+	m.cleared_AdhocPlans = false
+	m.removed_AdhocPlans = nil
+}
+
+// AddAgentStatuseIDs adds the "AgentStatuses" edge to the AgentStatus entity by ids.
+func (m *BuildMutation) AddAgentStatuseIDs(ids ...uuid.UUID) {
+	if m._AgentStatuses == nil {
+		m._AgentStatuses = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._BuildToAgentStatuses, ids[i])
-		m.removed_BuildToAgentStatuses[ids[i]] = struct{}{}
+		m._AgentStatuses[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedBuildToAgentStatuses returns the removed IDs of the "BuildToAgentStatuses" edge to the AgentStatus entity.
-func (m *BuildMutation) RemovedBuildToAgentStatusesIDs() (ids []uuid.UUID) {
-	for id := range m.removed_BuildToAgentStatuses {
-		ids = append(ids, id)
-	}
-	return
+// ClearAgentStatuses clears the "AgentStatuses" edge to the AgentStatus entity.
+func (m *BuildMutation) ClearAgentStatuses() {
+	m.cleared_AgentStatuses = true
 }
 
-// BuildToAgentStatusesIDs returns the "BuildToAgentStatuses" edge IDs in the mutation.
-func (m *BuildMutation) BuildToAgentStatusesIDs() (ids []uuid.UUID) {
-	for id := range m._BuildToAgentStatuses {
-		ids = append(ids, id)
-	}
-	return
+// AgentStatusesCleared reports if the "AgentStatuses" edge to the AgentStatus entity was cleared.
+func (m *BuildMutation) AgentStatusesCleared() bool {
+	return m.cleared_AgentStatuses
 }
 
-// ResetBuildToAgentStatuses resets all changes to the "BuildToAgentStatuses" edge.
-func (m *BuildMutation) ResetBuildToAgentStatuses() {
-	m._BuildToAgentStatuses = nil
-	m.cleared_BuildToAgentStatuses = false
-	m.removed_BuildToAgentStatuses = nil
-}
-
-// AddBuildToServerTaskIDs adds the "BuildToServerTasks" edge to the ServerTask entity by ids.
-func (m *BuildMutation) AddBuildToServerTaskIDs(ids ...uuid.UUID) {
-	if m._BuildToServerTasks == nil {
-		m._BuildToServerTasks = make(map[uuid.UUID]struct{})
+// RemoveAgentStatuseIDs removes the "AgentStatuses" edge to the AgentStatus entity by IDs.
+func (m *BuildMutation) RemoveAgentStatuseIDs(ids ...uuid.UUID) {
+	if m.removed_AgentStatuses == nil {
+		m.removed_AgentStatuses = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._BuildToServerTasks[ids[i]] = struct{}{}
+		delete(m._AgentStatuses, ids[i])
+		m.removed_AgentStatuses[ids[i]] = struct{}{}
 	}
 }
 
-// ClearBuildToServerTasks clears the "BuildToServerTasks" edge to the ServerTask entity.
-func (m *BuildMutation) ClearBuildToServerTasks() {
-	m.cleared_BuildToServerTasks = true
+// RemovedAgentStatuses returns the removed IDs of the "AgentStatuses" edge to the AgentStatus entity.
+func (m *BuildMutation) RemovedAgentStatusesIDs() (ids []uuid.UUID) {
+	for id := range m.removed_AgentStatuses {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// BuildToServerTasksCleared reports if the "BuildToServerTasks" edge to the ServerTask entity was cleared.
-func (m *BuildMutation) BuildToServerTasksCleared() bool {
-	return m.cleared_BuildToServerTasks
+// AgentStatusesIDs returns the "AgentStatuses" edge IDs in the mutation.
+func (m *BuildMutation) AgentStatusesIDs() (ids []uuid.UUID) {
+	for id := range m._AgentStatuses {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveBuildToServerTaskIDs removes the "BuildToServerTasks" edge to the ServerTask entity by IDs.
-func (m *BuildMutation) RemoveBuildToServerTaskIDs(ids ...uuid.UUID) {
-	if m.removed_BuildToServerTasks == nil {
-		m.removed_BuildToServerTasks = make(map[uuid.UUID]struct{})
+// ResetAgentStatuses resets all changes to the "AgentStatuses" edge.
+func (m *BuildMutation) ResetAgentStatuses() {
+	m._AgentStatuses = nil
+	m.cleared_AgentStatuses = false
+	m.removed_AgentStatuses = nil
+}
+
+// AddServerTaskIDs adds the "ServerTasks" edge to the ServerTask entity by ids.
+func (m *BuildMutation) AddServerTaskIDs(ids ...uuid.UUID) {
+	if m._ServerTasks == nil {
+		m._ServerTasks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._BuildToServerTasks, ids[i])
-		m.removed_BuildToServerTasks[ids[i]] = struct{}{}
+		m._ServerTasks[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedBuildToServerTasks returns the removed IDs of the "BuildToServerTasks" edge to the ServerTask entity.
-func (m *BuildMutation) RemovedBuildToServerTasksIDs() (ids []uuid.UUID) {
-	for id := range m.removed_BuildToServerTasks {
+// ClearServerTasks clears the "ServerTasks" edge to the ServerTask entity.
+func (m *BuildMutation) ClearServerTasks() {
+	m.cleared_ServerTasks = true
+}
+
+// ServerTasksCleared reports if the "ServerTasks" edge to the ServerTask entity was cleared.
+func (m *BuildMutation) ServerTasksCleared() bool {
+	return m.cleared_ServerTasks
+}
+
+// RemoveServerTaskIDs removes the "ServerTasks" edge to the ServerTask entity by IDs.
+func (m *BuildMutation) RemoveServerTaskIDs(ids ...uuid.UUID) {
+	if m.removed_ServerTasks == nil {
+		m.removed_ServerTasks = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._ServerTasks, ids[i])
+		m.removed_ServerTasks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedServerTasks returns the removed IDs of the "ServerTasks" edge to the ServerTask entity.
+func (m *BuildMutation) RemovedServerTasksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ServerTasks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// BuildToServerTasksIDs returns the "BuildToServerTasks" edge IDs in the mutation.
-func (m *BuildMutation) BuildToServerTasksIDs() (ids []uuid.UUID) {
-	for id := range m._BuildToServerTasks {
+// ServerTasksIDs returns the "ServerTasks" edge IDs in the mutation.
+func (m *BuildMutation) ServerTasksIDs() (ids []uuid.UUID) {
+	for id := range m._ServerTasks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetBuildToServerTasks resets all changes to the "BuildToServerTasks" edge.
-func (m *BuildMutation) ResetBuildToServerTasks() {
-	m._BuildToServerTasks = nil
-	m.cleared_BuildToServerTasks = false
-	m.removed_BuildToServerTasks = nil
+// ResetServerTasks resets all changes to the "ServerTasks" edge.
+func (m *BuildMutation) ResetServerTasks() {
+	m._ServerTasks = nil
+	m.cleared_ServerTasks = false
+	m.removed_ServerTasks = nil
 }
 
 // Where appends a list predicates to the BuildMutation builder.
@@ -6186,41 +6186,41 @@ func (m *BuildMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BuildMutation) AddedEdges() []string {
 	edges := make([]string, 0, 12)
-	if m._BuildToStatus != nil {
-		edges = append(edges, build.EdgeBuildToStatus)
+	if m._Status != nil {
+		edges = append(edges, build.EdgeStatus)
 	}
-	if m._BuildToEnvironment != nil {
-		edges = append(edges, build.EdgeBuildToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, build.EdgeEnvironment)
 	}
-	if m._BuildToCompetition != nil {
-		edges = append(edges, build.EdgeBuildToCompetition)
+	if m._Competition != nil {
+		edges = append(edges, build.EdgeCompetition)
 	}
-	if m._BuildToLatestBuildCommit != nil {
-		edges = append(edges, build.EdgeBuildToLatestBuildCommit)
+	if m._LatestBuildCommit != nil {
+		edges = append(edges, build.EdgeLatestBuildCommit)
 	}
-	if m._BuildToRepoCommit != nil {
-		edges = append(edges, build.EdgeBuildToRepoCommit)
+	if m._RepoCommits != nil {
+		edges = append(edges, build.EdgeRepoCommits)
 	}
-	if m._BuildToProvisionedNetwork != nil {
-		edges = append(edges, build.EdgeBuildToProvisionedNetwork)
+	if m._ProvisionedNetworks != nil {
+		edges = append(edges, build.EdgeProvisionedNetworks)
 	}
-	if m._BuildToTeam != nil {
-		edges = append(edges, build.EdgeBuildToTeam)
+	if m._Teams != nil {
+		edges = append(edges, build.EdgeTeams)
 	}
-	if m._BuildToPlan != nil {
-		edges = append(edges, build.EdgeBuildToPlan)
+	if m._Plans != nil {
+		edges = append(edges, build.EdgePlans)
 	}
-	if m._BuildToBuildCommits != nil {
-		edges = append(edges, build.EdgeBuildToBuildCommits)
+	if m._BuildCommits != nil {
+		edges = append(edges, build.EdgeBuildCommits)
 	}
-	if m._BuildToAdhocPlans != nil {
-		edges = append(edges, build.EdgeBuildToAdhocPlans)
+	if m._AdhocPlans != nil {
+		edges = append(edges, build.EdgeAdhocPlans)
 	}
-	if m._BuildToAgentStatuses != nil {
-		edges = append(edges, build.EdgeBuildToAgentStatuses)
+	if m._AgentStatuses != nil {
+		edges = append(edges, build.EdgeAgentStatuses)
 	}
-	if m._BuildToServerTasks != nil {
-		edges = append(edges, build.EdgeBuildToServerTasks)
+	if m._ServerTasks != nil {
+		edges = append(edges, build.EdgeServerTasks)
 	}
 	return edges
 }
@@ -6229,65 +6229,65 @@ func (m *BuildMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *BuildMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case build.EdgeBuildToStatus:
-		if id := m._BuildToStatus; id != nil {
+	case build.EdgeStatus:
+		if id := m._Status; id != nil {
 			return []ent.Value{*id}
 		}
-	case build.EdgeBuildToEnvironment:
-		if id := m._BuildToEnvironment; id != nil {
+	case build.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
-	case build.EdgeBuildToCompetition:
-		if id := m._BuildToCompetition; id != nil {
+	case build.EdgeCompetition:
+		if id := m._Competition; id != nil {
 			return []ent.Value{*id}
 		}
-	case build.EdgeBuildToLatestBuildCommit:
-		if id := m._BuildToLatestBuildCommit; id != nil {
+	case build.EdgeLatestBuildCommit:
+		if id := m._LatestBuildCommit; id != nil {
 			return []ent.Value{*id}
 		}
-	case build.EdgeBuildToRepoCommit:
-		if id := m._BuildToRepoCommit; id != nil {
+	case build.EdgeRepoCommits:
+		if id := m._RepoCommits; id != nil {
 			return []ent.Value{*id}
 		}
-	case build.EdgeBuildToProvisionedNetwork:
-		ids := make([]ent.Value, 0, len(m._BuildToProvisionedNetwork))
-		for id := range m._BuildToProvisionedNetwork {
+	case build.EdgeProvisionedNetworks:
+		ids := make([]ent.Value, 0, len(m._ProvisionedNetworks))
+		for id := range m._ProvisionedNetworks {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToTeam:
-		ids := make([]ent.Value, 0, len(m._BuildToTeam))
-		for id := range m._BuildToTeam {
+	case build.EdgeTeams:
+		ids := make([]ent.Value, 0, len(m._Teams))
+		for id := range m._Teams {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToPlan:
-		ids := make([]ent.Value, 0, len(m._BuildToPlan))
-		for id := range m._BuildToPlan {
+	case build.EdgePlans:
+		ids := make([]ent.Value, 0, len(m._Plans))
+		for id := range m._Plans {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToBuildCommits:
-		ids := make([]ent.Value, 0, len(m._BuildToBuildCommits))
-		for id := range m._BuildToBuildCommits {
+	case build.EdgeBuildCommits:
+		ids := make([]ent.Value, 0, len(m._BuildCommits))
+		for id := range m._BuildCommits {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToAdhocPlans:
-		ids := make([]ent.Value, 0, len(m._BuildToAdhocPlans))
-		for id := range m._BuildToAdhocPlans {
+	case build.EdgeAdhocPlans:
+		ids := make([]ent.Value, 0, len(m._AdhocPlans))
+		for id := range m._AdhocPlans {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToAgentStatuses:
-		ids := make([]ent.Value, 0, len(m._BuildToAgentStatuses))
-		for id := range m._BuildToAgentStatuses {
+	case build.EdgeAgentStatuses:
+		ids := make([]ent.Value, 0, len(m._AgentStatuses))
+		for id := range m._AgentStatuses {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToServerTasks:
-		ids := make([]ent.Value, 0, len(m._BuildToServerTasks))
-		for id := range m._BuildToServerTasks {
+	case build.EdgeServerTasks:
+		ids := make([]ent.Value, 0, len(m._ServerTasks))
+		for id := range m._ServerTasks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -6298,26 +6298,26 @@ func (m *BuildMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BuildMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 12)
-	if m.removed_BuildToProvisionedNetwork != nil {
-		edges = append(edges, build.EdgeBuildToProvisionedNetwork)
+	if m.removed_ProvisionedNetworks != nil {
+		edges = append(edges, build.EdgeProvisionedNetworks)
 	}
-	if m.removed_BuildToTeam != nil {
-		edges = append(edges, build.EdgeBuildToTeam)
+	if m.removed_Teams != nil {
+		edges = append(edges, build.EdgeTeams)
 	}
-	if m.removed_BuildToPlan != nil {
-		edges = append(edges, build.EdgeBuildToPlan)
+	if m.removed_Plans != nil {
+		edges = append(edges, build.EdgePlans)
 	}
-	if m.removed_BuildToBuildCommits != nil {
-		edges = append(edges, build.EdgeBuildToBuildCommits)
+	if m.removed_BuildCommits != nil {
+		edges = append(edges, build.EdgeBuildCommits)
 	}
-	if m.removed_BuildToAdhocPlans != nil {
-		edges = append(edges, build.EdgeBuildToAdhocPlans)
+	if m.removed_AdhocPlans != nil {
+		edges = append(edges, build.EdgeAdhocPlans)
 	}
-	if m.removed_BuildToAgentStatuses != nil {
-		edges = append(edges, build.EdgeBuildToAgentStatuses)
+	if m.removed_AgentStatuses != nil {
+		edges = append(edges, build.EdgeAgentStatuses)
 	}
-	if m.removed_BuildToServerTasks != nil {
-		edges = append(edges, build.EdgeBuildToServerTasks)
+	if m.removed_ServerTasks != nil {
+		edges = append(edges, build.EdgeServerTasks)
 	}
 	return edges
 }
@@ -6326,45 +6326,45 @@ func (m *BuildMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *BuildMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case build.EdgeBuildToProvisionedNetwork:
-		ids := make([]ent.Value, 0, len(m.removed_BuildToProvisionedNetwork))
-		for id := range m.removed_BuildToProvisionedNetwork {
+	case build.EdgeProvisionedNetworks:
+		ids := make([]ent.Value, 0, len(m.removed_ProvisionedNetworks))
+		for id := range m.removed_ProvisionedNetworks {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToTeam:
-		ids := make([]ent.Value, 0, len(m.removed_BuildToTeam))
-		for id := range m.removed_BuildToTeam {
+	case build.EdgeTeams:
+		ids := make([]ent.Value, 0, len(m.removed_Teams))
+		for id := range m.removed_Teams {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToPlan:
-		ids := make([]ent.Value, 0, len(m.removed_BuildToPlan))
-		for id := range m.removed_BuildToPlan {
+	case build.EdgePlans:
+		ids := make([]ent.Value, 0, len(m.removed_Plans))
+		for id := range m.removed_Plans {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToBuildCommits:
-		ids := make([]ent.Value, 0, len(m.removed_BuildToBuildCommits))
-		for id := range m.removed_BuildToBuildCommits {
+	case build.EdgeBuildCommits:
+		ids := make([]ent.Value, 0, len(m.removed_BuildCommits))
+		for id := range m.removed_BuildCommits {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToAdhocPlans:
-		ids := make([]ent.Value, 0, len(m.removed_BuildToAdhocPlans))
-		for id := range m.removed_BuildToAdhocPlans {
+	case build.EdgeAdhocPlans:
+		ids := make([]ent.Value, 0, len(m.removed_AdhocPlans))
+		for id := range m.removed_AdhocPlans {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToAgentStatuses:
-		ids := make([]ent.Value, 0, len(m.removed_BuildToAgentStatuses))
-		for id := range m.removed_BuildToAgentStatuses {
+	case build.EdgeAgentStatuses:
+		ids := make([]ent.Value, 0, len(m.removed_AgentStatuses))
+		for id := range m.removed_AgentStatuses {
 			ids = append(ids, id)
 		}
 		return ids
-	case build.EdgeBuildToServerTasks:
-		ids := make([]ent.Value, 0, len(m.removed_BuildToServerTasks))
-		for id := range m.removed_BuildToServerTasks {
+	case build.EdgeServerTasks:
+		ids := make([]ent.Value, 0, len(m.removed_ServerTasks))
+		for id := range m.removed_ServerTasks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -6375,41 +6375,41 @@ func (m *BuildMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BuildMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 12)
-	if m.cleared_BuildToStatus {
-		edges = append(edges, build.EdgeBuildToStatus)
+	if m.cleared_Status {
+		edges = append(edges, build.EdgeStatus)
 	}
-	if m.cleared_BuildToEnvironment {
-		edges = append(edges, build.EdgeBuildToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, build.EdgeEnvironment)
 	}
-	if m.cleared_BuildToCompetition {
-		edges = append(edges, build.EdgeBuildToCompetition)
+	if m.cleared_Competition {
+		edges = append(edges, build.EdgeCompetition)
 	}
-	if m.cleared_BuildToLatestBuildCommit {
-		edges = append(edges, build.EdgeBuildToLatestBuildCommit)
+	if m.cleared_LatestBuildCommit {
+		edges = append(edges, build.EdgeLatestBuildCommit)
 	}
-	if m.cleared_BuildToRepoCommit {
-		edges = append(edges, build.EdgeBuildToRepoCommit)
+	if m.cleared_RepoCommits {
+		edges = append(edges, build.EdgeRepoCommits)
 	}
-	if m.cleared_BuildToProvisionedNetwork {
-		edges = append(edges, build.EdgeBuildToProvisionedNetwork)
+	if m.cleared_ProvisionedNetworks {
+		edges = append(edges, build.EdgeProvisionedNetworks)
 	}
-	if m.cleared_BuildToTeam {
-		edges = append(edges, build.EdgeBuildToTeam)
+	if m.cleared_Teams {
+		edges = append(edges, build.EdgeTeams)
 	}
-	if m.cleared_BuildToPlan {
-		edges = append(edges, build.EdgeBuildToPlan)
+	if m.cleared_Plans {
+		edges = append(edges, build.EdgePlans)
 	}
-	if m.cleared_BuildToBuildCommits {
-		edges = append(edges, build.EdgeBuildToBuildCommits)
+	if m.cleared_BuildCommits {
+		edges = append(edges, build.EdgeBuildCommits)
 	}
-	if m.cleared_BuildToAdhocPlans {
-		edges = append(edges, build.EdgeBuildToAdhocPlans)
+	if m.cleared_AdhocPlans {
+		edges = append(edges, build.EdgeAdhocPlans)
 	}
-	if m.cleared_BuildToAgentStatuses {
-		edges = append(edges, build.EdgeBuildToAgentStatuses)
+	if m.cleared_AgentStatuses {
+		edges = append(edges, build.EdgeAgentStatuses)
 	}
-	if m.cleared_BuildToServerTasks {
-		edges = append(edges, build.EdgeBuildToServerTasks)
+	if m.cleared_ServerTasks {
+		edges = append(edges, build.EdgeServerTasks)
 	}
 	return edges
 }
@@ -6418,30 +6418,30 @@ func (m *BuildMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *BuildMutation) EdgeCleared(name string) bool {
 	switch name {
-	case build.EdgeBuildToStatus:
-		return m.cleared_BuildToStatus
-	case build.EdgeBuildToEnvironment:
-		return m.cleared_BuildToEnvironment
-	case build.EdgeBuildToCompetition:
-		return m.cleared_BuildToCompetition
-	case build.EdgeBuildToLatestBuildCommit:
-		return m.cleared_BuildToLatestBuildCommit
-	case build.EdgeBuildToRepoCommit:
-		return m.cleared_BuildToRepoCommit
-	case build.EdgeBuildToProvisionedNetwork:
-		return m.cleared_BuildToProvisionedNetwork
-	case build.EdgeBuildToTeam:
-		return m.cleared_BuildToTeam
-	case build.EdgeBuildToPlan:
-		return m.cleared_BuildToPlan
-	case build.EdgeBuildToBuildCommits:
-		return m.cleared_BuildToBuildCommits
-	case build.EdgeBuildToAdhocPlans:
-		return m.cleared_BuildToAdhocPlans
-	case build.EdgeBuildToAgentStatuses:
-		return m.cleared_BuildToAgentStatuses
-	case build.EdgeBuildToServerTasks:
-		return m.cleared_BuildToServerTasks
+	case build.EdgeStatus:
+		return m.cleared_Status
+	case build.EdgeEnvironment:
+		return m.cleared_Environment
+	case build.EdgeCompetition:
+		return m.cleared_Competition
+	case build.EdgeLatestBuildCommit:
+		return m.cleared_LatestBuildCommit
+	case build.EdgeRepoCommits:
+		return m.cleared_RepoCommits
+	case build.EdgeProvisionedNetworks:
+		return m.cleared_ProvisionedNetworks
+	case build.EdgeTeams:
+		return m.cleared_Teams
+	case build.EdgePlans:
+		return m.cleared_Plans
+	case build.EdgeBuildCommits:
+		return m.cleared_BuildCommits
+	case build.EdgeAdhocPlans:
+		return m.cleared_AdhocPlans
+	case build.EdgeAgentStatuses:
+		return m.cleared_AgentStatuses
+	case build.EdgeServerTasks:
+		return m.cleared_ServerTasks
 	}
 	return false
 }
@@ -6450,20 +6450,20 @@ func (m *BuildMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *BuildMutation) ClearEdge(name string) error {
 	switch name {
-	case build.EdgeBuildToStatus:
-		m.ClearBuildToStatus()
+	case build.EdgeStatus:
+		m.ClearStatus()
 		return nil
-	case build.EdgeBuildToEnvironment:
-		m.ClearBuildToEnvironment()
+	case build.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
-	case build.EdgeBuildToCompetition:
-		m.ClearBuildToCompetition()
+	case build.EdgeCompetition:
+		m.ClearCompetition()
 		return nil
-	case build.EdgeBuildToLatestBuildCommit:
-		m.ClearBuildToLatestBuildCommit()
+	case build.EdgeLatestBuildCommit:
+		m.ClearLatestBuildCommit()
 		return nil
-	case build.EdgeBuildToRepoCommit:
-		m.ClearBuildToRepoCommit()
+	case build.EdgeRepoCommits:
+		m.ClearRepoCommits()
 		return nil
 	}
 	return fmt.Errorf("unknown Build unique edge %s", name)
@@ -6473,41 +6473,41 @@ func (m *BuildMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *BuildMutation) ResetEdge(name string) error {
 	switch name {
-	case build.EdgeBuildToStatus:
-		m.ResetBuildToStatus()
+	case build.EdgeStatus:
+		m.ResetStatus()
 		return nil
-	case build.EdgeBuildToEnvironment:
-		m.ResetBuildToEnvironment()
+	case build.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
-	case build.EdgeBuildToCompetition:
-		m.ResetBuildToCompetition()
+	case build.EdgeCompetition:
+		m.ResetCompetition()
 		return nil
-	case build.EdgeBuildToLatestBuildCommit:
-		m.ResetBuildToLatestBuildCommit()
+	case build.EdgeLatestBuildCommit:
+		m.ResetLatestBuildCommit()
 		return nil
-	case build.EdgeBuildToRepoCommit:
-		m.ResetBuildToRepoCommit()
+	case build.EdgeRepoCommits:
+		m.ResetRepoCommits()
 		return nil
-	case build.EdgeBuildToProvisionedNetwork:
-		m.ResetBuildToProvisionedNetwork()
+	case build.EdgeProvisionedNetworks:
+		m.ResetProvisionedNetworks()
 		return nil
-	case build.EdgeBuildToTeam:
-		m.ResetBuildToTeam()
+	case build.EdgeTeams:
+		m.ResetTeams()
 		return nil
-	case build.EdgeBuildToPlan:
-		m.ResetBuildToPlan()
+	case build.EdgePlans:
+		m.ResetPlans()
 		return nil
-	case build.EdgeBuildToBuildCommits:
-		m.ResetBuildToBuildCommits()
+	case build.EdgeBuildCommits:
+		m.ResetBuildCommits()
 		return nil
-	case build.EdgeBuildToAdhocPlans:
-		m.ResetBuildToAdhocPlans()
+	case build.EdgeAdhocPlans:
+		m.ResetAdhocPlans()
 		return nil
-	case build.EdgeBuildToAgentStatuses:
-		m.ResetBuildToAgentStatuses()
+	case build.EdgeAgentStatuses:
+		m.ResetAgentStatuses()
 		return nil
-	case build.EdgeBuildToServerTasks:
-		m.ResetBuildToServerTasks()
+	case build.EdgeServerTasks:
+		m.ResetServerTasks()
 		return nil
 	}
 	return fmt.Errorf("unknown Build edge %s", name)

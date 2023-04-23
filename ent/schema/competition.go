@@ -53,6 +53,6 @@ func (Competition) Edges() []ent.Edge {
 			Ref("EnvironmentToCompetition").
 			Unique(),
 		edge.From("CompetitionToBuild", Build.Type).
-			Ref("BuildToCompetition"),
+			Ref("Competition"),
 	}
 }

@@ -739,10 +739,10 @@ func (sq *StatusQuery) loadStatusToBuild(ctx context.Context, query *BuildQuery,
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].build_build_to_status == nil {
+		if nodes[i].build_status == nil {
 			continue
 		}
-		fk := *nodes[i].build_build_to_status
+		fk := *nodes[i].build_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -756,7 +756,7 @@ func (sq *StatusQuery) loadStatusToBuild(ctx context.Context, query *BuildQuery,
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_build_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

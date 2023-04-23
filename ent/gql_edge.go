@@ -132,98 +132,98 @@ func (au *AuthUser) ServerTasks(ctx context.Context) ([]*ServerTask, error) {
 	return result, err
 }
 
-func (b *Build) BuildToStatus(ctx context.Context) (*Status, error) {
-	result, err := b.Edges.BuildToStatusOrErr()
+func (b *Build) Status(ctx context.Context) (*Status, error) {
+	result, err := b.Edges.StatusOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToStatus().Only(ctx)
+		result, err = b.QueryStatus().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (b *Build) BuildToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := b.Edges.BuildToEnvironmentOrErr()
+func (b *Build) Environment(ctx context.Context) (*Environment, error) {
+	result, err := b.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToEnvironment().Only(ctx)
+		result, err = b.QueryEnvironment().Only(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) BuildToCompetition(ctx context.Context) (*Competition, error) {
-	result, err := b.Edges.BuildToCompetitionOrErr()
+func (b *Build) Competition(ctx context.Context) (*Competition, error) {
+	result, err := b.Edges.CompetitionOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToCompetition().Only(ctx)
+		result, err = b.QueryCompetition().Only(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) BuildToLatestBuildCommit(ctx context.Context) (*BuildCommit, error) {
-	result, err := b.Edges.BuildToLatestBuildCommitOrErr()
+func (b *Build) LatestBuildCommit(ctx context.Context) (*BuildCommit, error) {
+	result, err := b.Edges.LatestBuildCommitOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToLatestBuildCommit().Only(ctx)
+		result, err = b.QueryLatestBuildCommit().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (b *Build) BuildToRepoCommit(ctx context.Context) (*RepoCommit, error) {
-	result, err := b.Edges.BuildToRepoCommitOrErr()
+func (b *Build) RepoCommits(ctx context.Context) (*RepoCommit, error) {
+	result, err := b.Edges.RepoCommitsOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToRepoCommit().Only(ctx)
+		result, err = b.QueryRepoCommits().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (b *Build) BuildToProvisionedNetwork(ctx context.Context) ([]*ProvisionedNetwork, error) {
-	result, err := b.Edges.BuildToProvisionedNetworkOrErr()
+func (b *Build) ProvisionedNetworks(ctx context.Context) ([]*ProvisionedNetwork, error) {
+	result, err := b.Edges.ProvisionedNetworksOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToProvisionedNetwork().All(ctx)
+		result, err = b.QueryProvisionedNetworks().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) BuildToTeam(ctx context.Context) ([]*Team, error) {
-	result, err := b.Edges.BuildToTeamOrErr()
+func (b *Build) Teams(ctx context.Context) ([]*Team, error) {
+	result, err := b.Edges.TeamsOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToTeam().All(ctx)
+		result, err = b.QueryTeams().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) BuildToPlan(ctx context.Context) ([]*Plan, error) {
-	result, err := b.Edges.BuildToPlanOrErr()
+func (b *Build) Plans(ctx context.Context) ([]*Plan, error) {
+	result, err := b.Edges.PlansOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToPlan().All(ctx)
+		result, err = b.QueryPlans().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) BuildToBuildCommits(ctx context.Context) ([]*BuildCommit, error) {
-	result, err := b.Edges.BuildToBuildCommitsOrErr()
+func (b *Build) BuildCommits(ctx context.Context) ([]*BuildCommit, error) {
+	result, err := b.Edges.BuildCommitsOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToBuildCommits().All(ctx)
+		result, err = b.QueryBuildCommits().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) BuildToAdhocPlans(ctx context.Context) ([]*AdhocPlan, error) {
-	result, err := b.Edges.BuildToAdhocPlansOrErr()
+func (b *Build) AdhocPlans(ctx context.Context) ([]*AdhocPlan, error) {
+	result, err := b.Edges.AdhocPlansOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToAdhocPlans().All(ctx)
+		result, err = b.QueryAdhocPlans().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) BuildToAgentStatuses(ctx context.Context) ([]*AgentStatus, error) {
-	result, err := b.Edges.BuildToAgentStatusesOrErr()
+func (b *Build) AgentStatuses(ctx context.Context) ([]*AgentStatus, error) {
+	result, err := b.Edges.AgentStatusesOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToAgentStatuses().All(ctx)
+		result, err = b.QueryAgentStatuses().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) BuildToServerTasks(ctx context.Context) ([]*ServerTask, error) {
-	result, err := b.Edges.BuildToServerTasksOrErr()
+func (b *Build) ServerTasks(ctx context.Context) ([]*ServerTask, error) {
+	result, err := b.Edges.ServerTasksOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryBuildToServerTasks().All(ctx)
+		result, err = b.QueryServerTasks().All(ctx)
 	}
 	return result, err
 }

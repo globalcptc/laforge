@@ -31,7 +31,7 @@ func (Status) Fields() []ent.Field {
 func (Status) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("StatusToBuild", Build.Type).
-			Ref("BuildToStatus").
+			Ref("Status").
 			Unique(),
 		edge.From("StatusToProvisionedNetwork", ProvisionedNetwork.Type).
 			Ref("ProvisionedNetworkToStatus").

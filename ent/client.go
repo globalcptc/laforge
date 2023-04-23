@@ -1181,15 +1181,15 @@ func (c *BuildClient) GetX(ctx context.Context, id uuid.UUID) *Build {
 	return obj
 }
 
-// QueryBuildToStatus queries the BuildToStatus edge of a Build.
-func (c *BuildClient) QueryBuildToStatus(b *Build) *StatusQuery {
+// QueryStatus queries the Status edge of a Build.
+func (c *BuildClient) QueryStatus(b *Build) *StatusQuery {
 	query := &StatusQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, build.BuildToStatusTable, build.BuildToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, build.StatusTable, build.StatusColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1197,15 +1197,15 @@ func (c *BuildClient) QueryBuildToStatus(b *Build) *StatusQuery {
 	return query
 }
 
-// QueryBuildToEnvironment queries the BuildToEnvironment edge of a Build.
-func (c *BuildClient) QueryBuildToEnvironment(b *Build) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a Build.
+func (c *BuildClient) QueryEnvironment(b *Build) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, build.BuildToEnvironmentTable, build.BuildToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, build.EnvironmentTable, build.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1213,15 +1213,15 @@ func (c *BuildClient) QueryBuildToEnvironment(b *Build) *EnvironmentQuery {
 	return query
 }
 
-// QueryBuildToCompetition queries the BuildToCompetition edge of a Build.
-func (c *BuildClient) QueryBuildToCompetition(b *Build) *CompetitionQuery {
+// QueryCompetition queries the Competition edge of a Build.
+func (c *BuildClient) QueryCompetition(b *Build) *CompetitionQuery {
 	query := &CompetitionQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(competition.Table, competition.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, build.BuildToCompetitionTable, build.BuildToCompetitionColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, build.CompetitionTable, build.CompetitionColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1229,15 +1229,15 @@ func (c *BuildClient) QueryBuildToCompetition(b *Build) *CompetitionQuery {
 	return query
 }
 
-// QueryBuildToLatestBuildCommit queries the BuildToLatestBuildCommit edge of a Build.
-func (c *BuildClient) QueryBuildToLatestBuildCommit(b *Build) *BuildCommitQuery {
+// QueryLatestBuildCommit queries the LatestBuildCommit edge of a Build.
+func (c *BuildClient) QueryLatestBuildCommit(b *Build) *BuildCommitQuery {
 	query := &BuildCommitQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, build.BuildToLatestBuildCommitTable, build.BuildToLatestBuildCommitColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, build.LatestBuildCommitTable, build.LatestBuildCommitColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1245,15 +1245,15 @@ func (c *BuildClient) QueryBuildToLatestBuildCommit(b *Build) *BuildCommitQuery 
 	return query
 }
 
-// QueryBuildToRepoCommit queries the BuildToRepoCommit edge of a Build.
-func (c *BuildClient) QueryBuildToRepoCommit(b *Build) *RepoCommitQuery {
+// QueryRepoCommits queries the RepoCommits edge of a Build.
+func (c *BuildClient) QueryRepoCommits(b *Build) *RepoCommitQuery {
 	query := &RepoCommitQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(repocommit.Table, repocommit.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, build.BuildToRepoCommitTable, build.BuildToRepoCommitColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, build.RepoCommitsTable, build.RepoCommitsColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1261,15 +1261,15 @@ func (c *BuildClient) QueryBuildToRepoCommit(b *Build) *RepoCommitQuery {
 	return query
 }
 
-// QueryBuildToProvisionedNetwork queries the BuildToProvisionedNetwork edge of a Build.
-func (c *BuildClient) QueryBuildToProvisionedNetwork(b *Build) *ProvisionedNetworkQuery {
+// QueryProvisionedNetworks queries the ProvisionedNetworks edge of a Build.
+func (c *BuildClient) QueryProvisionedNetworks(b *Build) *ProvisionedNetworkQuery {
 	query := &ProvisionedNetworkQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(provisionednetwork.Table, provisionednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToProvisionedNetworkTable, build.BuildToProvisionedNetworkColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.ProvisionedNetworksTable, build.ProvisionedNetworksColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1277,15 +1277,15 @@ func (c *BuildClient) QueryBuildToProvisionedNetwork(b *Build) *ProvisionedNetwo
 	return query
 }
 
-// QueryBuildToTeam queries the BuildToTeam edge of a Build.
-func (c *BuildClient) QueryBuildToTeam(b *Build) *TeamQuery {
+// QueryTeams queries the Teams edge of a Build.
+func (c *BuildClient) QueryTeams(b *Build) *TeamQuery {
 	query := &TeamQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(team.Table, team.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToTeamTable, build.BuildToTeamColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.TeamsTable, build.TeamsColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1293,15 +1293,15 @@ func (c *BuildClient) QueryBuildToTeam(b *Build) *TeamQuery {
 	return query
 }
 
-// QueryBuildToPlan queries the BuildToPlan edge of a Build.
-func (c *BuildClient) QueryBuildToPlan(b *Build) *PlanQuery {
+// QueryPlans queries the Plans edge of a Build.
+func (c *BuildClient) QueryPlans(b *Build) *PlanQuery {
 	query := &PlanQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToPlanTable, build.BuildToPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.PlansTable, build.PlansColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1309,15 +1309,15 @@ func (c *BuildClient) QueryBuildToPlan(b *Build) *PlanQuery {
 	return query
 }
 
-// QueryBuildToBuildCommits queries the BuildToBuildCommits edge of a Build.
-func (c *BuildClient) QueryBuildToBuildCommits(b *Build) *BuildCommitQuery {
+// QueryBuildCommits queries the BuildCommits edge of a Build.
+func (c *BuildClient) QueryBuildCommits(b *Build) *BuildCommitQuery {
 	query := &BuildCommitQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToBuildCommitsTable, build.BuildToBuildCommitsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildCommitsTable, build.BuildCommitsColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1325,15 +1325,15 @@ func (c *BuildClient) QueryBuildToBuildCommits(b *Build) *BuildCommitQuery {
 	return query
 }
 
-// QueryBuildToAdhocPlans queries the BuildToAdhocPlans edge of a Build.
-func (c *BuildClient) QueryBuildToAdhocPlans(b *Build) *AdhocPlanQuery {
+// QueryAdhocPlans queries the AdhocPlans edge of a Build.
+func (c *BuildClient) QueryAdhocPlans(b *Build) *AdhocPlanQuery {
 	query := &AdhocPlanQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToAdhocPlansTable, build.BuildToAdhocPlansColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.AdhocPlansTable, build.AdhocPlansColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1341,15 +1341,15 @@ func (c *BuildClient) QueryBuildToAdhocPlans(b *Build) *AdhocPlanQuery {
 	return query
 }
 
-// QueryBuildToAgentStatuses queries the BuildToAgentStatuses edge of a Build.
-func (c *BuildClient) QueryBuildToAgentStatuses(b *Build) *AgentStatusQuery {
+// QueryAgentStatuses queries the AgentStatuses edge of a Build.
+func (c *BuildClient) QueryAgentStatuses(b *Build) *AgentStatusQuery {
 	query := &AgentStatusQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(agentstatus.Table, agentstatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToAgentStatusesTable, build.BuildToAgentStatusesColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.AgentStatusesTable, build.AgentStatusesColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -1357,15 +1357,15 @@ func (c *BuildClient) QueryBuildToAgentStatuses(b *Build) *AgentStatusQuery {
 	return query
 }
 
-// QueryBuildToServerTasks queries the BuildToServerTasks edge of a Build.
-func (c *BuildClient) QueryBuildToServerTasks(b *Build) *ServerTaskQuery {
+// QueryServerTasks queries the ServerTasks edge of a Build.
+func (c *BuildClient) QueryServerTasks(b *Build) *ServerTaskQuery {
 	query := &ServerTaskQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(servertask.Table, servertask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToServerTasksTable, build.BuildToServerTasksColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.ServerTasksTable, build.ServerTasksColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil

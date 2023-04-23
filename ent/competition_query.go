@@ -586,13 +586,13 @@ func (cq *CompetitionQuery) loadCompetitionToBuild(ctx context.Context, query *B
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.build_build_to_competition
+		fk := n.build_competition
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "build_build_to_competition" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "build_competition" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_build_to_competition" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_competition" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

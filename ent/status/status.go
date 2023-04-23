@@ -55,7 +55,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "build" package.
 	StatusToBuildInverseTable = "builds"
 	// StatusToBuildColumn is the table column denoting the StatusToBuild relation/edge.
-	StatusToBuildColumn = "build_build_to_status"
+	StatusToBuildColumn = "build_status"
 	// StatusToProvisionedNetworkTable is the table that holds the StatusToProvisionedNetwork relation/edge.
 	StatusToProvisionedNetworkTable = "status"
 	// StatusToProvisionedNetworkInverseTable is the table name for the ProvisionedNetwork entity.
@@ -130,7 +130,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"adhoc_plan_status",
-	"build_build_to_status",
+	"build_status",
 	"plan_plan_to_status",
 	"provisioned_host_provisioned_host_to_status",
 	"provisioned_network_provisioned_network_to_status",

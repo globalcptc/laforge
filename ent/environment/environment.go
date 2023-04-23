@@ -194,7 +194,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "build" package.
 	EnvironmentToBuildInverseTable = "builds"
 	// EnvironmentToBuildColumn is the table column denoting the EnvironmentToBuild relation/edge.
-	EnvironmentToBuildColumn = "build_build_to_environment"
+	EnvironmentToBuildColumn = "build_environment"
 	// EnvironmentToRepositoryTable is the table that holds the EnvironmentToRepository relation/edge. The primary key declared below.
 	EnvironmentToRepositoryTable = "repository_RepositoryToEnvironment"
 	// EnvironmentToRepositoryInverseTable is the table name for the Repository entity.
