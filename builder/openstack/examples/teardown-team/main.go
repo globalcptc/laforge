@@ -65,14 +65,14 @@ func main() {
 	}
 	logrus.Infof("Found build v%d", build.Revision)
 	logrus.Info("Build contains:")
-	teamCount := build.QueryBuildToTeam().CountX(ctx)
+	teamCount := build.QueryTeams().CountX(ctx)
 	logrus.Infof("%d Teams", teamCount)
-	provisionedNetworkCount := build.QueryBuildToTeam().QueryTeamToProvisionedNetwork().CountX(ctx)
+	provisionedNetworkCount := build.QueryTeams().QueryTeamToProvisionedNetwork().CountX(ctx)
 	logrus.Infof("%d Provisioned Networks", provisionedNetworkCount)
-	provisionedHostCount := build.QueryBuildToTeam().QueryTeamToProvisionedNetwork().QueryProvisionedNetworkToProvisionedHost().CountX(ctx)
+	provisionedHostCount := build.QueryTeams().QueryTeamToProvisionedNetwork().QueryProvisionedNetworkToProvisionedHost().CountX(ctx)
 	logrus.Infof("%d Provisioned Hosts", provisionedHostCount)
 
-	entTeam, err := build.QueryBuildToTeam().Order(ent.Asc(team.FieldTeamNumber)).First(ctx)
+	entTeam, err := build.QueryTeams().Order(ent.Asc(team.FieldTeamNumber)).First(ctx)
 	if err != nil {
 		log.Fatalf("error querying team from build: %v", err)
 	}

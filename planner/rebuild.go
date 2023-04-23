@@ -29,7 +29,7 @@ func Rebuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerC
 		return false, err
 	}
 
-	rebuildRevision, err := entBuild.QueryBuildToBuildCommits().Count(ctx)
+	rebuildRevision, err := entBuild.QueryBuildCommits().Count(ctx)
 	if err != nil {
 		spawnedRebuildSuccessfully <- false
 		logger.Log.Errorf("error counting commits on build: %v", err)
@@ -49,7 +49,7 @@ func Rebuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerC
 		return false, fmt.Errorf("error while creating rebuild commit: %v", err)
 	}
 	rdb.Publish(ctx, "updatedBuildCommit", entRebuildCommit.ID.String())
-	err = entBuild.Update().SetBuildToLatestBuildCommit(entRebuildCommit).Exec(ctx)
+	err = entBuild.Update().SetLatestBuildCommit(entRebuildCommit).Exec(ctx)
 	if err != nil {
 		spawnedRebuildSuccessfully <- false
 		logger.Log.Errorf("error while setting latest commit on build: %v", err)
@@ -101,7 +101,7 @@ func Rebuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerC
 	}
 	logger.Log.Debug("-----\nCOMMIT APPROVED\n-----")
 
-	env, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	env, err := entBuild.QueryEnvironment().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("error querying environment from build: %v", err)
 		return false, err
@@ -307,7 +307,7 @@ func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus st
 			if getStatusError != nil {
 				break
 			}
-			provisionedStatus, getStatusError = build.QueryBuildToStatus().Only(ctx)
+			provisionedStatus, getStatusError = build.QueryStatus().Only(ctx)
 		case plan.TypeStartTeam:
 			team, getStatusError := entPlan.QueryPlanToTeam().Only(ctx)
 			if getStatusError != nil {
@@ -377,7 +377,7 @@ func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus st
 // 		if getStatusError != nil {
 // 			break
 // 		}
-// 		provisionedStatus, getStatusError = build.QueryBuildToStatus().Only(ctx)
+// 		provisionedStatus, getStatusError = build.QueryStatus().Only(ctx)
 // 	case plan.TypeStartTeam:
 // 		team, getStatusError := entPlan.QueryPlanToTeam().Only(ctx)
 // 		if getStatusError != nil {

@@ -42,7 +42,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	cancelMap[entBuild.ID] = cancel
 	ctxClosing := context.Background()
 	defer ctxClosing.Done()
-	entPlans, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePLANNING))).All(ctx)
+	entPlans, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePLANNING))).All(ctx)
 
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
@@ -138,7 +138,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 					logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 					return
 				}
-				entStatus, err := entBuild.QueryBuildToStatus().Only(ctx)
+				entStatus, err := entBuild.QueryStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -153,7 +153,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 
 	wg.Wait()
 
-	rootPlans, err := entBuild.QueryBuildToPlan().Where(plan.TypeEQ(plan.TypeStartBuild)).All(ctx)
+	rootPlans, err := entBuild.QueryPlans().Where(plan.TypeEQ(plan.TypeStartBuild)).All(ctx)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
 		if err != nil {
@@ -163,7 +163,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 		logger.Log.Errorf("Failed to Query Start Plan Nodes. Err: %v", err)
 		return err
 	}
-	environment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	environment, err := entBuild.QueryEnvironment().Only(ctx)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
 		if err != nil {
@@ -185,7 +185,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 		return err
 	}
 
-	entRootCommit, err := entBuild.QueryBuildToLatestBuildCommit().Only(ctx)
+	entRootCommit, err := entBuild.QueryLatestBuildCommit().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("error while querying lastest commit from build: %v", err)
 		return err
@@ -432,7 +432,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 			return
 		}
-		entStatus, err := entBuild.QueryBuildToStatus().Only(ctx)
+		entStatus, err := entBuild.QueryStatus().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 			return
@@ -884,8 +884,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs(entScript.Source + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + "true").
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
@@ -897,8 +897,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs(entScript.Source + "💔" + strings.Join(entScript.Args, " ")).
 			SetNumber(taskCount + 1).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Execute: %v", err)
@@ -909,8 +909,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs(entScript.Source).
 			SetNumber(taskCount + 2).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
@@ -929,8 +929,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 				SetArgs("").
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningStep(entStep).
 				Save(ctx)
 			if err != nil {
 				logger.Log.Errorf("failed Creating Agent Task for Reboot Command: %v", err)
@@ -942,8 +942,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 				SetArgs(entCommand.Program + "💔" + strings.Join(entCommand.Args, " ")).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningStep(entStep).
 				Save(ctx)
 			if err != nil {
 				logger.Log.Errorf("failed Creating Agent Task for Command: %v", err)
@@ -961,8 +961,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs(entFileDelete.Path).
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for File Delete: %v", err)
@@ -985,8 +985,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 				SetArgs(entFileDownload.Destination + "💔" + entFileDownload.Source + "💔" + strings.ToLower(fmt.Sprintf("%v", entFileDownload.IsTxt))).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningStep(entStep).
 				Save(ctx)
 		} else {
 			_, err = client.AgentTask.Create().
@@ -994,8 +994,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 				SetArgs(entFileDownload.Destination + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + strings.ToLower(fmt.Sprintf("%v", entFileDownload.IsTxt))).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningStep(entStep).
 				Save(ctx)
 		}
 		if err != nil {
@@ -1013,8 +1013,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs(entFileExtract.Source + "💔" + entFileExtract.Destination).
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for File Extract: %v", err)
@@ -1038,8 +1038,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + "false").
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
@@ -1050,8 +1050,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + "/tmp").
 			SetNumber(taskCount + 1).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
@@ -1062,8 +1062,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs("/tmp/" + entAnsible.Name + "/" + entAnsible.PlaybookName + "💔" + string(entAnsible.Method) + "💔" + entAnsible.Inventory).
 			SetNumber(taskCount + 2).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Execute: %v", err)
@@ -1074,8 +1074,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs("/tmp/" + entAnsible.Name).
 			SetNumber(taskCount + 3).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
@@ -1086,8 +1086,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs("/tmp/" + entAnsible.Name + ".zip").
 			SetNumber(taskCount + 4).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)

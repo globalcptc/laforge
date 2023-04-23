@@ -43,7 +43,7 @@ type hostConf struct {
 
 func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Build) (string, error) {
 
-	entEnvrioment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	entEnvrioment, err := entBuild.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -56,7 +56,7 @@ func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Bu
 		RevisionNumber:  entBuild.Revision,
 		Teams:           []teamConf{},
 	}
-	entTeams, err := entBuild.QueryBuildToTeam().All(ctx)
+	entTeams, err := entBuild.QueryTeams().All(ctx)
 	if err != nil {
 		return "", err
 	}

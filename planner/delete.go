@@ -39,7 +39,7 @@ func DeleteBuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.Ser
 		return false, err
 	}
 	rdb.Publish(deleteContext, "updatedBuildCommit", entDeleteCommit.ID.String())
-	err = entBuild.Update().SetBuildToLatestBuildCommit(entDeleteCommit).Exec(deleteContext)
+	err = entBuild.Update().SetLatestBuildCommit(entDeleteCommit).Exec(deleteContext)
 	if err != nil {
 		spawnedDelete <- false
 		logger.Log.Errorf("error while setting latest commit on build: %v", err)
@@ -83,7 +83,7 @@ func DeleteBuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.Ser
 	}
 	rdb.Publish(deleteContext, "updatedBuildCommit", entDeleteCommit.ID.String())
 
-	entPlans, err := entBuild.QueryBuildToPlan().All(deleteContext)
+	entPlans, err := entBuild.QueryPlans().All(deleteContext)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(deleteContext, client, rdb, taskStatus, serverTask)
 		if err != nil {
@@ -114,7 +114,7 @@ func DeleteBuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.Ser
 
 	wg.Wait()
 
-	rootPlans, err := entBuild.QueryBuildToPlan().Where(plan.TypeEQ(plan.TypeStartBuild)).All(deleteContext)
+	rootPlans, err := entBuild.QueryPlans().Where(plan.TypeEQ(plan.TypeStartBuild)).All(deleteContext)
 	if err != nil {
 		logger.Log.Errorf("error querying root plans from build: %v", err)
 		taskStatus, serverTask, err = utils.FailServerTask(deleteContext, client, rdb, taskStatus, serverTask)
@@ -124,7 +124,7 @@ func DeleteBuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.Ser
 		return false, err
 	}
 	logger.Log.Infof("ROOT PLANS: %v", rootPlans)
-	environment, err := entBuild.QueryBuildToEnvironment().Only(deleteContext)
+	environment, err := entBuild.QueryEnvironment().Only(deleteContext)
 	if err != nil {
 		logger.Log.Errorf("error querying environment from build: %v", err)
 		taskStatus, serverTask, err = utils.FailServerTask(deleteContext, client, rdb, taskStatus, serverTask)
@@ -191,12 +191,12 @@ func DeleteBuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.Ser
 }
 
 func generateDeleteBuildCommit(ctx context.Context, client *ent.Client, entBuild *ent.Build) (*ent.BuildCommit, error) {
-	entPlans, err := entBuild.QueryBuildToPlan().All(ctx)
+	entPlans, err := entBuild.QueryPlans().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error querying plans from build: %v", err)
 	}
 
-	commitRevision, err := entBuild.QueryBuildToBuildCommits().Count(ctx)
+	commitRevision, err := entBuild.QueryBuildCommits().Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error counting build commits on build: %v", err)
 	}
@@ -250,7 +250,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 		if getStatusError != nil {
 			break
 		}
-		provisionedStatus, getStatusError = build.QueryBuildToStatus().Only(ctx)
+		provisionedStatus, getStatusError = build.QueryStatus().Only(ctx)
 	case plan.TypeStartTeam:
 		team, getStatusError := entPlan.QueryPlanToTeam().Only(ctx)
 		if getStatusError != nil {
@@ -550,13 +550,13 @@ func deleteHost(client *ent.Client, logger *logging.Logger, builder *builder.Bui
 	logger.Log.Infof("deleted %s successfully", entProHost.SubnetIP)
 
 	// Cleanup agent tasks
-	_, deleteErr := client.AgentTask.Delete().Where(agenttask.HasAgentTaskToProvisionedHostWith(provisionedhost.IDEQ(entProHost.ID))).Exec(ctx)
+	_, deleteErr := client.AgentTask.Delete().Where(agenttask.HasProvisionedHostWith(provisionedhost.IDEQ(entProHost.ID))).Exec(ctx)
 	if deleteErr != nil {
 		logger.Log.Errorf("error while deleting Agent Tasks for Provisioned Host: %v", err)
 		return deleteErr
 	}
 	// Cleanup agent statuses
-	_, deleteErr = client.AgentStatus.Delete().Where(agentstatus.HasAgentStatusToProvisionedHostWith(provisionedhost.IDEQ(entProHost.ID))).Exec(ctx)
+	_, deleteErr = client.AgentStatus.Delete().Where(agentstatus.HasProvisionedHostWith(provisionedhost.IDEQ(entProHost.ID))).Exec(ctx)
 	if deleteErr != nil {
 		logger.Log.Errorf("error while deleting Agent Statuses for Provisioned Host: %v", err)
 		return deleteErr

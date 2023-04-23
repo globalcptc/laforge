@@ -1476,7 +1476,7 @@ func (vs *VSphere) GenerateGuestCustomization(ctx context.Context, specName stri
 	if err != nil {
 		return nil, fmt.Errorf("error while querying gin file middleware from provisioned host: %v", err)
 	}
-	env, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().QueryTeamToBuild().QueryBuildToEnvironment().Only(ctx)
+	env, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().QueryTeamToBuild().QueryEnvironment().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while querying environment from provisioned host: %v", err)
 	}

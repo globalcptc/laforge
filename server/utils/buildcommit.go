@@ -17,7 +17,7 @@ func CreateRootCommit(client *ent.Client, rdb *redis.Client, entBuild *ent.Build
 	ctx := context.Background()
 	defer ctx.Done()
 
-	buildPlans, err := entBuild.QueryBuildToPlan().All(ctx)
+	buildPlans, err := entBuild.QueryPlans().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error querying plans from build: %v", err)
 	}

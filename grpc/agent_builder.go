@@ -84,7 +84,7 @@ func main() {
 			logrus.Errorf("Failed to Query Team: %v", err)
 		}
 		teamName := team.TeamNumber
-		env, err := team.QueryTeamToBuild().QueryBuildToEnvironment().Only(ctx)
+		env, err := team.QueryTeamToBuild().QueryEnvironment().Only(ctx)
 		if err != nil {
 			logrus.Errorf("Failed to Query Enviroment: %v", err)
 		}

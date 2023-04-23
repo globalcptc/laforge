@@ -148,10 +148,10 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 	entBuild, err := client.Build.Create().
 		SetRevision(len(entEnvironment.Edges.EnvironmentToBuild)).
 		SetEnvironmentRevision(entEnvironment.Revision).
-		SetBuildToRepoCommit(entRepoCommit).
-		SetBuildToEnvironment(entEnvironment).
-		SetBuildToStatus(entStatus).
-		SetBuildToCompetition(entCompetition).
+		SetRepoCommits(entRepoCommit).
+		SetEnvironment(entEnvironment).
+		SetStatus(entStatus).
+		SetCompetition(entCompetition).
 		SetVars(map[string]string{}).
 		Save(ctx)
 	if err != nil {
@@ -227,7 +227,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 			_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
 			return
 		}
-		err = entBuild.Update().SetBuildToLatestBuildCommit(entCommit).Exec(ctx)
+		err = entBuild.Update().SetLatestBuildCommit(entCommit).Exec(ctx)
 		if err != nil {
 			_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
 			return
@@ -266,7 +266,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		}
 		if isApproved {
 			logger.Log.Debug("-----\nCOMMIT APPROVED\n-----")
-			entEnvironment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+			entEnvironment, err := entBuild.QueryEnvironment().Only(ctx)
 			if err != nil {
 				logger.Log.Errorf("failed to query environment from build: %v", err)
 				return
@@ -329,7 +329,7 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 		logger.Log.Errorf("Failed to create Team Number %v for Build %v. Err: %v", teamNumber, entBuild.ID, err)
 		return nil, err
 	}
-	buildPlanNode, err := entBuild.QueryBuildToPlan().Where(plan.StepNumberEQ(0)).Only(ctx)
+	buildPlanNode, err := entBuild.QueryPlans().Where(plan.StepNumberEQ(0)).Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Plan Node for Build %v. Err: %v", entBuild.ID, err)
 		return nil, err
@@ -352,7 +352,7 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 		logger.Log.Errorf("Failed to create Plan Node for Team %v. Err: %v", teamNumber, err)
 		return nil, err
 	}
-	buildNetworks, err := entBuild.QueryBuildToEnvironment().QueryEnvironmentToNetwork().All(ctx)
+	buildNetworks, err := entBuild.QueryEnvironment().QueryEnvironmentToNetwork().All(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Environment for Build %v. Err: %v", entBuild.ID, err)
 		return nil, err
@@ -479,7 +479,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		WithHostDependencyToNetwork().
 		All(ctx)
 
-	currentBuild := pNetwork.QueryProvisionedNetworkToBuild().WithBuildToEnvironment().OnlyX(ctx)
+	currentBuild := pNetwork.QueryProvisionedNetworkToBuild().WithEnvironment().OnlyX(ctx)
 	currentTeam := pNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 
 	for _, entHostDependency := range entHostDependencies {
@@ -605,7 +605,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		isWindowsHost = true
 	}
 
-	binaryPath := path.Join("builds", currentBuild.Edges.BuildToEnvironment.Name, fmt.Sprint(currentBuild.Revision), fmt.Sprint(currentTeam.TeamNumber), pNetwork.Name, entHost.Hostname)
+	binaryPath := path.Join("builds", currentBuild.Edges.Environment.Name, fmt.Sprint(currentBuild.Revision), fmt.Sprint(currentTeam.TeamNumber), pNetwork.Name, entHost.Hostname)
 	os.MkdirAll(binaryPath, 0755)
 	binaryName := path.Join(binaryPath, "laforgeAgent")
 	if isWindowsHost {
@@ -721,7 +721,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	}).Debug("creating provisioned step")
 	var entProvisioningStep *ent.ProvisioningStep
 	currentEnvironment, err := pHost.QueryProvisionedHostToHost().QueryHostToEnvironment().Only(ctx)
-	currentBuild := pHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToBuild().WithBuildToEnvironment().OnlyX(ctx)
+	currentBuild := pHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToBuild().WithEnvironment().OnlyX(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Current Environment for Provisoned Host %v. Err: %v", pHost.ID, err)
 		return nil, err
@@ -1017,7 +1017,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	// Check if step is ansible
 	entAnsible, err := client.Ansible.Query().Where(
 		ansible.And(
-			ansible.HasAnsibleFromEnvironmentWith(
+			ansible.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
 			ansible.HclIDEQ(hclID),
@@ -1090,12 +1090,12 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 		"prevPlan.Type":       prevPlan.Type,
 		"prevPlan.StepNumber": prevPlan.StepNumber,
 	}).Debug("creating provisioned scheduled step")
-	entBuild, err := entProvisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToBuild().WithBuildToEnvironment().Only(ctx)
+	entBuild, err := entProvisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToBuild().WithEnvironment().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed to query current build for environment: %v", err)
 		return fmt.Errorf("failed to query build from provisioned host: %v", err)
 	}
-	entCompetition, err := entBuild.QueryBuildToCompetition().Only(ctx)
+	entCompetition, err := entBuild.QueryCompetition().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed to query competition for provisioned host: %v", entProvisionedHost.ID, err)
 		return err
@@ -1338,7 +1338,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	// Check if step is ansible
 	entAnsible, err := client.Ansible.Query().Where(
 		ansible.And(
-			ansible.HasAnsibleFromEnvironmentWith(
+			ansible.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			ansible.HclIDEQ(entScheduledStep.Step),
@@ -1491,9 +1491,9 @@ func RenderScript(ctx context.Context, client *ent.Client, logger *logging.Logge
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
-	currentEnvironment := currentBuild.QueryBuildToEnvironment().OnlyX(ctx)
+	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
 	currentIncludedNetwork := currentEnvironment.QueryEnvironmentToIncludedNetwork().WithIncludedNetworkToHost().WithIncludedNetworkToNetwork().AllX(ctx)
-	currentCompetition := currentBuild.QueryBuildToCompetition().OnlyX(ctx)
+	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)
 	currentNetwork := currentProvisionedNetwork.QueryProvisionedNetworkToNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
 	currentIdentities := currentEnvironment.QueryEnvironmentToIdentity().AllX(ctx)
@@ -1578,7 +1578,7 @@ func renderFileDownload(ctx context.Context, logger *logging.Logger, entStep int
 	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
-	currentEnvironment := currentBuild.QueryBuildToEnvironment().OnlyX(ctx)
+	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
 
 	fileRelativePath := path.Join("builds", currentEnvironment.Name, fmt.Sprint(currentBuild.Revision), fmt.Sprint(currentTeam.TeamNumber), currentProvisionedNetwork.Name, currentHost.Hostname)
 	os.MkdirAll(fileRelativePath, 0755)
@@ -1643,9 +1643,9 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
-	currentEnvironment := currentBuild.QueryBuildToEnvironment().OnlyX(ctx)
+	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
 	currentIncludedNetwork := currentEnvironment.QueryEnvironmentToIncludedNetwork().WithIncludedNetworkToHost().WithIncludedNetworkToNetwork().AllX(ctx)
-	currentCompetition := currentBuild.QueryBuildToCompetition().OnlyX(ctx)
+	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)
 	currentNetwork := currentProvisionedNetwork.QueryProvisionedNetworkToNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
 	currentIdentities := currentEnvironment.QueryEnvironmentToIdentity().AllX(ctx)

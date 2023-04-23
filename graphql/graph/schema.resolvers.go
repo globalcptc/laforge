@@ -443,7 +443,7 @@ func (r *mutationResolver) ExecutePlan(ctx context.Context, buildUUID string) (*
 		return nil, fmt.Errorf("failed querying Build: %v", err)
 	}
 
-	entEnvironment, err := b.QueryBuildToEnvironment().Only(ctx)
+	entEnvironment, err := b.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query environment from build: %v", err)
 	}
@@ -490,7 +490,7 @@ func (r *mutationResolver) DeleteBuild(ctx context.Context, buildUUID string) (s
 		return "", fmt.Errorf("failed querying Build: %v", err)
 	}
 
-	entEnvironment, err := b.QueryBuildToEnvironment().Only(ctx)
+	entEnvironment, err := b.QueryEnvironment().Only(ctx)
 	if err != nil {
 		logrus.Errorf("failed to query environment from build: %v", err)
 		return "", err
@@ -519,7 +519,7 @@ func (r *mutationResolver) DeleteBuild(ctx context.Context, buildUUID string) (s
 
 	deleteIsSuccess := <-spawnedDelete
 	if deleteIsSuccess {
-		entBuildCommit, err := b.QueryBuildToLatestBuildCommit().Only(ctx)
+		entBuildCommit, err := b.QueryLatestBuildCommit().Only(ctx)
 		if err != nil {
 			return "", nil
 		}
@@ -552,7 +552,7 @@ func (r *mutationResolver) CreateTask(ctx context.Context, proHostUUID string, c
 		SetArgs(args).
 		SetNumber(taskCount).
 		SetState(agenttask.StateAWAITING).
-		SetAgentTaskToProvisionedHost(ph).
+		SetProvisionedHost(ph).
 		Save(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed Creating Agent Task: %v", err)
@@ -599,7 +599,7 @@ func (r *mutationResolver) Rebuild(ctx context.Context, rootPlans []*string) (bo
 	if err != nil {
 		return false, err
 	}
-	env, err := b.QueryBuildToEnvironment().First(ctx)
+	env, err := b.QueryEnvironment().First(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -698,7 +698,7 @@ func (r *mutationResolver) CreateAgentTasks(ctx context.Context, hostHclid strin
 	agentTasksReturn := []*ent.AgentTask{}
 
 	for _, team_number := range teams {
-		entTeam, err := entBuild.QueryBuildToTeam().Where(team.TeamNumberEQ(team_number)).Only(ctx)
+		entTeam, err := entBuild.QueryTeams().Where(team.TeamNumberEQ(team_number)).Only(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed querying team: %v", err)
 		}
@@ -716,7 +716,7 @@ func (r *mutationResolver) CreateAgentTasks(ctx context.Context, hostHclid strin
 				SetArgs(strings.Join(args, "💔")).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(pHost).
+				SetProvisionedHost(pHost).
 				Save(ctx)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create agent task: %v", err)
@@ -753,7 +753,7 @@ func (r *mutationResolver) CreateBatchAgentTasks(ctx context.Context, proHostUUI
 			SetArgs(strings.Join(args, "💔")).
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
+			SetProvisionedHost(entProvisionedHost).
 			Save(ctx)
 		if err != nil {
 			return agentTasksReturn, fmt.Errorf("failed to create agent task: %v", err)
@@ -1347,7 +1347,7 @@ func (r *queryResolver) GetBuildCommits(ctx context.Context, envUUID string) ([]
 		return nil, fmt.Errorf("failed casting envUUID to UUID: %v", err)
 	}
 
-	buildCommits, err := r.client.Environment.Query().Where(environment.IDEQ(uuid)).QueryEnvironmentToBuild().QueryBuildToBuildCommits().All(ctx)
+	buildCommits, err := r.client.Environment.Query().Where(environment.IDEQ(uuid)).QueryEnvironmentToBuild().QueryBuildCommits().All(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed querying BuildCommits from Environment: %v", err)
@@ -1394,7 +1394,7 @@ func (r *queryResolver) AgentStatus(ctx context.Context, clientID string) (*ent.
 	}
 
 	status, err := r.client.AgentStatus.Query().
-		Where(agentstatus.HasAgentStatusToProvisionedHostWith(provisionedhost.IDEQ(uuid))).
+		Where(agentstatus.HasProvisionedHostWith(provisionedhost.IDEQ(uuid))).
 		Order(ent.Desc(agentstatus.FieldTimestamp)).
 		First(ctx)
 
@@ -1422,7 +1422,7 @@ func (r *queryResolver) GetUserList(ctx context.Context) ([]*ent.AuthUser, error
 }
 
 func (r *queryResolver) GetCurrentUserTasks(ctx context.Context) ([]*ent.ServerTask, error) {
-	return r.client.AuthUser.Query().QueryAuthUserToServerTasks().All(ctx)
+	return r.client.AuthUser.Query().QueryServerTasks().All(ctx)
 }
 
 func (r *queryResolver) GetAgentTasks(ctx context.Context, proStepUUID string) ([]*ent.AgentTask, error) {
@@ -1450,7 +1450,7 @@ func (r *queryResolver) ListAgentStatuses(ctx context.Context, buildUUID string)
 		return nil, fmt.Errorf("failed casting buildUUID to UUID")
 	}
 
-	agentStatuses, err := r.client.Build.Query().Where(build.IDEQ(uuid)).QueryBuildToAgentStatuses().All(ctx)
+	agentStatuses, err := r.client.Build.Query().Where(build.IDEQ(uuid)).QueryAgentStatuses().All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1466,7 +1466,7 @@ func (r *queryResolver) ListBuildStatuses(ctx context.Context, buildUUID string)
 
 	statuses := make([]*ent.Status, 0)
 
-	buildStatus, err := r.client.Build.Query().Where(build.IDEQ(uuid)).QueryBuildToStatus().Only(ctx)
+	buildStatus, err := r.client.Build.Query().Where(build.IDEQ(uuid)).QueryStatus().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed querying build status from build: %v", err)
 	}
@@ -1511,12 +1511,12 @@ func (r *queryResolver) GetAllAgentStatus(ctx context.Context, buildUUID string,
 		return nil, err
 	}
 
-	totalAgentStatuses, err := r.client.AgentStatus.Query().Where(agentstatus.HasAgentStatusToBuildWith(build.IDEQ(uuid))).Count(ctx)
+	totalAgentStatuses, err := r.client.AgentStatus.Query().Where(agentstatus.HasBuildWith(build.IDEQ(uuid))).Count(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	agentStatuses, err := r.client.AgentStatus.Query().Where(agentstatus.HasAgentStatusToBuildWith(build.IDEQ(uuid))).Order(ent.Asc(agentstatus.FieldTimestamp)).Limit(count).Offset(offset).All(ctx)
+	agentStatuses, err := r.client.AgentStatus.Query().Where(agentstatus.HasBuildWith(build.IDEQ(uuid))).Order(ent.Asc(agentstatus.FieldTimestamp)).Limit(count).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1565,51 +1565,51 @@ func (r *queryResolver) GetPlanStatusCounts(ctx context.Context, buildUUID strin
 	if err != nil {
 		return nil, err
 	}
-	planningCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePLANNING))).Count(ctx)
+	planningCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePLANNING))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all planning plans from build: %v", err)
 	}
-	awaitingCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateAWAITING))).Count(ctx)
+	awaitingCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateAWAITING))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all awaiting plans from build: %v", err)
 	}
-	parentAwaitingCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePARENTAWAITING))).Count(ctx)
+	parentAwaitingCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePARENTAWAITING))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all parent_awaiting plans from build: %v", err)
 	}
-	inProgressCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateINPROGRESS))).Count(ctx)
+	inProgressCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateINPROGRESS))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all in_progress plans from build: %v", err)
 	}
-	failedCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateFAILED))).Count(ctx)
+	failedCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateFAILED))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all failed plans from build: %v", err)
 	}
-	completeCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateCOMPLETE))).Count(ctx)
+	completeCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateCOMPLETE))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all complete plans from build: %v", err)
 	}
-	taintedCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTAINTED))).Count(ctx)
+	taintedCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTAINTED))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all tainted plans from build: %v", err)
 	}
-	toDeleteCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTODELETE))).Count(ctx)
+	toDeleteCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTODELETE))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all to_delete plans from build: %v", err)
 	}
-	deleteInProgressCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateDELETEINPROGRESS))).Count(ctx)
+	deleteInProgressCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateDELETEINPROGRESS))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all delete_in_progress plans from build: %v", err)
 	}
-	deletedCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateDELETED))).Count(ctx)
+	deletedCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateDELETED))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all deleted plans from build: %v", err)
 	}
-	toRebuildCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTOREBUILD))).Count(ctx)
+	toRebuildCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTOREBUILD))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all to_rebuild plans from build: %v", err)
 	}
-	cancelledCount, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateCANCELLED))).Count(ctx)
+	cancelledCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateCANCELLED))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all cancelled plans from build: %v", err)
 	}

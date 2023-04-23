@@ -274,7 +274,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	// Check if step is ansible
 	entAnsible, err := client.Ansible.Query().Where(
 		ansible.And(
-			ansible.HasAnsibleFromEnvironmentWith(
+			ansible.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			ansible.HclIDEQ(entScheduledStep.Step),

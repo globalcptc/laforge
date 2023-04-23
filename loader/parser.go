@@ -959,7 +959,7 @@ func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 			Where(
 				ansible.And(
 					ansible.HclIDEQ(cAnsible.HclID),
-					ansible.HasAnsibleFromEnvironmentWith(environment.HclIDEQ(envHclID)),
+					ansible.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)

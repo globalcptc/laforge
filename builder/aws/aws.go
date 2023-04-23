@@ -151,7 +151,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	if err != nil {
 		return fmt.Errorf("couldn't query build from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
-	entCompetition, err := entBuild.QueryBuildToCompetition().Only(ctx)
+	entCompetition, err := entBuild.QueryCompetition().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query competition from build \"%v\": %v", entBuild.ID, err)
 	}
@@ -174,7 +174,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		return fmt.Errorf("couldn't query network from provisioned network \"%v\": %v", entProNetwork.Name, err)
 	}
 
-	entEnvironment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	entEnvironment, err := entBuild.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query environment from competition \"%v\": %v", entCompetition.ID, err)
 	}
@@ -512,7 +512,7 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 		return fmt.Errorf("couldn't query build from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
 
-	entEnvironment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	entEnvironment, err := entBuild.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query environment from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
@@ -610,7 +610,7 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	return
 }
 
-//DeployTeam Deploys VPC for a team
+// DeployTeam Deploys VPC for a team
 func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	ctxClosing := context.Background()
 	defer ctxClosing.Done()
@@ -619,7 +619,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	if err != nil {
 		return fmt.Errorf("couldn't query build from team \"%v\": %v", entTeam.TeamNumber, err)
 	}
-	entEnvironment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	entEnvironment, err := entBuild.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query environment from build \"%v\": %v", entTeam.TeamNumber, err)
 	}
@@ -856,7 +856,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	return nil
 }
 
-//TeardownHost Terminates a host and its security group
+// TeardownHost Terminates a host and its security group
 func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
 	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
@@ -1005,7 +1005,7 @@ func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwor
 	return nil
 }
 
-//TeardownTeam Terminates VPC
+// TeardownTeam Terminates VPC
 func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	// ###################
 	// Wait on open thread

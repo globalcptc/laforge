@@ -56,7 +56,7 @@ package main
 // 	if err != nil {
 // 		log.Fatalf("error querying build from env: %v", err)
 // 	}
-// 	teams, err := build.QueryBuildToTeam().All(ctx)
+// 	teams, err := build.QueryTeams().All(ctx)
 // 	if err != nil {
 // 		log.Fatalf("error querying teams from build: %v", err)
 // 	}
