@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
 	"github.com/gen0cide/laforge/ent/host"
@@ -48,8 +49,8 @@ type ProvisionedHost struct {
 	HCLProvisioningSteps []*ProvisioningStep `json:"ProvisioningSteps,omitempty"`
 	// ProvisioningScheduledSteps holds the value of the ProvisioningScheduledSteps edge.
 	HCLProvisioningScheduledSteps []*ProvisioningScheduledStep `json:"ProvisioningScheduledSteps,omitempty"`
-	// AgentStatuses holds the value of the AgentStatuses edge.
-	HCLAgentStatuses []*AgentStatus `json:"AgentStatuses,omitempty"`
+	// AgentStatus holds the value of the AgentStatus edge.
+	HCLAgentStatus *AgentStatus `json:"AgentStatus,omitempty"`
 	// AgentTasks holds the value of the AgentTasks edge.
 	HCLAgentTasks []*AgentTask `json:"AgentTasks,omitempty"`
 	// Plan holds the value of the Plan edge.
@@ -57,6 +58,7 @@ type ProvisionedHost struct {
 	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
 	HCLGinFileMiddleware *GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
 	//
+	agent_status_provisioned_host        *uuid.UUID
 	gin_file_middleware_provisioned_host *uuid.UUID
 	plan_provisioned_host                *uuid.UUID
 	provisioned_host_provisioned_network *uuid.UUID
@@ -81,8 +83,8 @@ type ProvisionedHostEdges struct {
 	ProvisioningSteps []*ProvisioningStep `json:"ProvisioningSteps,omitempty"`
 	// ProvisioningScheduledSteps holds the value of the ProvisioningScheduledSteps edge.
 	ProvisioningScheduledSteps []*ProvisioningScheduledStep `json:"ProvisioningScheduledSteps,omitempty"`
-	// AgentStatuses holds the value of the AgentStatuses edge.
-	AgentStatuses []*AgentStatus `json:"AgentStatuses,omitempty"`
+	// AgentStatus holds the value of the AgentStatus edge.
+	AgentStatus *AgentStatus `json:"AgentStatus,omitempty"`
 	// AgentTasks holds the value of the AgentTasks edge.
 	AgentTasks []*AgentTask `json:"AgentTasks,omitempty"`
 	// Plan holds the value of the Plan edge.
@@ -182,13 +184,18 @@ func (e ProvisionedHostEdges) ProvisioningScheduledStepsOrErr() ([]*Provisioning
 	return nil, &NotLoadedError{edge: "ProvisioningScheduledSteps"}
 }
 
-// AgentStatusesOrErr returns the AgentStatuses value or an error if the edge
-// was not loaded in eager-loading.
-func (e ProvisionedHostEdges) AgentStatusesOrErr() ([]*AgentStatus, error) {
+// AgentStatusOrErr returns the AgentStatus value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProvisionedHostEdges) AgentStatusOrErr() (*AgentStatus, error) {
 	if e.loadedTypes[7] {
-		return e.AgentStatuses, nil
+		if e.AgentStatus == nil {
+			// The edge AgentStatus was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: agentstatus.Label}
+		}
+		return e.AgentStatus, nil
 	}
-	return nil, &NotLoadedError{edge: "AgentStatuses"}
+	return nil, &NotLoadedError{edge: "AgentStatus"}
 }
 
 // AgentTasksOrErr returns the AgentTasks value or an error if the edge
@@ -239,17 +246,19 @@ func (*ProvisionedHost) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case provisionedhost.FieldID:
 			values[i] = new(uuid.UUID)
-		case provisionedhost.ForeignKeys[0]: // gin_file_middleware_provisioned_host
+		case provisionedhost.ForeignKeys[0]: // agent_status_provisioned_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisionedhost.ForeignKeys[1]: // plan_provisioned_host
+		case provisionedhost.ForeignKeys[1]: // gin_file_middleware_provisioned_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisionedhost.ForeignKeys[2]: // provisioned_host_provisioned_network
+		case provisionedhost.ForeignKeys[2]: // plan_provisioned_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisionedhost.ForeignKeys[3]: // provisioned_host_host
+		case provisionedhost.ForeignKeys[3]: // provisioned_host_provisioned_network
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisionedhost.ForeignKeys[4]: // provisioned_host_end_step_plan
+		case provisionedhost.ForeignKeys[4]: // provisioned_host_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisionedhost.ForeignKeys[5]: // provisioned_host_build
+		case provisionedhost.ForeignKeys[5]: // provisioned_host_end_step_plan
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case provisionedhost.ForeignKeys[6]: // provisioned_host_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type ProvisionedHost", columns[i])
@@ -295,40 +304,47 @@ func (ph *ProvisionedHost) assignValues(columns []string, values []interface{}) 
 			}
 		case provisionedhost.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field agent_status_provisioned_host", values[i])
+			} else if value.Valid {
+				ph.agent_status_provisioned_host = new(uuid.UUID)
+				*ph.agent_status_provisioned_host = *value.S.(*uuid.UUID)
+			}
+		case provisionedhost.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field gin_file_middleware_provisioned_host", values[i])
 			} else if value.Valid {
 				ph.gin_file_middleware_provisioned_host = new(uuid.UUID)
 				*ph.gin_file_middleware_provisioned_host = *value.S.(*uuid.UUID)
 			}
-		case provisionedhost.ForeignKeys[1]:
+		case provisionedhost.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field plan_provisioned_host", values[i])
 			} else if value.Valid {
 				ph.plan_provisioned_host = new(uuid.UUID)
 				*ph.plan_provisioned_host = *value.S.(*uuid.UUID)
 			}
-		case provisionedhost.ForeignKeys[2]:
+		case provisionedhost.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioned_host_provisioned_network", values[i])
 			} else if value.Valid {
 				ph.provisioned_host_provisioned_network = new(uuid.UUID)
 				*ph.provisioned_host_provisioned_network = *value.S.(*uuid.UUID)
 			}
-		case provisionedhost.ForeignKeys[3]:
+		case provisionedhost.ForeignKeys[4]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioned_host_host", values[i])
 			} else if value.Valid {
 				ph.provisioned_host_host = new(uuid.UUID)
 				*ph.provisioned_host_host = *value.S.(*uuid.UUID)
 			}
-		case provisionedhost.ForeignKeys[4]:
+		case provisionedhost.ForeignKeys[5]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioned_host_end_step_plan", values[i])
 			} else if value.Valid {
 				ph.provisioned_host_end_step_plan = new(uuid.UUID)
 				*ph.provisioned_host_end_step_plan = *value.S.(*uuid.UUID)
 			}
-		case provisionedhost.ForeignKeys[5]:
+		case provisionedhost.ForeignKeys[6]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioned_host_build", values[i])
 			} else if value.Valid {
@@ -375,9 +391,9 @@ func (ph *ProvisionedHost) QueryProvisioningScheduledSteps() *ProvisioningSchedu
 	return (&ProvisionedHostClient{config: ph.config}).QueryProvisioningScheduledSteps(ph)
 }
 
-// QueryAgentStatuses queries the "AgentStatuses" edge of the ProvisionedHost entity.
-func (ph *ProvisionedHost) QueryAgentStatuses() *AgentStatusQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryAgentStatuses(ph)
+// QueryAgentStatus queries the "AgentStatus" edge of the ProvisionedHost entity.
+func (ph *ProvisionedHost) QueryAgentStatus() *AgentStatusQuery {
+	return (&ProvisionedHostClient{config: ph.config}).QueryAgentStatus(ph)
 }
 
 // QueryAgentTasks queries the "AgentTasks" edge of the ProvisionedHost entity.

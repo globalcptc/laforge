@@ -163,19 +163,23 @@ func (phc *ProvisionedHostCreate) AddProvisioningScheduledSteps(p ...*Provisioni
 	return phc.AddProvisioningScheduledStepIDs(ids...)
 }
 
-// AddAgentStatuseIDs adds the "AgentStatuses" edge to the AgentStatus entity by IDs.
-func (phc *ProvisionedHostCreate) AddAgentStatuseIDs(ids ...uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.AddAgentStatuseIDs(ids...)
+// SetAgentStatusID sets the "AgentStatus" edge to the AgentStatus entity by ID.
+func (phc *ProvisionedHostCreate) SetAgentStatusID(id uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.SetAgentStatusID(id)
 	return phc
 }
 
-// AddAgentStatuses adds the "AgentStatuses" edges to the AgentStatus entity.
-func (phc *ProvisionedHostCreate) AddAgentStatuses(a ...*AgentStatus) *ProvisionedHostCreate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
+// SetNillableAgentStatusID sets the "AgentStatus" edge to the AgentStatus entity by ID if the given value is not nil.
+func (phc *ProvisionedHostCreate) SetNillableAgentStatusID(id *uuid.UUID) *ProvisionedHostCreate {
+	if id != nil {
+		phc = phc.SetAgentStatusID(*id)
 	}
-	return phc.AddAgentStatuseIDs(ids...)
+	return phc
+}
+
+// SetAgentStatus sets the "AgentStatus" edge to the AgentStatus entity.
+func (phc *ProvisionedHostCreate) SetAgentStatus(a *AgentStatus) *ProvisionedHostCreate {
+	return phc.SetAgentStatusID(a.ID)
 }
 
 // AddAgentTaskIDs adds the "AgentTasks" edge to the AgentTask entity by IDs.
@@ -536,12 +540,12 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := phc.mutation.AgentStatusesIDs(); len(nodes) > 0 {
+	if nodes := phc.mutation.AgentStatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisionedhost.AgentStatusesTable,
-			Columns: []string{provisionedhost.AgentStatusesColumn},
+			Table:   provisionedhost.AgentStatusTable,
+			Columns: []string{provisionedhost.AgentStatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -553,6 +557,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.agent_status_provisioned_host = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := phc.mutation.AgentTasksIDs(); len(nodes) > 0 {

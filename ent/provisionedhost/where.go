@@ -432,25 +432,25 @@ func HasProvisioningScheduledStepsWith(preds ...predicate.ProvisioningScheduledS
 	})
 }
 
-// HasAgentStatuses applies the HasEdge predicate on the "AgentStatuses" edge.
-func HasAgentStatuses() predicate.ProvisionedHost {
+// HasAgentStatus applies the HasEdge predicate on the "AgentStatus" edge.
+func HasAgentStatus() predicate.ProvisionedHost {
 	return predicate.ProvisionedHost(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AgentStatusesTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, AgentStatusesTable, AgentStatusesColumn),
+			sqlgraph.To(AgentStatusTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, AgentStatusTable, AgentStatusColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAgentStatusesWith applies the HasEdge predicate on the "AgentStatuses" edge with a given conditions (other predicates).
-func HasAgentStatusesWith(preds ...predicate.AgentStatus) predicate.ProvisionedHost {
+// HasAgentStatusWith applies the HasEdge predicate on the "AgentStatus" edge with a given conditions (other predicates).
+func HasAgentStatusWith(preds ...predicate.AgentStatus) predicate.ProvisionedHost {
 	return predicate.ProvisionedHost(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AgentStatusesInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, AgentStatusesTable, AgentStatusesColumn),
+			sqlgraph.To(AgentStatusInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, AgentStatusTable, AgentStatusColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

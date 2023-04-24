@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -81,7 +82,7 @@ func (asq *AgentStatusQuery) QueryProvisionedHost() *ProvisionedHostQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agentstatus.Table, agentstatus.FieldID, selector),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, agentstatus.ProvisionedHostTable, agentstatus.ProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, agentstatus.ProvisionedHostTable, agentstatus.ProvisionedHostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(asq.driver.Dialect(), step)
 		return fromU, nil
@@ -432,7 +433,7 @@ func (asq *AgentStatusQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 			asq.withBuild != nil,
 		}
 	)
-	if asq.withProvisionedHost != nil || asq.withProvisionedNetwork != nil || asq.withBuild != nil {
+	if asq.withProvisionedNetwork != nil || asq.withBuild != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -478,31 +479,30 @@ func (asq *AgentStatusQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 }
 
 func (asq *AgentStatusQuery) loadProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*AgentStatus, init func(*AgentStatus), assign func(*AgentStatus, *ProvisionedHost)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*AgentStatus)
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*AgentStatus)
 	for i := range nodes {
-		if nodes[i].agent_status_provisioned_host == nil {
-			continue
-		}
-		fk := *nodes[i].agent_status_provisioned_host
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
 	}
-	query.Where(provisionedhost.IDIn(ids...))
+	query.withFKs = true
+	query.Where(predicate.ProvisionedHost(func(s *sql.Selector) {
+		s.Where(sql.InValues(agentstatus.ProvisionedHostColumn, fks...))
+	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
+		fk := n.agent_status_provisioned_host
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "agent_status_provisioned_host" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_status_provisioned_host" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_status_provisioned_host" returned %v for node %v`, *fk, n.ID)
 		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
+		assign(node, n)
 	}
 	return nil
 }

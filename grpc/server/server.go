@@ -70,7 +70,7 @@ func (s *Server) GetHeartBeat(ctx context.Context, in *pb.HeartbeatRequest) (*pb
 		logrus.Errorf("GRPC SERVER ERROR: Cannot find client %v build. Error: %v", in.GetClientId(), err)
 		return &pb.HeartbeatReply{Status: message, AvalibleTasks: false}, nil
 	}
-	existingEntAgentStatus, err := ph.QueryAgentStatuses().First(ctx)
+	existingEntAgentStatus, err := ph.QueryAgentStatus().Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			createdEntAgentStatus, err := s.Client.AgentStatus.

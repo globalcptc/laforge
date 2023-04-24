@@ -59,7 +59,6 @@ type AgentStatus struct {
 	// Build holds the value of the Build edge.
 	HCLBuild *Build `json:"Build,omitempty"`
 	//
-	agent_status_provisioned_host    *uuid.UUID
 	agent_status_provisioned_network *uuid.UUID
 	agent_status_build               *uuid.UUID
 }
@@ -132,11 +131,9 @@ func (*AgentStatus) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case agentstatus.FieldID:
 			values[i] = new(uuid.UUID)
-		case agentstatus.ForeignKeys[0]: // agent_status_provisioned_host
+		case agentstatus.ForeignKeys[0]: // agent_status_provisioned_network
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case agentstatus.ForeignKeys[1]: // agent_status_provisioned_network
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case agentstatus.ForeignKeys[2]: // agent_status_build
+		case agentstatus.ForeignKeys[1]: // agent_status_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type AgentStatus", columns[i])
@@ -245,19 +242,12 @@ func (as *AgentStatus) assignValues(columns []string, values []interface{}) erro
 			}
 		case agentstatus.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field agent_status_provisioned_host", values[i])
-			} else if value.Valid {
-				as.agent_status_provisioned_host = new(uuid.UUID)
-				*as.agent_status_provisioned_host = *value.S.(*uuid.UUID)
-			}
-		case agentstatus.ForeignKeys[1]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field agent_status_provisioned_network", values[i])
 			} else if value.Valid {
 				as.agent_status_provisioned_network = new(uuid.UUID)
 				*as.agent_status_provisioned_network = *value.S.(*uuid.UUID)
 			}
-		case agentstatus.ForeignKeys[2]:
+		case agentstatus.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field agent_status_build", values[i])
 			} else if value.Valid {

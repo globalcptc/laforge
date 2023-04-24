@@ -51,7 +51,6 @@ var (
 		{Name: "free_mem", Type: field.TypeInt64},
 		{Name: "used_mem", Type: field.TypeInt64},
 		{Name: "timestamp", Type: field.TypeInt64},
-		{Name: "agent_status_provisioned_host", Type: field.TypeUUID, Nullable: true},
 		{Name: "agent_status_provisioned_network", Type: field.TypeUUID, Nullable: true},
 		{Name: "agent_status_build", Type: field.TypeUUID, Nullable: true},
 	}
@@ -62,20 +61,14 @@ var (
 		PrimaryKey: []*schema.Column{AgentStatusColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "agent_status_provisioned_hosts_ProvisionedHost",
-				Columns:    []*schema.Column{AgentStatusColumns[15]},
-				RefColumns: []*schema.Column{ProvisionedHostsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
 				Symbol:     "agent_status_provisioned_networks_ProvisionedNetwork",
-				Columns:    []*schema.Column{AgentStatusColumns[16]},
+				Columns:    []*schema.Column{AgentStatusColumns[15]},
 				RefColumns: []*schema.Column{ProvisionedNetworksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "agent_status_builds_Build",
-				Columns:    []*schema.Column{AgentStatusColumns[17]},
+				Columns:    []*schema.Column{AgentStatusColumns[16]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -716,6 +709,7 @@ var (
 		{Name: "subnet_ip", Type: field.TypeString},
 		{Name: "addon_type", Type: field.TypeEnum, Nullable: true, Enums: []string{"DNS"}},
 		{Name: "vars", Type: field.TypeJSON},
+		{Name: "agent_status_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "gin_file_middleware_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_host_provisioned_network", Type: field.TypeUUID},
@@ -730,38 +724,44 @@ var (
 		PrimaryKey: []*schema.Column{ProvisionedHostsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provisioned_hosts_gin_file_middlewares_ProvisionedHost",
+				Symbol:     "provisioned_hosts_agent_status_ProvisionedHost",
 				Columns:    []*schema.Column{ProvisionedHostsColumns[4]},
+				RefColumns: []*schema.Column{AgentStatusColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provisioned_hosts_gin_file_middlewares_ProvisionedHost",
+				Columns:    []*schema.Column{ProvisionedHostsColumns[5]},
 				RefColumns: []*schema.Column{GinFileMiddlewaresColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "provisioned_hosts_plans_ProvisionedHost",
-				Columns:    []*schema.Column{ProvisionedHostsColumns[5]},
+				Columns:    []*schema.Column{ProvisionedHostsColumns[6]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "provisioned_hosts_provisioned_networks_ProvisionedNetwork",
-				Columns:    []*schema.Column{ProvisionedHostsColumns[6]},
+				Columns:    []*schema.Column{ProvisionedHostsColumns[7]},
 				RefColumns: []*schema.Column{ProvisionedNetworksColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "provisioned_hosts_hosts_Host",
-				Columns:    []*schema.Column{ProvisionedHostsColumns[7]},
+				Columns:    []*schema.Column{ProvisionedHostsColumns[8]},
 				RefColumns: []*schema.Column{HostsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "provisioned_hosts_plans_EndStepPlan",
-				Columns:    []*schema.Column{ProvisionedHostsColumns[8]},
+				Columns:    []*schema.Column{ProvisionedHostsColumns[9]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provisioned_hosts_builds_Build",
-				Columns:    []*schema.Column{ProvisionedHostsColumns[9]},
+				Columns:    []*schema.Column{ProvisionedHostsColumns[10]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1596,9 +1596,8 @@ var (
 func init() {
 	AdhocPlansTable.ForeignKeys[0].RefTable = BuildsTable
 	AdhocPlansTable.ForeignKeys[1].RefTable = AgentTasksTable
-	AgentStatusTable.ForeignKeys[0].RefTable = ProvisionedHostsTable
-	AgentStatusTable.ForeignKeys[1].RefTable = ProvisionedNetworksTable
-	AgentStatusTable.ForeignKeys[2].RefTable = BuildsTable
+	AgentStatusTable.ForeignKeys[0].RefTable = ProvisionedNetworksTable
+	AgentStatusTable.ForeignKeys[1].RefTable = BuildsTable
 	AgentTasksTable.ForeignKeys[0].RefTable = ProvisioningStepsTable
 	AgentTasksTable.ForeignKeys[1].RefTable = ProvisioningScheduledStepsTable
 	AgentTasksTable.ForeignKeys[2].RefTable = ProvisionedHostsTable
@@ -1630,12 +1629,13 @@ func init() {
 	PlansTable.ForeignKeys[0].RefTable = BuildsTable
 	PlanDiffsTable.ForeignKeys[0].RefTable = BuildCommitsTable
 	PlanDiffsTable.ForeignKeys[1].RefTable = PlansTable
-	ProvisionedHostsTable.ForeignKeys[0].RefTable = GinFileMiddlewaresTable
-	ProvisionedHostsTable.ForeignKeys[1].RefTable = PlansTable
-	ProvisionedHostsTable.ForeignKeys[2].RefTable = ProvisionedNetworksTable
-	ProvisionedHostsTable.ForeignKeys[3].RefTable = HostsTable
-	ProvisionedHostsTable.ForeignKeys[4].RefTable = PlansTable
-	ProvisionedHostsTable.ForeignKeys[5].RefTable = BuildsTable
+	ProvisionedHostsTable.ForeignKeys[0].RefTable = AgentStatusTable
+	ProvisionedHostsTable.ForeignKeys[1].RefTable = GinFileMiddlewaresTable
+	ProvisionedHostsTable.ForeignKeys[2].RefTable = PlansTable
+	ProvisionedHostsTable.ForeignKeys[3].RefTable = ProvisionedNetworksTable
+	ProvisionedHostsTable.ForeignKeys[4].RefTable = HostsTable
+	ProvisionedHostsTable.ForeignKeys[5].RefTable = PlansTable
+	ProvisionedHostsTable.ForeignKeys[6].RefTable = BuildsTable
 	ProvisionedNetworksTable.ForeignKeys[0].RefTable = PlansTable
 	ProvisionedNetworksTable.ForeignKeys[1].RefTable = NetworksTable
 	ProvisionedNetworksTable.ForeignKeys[2].RefTable = BuildsTable

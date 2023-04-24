@@ -488,7 +488,7 @@ type ComplexityRoot struct {
 
 	ProvisionedHost struct {
 		AddonType                  func(childComplexity int) int
-		AgentStatuses              func(childComplexity int) int
+		AgentStatus                func(childComplexity int) int
 		AgentTasks                 func(childComplexity int) int
 		Build                      func(childComplexity int) int
 		EndStepPlan                func(childComplexity int) int
@@ -3298,12 +3298,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ProvisionedHost.AddonType(childComplexity), true
 
-	case "ProvisionedHost.AgentStatuses":
-		if e.complexity.ProvisionedHost.AgentStatuses == nil {
+	case "ProvisionedHost.AgentStatus":
+		if e.complexity.ProvisionedHost.AgentStatus == nil {
 			break
 		}
 
-		return e.complexity.ProvisionedHost.AgentStatuses(childComplexity), true
+		return e.complexity.ProvisionedHost.AgentStatus(childComplexity), true
 
 	case "ProvisionedHost.AgentTasks":
 		if e.complexity.ProvisionedHost.AgentTasks == nil {
@@ -5320,7 +5320,7 @@ type ProvisionedHost {
   Build: Build!
   ProvisioningSteps: [ProvisioningStep]!
   ProvisioningScheduledSteps: [ProvisioningScheduledStep]!
-  AgentStatuses: [AgentStatus]!
+  AgentStatus: AgentStatus
   AgentTasks: [AgentTask]!
   Plan: Plan!
   GinFileMiddleware: GinFileMiddleware
@@ -7685,8 +7685,8 @@ func (ec *executionContext) fieldContext_AgentStatus_ProvisionedHost(ctx context
 				return ec.fieldContext_ProvisionedHost_ProvisioningSteps(ctx, field)
 			case "ProvisioningScheduledSteps":
 				return ec.fieldContext_ProvisionedHost_ProvisioningScheduledSteps(ctx, field)
-			case "AgentStatuses":
-				return ec.fieldContext_ProvisionedHost_AgentStatuses(ctx, field)
+			case "AgentStatus":
+				return ec.fieldContext_ProvisionedHost_AgentStatus(ctx, field)
 			case "AgentTasks":
 				return ec.fieldContext_ProvisionedHost_AgentTasks(ctx, field)
 			case "Plan":
@@ -8476,8 +8476,8 @@ func (ec *executionContext) fieldContext_AgentTask_ProvisionedHost(ctx context.C
 				return ec.fieldContext_ProvisionedHost_ProvisioningSteps(ctx, field)
 			case "ProvisioningScheduledSteps":
 				return ec.fieldContext_ProvisionedHost_ProvisioningScheduledSteps(ctx, field)
-			case "AgentStatuses":
-				return ec.fieldContext_ProvisionedHost_AgentStatuses(ctx, field)
+			case "AgentStatus":
+				return ec.fieldContext_ProvisionedHost_AgentStatus(ctx, field)
 			case "AgentTasks":
 				return ec.fieldContext_ProvisionedHost_AgentTasks(ctx, field)
 			case "Plan":
@@ -17583,8 +17583,8 @@ func (ec *executionContext) fieldContext_GinFileMiddleware_ProvisionedHost(ctx c
 				return ec.fieldContext_ProvisionedHost_ProvisioningSteps(ctx, field)
 			case "ProvisioningScheduledSteps":
 				return ec.fieldContext_ProvisionedHost_ProvisioningScheduledSteps(ctx, field)
-			case "AgentStatuses":
-				return ec.fieldContext_ProvisionedHost_AgentStatuses(ctx, field)
+			case "AgentStatus":
+				return ec.fieldContext_ProvisionedHost_AgentStatus(ctx, field)
 			case "AgentTasks":
 				return ec.fieldContext_ProvisionedHost_AgentTasks(ctx, field)
 			case "Plan":
@@ -23488,8 +23488,8 @@ func (ec *executionContext) fieldContext_Plan_ProvisionedHost(ctx context.Contex
 				return ec.fieldContext_ProvisionedHost_ProvisioningSteps(ctx, field)
 			case "ProvisioningScheduledSteps":
 				return ec.fieldContext_ProvisionedHost_ProvisioningScheduledSteps(ctx, field)
-			case "AgentStatuses":
-				return ec.fieldContext_ProvisionedHost_AgentStatuses(ctx, field)
+			case "AgentStatus":
+				return ec.fieldContext_ProvisionedHost_AgentStatus(ctx, field)
 			case "AgentTasks":
 				return ec.fieldContext_ProvisionedHost_AgentTasks(ctx, field)
 			case "Plan":
@@ -25336,8 +25336,8 @@ func (ec *executionContext) fieldContext_ProvisionedHost_ProvisioningScheduledSt
 	return fc, nil
 }
 
-func (ec *executionContext) _ProvisionedHost_AgentStatuses(ctx context.Context, field graphql.CollectedField, obj *ent.ProvisionedHost) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ProvisionedHost_AgentStatuses(ctx, field)
+func (ec *executionContext) _ProvisionedHost_AgentStatus(ctx context.Context, field graphql.CollectedField, obj *ent.ProvisionedHost) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProvisionedHost_AgentStatus(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -25350,24 +25350,21 @@ func (ec *executionContext) _ProvisionedHost_AgentStatuses(ctx context.Context, 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.AgentStatuses(ctx)
+		return obj.AgentStatus(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.([]*ent.AgentStatus)
+	res := resTmp.(*ent.AgentStatus)
 	fc.Result = res
-	return ec.marshalNAgentStatus2ᚕᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐAgentStatus(ctx, field.Selections, res)
+	return ec.marshalOAgentStatus2ᚖgithubᚗcomᚋgen0cideᚋlaforgeᚋentᚐAgentStatus(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_ProvisionedHost_AgentStatuses(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_ProvisionedHost_AgentStatus(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ProvisionedHost",
 		Field:      field,
@@ -26123,8 +26120,8 @@ func (ec *executionContext) fieldContext_ProvisionedNetwork_ProvisionedHosts(ctx
 				return ec.fieldContext_ProvisionedHost_ProvisioningSteps(ctx, field)
 			case "ProvisioningScheduledSteps":
 				return ec.fieldContext_ProvisionedHost_ProvisioningScheduledSteps(ctx, field)
-			case "AgentStatuses":
-				return ec.fieldContext_ProvisionedHost_AgentStatuses(ctx, field)
+			case "AgentStatus":
+				return ec.fieldContext_ProvisionedHost_AgentStatus(ctx, field)
 			case "AgentTasks":
 				return ec.fieldContext_ProvisionedHost_AgentTasks(ctx, field)
 			case "Plan":
@@ -26541,8 +26538,8 @@ func (ec *executionContext) fieldContext_ProvisioningScheduledStep_ProvisionedHo
 				return ec.fieldContext_ProvisionedHost_ProvisioningSteps(ctx, field)
 			case "ProvisioningScheduledSteps":
 				return ec.fieldContext_ProvisionedHost_ProvisioningScheduledSteps(ctx, field)
-			case "AgentStatuses":
-				return ec.fieldContext_ProvisionedHost_AgentStatuses(ctx, field)
+			case "AgentStatus":
+				return ec.fieldContext_ProvisionedHost_AgentStatus(ctx, field)
 			case "AgentTasks":
 				return ec.fieldContext_ProvisionedHost_AgentTasks(ctx, field)
 			case "Plan":
@@ -27477,8 +27474,8 @@ func (ec *executionContext) fieldContext_ProvisioningStep_ProvisionedHost(ctx co
 				return ec.fieldContext_ProvisionedHost_ProvisioningSteps(ctx, field)
 			case "ProvisioningScheduledSteps":
 				return ec.fieldContext_ProvisionedHost_ProvisioningScheduledSteps(ctx, field)
-			case "AgentStatuses":
-				return ec.fieldContext_ProvisionedHost_AgentStatuses(ctx, field)
+			case "AgentStatus":
+				return ec.fieldContext_ProvisionedHost_AgentStatus(ctx, field)
 			case "AgentTasks":
 				return ec.fieldContext_ProvisionedHost_AgentTasks(ctx, field)
 			case "Plan":
@@ -28498,8 +28495,8 @@ func (ec *executionContext) fieldContext_Query_provisionedHost(ctx context.Conte
 				return ec.fieldContext_ProvisionedHost_ProvisioningSteps(ctx, field)
 			case "ProvisioningScheduledSteps":
 				return ec.fieldContext_ProvisionedHost_ProvisioningScheduledSteps(ctx, field)
-			case "AgentStatuses":
-				return ec.fieldContext_ProvisionedHost_AgentStatuses(ctx, field)
+			case "AgentStatus":
+				return ec.fieldContext_ProvisionedHost_AgentStatus(ctx, field)
 			case "AgentTasks":
 				return ec.fieldContext_ProvisionedHost_AgentTasks(ctx, field)
 			case "Plan":
@@ -34236,8 +34233,8 @@ func (ec *executionContext) fieldContext_Status_ProvisionedHost(ctx context.Cont
 				return ec.fieldContext_ProvisionedHost_ProvisioningSteps(ctx, field)
 			case "ProvisioningScheduledSteps":
 				return ec.fieldContext_ProvisionedHost_ProvisioningScheduledSteps(ctx, field)
-			case "AgentStatuses":
-				return ec.fieldContext_ProvisionedHost_AgentStatuses(ctx, field)
+			case "AgentStatus":
+				return ec.fieldContext_ProvisionedHost_AgentStatus(ctx, field)
 			case "AgentTasks":
 				return ec.fieldContext_ProvisionedHost_AgentTasks(ctx, field)
 			case "Plan":
@@ -43529,7 +43526,7 @@ func (ec *executionContext) _ProvisionedHost(ctx context.Context, sel ast.Select
 				return innerFunc(ctx)
 
 			})
-		case "AgentStatuses":
+		case "AgentStatus":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -43538,10 +43535,7 @@ func (ec *executionContext) _ProvisionedHost(ctx context.Context, sel ast.Select
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._ProvisionedHost_AgentStatuses(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
+				res = ec._ProvisionedHost_AgentStatus(ctx, field, obj)
 				return res
 			}
 

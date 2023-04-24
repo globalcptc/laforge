@@ -653,7 +653,7 @@ func (c *AgentStatusClient) QueryProvisionedHost(as *AgentStatus) *ProvisionedHo
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agentstatus.Table, agentstatus.FieldID, id),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, agentstatus.ProvisionedHostTable, agentstatus.ProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, agentstatus.ProvisionedHostTable, agentstatus.ProvisionedHostColumn),
 		)
 		fromV = sqlgraph.Neighbors(as.driver.Dialect(), step)
 		return fromV, nil
@@ -4437,15 +4437,15 @@ func (c *ProvisionedHostClient) QueryProvisioningScheduledSteps(ph *ProvisionedH
 	return query
 }
 
-// QueryAgentStatuses queries the AgentStatuses edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryAgentStatuses(ph *ProvisionedHost) *AgentStatusQuery {
+// QueryAgentStatus queries the AgentStatus edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryAgentStatus(ph *ProvisionedHost) *AgentStatusQuery {
 	query := &AgentStatusQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(agentstatus.Table, agentstatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.AgentStatusesTable, provisionedhost.AgentStatusesColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisionedhost.AgentStatusTable, provisionedhost.AgentStatusColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
