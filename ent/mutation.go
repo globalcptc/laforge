@@ -32386,38 +32386,38 @@ func (m *ServerTaskMutation) ResetEdge(name string) error {
 // StatusMutation represents an operation that mutates the Status nodes in the graph.
 type StatusMutation struct {
 	config
-	op                                        Op
-	typ                                       string
-	id                                        *uuid.UUID
-	state                                     *status.State
-	status_for                                *status.StatusFor
-	started_at                                *time.Time
-	ended_at                                  *time.Time
-	failed                                    *bool
-	completed                                 *bool
-	error                                     *string
-	clearedFields                             map[string]struct{}
-	_StatusToBuild                            *uuid.UUID
-	cleared_StatusToBuild                     bool
-	_StatusToProvisionedNetwork               *uuid.UUID
-	cleared_StatusToProvisionedNetwork        bool
-	_StatusToProvisionedHost                  *uuid.UUID
-	cleared_StatusToProvisionedHost           bool
-	_StatusToProvisioningStep                 *uuid.UUID
-	cleared_StatusToProvisioningStep          bool
-	_StatusToTeam                             *uuid.UUID
-	cleared_StatusToTeam                      bool
-	_StatusToPlan                             *uuid.UUID
-	cleared_StatusToPlan                      bool
-	_StatusToServerTask                       *uuid.UUID
-	cleared_StatusToServerTask                bool
-	_StatusToAdhocPlan                        *uuid.UUID
-	cleared_StatusToAdhocPlan                 bool
-	_StatusToProvisioningScheduledStep        *uuid.UUID
-	cleared_StatusToProvisioningScheduledStep bool
-	done                                      bool
-	oldValue                                  func(context.Context) (*Status, error)
-	predicates                                []predicate.Status
+	op                                Op
+	typ                               string
+	id                                *uuid.UUID
+	state                             *status.State
+	status_for                        *status.StatusFor
+	started_at                        *time.Time
+	ended_at                          *time.Time
+	failed                            *bool
+	completed                         *bool
+	error                             *string
+	clearedFields                     map[string]struct{}
+	_Build                            *uuid.UUID
+	cleared_Build                     bool
+	_ProvisionedNetwork               *uuid.UUID
+	cleared_ProvisionedNetwork        bool
+	_ProvisionedHost                  *uuid.UUID
+	cleared_ProvisionedHost           bool
+	_ProvisioningStep                 *uuid.UUID
+	cleared_ProvisioningStep          bool
+	_Team                             *uuid.UUID
+	cleared_Team                      bool
+	_Plan                             *uuid.UUID
+	cleared_Plan                      bool
+	_ServerTask                       *uuid.UUID
+	cleared_ServerTask                bool
+	_AdhocPlan                        *uuid.UUID
+	cleared_AdhocPlan                 bool
+	_ProvisioningScheduledStep        *uuid.UUID
+	cleared_ProvisioningScheduledStep bool
+	done                              bool
+	oldValue                          func(context.Context) (*Status, error)
+	predicates                        []predicate.Status
 }
 
 var _ ent.Mutation = (*StatusMutation)(nil)
@@ -32815,355 +32815,355 @@ func (m *StatusMutation) ResetError() {
 	delete(m.clearedFields, status.FieldError)
 }
 
-// SetStatusToBuildID sets the "StatusToBuild" edge to the Build entity by id.
-func (m *StatusMutation) SetStatusToBuildID(id uuid.UUID) {
-	m._StatusToBuild = &id
+// SetBuildID sets the "Build" edge to the Build entity by id.
+func (m *StatusMutation) SetBuildID(id uuid.UUID) {
+	m._Build = &id
 }
 
-// ClearStatusToBuild clears the "StatusToBuild" edge to the Build entity.
-func (m *StatusMutation) ClearStatusToBuild() {
-	m.cleared_StatusToBuild = true
+// ClearBuild clears the "Build" edge to the Build entity.
+func (m *StatusMutation) ClearBuild() {
+	m.cleared_Build = true
 }
 
-// StatusToBuildCleared reports if the "StatusToBuild" edge to the Build entity was cleared.
-func (m *StatusMutation) StatusToBuildCleared() bool {
-	return m.cleared_StatusToBuild
+// BuildCleared reports if the "Build" edge to the Build entity was cleared.
+func (m *StatusMutation) BuildCleared() bool {
+	return m.cleared_Build
 }
 
-// StatusToBuildID returns the "StatusToBuild" edge ID in the mutation.
-func (m *StatusMutation) StatusToBuildID() (id uuid.UUID, exists bool) {
-	if m._StatusToBuild != nil {
-		return *m._StatusToBuild, true
+// BuildID returns the "Build" edge ID in the mutation.
+func (m *StatusMutation) BuildID() (id uuid.UUID, exists bool) {
+	if m._Build != nil {
+		return *m._Build, true
 	}
 	return
 }
 
-// StatusToBuildIDs returns the "StatusToBuild" edge IDs in the mutation.
+// BuildIDs returns the "Build" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// StatusToBuildID instead. It exists only for internal usage by the builders.
-func (m *StatusMutation) StatusToBuildIDs() (ids []uuid.UUID) {
-	if id := m._StatusToBuild; id != nil {
+// BuildID instead. It exists only for internal usage by the builders.
+func (m *StatusMutation) BuildIDs() (ids []uuid.UUID) {
+	if id := m._Build; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetStatusToBuild resets all changes to the "StatusToBuild" edge.
-func (m *StatusMutation) ResetStatusToBuild() {
-	m._StatusToBuild = nil
-	m.cleared_StatusToBuild = false
+// ResetBuild resets all changes to the "Build" edge.
+func (m *StatusMutation) ResetBuild() {
+	m._Build = nil
+	m.cleared_Build = false
 }
 
-// SetStatusToProvisionedNetworkID sets the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity by id.
-func (m *StatusMutation) SetStatusToProvisionedNetworkID(id uuid.UUID) {
-	m._StatusToProvisionedNetwork = &id
+// SetProvisionedNetworkID sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity by id.
+func (m *StatusMutation) SetProvisionedNetworkID(id uuid.UUID) {
+	m._ProvisionedNetwork = &id
 }
 
-// ClearStatusToProvisionedNetwork clears the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (m *StatusMutation) ClearStatusToProvisionedNetwork() {
-	m.cleared_StatusToProvisionedNetwork = true
+// ClearProvisionedNetwork clears the "ProvisionedNetwork" edge to the ProvisionedNetwork entity.
+func (m *StatusMutation) ClearProvisionedNetwork() {
+	m.cleared_ProvisionedNetwork = true
 }
 
-// StatusToProvisionedNetworkCleared reports if the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity was cleared.
-func (m *StatusMutation) StatusToProvisionedNetworkCleared() bool {
-	return m.cleared_StatusToProvisionedNetwork
+// ProvisionedNetworkCleared reports if the "ProvisionedNetwork" edge to the ProvisionedNetwork entity was cleared.
+func (m *StatusMutation) ProvisionedNetworkCleared() bool {
+	return m.cleared_ProvisionedNetwork
 }
 
-// StatusToProvisionedNetworkID returns the "StatusToProvisionedNetwork" edge ID in the mutation.
-func (m *StatusMutation) StatusToProvisionedNetworkID() (id uuid.UUID, exists bool) {
-	if m._StatusToProvisionedNetwork != nil {
-		return *m._StatusToProvisionedNetwork, true
+// ProvisionedNetworkID returns the "ProvisionedNetwork" edge ID in the mutation.
+func (m *StatusMutation) ProvisionedNetworkID() (id uuid.UUID, exists bool) {
+	if m._ProvisionedNetwork != nil {
+		return *m._ProvisionedNetwork, true
 	}
 	return
 }
 
-// StatusToProvisionedNetworkIDs returns the "StatusToProvisionedNetwork" edge IDs in the mutation.
+// ProvisionedNetworkIDs returns the "ProvisionedNetwork" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// StatusToProvisionedNetworkID instead. It exists only for internal usage by the builders.
-func (m *StatusMutation) StatusToProvisionedNetworkIDs() (ids []uuid.UUID) {
-	if id := m._StatusToProvisionedNetwork; id != nil {
+// ProvisionedNetworkID instead. It exists only for internal usage by the builders.
+func (m *StatusMutation) ProvisionedNetworkIDs() (ids []uuid.UUID) {
+	if id := m._ProvisionedNetwork; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetStatusToProvisionedNetwork resets all changes to the "StatusToProvisionedNetwork" edge.
-func (m *StatusMutation) ResetStatusToProvisionedNetwork() {
-	m._StatusToProvisionedNetwork = nil
-	m.cleared_StatusToProvisionedNetwork = false
+// ResetProvisionedNetwork resets all changes to the "ProvisionedNetwork" edge.
+func (m *StatusMutation) ResetProvisionedNetwork() {
+	m._ProvisionedNetwork = nil
+	m.cleared_ProvisionedNetwork = false
 }
 
-// SetStatusToProvisionedHostID sets the "StatusToProvisionedHost" edge to the ProvisionedHost entity by id.
-func (m *StatusMutation) SetStatusToProvisionedHostID(id uuid.UUID) {
-	m._StatusToProvisionedHost = &id
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by id.
+func (m *StatusMutation) SetProvisionedHostID(id uuid.UUID) {
+	m._ProvisionedHost = &id
 }
 
-// ClearStatusToProvisionedHost clears the "StatusToProvisionedHost" edge to the ProvisionedHost entity.
-func (m *StatusMutation) ClearStatusToProvisionedHost() {
-	m.cleared_StatusToProvisionedHost = true
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (m *StatusMutation) ClearProvisionedHost() {
+	m.cleared_ProvisionedHost = true
 }
 
-// StatusToProvisionedHostCleared reports if the "StatusToProvisionedHost" edge to the ProvisionedHost entity was cleared.
-func (m *StatusMutation) StatusToProvisionedHostCleared() bool {
-	return m.cleared_StatusToProvisionedHost
+// ProvisionedHostCleared reports if the "ProvisionedHost" edge to the ProvisionedHost entity was cleared.
+func (m *StatusMutation) ProvisionedHostCleared() bool {
+	return m.cleared_ProvisionedHost
 }
 
-// StatusToProvisionedHostID returns the "StatusToProvisionedHost" edge ID in the mutation.
-func (m *StatusMutation) StatusToProvisionedHostID() (id uuid.UUID, exists bool) {
-	if m._StatusToProvisionedHost != nil {
-		return *m._StatusToProvisionedHost, true
+// ProvisionedHostID returns the "ProvisionedHost" edge ID in the mutation.
+func (m *StatusMutation) ProvisionedHostID() (id uuid.UUID, exists bool) {
+	if m._ProvisionedHost != nil {
+		return *m._ProvisionedHost, true
 	}
 	return
 }
 
-// StatusToProvisionedHostIDs returns the "StatusToProvisionedHost" edge IDs in the mutation.
+// ProvisionedHostIDs returns the "ProvisionedHost" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// StatusToProvisionedHostID instead. It exists only for internal usage by the builders.
-func (m *StatusMutation) StatusToProvisionedHostIDs() (ids []uuid.UUID) {
-	if id := m._StatusToProvisionedHost; id != nil {
+// ProvisionedHostID instead. It exists only for internal usage by the builders.
+func (m *StatusMutation) ProvisionedHostIDs() (ids []uuid.UUID) {
+	if id := m._ProvisionedHost; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetStatusToProvisionedHost resets all changes to the "StatusToProvisionedHost" edge.
-func (m *StatusMutation) ResetStatusToProvisionedHost() {
-	m._StatusToProvisionedHost = nil
-	m.cleared_StatusToProvisionedHost = false
+// ResetProvisionedHost resets all changes to the "ProvisionedHost" edge.
+func (m *StatusMutation) ResetProvisionedHost() {
+	m._ProvisionedHost = nil
+	m.cleared_ProvisionedHost = false
 }
 
-// SetStatusToProvisioningStepID sets the "StatusToProvisioningStep" edge to the ProvisioningStep entity by id.
-func (m *StatusMutation) SetStatusToProvisioningStepID(id uuid.UUID) {
-	m._StatusToProvisioningStep = &id
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by id.
+func (m *StatusMutation) SetProvisioningStepID(id uuid.UUID) {
+	m._ProvisioningStep = &id
 }
 
-// ClearStatusToProvisioningStep clears the "StatusToProvisioningStep" edge to the ProvisioningStep entity.
-func (m *StatusMutation) ClearStatusToProvisioningStep() {
-	m.cleared_StatusToProvisioningStep = true
+// ClearProvisioningStep clears the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (m *StatusMutation) ClearProvisioningStep() {
+	m.cleared_ProvisioningStep = true
 }
 
-// StatusToProvisioningStepCleared reports if the "StatusToProvisioningStep" edge to the ProvisioningStep entity was cleared.
-func (m *StatusMutation) StatusToProvisioningStepCleared() bool {
-	return m.cleared_StatusToProvisioningStep
+// ProvisioningStepCleared reports if the "ProvisioningStep" edge to the ProvisioningStep entity was cleared.
+func (m *StatusMutation) ProvisioningStepCleared() bool {
+	return m.cleared_ProvisioningStep
 }
 
-// StatusToProvisioningStepID returns the "StatusToProvisioningStep" edge ID in the mutation.
-func (m *StatusMutation) StatusToProvisioningStepID() (id uuid.UUID, exists bool) {
-	if m._StatusToProvisioningStep != nil {
-		return *m._StatusToProvisioningStep, true
+// ProvisioningStepID returns the "ProvisioningStep" edge ID in the mutation.
+func (m *StatusMutation) ProvisioningStepID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningStep != nil {
+		return *m._ProvisioningStep, true
 	}
 	return
 }
 
-// StatusToProvisioningStepIDs returns the "StatusToProvisioningStep" edge IDs in the mutation.
+// ProvisioningStepIDs returns the "ProvisioningStep" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// StatusToProvisioningStepID instead. It exists only for internal usage by the builders.
-func (m *StatusMutation) StatusToProvisioningStepIDs() (ids []uuid.UUID) {
-	if id := m._StatusToProvisioningStep; id != nil {
+// ProvisioningStepID instead. It exists only for internal usage by the builders.
+func (m *StatusMutation) ProvisioningStepIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningStep; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetStatusToProvisioningStep resets all changes to the "StatusToProvisioningStep" edge.
-func (m *StatusMutation) ResetStatusToProvisioningStep() {
-	m._StatusToProvisioningStep = nil
-	m.cleared_StatusToProvisioningStep = false
+// ResetProvisioningStep resets all changes to the "ProvisioningStep" edge.
+func (m *StatusMutation) ResetProvisioningStep() {
+	m._ProvisioningStep = nil
+	m.cleared_ProvisioningStep = false
 }
 
-// SetStatusToTeamID sets the "StatusToTeam" edge to the Team entity by id.
-func (m *StatusMutation) SetStatusToTeamID(id uuid.UUID) {
-	m._StatusToTeam = &id
+// SetTeamID sets the "Team" edge to the Team entity by id.
+func (m *StatusMutation) SetTeamID(id uuid.UUID) {
+	m._Team = &id
 }
 
-// ClearStatusToTeam clears the "StatusToTeam" edge to the Team entity.
-func (m *StatusMutation) ClearStatusToTeam() {
-	m.cleared_StatusToTeam = true
+// ClearTeam clears the "Team" edge to the Team entity.
+func (m *StatusMutation) ClearTeam() {
+	m.cleared_Team = true
 }
 
-// StatusToTeamCleared reports if the "StatusToTeam" edge to the Team entity was cleared.
-func (m *StatusMutation) StatusToTeamCleared() bool {
-	return m.cleared_StatusToTeam
+// TeamCleared reports if the "Team" edge to the Team entity was cleared.
+func (m *StatusMutation) TeamCleared() bool {
+	return m.cleared_Team
 }
 
-// StatusToTeamID returns the "StatusToTeam" edge ID in the mutation.
-func (m *StatusMutation) StatusToTeamID() (id uuid.UUID, exists bool) {
-	if m._StatusToTeam != nil {
-		return *m._StatusToTeam, true
+// TeamID returns the "Team" edge ID in the mutation.
+func (m *StatusMutation) TeamID() (id uuid.UUID, exists bool) {
+	if m._Team != nil {
+		return *m._Team, true
 	}
 	return
 }
 
-// StatusToTeamIDs returns the "StatusToTeam" edge IDs in the mutation.
+// TeamIDs returns the "Team" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// StatusToTeamID instead. It exists only for internal usage by the builders.
-func (m *StatusMutation) StatusToTeamIDs() (ids []uuid.UUID) {
-	if id := m._StatusToTeam; id != nil {
+// TeamID instead. It exists only for internal usage by the builders.
+func (m *StatusMutation) TeamIDs() (ids []uuid.UUID) {
+	if id := m._Team; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetStatusToTeam resets all changes to the "StatusToTeam" edge.
-func (m *StatusMutation) ResetStatusToTeam() {
-	m._StatusToTeam = nil
-	m.cleared_StatusToTeam = false
+// ResetTeam resets all changes to the "Team" edge.
+func (m *StatusMutation) ResetTeam() {
+	m._Team = nil
+	m.cleared_Team = false
 }
 
-// SetStatusToPlanID sets the "StatusToPlan" edge to the Plan entity by id.
-func (m *StatusMutation) SetStatusToPlanID(id uuid.UUID) {
-	m._StatusToPlan = &id
+// SetPlanID sets the "Plan" edge to the Plan entity by id.
+func (m *StatusMutation) SetPlanID(id uuid.UUID) {
+	m._Plan = &id
 }
 
-// ClearStatusToPlan clears the "StatusToPlan" edge to the Plan entity.
-func (m *StatusMutation) ClearStatusToPlan() {
-	m.cleared_StatusToPlan = true
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (m *StatusMutation) ClearPlan() {
+	m.cleared_Plan = true
 }
 
-// StatusToPlanCleared reports if the "StatusToPlan" edge to the Plan entity was cleared.
-func (m *StatusMutation) StatusToPlanCleared() bool {
-	return m.cleared_StatusToPlan
+// PlanCleared reports if the "Plan" edge to the Plan entity was cleared.
+func (m *StatusMutation) PlanCleared() bool {
+	return m.cleared_Plan
 }
 
-// StatusToPlanID returns the "StatusToPlan" edge ID in the mutation.
-func (m *StatusMutation) StatusToPlanID() (id uuid.UUID, exists bool) {
-	if m._StatusToPlan != nil {
-		return *m._StatusToPlan, true
+// PlanID returns the "Plan" edge ID in the mutation.
+func (m *StatusMutation) PlanID() (id uuid.UUID, exists bool) {
+	if m._Plan != nil {
+		return *m._Plan, true
 	}
 	return
 }
 
-// StatusToPlanIDs returns the "StatusToPlan" edge IDs in the mutation.
+// PlanIDs returns the "Plan" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// StatusToPlanID instead. It exists only for internal usage by the builders.
-func (m *StatusMutation) StatusToPlanIDs() (ids []uuid.UUID) {
-	if id := m._StatusToPlan; id != nil {
+// PlanID instead. It exists only for internal usage by the builders.
+func (m *StatusMutation) PlanIDs() (ids []uuid.UUID) {
+	if id := m._Plan; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetStatusToPlan resets all changes to the "StatusToPlan" edge.
-func (m *StatusMutation) ResetStatusToPlan() {
-	m._StatusToPlan = nil
-	m.cleared_StatusToPlan = false
+// ResetPlan resets all changes to the "Plan" edge.
+func (m *StatusMutation) ResetPlan() {
+	m._Plan = nil
+	m.cleared_Plan = false
 }
 
-// SetStatusToServerTaskID sets the "StatusToServerTask" edge to the ServerTask entity by id.
-func (m *StatusMutation) SetStatusToServerTaskID(id uuid.UUID) {
-	m._StatusToServerTask = &id
+// SetServerTaskID sets the "ServerTask" edge to the ServerTask entity by id.
+func (m *StatusMutation) SetServerTaskID(id uuid.UUID) {
+	m._ServerTask = &id
 }
 
-// ClearStatusToServerTask clears the "StatusToServerTask" edge to the ServerTask entity.
-func (m *StatusMutation) ClearStatusToServerTask() {
-	m.cleared_StatusToServerTask = true
+// ClearServerTask clears the "ServerTask" edge to the ServerTask entity.
+func (m *StatusMutation) ClearServerTask() {
+	m.cleared_ServerTask = true
 }
 
-// StatusToServerTaskCleared reports if the "StatusToServerTask" edge to the ServerTask entity was cleared.
-func (m *StatusMutation) StatusToServerTaskCleared() bool {
-	return m.cleared_StatusToServerTask
+// ServerTaskCleared reports if the "ServerTask" edge to the ServerTask entity was cleared.
+func (m *StatusMutation) ServerTaskCleared() bool {
+	return m.cleared_ServerTask
 }
 
-// StatusToServerTaskID returns the "StatusToServerTask" edge ID in the mutation.
-func (m *StatusMutation) StatusToServerTaskID() (id uuid.UUID, exists bool) {
-	if m._StatusToServerTask != nil {
-		return *m._StatusToServerTask, true
+// ServerTaskID returns the "ServerTask" edge ID in the mutation.
+func (m *StatusMutation) ServerTaskID() (id uuid.UUID, exists bool) {
+	if m._ServerTask != nil {
+		return *m._ServerTask, true
 	}
 	return
 }
 
-// StatusToServerTaskIDs returns the "StatusToServerTask" edge IDs in the mutation.
+// ServerTaskIDs returns the "ServerTask" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// StatusToServerTaskID instead. It exists only for internal usage by the builders.
-func (m *StatusMutation) StatusToServerTaskIDs() (ids []uuid.UUID) {
-	if id := m._StatusToServerTask; id != nil {
+// ServerTaskID instead. It exists only for internal usage by the builders.
+func (m *StatusMutation) ServerTaskIDs() (ids []uuid.UUID) {
+	if id := m._ServerTask; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetStatusToServerTask resets all changes to the "StatusToServerTask" edge.
-func (m *StatusMutation) ResetStatusToServerTask() {
-	m._StatusToServerTask = nil
-	m.cleared_StatusToServerTask = false
+// ResetServerTask resets all changes to the "ServerTask" edge.
+func (m *StatusMutation) ResetServerTask() {
+	m._ServerTask = nil
+	m.cleared_ServerTask = false
 }
 
-// SetStatusToAdhocPlanID sets the "StatusToAdhocPlan" edge to the AdhocPlan entity by id.
-func (m *StatusMutation) SetStatusToAdhocPlanID(id uuid.UUID) {
-	m._StatusToAdhocPlan = &id
+// SetAdhocPlanID sets the "AdhocPlan" edge to the AdhocPlan entity by id.
+func (m *StatusMutation) SetAdhocPlanID(id uuid.UUID) {
+	m._AdhocPlan = &id
 }
 
-// ClearStatusToAdhocPlan clears the "StatusToAdhocPlan" edge to the AdhocPlan entity.
-func (m *StatusMutation) ClearStatusToAdhocPlan() {
-	m.cleared_StatusToAdhocPlan = true
+// ClearAdhocPlan clears the "AdhocPlan" edge to the AdhocPlan entity.
+func (m *StatusMutation) ClearAdhocPlan() {
+	m.cleared_AdhocPlan = true
 }
 
-// StatusToAdhocPlanCleared reports if the "StatusToAdhocPlan" edge to the AdhocPlan entity was cleared.
-func (m *StatusMutation) StatusToAdhocPlanCleared() bool {
-	return m.cleared_StatusToAdhocPlan
+// AdhocPlanCleared reports if the "AdhocPlan" edge to the AdhocPlan entity was cleared.
+func (m *StatusMutation) AdhocPlanCleared() bool {
+	return m.cleared_AdhocPlan
 }
 
-// StatusToAdhocPlanID returns the "StatusToAdhocPlan" edge ID in the mutation.
-func (m *StatusMutation) StatusToAdhocPlanID() (id uuid.UUID, exists bool) {
-	if m._StatusToAdhocPlan != nil {
-		return *m._StatusToAdhocPlan, true
+// AdhocPlanID returns the "AdhocPlan" edge ID in the mutation.
+func (m *StatusMutation) AdhocPlanID() (id uuid.UUID, exists bool) {
+	if m._AdhocPlan != nil {
+		return *m._AdhocPlan, true
 	}
 	return
 }
 
-// StatusToAdhocPlanIDs returns the "StatusToAdhocPlan" edge IDs in the mutation.
+// AdhocPlanIDs returns the "AdhocPlan" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// StatusToAdhocPlanID instead. It exists only for internal usage by the builders.
-func (m *StatusMutation) StatusToAdhocPlanIDs() (ids []uuid.UUID) {
-	if id := m._StatusToAdhocPlan; id != nil {
+// AdhocPlanID instead. It exists only for internal usage by the builders.
+func (m *StatusMutation) AdhocPlanIDs() (ids []uuid.UUID) {
+	if id := m._AdhocPlan; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetStatusToAdhocPlan resets all changes to the "StatusToAdhocPlan" edge.
-func (m *StatusMutation) ResetStatusToAdhocPlan() {
-	m._StatusToAdhocPlan = nil
-	m.cleared_StatusToAdhocPlan = false
+// ResetAdhocPlan resets all changes to the "AdhocPlan" edge.
+func (m *StatusMutation) ResetAdhocPlan() {
+	m._AdhocPlan = nil
+	m.cleared_AdhocPlan = false
 }
 
-// SetStatusToProvisioningScheduledStepID sets the "StatusToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by id.
-func (m *StatusMutation) SetStatusToProvisioningScheduledStepID(id uuid.UUID) {
-	m._StatusToProvisioningScheduledStep = &id
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by id.
+func (m *StatusMutation) SetProvisioningScheduledStepID(id uuid.UUID) {
+	m._ProvisioningScheduledStep = &id
 }
 
-// ClearStatusToProvisioningScheduledStep clears the "StatusToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (m *StatusMutation) ClearStatusToProvisioningScheduledStep() {
-	m.cleared_StatusToProvisioningScheduledStep = true
+// ClearProvisioningScheduledStep clears the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (m *StatusMutation) ClearProvisioningScheduledStep() {
+	m.cleared_ProvisioningScheduledStep = true
 }
 
-// StatusToProvisioningScheduledStepCleared reports if the "StatusToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity was cleared.
-func (m *StatusMutation) StatusToProvisioningScheduledStepCleared() bool {
-	return m.cleared_StatusToProvisioningScheduledStep
+// ProvisioningScheduledStepCleared reports if the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity was cleared.
+func (m *StatusMutation) ProvisioningScheduledStepCleared() bool {
+	return m.cleared_ProvisioningScheduledStep
 }
 
-// StatusToProvisioningScheduledStepID returns the "StatusToProvisioningScheduledStep" edge ID in the mutation.
-func (m *StatusMutation) StatusToProvisioningScheduledStepID() (id uuid.UUID, exists bool) {
-	if m._StatusToProvisioningScheduledStep != nil {
-		return *m._StatusToProvisioningScheduledStep, true
+// ProvisioningScheduledStepID returns the "ProvisioningScheduledStep" edge ID in the mutation.
+func (m *StatusMutation) ProvisioningScheduledStepID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningScheduledStep != nil {
+		return *m._ProvisioningScheduledStep, true
 	}
 	return
 }
 
-// StatusToProvisioningScheduledStepIDs returns the "StatusToProvisioningScheduledStep" edge IDs in the mutation.
+// ProvisioningScheduledStepIDs returns the "ProvisioningScheduledStep" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// StatusToProvisioningScheduledStepID instead. It exists only for internal usage by the builders.
-func (m *StatusMutation) StatusToProvisioningScheduledStepIDs() (ids []uuid.UUID) {
-	if id := m._StatusToProvisioningScheduledStep; id != nil {
+// ProvisioningScheduledStepID instead. It exists only for internal usage by the builders.
+func (m *StatusMutation) ProvisioningScheduledStepIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningScheduledStep; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetStatusToProvisioningScheduledStep resets all changes to the "StatusToProvisioningScheduledStep" edge.
-func (m *StatusMutation) ResetStatusToProvisioningScheduledStep() {
-	m._StatusToProvisioningScheduledStep = nil
-	m.cleared_StatusToProvisioningScheduledStep = false
+// ResetProvisioningScheduledStep resets all changes to the "ProvisioningScheduledStep" edge.
+func (m *StatusMutation) ResetProvisioningScheduledStep() {
+	m._ProvisioningScheduledStep = nil
+	m.cleared_ProvisioningScheduledStep = false
 }
 
 // Where appends a list predicates to the StatusMutation builder.
@@ -33408,32 +33408,32 @@ func (m *StatusMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *StatusMutation) AddedEdges() []string {
 	edges := make([]string, 0, 9)
-	if m._StatusToBuild != nil {
-		edges = append(edges, status.EdgeStatusToBuild)
+	if m._Build != nil {
+		edges = append(edges, status.EdgeBuild)
 	}
-	if m._StatusToProvisionedNetwork != nil {
-		edges = append(edges, status.EdgeStatusToProvisionedNetwork)
+	if m._ProvisionedNetwork != nil {
+		edges = append(edges, status.EdgeProvisionedNetwork)
 	}
-	if m._StatusToProvisionedHost != nil {
-		edges = append(edges, status.EdgeStatusToProvisionedHost)
+	if m._ProvisionedHost != nil {
+		edges = append(edges, status.EdgeProvisionedHost)
 	}
-	if m._StatusToProvisioningStep != nil {
-		edges = append(edges, status.EdgeStatusToProvisioningStep)
+	if m._ProvisioningStep != nil {
+		edges = append(edges, status.EdgeProvisioningStep)
 	}
-	if m._StatusToTeam != nil {
-		edges = append(edges, status.EdgeStatusToTeam)
+	if m._Team != nil {
+		edges = append(edges, status.EdgeTeam)
 	}
-	if m._StatusToPlan != nil {
-		edges = append(edges, status.EdgeStatusToPlan)
+	if m._Plan != nil {
+		edges = append(edges, status.EdgePlan)
 	}
-	if m._StatusToServerTask != nil {
-		edges = append(edges, status.EdgeStatusToServerTask)
+	if m._ServerTask != nil {
+		edges = append(edges, status.EdgeServerTask)
 	}
-	if m._StatusToAdhocPlan != nil {
-		edges = append(edges, status.EdgeStatusToAdhocPlan)
+	if m._AdhocPlan != nil {
+		edges = append(edges, status.EdgeAdhocPlan)
 	}
-	if m._StatusToProvisioningScheduledStep != nil {
-		edges = append(edges, status.EdgeStatusToProvisioningScheduledStep)
+	if m._ProvisioningScheduledStep != nil {
+		edges = append(edges, status.EdgeProvisioningScheduledStep)
 	}
 	return edges
 }
@@ -33442,40 +33442,40 @@ func (m *StatusMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *StatusMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case status.EdgeStatusToBuild:
-		if id := m._StatusToBuild; id != nil {
+	case status.EdgeBuild:
+		if id := m._Build; id != nil {
 			return []ent.Value{*id}
 		}
-	case status.EdgeStatusToProvisionedNetwork:
-		if id := m._StatusToProvisionedNetwork; id != nil {
+	case status.EdgeProvisionedNetwork:
+		if id := m._ProvisionedNetwork; id != nil {
 			return []ent.Value{*id}
 		}
-	case status.EdgeStatusToProvisionedHost:
-		if id := m._StatusToProvisionedHost; id != nil {
+	case status.EdgeProvisionedHost:
+		if id := m._ProvisionedHost; id != nil {
 			return []ent.Value{*id}
 		}
-	case status.EdgeStatusToProvisioningStep:
-		if id := m._StatusToProvisioningStep; id != nil {
+	case status.EdgeProvisioningStep:
+		if id := m._ProvisioningStep; id != nil {
 			return []ent.Value{*id}
 		}
-	case status.EdgeStatusToTeam:
-		if id := m._StatusToTeam; id != nil {
+	case status.EdgeTeam:
+		if id := m._Team; id != nil {
 			return []ent.Value{*id}
 		}
-	case status.EdgeStatusToPlan:
-		if id := m._StatusToPlan; id != nil {
+	case status.EdgePlan:
+		if id := m._Plan; id != nil {
 			return []ent.Value{*id}
 		}
-	case status.EdgeStatusToServerTask:
-		if id := m._StatusToServerTask; id != nil {
+	case status.EdgeServerTask:
+		if id := m._ServerTask; id != nil {
 			return []ent.Value{*id}
 		}
-	case status.EdgeStatusToAdhocPlan:
-		if id := m._StatusToAdhocPlan; id != nil {
+	case status.EdgeAdhocPlan:
+		if id := m._AdhocPlan; id != nil {
 			return []ent.Value{*id}
 		}
-	case status.EdgeStatusToProvisioningScheduledStep:
-		if id := m._StatusToProvisioningScheduledStep; id != nil {
+	case status.EdgeProvisioningScheduledStep:
+		if id := m._ProvisioningScheduledStep; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -33499,32 +33499,32 @@ func (m *StatusMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *StatusMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 9)
-	if m.cleared_StatusToBuild {
-		edges = append(edges, status.EdgeStatusToBuild)
+	if m.cleared_Build {
+		edges = append(edges, status.EdgeBuild)
 	}
-	if m.cleared_StatusToProvisionedNetwork {
-		edges = append(edges, status.EdgeStatusToProvisionedNetwork)
+	if m.cleared_ProvisionedNetwork {
+		edges = append(edges, status.EdgeProvisionedNetwork)
 	}
-	if m.cleared_StatusToProvisionedHost {
-		edges = append(edges, status.EdgeStatusToProvisionedHost)
+	if m.cleared_ProvisionedHost {
+		edges = append(edges, status.EdgeProvisionedHost)
 	}
-	if m.cleared_StatusToProvisioningStep {
-		edges = append(edges, status.EdgeStatusToProvisioningStep)
+	if m.cleared_ProvisioningStep {
+		edges = append(edges, status.EdgeProvisioningStep)
 	}
-	if m.cleared_StatusToTeam {
-		edges = append(edges, status.EdgeStatusToTeam)
+	if m.cleared_Team {
+		edges = append(edges, status.EdgeTeam)
 	}
-	if m.cleared_StatusToPlan {
-		edges = append(edges, status.EdgeStatusToPlan)
+	if m.cleared_Plan {
+		edges = append(edges, status.EdgePlan)
 	}
-	if m.cleared_StatusToServerTask {
-		edges = append(edges, status.EdgeStatusToServerTask)
+	if m.cleared_ServerTask {
+		edges = append(edges, status.EdgeServerTask)
 	}
-	if m.cleared_StatusToAdhocPlan {
-		edges = append(edges, status.EdgeStatusToAdhocPlan)
+	if m.cleared_AdhocPlan {
+		edges = append(edges, status.EdgeAdhocPlan)
 	}
-	if m.cleared_StatusToProvisioningScheduledStep {
-		edges = append(edges, status.EdgeStatusToProvisioningScheduledStep)
+	if m.cleared_ProvisioningScheduledStep {
+		edges = append(edges, status.EdgeProvisioningScheduledStep)
 	}
 	return edges
 }
@@ -33533,24 +33533,24 @@ func (m *StatusMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *StatusMutation) EdgeCleared(name string) bool {
 	switch name {
-	case status.EdgeStatusToBuild:
-		return m.cleared_StatusToBuild
-	case status.EdgeStatusToProvisionedNetwork:
-		return m.cleared_StatusToProvisionedNetwork
-	case status.EdgeStatusToProvisionedHost:
-		return m.cleared_StatusToProvisionedHost
-	case status.EdgeStatusToProvisioningStep:
-		return m.cleared_StatusToProvisioningStep
-	case status.EdgeStatusToTeam:
-		return m.cleared_StatusToTeam
-	case status.EdgeStatusToPlan:
-		return m.cleared_StatusToPlan
-	case status.EdgeStatusToServerTask:
-		return m.cleared_StatusToServerTask
-	case status.EdgeStatusToAdhocPlan:
-		return m.cleared_StatusToAdhocPlan
-	case status.EdgeStatusToProvisioningScheduledStep:
-		return m.cleared_StatusToProvisioningScheduledStep
+	case status.EdgeBuild:
+		return m.cleared_Build
+	case status.EdgeProvisionedNetwork:
+		return m.cleared_ProvisionedNetwork
+	case status.EdgeProvisionedHost:
+		return m.cleared_ProvisionedHost
+	case status.EdgeProvisioningStep:
+		return m.cleared_ProvisioningStep
+	case status.EdgeTeam:
+		return m.cleared_Team
+	case status.EdgePlan:
+		return m.cleared_Plan
+	case status.EdgeServerTask:
+		return m.cleared_ServerTask
+	case status.EdgeAdhocPlan:
+		return m.cleared_AdhocPlan
+	case status.EdgeProvisioningScheduledStep:
+		return m.cleared_ProvisioningScheduledStep
 	}
 	return false
 }
@@ -33559,32 +33559,32 @@ func (m *StatusMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *StatusMutation) ClearEdge(name string) error {
 	switch name {
-	case status.EdgeStatusToBuild:
-		m.ClearStatusToBuild()
+	case status.EdgeBuild:
+		m.ClearBuild()
 		return nil
-	case status.EdgeStatusToProvisionedNetwork:
-		m.ClearStatusToProvisionedNetwork()
+	case status.EdgeProvisionedNetwork:
+		m.ClearProvisionedNetwork()
 		return nil
-	case status.EdgeStatusToProvisionedHost:
-		m.ClearStatusToProvisionedHost()
+	case status.EdgeProvisionedHost:
+		m.ClearProvisionedHost()
 		return nil
-	case status.EdgeStatusToProvisioningStep:
-		m.ClearStatusToProvisioningStep()
+	case status.EdgeProvisioningStep:
+		m.ClearProvisioningStep()
 		return nil
-	case status.EdgeStatusToTeam:
-		m.ClearStatusToTeam()
+	case status.EdgeTeam:
+		m.ClearTeam()
 		return nil
-	case status.EdgeStatusToPlan:
-		m.ClearStatusToPlan()
+	case status.EdgePlan:
+		m.ClearPlan()
 		return nil
-	case status.EdgeStatusToServerTask:
-		m.ClearStatusToServerTask()
+	case status.EdgeServerTask:
+		m.ClearServerTask()
 		return nil
-	case status.EdgeStatusToAdhocPlan:
-		m.ClearStatusToAdhocPlan()
+	case status.EdgeAdhocPlan:
+		m.ClearAdhocPlan()
 		return nil
-	case status.EdgeStatusToProvisioningScheduledStep:
-		m.ClearStatusToProvisioningScheduledStep()
+	case status.EdgeProvisioningScheduledStep:
+		m.ClearProvisioningScheduledStep()
 		return nil
 	}
 	return fmt.Errorf("unknown Status unique edge %s", name)
@@ -33594,32 +33594,32 @@ func (m *StatusMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *StatusMutation) ResetEdge(name string) error {
 	switch name {
-	case status.EdgeStatusToBuild:
-		m.ResetStatusToBuild()
+	case status.EdgeBuild:
+		m.ResetBuild()
 		return nil
-	case status.EdgeStatusToProvisionedNetwork:
-		m.ResetStatusToProvisionedNetwork()
+	case status.EdgeProvisionedNetwork:
+		m.ResetProvisionedNetwork()
 		return nil
-	case status.EdgeStatusToProvisionedHost:
-		m.ResetStatusToProvisionedHost()
+	case status.EdgeProvisionedHost:
+		m.ResetProvisionedHost()
 		return nil
-	case status.EdgeStatusToProvisioningStep:
-		m.ResetStatusToProvisioningStep()
+	case status.EdgeProvisioningStep:
+		m.ResetProvisioningStep()
 		return nil
-	case status.EdgeStatusToTeam:
-		m.ResetStatusToTeam()
+	case status.EdgeTeam:
+		m.ResetTeam()
 		return nil
-	case status.EdgeStatusToPlan:
-		m.ResetStatusToPlan()
+	case status.EdgePlan:
+		m.ResetPlan()
 		return nil
-	case status.EdgeStatusToServerTask:
-		m.ResetStatusToServerTask()
+	case status.EdgeServerTask:
+		m.ResetServerTask()
 		return nil
-	case status.EdgeStatusToAdhocPlan:
-		m.ResetStatusToAdhocPlan()
+	case status.EdgeAdhocPlan:
+		m.ResetAdhocPlan()
 		return nil
-	case status.EdgeStatusToProvisioningScheduledStep:
-		m.ResetStatusToProvisioningScheduledStep()
+	case status.EdgeProvisioningScheduledStep:
+		m.ResetProvisioningScheduledStep()
 		return nil
 	}
 	return fmt.Errorf("unknown Status edge %s", name)

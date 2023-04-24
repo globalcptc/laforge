@@ -660,7 +660,7 @@ func (r *mutationResolver) CancelCommit(ctx context.Context, commitUUID string) 
 		if err != nil {
 			return false, fmt.Errorf("failed querying build from build commit: %v", err)
 		}
-		err = r.client.Status.Update().Where(status.HasStatusToBuildWith(build.IDEQ(entBuild.ID))).SetState(status.StateCANCELLED).Exec(ctx)
+		err = r.client.Status.Update().Where(status.HasBuildWith(build.IDEQ(entBuild.ID))).SetState(status.StateCANCELLED).Exec(ctx)
 		if err != nil {
 			return false, fmt.Errorf("failed setting build status to cancelled: %v", err)
 		}
@@ -1472,7 +1472,7 @@ func (r *queryResolver) ListBuildStatuses(ctx context.Context, buildUUID string)
 	}
 	statuses = append(statuses, buildStatus)
 
-	planStatuses, err := r.client.Status.Query().Where(status.HasStatusToPlanWith(plan.HasBuildWith(build.IDEQ(uuid)))).All(ctx)
+	planStatuses, err := r.client.Status.Query().Where(status.HasPlanWith(plan.HasBuildWith(build.IDEQ(uuid)))).All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed querying plan statuses from build: %v", err)
 	}
@@ -1536,12 +1536,12 @@ func (r *queryResolver) GetAllPlanStatus(ctx context.Context, buildUUID string, 
 		return nil, err
 	}
 
-	totalStatuses, err := r.client.Status.Query().Where(status.HasStatusToPlanWith(plan.HasBuildWith(build.IDEQ(uuid)))).Count(ctx)
+	totalStatuses, err := r.client.Status.Query().Where(status.HasPlanWith(plan.HasBuildWith(build.IDEQ(uuid)))).Count(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	statuses, err := r.client.Status.Query().Where(status.HasStatusToPlanWith(plan.HasBuildWith(build.IDEQ(uuid)))).Order(ent.Asc(status.FieldStartedAt)).Limit(count).Offset(offset).All(ctx)
+	statuses, err := r.client.Status.Query().Where(status.HasPlanWith(plan.HasBuildWith(build.IDEQ(uuid)))).Order(ent.Asc(status.FieldStartedAt)).Limit(count).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}

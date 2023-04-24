@@ -3708,9 +3708,9 @@ func (s *Status) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Build",
-		Name: "StatusToBuild",
+		Name: "Build",
 	}
-	err = s.QueryStatusToBuild().
+	err = s.QueryBuild().
 		Select(build.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -3718,9 +3718,9 @@ func (s *Status) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "ProvisionedNetwork",
-		Name: "StatusToProvisionedNetwork",
+		Name: "ProvisionedNetwork",
 	}
-	err = s.QueryStatusToProvisionedNetwork().
+	err = s.QueryProvisionedNetwork().
 		Select(provisionednetwork.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -3728,9 +3728,9 @@ func (s *Status) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "ProvisionedHost",
-		Name: "StatusToProvisionedHost",
+		Name: "ProvisionedHost",
 	}
-	err = s.QueryStatusToProvisionedHost().
+	err = s.QueryProvisionedHost().
 		Select(provisionedhost.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -3738,9 +3738,9 @@ func (s *Status) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "ProvisioningStep",
-		Name: "StatusToProvisioningStep",
+		Name: "ProvisioningStep",
 	}
-	err = s.QueryStatusToProvisioningStep().
+	err = s.QueryProvisioningStep().
 		Select(provisioningstep.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
@@ -3748,9 +3748,9 @@ func (s *Status) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[4] = &Edge{
 		Type: "Team",
-		Name: "StatusToTeam",
+		Name: "Team",
 	}
-	err = s.QueryStatusToTeam().
+	err = s.QueryTeam().
 		Select(team.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
@@ -3758,9 +3758,9 @@ func (s *Status) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[5] = &Edge{
 		Type: "Plan",
-		Name: "StatusToPlan",
+		Name: "Plan",
 	}
-	err = s.QueryStatusToPlan().
+	err = s.QueryPlan().
 		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
@@ -3768,9 +3768,9 @@ func (s *Status) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[6] = &Edge{
 		Type: "ServerTask",
-		Name: "StatusToServerTask",
+		Name: "ServerTask",
 	}
-	err = s.QueryStatusToServerTask().
+	err = s.QueryServerTask().
 		Select(servertask.FieldID).
 		Scan(ctx, &node.Edges[6].IDs)
 	if err != nil {
@@ -3778,9 +3778,9 @@ func (s *Status) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[7] = &Edge{
 		Type: "AdhocPlan",
-		Name: "StatusToAdhocPlan",
+		Name: "AdhocPlan",
 	}
-	err = s.QueryStatusToAdhocPlan().
+	err = s.QueryAdhocPlan().
 		Select(adhocplan.FieldID).
 		Scan(ctx, &node.Edges[7].IDs)
 	if err != nil {
@@ -3788,9 +3788,9 @@ func (s *Status) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[8] = &Edge{
 		Type: "ProvisioningScheduledStep",
-		Name: "StatusToProvisioningScheduledStep",
+		Name: "ProvisioningScheduledStep",
 	}
-	err = s.QueryStatusToProvisioningScheduledStep().
+	err = s.QueryProvisioningScheduledStep().
 		Select(provisioningscheduledstep.FieldID).
 		Scan(ctx, &node.Edges[8].IDs)
 	if err != nil {

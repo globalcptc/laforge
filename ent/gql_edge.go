@@ -1244,74 +1244,74 @@ func (st *ServerTask) GinFileMiddleware(ctx context.Context) ([]*GinFileMiddlewa
 	return result, err
 }
 
-func (s *Status) StatusToBuild(ctx context.Context) (*Build, error) {
-	result, err := s.Edges.StatusToBuildOrErr()
+func (s *Status) Build(ctx context.Context) (*Build, error) {
+	result, err := s.Edges.BuildOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryStatusToBuild().Only(ctx)
+		result, err = s.QueryBuild().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (s *Status) StatusToProvisionedNetwork(ctx context.Context) (*ProvisionedNetwork, error) {
-	result, err := s.Edges.StatusToProvisionedNetworkOrErr()
+func (s *Status) ProvisionedNetwork(ctx context.Context) (*ProvisionedNetwork, error) {
+	result, err := s.Edges.ProvisionedNetworkOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryStatusToProvisionedNetwork().Only(ctx)
+		result, err = s.QueryProvisionedNetwork().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (s *Status) StatusToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
-	result, err := s.Edges.StatusToProvisionedHostOrErr()
+func (s *Status) ProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
+	result, err := s.Edges.ProvisionedHostOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryStatusToProvisionedHost().Only(ctx)
+		result, err = s.QueryProvisionedHost().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (s *Status) StatusToProvisioningStep(ctx context.Context) (*ProvisioningStep, error) {
-	result, err := s.Edges.StatusToProvisioningStepOrErr()
+func (s *Status) ProvisioningStep(ctx context.Context) (*ProvisioningStep, error) {
+	result, err := s.Edges.ProvisioningStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryStatusToProvisioningStep().Only(ctx)
+		result, err = s.QueryProvisioningStep().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (s *Status) StatusToTeam(ctx context.Context) (*Team, error) {
-	result, err := s.Edges.StatusToTeamOrErr()
+func (s *Status) Team(ctx context.Context) (*Team, error) {
+	result, err := s.Edges.TeamOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryStatusToTeam().Only(ctx)
+		result, err = s.QueryTeam().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (s *Status) StatusToPlan(ctx context.Context) (*Plan, error) {
-	result, err := s.Edges.StatusToPlanOrErr()
+func (s *Status) Plan(ctx context.Context) (*Plan, error) {
+	result, err := s.Edges.PlanOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryStatusToPlan().Only(ctx)
+		result, err = s.QueryPlan().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (s *Status) StatusToServerTask(ctx context.Context) (*ServerTask, error) {
-	result, err := s.Edges.StatusToServerTaskOrErr()
+func (s *Status) ServerTask(ctx context.Context) (*ServerTask, error) {
+	result, err := s.Edges.ServerTaskOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryStatusToServerTask().Only(ctx)
+		result, err = s.QueryServerTask().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (s *Status) StatusToAdhocPlan(ctx context.Context) (*AdhocPlan, error) {
-	result, err := s.Edges.StatusToAdhocPlanOrErr()
+func (s *Status) AdhocPlan(ctx context.Context) (*AdhocPlan, error) {
+	result, err := s.Edges.AdhocPlanOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryStatusToAdhocPlan().Only(ctx)
+		result, err = s.QueryAdhocPlan().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (s *Status) StatusToProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
-	result, err := s.Edges.StatusToProvisioningScheduledStepOrErr()
+func (s *Status) ProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
+	result, err := s.Edges.ProvisioningScheduledStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryStatusToProvisioningScheduledStep().Only(ctx)
+		result, err = s.QueryProvisioningScheduledStep().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

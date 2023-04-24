@@ -45,24 +45,24 @@ type Status struct {
 	Edges StatusEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// StatusToBuild holds the value of the StatusToBuild edge.
-	HCLStatusToBuild *Build `json:"StatusToBuild,omitempty"`
-	// StatusToProvisionedNetwork holds the value of the StatusToProvisionedNetwork edge.
-	HCLStatusToProvisionedNetwork *ProvisionedNetwork `json:"StatusToProvisionedNetwork,omitempty"`
-	// StatusToProvisionedHost holds the value of the StatusToProvisionedHost edge.
-	HCLStatusToProvisionedHost *ProvisionedHost `json:"StatusToProvisionedHost,omitempty"`
-	// StatusToProvisioningStep holds the value of the StatusToProvisioningStep edge.
-	HCLStatusToProvisioningStep *ProvisioningStep `json:"StatusToProvisioningStep,omitempty"`
-	// StatusToTeam holds the value of the StatusToTeam edge.
-	HCLStatusToTeam *Team `json:"StatusToTeam,omitempty"`
-	// StatusToPlan holds the value of the StatusToPlan edge.
-	HCLStatusToPlan *Plan `json:"StatusToPlan,omitempty"`
-	// StatusToServerTask holds the value of the StatusToServerTask edge.
-	HCLStatusToServerTask *ServerTask `json:"StatusToServerTask,omitempty"`
-	// StatusToAdhocPlan holds the value of the StatusToAdhocPlan edge.
-	HCLStatusToAdhocPlan *AdhocPlan `json:"StatusToAdhocPlan,omitempty"`
-	// StatusToProvisioningScheduledStep holds the value of the StatusToProvisioningScheduledStep edge.
-	HCLStatusToProvisioningScheduledStep *ProvisioningScheduledStep `json:"StatusToProvisioningScheduledStep,omitempty"`
+	// Build holds the value of the Build edge.
+	HCLBuild *Build `json:"Build,omitempty"`
+	// ProvisionedNetwork holds the value of the ProvisionedNetwork edge.
+	HCLProvisionedNetwork *ProvisionedNetwork `json:"ProvisionedNetwork,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	HCLProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// ProvisioningStep holds the value of the ProvisioningStep edge.
+	HCLProvisioningStep *ProvisioningStep `json:"ProvisioningStep,omitempty"`
+	// Team holds the value of the Team edge.
+	HCLTeam *Team `json:"Team,omitempty"`
+	// Plan holds the value of the Plan edge.
+	HCLPlan *Plan `json:"Plan,omitempty"`
+	// ServerTask holds the value of the ServerTask edge.
+	HCLServerTask *ServerTask `json:"ServerTask,omitempty"`
+	// AdhocPlan holds the value of the AdhocPlan edge.
+	HCLAdhocPlan *AdhocPlan `json:"AdhocPlan,omitempty"`
+	// ProvisioningScheduledStep holds the value of the ProvisioningScheduledStep edge.
+	HCLProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
 	//
 	adhoc_plan_status                  *uuid.UUID
 	build_status                       *uuid.UUID
@@ -77,153 +77,153 @@ type Status struct {
 
 // StatusEdges holds the relations/edges for other nodes in the graph.
 type StatusEdges struct {
-	// StatusToBuild holds the value of the StatusToBuild edge.
-	StatusToBuild *Build `json:"StatusToBuild,omitempty"`
-	// StatusToProvisionedNetwork holds the value of the StatusToProvisionedNetwork edge.
-	StatusToProvisionedNetwork *ProvisionedNetwork `json:"StatusToProvisionedNetwork,omitempty"`
-	// StatusToProvisionedHost holds the value of the StatusToProvisionedHost edge.
-	StatusToProvisionedHost *ProvisionedHost `json:"StatusToProvisionedHost,omitempty"`
-	// StatusToProvisioningStep holds the value of the StatusToProvisioningStep edge.
-	StatusToProvisioningStep *ProvisioningStep `json:"StatusToProvisioningStep,omitempty"`
-	// StatusToTeam holds the value of the StatusToTeam edge.
-	StatusToTeam *Team `json:"StatusToTeam,omitempty"`
-	// StatusToPlan holds the value of the StatusToPlan edge.
-	StatusToPlan *Plan `json:"StatusToPlan,omitempty"`
-	// StatusToServerTask holds the value of the StatusToServerTask edge.
-	StatusToServerTask *ServerTask `json:"StatusToServerTask,omitempty"`
-	// StatusToAdhocPlan holds the value of the StatusToAdhocPlan edge.
-	StatusToAdhocPlan *AdhocPlan `json:"StatusToAdhocPlan,omitempty"`
-	// StatusToProvisioningScheduledStep holds the value of the StatusToProvisioningScheduledStep edge.
-	StatusToProvisioningScheduledStep *ProvisioningScheduledStep `json:"StatusToProvisioningScheduledStep,omitempty"`
+	// Build holds the value of the Build edge.
+	Build *Build `json:"Build,omitempty"`
+	// ProvisionedNetwork holds the value of the ProvisionedNetwork edge.
+	ProvisionedNetwork *ProvisionedNetwork `json:"ProvisionedNetwork,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	ProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// ProvisioningStep holds the value of the ProvisioningStep edge.
+	ProvisioningStep *ProvisioningStep `json:"ProvisioningStep,omitempty"`
+	// Team holds the value of the Team edge.
+	Team *Team `json:"Team,omitempty"`
+	// Plan holds the value of the Plan edge.
+	Plan *Plan `json:"Plan,omitempty"`
+	// ServerTask holds the value of the ServerTask edge.
+	ServerTask *ServerTask `json:"ServerTask,omitempty"`
+	// AdhocPlan holds the value of the AdhocPlan edge.
+	AdhocPlan *AdhocPlan `json:"AdhocPlan,omitempty"`
+	// ProvisioningScheduledStep holds the value of the ProvisioningScheduledStep edge.
+	ProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [9]bool
 }
 
-// StatusToBuildOrErr returns the StatusToBuild value or an error if the edge
+// BuildOrErr returns the Build value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e StatusEdges) StatusToBuildOrErr() (*Build, error) {
+func (e StatusEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[0] {
-		if e.StatusToBuild == nil {
-			// The edge StatusToBuild was loaded in eager-loading,
+		if e.Build == nil {
+			// The edge Build was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
-		return e.StatusToBuild, nil
+		return e.Build, nil
 	}
-	return nil, &NotLoadedError{edge: "StatusToBuild"}
+	return nil, &NotLoadedError{edge: "Build"}
 }
 
-// StatusToProvisionedNetworkOrErr returns the StatusToProvisionedNetwork value or an error if the edge
+// ProvisionedNetworkOrErr returns the ProvisionedNetwork value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e StatusEdges) StatusToProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
+func (e StatusEdges) ProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
 	if e.loadedTypes[1] {
-		if e.StatusToProvisionedNetwork == nil {
-			// The edge StatusToProvisionedNetwork was loaded in eager-loading,
+		if e.ProvisionedNetwork == nil {
+			// The edge ProvisionedNetwork was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisionednetwork.Label}
 		}
-		return e.StatusToProvisionedNetwork, nil
+		return e.ProvisionedNetwork, nil
 	}
-	return nil, &NotLoadedError{edge: "StatusToProvisionedNetwork"}
+	return nil, &NotLoadedError{edge: "ProvisionedNetwork"}
 }
 
-// StatusToProvisionedHostOrErr returns the StatusToProvisionedHost value or an error if the edge
+// ProvisionedHostOrErr returns the ProvisionedHost value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e StatusEdges) StatusToProvisionedHostOrErr() (*ProvisionedHost, error) {
+func (e StatusEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[2] {
-		if e.StatusToProvisionedHost == nil {
-			// The edge StatusToProvisionedHost was loaded in eager-loading,
+		if e.ProvisionedHost == nil {
+			// The edge ProvisionedHost was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
-		return e.StatusToProvisionedHost, nil
+		return e.ProvisionedHost, nil
 	}
-	return nil, &NotLoadedError{edge: "StatusToProvisionedHost"}
+	return nil, &NotLoadedError{edge: "ProvisionedHost"}
 }
 
-// StatusToProvisioningStepOrErr returns the StatusToProvisioningStep value or an error if the edge
+// ProvisioningStepOrErr returns the ProvisioningStep value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e StatusEdges) StatusToProvisioningStepOrErr() (*ProvisioningStep, error) {
+func (e StatusEdges) ProvisioningStepOrErr() (*ProvisioningStep, error) {
 	if e.loadedTypes[3] {
-		if e.StatusToProvisioningStep == nil {
-			// The edge StatusToProvisioningStep was loaded in eager-loading,
+		if e.ProvisioningStep == nil {
+			// The edge ProvisioningStep was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisioningstep.Label}
 		}
-		return e.StatusToProvisioningStep, nil
+		return e.ProvisioningStep, nil
 	}
-	return nil, &NotLoadedError{edge: "StatusToProvisioningStep"}
+	return nil, &NotLoadedError{edge: "ProvisioningStep"}
 }
 
-// StatusToTeamOrErr returns the StatusToTeam value or an error if the edge
+// TeamOrErr returns the Team value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e StatusEdges) StatusToTeamOrErr() (*Team, error) {
+func (e StatusEdges) TeamOrErr() (*Team, error) {
 	if e.loadedTypes[4] {
-		if e.StatusToTeam == nil {
-			// The edge StatusToTeam was loaded in eager-loading,
+		if e.Team == nil {
+			// The edge Team was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: team.Label}
 		}
-		return e.StatusToTeam, nil
+		return e.Team, nil
 	}
-	return nil, &NotLoadedError{edge: "StatusToTeam"}
+	return nil, &NotLoadedError{edge: "Team"}
 }
 
-// StatusToPlanOrErr returns the StatusToPlan value or an error if the edge
+// PlanOrErr returns the Plan value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e StatusEdges) StatusToPlanOrErr() (*Plan, error) {
+func (e StatusEdges) PlanOrErr() (*Plan, error) {
 	if e.loadedTypes[5] {
-		if e.StatusToPlan == nil {
-			// The edge StatusToPlan was loaded in eager-loading,
+		if e.Plan == nil {
+			// The edge Plan was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: plan.Label}
 		}
-		return e.StatusToPlan, nil
+		return e.Plan, nil
 	}
-	return nil, &NotLoadedError{edge: "StatusToPlan"}
+	return nil, &NotLoadedError{edge: "Plan"}
 }
 
-// StatusToServerTaskOrErr returns the StatusToServerTask value or an error if the edge
+// ServerTaskOrErr returns the ServerTask value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e StatusEdges) StatusToServerTaskOrErr() (*ServerTask, error) {
+func (e StatusEdges) ServerTaskOrErr() (*ServerTask, error) {
 	if e.loadedTypes[6] {
-		if e.StatusToServerTask == nil {
-			// The edge StatusToServerTask was loaded in eager-loading,
+		if e.ServerTask == nil {
+			// The edge ServerTask was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: servertask.Label}
 		}
-		return e.StatusToServerTask, nil
+		return e.ServerTask, nil
 	}
-	return nil, &NotLoadedError{edge: "StatusToServerTask"}
+	return nil, &NotLoadedError{edge: "ServerTask"}
 }
 
-// StatusToAdhocPlanOrErr returns the StatusToAdhocPlan value or an error if the edge
+// AdhocPlanOrErr returns the AdhocPlan value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e StatusEdges) StatusToAdhocPlanOrErr() (*AdhocPlan, error) {
+func (e StatusEdges) AdhocPlanOrErr() (*AdhocPlan, error) {
 	if e.loadedTypes[7] {
-		if e.StatusToAdhocPlan == nil {
-			// The edge StatusToAdhocPlan was loaded in eager-loading,
+		if e.AdhocPlan == nil {
+			// The edge AdhocPlan was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: adhocplan.Label}
 		}
-		return e.StatusToAdhocPlan, nil
+		return e.AdhocPlan, nil
 	}
-	return nil, &NotLoadedError{edge: "StatusToAdhocPlan"}
+	return nil, &NotLoadedError{edge: "AdhocPlan"}
 }
 
-// StatusToProvisioningScheduledStepOrErr returns the StatusToProvisioningScheduledStep value or an error if the edge
+// ProvisioningScheduledStepOrErr returns the ProvisioningScheduledStep value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e StatusEdges) StatusToProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
+func (e StatusEdges) ProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
 	if e.loadedTypes[8] {
-		if e.StatusToProvisioningScheduledStep == nil {
-			// The edge StatusToProvisioningScheduledStep was loaded in eager-loading,
+		if e.ProvisioningScheduledStep == nil {
+			// The edge ProvisioningScheduledStep was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisioningscheduledstep.Label}
 		}
-		return e.StatusToProvisioningScheduledStep, nil
+		return e.ProvisioningScheduledStep, nil
 	}
-	return nil, &NotLoadedError{edge: "StatusToProvisioningScheduledStep"}
+	return nil, &NotLoadedError{edge: "ProvisioningScheduledStep"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -388,49 +388,49 @@ func (s *Status) assignValues(columns []string, values []interface{}) error {
 	return nil
 }
 
-// QueryStatusToBuild queries the "StatusToBuild" edge of the Status entity.
-func (s *Status) QueryStatusToBuild() *BuildQuery {
-	return (&StatusClient{config: s.config}).QueryStatusToBuild(s)
+// QueryBuild queries the "Build" edge of the Status entity.
+func (s *Status) QueryBuild() *BuildQuery {
+	return (&StatusClient{config: s.config}).QueryBuild(s)
 }
 
-// QueryStatusToProvisionedNetwork queries the "StatusToProvisionedNetwork" edge of the Status entity.
-func (s *Status) QueryStatusToProvisionedNetwork() *ProvisionedNetworkQuery {
-	return (&StatusClient{config: s.config}).QueryStatusToProvisionedNetwork(s)
+// QueryProvisionedNetwork queries the "ProvisionedNetwork" edge of the Status entity.
+func (s *Status) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
+	return (&StatusClient{config: s.config}).QueryProvisionedNetwork(s)
 }
 
-// QueryStatusToProvisionedHost queries the "StatusToProvisionedHost" edge of the Status entity.
-func (s *Status) QueryStatusToProvisionedHost() *ProvisionedHostQuery {
-	return (&StatusClient{config: s.config}).QueryStatusToProvisionedHost(s)
+// QueryProvisionedHost queries the "ProvisionedHost" edge of the Status entity.
+func (s *Status) QueryProvisionedHost() *ProvisionedHostQuery {
+	return (&StatusClient{config: s.config}).QueryProvisionedHost(s)
 }
 
-// QueryStatusToProvisioningStep queries the "StatusToProvisioningStep" edge of the Status entity.
-func (s *Status) QueryStatusToProvisioningStep() *ProvisioningStepQuery {
-	return (&StatusClient{config: s.config}).QueryStatusToProvisioningStep(s)
+// QueryProvisioningStep queries the "ProvisioningStep" edge of the Status entity.
+func (s *Status) QueryProvisioningStep() *ProvisioningStepQuery {
+	return (&StatusClient{config: s.config}).QueryProvisioningStep(s)
 }
 
-// QueryStatusToTeam queries the "StatusToTeam" edge of the Status entity.
-func (s *Status) QueryStatusToTeam() *TeamQuery {
-	return (&StatusClient{config: s.config}).QueryStatusToTeam(s)
+// QueryTeam queries the "Team" edge of the Status entity.
+func (s *Status) QueryTeam() *TeamQuery {
+	return (&StatusClient{config: s.config}).QueryTeam(s)
 }
 
-// QueryStatusToPlan queries the "StatusToPlan" edge of the Status entity.
-func (s *Status) QueryStatusToPlan() *PlanQuery {
-	return (&StatusClient{config: s.config}).QueryStatusToPlan(s)
+// QueryPlan queries the "Plan" edge of the Status entity.
+func (s *Status) QueryPlan() *PlanQuery {
+	return (&StatusClient{config: s.config}).QueryPlan(s)
 }
 
-// QueryStatusToServerTask queries the "StatusToServerTask" edge of the Status entity.
-func (s *Status) QueryStatusToServerTask() *ServerTaskQuery {
-	return (&StatusClient{config: s.config}).QueryStatusToServerTask(s)
+// QueryServerTask queries the "ServerTask" edge of the Status entity.
+func (s *Status) QueryServerTask() *ServerTaskQuery {
+	return (&StatusClient{config: s.config}).QueryServerTask(s)
 }
 
-// QueryStatusToAdhocPlan queries the "StatusToAdhocPlan" edge of the Status entity.
-func (s *Status) QueryStatusToAdhocPlan() *AdhocPlanQuery {
-	return (&StatusClient{config: s.config}).QueryStatusToAdhocPlan(s)
+// QueryAdhocPlan queries the "AdhocPlan" edge of the Status entity.
+func (s *Status) QueryAdhocPlan() *AdhocPlanQuery {
+	return (&StatusClient{config: s.config}).QueryAdhocPlan(s)
 }
 
-// QueryStatusToProvisioningScheduledStep queries the "StatusToProvisioningScheduledStep" edge of the Status entity.
-func (s *Status) QueryStatusToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
-	return (&StatusClient{config: s.config}).QueryStatusToProvisioningScheduledStep(s)
+// QueryProvisioningScheduledStep queries the "ProvisioningScheduledStep" edge of the Status entity.
+func (s *Status) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+	return (&StatusClient{config: s.config}).QueryProvisioningScheduledStep(s)
 }
 
 // Update returns a builder for updating this Status.

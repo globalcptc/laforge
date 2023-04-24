@@ -145,7 +145,7 @@ func main() {
 	// 	}
 	// 	logrus.Infof("Deleted %v amount of GinMiddleware for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.AgentStatus.Delete().Where(
-	// 		agentstatus.HasAgentStatusToBuildWith(
+	// 		agentstatus.HasAgentBuildWith(
 	// 			build.IDEQ(entBuild.ID),
 	// 		),
 	// 	).Exec(ctx)
