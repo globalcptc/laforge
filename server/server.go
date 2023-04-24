@@ -22,6 +22,7 @@ import (
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
+	"github.com/gen0cide/laforge/ent/migrate"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/graphql/auth"
@@ -229,7 +230,11 @@ func main() {
 	defer client.Close()
 
 	// Run the auto migration tool.
-	if err := client.Schema.Create(ctx); err != nil {
+	if err := client.Schema.Create(
+		ctx,
+		migrate.WithDropIndex(true),
+		migrate.WithDropColumn(true),
+	); err != nil {
 		logrus.Fatalf("failed creating schema resources: %v", err)
 	}
 
