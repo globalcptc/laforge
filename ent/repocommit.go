@@ -43,7 +43,7 @@ type RepoCommit struct {
 	// Repository holds the value of the Repository edge.
 	HCLRepository *Repository `json:"Repository,omitempty"`
 	//
-	repository_repository_to_repo_commit *uuid.UUID
+	repository_repo_commits *uuid.UUID
 }
 
 // RepoCommitEdges holds the relations/edges for other nodes in the graph.
@@ -82,7 +82,7 @@ func (*RepoCommit) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case repocommit.FieldID:
 			values[i] = new(uuid.UUID)
-		case repocommit.ForeignKeys[0]: // repository_repository_to_repo_commit
+		case repocommit.ForeignKeys[0]: // repository_repo_commits
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type RepoCommit", columns[i])
@@ -161,10 +161,10 @@ func (rc *RepoCommit) assignValues(columns []string, values []interface{}) error
 			}
 		case repocommit.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field repository_repository_to_repo_commit", values[i])
+				return fmt.Errorf("unexpected type %T for field repository_repo_commits", values[i])
 			} else if value.Valid {
-				rc.repository_repository_to_repo_commit = new(uuid.UUID)
-				*rc.repository_repository_to_repo_commit = *value.S.(*uuid.UUID)
+				rc.repository_repo_commits = new(uuid.UUID)
+				*rc.repository_repo_commits = *value.S.(*uuid.UUID)
 			}
 		}
 	}

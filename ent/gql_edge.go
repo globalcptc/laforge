@@ -1148,18 +1148,18 @@ func (rc *RepoCommit) Repository(ctx context.Context) (*Repository, error) {
 	return result, MaskNotFound(err)
 }
 
-func (r *Repository) RepositoryToEnvironment(ctx context.Context) ([]*Environment, error) {
-	result, err := r.Edges.RepositoryToEnvironmentOrErr()
+func (r *Repository) Environments(ctx context.Context) ([]*Environment, error) {
+	result, err := r.Edges.EnvironmentsOrErr()
 	if IsNotLoaded(err) {
-		result, err = r.QueryRepositoryToEnvironment().All(ctx)
+		result, err = r.QueryEnvironments().All(ctx)
 	}
 	return result, err
 }
 
-func (r *Repository) RepositoryToRepoCommit(ctx context.Context) ([]*RepoCommit, error) {
-	result, err := r.Edges.RepositoryToRepoCommitOrErr()
+func (r *Repository) RepoCommits(ctx context.Context) ([]*RepoCommit, error) {
+	result, err := r.Edges.RepoCommitsOrErr()
 	if IsNotLoaded(err) {
-		result, err = r.QueryRepositoryToRepoCommit().All(ctx)
+		result, err = r.QueryRepoCommits().All(ctx)
 	}
 	return result, err
 }

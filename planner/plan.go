@@ -136,7 +136,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		}
 		return nil, err
 	}
-	entRepoCommit, err := entEnvironment.QueryRepositories().QueryRepositoryToRepoCommit().Order(ent.Desc(repocommit.FieldRevision)).First(ctx)
+	entRepoCommit, err := entEnvironment.QueryRepositories().QueryRepoCommits().Order(ent.Desc(repocommit.FieldRevision)).First(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Repository from Environment %v. Err: %v", entEnvironment.HclID, err)
 		_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)

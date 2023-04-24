@@ -3280,9 +3280,9 @@ func (r *Repository) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
-		Name: "RepositoryToEnvironment",
+		Name: "Environments",
 	}
-	err = r.QueryRepositoryToEnvironment().
+	err = r.QueryEnvironments().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -3290,9 +3290,9 @@ func (r *Repository) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "RepoCommit",
-		Name: "RepositoryToRepoCommit",
+		Name: "RepoCommits",
 	}
-	err = r.QueryRepositoryToRepoCommit().
+	err = r.QueryRepoCommits().
 		Select(repocommit.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {

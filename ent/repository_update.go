@@ -70,34 +70,34 @@ func (ru *RepositoryUpdate) SetNillableFolderPath(s *string) *RepositoryUpdate {
 	return ru
 }
 
-// AddRepositoryToEnvironmentIDs adds the "RepositoryToEnvironment" edge to the Environment entity by IDs.
-func (ru *RepositoryUpdate) AddRepositoryToEnvironmentIDs(ids ...uuid.UUID) *RepositoryUpdate {
-	ru.mutation.AddRepositoryToEnvironmentIDs(ids...)
+// AddEnvironmentIDs adds the "Environments" edge to the Environment entity by IDs.
+func (ru *RepositoryUpdate) AddEnvironmentIDs(ids ...uuid.UUID) *RepositoryUpdate {
+	ru.mutation.AddEnvironmentIDs(ids...)
 	return ru
 }
 
-// AddRepositoryToEnvironment adds the "RepositoryToEnvironment" edges to the Environment entity.
-func (ru *RepositoryUpdate) AddRepositoryToEnvironment(e ...*Environment) *RepositoryUpdate {
+// AddEnvironments adds the "Environments" edges to the Environment entity.
+func (ru *RepositoryUpdate) AddEnvironments(e ...*Environment) *RepositoryUpdate {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return ru.AddRepositoryToEnvironmentIDs(ids...)
+	return ru.AddEnvironmentIDs(ids...)
 }
 
-// AddRepositoryToRepoCommitIDs adds the "RepositoryToRepoCommit" edge to the RepoCommit entity by IDs.
-func (ru *RepositoryUpdate) AddRepositoryToRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdate {
-	ru.mutation.AddRepositoryToRepoCommitIDs(ids...)
+// AddRepoCommitIDs adds the "RepoCommits" edge to the RepoCommit entity by IDs.
+func (ru *RepositoryUpdate) AddRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdate {
+	ru.mutation.AddRepoCommitIDs(ids...)
 	return ru
 }
 
-// AddRepositoryToRepoCommit adds the "RepositoryToRepoCommit" edges to the RepoCommit entity.
-func (ru *RepositoryUpdate) AddRepositoryToRepoCommit(r ...*RepoCommit) *RepositoryUpdate {
+// AddRepoCommits adds the "RepoCommits" edges to the RepoCommit entity.
+func (ru *RepositoryUpdate) AddRepoCommits(r ...*RepoCommit) *RepositoryUpdate {
 	ids := make([]uuid.UUID, len(r))
 	for i := range r {
 		ids[i] = r[i].ID
 	}
-	return ru.AddRepositoryToRepoCommitIDs(ids...)
+	return ru.AddRepoCommitIDs(ids...)
 }
 
 // Mutation returns the RepositoryMutation object of the builder.
@@ -105,46 +105,46 @@ func (ru *RepositoryUpdate) Mutation() *RepositoryMutation {
 	return ru.mutation
 }
 
-// ClearRepositoryToEnvironment clears all "RepositoryToEnvironment" edges to the Environment entity.
-func (ru *RepositoryUpdate) ClearRepositoryToEnvironment() *RepositoryUpdate {
-	ru.mutation.ClearRepositoryToEnvironment()
+// ClearEnvironments clears all "Environments" edges to the Environment entity.
+func (ru *RepositoryUpdate) ClearEnvironments() *RepositoryUpdate {
+	ru.mutation.ClearEnvironments()
 	return ru
 }
 
-// RemoveRepositoryToEnvironmentIDs removes the "RepositoryToEnvironment" edge to Environment entities by IDs.
-func (ru *RepositoryUpdate) RemoveRepositoryToEnvironmentIDs(ids ...uuid.UUID) *RepositoryUpdate {
-	ru.mutation.RemoveRepositoryToEnvironmentIDs(ids...)
+// RemoveEnvironmentIDs removes the "Environments" edge to Environment entities by IDs.
+func (ru *RepositoryUpdate) RemoveEnvironmentIDs(ids ...uuid.UUID) *RepositoryUpdate {
+	ru.mutation.RemoveEnvironmentIDs(ids...)
 	return ru
 }
 
-// RemoveRepositoryToEnvironment removes "RepositoryToEnvironment" edges to Environment entities.
-func (ru *RepositoryUpdate) RemoveRepositoryToEnvironment(e ...*Environment) *RepositoryUpdate {
+// RemoveEnvironments removes "Environments" edges to Environment entities.
+func (ru *RepositoryUpdate) RemoveEnvironments(e ...*Environment) *RepositoryUpdate {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return ru.RemoveRepositoryToEnvironmentIDs(ids...)
+	return ru.RemoveEnvironmentIDs(ids...)
 }
 
-// ClearRepositoryToRepoCommit clears all "RepositoryToRepoCommit" edges to the RepoCommit entity.
-func (ru *RepositoryUpdate) ClearRepositoryToRepoCommit() *RepositoryUpdate {
-	ru.mutation.ClearRepositoryToRepoCommit()
+// ClearRepoCommits clears all "RepoCommits" edges to the RepoCommit entity.
+func (ru *RepositoryUpdate) ClearRepoCommits() *RepositoryUpdate {
+	ru.mutation.ClearRepoCommits()
 	return ru
 }
 
-// RemoveRepositoryToRepoCommitIDs removes the "RepositoryToRepoCommit" edge to RepoCommit entities by IDs.
-func (ru *RepositoryUpdate) RemoveRepositoryToRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdate {
-	ru.mutation.RemoveRepositoryToRepoCommitIDs(ids...)
+// RemoveRepoCommitIDs removes the "RepoCommits" edge to RepoCommit entities by IDs.
+func (ru *RepositoryUpdate) RemoveRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdate {
+	ru.mutation.RemoveRepoCommitIDs(ids...)
 	return ru
 }
 
-// RemoveRepositoryToRepoCommit removes "RepositoryToRepoCommit" edges to RepoCommit entities.
-func (ru *RepositoryUpdate) RemoveRepositoryToRepoCommit(r ...*RepoCommit) *RepositoryUpdate {
+// RemoveRepoCommits removes "RepoCommits" edges to RepoCommit entities.
+func (ru *RepositoryUpdate) RemoveRepoCommits(r ...*RepoCommit) *RepositoryUpdate {
 	ids := make([]uuid.UUID, len(r))
 	for i := range r {
 		ids[i] = r[i].ID
 	}
-	return ru.RemoveRepositoryToRepoCommitIDs(ids...)
+	return ru.RemoveRepoCommitIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -247,12 +247,12 @@ func (ru *RepositoryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: repository.FieldFolderPath,
 		})
 	}
-	if ru.mutation.RepositoryToEnvironmentCleared() {
+	if ru.mutation.EnvironmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   repository.RepositoryToEnvironmentTable,
-			Columns: repository.RepositoryToEnvironmentPrimaryKey,
+			Table:   repository.EnvironmentsTable,
+			Columns: repository.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -263,12 +263,12 @@ func (ru *RepositoryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ru.mutation.RemovedRepositoryToEnvironmentIDs(); len(nodes) > 0 && !ru.mutation.RepositoryToEnvironmentCleared() {
+	if nodes := ru.mutation.RemovedEnvironmentsIDs(); len(nodes) > 0 && !ru.mutation.EnvironmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   repository.RepositoryToEnvironmentTable,
-			Columns: repository.RepositoryToEnvironmentPrimaryKey,
+			Table:   repository.EnvironmentsTable,
+			Columns: repository.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -282,12 +282,12 @@ func (ru *RepositoryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ru.mutation.RepositoryToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := ru.mutation.EnvironmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   repository.RepositoryToEnvironmentTable,
-			Columns: repository.RepositoryToEnvironmentPrimaryKey,
+			Table:   repository.EnvironmentsTable,
+			Columns: repository.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -301,12 +301,12 @@ func (ru *RepositoryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ru.mutation.RepositoryToRepoCommitCleared() {
+	if ru.mutation.RepoCommitsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   repository.RepositoryToRepoCommitTable,
-			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Table:   repository.RepoCommitsTable,
+			Columns: []string{repository.RepoCommitsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -317,12 +317,12 @@ func (ru *RepositoryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ru.mutation.RemovedRepositoryToRepoCommitIDs(); len(nodes) > 0 && !ru.mutation.RepositoryToRepoCommitCleared() {
+	if nodes := ru.mutation.RemovedRepoCommitsIDs(); len(nodes) > 0 && !ru.mutation.RepoCommitsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   repository.RepositoryToRepoCommitTable,
-			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Table:   repository.RepoCommitsTable,
+			Columns: []string{repository.RepoCommitsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -336,12 +336,12 @@ func (ru *RepositoryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ru.mutation.RepositoryToRepoCommitIDs(); len(nodes) > 0 {
+	if nodes := ru.mutation.RepoCommitsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   repository.RepositoryToRepoCommitTable,
-			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Table:   repository.RepoCommitsTable,
+			Columns: []string{repository.RepoCommitsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -414,34 +414,34 @@ func (ruo *RepositoryUpdateOne) SetNillableFolderPath(s *string) *RepositoryUpda
 	return ruo
 }
 
-// AddRepositoryToEnvironmentIDs adds the "RepositoryToEnvironment" edge to the Environment entity by IDs.
-func (ruo *RepositoryUpdateOne) AddRepositoryToEnvironmentIDs(ids ...uuid.UUID) *RepositoryUpdateOne {
-	ruo.mutation.AddRepositoryToEnvironmentIDs(ids...)
+// AddEnvironmentIDs adds the "Environments" edge to the Environment entity by IDs.
+func (ruo *RepositoryUpdateOne) AddEnvironmentIDs(ids ...uuid.UUID) *RepositoryUpdateOne {
+	ruo.mutation.AddEnvironmentIDs(ids...)
 	return ruo
 }
 
-// AddRepositoryToEnvironment adds the "RepositoryToEnvironment" edges to the Environment entity.
-func (ruo *RepositoryUpdateOne) AddRepositoryToEnvironment(e ...*Environment) *RepositoryUpdateOne {
+// AddEnvironments adds the "Environments" edges to the Environment entity.
+func (ruo *RepositoryUpdateOne) AddEnvironments(e ...*Environment) *RepositoryUpdateOne {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return ruo.AddRepositoryToEnvironmentIDs(ids...)
+	return ruo.AddEnvironmentIDs(ids...)
 }
 
-// AddRepositoryToRepoCommitIDs adds the "RepositoryToRepoCommit" edge to the RepoCommit entity by IDs.
-func (ruo *RepositoryUpdateOne) AddRepositoryToRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdateOne {
-	ruo.mutation.AddRepositoryToRepoCommitIDs(ids...)
+// AddRepoCommitIDs adds the "RepoCommits" edge to the RepoCommit entity by IDs.
+func (ruo *RepositoryUpdateOne) AddRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdateOne {
+	ruo.mutation.AddRepoCommitIDs(ids...)
 	return ruo
 }
 
-// AddRepositoryToRepoCommit adds the "RepositoryToRepoCommit" edges to the RepoCommit entity.
-func (ruo *RepositoryUpdateOne) AddRepositoryToRepoCommit(r ...*RepoCommit) *RepositoryUpdateOne {
+// AddRepoCommits adds the "RepoCommits" edges to the RepoCommit entity.
+func (ruo *RepositoryUpdateOne) AddRepoCommits(r ...*RepoCommit) *RepositoryUpdateOne {
 	ids := make([]uuid.UUID, len(r))
 	for i := range r {
 		ids[i] = r[i].ID
 	}
-	return ruo.AddRepositoryToRepoCommitIDs(ids...)
+	return ruo.AddRepoCommitIDs(ids...)
 }
 
 // Mutation returns the RepositoryMutation object of the builder.
@@ -449,46 +449,46 @@ func (ruo *RepositoryUpdateOne) Mutation() *RepositoryMutation {
 	return ruo.mutation
 }
 
-// ClearRepositoryToEnvironment clears all "RepositoryToEnvironment" edges to the Environment entity.
-func (ruo *RepositoryUpdateOne) ClearRepositoryToEnvironment() *RepositoryUpdateOne {
-	ruo.mutation.ClearRepositoryToEnvironment()
+// ClearEnvironments clears all "Environments" edges to the Environment entity.
+func (ruo *RepositoryUpdateOne) ClearEnvironments() *RepositoryUpdateOne {
+	ruo.mutation.ClearEnvironments()
 	return ruo
 }
 
-// RemoveRepositoryToEnvironmentIDs removes the "RepositoryToEnvironment" edge to Environment entities by IDs.
-func (ruo *RepositoryUpdateOne) RemoveRepositoryToEnvironmentIDs(ids ...uuid.UUID) *RepositoryUpdateOne {
-	ruo.mutation.RemoveRepositoryToEnvironmentIDs(ids...)
+// RemoveEnvironmentIDs removes the "Environments" edge to Environment entities by IDs.
+func (ruo *RepositoryUpdateOne) RemoveEnvironmentIDs(ids ...uuid.UUID) *RepositoryUpdateOne {
+	ruo.mutation.RemoveEnvironmentIDs(ids...)
 	return ruo
 }
 
-// RemoveRepositoryToEnvironment removes "RepositoryToEnvironment" edges to Environment entities.
-func (ruo *RepositoryUpdateOne) RemoveRepositoryToEnvironment(e ...*Environment) *RepositoryUpdateOne {
+// RemoveEnvironments removes "Environments" edges to Environment entities.
+func (ruo *RepositoryUpdateOne) RemoveEnvironments(e ...*Environment) *RepositoryUpdateOne {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return ruo.RemoveRepositoryToEnvironmentIDs(ids...)
+	return ruo.RemoveEnvironmentIDs(ids...)
 }
 
-// ClearRepositoryToRepoCommit clears all "RepositoryToRepoCommit" edges to the RepoCommit entity.
-func (ruo *RepositoryUpdateOne) ClearRepositoryToRepoCommit() *RepositoryUpdateOne {
-	ruo.mutation.ClearRepositoryToRepoCommit()
+// ClearRepoCommits clears all "RepoCommits" edges to the RepoCommit entity.
+func (ruo *RepositoryUpdateOne) ClearRepoCommits() *RepositoryUpdateOne {
+	ruo.mutation.ClearRepoCommits()
 	return ruo
 }
 
-// RemoveRepositoryToRepoCommitIDs removes the "RepositoryToRepoCommit" edge to RepoCommit entities by IDs.
-func (ruo *RepositoryUpdateOne) RemoveRepositoryToRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdateOne {
-	ruo.mutation.RemoveRepositoryToRepoCommitIDs(ids...)
+// RemoveRepoCommitIDs removes the "RepoCommits" edge to RepoCommit entities by IDs.
+func (ruo *RepositoryUpdateOne) RemoveRepoCommitIDs(ids ...uuid.UUID) *RepositoryUpdateOne {
+	ruo.mutation.RemoveRepoCommitIDs(ids...)
 	return ruo
 }
 
-// RemoveRepositoryToRepoCommit removes "RepositoryToRepoCommit" edges to RepoCommit entities.
-func (ruo *RepositoryUpdateOne) RemoveRepositoryToRepoCommit(r ...*RepoCommit) *RepositoryUpdateOne {
+// RemoveRepoCommits removes "RepoCommits" edges to RepoCommit entities.
+func (ruo *RepositoryUpdateOne) RemoveRepoCommits(r ...*RepoCommit) *RepositoryUpdateOne {
 	ids := make([]uuid.UUID, len(r))
 	for i := range r {
 		ids[i] = r[i].ID
 	}
-	return ruo.RemoveRepositoryToRepoCommitIDs(ids...)
+	return ruo.RemoveRepoCommitIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -621,12 +621,12 @@ func (ruo *RepositoryUpdateOne) sqlSave(ctx context.Context) (_node *Repository,
 			Column: repository.FieldFolderPath,
 		})
 	}
-	if ruo.mutation.RepositoryToEnvironmentCleared() {
+	if ruo.mutation.EnvironmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   repository.RepositoryToEnvironmentTable,
-			Columns: repository.RepositoryToEnvironmentPrimaryKey,
+			Table:   repository.EnvironmentsTable,
+			Columns: repository.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -637,12 +637,12 @@ func (ruo *RepositoryUpdateOne) sqlSave(ctx context.Context) (_node *Repository,
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ruo.mutation.RemovedRepositoryToEnvironmentIDs(); len(nodes) > 0 && !ruo.mutation.RepositoryToEnvironmentCleared() {
+	if nodes := ruo.mutation.RemovedEnvironmentsIDs(); len(nodes) > 0 && !ruo.mutation.EnvironmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   repository.RepositoryToEnvironmentTable,
-			Columns: repository.RepositoryToEnvironmentPrimaryKey,
+			Table:   repository.EnvironmentsTable,
+			Columns: repository.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -656,12 +656,12 @@ func (ruo *RepositoryUpdateOne) sqlSave(ctx context.Context) (_node *Repository,
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ruo.mutation.RepositoryToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := ruo.mutation.EnvironmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   repository.RepositoryToEnvironmentTable,
-			Columns: repository.RepositoryToEnvironmentPrimaryKey,
+			Table:   repository.EnvironmentsTable,
+			Columns: repository.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -675,12 +675,12 @@ func (ruo *RepositoryUpdateOne) sqlSave(ctx context.Context) (_node *Repository,
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ruo.mutation.RepositoryToRepoCommitCleared() {
+	if ruo.mutation.RepoCommitsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   repository.RepositoryToRepoCommitTable,
-			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Table:   repository.RepoCommitsTable,
+			Columns: []string{repository.RepoCommitsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -691,12 +691,12 @@ func (ruo *RepositoryUpdateOne) sqlSave(ctx context.Context) (_node *Repository,
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ruo.mutation.RemovedRepositoryToRepoCommitIDs(); len(nodes) > 0 && !ruo.mutation.RepositoryToRepoCommitCleared() {
+	if nodes := ruo.mutation.RemovedRepoCommitsIDs(); len(nodes) > 0 && !ruo.mutation.RepoCommitsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   repository.RepositoryToRepoCommitTable,
-			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Table:   repository.RepoCommitsTable,
+			Columns: []string{repository.RepoCommitsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -710,12 +710,12 @@ func (ruo *RepositoryUpdateOne) sqlSave(ctx context.Context) (_node *Repository,
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ruo.mutation.RepositoryToRepoCommitIDs(); len(nodes) > 0 {
+	if nodes := ruo.mutation.RepoCommitsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   repository.RepositoryToRepoCommitTable,
-			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Table:   repository.RepoCommitsTable,
+			Columns: []string{repository.RepoCommitsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

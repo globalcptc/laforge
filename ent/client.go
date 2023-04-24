@@ -5463,15 +5463,15 @@ func (c *RepositoryClient) GetX(ctx context.Context, id uuid.UUID) *Repository {
 	return obj
 }
 
-// QueryRepositoryToEnvironment queries the RepositoryToEnvironment edge of a Repository.
-func (c *RepositoryClient) QueryRepositoryToEnvironment(r *Repository) *EnvironmentQuery {
+// QueryEnvironments queries the Environments edge of a Repository.
+func (c *RepositoryClient) QueryEnvironments(r *Repository) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := r.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(repository.Table, repository.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, repository.RepositoryToEnvironmentTable, repository.RepositoryToEnvironmentPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, repository.EnvironmentsTable, repository.EnvironmentsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
 		return fromV, nil
@@ -5479,15 +5479,15 @@ func (c *RepositoryClient) QueryRepositoryToEnvironment(r *Repository) *Environm
 	return query
 }
 
-// QueryRepositoryToRepoCommit queries the RepositoryToRepoCommit edge of a Repository.
-func (c *RepositoryClient) QueryRepositoryToRepoCommit(r *Repository) *RepoCommitQuery {
+// QueryRepoCommits queries the RepoCommits edge of a Repository.
+func (c *RepositoryClient) QueryRepoCommits(r *Repository) *RepoCommitQuery {
 	query := &RepoCommitQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := r.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(repository.Table, repository.FieldID, id),
 			sqlgraph.To(repocommit.Table, repocommit.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, repository.RepositoryToRepoCommitTable, repository.RepositoryToRepoCommitColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, repository.RepoCommitsTable, repository.RepoCommitsColumn),
 		)
 		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
 		return fromV, nil

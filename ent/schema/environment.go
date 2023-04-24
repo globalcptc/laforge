@@ -129,7 +129,7 @@ func (Environment) Edges() []ent.Edge {
 		edge.From("Builds", Build.Type).
 			Ref("Environment"),
 		edge.From("Repositories", Repository.Type).
-			Ref("RepositoryToEnvironment"),
+			Ref("Environments"),
 		edge.From("ServerTasks", ServerTask.Type).
 			Ref("ServerTaskToEnvironment"),
 	}

@@ -395,10 +395,10 @@ func (rcq *RepoCommitQuery) loadRepository(ctx context.Context, query *Repositor
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*RepoCommit)
 	for i := range nodes {
-		if nodes[i].repository_repository_to_repo_commit == nil {
+		if nodes[i].repository_repo_commits == nil {
 			continue
 		}
-		fk := *nodes[i].repository_repository_to_repo_commit
+		fk := *nodes[i].repository_repo_commits
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (rcq *RepoCommitQuery) loadRepository(ctx context.Context, query *Repositor
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "repository_repository_to_repo_commit" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "repository_repo_commits" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

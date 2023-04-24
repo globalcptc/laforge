@@ -28620,23 +28620,23 @@ func (m *RepoCommitMutation) ResetEdge(name string) error {
 // RepositoryMutation represents an operation that mutates the Repository nodes in the graph.
 type RepositoryMutation struct {
 	config
-	op                              Op
-	typ                             string
-	id                              *uuid.UUID
-	repo_url                        *string
-	branch_name                     *string
-	enviroment_filepath             *string
-	folder_path                     *string
-	clearedFields                   map[string]struct{}
-	_RepositoryToEnvironment        map[uuid.UUID]struct{}
-	removed_RepositoryToEnvironment map[uuid.UUID]struct{}
-	cleared_RepositoryToEnvironment bool
-	_RepositoryToRepoCommit         map[uuid.UUID]struct{}
-	removed_RepositoryToRepoCommit  map[uuid.UUID]struct{}
-	cleared_RepositoryToRepoCommit  bool
-	done                            bool
-	oldValue                        func(context.Context) (*Repository, error)
-	predicates                      []predicate.Repository
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	repo_url             *string
+	branch_name          *string
+	enviroment_filepath  *string
+	folder_path          *string
+	clearedFields        map[string]struct{}
+	_Environments        map[uuid.UUID]struct{}
+	removed_Environments map[uuid.UUID]struct{}
+	cleared_Environments bool
+	_RepoCommits         map[uuid.UUID]struct{}
+	removed_RepoCommits  map[uuid.UUID]struct{}
+	cleared_RepoCommits  bool
+	done                 bool
+	oldValue             func(context.Context) (*Repository, error)
+	predicates           []predicate.Repository
 }
 
 var _ ent.Mutation = (*RepositoryMutation)(nil)
@@ -28887,112 +28887,112 @@ func (m *RepositoryMutation) ResetFolderPath() {
 	m.folder_path = nil
 }
 
-// AddRepositoryToEnvironmentIDs adds the "RepositoryToEnvironment" edge to the Environment entity by ids.
-func (m *RepositoryMutation) AddRepositoryToEnvironmentIDs(ids ...uuid.UUID) {
-	if m._RepositoryToEnvironment == nil {
-		m._RepositoryToEnvironment = make(map[uuid.UUID]struct{})
+// AddEnvironmentIDs adds the "Environments" edge to the Environment entity by ids.
+func (m *RepositoryMutation) AddEnvironmentIDs(ids ...uuid.UUID) {
+	if m._Environments == nil {
+		m._Environments = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._RepositoryToEnvironment[ids[i]] = struct{}{}
+		m._Environments[ids[i]] = struct{}{}
 	}
 }
 
-// ClearRepositoryToEnvironment clears the "RepositoryToEnvironment" edge to the Environment entity.
-func (m *RepositoryMutation) ClearRepositoryToEnvironment() {
-	m.cleared_RepositoryToEnvironment = true
+// ClearEnvironments clears the "Environments" edge to the Environment entity.
+func (m *RepositoryMutation) ClearEnvironments() {
+	m.cleared_Environments = true
 }
 
-// RepositoryToEnvironmentCleared reports if the "RepositoryToEnvironment" edge to the Environment entity was cleared.
-func (m *RepositoryMutation) RepositoryToEnvironmentCleared() bool {
-	return m.cleared_RepositoryToEnvironment
+// EnvironmentsCleared reports if the "Environments" edge to the Environment entity was cleared.
+func (m *RepositoryMutation) EnvironmentsCleared() bool {
+	return m.cleared_Environments
 }
 
-// RemoveRepositoryToEnvironmentIDs removes the "RepositoryToEnvironment" edge to the Environment entity by IDs.
-func (m *RepositoryMutation) RemoveRepositoryToEnvironmentIDs(ids ...uuid.UUID) {
-	if m.removed_RepositoryToEnvironment == nil {
-		m.removed_RepositoryToEnvironment = make(map[uuid.UUID]struct{})
+// RemoveEnvironmentIDs removes the "Environments" edge to the Environment entity by IDs.
+func (m *RepositoryMutation) RemoveEnvironmentIDs(ids ...uuid.UUID) {
+	if m.removed_Environments == nil {
+		m.removed_Environments = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._RepositoryToEnvironment, ids[i])
-		m.removed_RepositoryToEnvironment[ids[i]] = struct{}{}
+		delete(m._Environments, ids[i])
+		m.removed_Environments[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedRepositoryToEnvironment returns the removed IDs of the "RepositoryToEnvironment" edge to the Environment entity.
-func (m *RepositoryMutation) RemovedRepositoryToEnvironmentIDs() (ids []uuid.UUID) {
-	for id := range m.removed_RepositoryToEnvironment {
+// RemovedEnvironments returns the removed IDs of the "Environments" edge to the Environment entity.
+func (m *RepositoryMutation) RemovedEnvironmentsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Environments {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// RepositoryToEnvironmentIDs returns the "RepositoryToEnvironment" edge IDs in the mutation.
-func (m *RepositoryMutation) RepositoryToEnvironmentIDs() (ids []uuid.UUID) {
-	for id := range m._RepositoryToEnvironment {
+// EnvironmentsIDs returns the "Environments" edge IDs in the mutation.
+func (m *RepositoryMutation) EnvironmentsIDs() (ids []uuid.UUID) {
+	for id := range m._Environments {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetRepositoryToEnvironment resets all changes to the "RepositoryToEnvironment" edge.
-func (m *RepositoryMutation) ResetRepositoryToEnvironment() {
-	m._RepositoryToEnvironment = nil
-	m.cleared_RepositoryToEnvironment = false
-	m.removed_RepositoryToEnvironment = nil
+// ResetEnvironments resets all changes to the "Environments" edge.
+func (m *RepositoryMutation) ResetEnvironments() {
+	m._Environments = nil
+	m.cleared_Environments = false
+	m.removed_Environments = nil
 }
 
-// AddRepositoryToRepoCommitIDs adds the "RepositoryToRepoCommit" edge to the RepoCommit entity by ids.
-func (m *RepositoryMutation) AddRepositoryToRepoCommitIDs(ids ...uuid.UUID) {
-	if m._RepositoryToRepoCommit == nil {
-		m._RepositoryToRepoCommit = make(map[uuid.UUID]struct{})
+// AddRepoCommitIDs adds the "RepoCommits" edge to the RepoCommit entity by ids.
+func (m *RepositoryMutation) AddRepoCommitIDs(ids ...uuid.UUID) {
+	if m._RepoCommits == nil {
+		m._RepoCommits = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._RepositoryToRepoCommit[ids[i]] = struct{}{}
+		m._RepoCommits[ids[i]] = struct{}{}
 	}
 }
 
-// ClearRepositoryToRepoCommit clears the "RepositoryToRepoCommit" edge to the RepoCommit entity.
-func (m *RepositoryMutation) ClearRepositoryToRepoCommit() {
-	m.cleared_RepositoryToRepoCommit = true
+// ClearRepoCommits clears the "RepoCommits" edge to the RepoCommit entity.
+func (m *RepositoryMutation) ClearRepoCommits() {
+	m.cleared_RepoCommits = true
 }
 
-// RepositoryToRepoCommitCleared reports if the "RepositoryToRepoCommit" edge to the RepoCommit entity was cleared.
-func (m *RepositoryMutation) RepositoryToRepoCommitCleared() bool {
-	return m.cleared_RepositoryToRepoCommit
+// RepoCommitsCleared reports if the "RepoCommits" edge to the RepoCommit entity was cleared.
+func (m *RepositoryMutation) RepoCommitsCleared() bool {
+	return m.cleared_RepoCommits
 }
 
-// RemoveRepositoryToRepoCommitIDs removes the "RepositoryToRepoCommit" edge to the RepoCommit entity by IDs.
-func (m *RepositoryMutation) RemoveRepositoryToRepoCommitIDs(ids ...uuid.UUID) {
-	if m.removed_RepositoryToRepoCommit == nil {
-		m.removed_RepositoryToRepoCommit = make(map[uuid.UUID]struct{})
+// RemoveRepoCommitIDs removes the "RepoCommits" edge to the RepoCommit entity by IDs.
+func (m *RepositoryMutation) RemoveRepoCommitIDs(ids ...uuid.UUID) {
+	if m.removed_RepoCommits == nil {
+		m.removed_RepoCommits = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._RepositoryToRepoCommit, ids[i])
-		m.removed_RepositoryToRepoCommit[ids[i]] = struct{}{}
+		delete(m._RepoCommits, ids[i])
+		m.removed_RepoCommits[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedRepositoryToRepoCommit returns the removed IDs of the "RepositoryToRepoCommit" edge to the RepoCommit entity.
-func (m *RepositoryMutation) RemovedRepositoryToRepoCommitIDs() (ids []uuid.UUID) {
-	for id := range m.removed_RepositoryToRepoCommit {
+// RemovedRepoCommits returns the removed IDs of the "RepoCommits" edge to the RepoCommit entity.
+func (m *RepositoryMutation) RemovedRepoCommitsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_RepoCommits {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// RepositoryToRepoCommitIDs returns the "RepositoryToRepoCommit" edge IDs in the mutation.
-func (m *RepositoryMutation) RepositoryToRepoCommitIDs() (ids []uuid.UUID) {
-	for id := range m._RepositoryToRepoCommit {
+// RepoCommitsIDs returns the "RepoCommits" edge IDs in the mutation.
+func (m *RepositoryMutation) RepoCommitsIDs() (ids []uuid.UUID) {
+	for id := range m._RepoCommits {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetRepositoryToRepoCommit resets all changes to the "RepositoryToRepoCommit" edge.
-func (m *RepositoryMutation) ResetRepositoryToRepoCommit() {
-	m._RepositoryToRepoCommit = nil
-	m.cleared_RepositoryToRepoCommit = false
-	m.removed_RepositoryToRepoCommit = nil
+// ResetRepoCommits resets all changes to the "RepoCommits" edge.
+func (m *RepositoryMutation) ResetRepoCommits() {
+	m._RepoCommits = nil
+	m.cleared_RepoCommits = false
+	m.removed_RepoCommits = nil
 }
 
 // Where appends a list predicates to the RepositoryMutation builder.
@@ -29165,11 +29165,11 @@ func (m *RepositoryMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RepositoryMutation) AddedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m._RepositoryToEnvironment != nil {
-		edges = append(edges, repository.EdgeRepositoryToEnvironment)
+	if m._Environments != nil {
+		edges = append(edges, repository.EdgeEnvironments)
 	}
-	if m._RepositoryToRepoCommit != nil {
-		edges = append(edges, repository.EdgeRepositoryToRepoCommit)
+	if m._RepoCommits != nil {
+		edges = append(edges, repository.EdgeRepoCommits)
 	}
 	return edges
 }
@@ -29178,15 +29178,15 @@ func (m *RepositoryMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *RepositoryMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case repository.EdgeRepositoryToEnvironment:
-		ids := make([]ent.Value, 0, len(m._RepositoryToEnvironment))
-		for id := range m._RepositoryToEnvironment {
+	case repository.EdgeEnvironments:
+		ids := make([]ent.Value, 0, len(m._Environments))
+		for id := range m._Environments {
 			ids = append(ids, id)
 		}
 		return ids
-	case repository.EdgeRepositoryToRepoCommit:
-		ids := make([]ent.Value, 0, len(m._RepositoryToRepoCommit))
-		for id := range m._RepositoryToRepoCommit {
+	case repository.EdgeRepoCommits:
+		ids := make([]ent.Value, 0, len(m._RepoCommits))
+		for id := range m._RepoCommits {
 			ids = append(ids, id)
 		}
 		return ids
@@ -29197,11 +29197,11 @@ func (m *RepositoryMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RepositoryMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.removed_RepositoryToEnvironment != nil {
-		edges = append(edges, repository.EdgeRepositoryToEnvironment)
+	if m.removed_Environments != nil {
+		edges = append(edges, repository.EdgeEnvironments)
 	}
-	if m.removed_RepositoryToRepoCommit != nil {
-		edges = append(edges, repository.EdgeRepositoryToRepoCommit)
+	if m.removed_RepoCommits != nil {
+		edges = append(edges, repository.EdgeRepoCommits)
 	}
 	return edges
 }
@@ -29210,15 +29210,15 @@ func (m *RepositoryMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *RepositoryMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case repository.EdgeRepositoryToEnvironment:
-		ids := make([]ent.Value, 0, len(m.removed_RepositoryToEnvironment))
-		for id := range m.removed_RepositoryToEnvironment {
+	case repository.EdgeEnvironments:
+		ids := make([]ent.Value, 0, len(m.removed_Environments))
+		for id := range m.removed_Environments {
 			ids = append(ids, id)
 		}
 		return ids
-	case repository.EdgeRepositoryToRepoCommit:
-		ids := make([]ent.Value, 0, len(m.removed_RepositoryToRepoCommit))
-		for id := range m.removed_RepositoryToRepoCommit {
+	case repository.EdgeRepoCommits:
+		ids := make([]ent.Value, 0, len(m.removed_RepoCommits))
+		for id := range m.removed_RepoCommits {
 			ids = append(ids, id)
 		}
 		return ids
@@ -29229,11 +29229,11 @@ func (m *RepositoryMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RepositoryMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.cleared_RepositoryToEnvironment {
-		edges = append(edges, repository.EdgeRepositoryToEnvironment)
+	if m.cleared_Environments {
+		edges = append(edges, repository.EdgeEnvironments)
 	}
-	if m.cleared_RepositoryToRepoCommit {
-		edges = append(edges, repository.EdgeRepositoryToRepoCommit)
+	if m.cleared_RepoCommits {
+		edges = append(edges, repository.EdgeRepoCommits)
 	}
 	return edges
 }
@@ -29242,10 +29242,10 @@ func (m *RepositoryMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *RepositoryMutation) EdgeCleared(name string) bool {
 	switch name {
-	case repository.EdgeRepositoryToEnvironment:
-		return m.cleared_RepositoryToEnvironment
-	case repository.EdgeRepositoryToRepoCommit:
-		return m.cleared_RepositoryToRepoCommit
+	case repository.EdgeEnvironments:
+		return m.cleared_Environments
+	case repository.EdgeRepoCommits:
+		return m.cleared_RepoCommits
 	}
 	return false
 }
@@ -29262,11 +29262,11 @@ func (m *RepositoryMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *RepositoryMutation) ResetEdge(name string) error {
 	switch name {
-	case repository.EdgeRepositoryToEnvironment:
-		m.ResetRepositoryToEnvironment()
+	case repository.EdgeEnvironments:
+		m.ResetEnvironments()
 		return nil
-	case repository.EdgeRepositoryToRepoCommit:
-		m.ResetRepositoryToRepoCommit()
+	case repository.EdgeRepoCommits:
+		m.ResetRepoCommits()
 		return nil
 	}
 	return fmt.Errorf("unknown Repository edge %s", name)

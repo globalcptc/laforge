@@ -329,7 +329,7 @@ func (rcc *RepoCommitCreate) createSpec() (*RepoCommit, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.repository_repository_to_repo_commit = &nodes[0]
+		_node.repository_repo_commits = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

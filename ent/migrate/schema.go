@@ -997,7 +997,7 @@ var (
 		{Name: "message", Type: field.TypeString},
 		{Name: "tree_hash", Type: field.TypeString},
 		{Name: "parent_hashes", Type: field.TypeJSON},
-		{Name: "repository_repository_to_repo_commit", Type: field.TypeUUID, Nullable: true},
+		{Name: "repository_repo_commits", Type: field.TypeUUID, Nullable: true},
 	}
 	// RepoCommitsTable holds the schema information for the "repo_commits" table.
 	RepoCommitsTable = &schema.Table{
@@ -1006,7 +1006,7 @@ var (
 		PrimaryKey: []*schema.Column{RepoCommitsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "repo_commits_repositories_RepositoryToRepoCommit",
+				Symbol:     "repo_commits_repositories_RepoCommits",
 				Columns:    []*schema.Column{RepoCommitsColumns[9]},
 				RefColumns: []*schema.Column{RepositoriesColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -1517,26 +1517,26 @@ var (
 			},
 		},
 	}
-	// RepositoryRepositoryToEnvironmentColumns holds the columns for the "repository_RepositoryToEnvironment" table.
-	RepositoryRepositoryToEnvironmentColumns = []*schema.Column{
+	// RepositoryEnvironmentsColumns holds the columns for the "repository_Environments" table.
+	RepositoryEnvironmentsColumns = []*schema.Column{
 		{Name: "repository_id", Type: field.TypeUUID},
 		{Name: "environment_id", Type: field.TypeUUID},
 	}
-	// RepositoryRepositoryToEnvironmentTable holds the schema information for the "repository_RepositoryToEnvironment" table.
-	RepositoryRepositoryToEnvironmentTable = &schema.Table{
-		Name:       "repository_RepositoryToEnvironment",
-		Columns:    RepositoryRepositoryToEnvironmentColumns,
-		PrimaryKey: []*schema.Column{RepositoryRepositoryToEnvironmentColumns[0], RepositoryRepositoryToEnvironmentColumns[1]},
+	// RepositoryEnvironmentsTable holds the schema information for the "repository_Environments" table.
+	RepositoryEnvironmentsTable = &schema.Table{
+		Name:       "repository_Environments",
+		Columns:    RepositoryEnvironmentsColumns,
+		PrimaryKey: []*schema.Column{RepositoryEnvironmentsColumns[0], RepositoryEnvironmentsColumns[1]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "repository_RepositoryToEnvironment_repository_id",
-				Columns:    []*schema.Column{RepositoryRepositoryToEnvironmentColumns[0]},
+				Symbol:     "repository_Environments_repository_id",
+				Columns:    []*schema.Column{RepositoryEnvironmentsColumns[0]},
 				RefColumns: []*schema.Column{RepositoriesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "repository_RepositoryToEnvironment_environment_id",
-				Columns:    []*schema.Column{RepositoryRepositoryToEnvironmentColumns[1]},
+				Symbol:     "repository_Environments_environment_id",
+				Columns:    []*schema.Column{RepositoryEnvironmentsColumns[1]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1590,7 +1590,7 @@ var (
 		EnvironmentDNSTable,
 		IncludedNetworkHostsTable,
 		PlanNextPlansTable,
-		RepositoryRepositoryToEnvironmentTable,
+		RepositoryEnvironmentsTable,
 	}
 )
 
@@ -1702,6 +1702,6 @@ func init() {
 	IncludedNetworkHostsTable.ForeignKeys[1].RefTable = HostsTable
 	PlanNextPlansTable.ForeignKeys[0].RefTable = PlansTable
 	PlanNextPlansTable.ForeignKeys[1].RefTable = PlansTable
-	RepositoryRepositoryToEnvironmentTable.ForeignKeys[0].RefTable = RepositoriesTable
-	RepositoryRepositoryToEnvironmentTable.ForeignKeys[1].RefTable = EnvironmentsTable
+	RepositoryEnvironmentsTable.ForeignKeys[0].RefTable = RepositoriesTable
+	RepositoryEnvironmentsTable.ForeignKeys[1].RefTable = EnvironmentsTable
 }

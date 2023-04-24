@@ -76,34 +76,34 @@ func (rc *RepositoryCreate) SetNillableID(u *uuid.UUID) *RepositoryCreate {
 	return rc
 }
 
-// AddRepositoryToEnvironmentIDs adds the "RepositoryToEnvironment" edge to the Environment entity by IDs.
-func (rc *RepositoryCreate) AddRepositoryToEnvironmentIDs(ids ...uuid.UUID) *RepositoryCreate {
-	rc.mutation.AddRepositoryToEnvironmentIDs(ids...)
+// AddEnvironmentIDs adds the "Environments" edge to the Environment entity by IDs.
+func (rc *RepositoryCreate) AddEnvironmentIDs(ids ...uuid.UUID) *RepositoryCreate {
+	rc.mutation.AddEnvironmentIDs(ids...)
 	return rc
 }
 
-// AddRepositoryToEnvironment adds the "RepositoryToEnvironment" edges to the Environment entity.
-func (rc *RepositoryCreate) AddRepositoryToEnvironment(e ...*Environment) *RepositoryCreate {
+// AddEnvironments adds the "Environments" edges to the Environment entity.
+func (rc *RepositoryCreate) AddEnvironments(e ...*Environment) *RepositoryCreate {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return rc.AddRepositoryToEnvironmentIDs(ids...)
+	return rc.AddEnvironmentIDs(ids...)
 }
 
-// AddRepositoryToRepoCommitIDs adds the "RepositoryToRepoCommit" edge to the RepoCommit entity by IDs.
-func (rc *RepositoryCreate) AddRepositoryToRepoCommitIDs(ids ...uuid.UUID) *RepositoryCreate {
-	rc.mutation.AddRepositoryToRepoCommitIDs(ids...)
+// AddRepoCommitIDs adds the "RepoCommits" edge to the RepoCommit entity by IDs.
+func (rc *RepositoryCreate) AddRepoCommitIDs(ids ...uuid.UUID) *RepositoryCreate {
+	rc.mutation.AddRepoCommitIDs(ids...)
 	return rc
 }
 
-// AddRepositoryToRepoCommit adds the "RepositoryToRepoCommit" edges to the RepoCommit entity.
-func (rc *RepositoryCreate) AddRepositoryToRepoCommit(r ...*RepoCommit) *RepositoryCreate {
+// AddRepoCommits adds the "RepoCommits" edges to the RepoCommit entity.
+func (rc *RepositoryCreate) AddRepoCommits(r ...*RepoCommit) *RepositoryCreate {
 	ids := make([]uuid.UUID, len(r))
 	for i := range r {
 		ids[i] = r[i].ID
 	}
-	return rc.AddRepositoryToRepoCommitIDs(ids...)
+	return rc.AddRepoCommitIDs(ids...)
 }
 
 // Mutation returns the RepositoryMutation object of the builder.
@@ -279,12 +279,12 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 		})
 		_node.FolderPath = value
 	}
-	if nodes := rc.mutation.RepositoryToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := rc.mutation.EnvironmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   repository.RepositoryToEnvironmentTable,
-			Columns: repository.RepositoryToEnvironmentPrimaryKey,
+			Table:   repository.EnvironmentsTable,
+			Columns: repository.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -298,12 +298,12 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := rc.mutation.RepositoryToRepoCommitIDs(); len(nodes) > 0 {
+	if nodes := rc.mutation.RepoCommitsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   repository.RepositoryToRepoCommitTable,
-			Columns: []string{repository.RepositoryToRepoCommitColumn},
+			Table:   repository.RepoCommitsTable,
+			Columns: []string{repository.RepoCommitsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

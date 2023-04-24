@@ -776,7 +776,7 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 			repository.EnviromentFilepath(envFilePath),
 			repository.RepoURL(repoURL),
 		),
-	).WithRepositoryToRepoCommit().First(ctx)
+	).WithRepoCommits().First(ctx)
 
 	if foundRepo != nil {
 		return r.UpdateEnviromentViaPull(ctx, foundRepo.ID.String())
@@ -821,7 +821,7 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 		return nil, fmt.Errorf("couldn't create entRepoCommit: %v", err)
 	}
 
-	err = entRepo.Update().AddRepositoryToRepoCommit(entRepoCommit).Exec(ctx)
+	err = entRepo.Update().AddRepoCommits(entRepoCommit).Exec(ctx)
 	if err != nil {
 		r.client.Repository.DeleteOne(entRepo).Exec(ctx)
 		r.client.RepoCommit.DeleteOne(entRepoCommit).Exec(ctx)
@@ -839,7 +839,7 @@ func (r *mutationResolver) CreateEnviromentFromRepo(ctx context.Context, repoURL
 
 	_, err = entRepo.Update().
 		SetFolderPath(repoFolderPath).
-		AddRepositoryToEnvironment(loadedEnviroments...).
+		AddEnvironments(loadedEnviroments...).
 		Save(ctx)
 	if err != nil {
 		return nil, err
@@ -864,7 +864,7 @@ func (r *mutationResolver) UpdateEnviromentViaPull(ctx context.Context, envUUID 
 		return nil, err
 	}
 
-	entRepo, err := entEnvironment.QueryRepositories().WithRepositoryToRepoCommit().Only(ctx)
+	entRepo, err := entEnvironment.QueryRepositories().WithRepoCommits().Only(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -880,7 +880,7 @@ func (r *mutationResolver) UpdateEnviromentViaPull(ctx context.Context, envUUID 
 	}
 
 	entRepoCommit, err := r.client.RepoCommit.Create().
-		SetRevision(len(entRepo.Edges.RepositoryToRepoCommit)).
+		SetRevision(len(entRepo.Edges.RepoCommits)).
 		SetHash(commit_info.Hash.String()).
 		SetAuthor(commit_info.Author).
 		SetCommitter(commit_info.Committer).
@@ -894,7 +894,7 @@ func (r *mutationResolver) UpdateEnviromentViaPull(ctx context.Context, envUUID 
 		return nil, fmt.Errorf("couldn't create entRepoCommit: %v", err)
 	}
 
-	err = entRepo.Update().AddRepositoryToRepoCommit(entRepoCommit).Exec(ctx)
+	err = entRepo.Update().AddRepoCommits(entRepoCommit).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't add RepoCommit to Repository: %v", err)
 	}

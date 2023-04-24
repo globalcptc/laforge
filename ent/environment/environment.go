@@ -196,7 +196,7 @@ const (
 	// BuildsColumn is the table column denoting the Builds relation/edge.
 	BuildsColumn = "build_environment"
 	// RepositoriesTable is the table that holds the Repositories relation/edge. The primary key declared below.
-	RepositoriesTable = "repository_RepositoryToEnvironment"
+	RepositoriesTable = "repository_Environments"
 	// RepositoriesInverseTable is the table name for the Repository entity.
 	// It exists in this package in order to avoid circular dependency with the "repository" package.
 	RepositoriesInverseTable = "repositories"
