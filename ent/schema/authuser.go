@@ -40,7 +40,7 @@ func (AuthUser) Edges() []ent.Edge {
 				OnDelete: entsql.Cascade,
 			}),
 		edge.From("ServerTasks", ServerTask.Type).
-			Ref("ServerTaskToAuthUser").
+			Ref("AuthUser").
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),

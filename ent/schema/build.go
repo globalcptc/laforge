@@ -59,6 +59,6 @@ func (Build) Edges() []ent.Edge {
 		edge.From("AgentStatuses", AgentStatus.Type).
 			Ref("Build"),
 		edge.From("ServerTasks", ServerTask.Type).
-			Ref("ServerTaskToBuild"),
+			Ref("Build"),
 	}
 }

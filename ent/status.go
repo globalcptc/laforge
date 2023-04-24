@@ -71,7 +71,7 @@ type Status struct {
 	provisioned_network_status         *uuid.UUID
 	provisioning_scheduled_step_status *uuid.UUID
 	provisioning_step_status           *uuid.UUID
-	server_task_server_task_to_status  *uuid.UUID
+	server_task_status                 *uuid.UUID
 	team_team_to_status                *uuid.UUID
 }
 
@@ -253,7 +253,7 @@ func (*Status) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case status.ForeignKeys[6]: // provisioning_step_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case status.ForeignKeys[7]: // server_task_server_task_to_status
+		case status.ForeignKeys[7]: // server_task_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case status.ForeignKeys[8]: // team_team_to_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -371,10 +371,10 @@ func (s *Status) assignValues(columns []string, values []interface{}) error {
 			}
 		case status.ForeignKeys[7]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field server_task_server_task_to_status", values[i])
+				return fmt.Errorf("unexpected type %T for field server_task_status", values[i])
 			} else if value.Valid {
-				s.server_task_server_task_to_status = new(uuid.UUID)
-				*s.server_task_server_task_to_status = *value.S.(*uuid.UUID)
+				s.server_task_status = new(uuid.UUID)
+				*s.server_task_status = *value.S.(*uuid.UUID)
 			}
 		case status.ForeignKeys[8]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

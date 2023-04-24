@@ -102,13 +102,13 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 	if err != nil {
 		return nil, err
 	}
-	serverTask, err = client.ServerTask.UpdateOne(serverTask).SetServerTaskToEnvironment(entEnvironment).Save(ctx)
+	serverTask, err = client.ServerTask.UpdateOne(serverTask).SetEnvironment(entEnvironment).Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error assigning environment to create build server task: %v", err)
 	}
 	rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 	if RenderFiles {
-		RenderFilesTask, err = client.ServerTask.UpdateOne(RenderFilesTask).SetServerTaskToEnvironment(entEnvironment).Save(ctx)
+		RenderFilesTask, err = client.ServerTask.UpdateOne(RenderFilesTask).SetEnvironment(entEnvironment).Save(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error assigning environment to render files server task: %v", err)
 		}
@@ -162,13 +162,13 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		}
 		return nil, err
 	}
-	serverTask, err = client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(entBuild).Save(ctx)
+	serverTask, err = client.ServerTask.UpdateOne(serverTask).SetBuild(entBuild).Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error assigning environment to create build server task: %v", err)
 	}
 	rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
 	if RenderFiles {
-		RenderFilesTask, err = client.ServerTask.UpdateOne(RenderFilesTask).SetServerTaskToBuild(entBuild).Save(ctx)
+		RenderFilesTask, err = client.ServerTask.UpdateOne(RenderFilesTask).SetBuild(entBuild).Save(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error linking build to render files server task: %v", err)
 		}
@@ -246,7 +246,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 			_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
 			return
 		}
-		serverTask, err = client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(entBuild).Save(ctx)
+		serverTask, err = client.ServerTask.UpdateOne(serverTask).SetBuild(entBuild).Save(ctx)
 		if err != nil {
 			_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
 			return
@@ -277,7 +277,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 				logger.Log.Errorf("error creating server task: %v", err)
 				return
 			}
-			serverTask, err = client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(entBuild).SetServerTaskToEnvironment(entEnvironment).SetServerTaskToBuildCommit(entCommit).Save(ctx)
+			serverTask, err = client.ServerTask.UpdateOne(serverTask).SetBuild(entBuild).SetEnvironment(entEnvironment).SetBuildCommit(entCommit).Save(ctx)
 			if err != nil {
 				taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
 				if err != nil {
@@ -630,7 +630,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 			return nil, err
 		}
 		if RenderFilesTask != nil {
-			RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
+			RenderFilesTask, err = RenderFilesTask.Update().AddGinFileMiddleware(entTmpUrl).Save(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -1409,7 +1409,7 @@ func renderFiles(ctx context.Context, client *ent.Client, logger *logging.Logger
 			return err
 		}
 		if RenderFilesTask != nil {
-			RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
+			RenderFilesTask, err = RenderFilesTask.Update().AddGinFileMiddleware(entTmpUrl).Save(ctx)
 			if err != nil {
 				return err
 			}

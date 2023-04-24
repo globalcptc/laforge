@@ -95,98 +95,98 @@ func (stc *ServerTaskCreate) SetNillableID(u *uuid.UUID) *ServerTaskCreate {
 	return stc
 }
 
-// SetServerTaskToAuthUserID sets the "ServerTaskToAuthUser" edge to the AuthUser entity by ID.
-func (stc *ServerTaskCreate) SetServerTaskToAuthUserID(id uuid.UUID) *ServerTaskCreate {
-	stc.mutation.SetServerTaskToAuthUserID(id)
+// SetAuthUserID sets the "AuthUser" edge to the AuthUser entity by ID.
+func (stc *ServerTaskCreate) SetAuthUserID(id uuid.UUID) *ServerTaskCreate {
+	stc.mutation.SetAuthUserID(id)
 	return stc
 }
 
-// SetServerTaskToAuthUser sets the "ServerTaskToAuthUser" edge to the AuthUser entity.
-func (stc *ServerTaskCreate) SetServerTaskToAuthUser(a *AuthUser) *ServerTaskCreate {
-	return stc.SetServerTaskToAuthUserID(a.ID)
+// SetAuthUser sets the "AuthUser" edge to the AuthUser entity.
+func (stc *ServerTaskCreate) SetAuthUser(a *AuthUser) *ServerTaskCreate {
+	return stc.SetAuthUserID(a.ID)
 }
 
-// SetServerTaskToStatusID sets the "ServerTaskToStatus" edge to the Status entity by ID.
-func (stc *ServerTaskCreate) SetServerTaskToStatusID(id uuid.UUID) *ServerTaskCreate {
-	stc.mutation.SetServerTaskToStatusID(id)
+// SetStatusID sets the "Status" edge to the Status entity by ID.
+func (stc *ServerTaskCreate) SetStatusID(id uuid.UUID) *ServerTaskCreate {
+	stc.mutation.SetStatusID(id)
 	return stc
 }
 
-// SetServerTaskToStatus sets the "ServerTaskToStatus" edge to the Status entity.
-func (stc *ServerTaskCreate) SetServerTaskToStatus(s *Status) *ServerTaskCreate {
-	return stc.SetServerTaskToStatusID(s.ID)
+// SetStatus sets the "Status" edge to the Status entity.
+func (stc *ServerTaskCreate) SetStatus(s *Status) *ServerTaskCreate {
+	return stc.SetStatusID(s.ID)
 }
 
-// SetServerTaskToEnvironmentID sets the "ServerTaskToEnvironment" edge to the Environment entity by ID.
-func (stc *ServerTaskCreate) SetServerTaskToEnvironmentID(id uuid.UUID) *ServerTaskCreate {
-	stc.mutation.SetServerTaskToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (stc *ServerTaskCreate) SetEnvironmentID(id uuid.UUID) *ServerTaskCreate {
+	stc.mutation.SetEnvironmentID(id)
 	return stc
 }
 
-// SetNillableServerTaskToEnvironmentID sets the "ServerTaskToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (stc *ServerTaskCreate) SetNillableServerTaskToEnvironmentID(id *uuid.UUID) *ServerTaskCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (stc *ServerTaskCreate) SetNillableEnvironmentID(id *uuid.UUID) *ServerTaskCreate {
 	if id != nil {
-		stc = stc.SetServerTaskToEnvironmentID(*id)
+		stc = stc.SetEnvironmentID(*id)
 	}
 	return stc
 }
 
-// SetServerTaskToEnvironment sets the "ServerTaskToEnvironment" edge to the Environment entity.
-func (stc *ServerTaskCreate) SetServerTaskToEnvironment(e *Environment) *ServerTaskCreate {
-	return stc.SetServerTaskToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (stc *ServerTaskCreate) SetEnvironment(e *Environment) *ServerTaskCreate {
+	return stc.SetEnvironmentID(e.ID)
 }
 
-// SetServerTaskToBuildID sets the "ServerTaskToBuild" edge to the Build entity by ID.
-func (stc *ServerTaskCreate) SetServerTaskToBuildID(id uuid.UUID) *ServerTaskCreate {
-	stc.mutation.SetServerTaskToBuildID(id)
+// SetBuildID sets the "Build" edge to the Build entity by ID.
+func (stc *ServerTaskCreate) SetBuildID(id uuid.UUID) *ServerTaskCreate {
+	stc.mutation.SetBuildID(id)
 	return stc
 }
 
-// SetNillableServerTaskToBuildID sets the "ServerTaskToBuild" edge to the Build entity by ID if the given value is not nil.
-func (stc *ServerTaskCreate) SetNillableServerTaskToBuildID(id *uuid.UUID) *ServerTaskCreate {
+// SetNillableBuildID sets the "Build" edge to the Build entity by ID if the given value is not nil.
+func (stc *ServerTaskCreate) SetNillableBuildID(id *uuid.UUID) *ServerTaskCreate {
 	if id != nil {
-		stc = stc.SetServerTaskToBuildID(*id)
+		stc = stc.SetBuildID(*id)
 	}
 	return stc
 }
 
-// SetServerTaskToBuild sets the "ServerTaskToBuild" edge to the Build entity.
-func (stc *ServerTaskCreate) SetServerTaskToBuild(b *Build) *ServerTaskCreate {
-	return stc.SetServerTaskToBuildID(b.ID)
+// SetBuild sets the "Build" edge to the Build entity.
+func (stc *ServerTaskCreate) SetBuild(b *Build) *ServerTaskCreate {
+	return stc.SetBuildID(b.ID)
 }
 
-// SetServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by ID.
-func (stc *ServerTaskCreate) SetServerTaskToBuildCommitID(id uuid.UUID) *ServerTaskCreate {
-	stc.mutation.SetServerTaskToBuildCommitID(id)
+// SetBuildCommitID sets the "BuildCommit" edge to the BuildCommit entity by ID.
+func (stc *ServerTaskCreate) SetBuildCommitID(id uuid.UUID) *ServerTaskCreate {
+	stc.mutation.SetBuildCommitID(id)
 	return stc
 }
 
-// SetNillableServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by ID if the given value is not nil.
-func (stc *ServerTaskCreate) SetNillableServerTaskToBuildCommitID(id *uuid.UUID) *ServerTaskCreate {
+// SetNillableBuildCommitID sets the "BuildCommit" edge to the BuildCommit entity by ID if the given value is not nil.
+func (stc *ServerTaskCreate) SetNillableBuildCommitID(id *uuid.UUID) *ServerTaskCreate {
 	if id != nil {
-		stc = stc.SetServerTaskToBuildCommitID(*id)
+		stc = stc.SetBuildCommitID(*id)
 	}
 	return stc
 }
 
-// SetServerTaskToBuildCommit sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity.
-func (stc *ServerTaskCreate) SetServerTaskToBuildCommit(b *BuildCommit) *ServerTaskCreate {
-	return stc.SetServerTaskToBuildCommitID(b.ID)
+// SetBuildCommit sets the "BuildCommit" edge to the BuildCommit entity.
+func (stc *ServerTaskCreate) SetBuildCommit(b *BuildCommit) *ServerTaskCreate {
+	return stc.SetBuildCommitID(b.ID)
 }
 
-// AddServerTaskToGinFileMiddlewareIDs adds the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity by IDs.
-func (stc *ServerTaskCreate) AddServerTaskToGinFileMiddlewareIDs(ids ...uuid.UUID) *ServerTaskCreate {
-	stc.mutation.AddServerTaskToGinFileMiddlewareIDs(ids...)
+// AddGinFileMiddlewareIDs adds the "GinFileMiddleware" edge to the GinFileMiddleware entity by IDs.
+func (stc *ServerTaskCreate) AddGinFileMiddlewareIDs(ids ...uuid.UUID) *ServerTaskCreate {
+	stc.mutation.AddGinFileMiddlewareIDs(ids...)
 	return stc
 }
 
-// AddServerTaskToGinFileMiddleware adds the "ServerTaskToGinFileMiddleware" edges to the GinFileMiddleware entity.
-func (stc *ServerTaskCreate) AddServerTaskToGinFileMiddleware(g ...*GinFileMiddleware) *ServerTaskCreate {
+// AddGinFileMiddleware adds the "GinFileMiddleware" edges to the GinFileMiddleware entity.
+func (stc *ServerTaskCreate) AddGinFileMiddleware(g ...*GinFileMiddleware) *ServerTaskCreate {
 	ids := make([]uuid.UUID, len(g))
 	for i := range g {
 		ids[i] = g[i].ID
 	}
-	return stc.AddServerTaskToGinFileMiddlewareIDs(ids...)
+	return stc.AddGinFileMiddlewareIDs(ids...)
 }
 
 // Mutation returns the ServerTaskMutation object of the builder.
@@ -282,11 +282,11 @@ func (stc *ServerTaskCreate) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ServerTask.type": %w`, err)}
 		}
 	}
-	if _, ok := stc.mutation.ServerTaskToAuthUserID(); !ok {
-		return &ValidationError{Name: "ServerTaskToAuthUser", err: errors.New(`ent: missing required edge "ServerTask.ServerTaskToAuthUser"`)}
+	if _, ok := stc.mutation.AuthUserID(); !ok {
+		return &ValidationError{Name: "AuthUser", err: errors.New(`ent: missing required edge "ServerTask.AuthUser"`)}
 	}
-	if _, ok := stc.mutation.ServerTaskToStatusID(); !ok {
-		return &ValidationError{Name: "ServerTaskToStatus", err: errors.New(`ent: missing required edge "ServerTask.ServerTaskToStatus"`)}
+	if _, ok := stc.mutation.StatusID(); !ok {
+		return &ValidationError{Name: "Status", err: errors.New(`ent: missing required edge "ServerTask.Status"`)}
 	}
 	return nil
 }
@@ -364,12 +364,12 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 		})
 		_node.LogFilePath = value
 	}
-	if nodes := stc.mutation.ServerTaskToAuthUserIDs(); len(nodes) > 0 {
+	if nodes := stc.mutation.AuthUserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToAuthUserTable,
-			Columns: []string{servertask.ServerTaskToAuthUserColumn},
+			Table:   servertask.AuthUserTable,
+			Columns: []string{servertask.AuthUserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -381,15 +381,15 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.server_task_server_task_to_auth_user = &nodes[0]
+		_node.server_task_auth_user = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := stc.mutation.ServerTaskToStatusIDs(); len(nodes) > 0 {
+	if nodes := stc.mutation.StatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToStatusTable,
-			Columns: []string{servertask.ServerTaskToStatusColumn},
+			Table:   servertask.StatusTable,
+			Columns: []string{servertask.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -403,12 +403,12 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := stc.mutation.ServerTaskToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := stc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToEnvironmentTable,
-			Columns: []string{servertask.ServerTaskToEnvironmentColumn},
+			Table:   servertask.EnvironmentTable,
+			Columns: []string{servertask.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -420,15 +420,15 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.server_task_server_task_to_environment = &nodes[0]
+		_node.server_task_environment = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := stc.mutation.ServerTaskToBuildIDs(); len(nodes) > 0 {
+	if nodes := stc.mutation.BuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToBuildTable,
-			Columns: []string{servertask.ServerTaskToBuildColumn},
+			Table:   servertask.BuildTable,
+			Columns: []string{servertask.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -440,15 +440,15 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.server_task_server_task_to_build = &nodes[0]
+		_node.server_task_build = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := stc.mutation.ServerTaskToBuildCommitIDs(); len(nodes) > 0 {
+	if nodes := stc.mutation.BuildCommitIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToBuildCommitTable,
-			Columns: []string{servertask.ServerTaskToBuildCommitColumn},
+			Table:   servertask.BuildCommitTable,
+			Columns: []string{servertask.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -460,15 +460,15 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.server_task_server_task_to_build_commit = &nodes[0]
+		_node.server_task_build_commit = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := stc.mutation.ServerTaskToGinFileMiddlewareIDs(); len(nodes) > 0 {
+	if nodes := stc.mutation.GinFileMiddlewareIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   servertask.ServerTaskToGinFileMiddlewareTable,
-			Columns: []string{servertask.ServerTaskToGinFileMiddlewareColumn},
+			Table:   servertask.GinFileMiddlewareTable,
+			Columns: []string{servertask.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

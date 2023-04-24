@@ -1222,13 +1222,13 @@ func (bq *BuildQuery) loadServerTasks(ctx context.Context, query *ServerTaskQuer
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.server_task_server_task_to_build
+		fk := n.server_task_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "server_task_server_task_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "server_task_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

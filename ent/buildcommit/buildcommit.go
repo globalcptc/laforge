@@ -45,7 +45,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "servertask" package.
 	ServerTasksInverseTable = "server_tasks"
 	// ServerTasksColumn is the table column denoting the ServerTasks relation/edge.
-	ServerTasksColumn = "server_task_server_task_to_build_commit"
+	ServerTasksColumn = "server_task_build_commit"
 	// PlanDiffsTable is the table that holds the PlanDiffs relation/edge.
 	PlanDiffsTable = "plan_diffs"
 	// PlanDiffsInverseTable is the table name for the PlanDiff entity.

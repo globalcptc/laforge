@@ -97,7 +97,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "servertask" package.
 	StatusToServerTaskInverseTable = "server_tasks"
 	// StatusToServerTaskColumn is the table column denoting the StatusToServerTask relation/edge.
-	StatusToServerTaskColumn = "server_task_server_task_to_status"
+	StatusToServerTaskColumn = "server_task_status"
 	// StatusToAdhocPlanTable is the table that holds the StatusToAdhocPlan relation/edge.
 	StatusToAdhocPlanTable = "status"
 	// StatusToAdhocPlanInverseTable is the table name for the AdhocPlan entity.
@@ -136,7 +136,7 @@ var ForeignKeys = []string{
 	"provisioned_network_status",
 	"provisioning_scheduled_step_status",
 	"provisioning_step_status",
-	"server_task_server_task_to_status",
+	"server_task_status",
 	"team_team_to_status",
 }
 

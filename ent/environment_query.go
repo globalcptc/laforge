@@ -1941,13 +1941,13 @@ func (eq *EnvironmentQuery) loadServerTasks(ctx context.Context, query *ServerTa
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.server_task_server_task_to_environment
+		fk := n.server_task_environment
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "server_task_server_task_to_environment" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "server_task_environment" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_environment" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_environment" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

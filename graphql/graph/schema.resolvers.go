@@ -374,7 +374,7 @@ func (r *mutationResolver) LoadEnvironment(ctx context.Context, envFilePath stri
 	if err != nil {
 		return nil, fmt.Errorf("error completing server task: %v", err)
 	}
-	serverTask, err = r.client.ServerTask.UpdateOne(serverTask).SetServerTaskToEnvironment(results[0]).Save(ctx)
+	serverTask, err = r.client.ServerTask.UpdateOne(serverTask).SetEnvironment(results[0]).Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error setting environment on server task: %v", err)
 	}
@@ -452,7 +452,7 @@ func (r *mutationResolver) ExecutePlan(ctx context.Context, buildUUID string) (*
 	if err != nil {
 		return nil, fmt.Errorf("error creating server task: %v", err)
 	}
-	serverTask, err = r.client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(b).SetServerTaskToEnvironment(entEnvironment).Save(ctx)
+	serverTask, err = r.client.ServerTask.UpdateOne(serverTask).SetBuild(b).SetEnvironment(entEnvironment).Save(ctx)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctx, r.client, r.rdb, taskStatus, serverTask)
 		if err != nil {
@@ -500,7 +500,7 @@ func (r *mutationResolver) DeleteBuild(ctx context.Context, buildUUID string) (s
 	if err != nil {
 		return "", fmt.Errorf("error creating server task: %v", err)
 	}
-	serverTask, err = r.client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(b).SetServerTaskToEnvironment(entEnvironment).Save(ctx)
+	serverTask, err = r.client.ServerTask.UpdateOne(serverTask).SetBuild(b).SetEnvironment(entEnvironment).Save(ctx)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctx, r.client, r.rdb, taskStatus, serverTask)
 		if err != nil {
@@ -608,7 +608,7 @@ func (r *mutationResolver) Rebuild(ctx context.Context, rootPlans []*string) (bo
 	if err != nil {
 		return false, fmt.Errorf("error creating server task: %v", err)
 	}
-	serverTask, err = r.client.ServerTask.UpdateOne(serverTask).SetServerTaskToBuild(b).SetServerTaskToEnvironment(env).Save(ctx)
+	serverTask, err = r.client.ServerTask.UpdateOne(serverTask).SetBuild(b).SetEnvironment(env).Save(ctx)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctx, r.client, r.rdb, taskStatus, serverTask)
 		if err != nil {
@@ -666,13 +666,13 @@ func (r *mutationResolver) CancelCommit(ctx context.Context, commitUUID string) 
 		}
 	}
 	r.rdb.Publish(ctx, "updatedBuildCommit", commitUUID)
-	entServerTasks, err := entBuildCommit.QueryServerTasks().WithServerTaskToStatus().All(ctx)
+	entServerTasks, err := entBuildCommit.QueryServerTasks().WithStatus().All(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed querying server tasks from build commit: %v", err)
 	}
 	for _, serverTask := range entServerTasks {
-		if serverTask.Edges.ServerTaskToStatus.State == status.StateINPROGRESS {
-			err := serverTask.Edges.ServerTaskToStatus.Update().SetEndedAt(time.Now()).SetState(status.StateCANCELLED).Exec(ctx)
+		if serverTask.Edges.Status.State == status.StateINPROGRESS {
+			err := serverTask.Edges.Status.Update().SetEndedAt(time.Now()).SetState(status.StateCANCELLED).Exec(ctx)
 			if err != nil {
 				return false, fmt.Errorf("failed to cancel server task(s) associated with build commit: %v", err)
 			}

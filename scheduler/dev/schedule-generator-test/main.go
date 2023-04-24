@@ -152,7 +152,7 @@ func createProvisioningScheduleStep(ctx context.Context, client *ent.Client, ent
 			// 		return nil, err
 			// 	}
 			// 	if RenderFilesTask != nil {
-			// 		RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
+			// 		RenderFilesTask, err = RenderFilesTask.Update().AddGinFileMiddleware(entTmpUrl).Save(ctx)
 			// 		if err != nil {
 			// 			return nil, err
 			// 		}

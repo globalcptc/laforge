@@ -5829,15 +5829,15 @@ func (c *ServerTaskClient) GetX(ctx context.Context, id uuid.UUID) *ServerTask {
 	return obj
 }
 
-// QueryServerTaskToAuthUser queries the ServerTaskToAuthUser edge of a ServerTask.
-func (c *ServerTaskClient) QueryServerTaskToAuthUser(st *ServerTask) *AuthUserQuery {
+// QueryAuthUser queries the AuthUser edge of a ServerTask.
+func (c *ServerTaskClient) QueryAuthUser(st *ServerTask) *AuthUserQuery {
 	query := &AuthUserQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := st.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, id),
 			sqlgraph.To(authuser.Table, authuser.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToAuthUserTable, servertask.ServerTaskToAuthUserColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.AuthUserTable, servertask.AuthUserColumn),
 		)
 		fromV = sqlgraph.Neighbors(st.driver.Dialect(), step)
 		return fromV, nil
@@ -5845,15 +5845,15 @@ func (c *ServerTaskClient) QueryServerTaskToAuthUser(st *ServerTask) *AuthUserQu
 	return query
 }
 
-// QueryServerTaskToStatus queries the ServerTaskToStatus edge of a ServerTask.
-func (c *ServerTaskClient) QueryServerTaskToStatus(st *ServerTask) *StatusQuery {
+// QueryStatus queries the Status edge of a ServerTask.
+func (c *ServerTaskClient) QueryStatus(st *ServerTask) *StatusQuery {
 	query := &StatusQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := st.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, id),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, servertask.ServerTaskToStatusTable, servertask.ServerTaskToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, servertask.StatusTable, servertask.StatusColumn),
 		)
 		fromV = sqlgraph.Neighbors(st.driver.Dialect(), step)
 		return fromV, nil
@@ -5861,15 +5861,15 @@ func (c *ServerTaskClient) QueryServerTaskToStatus(st *ServerTask) *StatusQuery 
 	return query
 }
 
-// QueryServerTaskToEnvironment queries the ServerTaskToEnvironment edge of a ServerTask.
-func (c *ServerTaskClient) QueryServerTaskToEnvironment(st *ServerTask) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a ServerTask.
+func (c *ServerTaskClient) QueryEnvironment(st *ServerTask) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := st.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToEnvironmentTable, servertask.ServerTaskToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.EnvironmentTable, servertask.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(st.driver.Dialect(), step)
 		return fromV, nil
@@ -5877,15 +5877,15 @@ func (c *ServerTaskClient) QueryServerTaskToEnvironment(st *ServerTask) *Environ
 	return query
 }
 
-// QueryServerTaskToBuild queries the ServerTaskToBuild edge of a ServerTask.
-func (c *ServerTaskClient) QueryServerTaskToBuild(st *ServerTask) *BuildQuery {
+// QueryBuild queries the Build edge of a ServerTask.
+func (c *ServerTaskClient) QueryBuild(st *ServerTask) *BuildQuery {
 	query := &BuildQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := st.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, id),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToBuildTable, servertask.ServerTaskToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.BuildTable, servertask.BuildColumn),
 		)
 		fromV = sqlgraph.Neighbors(st.driver.Dialect(), step)
 		return fromV, nil
@@ -5893,15 +5893,15 @@ func (c *ServerTaskClient) QueryServerTaskToBuild(st *ServerTask) *BuildQuery {
 	return query
 }
 
-// QueryServerTaskToBuildCommit queries the ServerTaskToBuildCommit edge of a ServerTask.
-func (c *ServerTaskClient) QueryServerTaskToBuildCommit(st *ServerTask) *BuildCommitQuery {
+// QueryBuildCommit queries the BuildCommit edge of a ServerTask.
+func (c *ServerTaskClient) QueryBuildCommit(st *ServerTask) *BuildCommitQuery {
 	query := &BuildCommitQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := st.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, id),
 			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToBuildCommitTable, servertask.ServerTaskToBuildCommitColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.BuildCommitTable, servertask.BuildCommitColumn),
 		)
 		fromV = sqlgraph.Neighbors(st.driver.Dialect(), step)
 		return fromV, nil
@@ -5909,15 +5909,15 @@ func (c *ServerTaskClient) QueryServerTaskToBuildCommit(st *ServerTask) *BuildCo
 	return query
 }
 
-// QueryServerTaskToGinFileMiddleware queries the ServerTaskToGinFileMiddleware edge of a ServerTask.
-func (c *ServerTaskClient) QueryServerTaskToGinFileMiddleware(st *ServerTask) *GinFileMiddlewareQuery {
+// QueryGinFileMiddleware queries the GinFileMiddleware edge of a ServerTask.
+func (c *ServerTaskClient) QueryGinFileMiddleware(st *ServerTask) *GinFileMiddlewareQuery {
 	query := &GinFileMiddlewareQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := st.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, id),
 			sqlgraph.To(ginfilemiddleware.Table, ginfilemiddleware.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, servertask.ServerTaskToGinFileMiddlewareTable, servertask.ServerTaskToGinFileMiddlewareColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, servertask.GinFileMiddlewareTable, servertask.GinFileMiddlewareColumn),
 		)
 		fromV = sqlgraph.Neighbors(st.driver.Dialect(), step)
 		return fromV, nil

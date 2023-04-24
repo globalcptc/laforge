@@ -1196,50 +1196,50 @@ func (s *Script) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (st *ServerTask) ServerTaskToAuthUser(ctx context.Context) (*AuthUser, error) {
-	result, err := st.Edges.ServerTaskToAuthUserOrErr()
+func (st *ServerTask) AuthUser(ctx context.Context) (*AuthUser, error) {
+	result, err := st.Edges.AuthUserOrErr()
 	if IsNotLoaded(err) {
-		result, err = st.QueryServerTaskToAuthUser().Only(ctx)
+		result, err = st.QueryAuthUser().Only(ctx)
 	}
 	return result, err
 }
 
-func (st *ServerTask) ServerTaskToStatus(ctx context.Context) (*Status, error) {
-	result, err := st.Edges.ServerTaskToStatusOrErr()
+func (st *ServerTask) Status(ctx context.Context) (*Status, error) {
+	result, err := st.Edges.StatusOrErr()
 	if IsNotLoaded(err) {
-		result, err = st.QueryServerTaskToStatus().Only(ctx)
+		result, err = st.QueryStatus().Only(ctx)
 	}
 	return result, err
 }
 
-func (st *ServerTask) ServerTaskToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := st.Edges.ServerTaskToEnvironmentOrErr()
+func (st *ServerTask) Environment(ctx context.Context) (*Environment, error) {
+	result, err := st.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = st.QueryServerTaskToEnvironment().Only(ctx)
+		result, err = st.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (st *ServerTask) ServerTaskToBuild(ctx context.Context) (*Build, error) {
-	result, err := st.Edges.ServerTaskToBuildOrErr()
+func (st *ServerTask) Build(ctx context.Context) (*Build, error) {
+	result, err := st.Edges.BuildOrErr()
 	if IsNotLoaded(err) {
-		result, err = st.QueryServerTaskToBuild().Only(ctx)
+		result, err = st.QueryBuild().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (st *ServerTask) ServerTaskToBuildCommit(ctx context.Context) (*BuildCommit, error) {
-	result, err := st.Edges.ServerTaskToBuildCommitOrErr()
+func (st *ServerTask) BuildCommit(ctx context.Context) (*BuildCommit, error) {
+	result, err := st.Edges.BuildCommitOrErr()
 	if IsNotLoaded(err) {
-		result, err = st.QueryServerTaskToBuildCommit().Only(ctx)
+		result, err = st.QueryBuildCommit().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (st *ServerTask) ServerTaskToGinFileMiddleware(ctx context.Context) ([]*GinFileMiddleware, error) {
-	result, err := st.Edges.ServerTaskToGinFileMiddlewareOrErr()
+func (st *ServerTask) GinFileMiddleware(ctx context.Context) ([]*GinFileMiddleware, error) {
+	result, err := st.Edges.GinFileMiddlewareOrErr()
 	if IsNotLoaded(err) {
-		result, err = st.QueryServerTaskToGinFileMiddleware().All(ctx)
+		result, err = st.QueryGinFileMiddleware().All(ctx)
 	}
 	return result, err
 }

@@ -206,7 +206,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "servertask" package.
 	ServerTasksInverseTable = "server_tasks"
 	// ServerTasksColumn is the table column denoting the ServerTasks relation/edge.
-	ServerTasksColumn = "server_task_server_task_to_environment"
+	ServerTasksColumn = "server_task_environment"
 )
 
 // Columns holds all SQL columns for environment fields.

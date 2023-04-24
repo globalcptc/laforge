@@ -31386,31 +31386,31 @@ func (m *ScriptMutation) ResetEdge(name string) error {
 // ServerTaskMutation represents an operation that mutates the ServerTask nodes in the graph.
 type ServerTaskMutation struct {
 	config
-	op                                    Op
-	typ                                   string
-	id                                    *uuid.UUID
-	_type                                 *servertask.Type
-	start_time                            *time.Time
-	end_time                              *time.Time
-	errors                                *[]string
-	log_file_path                         *string
-	clearedFields                         map[string]struct{}
-	_ServerTaskToAuthUser                 *uuid.UUID
-	cleared_ServerTaskToAuthUser          bool
-	_ServerTaskToStatus                   *uuid.UUID
-	cleared_ServerTaskToStatus            bool
-	_ServerTaskToEnvironment              *uuid.UUID
-	cleared_ServerTaskToEnvironment       bool
-	_ServerTaskToBuild                    *uuid.UUID
-	cleared_ServerTaskToBuild             bool
-	_ServerTaskToBuildCommit              *uuid.UUID
-	cleared_ServerTaskToBuildCommit       bool
-	_ServerTaskToGinFileMiddleware        map[uuid.UUID]struct{}
-	removed_ServerTaskToGinFileMiddleware map[uuid.UUID]struct{}
-	cleared_ServerTaskToGinFileMiddleware bool
-	done                                  bool
-	oldValue                              func(context.Context) (*ServerTask, error)
-	predicates                            []predicate.ServerTask
+	op                        Op
+	typ                       string
+	id                        *uuid.UUID
+	_type                     *servertask.Type
+	start_time                *time.Time
+	end_time                  *time.Time
+	errors                    *[]string
+	log_file_path             *string
+	clearedFields             map[string]struct{}
+	_AuthUser                 *uuid.UUID
+	cleared_AuthUser          bool
+	_Status                   *uuid.UUID
+	cleared_Status            bool
+	_Environment              *uuid.UUID
+	cleared_Environment       bool
+	_Build                    *uuid.UUID
+	cleared_Build             bool
+	_BuildCommit              *uuid.UUID
+	cleared_BuildCommit       bool
+	_GinFileMiddleware        map[uuid.UUID]struct{}
+	removed_GinFileMiddleware map[uuid.UUID]struct{}
+	cleared_GinFileMiddleware bool
+	done                      bool
+	oldValue                  func(context.Context) (*ServerTask, error)
+	predicates                []predicate.ServerTask
 }
 
 var _ ent.Mutation = (*ServerTaskMutation)(nil)
@@ -31749,253 +31749,253 @@ func (m *ServerTaskMutation) ResetLogFilePath() {
 	delete(m.clearedFields, servertask.FieldLogFilePath)
 }
 
-// SetServerTaskToAuthUserID sets the "ServerTaskToAuthUser" edge to the AuthUser entity by id.
-func (m *ServerTaskMutation) SetServerTaskToAuthUserID(id uuid.UUID) {
-	m._ServerTaskToAuthUser = &id
+// SetAuthUserID sets the "AuthUser" edge to the AuthUser entity by id.
+func (m *ServerTaskMutation) SetAuthUserID(id uuid.UUID) {
+	m._AuthUser = &id
 }
 
-// ClearServerTaskToAuthUser clears the "ServerTaskToAuthUser" edge to the AuthUser entity.
-func (m *ServerTaskMutation) ClearServerTaskToAuthUser() {
-	m.cleared_ServerTaskToAuthUser = true
+// ClearAuthUser clears the "AuthUser" edge to the AuthUser entity.
+func (m *ServerTaskMutation) ClearAuthUser() {
+	m.cleared_AuthUser = true
 }
 
-// ServerTaskToAuthUserCleared reports if the "ServerTaskToAuthUser" edge to the AuthUser entity was cleared.
-func (m *ServerTaskMutation) ServerTaskToAuthUserCleared() bool {
-	return m.cleared_ServerTaskToAuthUser
+// AuthUserCleared reports if the "AuthUser" edge to the AuthUser entity was cleared.
+func (m *ServerTaskMutation) AuthUserCleared() bool {
+	return m.cleared_AuthUser
 }
 
-// ServerTaskToAuthUserID returns the "ServerTaskToAuthUser" edge ID in the mutation.
-func (m *ServerTaskMutation) ServerTaskToAuthUserID() (id uuid.UUID, exists bool) {
-	if m._ServerTaskToAuthUser != nil {
-		return *m._ServerTaskToAuthUser, true
+// AuthUserID returns the "AuthUser" edge ID in the mutation.
+func (m *ServerTaskMutation) AuthUserID() (id uuid.UUID, exists bool) {
+	if m._AuthUser != nil {
+		return *m._AuthUser, true
 	}
 	return
 }
 
-// ServerTaskToAuthUserIDs returns the "ServerTaskToAuthUser" edge IDs in the mutation.
+// AuthUserIDs returns the "AuthUser" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ServerTaskToAuthUserID instead. It exists only for internal usage by the builders.
-func (m *ServerTaskMutation) ServerTaskToAuthUserIDs() (ids []uuid.UUID) {
-	if id := m._ServerTaskToAuthUser; id != nil {
+// AuthUserID instead. It exists only for internal usage by the builders.
+func (m *ServerTaskMutation) AuthUserIDs() (ids []uuid.UUID) {
+	if id := m._AuthUser; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetServerTaskToAuthUser resets all changes to the "ServerTaskToAuthUser" edge.
-func (m *ServerTaskMutation) ResetServerTaskToAuthUser() {
-	m._ServerTaskToAuthUser = nil
-	m.cleared_ServerTaskToAuthUser = false
+// ResetAuthUser resets all changes to the "AuthUser" edge.
+func (m *ServerTaskMutation) ResetAuthUser() {
+	m._AuthUser = nil
+	m.cleared_AuthUser = false
 }
 
-// SetServerTaskToStatusID sets the "ServerTaskToStatus" edge to the Status entity by id.
-func (m *ServerTaskMutation) SetServerTaskToStatusID(id uuid.UUID) {
-	m._ServerTaskToStatus = &id
+// SetStatusID sets the "Status" edge to the Status entity by id.
+func (m *ServerTaskMutation) SetStatusID(id uuid.UUID) {
+	m._Status = &id
 }
 
-// ClearServerTaskToStatus clears the "ServerTaskToStatus" edge to the Status entity.
-func (m *ServerTaskMutation) ClearServerTaskToStatus() {
-	m.cleared_ServerTaskToStatus = true
+// ClearStatus clears the "Status" edge to the Status entity.
+func (m *ServerTaskMutation) ClearStatus() {
+	m.cleared_Status = true
 }
 
-// ServerTaskToStatusCleared reports if the "ServerTaskToStatus" edge to the Status entity was cleared.
-func (m *ServerTaskMutation) ServerTaskToStatusCleared() bool {
-	return m.cleared_ServerTaskToStatus
+// StatusCleared reports if the "Status" edge to the Status entity was cleared.
+func (m *ServerTaskMutation) StatusCleared() bool {
+	return m.cleared_Status
 }
 
-// ServerTaskToStatusID returns the "ServerTaskToStatus" edge ID in the mutation.
-func (m *ServerTaskMutation) ServerTaskToStatusID() (id uuid.UUID, exists bool) {
-	if m._ServerTaskToStatus != nil {
-		return *m._ServerTaskToStatus, true
+// StatusID returns the "Status" edge ID in the mutation.
+func (m *ServerTaskMutation) StatusID() (id uuid.UUID, exists bool) {
+	if m._Status != nil {
+		return *m._Status, true
 	}
 	return
 }
 
-// ServerTaskToStatusIDs returns the "ServerTaskToStatus" edge IDs in the mutation.
+// StatusIDs returns the "Status" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ServerTaskToStatusID instead. It exists only for internal usage by the builders.
-func (m *ServerTaskMutation) ServerTaskToStatusIDs() (ids []uuid.UUID) {
-	if id := m._ServerTaskToStatus; id != nil {
+// StatusID instead. It exists only for internal usage by the builders.
+func (m *ServerTaskMutation) StatusIDs() (ids []uuid.UUID) {
+	if id := m._Status; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetServerTaskToStatus resets all changes to the "ServerTaskToStatus" edge.
-func (m *ServerTaskMutation) ResetServerTaskToStatus() {
-	m._ServerTaskToStatus = nil
-	m.cleared_ServerTaskToStatus = false
+// ResetStatus resets all changes to the "Status" edge.
+func (m *ServerTaskMutation) ResetStatus() {
+	m._Status = nil
+	m.cleared_Status = false
 }
 
-// SetServerTaskToEnvironmentID sets the "ServerTaskToEnvironment" edge to the Environment entity by id.
-func (m *ServerTaskMutation) SetServerTaskToEnvironmentID(id uuid.UUID) {
-	m._ServerTaskToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *ServerTaskMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearServerTaskToEnvironment clears the "ServerTaskToEnvironment" edge to the Environment entity.
-func (m *ServerTaskMutation) ClearServerTaskToEnvironment() {
-	m.cleared_ServerTaskToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *ServerTaskMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// ServerTaskToEnvironmentCleared reports if the "ServerTaskToEnvironment" edge to the Environment entity was cleared.
-func (m *ServerTaskMutation) ServerTaskToEnvironmentCleared() bool {
-	return m.cleared_ServerTaskToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *ServerTaskMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// ServerTaskToEnvironmentID returns the "ServerTaskToEnvironment" edge ID in the mutation.
-func (m *ServerTaskMutation) ServerTaskToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._ServerTaskToEnvironment != nil {
-		return *m._ServerTaskToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *ServerTaskMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// ServerTaskToEnvironmentIDs returns the "ServerTaskToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ServerTaskToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *ServerTaskMutation) ServerTaskToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._ServerTaskToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *ServerTaskMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetServerTaskToEnvironment resets all changes to the "ServerTaskToEnvironment" edge.
-func (m *ServerTaskMutation) ResetServerTaskToEnvironment() {
-	m._ServerTaskToEnvironment = nil
-	m.cleared_ServerTaskToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *ServerTaskMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
-// SetServerTaskToBuildID sets the "ServerTaskToBuild" edge to the Build entity by id.
-func (m *ServerTaskMutation) SetServerTaskToBuildID(id uuid.UUID) {
-	m._ServerTaskToBuild = &id
+// SetBuildID sets the "Build" edge to the Build entity by id.
+func (m *ServerTaskMutation) SetBuildID(id uuid.UUID) {
+	m._Build = &id
 }
 
-// ClearServerTaskToBuild clears the "ServerTaskToBuild" edge to the Build entity.
-func (m *ServerTaskMutation) ClearServerTaskToBuild() {
-	m.cleared_ServerTaskToBuild = true
+// ClearBuild clears the "Build" edge to the Build entity.
+func (m *ServerTaskMutation) ClearBuild() {
+	m.cleared_Build = true
 }
 
-// ServerTaskToBuildCleared reports if the "ServerTaskToBuild" edge to the Build entity was cleared.
-func (m *ServerTaskMutation) ServerTaskToBuildCleared() bool {
-	return m.cleared_ServerTaskToBuild
+// BuildCleared reports if the "Build" edge to the Build entity was cleared.
+func (m *ServerTaskMutation) BuildCleared() bool {
+	return m.cleared_Build
 }
 
-// ServerTaskToBuildID returns the "ServerTaskToBuild" edge ID in the mutation.
-func (m *ServerTaskMutation) ServerTaskToBuildID() (id uuid.UUID, exists bool) {
-	if m._ServerTaskToBuild != nil {
-		return *m._ServerTaskToBuild, true
+// BuildID returns the "Build" edge ID in the mutation.
+func (m *ServerTaskMutation) BuildID() (id uuid.UUID, exists bool) {
+	if m._Build != nil {
+		return *m._Build, true
 	}
 	return
 }
 
-// ServerTaskToBuildIDs returns the "ServerTaskToBuild" edge IDs in the mutation.
+// BuildIDs returns the "Build" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ServerTaskToBuildID instead. It exists only for internal usage by the builders.
-func (m *ServerTaskMutation) ServerTaskToBuildIDs() (ids []uuid.UUID) {
-	if id := m._ServerTaskToBuild; id != nil {
+// BuildID instead. It exists only for internal usage by the builders.
+func (m *ServerTaskMutation) BuildIDs() (ids []uuid.UUID) {
+	if id := m._Build; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetServerTaskToBuild resets all changes to the "ServerTaskToBuild" edge.
-func (m *ServerTaskMutation) ResetServerTaskToBuild() {
-	m._ServerTaskToBuild = nil
-	m.cleared_ServerTaskToBuild = false
+// ResetBuild resets all changes to the "Build" edge.
+func (m *ServerTaskMutation) ResetBuild() {
+	m._Build = nil
+	m.cleared_Build = false
 }
 
-// SetServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by id.
-func (m *ServerTaskMutation) SetServerTaskToBuildCommitID(id uuid.UUID) {
-	m._ServerTaskToBuildCommit = &id
+// SetBuildCommitID sets the "BuildCommit" edge to the BuildCommit entity by id.
+func (m *ServerTaskMutation) SetBuildCommitID(id uuid.UUID) {
+	m._BuildCommit = &id
 }
 
-// ClearServerTaskToBuildCommit clears the "ServerTaskToBuildCommit" edge to the BuildCommit entity.
-func (m *ServerTaskMutation) ClearServerTaskToBuildCommit() {
-	m.cleared_ServerTaskToBuildCommit = true
+// ClearBuildCommit clears the "BuildCommit" edge to the BuildCommit entity.
+func (m *ServerTaskMutation) ClearBuildCommit() {
+	m.cleared_BuildCommit = true
 }
 
-// ServerTaskToBuildCommitCleared reports if the "ServerTaskToBuildCommit" edge to the BuildCommit entity was cleared.
-func (m *ServerTaskMutation) ServerTaskToBuildCommitCleared() bool {
-	return m.cleared_ServerTaskToBuildCommit
+// BuildCommitCleared reports if the "BuildCommit" edge to the BuildCommit entity was cleared.
+func (m *ServerTaskMutation) BuildCommitCleared() bool {
+	return m.cleared_BuildCommit
 }
 
-// ServerTaskToBuildCommitID returns the "ServerTaskToBuildCommit" edge ID in the mutation.
-func (m *ServerTaskMutation) ServerTaskToBuildCommitID() (id uuid.UUID, exists bool) {
-	if m._ServerTaskToBuildCommit != nil {
-		return *m._ServerTaskToBuildCommit, true
+// BuildCommitID returns the "BuildCommit" edge ID in the mutation.
+func (m *ServerTaskMutation) BuildCommitID() (id uuid.UUID, exists bool) {
+	if m._BuildCommit != nil {
+		return *m._BuildCommit, true
 	}
 	return
 }
 
-// ServerTaskToBuildCommitIDs returns the "ServerTaskToBuildCommit" edge IDs in the mutation.
+// BuildCommitIDs returns the "BuildCommit" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ServerTaskToBuildCommitID instead. It exists only for internal usage by the builders.
-func (m *ServerTaskMutation) ServerTaskToBuildCommitIDs() (ids []uuid.UUID) {
-	if id := m._ServerTaskToBuildCommit; id != nil {
+// BuildCommitID instead. It exists only for internal usage by the builders.
+func (m *ServerTaskMutation) BuildCommitIDs() (ids []uuid.UUID) {
+	if id := m._BuildCommit; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetServerTaskToBuildCommit resets all changes to the "ServerTaskToBuildCommit" edge.
-func (m *ServerTaskMutation) ResetServerTaskToBuildCommit() {
-	m._ServerTaskToBuildCommit = nil
-	m.cleared_ServerTaskToBuildCommit = false
+// ResetBuildCommit resets all changes to the "BuildCommit" edge.
+func (m *ServerTaskMutation) ResetBuildCommit() {
+	m._BuildCommit = nil
+	m.cleared_BuildCommit = false
 }
 
-// AddServerTaskToGinFileMiddlewareIDs adds the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity by ids.
-func (m *ServerTaskMutation) AddServerTaskToGinFileMiddlewareIDs(ids ...uuid.UUID) {
-	if m._ServerTaskToGinFileMiddleware == nil {
-		m._ServerTaskToGinFileMiddleware = make(map[uuid.UUID]struct{})
+// AddGinFileMiddlewareIDs adds the "GinFileMiddleware" edge to the GinFileMiddleware entity by ids.
+func (m *ServerTaskMutation) AddGinFileMiddlewareIDs(ids ...uuid.UUID) {
+	if m._GinFileMiddleware == nil {
+		m._GinFileMiddleware = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._ServerTaskToGinFileMiddleware[ids[i]] = struct{}{}
+		m._GinFileMiddleware[ids[i]] = struct{}{}
 	}
 }
 
-// ClearServerTaskToGinFileMiddleware clears the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity.
-func (m *ServerTaskMutation) ClearServerTaskToGinFileMiddleware() {
-	m.cleared_ServerTaskToGinFileMiddleware = true
+// ClearGinFileMiddleware clears the "GinFileMiddleware" edge to the GinFileMiddleware entity.
+func (m *ServerTaskMutation) ClearGinFileMiddleware() {
+	m.cleared_GinFileMiddleware = true
 }
 
-// ServerTaskToGinFileMiddlewareCleared reports if the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity was cleared.
-func (m *ServerTaskMutation) ServerTaskToGinFileMiddlewareCleared() bool {
-	return m.cleared_ServerTaskToGinFileMiddleware
+// GinFileMiddlewareCleared reports if the "GinFileMiddleware" edge to the GinFileMiddleware entity was cleared.
+func (m *ServerTaskMutation) GinFileMiddlewareCleared() bool {
+	return m.cleared_GinFileMiddleware
 }
 
-// RemoveServerTaskToGinFileMiddlewareIDs removes the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity by IDs.
-func (m *ServerTaskMutation) RemoveServerTaskToGinFileMiddlewareIDs(ids ...uuid.UUID) {
-	if m.removed_ServerTaskToGinFileMiddleware == nil {
-		m.removed_ServerTaskToGinFileMiddleware = make(map[uuid.UUID]struct{})
+// RemoveGinFileMiddlewareIDs removes the "GinFileMiddleware" edge to the GinFileMiddleware entity by IDs.
+func (m *ServerTaskMutation) RemoveGinFileMiddlewareIDs(ids ...uuid.UUID) {
+	if m.removed_GinFileMiddleware == nil {
+		m.removed_GinFileMiddleware = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._ServerTaskToGinFileMiddleware, ids[i])
-		m.removed_ServerTaskToGinFileMiddleware[ids[i]] = struct{}{}
+		delete(m._GinFileMiddleware, ids[i])
+		m.removed_GinFileMiddleware[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedServerTaskToGinFileMiddleware returns the removed IDs of the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity.
-func (m *ServerTaskMutation) RemovedServerTaskToGinFileMiddlewareIDs() (ids []uuid.UUID) {
-	for id := range m.removed_ServerTaskToGinFileMiddleware {
+// RemovedGinFileMiddleware returns the removed IDs of the "GinFileMiddleware" edge to the GinFileMiddleware entity.
+func (m *ServerTaskMutation) RemovedGinFileMiddlewareIDs() (ids []uuid.UUID) {
+	for id := range m.removed_GinFileMiddleware {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ServerTaskToGinFileMiddlewareIDs returns the "ServerTaskToGinFileMiddleware" edge IDs in the mutation.
-func (m *ServerTaskMutation) ServerTaskToGinFileMiddlewareIDs() (ids []uuid.UUID) {
-	for id := range m._ServerTaskToGinFileMiddleware {
+// GinFileMiddlewareIDs returns the "GinFileMiddleware" edge IDs in the mutation.
+func (m *ServerTaskMutation) GinFileMiddlewareIDs() (ids []uuid.UUID) {
+	for id := range m._GinFileMiddleware {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetServerTaskToGinFileMiddleware resets all changes to the "ServerTaskToGinFileMiddleware" edge.
-func (m *ServerTaskMutation) ResetServerTaskToGinFileMiddleware() {
-	m._ServerTaskToGinFileMiddleware = nil
-	m.cleared_ServerTaskToGinFileMiddleware = false
-	m.removed_ServerTaskToGinFileMiddleware = nil
+// ResetGinFileMiddleware resets all changes to the "GinFileMiddleware" edge.
+func (m *ServerTaskMutation) ResetGinFileMiddleware() {
+	m._GinFileMiddleware = nil
+	m.cleared_GinFileMiddleware = false
+	m.removed_GinFileMiddleware = nil
 }
 
 // Where appends a list predicates to the ServerTaskMutation builder.
@@ -32212,23 +32212,23 @@ func (m *ServerTaskMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ServerTaskMutation) AddedEdges() []string {
 	edges := make([]string, 0, 6)
-	if m._ServerTaskToAuthUser != nil {
-		edges = append(edges, servertask.EdgeServerTaskToAuthUser)
+	if m._AuthUser != nil {
+		edges = append(edges, servertask.EdgeAuthUser)
 	}
-	if m._ServerTaskToStatus != nil {
-		edges = append(edges, servertask.EdgeServerTaskToStatus)
+	if m._Status != nil {
+		edges = append(edges, servertask.EdgeStatus)
 	}
-	if m._ServerTaskToEnvironment != nil {
-		edges = append(edges, servertask.EdgeServerTaskToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, servertask.EdgeEnvironment)
 	}
-	if m._ServerTaskToBuild != nil {
-		edges = append(edges, servertask.EdgeServerTaskToBuild)
+	if m._Build != nil {
+		edges = append(edges, servertask.EdgeBuild)
 	}
-	if m._ServerTaskToBuildCommit != nil {
-		edges = append(edges, servertask.EdgeServerTaskToBuildCommit)
+	if m._BuildCommit != nil {
+		edges = append(edges, servertask.EdgeBuildCommit)
 	}
-	if m._ServerTaskToGinFileMiddleware != nil {
-		edges = append(edges, servertask.EdgeServerTaskToGinFileMiddleware)
+	if m._GinFileMiddleware != nil {
+		edges = append(edges, servertask.EdgeGinFileMiddleware)
 	}
 	return edges
 }
@@ -32237,29 +32237,29 @@ func (m *ServerTaskMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *ServerTaskMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case servertask.EdgeServerTaskToAuthUser:
-		if id := m._ServerTaskToAuthUser; id != nil {
+	case servertask.EdgeAuthUser:
+		if id := m._AuthUser; id != nil {
 			return []ent.Value{*id}
 		}
-	case servertask.EdgeServerTaskToStatus:
-		if id := m._ServerTaskToStatus; id != nil {
+	case servertask.EdgeStatus:
+		if id := m._Status; id != nil {
 			return []ent.Value{*id}
 		}
-	case servertask.EdgeServerTaskToEnvironment:
-		if id := m._ServerTaskToEnvironment; id != nil {
+	case servertask.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
-	case servertask.EdgeServerTaskToBuild:
-		if id := m._ServerTaskToBuild; id != nil {
+	case servertask.EdgeBuild:
+		if id := m._Build; id != nil {
 			return []ent.Value{*id}
 		}
-	case servertask.EdgeServerTaskToBuildCommit:
-		if id := m._ServerTaskToBuildCommit; id != nil {
+	case servertask.EdgeBuildCommit:
+		if id := m._BuildCommit; id != nil {
 			return []ent.Value{*id}
 		}
-	case servertask.EdgeServerTaskToGinFileMiddleware:
-		ids := make([]ent.Value, 0, len(m._ServerTaskToGinFileMiddleware))
-		for id := range m._ServerTaskToGinFileMiddleware {
+	case servertask.EdgeGinFileMiddleware:
+		ids := make([]ent.Value, 0, len(m._GinFileMiddleware))
+		for id := range m._GinFileMiddleware {
 			ids = append(ids, id)
 		}
 		return ids
@@ -32270,8 +32270,8 @@ func (m *ServerTaskMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ServerTaskMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 6)
-	if m.removed_ServerTaskToGinFileMiddleware != nil {
-		edges = append(edges, servertask.EdgeServerTaskToGinFileMiddleware)
+	if m.removed_GinFileMiddleware != nil {
+		edges = append(edges, servertask.EdgeGinFileMiddleware)
 	}
 	return edges
 }
@@ -32280,9 +32280,9 @@ func (m *ServerTaskMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ServerTaskMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case servertask.EdgeServerTaskToGinFileMiddleware:
-		ids := make([]ent.Value, 0, len(m.removed_ServerTaskToGinFileMiddleware))
-		for id := range m.removed_ServerTaskToGinFileMiddleware {
+	case servertask.EdgeGinFileMiddleware:
+		ids := make([]ent.Value, 0, len(m.removed_GinFileMiddleware))
+		for id := range m.removed_GinFileMiddleware {
 			ids = append(ids, id)
 		}
 		return ids
@@ -32293,23 +32293,23 @@ func (m *ServerTaskMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ServerTaskMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 6)
-	if m.cleared_ServerTaskToAuthUser {
-		edges = append(edges, servertask.EdgeServerTaskToAuthUser)
+	if m.cleared_AuthUser {
+		edges = append(edges, servertask.EdgeAuthUser)
 	}
-	if m.cleared_ServerTaskToStatus {
-		edges = append(edges, servertask.EdgeServerTaskToStatus)
+	if m.cleared_Status {
+		edges = append(edges, servertask.EdgeStatus)
 	}
-	if m.cleared_ServerTaskToEnvironment {
-		edges = append(edges, servertask.EdgeServerTaskToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, servertask.EdgeEnvironment)
 	}
-	if m.cleared_ServerTaskToBuild {
-		edges = append(edges, servertask.EdgeServerTaskToBuild)
+	if m.cleared_Build {
+		edges = append(edges, servertask.EdgeBuild)
 	}
-	if m.cleared_ServerTaskToBuildCommit {
-		edges = append(edges, servertask.EdgeServerTaskToBuildCommit)
+	if m.cleared_BuildCommit {
+		edges = append(edges, servertask.EdgeBuildCommit)
 	}
-	if m.cleared_ServerTaskToGinFileMiddleware {
-		edges = append(edges, servertask.EdgeServerTaskToGinFileMiddleware)
+	if m.cleared_GinFileMiddleware {
+		edges = append(edges, servertask.EdgeGinFileMiddleware)
 	}
 	return edges
 }
@@ -32318,18 +32318,18 @@ func (m *ServerTaskMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *ServerTaskMutation) EdgeCleared(name string) bool {
 	switch name {
-	case servertask.EdgeServerTaskToAuthUser:
-		return m.cleared_ServerTaskToAuthUser
-	case servertask.EdgeServerTaskToStatus:
-		return m.cleared_ServerTaskToStatus
-	case servertask.EdgeServerTaskToEnvironment:
-		return m.cleared_ServerTaskToEnvironment
-	case servertask.EdgeServerTaskToBuild:
-		return m.cleared_ServerTaskToBuild
-	case servertask.EdgeServerTaskToBuildCommit:
-		return m.cleared_ServerTaskToBuildCommit
-	case servertask.EdgeServerTaskToGinFileMiddleware:
-		return m.cleared_ServerTaskToGinFileMiddleware
+	case servertask.EdgeAuthUser:
+		return m.cleared_AuthUser
+	case servertask.EdgeStatus:
+		return m.cleared_Status
+	case servertask.EdgeEnvironment:
+		return m.cleared_Environment
+	case servertask.EdgeBuild:
+		return m.cleared_Build
+	case servertask.EdgeBuildCommit:
+		return m.cleared_BuildCommit
+	case servertask.EdgeGinFileMiddleware:
+		return m.cleared_GinFileMiddleware
 	}
 	return false
 }
@@ -32338,20 +32338,20 @@ func (m *ServerTaskMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ServerTaskMutation) ClearEdge(name string) error {
 	switch name {
-	case servertask.EdgeServerTaskToAuthUser:
-		m.ClearServerTaskToAuthUser()
+	case servertask.EdgeAuthUser:
+		m.ClearAuthUser()
 		return nil
-	case servertask.EdgeServerTaskToStatus:
-		m.ClearServerTaskToStatus()
+	case servertask.EdgeStatus:
+		m.ClearStatus()
 		return nil
-	case servertask.EdgeServerTaskToEnvironment:
-		m.ClearServerTaskToEnvironment()
+	case servertask.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
-	case servertask.EdgeServerTaskToBuild:
-		m.ClearServerTaskToBuild()
+	case servertask.EdgeBuild:
+		m.ClearBuild()
 		return nil
-	case servertask.EdgeServerTaskToBuildCommit:
-		m.ClearServerTaskToBuildCommit()
+	case servertask.EdgeBuildCommit:
+		m.ClearBuildCommit()
 		return nil
 	}
 	return fmt.Errorf("unknown ServerTask unique edge %s", name)
@@ -32361,23 +32361,23 @@ func (m *ServerTaskMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ServerTaskMutation) ResetEdge(name string) error {
 	switch name {
-	case servertask.EdgeServerTaskToAuthUser:
-		m.ResetServerTaskToAuthUser()
+	case servertask.EdgeAuthUser:
+		m.ResetAuthUser()
 		return nil
-	case servertask.EdgeServerTaskToStatus:
-		m.ResetServerTaskToStatus()
+	case servertask.EdgeStatus:
+		m.ResetStatus()
 		return nil
-	case servertask.EdgeServerTaskToEnvironment:
-		m.ResetServerTaskToEnvironment()
+	case servertask.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
-	case servertask.EdgeServerTaskToBuild:
-		m.ResetServerTaskToBuild()
+	case servertask.EdgeBuild:
+		m.ResetBuild()
 		return nil
-	case servertask.EdgeServerTaskToBuildCommit:
-		m.ResetServerTaskToBuildCommit()
+	case servertask.EdgeBuildCommit:
+		m.ResetBuildCommit()
 		return nil
-	case servertask.EdgeServerTaskToGinFileMiddleware:
-		m.ResetServerTaskToGinFileMiddleware()
+	case servertask.EdgeGinFileMiddleware:
+		m.ResetGinFileMiddleware()
 		return nil
 	}
 	return fmt.Errorf("unknown ServerTask edge %s", name)

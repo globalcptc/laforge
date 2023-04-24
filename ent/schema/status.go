@@ -49,7 +49,7 @@ func (Status) Edges() []ent.Edge {
 			Ref("Status").
 			Unique(),
 		edge.From("StatusToServerTask", ServerTask.Type).
-			Ref("ServerTaskToStatus").
+			Ref("Status").
 			Unique(),
 		edge.From("StatusToAdhocPlan", AdhocPlan.Type).
 			Ref("Status").

@@ -495,7 +495,7 @@ var (
 		{Name: "url_id", Type: field.TypeString},
 		{Name: "file_path", Type: field.TypeString},
 		{Name: "accessed", Type: field.TypeBool, Default: false},
-		{Name: "server_task_server_task_to_gin_file_middleware", Type: field.TypeUUID, Nullable: true},
+		{Name: "server_task_gin_file_middleware", Type: field.TypeUUID, Nullable: true},
 	}
 	// GinFileMiddlewaresTable holds the schema information for the "gin_file_middlewares" table.
 	GinFileMiddlewaresTable = &schema.Table{
@@ -504,7 +504,7 @@ var (
 		PrimaryKey: []*schema.Column{GinFileMiddlewaresColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "gin_file_middlewares_server_tasks_ServerTaskToGinFileMiddleware",
+				Symbol:     "gin_file_middlewares_server_tasks_GinFileMiddleware",
 				Columns:    []*schema.Column{GinFileMiddlewaresColumns[4]},
 				RefColumns: []*schema.Column{ServerTasksColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -1094,10 +1094,10 @@ var (
 		{Name: "end_time", Type: field.TypeTime, Nullable: true},
 		{Name: "errors", Type: field.TypeJSON, Nullable: true},
 		{Name: "log_file_path", Type: field.TypeString, Nullable: true},
-		{Name: "server_task_server_task_to_auth_user", Type: field.TypeUUID},
-		{Name: "server_task_server_task_to_environment", Type: field.TypeUUID, Nullable: true},
-		{Name: "server_task_server_task_to_build", Type: field.TypeUUID, Nullable: true},
-		{Name: "server_task_server_task_to_build_commit", Type: field.TypeUUID, Nullable: true},
+		{Name: "server_task_auth_user", Type: field.TypeUUID},
+		{Name: "server_task_environment", Type: field.TypeUUID, Nullable: true},
+		{Name: "server_task_build", Type: field.TypeUUID, Nullable: true},
+		{Name: "server_task_build_commit", Type: field.TypeUUID, Nullable: true},
 	}
 	// ServerTasksTable holds the schema information for the "server_tasks" table.
 	ServerTasksTable = &schema.Table{
@@ -1106,25 +1106,25 @@ var (
 		PrimaryKey: []*schema.Column{ServerTasksColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "server_tasks_auth_users_ServerTaskToAuthUser",
+				Symbol:     "server_tasks_auth_users_AuthUser",
 				Columns:    []*schema.Column{ServerTasksColumns[6]},
 				RefColumns: []*schema.Column{AuthUsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "server_tasks_environments_ServerTaskToEnvironment",
+				Symbol:     "server_tasks_environments_Environment",
 				Columns:    []*schema.Column{ServerTasksColumns[7]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "server_tasks_builds_ServerTaskToBuild",
+				Symbol:     "server_tasks_builds_Build",
 				Columns:    []*schema.Column{ServerTasksColumns[8]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "server_tasks_build_commits_ServerTaskToBuildCommit",
+				Symbol:     "server_tasks_build_commits_BuildCommit",
 				Columns:    []*schema.Column{ServerTasksColumns[9]},
 				RefColumns: []*schema.Column{BuildCommitsColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -1148,7 +1148,7 @@ var (
 		{Name: "provisioned_network_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_scheduled_step_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_step_status", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "server_task_server_task_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "server_task_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "team_team_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
 	// StatusTable holds the schema information for the "status" table.
@@ -1200,7 +1200,7 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "status_server_tasks_ServerTaskToStatus",
+				Symbol:     "status_server_tasks_Status",
 				Columns:    []*schema.Column{StatusColumns[15]},
 				RefColumns: []*schema.Column{ServerTasksColumns[0]},
 				OnDelete:   schema.Cascade,

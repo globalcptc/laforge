@@ -37,7 +37,7 @@ type GinFileMiddleware struct {
 	// ProvisioningScheduledStep holds the value of the ProvisioningScheduledStep edge.
 	HCLProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
 	//
-	server_task_server_task_to_gin_file_middleware *uuid.UUID
+	server_task_gin_file_middleware *uuid.UUID
 }
 
 // GinFileMiddlewareEdges holds the relations/edges for other nodes in the graph.
@@ -106,7 +106,7 @@ func (*GinFileMiddleware) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case ginfilemiddleware.FieldID:
 			values[i] = new(uuid.UUID)
-		case ginfilemiddleware.ForeignKeys[0]: // server_task_server_task_to_gin_file_middleware
+		case ginfilemiddleware.ForeignKeys[0]: // server_task_gin_file_middleware
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type GinFileMiddleware", columns[i])
@@ -149,10 +149,10 @@ func (gfm *GinFileMiddleware) assignValues(columns []string, values []interface{
 			}
 		case ginfilemiddleware.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field server_task_server_task_to_gin_file_middleware", values[i])
+				return fmt.Errorf("unexpected type %T for field server_task_gin_file_middleware", values[i])
 			} else if value.Valid {
-				gfm.server_task_server_task_to_gin_file_middleware = new(uuid.UUID)
-				*gfm.server_task_server_task_to_gin_file_middleware = *value.S.(*uuid.UUID)
+				gfm.server_task_gin_file_middleware = new(uuid.UUID)
+				*gfm.server_task_gin_file_middleware = *value.S.(*uuid.UUID)
 			}
 		}
 	}

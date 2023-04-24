@@ -3581,9 +3581,9 @@ func (st *ServerTask) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "AuthUser",
-		Name: "ServerTaskToAuthUser",
+		Name: "AuthUser",
 	}
-	err = st.QueryServerTaskToAuthUser().
+	err = st.QueryAuthUser().
 		Select(authuser.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -3591,9 +3591,9 @@ func (st *ServerTask) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Status",
-		Name: "ServerTaskToStatus",
+		Name: "Status",
 	}
-	err = st.QueryServerTaskToStatus().
+	err = st.QueryStatus().
 		Select(status.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -3601,9 +3601,9 @@ func (st *ServerTask) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Environment",
-		Name: "ServerTaskToEnvironment",
+		Name: "Environment",
 	}
-	err = st.QueryServerTaskToEnvironment().
+	err = st.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -3611,9 +3611,9 @@ func (st *ServerTask) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "Build",
-		Name: "ServerTaskToBuild",
+		Name: "Build",
 	}
-	err = st.QueryServerTaskToBuild().
+	err = st.QueryBuild().
 		Select(build.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
@@ -3621,9 +3621,9 @@ func (st *ServerTask) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[4] = &Edge{
 		Type: "BuildCommit",
-		Name: "ServerTaskToBuildCommit",
+		Name: "BuildCommit",
 	}
-	err = st.QueryServerTaskToBuildCommit().
+	err = st.QueryBuildCommit().
 		Select(buildcommit.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
@@ -3631,9 +3631,9 @@ func (st *ServerTask) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[5] = &Edge{
 		Type: "GinFileMiddleware",
-		Name: "ServerTaskToGinFileMiddleware",
+		Name: "GinFileMiddleware",
 	}
-	err = st.QueryServerTaskToGinFileMiddleware().
+	err = st.QueryGinFileMiddleware().
 		Select(ginfilemiddleware.FieldID).
 		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
