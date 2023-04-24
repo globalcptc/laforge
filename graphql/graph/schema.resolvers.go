@@ -40,6 +40,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func (r *adhocPlanResolver) ID(ctx context.Context, obj *ent.AdhocPlan) (string, error) {
+	return obj.ID.String(), nil
+}
+
 func (r *agentTaskResolver) ID(ctx context.Context, obj *ent.AgentTask) (string, error) {
 	return obj.ID.String(), nil
 }
@@ -52,16 +56,28 @@ func (r *agentTaskResolver) State(ctx context.Context, obj *ent.AgentTask) (mode
 	return model.AgentTaskState(obj.State), nil
 }
 
-func (r *authUserResolver) ID(ctx context.Context, obj *ent.AuthUser) (string, error) {
+func (r *ansibleResolver) ID(ctx context.Context, obj *ent.Ansible) (string, error) {
 	return obj.ID.String(), nil
 }
 
-func (r *authUserResolver) Role(ctx context.Context, obj *ent.AuthUser) (model.RoleLevel, error) {
-	return model.RoleLevel(obj.Role), nil
+func (r *ansibleResolver) Method(ctx context.Context, obj *ent.Ansible) (model.AnsibleMethod, error) {
+	return model.AnsibleMethod(obj.Method), nil
 }
 
-func (r *authUserResolver) Provider(ctx context.Context, obj *ent.AuthUser) (model.ProviderType, error) {
-	return model.ProviderType(obj.Provider), nil
+func (r *ansibleResolver) Tags(ctx context.Context, obj *ent.Ansible) ([]*model.TagMap, error) {
+	results := make([]*model.TagMap, 0)
+	for tagKey, tagValue := range obj.Tags {
+		tempTag := &model.TagMap{
+			Key:   tagKey,
+			Value: tagValue,
+		}
+		results = append(results, tempTag)
+	}
+	return results, nil
+}
+
+func (r *authUserResolver) ID(ctx context.Context, obj *ent.AuthUser) (string, error) {
+	return obj.ID.String(), nil
 }
 
 func (r *authUserResolver) PublicKey(ctx context.Context, obj *ent.AuthUser) (string, error) {
@@ -79,6 +95,14 @@ func (r *authUserResolver) PublicKey(ctx context.Context, obj *ent.AuthUser) (st
 	// Convert []byte to string and print to screen
 	text := string(content)
 	return text, nil
+}
+
+func (r *authUserResolver) Role(ctx context.Context, obj *ent.AuthUser) (model.RoleLevel, error) {
+	return model.RoleLevel(obj.Role), nil
+}
+
+func (r *authUserResolver) Provider(ctx context.Context, obj *ent.AuthUser) (model.ProviderType, error) {
+	return model.ProviderType(obj.Provider), nil
 }
 
 func (r *buildResolver) ID(ctx context.Context, obj *ent.Build) (string, error) {
@@ -197,6 +221,10 @@ func (r *dNSRecordResolver) Tags(ctx context.Context, obj *ent.DNSRecord) ([]*mo
 	return results, nil
 }
 
+func (r *diskResolver) ID(ctx context.Context, obj *ent.Disk) (string, error) {
+	return obj.ID.String(), nil
+}
+
 func (r *environmentResolver) ID(ctx context.Context, obj *ent.Environment) (string, error) {
 	return obj.ID.String(), nil
 }
@@ -273,6 +301,10 @@ func (r *fileExtractResolver) Tags(ctx context.Context, obj *ent.FileExtract) ([
 	return results, nil
 }
 
+func (r *findingResolver) ID(ctx context.Context, obj *ent.Finding) (string, error) {
+	return obj.ID.String(), nil
+}
+
 func (r *findingResolver) Severity(ctx context.Context, obj *ent.Finding) (model.FindingSeverity, error) {
 	return model.FindingSeverity(obj.Severity), nil
 }
@@ -291,6 +323,10 @@ func (r *findingResolver) Tags(ctx context.Context, obj *ent.Finding) ([]*model.
 		results = append(results, tempTag)
 	}
 	return results, nil
+}
+
+func (r *ginFileMiddlewareResolver) ID(ctx context.Context, obj *ent.GinFileMiddleware) (string, error) {
+	return obj.ID.String(), nil
 }
 
 func (r *hostResolver) ID(ctx context.Context, obj *ent.Host) (string, error) {
@@ -321,6 +357,10 @@ func (r *hostResolver) Tags(ctx context.Context, obj *ent.Host) ([]*model.TagMap
 	return results, nil
 }
 
+func (r *hostDependencyResolver) ID(ctx context.Context, obj *ent.HostDependency) (string, error) {
+	return obj.ID.String(), nil
+}
+
 func (r *identityResolver) ID(ctx context.Context, obj *ent.Identity) (string, error) {
 	return obj.ID.String(), nil
 }
@@ -347,6 +387,10 @@ func (r *identityResolver) Tags(ctx context.Context, obj *ent.Identity) ([]*mode
 		results = append(results, tempTag)
 	}
 	return results, nil
+}
+
+func (r *includedNetworkResolver) ID(ctx context.Context, obj *ent.IncludedNetwork) (string, error) {
+	return obj.ID.String(), nil
 }
 
 func (r *mutationResolver) LoadEnvironment(ctx context.Context, envFilePath string) ([]*ent.Environment, error) {
@@ -1192,28 +1236,49 @@ func (r *provisionedHostResolver) ID(ctx context.Context, obj *ent.ProvisionedHo
 	return obj.ID.String(), nil
 }
 
-func (r *provisionedHostResolver) ProvisionedHostToAgentStatus(ctx context.Context, obj *ent.ProvisionedHost) (*ent.AgentStatus, error) {
-	check, err := obj.QueryAgentStatuses().Exist(ctx)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed querying Agent Status: %v", err)
+func (r *provisionedHostResolver) AddonType(ctx context.Context, obj *ent.ProvisionedHost) (*model.ProvisionedHostAddonType, error) {
+	var addonType model.ProvisionedHostAddonType
+	switch *obj.AddonType {
+	case provisionedhost.AddonTypeDNS:
+		addonType = model.ProvisionedHostAddonTypeDNS
 	}
+	return &addonType, nil
+}
 
-	if check {
-		a, err := obj.QueryAgentStatuses().Order(
-			ent.Desc(agentstatus.FieldTimestamp),
-		).First(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed querying Agent Status: %v", err)
+func (r *provisionedHostResolver) Vars(ctx context.Context, obj *ent.ProvisionedHost) ([]*model.VarsMap, error) {
+	results := make([]*model.VarsMap, 0)
+	for varKey, varValue := range obj.Vars {
+		tempVar := &model.VarsMap{
+			Key:   varKey,
+			Value: varValue,
 		}
-		return a, nil
+		results = append(results, tempVar)
 	}
-
-	return nil, nil
+	return results, nil
 }
 
 func (r *provisionedNetworkResolver) ID(ctx context.Context, obj *ent.ProvisionedNetwork) (string, error) {
 	return obj.ID.String(), nil
+}
+
+func (r *provisionedNetworkResolver) Vars(ctx context.Context, obj *ent.ProvisionedNetwork) ([]*model.VarsMap, error) {
+	results := make([]*model.VarsMap, 0)
+	for varKey, varValue := range obj.Vars {
+		tempVar := &model.VarsMap{
+			Key:   varKey,
+			Value: varValue,
+		}
+		results = append(results, tempVar)
+	}
+	return results, nil
+}
+
+func (r *provisioningScheduledStepResolver) ID(ctx context.Context, obj *ent.ProvisioningScheduledStep) (string, error) {
+	return obj.ID.String(), nil
+}
+
+func (r *provisioningScheduledStepResolver) Type(ctx context.Context, obj *ent.ProvisioningScheduledStep) (model.ProvisioningScheduledStepType, error) {
+	return model.ProvisioningScheduledStepType(obj.Type), nil
 }
 
 func (r *provisioningStepResolver) ID(ctx context.Context, obj *ent.ProvisioningStep) (string, error) {
@@ -1700,6 +1765,14 @@ func (r *repositoryResolver) EnvironmentFilepath(ctx context.Context, obj *ent.R
 	return obj.EnviromentFilepath, nil
 }
 
+func (r *scheduledStepResolver) ID(ctx context.Context, obj *ent.ScheduledStep) (string, error) {
+	return obj.ID.String(), nil
+}
+
+func (r *scheduledStepResolver) Type(ctx context.Context, obj *ent.ScheduledStep) (model.ScheduledStepType, error) {
+	return model.ScheduledStepType(obj.Type), nil
+}
+
 func (r *scriptResolver) ID(ctx context.Context, obj *ent.Script) (string, error) {
 	return obj.ID.String(), nil
 }
@@ -2001,6 +2074,26 @@ func (r *subscriptionResolver) StreamServerTaskLog(ctx context.Context, taskID s
 	return logStream, nil
 }
 
+func (r *tagResolver) ID(ctx context.Context, obj *ent.Tag) (string, error) {
+	return obj.ID.String(), nil
+}
+
+func (r *tagResolver) UUID(ctx context.Context, obj *ent.Tag) (string, error) {
+	return obj.ID.String(), nil
+}
+
+func (r *tagResolver) Description(ctx context.Context, obj *ent.Tag) ([]*model.TagMap, error) {
+	results := make([]*model.TagMap, 0)
+	for tagKey, tagValue := range obj.Description {
+		tempTag := &model.TagMap{
+			Key:   tagKey,
+			Value: tagValue,
+		}
+		results = append(results, tempTag)
+	}
+	return results, nil
+}
+
 func (r *teamResolver) ID(ctx context.Context, obj *ent.Team) (string, error) {
 	return obj.ID.String(), nil
 }
@@ -2009,8 +2102,14 @@ func (r *userResolver) ID(ctx context.Context, obj *ent.User) (string, error) {
 	return obj.ID.String(), nil
 }
 
+// AdhocPlan returns generated.AdhocPlanResolver implementation.
+func (r *Resolver) AdhocPlan() generated.AdhocPlanResolver { return &adhocPlanResolver{r} }
+
 // AgentTask returns generated.AgentTaskResolver implementation.
 func (r *Resolver) AgentTask() generated.AgentTaskResolver { return &agentTaskResolver{r} }
+
+// Ansible returns generated.AnsibleResolver implementation.
+func (r *Resolver) Ansible() generated.AnsibleResolver { return &ansibleResolver{r} }
 
 // AuthUser returns generated.AuthUserResolver implementation.
 func (r *Resolver) AuthUser() generated.AuthUserResolver { return &authUserResolver{r} }
@@ -2033,6 +2132,9 @@ func (r *Resolver) DNS() generated.DNSResolver { return &dNSResolver{r} }
 // DNSRecord returns generated.DNSRecordResolver implementation.
 func (r *Resolver) DNSRecord() generated.DNSRecordResolver { return &dNSRecordResolver{r} }
 
+// Disk returns generated.DiskResolver implementation.
+func (r *Resolver) Disk() generated.DiskResolver { return &diskResolver{r} }
+
 // Environment returns generated.EnvironmentResolver implementation.
 func (r *Resolver) Environment() generated.EnvironmentResolver { return &environmentResolver{r} }
 
@@ -2048,11 +2150,26 @@ func (r *Resolver) FileExtract() generated.FileExtractResolver { return &fileExt
 // Finding returns generated.FindingResolver implementation.
 func (r *Resolver) Finding() generated.FindingResolver { return &findingResolver{r} }
 
+// GinFileMiddleware returns generated.GinFileMiddlewareResolver implementation.
+func (r *Resolver) GinFileMiddleware() generated.GinFileMiddlewareResolver {
+	return &ginFileMiddlewareResolver{r}
+}
+
 // Host returns generated.HostResolver implementation.
 func (r *Resolver) Host() generated.HostResolver { return &hostResolver{r} }
 
+// HostDependency returns generated.HostDependencyResolver implementation.
+func (r *Resolver) HostDependency() generated.HostDependencyResolver {
+	return &hostDependencyResolver{r}
+}
+
 // Identity returns generated.IdentityResolver implementation.
 func (r *Resolver) Identity() generated.IdentityResolver { return &identityResolver{r} }
+
+// IncludedNetwork returns generated.IncludedNetworkResolver implementation.
+func (r *Resolver) IncludedNetwork() generated.IncludedNetworkResolver {
+	return &includedNetworkResolver{r}
+}
 
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
@@ -2076,6 +2193,11 @@ func (r *Resolver) ProvisionedNetwork() generated.ProvisionedNetworkResolver {
 	return &provisionedNetworkResolver{r}
 }
 
+// ProvisioningScheduledStep returns generated.ProvisioningScheduledStepResolver implementation.
+func (r *Resolver) ProvisioningScheduledStep() generated.ProvisioningScheduledStepResolver {
+	return &provisioningScheduledStepResolver{r}
+}
+
 // ProvisioningStep returns generated.ProvisioningStepResolver implementation.
 func (r *Resolver) ProvisioningStep() generated.ProvisioningStepResolver {
 	return &provisioningStepResolver{r}
@@ -2090,6 +2212,9 @@ func (r *Resolver) RepoCommit() generated.RepoCommitResolver { return &repoCommi
 // Repository returns generated.RepositoryResolver implementation.
 func (r *Resolver) Repository() generated.RepositoryResolver { return &repositoryResolver{r} }
 
+// ScheduledStep returns generated.ScheduledStepResolver implementation.
+func (r *Resolver) ScheduledStep() generated.ScheduledStepResolver { return &scheduledStepResolver{r} }
+
 // Script returns generated.ScriptResolver implementation.
 func (r *Resolver) Script() generated.ScriptResolver { return &scriptResolver{r} }
 
@@ -2102,13 +2227,18 @@ func (r *Resolver) Status() generated.StatusResolver { return &statusResolver{r}
 // Subscription returns generated.SubscriptionResolver implementation.
 func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
 
+// Tag returns generated.TagResolver implementation.
+func (r *Resolver) Tag() generated.TagResolver { return &tagResolver{r} }
+
 // Team returns generated.TeamResolver implementation.
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 
 // User returns generated.UserResolver implementation.
 func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 
+type adhocPlanResolver struct{ *Resolver }
 type agentTaskResolver struct{ *Resolver }
+type ansibleResolver struct{ *Resolver }
 type authUserResolver struct{ *Resolver }
 type buildResolver struct{ *Resolver }
 type buildCommitResolver struct{ *Resolver }
@@ -2116,26 +2246,33 @@ type commandResolver struct{ *Resolver }
 type competitionResolver struct{ *Resolver }
 type dNSResolver struct{ *Resolver }
 type dNSRecordResolver struct{ *Resolver }
+type diskResolver struct{ *Resolver }
 type environmentResolver struct{ *Resolver }
 type fileDeleteResolver struct{ *Resolver }
 type fileDownloadResolver struct{ *Resolver }
 type fileExtractResolver struct{ *Resolver }
 type findingResolver struct{ *Resolver }
+type ginFileMiddlewareResolver struct{ *Resolver }
 type hostResolver struct{ *Resolver }
+type hostDependencyResolver struct{ *Resolver }
 type identityResolver struct{ *Resolver }
+type includedNetworkResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type networkResolver struct{ *Resolver }
 type planResolver struct{ *Resolver }
 type planDiffResolver struct{ *Resolver }
 type provisionedHostResolver struct{ *Resolver }
 type provisionedNetworkResolver struct{ *Resolver }
+type provisioningScheduledStepResolver struct{ *Resolver }
 type provisioningStepResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type repoCommitResolver struct{ *Resolver }
 type repositoryResolver struct{ *Resolver }
+type scheduledStepResolver struct{ *Resolver }
 type scriptResolver struct{ *Resolver }
 type serverTaskResolver struct{ *Resolver }
 type statusResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
+type tagResolver struct{ *Resolver }
 type teamResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
