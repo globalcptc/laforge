@@ -826,10 +826,10 @@ func (sq *StatusQuery) loadStatusToProvisioningStep(ctx context.Context, query *
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].provisioning_step_provisioning_step_to_status == nil {
+		if nodes[i].provisioning_step_status == nil {
 			continue
 		}
-		fk := *nodes[i].provisioning_step_provisioning_step_to_status
+		fk := *nodes[i].provisioning_step_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -843,7 +843,7 @@ func (sq *StatusQuery) loadStatusToProvisioningStep(ctx context.Context, query *
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

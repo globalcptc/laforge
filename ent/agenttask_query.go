@@ -106,7 +106,7 @@ func (atq *AgentTaskQuery) QueryProvisioningScheduledStep() *ProvisioningSchedul
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
 			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, agenttask.ProvisioningScheduledStepTable, agenttask.ProvisioningScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.ProvisioningScheduledStepTable, agenttask.ProvisioningScheduledStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
 		return fromU, nil
@@ -470,7 +470,7 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 			atq.withAdhocPlans != nil,
 		}
 	)
-	if atq.withProvisioningStep != nil || atq.withProvisionedHost != nil {
+	if atq.withProvisioningStep != nil || atq.withProvisioningScheduledStep != nil || atq.withProvisionedHost != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -552,30 +552,31 @@ func (atq *AgentTaskQuery) loadProvisioningStep(ctx context.Context, query *Prov
 	return nil
 }
 func (atq *AgentTaskQuery) loadProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisioningScheduledStep)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*AgentTask)
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*AgentTask)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
+		if nodes[i].agent_task_provisioning_scheduled_step == nil {
+			continue
+		}
+		fk := *nodes[i].agent_task_provisioning_scheduled_step
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.withFKs = true
-	query.Where(predicate.ProvisioningScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(agenttask.ProvisioningScheduledStepColumn, fks...))
-	}))
+	query.Where(provisioningscheduledstep.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_task_provisioning_scheduled_step
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_task_provisioning_scheduled_step" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_task_provisioning_scheduled_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_task_provisioning_scheduled_step" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }

@@ -76,7 +76,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "provisioningstep" package.
 	StatusToProvisioningStepInverseTable = "provisioning_steps"
 	// StatusToProvisioningStepColumn is the table column denoting the StatusToProvisioningStep relation/edge.
-	StatusToProvisioningStepColumn = "provisioning_step_provisioning_step_to_status"
+	StatusToProvisioningStepColumn = "provisioning_step_status"
 	// StatusToTeamTable is the table that holds the StatusToTeam relation/edge.
 	StatusToTeamTable = "status"
 	// StatusToTeamInverseTable is the table name for the Team entity.
@@ -135,7 +135,7 @@ var ForeignKeys = []string{
 	"provisioned_host_status",
 	"provisioned_network_status",
 	"provisioning_scheduled_step_status",
-	"provisioning_step_provisioning_step_to_status",
+	"provisioning_step_status",
 	"server_task_server_task_to_status",
 	"team_team_to_status",
 }

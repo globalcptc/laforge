@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/command"
 	"github.com/gen0cide/laforge/ent/dnsrecord"
@@ -59,14 +58,13 @@ type ProvisioningScheduledStep struct {
 	HCLFileExtract *FileExtract `json:"FileExtract,omitempty"`
 	// Ansible holds the value of the Ansible edge.
 	HCLAnsible *Ansible `json:"Ansible,omitempty"`
-	// AgentTask holds the value of the AgentTask edge.
-	HCLAgentTask *AgentTask `json:"AgentTask,omitempty"`
+	// AgentTasks holds the value of the AgentTasks edge.
+	HCLAgentTasks []*AgentTask `json:"AgentTasks,omitempty"`
 	// Plan holds the value of the Plan edge.
 	HCLPlan *Plan `json:"Plan,omitempty"`
 	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
 	HCLGinFileMiddleware *GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
 	//
-	agent_task_provisioning_scheduled_step          *uuid.UUID
 	gin_file_middleware_provisioning_scheduled_step *uuid.UUID
 	plan_provisioning_scheduled_step                *uuid.UUID
 	provisioning_scheduled_step_scheduled_step      *uuid.UUID
@@ -102,8 +100,8 @@ type ProvisioningScheduledStepEdges struct {
 	FileExtract *FileExtract `json:"FileExtract,omitempty"`
 	// Ansible holds the value of the Ansible edge.
 	Ansible *Ansible `json:"Ansible,omitempty"`
-	// AgentTask holds the value of the AgentTask edge.
-	AgentTask *AgentTask `json:"AgentTask,omitempty"`
+	// AgentTasks holds the value of the AgentTasks edge.
+	AgentTasks []*AgentTask `json:"AgentTasks,omitempty"`
 	// Plan holds the value of the Plan edge.
 	Plan *Plan `json:"Plan,omitempty"`
 	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
@@ -253,18 +251,13 @@ func (e ProvisioningScheduledStepEdges) AnsibleOrErr() (*Ansible, error) {
 	return nil, &NotLoadedError{edge: "Ansible"}
 }
 
-// AgentTaskOrErr returns the AgentTask value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningScheduledStepEdges) AgentTaskOrErr() (*AgentTask, error) {
+// AgentTasksOrErr returns the AgentTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProvisioningScheduledStepEdges) AgentTasksOrErr() ([]*AgentTask, error) {
 	if e.loadedTypes[10] {
-		if e.AgentTask == nil {
-			// The edge AgentTask was loaded in eager-loading,
-			// but was not found.
-			return nil, &NotFoundError{label: agenttask.Label}
-		}
-		return e.AgentTask, nil
+		return e.AgentTasks, nil
 	}
-	return nil, &NotLoadedError{edge: "AgentTask"}
+	return nil, &NotLoadedError{edge: "AgentTasks"}
 }
 
 // PlanOrErr returns the Plan value or an error if the edge
@@ -306,29 +299,27 @@ func (*ProvisioningScheduledStep) scanValues(columns []string) ([]interface{}, e
 			values[i] = new(sql.NullTime)
 		case provisioningscheduledstep.FieldID:
 			values[i] = new(uuid.UUID)
-		case provisioningscheduledstep.ForeignKeys[0]: // agent_task_provisioning_scheduled_step
+		case provisioningscheduledstep.ForeignKeys[0]: // gin_file_middleware_provisioning_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[1]: // gin_file_middleware_provisioning_scheduled_step
+		case provisioningscheduledstep.ForeignKeys[1]: // plan_provisioning_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[2]: // plan_provisioning_scheduled_step
+		case provisioningscheduledstep.ForeignKeys[2]: // provisioning_scheduled_step_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[3]: // provisioning_scheduled_step_scheduled_step
+		case provisioningscheduledstep.ForeignKeys[3]: // provisioning_scheduled_step_provisioned_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[4]: // provisioning_scheduled_step_provisioned_host
+		case provisioningscheduledstep.ForeignKeys[4]: // provisioning_scheduled_step_script
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[5]: // provisioning_scheduled_step_script
+		case provisioningscheduledstep.ForeignKeys[5]: // provisioning_scheduled_step_command
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[6]: // provisioning_scheduled_step_command
+		case provisioningscheduledstep.ForeignKeys[6]: // provisioning_scheduled_step_dns_record
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[7]: // provisioning_scheduled_step_dns_record
+		case provisioningscheduledstep.ForeignKeys[7]: // provisioning_scheduled_step_file_delete
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[8]: // provisioning_scheduled_step_file_delete
+		case provisioningscheduledstep.ForeignKeys[8]: // provisioning_scheduled_step_file_download
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[9]: // provisioning_scheduled_step_file_download
+		case provisioningscheduledstep.ForeignKeys[9]: // provisioning_scheduled_step_file_extract
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[10]: // provisioning_scheduled_step_file_extract
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[11]: // provisioning_scheduled_step_ansible
+		case provisioningscheduledstep.ForeignKeys[10]: // provisioning_scheduled_step_ansible
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type ProvisioningScheduledStep", columns[i])
@@ -365,82 +356,75 @@ func (pss *ProvisioningScheduledStep) assignValues(columns []string, values []in
 			}
 		case provisioningscheduledstep.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field agent_task_provisioning_scheduled_step", values[i])
-			} else if value.Valid {
-				pss.agent_task_provisioning_scheduled_step = new(uuid.UUID)
-				*pss.agent_task_provisioning_scheduled_step = *value.S.(*uuid.UUID)
-			}
-		case provisioningscheduledstep.ForeignKeys[1]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field gin_file_middleware_provisioning_scheduled_step", values[i])
 			} else if value.Valid {
 				pss.gin_file_middleware_provisioning_scheduled_step = new(uuid.UUID)
 				*pss.gin_file_middleware_provisioning_scheduled_step = *value.S.(*uuid.UUID)
 			}
-		case provisioningscheduledstep.ForeignKeys[2]:
+		case provisioningscheduledstep.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field plan_provisioning_scheduled_step", values[i])
 			} else if value.Valid {
 				pss.plan_provisioning_scheduled_step = new(uuid.UUID)
 				*pss.plan_provisioning_scheduled_step = *value.S.(*uuid.UUID)
 			}
-		case provisioningscheduledstep.ForeignKeys[3]:
+		case provisioningscheduledstep.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_scheduled_step", values[i])
 			} else if value.Valid {
 				pss.provisioning_scheduled_step_scheduled_step = new(uuid.UUID)
 				*pss.provisioning_scheduled_step_scheduled_step = *value.S.(*uuid.UUID)
 			}
-		case provisioningscheduledstep.ForeignKeys[4]:
+		case provisioningscheduledstep.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_provisioned_host", values[i])
 			} else if value.Valid {
 				pss.provisioning_scheduled_step_provisioned_host = new(uuid.UUID)
 				*pss.provisioning_scheduled_step_provisioned_host = *value.S.(*uuid.UUID)
 			}
-		case provisioningscheduledstep.ForeignKeys[5]:
+		case provisioningscheduledstep.ForeignKeys[4]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_script", values[i])
 			} else if value.Valid {
 				pss.provisioning_scheduled_step_script = new(uuid.UUID)
 				*pss.provisioning_scheduled_step_script = *value.S.(*uuid.UUID)
 			}
-		case provisioningscheduledstep.ForeignKeys[6]:
+		case provisioningscheduledstep.ForeignKeys[5]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_command", values[i])
 			} else if value.Valid {
 				pss.provisioning_scheduled_step_command = new(uuid.UUID)
 				*pss.provisioning_scheduled_step_command = *value.S.(*uuid.UUID)
 			}
-		case provisioningscheduledstep.ForeignKeys[7]:
+		case provisioningscheduledstep.ForeignKeys[6]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_dns_record", values[i])
 			} else if value.Valid {
 				pss.provisioning_scheduled_step_dns_record = new(uuid.UUID)
 				*pss.provisioning_scheduled_step_dns_record = *value.S.(*uuid.UUID)
 			}
-		case provisioningscheduledstep.ForeignKeys[8]:
+		case provisioningscheduledstep.ForeignKeys[7]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_file_delete", values[i])
 			} else if value.Valid {
 				pss.provisioning_scheduled_step_file_delete = new(uuid.UUID)
 				*pss.provisioning_scheduled_step_file_delete = *value.S.(*uuid.UUID)
 			}
-		case provisioningscheduledstep.ForeignKeys[9]:
+		case provisioningscheduledstep.ForeignKeys[8]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_file_download", values[i])
 			} else if value.Valid {
 				pss.provisioning_scheduled_step_file_download = new(uuid.UUID)
 				*pss.provisioning_scheduled_step_file_download = *value.S.(*uuid.UUID)
 			}
-		case provisioningscheduledstep.ForeignKeys[10]:
+		case provisioningscheduledstep.ForeignKeys[9]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_file_extract", values[i])
 			} else if value.Valid {
 				pss.provisioning_scheduled_step_file_extract = new(uuid.UUID)
 				*pss.provisioning_scheduled_step_file_extract = *value.S.(*uuid.UUID)
 			}
-		case provisioningscheduledstep.ForeignKeys[11]:
+		case provisioningscheduledstep.ForeignKeys[10]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field provisioning_scheduled_step_ansible", values[i])
 			} else if value.Valid {
@@ -502,9 +486,9 @@ func (pss *ProvisioningScheduledStep) QueryAnsible() *AnsibleQuery {
 	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryAnsible(pss)
 }
 
-// QueryAgentTask queries the "AgentTask" edge of the ProvisioningScheduledStep entity.
-func (pss *ProvisioningScheduledStep) QueryAgentTask() *AgentTaskQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryAgentTask(pss)
+// QueryAgentTasks queries the "AgentTasks" edge of the ProvisioningScheduledStep entity.
+func (pss *ProvisioningScheduledStep) QueryAgentTasks() *AgentTaskQuery {
+	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryAgentTasks(pss)
 }
 
 // QueryPlan queries the "Plan" edge of the ProvisioningScheduledStep entity.

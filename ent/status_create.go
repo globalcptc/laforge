@@ -581,7 +581,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_step_provisioning_step_to_status = &nodes[0]
+		_node.provisioning_step_status = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := sc.mutation.StatusToTeamIDs(); len(nodes) > 0 {

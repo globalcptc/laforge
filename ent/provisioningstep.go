@@ -36,235 +36,235 @@ type ProvisioningStep struct {
 	Edges ProvisioningStepEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// ProvisioningStepToStatus holds the value of the ProvisioningStepToStatus edge.
-	HCLProvisioningStepToStatus *Status `json:"ProvisioningStepToStatus,omitempty"`
-	// ProvisioningStepToProvisionedHost holds the value of the ProvisioningStepToProvisionedHost edge.
-	HCLProvisioningStepToProvisionedHost *ProvisionedHost `json:"ProvisioningStepToProvisionedHost,omitempty"`
-	// ProvisioningStepToScript holds the value of the ProvisioningStepToScript edge.
-	HCLProvisioningStepToScript *Script `json:"ProvisioningStepToScript,omitempty"`
-	// ProvisioningStepToCommand holds the value of the ProvisioningStepToCommand edge.
-	HCLProvisioningStepToCommand *Command `json:"ProvisioningStepToCommand,omitempty"`
-	// ProvisioningStepToDNSRecord holds the value of the ProvisioningStepToDNSRecord edge.
-	HCLProvisioningStepToDNSRecord *DNSRecord `json:"ProvisioningStepToDNSRecord,omitempty"`
-	// ProvisioningStepToFileDelete holds the value of the ProvisioningStepToFileDelete edge.
-	HCLProvisioningStepToFileDelete *FileDelete `json:"ProvisioningStepToFileDelete,omitempty"`
-	// ProvisioningStepToFileDownload holds the value of the ProvisioningStepToFileDownload edge.
-	HCLProvisioningStepToFileDownload *FileDownload `json:"ProvisioningStepToFileDownload,omitempty"`
-	// ProvisioningStepToFileExtract holds the value of the ProvisioningStepToFileExtract edge.
-	HCLProvisioningStepToFileExtract *FileExtract `json:"ProvisioningStepToFileExtract,omitempty"`
-	// ProvisioningStepToAnsible holds the value of the ProvisioningStepToAnsible edge.
-	HCLProvisioningStepToAnsible *Ansible `json:"ProvisioningStepToAnsible,omitempty"`
-	// ProvisioningStepToPlan holds the value of the ProvisioningStepToPlan edge.
-	HCLProvisioningStepToPlan *Plan `json:"ProvisioningStepToPlan,omitempty"`
-	// ProvisioningStepToAgentTask holds the value of the ProvisioningStepToAgentTask edge.
-	HCLProvisioningStepToAgentTask []*AgentTask `json:"ProvisioningStepToAgentTask,omitempty"`
-	// ProvisioningStepToGinFileMiddleware holds the value of the ProvisioningStepToGinFileMiddleware edge.
-	HCLProvisioningStepToGinFileMiddleware *GinFileMiddleware `json:"ProvisioningStepToGinFileMiddleware,omitempty"`
+	// Status holds the value of the Status edge.
+	HCLStatus *Status `json:"Status,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	HCLProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// Script holds the value of the Script edge.
+	HCLScript *Script `json:"Script,omitempty"`
+	// Command holds the value of the Command edge.
+	HCLCommand *Command `json:"Command,omitempty"`
+	// DNSRecord holds the value of the DNSRecord edge.
+	HCLDNSRecord *DNSRecord `json:"DNSRecord,omitempty"`
+	// FileDelete holds the value of the FileDelete edge.
+	HCLFileDelete *FileDelete `json:"FileDelete,omitempty"`
+	// FileDownload holds the value of the FileDownload edge.
+	HCLFileDownload *FileDownload `json:"FileDownload,omitempty"`
+	// FileExtract holds the value of the FileExtract edge.
+	HCLFileExtract *FileExtract `json:"FileExtract,omitempty"`
+	// Ansible holds the value of the Ansible edge.
+	HCLAnsible *Ansible `json:"Ansible,omitempty"`
+	// Plan holds the value of the Plan edge.
+	HCLPlan *Plan `json:"Plan,omitempty"`
+	// AgentTasks holds the value of the AgentTasks edge.
+	HCLAgentTasks []*AgentTask `json:"AgentTasks,omitempty"`
+	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
+	HCLGinFileMiddleware *GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
 	//
-	gin_file_middleware_provisioning_step                   *uuid.UUID
-	plan_provisioning_step                                  *uuid.UUID
-	provisioning_step_provisioning_step_to_provisioned_host *uuid.UUID
-	provisioning_step_provisioning_step_to_script           *uuid.UUID
-	provisioning_step_provisioning_step_to_command          *uuid.UUID
-	provisioning_step_provisioning_step_to_dns_record       *uuid.UUID
-	provisioning_step_provisioning_step_to_file_delete      *uuid.UUID
-	provisioning_step_provisioning_step_to_file_download    *uuid.UUID
-	provisioning_step_provisioning_step_to_file_extract     *uuid.UUID
-	provisioning_step_provisioning_step_to_ansible          *uuid.UUID
+	gin_file_middleware_provisioning_step *uuid.UUID
+	plan_provisioning_step                *uuid.UUID
+	provisioning_step_provisioned_host    *uuid.UUID
+	provisioning_step_script              *uuid.UUID
+	provisioning_step_command             *uuid.UUID
+	provisioning_step_dns_record          *uuid.UUID
+	provisioning_step_file_delete         *uuid.UUID
+	provisioning_step_file_download       *uuid.UUID
+	provisioning_step_file_extract        *uuid.UUID
+	provisioning_step_ansible             *uuid.UUID
 }
 
 // ProvisioningStepEdges holds the relations/edges for other nodes in the graph.
 type ProvisioningStepEdges struct {
-	// ProvisioningStepToStatus holds the value of the ProvisioningStepToStatus edge.
-	ProvisioningStepToStatus *Status `json:"ProvisioningStepToStatus,omitempty"`
-	// ProvisioningStepToProvisionedHost holds the value of the ProvisioningStepToProvisionedHost edge.
-	ProvisioningStepToProvisionedHost *ProvisionedHost `json:"ProvisioningStepToProvisionedHost,omitempty"`
-	// ProvisioningStepToScript holds the value of the ProvisioningStepToScript edge.
-	ProvisioningStepToScript *Script `json:"ProvisioningStepToScript,omitempty"`
-	// ProvisioningStepToCommand holds the value of the ProvisioningStepToCommand edge.
-	ProvisioningStepToCommand *Command `json:"ProvisioningStepToCommand,omitempty"`
-	// ProvisioningStepToDNSRecord holds the value of the ProvisioningStepToDNSRecord edge.
-	ProvisioningStepToDNSRecord *DNSRecord `json:"ProvisioningStepToDNSRecord,omitempty"`
-	// ProvisioningStepToFileDelete holds the value of the ProvisioningStepToFileDelete edge.
-	ProvisioningStepToFileDelete *FileDelete `json:"ProvisioningStepToFileDelete,omitempty"`
-	// ProvisioningStepToFileDownload holds the value of the ProvisioningStepToFileDownload edge.
-	ProvisioningStepToFileDownload *FileDownload `json:"ProvisioningStepToFileDownload,omitempty"`
-	// ProvisioningStepToFileExtract holds the value of the ProvisioningStepToFileExtract edge.
-	ProvisioningStepToFileExtract *FileExtract `json:"ProvisioningStepToFileExtract,omitempty"`
-	// ProvisioningStepToAnsible holds the value of the ProvisioningStepToAnsible edge.
-	ProvisioningStepToAnsible *Ansible `json:"ProvisioningStepToAnsible,omitempty"`
-	// ProvisioningStepToPlan holds the value of the ProvisioningStepToPlan edge.
-	ProvisioningStepToPlan *Plan `json:"ProvisioningStepToPlan,omitempty"`
-	// ProvisioningStepToAgentTask holds the value of the ProvisioningStepToAgentTask edge.
-	ProvisioningStepToAgentTask []*AgentTask `json:"ProvisioningStepToAgentTask,omitempty"`
-	// ProvisioningStepToGinFileMiddleware holds the value of the ProvisioningStepToGinFileMiddleware edge.
-	ProvisioningStepToGinFileMiddleware *GinFileMiddleware `json:"ProvisioningStepToGinFileMiddleware,omitempty"`
+	// Status holds the value of the Status edge.
+	Status *Status `json:"Status,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	ProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// Script holds the value of the Script edge.
+	Script *Script `json:"Script,omitempty"`
+	// Command holds the value of the Command edge.
+	Command *Command `json:"Command,omitempty"`
+	// DNSRecord holds the value of the DNSRecord edge.
+	DNSRecord *DNSRecord `json:"DNSRecord,omitempty"`
+	// FileDelete holds the value of the FileDelete edge.
+	FileDelete *FileDelete `json:"FileDelete,omitempty"`
+	// FileDownload holds the value of the FileDownload edge.
+	FileDownload *FileDownload `json:"FileDownload,omitempty"`
+	// FileExtract holds the value of the FileExtract edge.
+	FileExtract *FileExtract `json:"FileExtract,omitempty"`
+	// Ansible holds the value of the Ansible edge.
+	Ansible *Ansible `json:"Ansible,omitempty"`
+	// Plan holds the value of the Plan edge.
+	Plan *Plan `json:"Plan,omitempty"`
+	// AgentTasks holds the value of the AgentTasks edge.
+	AgentTasks []*AgentTask `json:"AgentTasks,omitempty"`
+	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
+	GinFileMiddleware *GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [12]bool
 }
 
-// ProvisioningStepToStatusOrErr returns the ProvisioningStepToStatus value or an error if the edge
+// StatusOrErr returns the Status value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningStepEdges) ProvisioningStepToStatusOrErr() (*Status, error) {
+func (e ProvisioningStepEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[0] {
-		if e.ProvisioningStepToStatus == nil {
-			// The edge ProvisioningStepToStatus was loaded in eager-loading,
+		if e.Status == nil {
+			// The edge Status was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
-		return e.ProvisioningStepToStatus, nil
+		return e.Status, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToStatus"}
+	return nil, &NotLoadedError{edge: "Status"}
 }
 
-// ProvisioningStepToProvisionedHostOrErr returns the ProvisioningStepToProvisionedHost value or an error if the edge
+// ProvisionedHostOrErr returns the ProvisionedHost value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningStepEdges) ProvisioningStepToProvisionedHostOrErr() (*ProvisionedHost, error) {
+func (e ProvisioningStepEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[1] {
-		if e.ProvisioningStepToProvisionedHost == nil {
-			// The edge ProvisioningStepToProvisionedHost was loaded in eager-loading,
+		if e.ProvisionedHost == nil {
+			// The edge ProvisionedHost was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
-		return e.ProvisioningStepToProvisionedHost, nil
+		return e.ProvisionedHost, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToProvisionedHost"}
+	return nil, &NotLoadedError{edge: "ProvisionedHost"}
 }
 
-// ProvisioningStepToScriptOrErr returns the ProvisioningStepToScript value or an error if the edge
+// ScriptOrErr returns the Script value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningStepEdges) ProvisioningStepToScriptOrErr() (*Script, error) {
+func (e ProvisioningStepEdges) ScriptOrErr() (*Script, error) {
 	if e.loadedTypes[2] {
-		if e.ProvisioningStepToScript == nil {
-			// The edge ProvisioningStepToScript was loaded in eager-loading,
+		if e.Script == nil {
+			// The edge Script was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: script.Label}
 		}
-		return e.ProvisioningStepToScript, nil
+		return e.Script, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToScript"}
+	return nil, &NotLoadedError{edge: "Script"}
 }
 
-// ProvisioningStepToCommandOrErr returns the ProvisioningStepToCommand value or an error if the edge
+// CommandOrErr returns the Command value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningStepEdges) ProvisioningStepToCommandOrErr() (*Command, error) {
+func (e ProvisioningStepEdges) CommandOrErr() (*Command, error) {
 	if e.loadedTypes[3] {
-		if e.ProvisioningStepToCommand == nil {
-			// The edge ProvisioningStepToCommand was loaded in eager-loading,
+		if e.Command == nil {
+			// The edge Command was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: command.Label}
 		}
-		return e.ProvisioningStepToCommand, nil
+		return e.Command, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToCommand"}
+	return nil, &NotLoadedError{edge: "Command"}
 }
 
-// ProvisioningStepToDNSRecordOrErr returns the ProvisioningStepToDNSRecord value or an error if the edge
+// DNSRecordOrErr returns the DNSRecord value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningStepEdges) ProvisioningStepToDNSRecordOrErr() (*DNSRecord, error) {
+func (e ProvisioningStepEdges) DNSRecordOrErr() (*DNSRecord, error) {
 	if e.loadedTypes[4] {
-		if e.ProvisioningStepToDNSRecord == nil {
-			// The edge ProvisioningStepToDNSRecord was loaded in eager-loading,
+		if e.DNSRecord == nil {
+			// The edge DNSRecord was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: dnsrecord.Label}
 		}
-		return e.ProvisioningStepToDNSRecord, nil
+		return e.DNSRecord, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToDNSRecord"}
+	return nil, &NotLoadedError{edge: "DNSRecord"}
 }
 
-// ProvisioningStepToFileDeleteOrErr returns the ProvisioningStepToFileDelete value or an error if the edge
+// FileDeleteOrErr returns the FileDelete value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningStepEdges) ProvisioningStepToFileDeleteOrErr() (*FileDelete, error) {
+func (e ProvisioningStepEdges) FileDeleteOrErr() (*FileDelete, error) {
 	if e.loadedTypes[5] {
-		if e.ProvisioningStepToFileDelete == nil {
-			// The edge ProvisioningStepToFileDelete was loaded in eager-loading,
+		if e.FileDelete == nil {
+			// The edge FileDelete was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: filedelete.Label}
 		}
-		return e.ProvisioningStepToFileDelete, nil
+		return e.FileDelete, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToFileDelete"}
+	return nil, &NotLoadedError{edge: "FileDelete"}
 }
 
-// ProvisioningStepToFileDownloadOrErr returns the ProvisioningStepToFileDownload value or an error if the edge
+// FileDownloadOrErr returns the FileDownload value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningStepEdges) ProvisioningStepToFileDownloadOrErr() (*FileDownload, error) {
+func (e ProvisioningStepEdges) FileDownloadOrErr() (*FileDownload, error) {
 	if e.loadedTypes[6] {
-		if e.ProvisioningStepToFileDownload == nil {
-			// The edge ProvisioningStepToFileDownload was loaded in eager-loading,
+		if e.FileDownload == nil {
+			// The edge FileDownload was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: filedownload.Label}
 		}
-		return e.ProvisioningStepToFileDownload, nil
+		return e.FileDownload, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToFileDownload"}
+	return nil, &NotLoadedError{edge: "FileDownload"}
 }
 
-// ProvisioningStepToFileExtractOrErr returns the ProvisioningStepToFileExtract value or an error if the edge
+// FileExtractOrErr returns the FileExtract value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningStepEdges) ProvisioningStepToFileExtractOrErr() (*FileExtract, error) {
+func (e ProvisioningStepEdges) FileExtractOrErr() (*FileExtract, error) {
 	if e.loadedTypes[7] {
-		if e.ProvisioningStepToFileExtract == nil {
-			// The edge ProvisioningStepToFileExtract was loaded in eager-loading,
+		if e.FileExtract == nil {
+			// The edge FileExtract was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: fileextract.Label}
 		}
-		return e.ProvisioningStepToFileExtract, nil
+		return e.FileExtract, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToFileExtract"}
+	return nil, &NotLoadedError{edge: "FileExtract"}
 }
 
-// ProvisioningStepToAnsibleOrErr returns the ProvisioningStepToAnsible value or an error if the edge
+// AnsibleOrErr returns the Ansible value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningStepEdges) ProvisioningStepToAnsibleOrErr() (*Ansible, error) {
+func (e ProvisioningStepEdges) AnsibleOrErr() (*Ansible, error) {
 	if e.loadedTypes[8] {
-		if e.ProvisioningStepToAnsible == nil {
-			// The edge ProvisioningStepToAnsible was loaded in eager-loading,
+		if e.Ansible == nil {
+			// The edge Ansible was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: ansible.Label}
 		}
-		return e.ProvisioningStepToAnsible, nil
+		return e.Ansible, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToAnsible"}
+	return nil, &NotLoadedError{edge: "Ansible"}
 }
 
-// ProvisioningStepToPlanOrErr returns the ProvisioningStepToPlan value or an error if the edge
+// PlanOrErr returns the Plan value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningStepEdges) ProvisioningStepToPlanOrErr() (*Plan, error) {
+func (e ProvisioningStepEdges) PlanOrErr() (*Plan, error) {
 	if e.loadedTypes[9] {
-		if e.ProvisioningStepToPlan == nil {
-			// The edge ProvisioningStepToPlan was loaded in eager-loading,
+		if e.Plan == nil {
+			// The edge Plan was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: plan.Label}
 		}
-		return e.ProvisioningStepToPlan, nil
+		return e.Plan, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToPlan"}
+	return nil, &NotLoadedError{edge: "Plan"}
 }
 
-// ProvisioningStepToAgentTaskOrErr returns the ProvisioningStepToAgentTask value or an error if the edge
+// AgentTasksOrErr returns the AgentTasks value or an error if the edge
 // was not loaded in eager-loading.
-func (e ProvisioningStepEdges) ProvisioningStepToAgentTaskOrErr() ([]*AgentTask, error) {
+func (e ProvisioningStepEdges) AgentTasksOrErr() ([]*AgentTask, error) {
 	if e.loadedTypes[10] {
-		return e.ProvisioningStepToAgentTask, nil
+		return e.AgentTasks, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToAgentTask"}
+	return nil, &NotLoadedError{edge: "AgentTasks"}
 }
 
-// ProvisioningStepToGinFileMiddlewareOrErr returns the ProvisioningStepToGinFileMiddleware value or an error if the edge
+// GinFileMiddlewareOrErr returns the GinFileMiddleware value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisioningStepEdges) ProvisioningStepToGinFileMiddlewareOrErr() (*GinFileMiddleware, error) {
+func (e ProvisioningStepEdges) GinFileMiddlewareOrErr() (*GinFileMiddleware, error) {
 	if e.loadedTypes[11] {
-		if e.ProvisioningStepToGinFileMiddleware == nil {
-			// The edge ProvisioningStepToGinFileMiddleware was loaded in eager-loading,
+		if e.GinFileMiddleware == nil {
+			// The edge GinFileMiddleware was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: ginfilemiddleware.Label}
 		}
-		return e.ProvisioningStepToGinFileMiddleware, nil
+		return e.GinFileMiddleware, nil
 	}
-	return nil, &NotLoadedError{edge: "ProvisioningStepToGinFileMiddleware"}
+	return nil, &NotLoadedError{edge: "GinFileMiddleware"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -282,21 +282,21 @@ func (*ProvisioningStep) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisioningstep.ForeignKeys[1]: // plan_provisioning_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningstep.ForeignKeys[2]: // provisioning_step_provisioning_step_to_provisioned_host
+		case provisioningstep.ForeignKeys[2]: // provisioning_step_provisioned_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningstep.ForeignKeys[3]: // provisioning_step_provisioning_step_to_script
+		case provisioningstep.ForeignKeys[3]: // provisioning_step_script
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningstep.ForeignKeys[4]: // provisioning_step_provisioning_step_to_command
+		case provisioningstep.ForeignKeys[4]: // provisioning_step_command
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningstep.ForeignKeys[5]: // provisioning_step_provisioning_step_to_dns_record
+		case provisioningstep.ForeignKeys[5]: // provisioning_step_dns_record
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningstep.ForeignKeys[6]: // provisioning_step_provisioning_step_to_file_delete
+		case provisioningstep.ForeignKeys[6]: // provisioning_step_file_delete
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningstep.ForeignKeys[7]: // provisioning_step_provisioning_step_to_file_download
+		case provisioningstep.ForeignKeys[7]: // provisioning_step_file_download
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningstep.ForeignKeys[8]: // provisioning_step_provisioning_step_to_file_extract
+		case provisioningstep.ForeignKeys[8]: // provisioning_step_file_extract
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningstep.ForeignKeys[9]: // provisioning_step_provisioning_step_to_ansible
+		case provisioningstep.ForeignKeys[9]: // provisioning_step_ansible
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type ProvisioningStep", columns[i])
@@ -347,123 +347,123 @@ func (ps *ProvisioningStep) assignValues(columns []string, values []interface{})
 			}
 		case provisioningstep.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioning_step_provisioning_step_to_provisioned_host", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioning_step_provisioned_host", values[i])
 			} else if value.Valid {
-				ps.provisioning_step_provisioning_step_to_provisioned_host = new(uuid.UUID)
-				*ps.provisioning_step_provisioning_step_to_provisioned_host = *value.S.(*uuid.UUID)
+				ps.provisioning_step_provisioned_host = new(uuid.UUID)
+				*ps.provisioning_step_provisioned_host = *value.S.(*uuid.UUID)
 			}
 		case provisioningstep.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioning_step_provisioning_step_to_script", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioning_step_script", values[i])
 			} else if value.Valid {
-				ps.provisioning_step_provisioning_step_to_script = new(uuid.UUID)
-				*ps.provisioning_step_provisioning_step_to_script = *value.S.(*uuid.UUID)
+				ps.provisioning_step_script = new(uuid.UUID)
+				*ps.provisioning_step_script = *value.S.(*uuid.UUID)
 			}
 		case provisioningstep.ForeignKeys[4]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioning_step_provisioning_step_to_command", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioning_step_command", values[i])
 			} else if value.Valid {
-				ps.provisioning_step_provisioning_step_to_command = new(uuid.UUID)
-				*ps.provisioning_step_provisioning_step_to_command = *value.S.(*uuid.UUID)
+				ps.provisioning_step_command = new(uuid.UUID)
+				*ps.provisioning_step_command = *value.S.(*uuid.UUID)
 			}
 		case provisioningstep.ForeignKeys[5]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioning_step_provisioning_step_to_dns_record", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioning_step_dns_record", values[i])
 			} else if value.Valid {
-				ps.provisioning_step_provisioning_step_to_dns_record = new(uuid.UUID)
-				*ps.provisioning_step_provisioning_step_to_dns_record = *value.S.(*uuid.UUID)
+				ps.provisioning_step_dns_record = new(uuid.UUID)
+				*ps.provisioning_step_dns_record = *value.S.(*uuid.UUID)
 			}
 		case provisioningstep.ForeignKeys[6]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioning_step_provisioning_step_to_file_delete", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioning_step_file_delete", values[i])
 			} else if value.Valid {
-				ps.provisioning_step_provisioning_step_to_file_delete = new(uuid.UUID)
-				*ps.provisioning_step_provisioning_step_to_file_delete = *value.S.(*uuid.UUID)
+				ps.provisioning_step_file_delete = new(uuid.UUID)
+				*ps.provisioning_step_file_delete = *value.S.(*uuid.UUID)
 			}
 		case provisioningstep.ForeignKeys[7]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioning_step_provisioning_step_to_file_download", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioning_step_file_download", values[i])
 			} else if value.Valid {
-				ps.provisioning_step_provisioning_step_to_file_download = new(uuid.UUID)
-				*ps.provisioning_step_provisioning_step_to_file_download = *value.S.(*uuid.UUID)
+				ps.provisioning_step_file_download = new(uuid.UUID)
+				*ps.provisioning_step_file_download = *value.S.(*uuid.UUID)
 			}
 		case provisioningstep.ForeignKeys[8]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioning_step_provisioning_step_to_file_extract", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioning_step_file_extract", values[i])
 			} else if value.Valid {
-				ps.provisioning_step_provisioning_step_to_file_extract = new(uuid.UUID)
-				*ps.provisioning_step_provisioning_step_to_file_extract = *value.S.(*uuid.UUID)
+				ps.provisioning_step_file_extract = new(uuid.UUID)
+				*ps.provisioning_step_file_extract = *value.S.(*uuid.UUID)
 			}
 		case provisioningstep.ForeignKeys[9]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioning_step_provisioning_step_to_ansible", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioning_step_ansible", values[i])
 			} else if value.Valid {
-				ps.provisioning_step_provisioning_step_to_ansible = new(uuid.UUID)
-				*ps.provisioning_step_provisioning_step_to_ansible = *value.S.(*uuid.UUID)
+				ps.provisioning_step_ansible = new(uuid.UUID)
+				*ps.provisioning_step_ansible = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryProvisioningStepToStatus queries the "ProvisioningStepToStatus" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToStatus() *StatusQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToStatus(ps)
+// QueryStatus queries the "Status" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryStatus() *StatusQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryStatus(ps)
 }
 
-// QueryProvisioningStepToProvisionedHost queries the "ProvisioningStepToProvisionedHost" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToProvisionedHost() *ProvisionedHostQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToProvisionedHost(ps)
+// QueryProvisionedHost queries the "ProvisionedHost" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryProvisionedHost() *ProvisionedHostQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryProvisionedHost(ps)
 }
 
-// QueryProvisioningStepToScript queries the "ProvisioningStepToScript" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToScript() *ScriptQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToScript(ps)
+// QueryScript queries the "Script" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryScript() *ScriptQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryScript(ps)
 }
 
-// QueryProvisioningStepToCommand queries the "ProvisioningStepToCommand" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToCommand() *CommandQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToCommand(ps)
+// QueryCommand queries the "Command" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryCommand() *CommandQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryCommand(ps)
 }
 
-// QueryProvisioningStepToDNSRecord queries the "ProvisioningStepToDNSRecord" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToDNSRecord() *DNSRecordQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToDNSRecord(ps)
+// QueryDNSRecord queries the "DNSRecord" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryDNSRecord() *DNSRecordQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryDNSRecord(ps)
 }
 
-// QueryProvisioningStepToFileDelete queries the "ProvisioningStepToFileDelete" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToFileDelete() *FileDeleteQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToFileDelete(ps)
+// QueryFileDelete queries the "FileDelete" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryFileDelete() *FileDeleteQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryFileDelete(ps)
 }
 
-// QueryProvisioningStepToFileDownload queries the "ProvisioningStepToFileDownload" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToFileDownload() *FileDownloadQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToFileDownload(ps)
+// QueryFileDownload queries the "FileDownload" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryFileDownload() *FileDownloadQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryFileDownload(ps)
 }
 
-// QueryProvisioningStepToFileExtract queries the "ProvisioningStepToFileExtract" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToFileExtract() *FileExtractQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToFileExtract(ps)
+// QueryFileExtract queries the "FileExtract" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryFileExtract() *FileExtractQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryFileExtract(ps)
 }
 
-// QueryProvisioningStepToAnsible queries the "ProvisioningStepToAnsible" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToAnsible() *AnsibleQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToAnsible(ps)
+// QueryAnsible queries the "Ansible" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryAnsible() *AnsibleQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryAnsible(ps)
 }
 
-// QueryProvisioningStepToPlan queries the "ProvisioningStepToPlan" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToPlan() *PlanQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToPlan(ps)
+// QueryPlan queries the "Plan" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryPlan() *PlanQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryPlan(ps)
 }
 
-// QueryProvisioningStepToAgentTask queries the "ProvisioningStepToAgentTask" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToAgentTask() *AgentTaskQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToAgentTask(ps)
+// QueryAgentTasks queries the "AgentTasks" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryAgentTasks() *AgentTaskQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryAgentTasks(ps)
 }
 
-// QueryProvisioningStepToGinFileMiddleware queries the "ProvisioningStepToGinFileMiddleware" edge of the ProvisioningStep entity.
-func (ps *ProvisioningStep) QueryProvisioningStepToGinFileMiddleware() *GinFileMiddlewareQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisioningStepToGinFileMiddleware(ps)
+// QueryGinFileMiddleware queries the "GinFileMiddleware" edge of the ProvisioningStep entity.
+func (ps *ProvisioningStep) QueryGinFileMiddleware() *GinFileMiddlewareQuery {
+	return (&ProvisioningStepClient{config: ps.config}).QueryGinFileMiddleware(ps)
 }
 
 // Update returns a builder for updating this ProvisioningStep.

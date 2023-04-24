@@ -381,7 +381,7 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if atu.mutation.ProvisioningScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   agenttask.ProvisioningScheduledStepTable,
 			Columns: []string{agenttask.ProvisioningScheduledStepColumn},
@@ -397,7 +397,7 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if nodes := atu.mutation.ProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   agenttask.ProvisioningScheduledStepTable,
 			Columns: []string{agenttask.ProvisioningScheduledStepColumn},
@@ -901,7 +901,7 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 	}
 	if atuo.mutation.ProvisioningScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   agenttask.ProvisioningScheduledStepTable,
 			Columns: []string{agenttask.ProvisioningScheduledStepColumn},
@@ -917,7 +917,7 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 	}
 	if nodes := atuo.mutation.ProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   agenttask.ProvisioningScheduledStepTable,
 			Columns: []string{agenttask.ProvisioningScheduledStepColumn},

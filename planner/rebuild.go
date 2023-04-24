@@ -331,7 +331,7 @@ func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus st
 			if getStatusError != nil {
 				break
 			}
-			provisionedStatus, getStatusError = step.QueryProvisioningStepToStatus().Only(ctx)
+			provisionedStatus, getStatusError = step.QueryStatus().Only(ctx)
 		}
 		if getStatusError != nil {
 			logger.Log.Errorf("error getting status of provisioned object: %v", getStatusError)
@@ -401,7 +401,7 @@ func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus st
 // 		if getStatusError != nil {
 // 			break
 // 		}
-// 		provisionedStatus, getStatusError = step.QueryProvisioningStepToStatus().Only(ctx)
+// 		provisionedStatus, getStatusError = step.QueryStatus().Only(ctx)
 // 	default:
 // 		break
 // 	}

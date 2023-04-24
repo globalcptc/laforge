@@ -40,7 +40,7 @@ func (Status) Edges() []ent.Edge {
 			Ref("Status").
 			Unique(),
 		edge.From("StatusToProvisioningStep", ProvisioningStep.Type).
-			Ref("ProvisioningStepToStatus").
+			Ref("Status").
 			Unique(),
 		edge.From("StatusToTeam", Team.Type).
 			Ref("TeamToStatus").

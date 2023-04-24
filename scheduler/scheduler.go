@@ -349,7 +349,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 	}
 
 	for {
-		taskFailed, err := entProvisioningScheduledStep.QueryAgentTask().Where(
+		taskFailed, err := entProvisioningScheduledStep.QueryAgentTasks().Where(
 			agenttask.StateEQ(
 				agenttask.StateFAILED,
 			),
@@ -371,7 +371,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			return
 		}
 
-		taskRunning, err := entProvisioningScheduledStep.QueryAgentTask().Where(
+		taskRunning, err := entProvisioningScheduledStep.QueryAgentTasks().Where(
 			agenttask.StateNEQ(
 				agenttask.StateCOMPLETE,
 			),

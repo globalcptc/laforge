@@ -384,7 +384,7 @@ func (atc *AgentTaskCreate) createSpec() (*AgentTask, *sqlgraph.CreateSpec) {
 	}
 	if nodes := atc.mutation.ProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   agenttask.ProvisioningScheduledStepTable,
 			Columns: []string{agenttask.ProvisioningScheduledStepColumn},
@@ -399,6 +399,7 @@ func (atc *AgentTaskCreate) createSpec() (*AgentTask, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.agent_task_provisioning_scheduled_step = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := atc.mutation.ProvisionedHostIDs(); len(nodes) > 0 {

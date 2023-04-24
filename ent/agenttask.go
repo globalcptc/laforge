@@ -45,8 +45,9 @@ type AgentTask struct {
 	// AdhocPlans holds the value of the AdhocPlans edge.
 	HCLAdhocPlans []*AdhocPlan `json:"AdhocPlans,omitempty"`
 	//
-	agent_task_provisioning_step *uuid.UUID
-	agent_task_provisioned_host  *uuid.UUID
+	agent_task_provisioning_step           *uuid.UUID
+	agent_task_provisioning_scheduled_step *uuid.UUID
+	agent_task_provisioned_host            *uuid.UUID
 }
 
 // AgentTaskEdges holds the relations/edges for other nodes in the graph.
@@ -128,7 +129,9 @@ func (*AgentTask) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(uuid.UUID)
 		case agenttask.ForeignKeys[0]: // agent_task_provisioning_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case agenttask.ForeignKeys[1]: // agent_task_provisioned_host
+		case agenttask.ForeignKeys[1]: // agent_task_provisioning_scheduled_step
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case agenttask.ForeignKeys[2]: // agent_task_provisioned_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type AgentTask", columns[i])
@@ -195,6 +198,13 @@ func (at *AgentTask) assignValues(columns []string, values []interface{}) error 
 				*at.agent_task_provisioning_step = *value.S.(*uuid.UUID)
 			}
 		case agenttask.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field agent_task_provisioning_scheduled_step", values[i])
+			} else if value.Valid {
+				at.agent_task_provisioning_scheduled_step = new(uuid.UUID)
+				*at.agent_task_provisioning_scheduled_step = *value.S.(*uuid.UUID)
+			}
+		case agenttask.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field agent_task_provisioned_host", values[i])
 			} else if value.Valid {

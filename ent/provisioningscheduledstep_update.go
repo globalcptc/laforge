@@ -228,23 +228,19 @@ func (pssu *ProvisioningScheduledStepUpdate) SetAnsible(a *Ansible) *Provisionin
 	return pssu.SetAnsibleID(a.ID)
 }
 
-// SetAgentTaskID sets the "AgentTask" edge to the AgentTask entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetAgentTaskID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetAgentTaskID(id)
+// AddAgentTaskIDs adds the "AgentTasks" edge to the AgentTask entity by IDs.
+func (pssu *ProvisioningScheduledStepUpdate) AddAgentTaskIDs(ids ...uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.AddAgentTaskIDs(ids...)
 	return pssu
 }
 
-// SetNillableAgentTaskID sets the "AgentTask" edge to the AgentTask entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableAgentTaskID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
-	if id != nil {
-		pssu = pssu.SetAgentTaskID(*id)
+// AddAgentTasks adds the "AgentTasks" edges to the AgentTask entity.
+func (pssu *ProvisioningScheduledStepUpdate) AddAgentTasks(a ...*AgentTask) *ProvisioningScheduledStepUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
 	}
-	return pssu
-}
-
-// SetAgentTask sets the "AgentTask" edge to the AgentTask entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetAgentTask(a *AgentTask) *ProvisioningScheduledStepUpdate {
-	return pssu.SetAgentTaskID(a.ID)
+	return pssu.AddAgentTaskIDs(ids...)
 }
 
 // SetPlanID sets the "Plan" edge to the Plan entity by ID.
@@ -350,10 +346,25 @@ func (pssu *ProvisioningScheduledStepUpdate) ClearAnsible() *ProvisioningSchedul
 	return pssu
 }
 
-// ClearAgentTask clears the "AgentTask" edge to the AgentTask entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearAgentTask() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearAgentTask()
+// ClearAgentTasks clears all "AgentTasks" edges to the AgentTask entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearAgentTasks() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearAgentTasks()
 	return pssu
+}
+
+// RemoveAgentTaskIDs removes the "AgentTasks" edge to AgentTask entities by IDs.
+func (pssu *ProvisioningScheduledStepUpdate) RemoveAgentTaskIDs(ids ...uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.RemoveAgentTaskIDs(ids...)
+	return pssu
+}
+
+// RemoveAgentTasks removes "AgentTasks" edges to AgentTask entities.
+func (pssu *ProvisioningScheduledStepUpdate) RemoveAgentTasks(a ...*AgentTask) *ProvisioningScheduledStepUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return pssu.RemoveAgentTaskIDs(ids...)
 }
 
 // ClearPlan clears the "Plan" edge to the Plan entity.
@@ -826,12 +837,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.AgentTaskCleared() {
+	if pssu.mutation.AgentTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisioningscheduledstep.AgentTaskTable,
-			Columns: []string{provisioningscheduledstep.AgentTaskColumn},
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -842,12 +853,31 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.AgentTaskIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.RemovedAgentTasksIDs(); len(nodes) > 0 && !pssu.mutation.AgentTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisioningscheduledstep.AgentTaskTable,
-			Columns: []string{provisioningscheduledstep.AgentTaskColumn},
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agenttask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pssu.mutation.AgentTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1136,23 +1166,19 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) SetAnsible(a *Ansible) *Provisi
 	return pssuo.SetAnsibleID(a.ID)
 }
 
-// SetAgentTaskID sets the "AgentTask" edge to the AgentTask entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetAgentTaskID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetAgentTaskID(id)
+// AddAgentTaskIDs adds the "AgentTasks" edge to the AgentTask entity by IDs.
+func (pssuo *ProvisioningScheduledStepUpdateOne) AddAgentTaskIDs(ids ...uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.AddAgentTaskIDs(ids...)
 	return pssuo
 }
 
-// SetNillableAgentTaskID sets the "AgentTask" edge to the AgentTask entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableAgentTaskID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	if id != nil {
-		pssuo = pssuo.SetAgentTaskID(*id)
+// AddAgentTasks adds the "AgentTasks" edges to the AgentTask entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) AddAgentTasks(a ...*AgentTask) *ProvisioningScheduledStepUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
 	}
-	return pssuo
-}
-
-// SetAgentTask sets the "AgentTask" edge to the AgentTask entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetAgentTask(a *AgentTask) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetAgentTaskID(a.ID)
+	return pssuo.AddAgentTaskIDs(ids...)
 }
 
 // SetPlanID sets the "Plan" edge to the Plan entity by ID.
@@ -1258,10 +1284,25 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) ClearAnsible() *ProvisioningSch
 	return pssuo
 }
 
-// ClearAgentTask clears the "AgentTask" edge to the AgentTask entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearAgentTask() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearAgentTask()
+// ClearAgentTasks clears all "AgentTasks" edges to the AgentTask entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearAgentTasks() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearAgentTasks()
 	return pssuo
+}
+
+// RemoveAgentTaskIDs removes the "AgentTasks" edge to AgentTask entities by IDs.
+func (pssuo *ProvisioningScheduledStepUpdateOne) RemoveAgentTaskIDs(ids ...uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.RemoveAgentTaskIDs(ids...)
+	return pssuo
+}
+
+// RemoveAgentTasks removes "AgentTasks" edges to AgentTask entities.
+func (pssuo *ProvisioningScheduledStepUpdateOne) RemoveAgentTasks(a ...*AgentTask) *ProvisioningScheduledStepUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return pssuo.RemoveAgentTaskIDs(ids...)
 }
 
 // ClearPlan clears the "Plan" edge to the Plan entity.
@@ -1764,12 +1805,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.AgentTaskCleared() {
+	if pssuo.mutation.AgentTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisioningscheduledstep.AgentTaskTable,
-			Columns: []string{provisioningscheduledstep.AgentTaskColumn},
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1780,12 +1821,31 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.AgentTaskIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.RemovedAgentTasksIDs(); len(nodes) > 0 && !pssuo.mutation.AgentTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisioningscheduledstep.AgentTaskTable,
-			Columns: []string{provisioningscheduledstep.AgentTaskColumn},
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agenttask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pssuo.mutation.AgentTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

@@ -64,15 +64,15 @@ type Status struct {
 	// StatusToProvisioningScheduledStep holds the value of the StatusToProvisioningScheduledStep edge.
 	HCLStatusToProvisioningScheduledStep *ProvisioningScheduledStep `json:"StatusToProvisioningScheduledStep,omitempty"`
 	//
-	adhoc_plan_status                             *uuid.UUID
-	build_status                                  *uuid.UUID
-	plan_status                                   *uuid.UUID
-	provisioned_host_status                       *uuid.UUID
-	provisioned_network_status                    *uuid.UUID
-	provisioning_scheduled_step_status            *uuid.UUID
-	provisioning_step_provisioning_step_to_status *uuid.UUID
-	server_task_server_task_to_status             *uuid.UUID
-	team_team_to_status                           *uuid.UUID
+	adhoc_plan_status                  *uuid.UUID
+	build_status                       *uuid.UUID
+	plan_status                        *uuid.UUID
+	provisioned_host_status            *uuid.UUID
+	provisioned_network_status         *uuid.UUID
+	provisioning_scheduled_step_status *uuid.UUID
+	provisioning_step_status           *uuid.UUID
+	server_task_server_task_to_status  *uuid.UUID
+	team_team_to_status                *uuid.UUID
 }
 
 // StatusEdges holds the relations/edges for other nodes in the graph.
@@ -251,7 +251,7 @@ func (*Status) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case status.ForeignKeys[5]: // provisioning_scheduled_step_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case status.ForeignKeys[6]: // provisioning_step_provisioning_step_to_status
+		case status.ForeignKeys[6]: // provisioning_step_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case status.ForeignKeys[7]: // server_task_server_task_to_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -364,10 +364,10 @@ func (s *Status) assignValues(columns []string, values []interface{}) error {
 			}
 		case status.ForeignKeys[6]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioning_step_provisioning_step_to_status", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioning_step_status", values[i])
 			} else if value.Valid {
-				s.provisioning_step_provisioning_step_to_status = new(uuid.UUID)
-				*s.provisioning_step_provisioning_step_to_status = *value.S.(*uuid.UUID)
+				s.provisioning_step_status = new(uuid.UUID)
+				*s.provisioning_step_status = *value.S.(*uuid.UUID)
 			}
 		case status.ForeignKeys[7]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

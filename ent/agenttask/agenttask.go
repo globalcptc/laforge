@@ -45,7 +45,7 @@ const (
 	// ProvisioningStepColumn is the table column denoting the ProvisioningStep relation/edge.
 	ProvisioningStepColumn = "agent_task_provisioning_step"
 	// ProvisioningScheduledStepTable is the table that holds the ProvisioningScheduledStep relation/edge.
-	ProvisioningScheduledStepTable = "provisioning_scheduled_steps"
+	ProvisioningScheduledStepTable = "agent_tasks"
 	// ProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
 	// It exists in this package in order to avoid circular dependency with the "provisioningscheduledstep" package.
 	ProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
@@ -82,6 +82,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"agent_task_provisioning_step",
+	"agent_task_provisioning_scheduled_step",
 	"agent_task_provisioned_host",
 }
 

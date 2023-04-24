@@ -1436,7 +1436,7 @@ func (r *queryResolver) GetAgentTasks(ctx context.Context, proStepUUID string) (
 		return nil, err
 	}
 
-	agentTasks, err := entProStep.QueryProvisioningStepToAgentTask().All(ctx)
+	agentTasks, err := entProStep.QueryAgentTasks().All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1496,7 +1496,7 @@ func (r *queryResolver) ListBuildStatuses(ctx context.Context, buildUUID string)
 	}
 	statuses = append(statuses, provisionedHostStatuses...)
 
-	provisioningStepStatuses, err := r.client.ProvisioningStep.Query().Where(provisioningstep.HasProvisioningStepToProvisionedHostWith(provisionedhost.HasBuildWith(build.IDEQ(uuid)))).QueryProvisioningStepToStatus().All(ctx)
+	provisioningStepStatuses, err := r.client.ProvisioningStep.Query().Where(provisioningstep.HasProvisionedHostWith(provisionedhost.HasBuildWith(build.IDEQ(uuid)))).QueryStatus().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed querying provisioning step statuses from build: %v", err)
 	}

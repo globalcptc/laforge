@@ -86,7 +86,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "provisioningstep" package.
 	ProvisioningStepsInverseTable = "provisioning_steps"
 	// ProvisioningStepsColumn is the table column denoting the ProvisioningSteps relation/edge.
-	ProvisioningStepsColumn = "provisioning_step_provisioning_step_to_provisioned_host"
+	ProvisioningStepsColumn = "provisioning_step_provisioned_host"
 	// ProvisioningScheduledStepsTable is the table that holds the ProvisioningScheduledSteps relation/edge.
 	ProvisioningScheduledStepsTable = "provisioning_scheduled_steps"
 	// ProvisioningScheduledStepsInverseTable is the table name for the ProvisioningScheduledStep entity.

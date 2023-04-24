@@ -659,9 +659,9 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		entUserDataProvisioningStep, err := client.ProvisioningStep.Create().
 			SetStepNumber(0).
 			SetType(provisioningstep.TypeScript).
-			SetProvisioningStepToScript(userDataScript).
-			SetProvisioningStepToProvisionedHost(entProvisionedHost).
-			SetProvisioningStepToStatus(entUserDataStatus).
+			SetScript(userDataScript).
+			SetProvisionedHost(entProvisionedHost).
+			SetStatus(entUserDataStatus).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Create Provisioning Step for Script %v. Err: %v", userDataScriptID, err)
@@ -679,7 +679,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		if err != nil {
 			return nil, err
 		}
-		endPlanNode, err = entProvisioningStep.QueryProvisioningStepToPlan().Only(ctx)
+		endPlanNode, err = entProvisioningStep.QueryPlan().Only(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -745,9 +745,9 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		entProvisioningStep, err = client.ProvisioningStep.Create().
 			SetStepNumber(stepNumber).
 			SetType(provisioningstep.TypeScript).
-			SetProvisioningStepToScript(entScript).
-			SetProvisioningStepToStatus(entStatus).
-			SetProvisioningStepToProvisionedHost(pHost).
+			SetScript(entScript).
+			SetStatus(entStatus).
+			SetProvisionedHost(pHost).
 			Save(ctx)
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
@@ -795,9 +795,9 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		entProvisioningStep, err = client.ProvisioningStep.Create().
 			SetStepNumber(stepNumber).
 			SetType(provisioningstep.TypeCommand).
-			SetProvisioningStepToCommand(entCommand).
-			SetProvisioningStepToStatus(entStatus).
-			SetProvisioningStepToProvisionedHost(pHost).
+			SetCommand(entCommand).
+			SetStatus(entStatus).
+			SetProvisionedHost(pHost).
 			Save(ctx)
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
@@ -841,9 +841,9 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		entProvisioningStep, err = client.ProvisioningStep.Create().
 			SetStepNumber(stepNumber).
 			SetType(provisioningstep.TypeFileDownload).
-			SetProvisioningStepToFileDownload(entFileDownload).
-			SetProvisioningStepToStatus(entStatus).
-			SetProvisioningStepToProvisionedHost(pHost).
+			SetFileDownload(entFileDownload).
+			SetStatus(entStatus).
+			SetProvisionedHost(pHost).
 			Save(ctx)
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
@@ -891,9 +891,9 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		entProvisioningStep, err = client.ProvisioningStep.Create().
 			SetStepNumber(stepNumber).
 			SetType(provisioningstep.TypeFileExtract).
-			SetProvisioningStepToFileExtract(entFileExtract).
-			SetProvisioningStepToStatus(entStatus).
-			SetProvisioningStepToProvisionedHost(pHost).
+			SetFileExtract(entFileExtract).
+			SetStatus(entStatus).
+			SetProvisionedHost(pHost).
 			Save(ctx)
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
@@ -936,9 +936,9 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		// Step is a file delete
 		entProvisioningStep, err = client.ProvisioningStep.Create().
 			SetStepNumber(stepNumber).
-			SetType(provisioningstep.TypeFileDelete).SetProvisioningStepToFileDelete(entFileDelete).
-			SetProvisioningStepToStatus(entStatus).
-			SetProvisioningStepToProvisionedHost(pHost).
+			SetType(provisioningstep.TypeFileDelete).SetFileDelete(entFileDelete).
+			SetStatus(entStatus).
+			SetProvisionedHost(pHost).
 			Save(ctx)
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
@@ -981,9 +981,9 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		// Step is a dns record
 		entProvisioningStep, err = client.ProvisioningStep.Create().
 			SetStepNumber(stepNumber).
-			SetType(provisioningstep.TypeDNSRecord).SetProvisioningStepToDNSRecord(entDNSRecord).
-			SetProvisioningStepToStatus(entStatus).
-			SetProvisioningStepToProvisionedHost(pHost).
+			SetType(provisioningstep.TypeDNSRecord).SetDNSRecord(entDNSRecord).
+			SetStatus(entStatus).
+			SetProvisionedHost(pHost).
 			Save(ctx)
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
@@ -1027,9 +1027,9 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		entProvisioningStep, err = client.ProvisioningStep.Create().
 			SetStepNumber(stepNumber).
 			SetType(provisioningstep.TypeAnsible).
-			SetProvisioningStepToAnsible(entAnsible).
-			SetProvisioningStepToStatus(entStatus).
-			SetProvisioningStepToProvisionedHost(pHost).
+			SetAnsible(entAnsible).
+			SetStatus(entStatus).
+			SetProvisionedHost(pHost).
 			Save(ctx)
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
@@ -1477,8 +1477,8 @@ func RenderScript(ctx context.Context, client *ent.Client, logger *logging.Logge
 			"pStep.StepNumber": entProvisioningStep.StepNumber,
 			"pStep.Type":       entProvisioningStep.Type,
 		}).Debug("render script")
-		currentProvisionedHost = entProvisioningStep.QueryProvisioningStepToProvisionedHost().OnlyX(ctx)
-		currentScript = entProvisioningStep.QueryProvisioningStepToScript().OnlyX(ctx)
+		currentProvisionedHost = entProvisioningStep.QueryProvisionedHost().OnlyX(ctx)
+		currentScript = entProvisioningStep.QueryScript().OnlyX(ctx)
 	}
 	if entProvisioningScheduledStep != nil {
 		logger.Log.WithFields(logrus.Fields{
@@ -1563,8 +1563,8 @@ func renderFileDownload(ctx context.Context, logger *logging.Logger, entStep int
 			"pStep.StepNumber": entProvisioningStep.StepNumber,
 			"pStep.Type":       entProvisioningStep.Type,
 		}).Debug("render file download")
-		currentProvisionedHost = entProvisioningStep.QueryProvisioningStepToProvisionedHost().OnlyX(ctx)
-		currentFileDownload = entProvisioningStep.QueryProvisioningStepToFileDownload().OnlyX(ctx)
+		currentProvisionedHost = entProvisioningStep.QueryProvisionedHost().OnlyX(ctx)
+		currentFileDownload = entProvisioningStep.QueryFileDownload().OnlyX(ctx)
 	}
 	if entProvisioningScheduledStep != nil {
 		logger.Log.WithFields(logrus.Fields{
@@ -1629,8 +1629,8 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 			"pStep.StepNumber": entProvisioningStep.StepNumber,
 			"pStep.Type":       entProvisioningStep.Type,
 		}).Debug("render ansible")
-		currentProvisionedHost = entProvisioningStep.QueryProvisioningStepToProvisionedHost().OnlyX(ctx)
-		currentAnsible = entProvisioningStep.QueryProvisioningStepToAnsible().OnlyX(ctx)
+		currentProvisionedHost = entProvisioningStep.QueryProvisionedHost().OnlyX(ctx)
+		currentAnsible = entProvisioningStep.QueryAnsible().OnlyX(ctx)
 	}
 	if entProvisioningScheduledStep != nil {
 		logger.Log.WithFields(logrus.Fields{

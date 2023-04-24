@@ -2975,9 +2975,9 @@ func (pss *ProvisioningScheduledStep) Node(ctx context.Context) (node *Node, err
 	}
 	node.Edges[10] = &Edge{
 		Type: "AgentTask",
-		Name: "AgentTask",
+		Name: "AgentTasks",
 	}
-	err = pss.QueryAgentTask().
+	err = pss.QueryAgentTasks().
 		Select(agenttask.FieldID).
 		Scan(ctx, &node.Edges[10].IDs)
 	if err != nil {
@@ -3032,9 +3032,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Status",
-		Name: "ProvisioningStepToStatus",
+		Name: "Status",
 	}
-	err = ps.QueryProvisioningStepToStatus().
+	err = ps.QueryStatus().
 		Select(status.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -3042,9 +3042,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "ProvisionedHost",
-		Name: "ProvisioningStepToProvisionedHost",
+		Name: "ProvisionedHost",
 	}
-	err = ps.QueryProvisioningStepToProvisionedHost().
+	err = ps.QueryProvisionedHost().
 		Select(provisionedhost.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -3052,9 +3052,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Script",
-		Name: "ProvisioningStepToScript",
+		Name: "Script",
 	}
-	err = ps.QueryProvisioningStepToScript().
+	err = ps.QueryScript().
 		Select(script.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -3062,9 +3062,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "Command",
-		Name: "ProvisioningStepToCommand",
+		Name: "Command",
 	}
-	err = ps.QueryProvisioningStepToCommand().
+	err = ps.QueryCommand().
 		Select(command.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
@@ -3072,9 +3072,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[4] = &Edge{
 		Type: "DNSRecord",
-		Name: "ProvisioningStepToDNSRecord",
+		Name: "DNSRecord",
 	}
-	err = ps.QueryProvisioningStepToDNSRecord().
+	err = ps.QueryDNSRecord().
 		Select(dnsrecord.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
@@ -3082,9 +3082,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[5] = &Edge{
 		Type: "FileDelete",
-		Name: "ProvisioningStepToFileDelete",
+		Name: "FileDelete",
 	}
-	err = ps.QueryProvisioningStepToFileDelete().
+	err = ps.QueryFileDelete().
 		Select(filedelete.FieldID).
 		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
@@ -3092,9 +3092,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[6] = &Edge{
 		Type: "FileDownload",
-		Name: "ProvisioningStepToFileDownload",
+		Name: "FileDownload",
 	}
-	err = ps.QueryProvisioningStepToFileDownload().
+	err = ps.QueryFileDownload().
 		Select(filedownload.FieldID).
 		Scan(ctx, &node.Edges[6].IDs)
 	if err != nil {
@@ -3102,9 +3102,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[7] = &Edge{
 		Type: "FileExtract",
-		Name: "ProvisioningStepToFileExtract",
+		Name: "FileExtract",
 	}
-	err = ps.QueryProvisioningStepToFileExtract().
+	err = ps.QueryFileExtract().
 		Select(fileextract.FieldID).
 		Scan(ctx, &node.Edges[7].IDs)
 	if err != nil {
@@ -3112,9 +3112,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[8] = &Edge{
 		Type: "Ansible",
-		Name: "ProvisioningStepToAnsible",
+		Name: "Ansible",
 	}
-	err = ps.QueryProvisioningStepToAnsible().
+	err = ps.QueryAnsible().
 		Select(ansible.FieldID).
 		Scan(ctx, &node.Edges[8].IDs)
 	if err != nil {
@@ -3122,9 +3122,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[9] = &Edge{
 		Type: "Plan",
-		Name: "ProvisioningStepToPlan",
+		Name: "Plan",
 	}
-	err = ps.QueryProvisioningStepToPlan().
+	err = ps.QueryPlan().
 		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[9].IDs)
 	if err != nil {
@@ -3132,9 +3132,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[10] = &Edge{
 		Type: "AgentTask",
-		Name: "ProvisioningStepToAgentTask",
+		Name: "AgentTasks",
 	}
-	err = ps.QueryProvisioningStepToAgentTask().
+	err = ps.QueryAgentTasks().
 		Select(agenttask.FieldID).
 		Scan(ctx, &node.Edges[10].IDs)
 	if err != nil {
@@ -3142,9 +3142,9 @@ func (ps *ProvisioningStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[11] = &Edge{
 		Type: "GinFileMiddleware",
-		Name: "ProvisioningStepToGinFileMiddleware",
+		Name: "GinFileMiddleware",
 	}
-	err = ps.QueryProvisioningStepToGinFileMiddleware().
+	err = ps.QueryGinFileMiddleware().
 		Select(ginfilemiddleware.FieldID).
 		Scan(ctx, &node.Edges[11].IDs)
 	if err != nil {

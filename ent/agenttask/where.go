@@ -575,7 +575,7 @@ func HasProvisioningScheduledStep() predicate.AgentTask {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(ProvisioningScheduledStepTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -587,7 +587,7 @@ func HasProvisioningScheduledStepWith(preds ...predicate.ProvisioningScheduledSt
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(ProvisioningScheduledStepInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

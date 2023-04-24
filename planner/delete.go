@@ -274,7 +274,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 		if getStatusError != nil {
 			break
 		}
-		provisionedStatus, getStatusError = step.QueryProvisioningStepToStatus().Only(ctx)
+		provisionedStatus, getStatusError = step.QueryStatus().Only(ctx)
 	case plan.TypeStartScheduledStep:
 		step, getStatusError := entPlan.QueryProvisioningScheduledStep().Only(ctx)
 		if getStatusError != nil {
@@ -445,7 +445,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 		if deleteErr != nil {
 			break
 		}
-		ginFileMiddleware, deleteErr := step.QueryProvisioningStepToGinFileMiddleware().Only(ctx)
+		ginFileMiddleware, deleteErr := step.QueryGinFileMiddleware().Only(ctx)
 		if deleteErr != nil {
 			break
 		}
@@ -525,7 +525,7 @@ func deleteHost(client *ent.Client, logger *logging.Logger, builder *builder.Bui
 			logger.Log.Errorf("error while querying userdata script from Provisioned Host: %v", saveErr)
 			return saveErr
 		}
-		ginFileMiddleware, saveErr := step.QueryProvisioningStepToGinFileMiddleware().Only(ctx)
+		ginFileMiddleware, saveErr := step.QueryGinFileMiddleware().Only(ctx)
 		if saveErr != nil {
 			logger.Log.Errorf("error while querying Gin File Middleware from provisioning step: %v", saveErr)
 			return saveErr
@@ -535,7 +535,7 @@ func deleteHost(client *ent.Client, logger *logging.Logger, builder *builder.Bui
 			logger.Log.Errorf("error while setting Gin File Middleware accessed to false: %v", saveErr)
 			return saveErr
 		}
-		provisionedStatus, saveErr := step.QueryProvisioningStepToStatus().Only(ctx)
+		provisionedStatus, saveErr := step.QueryStatus().Only(ctx)
 		if saveErr != nil {
 			logger.Log.Errorf("error while querying Status from Provisioning Step: %v", saveErr)
 			return saveErr

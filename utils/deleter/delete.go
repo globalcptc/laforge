@@ -167,7 +167,7 @@ func main() {
 	// 	}
 	// 	logrus.Infof("Deleted %v amount of agenttask for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.ProvisioningStep.Delete().Where(
-	// 		provisioningstep.HasProvisioningStepToProvisionedHostWith(
+	// 		provisioningstep.HasProvisionedHostWith(
 	// 			provisionedhost.HasProvisionedNetworkWith(
 	// 				provisionednetwork.HasBuildWith(
 	// 					build.IDEQ(entBuild.ID),

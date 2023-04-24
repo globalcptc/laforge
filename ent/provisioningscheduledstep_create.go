@@ -234,23 +234,19 @@ func (pssc *ProvisioningScheduledStepCreate) SetAnsible(a *Ansible) *Provisionin
 	return pssc.SetAnsibleID(a.ID)
 }
 
-// SetAgentTaskID sets the "AgentTask" edge to the AgentTask entity by ID.
-func (pssc *ProvisioningScheduledStepCreate) SetAgentTaskID(id uuid.UUID) *ProvisioningScheduledStepCreate {
-	pssc.mutation.SetAgentTaskID(id)
+// AddAgentTaskIDs adds the "AgentTasks" edge to the AgentTask entity by IDs.
+func (pssc *ProvisioningScheduledStepCreate) AddAgentTaskIDs(ids ...uuid.UUID) *ProvisioningScheduledStepCreate {
+	pssc.mutation.AddAgentTaskIDs(ids...)
 	return pssc
 }
 
-// SetNillableAgentTaskID sets the "AgentTask" edge to the AgentTask entity by ID if the given value is not nil.
-func (pssc *ProvisioningScheduledStepCreate) SetNillableAgentTaskID(id *uuid.UUID) *ProvisioningScheduledStepCreate {
-	if id != nil {
-		pssc = pssc.SetAgentTaskID(*id)
+// AddAgentTasks adds the "AgentTasks" edges to the AgentTask entity.
+func (pssc *ProvisioningScheduledStepCreate) AddAgentTasks(a ...*AgentTask) *ProvisioningScheduledStepCreate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
 	}
-	return pssc
-}
-
-// SetAgentTask sets the "AgentTask" edge to the AgentTask entity.
-func (pssc *ProvisioningScheduledStepCreate) SetAgentTask(a *AgentTask) *ProvisioningScheduledStepCreate {
-	return pssc.SetAgentTaskID(a.ID)
+	return pssc.AddAgentTaskIDs(ids...)
 }
 
 // SetPlanID sets the "Plan" edge to the Plan entity by ID.
@@ -644,12 +640,12 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		_node.provisioning_scheduled_step_ansible = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pssc.mutation.AgentTaskIDs(); len(nodes) > 0 {
+	if nodes := pssc.mutation.AgentTasksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisioningscheduledstep.AgentTaskTable,
-			Columns: []string{provisioningscheduledstep.AgentTaskColumn},
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -661,7 +657,6 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.agent_task_provisioning_scheduled_step = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := pssc.mutation.PlanIDs(); len(nodes) > 0 {
