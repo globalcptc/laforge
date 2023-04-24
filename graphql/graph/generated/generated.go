@@ -1462,7 +1462,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Build.Environment(childComplexity), true
 
-	case "Build.environment_revision":
+	case "Build.environmentRevision":
 		if e.complexity.Build.EnvironmentRevision == nil {
 			break
 		}
@@ -2120,7 +2120,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Environment.Tags(childComplexity), true
 
-	case "Environment.team_count":
+	case "Environment.teamCount":
 		if e.complexity.Environment.TeamCount == nil {
 			break
 		}
@@ -2617,7 +2617,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.HostDependency.RequiredBy(childComplexity), true
 
-	case "Identity.avatar_file":
+	case "Identity.avatarFile":
 		if e.complexity.Identity.AvatarFile == nil {
 			break
 		}
@@ -5034,7 +5034,7 @@ type AuthUser {
 type Build {
   id: ID!
   revision: Int!
-  environment_revision: Int!
+  environmentRevision: Int!
   completedPlan: Boolean!
   Status: Status!
   Environment: Environment!
@@ -5129,7 +5129,7 @@ type Environment {
   name: String!
   description: String!
   builder: String!
-  team_count: Int!
+  teamCount: Int!
   revision: Int!
   adminCidrs: [String]!
   exposedVdiPorts: [String]!
@@ -5255,7 +5255,7 @@ type Identity {
   email: String!
   password: String!
   description: String!
-  avatar_file: String!
+  avatarFile: String!
   vars: [varsMap]!
   tags: [tagMap]!
   Environment: Environment!
@@ -6837,8 +6837,8 @@ func (ec *executionContext) fieldContext_AdhocPlan_Build(ctx context.Context, fi
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -7803,8 +7803,8 @@ func (ec *executionContext) fieldContext_AgentStatus_Build(ctx context.Context, 
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -9094,8 +9094,8 @@ func (ec *executionContext) fieldContext_Ansible_Environment(ctx context.Context
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -9792,8 +9792,8 @@ func (ec *executionContext) fieldContext_Build_revision(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Build_environment_revision(ctx context.Context, field graphql.CollectedField, obj *ent.Build) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Build_environment_revision(ctx, field)
+func (ec *executionContext) _Build_environmentRevision(ctx context.Context, field graphql.CollectedField, obj *ent.Build) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Build_environmentRevision(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -9823,7 +9823,7 @@ func (ec *executionContext) _Build_environment_revision(ctx context.Context, fie
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Build_environment_revision(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Build_environmentRevision(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Build",
 		Field:      field,
@@ -10011,8 +10011,8 @@ func (ec *executionContext) fieldContext_Build_Environment(ctx context.Context, 
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -10990,8 +10990,8 @@ func (ec *executionContext) fieldContext_BuildCommit_Build(ctx context.Context, 
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -11796,8 +11796,8 @@ func (ec *executionContext) fieldContext_Command_Environment(ctx context.Context
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -12278,8 +12278,8 @@ func (ec *executionContext) fieldContext_Competition_Environment(ctx context.Con
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -12380,8 +12380,8 @@ func (ec *executionContext) fieldContext_Competition_Builds(ctx context.Context,
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -12777,8 +12777,8 @@ func (ec *executionContext) fieldContext_DNS_Environments(ctx context.Context, f
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -13361,8 +13361,8 @@ func (ec *executionContext) fieldContext_DNSRecord_Environment(ctx context.Conte
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -13860,8 +13860,8 @@ func (ec *executionContext) fieldContext_Environment_builder(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Environment_team_count(ctx context.Context, field graphql.CollectedField, obj *ent.Environment) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Environment_team_count(ctx, field)
+func (ec *executionContext) _Environment_teamCount(ctx context.Context, field graphql.CollectedField, obj *ent.Environment) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Environment_teamCount(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -13891,7 +13891,7 @@ func (ec *executionContext) _Environment_team_count(ctx context.Context, field g
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Environment_team_count(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Environment_teamCount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Environment",
 		Field:      field,
@@ -14397,8 +14397,8 @@ func (ec *executionContext) fieldContext_Environment_Identities(ctx context.Cont
 				return ec.fieldContext_Identity_password(ctx, field)
 			case "description":
 				return ec.fieldContext_Identity_description(ctx, field)
-			case "avatar_file":
-				return ec.fieldContext_Identity_avatar_file(ctx, field)
+			case "avatarFile":
+				return ec.fieldContext_Identity_avatarFile(ctx, field)
 			case "vars":
 				return ec.fieldContext_Identity_vars(ctx, field)
 			case "tags":
@@ -15313,8 +15313,8 @@ func (ec *executionContext) fieldContext_Environment_Builds(ctx context.Context,
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -15709,8 +15709,8 @@ func (ec *executionContext) fieldContext_FileDelete_Environment(ctx context.Cont
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -16309,8 +16309,8 @@ func (ec *executionContext) fieldContext_FileDownload_Environment(ctx context.Co
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -16689,8 +16689,8 @@ func (ec *executionContext) fieldContext_FileExtract_Environment(ctx context.Con
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -17290,8 +17290,8 @@ func (ec *executionContext) fieldContext_Finding_Environment(ctx context.Context
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -18578,8 +18578,8 @@ func (ec *executionContext) fieldContext_Host_Environment(ctx context.Context, f
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -19230,8 +19230,8 @@ func (ec *executionContext) fieldContext_HostDependency_Environment(ctx context.
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -19597,8 +19597,8 @@ func (ec *executionContext) fieldContext_Identity_description(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Identity_avatar_file(ctx context.Context, field graphql.CollectedField, obj *ent.Identity) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Identity_avatar_file(ctx, field)
+func (ec *executionContext) _Identity_avatarFile(ctx context.Context, field graphql.CollectedField, obj *ent.Identity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Identity_avatarFile(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -19628,7 +19628,7 @@ func (ec *executionContext) _Identity_avatar_file(ctx context.Context, field gra
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Identity_avatar_file(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Identity_avatarFile(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Identity",
 		Field:      field,
@@ -19792,8 +19792,8 @@ func (ec *executionContext) fieldContext_Identity_Environment(ctx context.Contex
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -20239,8 +20239,8 @@ func (ec *executionContext) fieldContext_IncludedNetwork_Environments(ctx contex
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -20458,8 +20458,8 @@ func (ec *executionContext) fieldContext_Mutation_loadEnvironment(ctx context.Co
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -20592,8 +20592,8 @@ func (ec *executionContext) fieldContext_Mutation_createBuild(ctx context.Contex
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -20781,8 +20781,8 @@ func (ec *executionContext) fieldContext_Mutation_executePlan(ctx context.Contex
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -21582,8 +21582,8 @@ func (ec *executionContext) fieldContext_Mutation_createEnviromentFromRepo(ctx c
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -21727,8 +21727,8 @@ func (ec *executionContext) fieldContext_Mutation_updateEnviromentViaPull(ctx co
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -22782,8 +22782,8 @@ func (ec *executionContext) fieldContext_Network_Environment(ctx context.Context
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -23277,8 +23277,8 @@ func (ec *executionContext) fieldContext_Plan_Build(ctx context.Context, field g
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -25147,8 +25147,8 @@ func (ec *executionContext) fieldContext_ProvisionedHost_Build(ctx context.Conte
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -25972,8 +25972,8 @@ func (ec *executionContext) fieldContext_ProvisionedNetwork_Build(ctx context.Co
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -28215,8 +28215,8 @@ func (ec *executionContext) fieldContext_Query_environments(ctx context.Context,
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -28346,8 +28346,8 @@ func (ec *executionContext) fieldContext_Query_environment(ctx context.Context, 
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -28898,8 +28898,8 @@ func (ec *executionContext) fieldContext_Query_getBuilds(ctx context.Context, fi
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -28997,8 +28997,8 @@ func (ec *executionContext) fieldContext_Query_build(ctx context.Context, field 
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -31508,8 +31508,8 @@ func (ec *executionContext) fieldContext_Repository_Environments(ctx context.Con
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -32027,8 +32027,8 @@ func (ec *executionContext) fieldContext_ScheduledStep_Environment(ctx context.C
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -32929,8 +32929,8 @@ func (ec *executionContext) fieldContext_Script_Environment(ctx context.Context,
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -33438,8 +33438,8 @@ func (ec *executionContext) fieldContext_ServerTask_Environment(ctx context.Cont
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -33537,8 +33537,8 @@ func (ec *executionContext) fieldContext_ServerTask_Build(ctx context.Context, f
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -34080,8 +34080,8 @@ func (ec *executionContext) fieldContext_Status_Build(ctx context.Context, field
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -35200,8 +35200,8 @@ func (ec *executionContext) fieldContext_Subscription_updatedBuild(ctx context.C
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -35847,8 +35847,8 @@ func (ec *executionContext) fieldContext_Team_Build(ctx context.Context, field g
 				return ec.fieldContext_Build_id(ctx, field)
 			case "revision":
 				return ec.fieldContext_Build_revision(ctx, field)
-			case "environment_revision":
-				return ec.fieldContext_Build_environment_revision(ctx, field)
+			case "environmentRevision":
+				return ec.fieldContext_Build_environmentRevision(ctx, field)
 			case "completedPlan":
 				return ec.fieldContext_Build_completedPlan(ctx, field)
 			case "Status":
@@ -36422,8 +36422,8 @@ func (ec *executionContext) fieldContext_User_Environments(ctx context.Context, 
 				return ec.fieldContext_Environment_description(ctx, field)
 			case "builder":
 				return ec.fieldContext_Environment_builder(ctx, field)
-			case "team_count":
-				return ec.fieldContext_Environment_team_count(ctx, field)
+			case "teamCount":
+				return ec.fieldContext_Environment_teamCount(ctx, field)
 			case "revision":
 				return ec.fieldContext_Environment_revision(ctx, field)
 			case "adminCidrs":
@@ -39481,9 +39481,9 @@ func (ec *executionContext) _Build(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
-		case "environment_revision":
+		case "environmentRevision":
 
-			out.Values[i] = ec._Build_environment_revision(ctx, field, obj)
+			out.Values[i] = ec._Build_environmentRevision(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
@@ -40642,9 +40642,9 @@ func (ec *executionContext) _Environment(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
-		case "team_count":
+		case "teamCount":
 
-			out.Values[i] = ec._Environment_team_count(ctx, field, obj)
+			out.Values[i] = ec._Environment_teamCount(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
@@ -42239,9 +42239,9 @@ func (ec *executionContext) _Identity(ctx context.Context, sel ast.SelectionSet,
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
-		case "avatar_file":
+		case "avatarFile":
 
-			out.Values[i] = ec._Identity_avatar_file(ctx, field, obj)
+			out.Values[i] = ec._Identity_avatarFile(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)

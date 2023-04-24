@@ -248,7 +248,7 @@ type AuthUser {
 type Build {
   id: ID!
   revision: Int!
-  environment_revision: Int!
+  environmentRevision: Int!
   completedPlan: Boolean!
   Status: Status!
   Environment: Environment!
@@ -343,7 +343,7 @@ type Environment {
   name: String!
   description: String!
   builder: String!
-  team_count: Int!
+  teamCount: Int!
   revision: Int!
   adminCidrs: [String]!
   exposedVdiPorts: [String]!
@@ -469,7 +469,7 @@ type Identity {
   email: String!
   password: String!
   description: String!
-  avatar_file: String!
+  avatarFile: String!
   vars: [varsMap]!
   tags: [tagMap]!
   Environment: Environment!
