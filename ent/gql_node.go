@@ -2588,9 +2588,9 @@ func (pd *PlanDiff) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "BuildCommit",
-		Name: "PlanDiffToBuildCommit",
+		Name: "BuildCommit",
 	}
-	err = pd.QueryPlanDiffToBuildCommit().
+	err = pd.QueryBuildCommit().
 		Select(buildcommit.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -2598,9 +2598,9 @@ func (pd *PlanDiff) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Plan",
-		Name: "PlanDiffToPlan",
+		Name: "Plan",
 	}
-	err = pd.QueryPlanDiffToPlan().
+	err = pd.QueryPlan().
 		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {

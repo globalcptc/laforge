@@ -36,7 +36,7 @@ func (BuildCommit) Edges() []ent.Edge {
 		edge.From("ServerTasks", ServerTask.Type).
 			Ref("ServerTaskToBuildCommit"),
 		edge.From("PlanDiffs", PlanDiff.Type).
-			Ref("PlanDiffToBuildCommit").
+			Ref("BuildCommit").
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),

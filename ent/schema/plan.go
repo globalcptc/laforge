@@ -59,6 +59,6 @@ func (Plan) Edges() []ent.Edge {
 				OnDelete: entsql.Cascade,
 			}),
 		edge.From("PlanDiffs", PlanDiff.Type).
-			Ref("PlanDiffToPlan"),
+			Ref("Plan"),
 	}
 }

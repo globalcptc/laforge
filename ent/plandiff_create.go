@@ -48,26 +48,26 @@ func (pdc *PlanDiffCreate) SetNillableID(u *uuid.UUID) *PlanDiffCreate {
 	return pdc
 }
 
-// SetPlanDiffToBuildCommitID sets the "PlanDiffToBuildCommit" edge to the BuildCommit entity by ID.
-func (pdc *PlanDiffCreate) SetPlanDiffToBuildCommitID(id uuid.UUID) *PlanDiffCreate {
-	pdc.mutation.SetPlanDiffToBuildCommitID(id)
+// SetBuildCommitID sets the "BuildCommit" edge to the BuildCommit entity by ID.
+func (pdc *PlanDiffCreate) SetBuildCommitID(id uuid.UUID) *PlanDiffCreate {
+	pdc.mutation.SetBuildCommitID(id)
 	return pdc
 }
 
-// SetPlanDiffToBuildCommit sets the "PlanDiffToBuildCommit" edge to the BuildCommit entity.
-func (pdc *PlanDiffCreate) SetPlanDiffToBuildCommit(b *BuildCommit) *PlanDiffCreate {
-	return pdc.SetPlanDiffToBuildCommitID(b.ID)
+// SetBuildCommit sets the "BuildCommit" edge to the BuildCommit entity.
+func (pdc *PlanDiffCreate) SetBuildCommit(b *BuildCommit) *PlanDiffCreate {
+	return pdc.SetBuildCommitID(b.ID)
 }
 
-// SetPlanDiffToPlanID sets the "PlanDiffToPlan" edge to the Plan entity by ID.
-func (pdc *PlanDiffCreate) SetPlanDiffToPlanID(id uuid.UUID) *PlanDiffCreate {
-	pdc.mutation.SetPlanDiffToPlanID(id)
+// SetPlanID sets the "Plan" edge to the Plan entity by ID.
+func (pdc *PlanDiffCreate) SetPlanID(id uuid.UUID) *PlanDiffCreate {
+	pdc.mutation.SetPlanID(id)
 	return pdc
 }
 
-// SetPlanDiffToPlan sets the "PlanDiffToPlan" edge to the Plan entity.
-func (pdc *PlanDiffCreate) SetPlanDiffToPlan(p *Plan) *PlanDiffCreate {
-	return pdc.SetPlanDiffToPlanID(p.ID)
+// SetPlan sets the "Plan" edge to the Plan entity.
+func (pdc *PlanDiffCreate) SetPlan(p *Plan) *PlanDiffCreate {
+	return pdc.SetPlanID(p.ID)
 }
 
 // Mutation returns the PlanDiffMutation object of the builder.
@@ -166,11 +166,11 @@ func (pdc *PlanDiffCreate) check() error {
 			return &ValidationError{Name: "new_state", err: fmt.Errorf(`ent: validator failed for field "PlanDiff.new_state": %w`, err)}
 		}
 	}
-	if _, ok := pdc.mutation.PlanDiffToBuildCommitID(); !ok {
-		return &ValidationError{Name: "PlanDiffToBuildCommit", err: errors.New(`ent: missing required edge "PlanDiff.PlanDiffToBuildCommit"`)}
+	if _, ok := pdc.mutation.BuildCommitID(); !ok {
+		return &ValidationError{Name: "BuildCommit", err: errors.New(`ent: missing required edge "PlanDiff.BuildCommit"`)}
 	}
-	if _, ok := pdc.mutation.PlanDiffToPlanID(); !ok {
-		return &ValidationError{Name: "PlanDiffToPlan", err: errors.New(`ent: missing required edge "PlanDiff.PlanDiffToPlan"`)}
+	if _, ok := pdc.mutation.PlanID(); !ok {
+		return &ValidationError{Name: "Plan", err: errors.New(`ent: missing required edge "PlanDiff.Plan"`)}
 	}
 	return nil
 }
@@ -224,12 +224,12 @@ func (pdc *PlanDiffCreate) createSpec() (*PlanDiff, *sqlgraph.CreateSpec) {
 		})
 		_node.NewState = value
 	}
-	if nodes := pdc.mutation.PlanDiffToBuildCommitIDs(); len(nodes) > 0 {
+	if nodes := pdc.mutation.BuildCommitIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   plandiff.PlanDiffToBuildCommitTable,
-			Columns: []string{plandiff.PlanDiffToBuildCommitColumn},
+			Table:   plandiff.BuildCommitTable,
+			Columns: []string{plandiff.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -241,15 +241,15 @@ func (pdc *PlanDiffCreate) createSpec() (*PlanDiff, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.plan_diff_plan_diff_to_build_commit = &nodes[0]
+		_node.plan_diff_build_commit = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pdc.mutation.PlanDiffToPlanIDs(); len(nodes) > 0 {
+	if nodes := pdc.mutation.PlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   plandiff.PlanDiffToPlanTable,
-			Columns: []string{plandiff.PlanDiffToPlanColumn},
+			Table:   plandiff.PlanTable,
+			Columns: []string{plandiff.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -261,7 +261,7 @@ func (pdc *PlanDiffCreate) createSpec() (*PlanDiff, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.plan_diff_plan_diff_to_plan = &nodes[0]
+		_node.plan_diff_plan = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

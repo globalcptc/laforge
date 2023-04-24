@@ -52,7 +52,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "plandiff" package.
 	PlanDiffsInverseTable = "plan_diffs"
 	// PlanDiffsColumn is the table column denoting the PlanDiffs relation/edge.
-	PlanDiffsColumn = "plan_diff_plan_diff_to_build_commit"
+	PlanDiffsColumn = "plan_diff_build_commit"
 )
 
 // Columns holds all SQL columns for buildcommit fields.

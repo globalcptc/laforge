@@ -4203,15 +4203,15 @@ func (c *PlanDiffClient) GetX(ctx context.Context, id uuid.UUID) *PlanDiff {
 	return obj
 }
 
-// QueryPlanDiffToBuildCommit queries the PlanDiffToBuildCommit edge of a PlanDiff.
-func (c *PlanDiffClient) QueryPlanDiffToBuildCommit(pd *PlanDiff) *BuildCommitQuery {
+// QueryBuildCommit queries the BuildCommit edge of a PlanDiff.
+func (c *PlanDiffClient) QueryBuildCommit(pd *PlanDiff) *BuildCommitQuery {
 	query := &BuildCommitQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pd.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plandiff.Table, plandiff.FieldID, id),
 			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, plandiff.PlanDiffToBuildCommitTable, plandiff.PlanDiffToBuildCommitColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, plandiff.BuildCommitTable, plandiff.BuildCommitColumn),
 		)
 		fromV = sqlgraph.Neighbors(pd.driver.Dialect(), step)
 		return fromV, nil
@@ -4219,15 +4219,15 @@ func (c *PlanDiffClient) QueryPlanDiffToBuildCommit(pd *PlanDiff) *BuildCommitQu
 	return query
 }
 
-// QueryPlanDiffToPlan queries the PlanDiffToPlan edge of a PlanDiff.
-func (c *PlanDiffClient) QueryPlanDiffToPlan(pd *PlanDiff) *PlanQuery {
+// QueryPlan queries the Plan edge of a PlanDiff.
+func (c *PlanDiffClient) QueryPlan(pd *PlanDiff) *PlanQuery {
 	query := &PlanQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pd.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plandiff.Table, plandiff.FieldID, id),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, plandiff.PlanDiffToPlanTable, plandiff.PlanDiffToPlanColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, plandiff.PlanTable, plandiff.PlanColumn),
 		)
 		fromV = sqlgraph.Neighbors(pd.driver.Dialect(), step)
 		return fromV, nil

@@ -681,8 +681,8 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "revision", Type: field.TypeInt},
 		{Name: "new_state", Type: field.TypeEnum, Enums: []string{"PLANNING", "AWAITING", "INPROGRESS", "FAILED", "COMPLETE", "TAINTED", "TODELETE", "DELETEINPROGRESS", "DELETED", "TOREBUILD"}},
-		{Name: "plan_diff_plan_diff_to_build_commit", Type: field.TypeUUID},
-		{Name: "plan_diff_plan_diff_to_plan", Type: field.TypeUUID},
+		{Name: "plan_diff_build_commit", Type: field.TypeUUID},
+		{Name: "plan_diff_plan", Type: field.TypeUUID},
 	}
 	// PlanDiffsTable holds the schema information for the "plan_diffs" table.
 	PlanDiffsTable = &schema.Table{
@@ -691,13 +691,13 @@ var (
 		PrimaryKey: []*schema.Column{PlanDiffsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "plan_diffs_build_commits_PlanDiffToBuildCommit",
+				Symbol:     "plan_diffs_build_commits_BuildCommit",
 				Columns:    []*schema.Column{PlanDiffsColumns[3]},
 				RefColumns: []*schema.Column{BuildCommitsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "plan_diffs_plans_PlanDiffToPlan",
+				Symbol:     "plan_diffs_plans_Plan",
 				Columns:    []*schema.Column{PlanDiffsColumns[4]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.NoAction,

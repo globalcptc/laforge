@@ -102,7 +102,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "plandiff" package.
 	PlanDiffsInverseTable = "plan_diffs"
 	// PlanDiffsColumn is the table column denoting the PlanDiffs relation/edge.
-	PlanDiffsColumn = "plan_diff_plan_diff_to_plan"
+	PlanDiffsColumn = "plan_diff_plan"
 )
 
 // Columns holds all SQL columns for plan fields.

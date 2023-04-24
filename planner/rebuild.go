@@ -201,14 +201,14 @@ func generateRebuildCommitPlans(client *ent.Client, ctx context.Context, rootPla
 		return err
 	}
 
-	planDiffExists, err := entBuildCommit.QueryPlanDiffs().Where(plandiff.HasPlanDiffToPlanWith(plan.IDEQ(rootPlan.ID))).Exist(ctx)
+	planDiffExists, err := entBuildCommit.QueryPlanDiffs().Where(plandiff.HasPlanWith(plan.IDEQ(rootPlan.ID))).Exist(ctx)
 	if err != nil {
 		return err
 	} else if !planDiffExists {
 		_, err = client.PlanDiff.Create().
 			SetNewState(plandiff.NewStateTOREBUILD).
-			SetPlanDiffToBuildCommit(entBuildCommit).
-			SetPlanDiffToPlan(rootPlan).
+			SetBuildCommit(entBuildCommit).
+			SetPlan(rootPlan).
 			SetRevision(diffRevision).
 			Save(ctx)
 	}
@@ -233,14 +233,14 @@ func generateRebuildCommitPreviousPlans(client *ent.Client, ctx context.Context,
 		return err
 	}
 
-	planDiffExists, err := entBuildCommit.QueryPlanDiffs().Where(plandiff.HasPlanDiffToPlanWith(plan.IDEQ(rootPlan.ID))).Exist(ctx)
+	planDiffExists, err := entBuildCommit.QueryPlanDiffs().Where(plandiff.HasPlanWith(plan.IDEQ(rootPlan.ID))).Exist(ctx)
 	if err != nil {
 		return err
 	} else if !planDiffExists {
 		_, err = client.PlanDiff.Create().
 			SetNewState(plandiff.NewStateCOMPLETE).
-			SetPlanDiffToBuildCommit(entBuildCommit).
-			SetPlanDiffToPlan(rootPlan).
+			SetBuildCommit(entBuildCommit).
+			SetPlan(rootPlan).
 			SetRevision(diffRevision).
 			Save(ctx)
 	}
@@ -284,7 +284,7 @@ func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus st
 		if entPlanDiff.NewState != plandiff.NewStateTOREBUILD {
 			continue
 		}
-		entPlan, err := entPlanDiff.QueryPlanDiffToPlan().Only(ctx)
+		entPlan, err := entPlanDiff.QueryPlan().Only(ctx)
 		if err != nil {
 			return err
 		}

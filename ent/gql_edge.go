@@ -788,18 +788,18 @@ func (pl *Plan) PlanDiffs(ctx context.Context) ([]*PlanDiff, error) {
 	return result, err
 }
 
-func (pd *PlanDiff) PlanDiffToBuildCommit(ctx context.Context) (*BuildCommit, error) {
-	result, err := pd.Edges.PlanDiffToBuildCommitOrErr()
+func (pd *PlanDiff) BuildCommit(ctx context.Context) (*BuildCommit, error) {
+	result, err := pd.Edges.BuildCommitOrErr()
 	if IsNotLoaded(err) {
-		result, err = pd.QueryPlanDiffToBuildCommit().Only(ctx)
+		result, err = pd.QueryBuildCommit().Only(ctx)
 	}
 	return result, err
 }
 
-func (pd *PlanDiff) PlanDiffToPlan(ctx context.Context) (*Plan, error) {
-	result, err := pd.Edges.PlanDiffToPlanOrErr()
+func (pd *PlanDiff) Plan(ctx context.Context) (*Plan, error) {
+	result, err := pd.Edges.PlanOrErr()
 	if IsNotLoaded(err) {
-		result, err = pd.QueryPlanDiffToPlan().Only(ctx)
+		result, err = pd.QueryPlan().Only(ctx)
 	}
 	return result, err
 }

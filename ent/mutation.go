@@ -22949,20 +22949,20 @@ func (m *PlanMutation) ResetEdge(name string) error {
 // PlanDiffMutation represents an operation that mutates the PlanDiff nodes in the graph.
 type PlanDiffMutation struct {
 	config
-	op                            Op
-	typ                           string
-	id                            *uuid.UUID
-	revision                      *int
-	addrevision                   *int
-	new_state                     *plandiff.NewState
-	clearedFields                 map[string]struct{}
-	_PlanDiffToBuildCommit        *uuid.UUID
-	cleared_PlanDiffToBuildCommit bool
-	_PlanDiffToPlan               *uuid.UUID
-	cleared_PlanDiffToPlan        bool
-	done                          bool
-	oldValue                      func(context.Context) (*PlanDiff, error)
-	predicates                    []predicate.PlanDiff
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	revision            *int
+	addrevision         *int
+	new_state           *plandiff.NewState
+	clearedFields       map[string]struct{}
+	_BuildCommit        *uuid.UUID
+	cleared_BuildCommit bool
+	_Plan               *uuid.UUID
+	cleared_Plan        bool
+	done                bool
+	oldValue            func(context.Context) (*PlanDiff, error)
+	predicates          []predicate.PlanDiff
 }
 
 var _ ent.Mutation = (*PlanDiffMutation)(nil)
@@ -23161,82 +23161,82 @@ func (m *PlanDiffMutation) ResetNewState() {
 	m.new_state = nil
 }
 
-// SetPlanDiffToBuildCommitID sets the "PlanDiffToBuildCommit" edge to the BuildCommit entity by id.
-func (m *PlanDiffMutation) SetPlanDiffToBuildCommitID(id uuid.UUID) {
-	m._PlanDiffToBuildCommit = &id
+// SetBuildCommitID sets the "BuildCommit" edge to the BuildCommit entity by id.
+func (m *PlanDiffMutation) SetBuildCommitID(id uuid.UUID) {
+	m._BuildCommit = &id
 }
 
-// ClearPlanDiffToBuildCommit clears the "PlanDiffToBuildCommit" edge to the BuildCommit entity.
-func (m *PlanDiffMutation) ClearPlanDiffToBuildCommit() {
-	m.cleared_PlanDiffToBuildCommit = true
+// ClearBuildCommit clears the "BuildCommit" edge to the BuildCommit entity.
+func (m *PlanDiffMutation) ClearBuildCommit() {
+	m.cleared_BuildCommit = true
 }
 
-// PlanDiffToBuildCommitCleared reports if the "PlanDiffToBuildCommit" edge to the BuildCommit entity was cleared.
-func (m *PlanDiffMutation) PlanDiffToBuildCommitCleared() bool {
-	return m.cleared_PlanDiffToBuildCommit
+// BuildCommitCleared reports if the "BuildCommit" edge to the BuildCommit entity was cleared.
+func (m *PlanDiffMutation) BuildCommitCleared() bool {
+	return m.cleared_BuildCommit
 }
 
-// PlanDiffToBuildCommitID returns the "PlanDiffToBuildCommit" edge ID in the mutation.
-func (m *PlanDiffMutation) PlanDiffToBuildCommitID() (id uuid.UUID, exists bool) {
-	if m._PlanDiffToBuildCommit != nil {
-		return *m._PlanDiffToBuildCommit, true
+// BuildCommitID returns the "BuildCommit" edge ID in the mutation.
+func (m *PlanDiffMutation) BuildCommitID() (id uuid.UUID, exists bool) {
+	if m._BuildCommit != nil {
+		return *m._BuildCommit, true
 	}
 	return
 }
 
-// PlanDiffToBuildCommitIDs returns the "PlanDiffToBuildCommit" edge IDs in the mutation.
+// BuildCommitIDs returns the "BuildCommit" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// PlanDiffToBuildCommitID instead. It exists only for internal usage by the builders.
-func (m *PlanDiffMutation) PlanDiffToBuildCommitIDs() (ids []uuid.UUID) {
-	if id := m._PlanDiffToBuildCommit; id != nil {
+// BuildCommitID instead. It exists only for internal usage by the builders.
+func (m *PlanDiffMutation) BuildCommitIDs() (ids []uuid.UUID) {
+	if id := m._BuildCommit; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetPlanDiffToBuildCommit resets all changes to the "PlanDiffToBuildCommit" edge.
-func (m *PlanDiffMutation) ResetPlanDiffToBuildCommit() {
-	m._PlanDiffToBuildCommit = nil
-	m.cleared_PlanDiffToBuildCommit = false
+// ResetBuildCommit resets all changes to the "BuildCommit" edge.
+func (m *PlanDiffMutation) ResetBuildCommit() {
+	m._BuildCommit = nil
+	m.cleared_BuildCommit = false
 }
 
-// SetPlanDiffToPlanID sets the "PlanDiffToPlan" edge to the Plan entity by id.
-func (m *PlanDiffMutation) SetPlanDiffToPlanID(id uuid.UUID) {
-	m._PlanDiffToPlan = &id
+// SetPlanID sets the "Plan" edge to the Plan entity by id.
+func (m *PlanDiffMutation) SetPlanID(id uuid.UUID) {
+	m._Plan = &id
 }
 
-// ClearPlanDiffToPlan clears the "PlanDiffToPlan" edge to the Plan entity.
-func (m *PlanDiffMutation) ClearPlanDiffToPlan() {
-	m.cleared_PlanDiffToPlan = true
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (m *PlanDiffMutation) ClearPlan() {
+	m.cleared_Plan = true
 }
 
-// PlanDiffToPlanCleared reports if the "PlanDiffToPlan" edge to the Plan entity was cleared.
-func (m *PlanDiffMutation) PlanDiffToPlanCleared() bool {
-	return m.cleared_PlanDiffToPlan
+// PlanCleared reports if the "Plan" edge to the Plan entity was cleared.
+func (m *PlanDiffMutation) PlanCleared() bool {
+	return m.cleared_Plan
 }
 
-// PlanDiffToPlanID returns the "PlanDiffToPlan" edge ID in the mutation.
-func (m *PlanDiffMutation) PlanDiffToPlanID() (id uuid.UUID, exists bool) {
-	if m._PlanDiffToPlan != nil {
-		return *m._PlanDiffToPlan, true
+// PlanID returns the "Plan" edge ID in the mutation.
+func (m *PlanDiffMutation) PlanID() (id uuid.UUID, exists bool) {
+	if m._Plan != nil {
+		return *m._Plan, true
 	}
 	return
 }
 
-// PlanDiffToPlanIDs returns the "PlanDiffToPlan" edge IDs in the mutation.
+// PlanIDs returns the "Plan" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// PlanDiffToPlanID instead. It exists only for internal usage by the builders.
-func (m *PlanDiffMutation) PlanDiffToPlanIDs() (ids []uuid.UUID) {
-	if id := m._PlanDiffToPlan; id != nil {
+// PlanID instead. It exists only for internal usage by the builders.
+func (m *PlanDiffMutation) PlanIDs() (ids []uuid.UUID) {
+	if id := m._Plan; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetPlanDiffToPlan resets all changes to the "PlanDiffToPlan" edge.
-func (m *PlanDiffMutation) ResetPlanDiffToPlan() {
-	m._PlanDiffToPlan = nil
-	m.cleared_PlanDiffToPlan = false
+// ResetPlan resets all changes to the "Plan" edge.
+func (m *PlanDiffMutation) ResetPlan() {
+	m._Plan = nil
+	m.cleared_Plan = false
 }
 
 // Where appends a list predicates to the PlanDiffMutation builder.
@@ -23390,11 +23390,11 @@ func (m *PlanDiffMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PlanDiffMutation) AddedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m._PlanDiffToBuildCommit != nil {
-		edges = append(edges, plandiff.EdgePlanDiffToBuildCommit)
+	if m._BuildCommit != nil {
+		edges = append(edges, plandiff.EdgeBuildCommit)
 	}
-	if m._PlanDiffToPlan != nil {
-		edges = append(edges, plandiff.EdgePlanDiffToPlan)
+	if m._Plan != nil {
+		edges = append(edges, plandiff.EdgePlan)
 	}
 	return edges
 }
@@ -23403,12 +23403,12 @@ func (m *PlanDiffMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *PlanDiffMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case plandiff.EdgePlanDiffToBuildCommit:
-		if id := m._PlanDiffToBuildCommit; id != nil {
+	case plandiff.EdgeBuildCommit:
+		if id := m._BuildCommit; id != nil {
 			return []ent.Value{*id}
 		}
-	case plandiff.EdgePlanDiffToPlan:
-		if id := m._PlanDiffToPlan; id != nil {
+	case plandiff.EdgePlan:
+		if id := m._Plan; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -23432,11 +23432,11 @@ func (m *PlanDiffMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PlanDiffMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.cleared_PlanDiffToBuildCommit {
-		edges = append(edges, plandiff.EdgePlanDiffToBuildCommit)
+	if m.cleared_BuildCommit {
+		edges = append(edges, plandiff.EdgeBuildCommit)
 	}
-	if m.cleared_PlanDiffToPlan {
-		edges = append(edges, plandiff.EdgePlanDiffToPlan)
+	if m.cleared_Plan {
+		edges = append(edges, plandiff.EdgePlan)
 	}
 	return edges
 }
@@ -23445,10 +23445,10 @@ func (m *PlanDiffMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *PlanDiffMutation) EdgeCleared(name string) bool {
 	switch name {
-	case plandiff.EdgePlanDiffToBuildCommit:
-		return m.cleared_PlanDiffToBuildCommit
-	case plandiff.EdgePlanDiffToPlan:
-		return m.cleared_PlanDiffToPlan
+	case plandiff.EdgeBuildCommit:
+		return m.cleared_BuildCommit
+	case plandiff.EdgePlan:
+		return m.cleared_Plan
 	}
 	return false
 }
@@ -23457,11 +23457,11 @@ func (m *PlanDiffMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *PlanDiffMutation) ClearEdge(name string) error {
 	switch name {
-	case plandiff.EdgePlanDiffToBuildCommit:
-		m.ClearPlanDiffToBuildCommit()
+	case plandiff.EdgeBuildCommit:
+		m.ClearBuildCommit()
 		return nil
-	case plandiff.EdgePlanDiffToPlan:
-		m.ClearPlanDiffToPlan()
+	case plandiff.EdgePlan:
+		m.ClearPlan()
 		return nil
 	}
 	return fmt.Errorf("unknown PlanDiff unique edge %s", name)
@@ -23471,11 +23471,11 @@ func (m *PlanDiffMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *PlanDiffMutation) ResetEdge(name string) error {
 	switch name {
-	case plandiff.EdgePlanDiffToBuildCommit:
-		m.ResetPlanDiffToBuildCommit()
+	case plandiff.EdgeBuildCommit:
+		m.ResetBuildCommit()
 		return nil
-	case plandiff.EdgePlanDiffToPlan:
-		m.ResetPlanDiffToPlan()
+	case plandiff.EdgePlan:
+		m.ResetPlan()
 		return nil
 	}
 	return fmt.Errorf("unknown PlanDiff edge %s", name)

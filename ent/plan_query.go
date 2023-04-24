@@ -1112,13 +1112,13 @@ func (pq *PlanQuery) loadPlanDiffs(ctx context.Context, query *PlanDiffQuery, no
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.plan_diff_plan_diff_to_plan
+		fk := n.plan_diff_plan
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_diff_plan_diff_to_plan" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "plan_diff_plan" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_diff_plan_diff_to_plan" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_diff_plan" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

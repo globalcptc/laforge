@@ -44,8 +44,8 @@ func CreateRootCommit(client *ent.Client, rdb *redis.Client, entBuild *ent.Build
 		_, planDiffErr := client.PlanDiff.Create().
 			SetNewState(plandiff.NewStatePLANNING).
 			SetRevision(numExistingDiffs).
-			SetPlanDiffToBuildCommit(rootCommit).
-			SetPlanDiffToPlan(buildPlan).
+			SetBuildCommit(rootCommit).
+			SetPlan(buildPlan).
 			Save(ctx)
 		if planDiffErr != nil {
 			logrus.WithFields(logrus.Fields{

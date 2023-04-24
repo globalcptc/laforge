@@ -219,8 +219,8 @@ func generateDeleteBuildCommit(ctx context.Context, client *ent.Client, entBuild
 		_, err = client.PlanDiff.Create().
 			SetNewState(plandiff.NewStateTODELETE).
 			SetRevision(entPlanDiffRevision).
-			SetPlanDiffToBuildCommit(entDeleteCommit).
-			SetPlanDiffToPlan(entPlan).
+			SetBuildCommit(entDeleteCommit).
+			SetPlan(entPlan).
 			Save(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error while creating plan diff: %v", err)
