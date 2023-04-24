@@ -24,8 +24,8 @@ type AdhocPlan struct {
 	Edges AdhocPlanEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// PrevAdhocPlan holds the value of the PrevAdhocPlan edge.
-	HCLPrevAdhocPlan []*AdhocPlan `json:"PrevAdhocPlan,omitempty"`
+	// PrevAdhocPlans holds the value of the PrevAdhocPlans edge.
+	HCLPrevAdhocPlans []*AdhocPlan `json:"PrevAdhocPlans,omitempty"`
 	// NextAdhocPlans holds the value of the NextAdhocPlans edge.
 	HCLNextAdhocPlans []*AdhocPlan `json:"NextAdhocPlans,omitempty"`
 	// Build holds the value of the Build edge.
@@ -41,8 +41,8 @@ type AdhocPlan struct {
 
 // AdhocPlanEdges holds the relations/edges for other nodes in the graph.
 type AdhocPlanEdges struct {
-	// PrevAdhocPlan holds the value of the PrevAdhocPlan edge.
-	PrevAdhocPlan []*AdhocPlan `json:"PrevAdhocPlan,omitempty"`
+	// PrevAdhocPlans holds the value of the PrevAdhocPlans edge.
+	PrevAdhocPlans []*AdhocPlan `json:"PrevAdhocPlans,omitempty"`
 	// NextAdhocPlans holds the value of the NextAdhocPlans edge.
 	NextAdhocPlans []*AdhocPlan `json:"NextAdhocPlans,omitempty"`
 	// Build holds the value of the Build edge.
@@ -56,13 +56,13 @@ type AdhocPlanEdges struct {
 	loadedTypes [5]bool
 }
 
-// PrevAdhocPlanOrErr returns the PrevAdhocPlan value or an error if the edge
+// PrevAdhocPlansOrErr returns the PrevAdhocPlans value or an error if the edge
 // was not loaded in eager-loading.
-func (e AdhocPlanEdges) PrevAdhocPlanOrErr() ([]*AdhocPlan, error) {
+func (e AdhocPlanEdges) PrevAdhocPlansOrErr() ([]*AdhocPlan, error) {
 	if e.loadedTypes[0] {
-		return e.PrevAdhocPlan, nil
+		return e.PrevAdhocPlans, nil
 	}
-	return nil, &NotLoadedError{edge: "PrevAdhocPlan"}
+	return nil, &NotLoadedError{edge: "PrevAdhocPlans"}
 }
 
 // NextAdhocPlansOrErr returns the NextAdhocPlans value or an error if the edge
@@ -167,9 +167,9 @@ func (ap *AdhocPlan) assignValues(columns []string, values []interface{}) error 
 	return nil
 }
 
-// QueryPrevAdhocPlan queries the "PrevAdhocPlan" edge of the AdhocPlan entity.
-func (ap *AdhocPlan) QueryPrevAdhocPlan() *AdhocPlanQuery {
-	return (&AdhocPlanClient{config: ap.config}).QueryPrevAdhocPlan(ap)
+// QueryPrevAdhocPlans queries the "PrevAdhocPlans" edge of the AdhocPlan entity.
+func (ap *AdhocPlan) QueryPrevAdhocPlans() *AdhocPlanQuery {
+	return (&AdhocPlanClient{config: ap.config}).QueryPrevAdhocPlans(ap)
 }
 
 // QueryNextAdhocPlans queries the "NextAdhocPlans" edge of the AdhocPlan entity.

@@ -355,25 +355,25 @@ func HasLatestBuildCommitWith(preds ...predicate.BuildCommit) predicate.Build {
 	})
 }
 
-// HasRepoCommits applies the HasEdge predicate on the "RepoCommits" edge.
-func HasRepoCommits() predicate.Build {
+// HasRepoCommit applies the HasEdge predicate on the "RepoCommit" edge.
+func HasRepoCommit() predicate.Build {
 	return predicate.Build(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RepoCommitsTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, RepoCommitsTable, RepoCommitsColumn),
+			sqlgraph.To(RepoCommitTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, RepoCommitTable, RepoCommitColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasRepoCommitsWith applies the HasEdge predicate on the "RepoCommits" edge with a given conditions (other predicates).
-func HasRepoCommitsWith(preds ...predicate.RepoCommit) predicate.Build {
+// HasRepoCommitWith applies the HasEdge predicate on the "RepoCommit" edge with a given conditions (other predicates).
+func HasRepoCommitWith(preds ...predicate.RepoCommit) predicate.Build {
 	return predicate.Build(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RepoCommitsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, RepoCommitsTable, RepoCommitsColumn),
+			sqlgraph.To(RepoCommitInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, RepoCommitTable, RepoCommitColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

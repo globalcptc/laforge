@@ -43,8 +43,8 @@ type Build struct {
 	HCLCompetition *Competition `json:"Competition,omitempty"`
 	// LatestBuildCommit holds the value of the LatestBuildCommit edge.
 	HCLLatestBuildCommit *BuildCommit `json:"LatestBuildCommit,omitempty"`
-	// RepoCommits holds the value of the RepoCommits edge.
-	HCLRepoCommits *RepoCommit `json:"RepoCommits,omitempty"`
+	// RepoCommit holds the value of the RepoCommit edge.
+	HCLRepoCommit *RepoCommit `json:"RepoCommit,omitempty"`
 	// ProvisionedNetworks holds the value of the ProvisionedNetworks edge.
 	HCLProvisionedNetworks []*ProvisionedNetwork `json:"ProvisionedNetworks,omitempty"`
 	// Teams holds the value of the Teams edge.
@@ -63,7 +63,7 @@ type Build struct {
 	build_environment         *uuid.UUID
 	build_competition         *uuid.UUID
 	build_latest_build_commit *uuid.UUID
-	build_repo_commits        *uuid.UUID
+	build_repo_commit         *uuid.UUID
 }
 
 // BuildEdges holds the relations/edges for other nodes in the graph.
@@ -76,8 +76,8 @@ type BuildEdges struct {
 	Competition *Competition `json:"Competition,omitempty"`
 	// LatestBuildCommit holds the value of the LatestBuildCommit edge.
 	LatestBuildCommit *BuildCommit `json:"LatestBuildCommit,omitempty"`
-	// RepoCommits holds the value of the RepoCommits edge.
-	RepoCommits *RepoCommit `json:"RepoCommits,omitempty"`
+	// RepoCommit holds the value of the RepoCommit edge.
+	RepoCommit *RepoCommit `json:"RepoCommit,omitempty"`
 	// ProvisionedNetworks holds the value of the ProvisionedNetworks edge.
 	ProvisionedNetworks []*ProvisionedNetwork `json:"ProvisionedNetworks,omitempty"`
 	// Teams holds the value of the Teams edge.
@@ -153,18 +153,18 @@ func (e BuildEdges) LatestBuildCommitOrErr() (*BuildCommit, error) {
 	return nil, &NotLoadedError{edge: "LatestBuildCommit"}
 }
 
-// RepoCommitsOrErr returns the RepoCommits value or an error if the edge
+// RepoCommitOrErr returns the RepoCommit value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e BuildEdges) RepoCommitsOrErr() (*RepoCommit, error) {
+func (e BuildEdges) RepoCommitOrErr() (*RepoCommit, error) {
 	if e.loadedTypes[4] {
-		if e.RepoCommits == nil {
-			// The edge RepoCommits was loaded in eager-loading,
+		if e.RepoCommit == nil {
+			// The edge RepoCommit was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: repocommit.Label}
 		}
-		return e.RepoCommits, nil
+		return e.RepoCommit, nil
 	}
-	return nil, &NotLoadedError{edge: "RepoCommits"}
+	return nil, &NotLoadedError{edge: "RepoCommit"}
 }
 
 // ProvisionedNetworksOrErr returns the ProvisionedNetworks value or an error if the edge
@@ -249,7 +249,7 @@ func (*Build) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case build.ForeignKeys[2]: // build_latest_build_commit
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case build.ForeignKeys[3]: // build_repo_commits
+		case build.ForeignKeys[3]: // build_repo_commit
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Build", columns[i])
@@ -321,10 +321,10 @@ func (b *Build) assignValues(columns []string, values []interface{}) error {
 			}
 		case build.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field build_repo_commits", values[i])
+				return fmt.Errorf("unexpected type %T for field build_repo_commit", values[i])
 			} else if value.Valid {
-				b.build_repo_commits = new(uuid.UUID)
-				*b.build_repo_commits = *value.S.(*uuid.UUID)
+				b.build_repo_commit = new(uuid.UUID)
+				*b.build_repo_commit = *value.S.(*uuid.UUID)
 			}
 		}
 	}
@@ -351,9 +351,9 @@ func (b *Build) QueryLatestBuildCommit() *BuildCommitQuery {
 	return (&BuildClient{config: b.config}).QueryLatestBuildCommit(b)
 }
 
-// QueryRepoCommits queries the "RepoCommits" edge of the Build entity.
-func (b *Build) QueryRepoCommits() *RepoCommitQuery {
-	return (&BuildClient{config: b.config}).QueryRepoCommits(b)
+// QueryRepoCommit queries the "RepoCommit" edge of the Build entity.
+func (b *Build) QueryRepoCommit() *RepoCommitQuery {
+	return (&BuildClient{config: b.config}).QueryRepoCommit(b)
 }
 
 // QueryProvisionedNetworks queries the "ProvisionedNetworks" edge of the Build entity.

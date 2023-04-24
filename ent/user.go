@@ -31,8 +31,8 @@ type User struct {
 	// Edges put into the main struct to be loaded via hcl
 	// Tag holds the value of the Tag edge.
 	HCLTag []*Tag `json:"Tag,omitempty"`
-	// Environment holds the value of the Environment edge.
-	HCLEnvironment []*Environment `json:"Environment,omitempty"`
+	// Environments holds the value of the Environments edge.
+	HCLEnvironments []*Environment `json:"Environments,omitempty"`
 	//
 	ansible_users *uuid.UUID
 	command_users *uuid.UUID
@@ -45,8 +45,8 @@ type User struct {
 type UserEdges struct {
 	// Tag holds the value of the Tag edge.
 	Tag []*Tag `json:"Tag,omitempty"`
-	// Environment holds the value of the Environment edge.
-	Environment []*Environment `json:"Environment,omitempty"`
+	// Environments holds the value of the Environments edge.
+	Environments []*Environment `json:"Environments,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
@@ -61,13 +61,13 @@ func (e UserEdges) TagOrErr() ([]*Tag, error) {
 	return nil, &NotLoadedError{edge: "Tag"}
 }
 
-// EnvironmentOrErr returns the Environment value or an error if the edge
+// EnvironmentsOrErr returns the Environments value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) EnvironmentOrErr() ([]*Environment, error) {
+func (e UserEdges) EnvironmentsOrErr() ([]*Environment, error) {
 	if e.loadedTypes[1] {
-		return e.Environment, nil
+		return e.Environments, nil
 	}
-	return nil, &NotLoadedError{edge: "Environment"}
+	return nil, &NotLoadedError{edge: "Environments"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -179,9 +179,9 @@ func (u *User) QueryTag() *TagQuery {
 	return (&UserClient{config: u.config}).QueryTag(u)
 }
 
-// QueryEnvironment queries the "Environment" edge of the User entity.
-func (u *User) QueryEnvironment() *EnvironmentQuery {
-	return (&UserClient{config: u.config}).QueryEnvironment(u)
+// QueryEnvironments queries the "Environments" edge of the User entity.
+func (u *User) QueryEnvironments() *EnvironmentQuery {
+	return (&UserClient{config: u.config}).QueryEnvironments(u)
 }
 
 // Update returns a builder for updating this User.

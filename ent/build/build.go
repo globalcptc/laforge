@@ -27,8 +27,8 @@ const (
 	EdgeCompetition = "Competition"
 	// EdgeLatestBuildCommit holds the string denoting the latestbuildcommit edge name in mutations.
 	EdgeLatestBuildCommit = "LatestBuildCommit"
-	// EdgeRepoCommits holds the string denoting the repocommits edge name in mutations.
-	EdgeRepoCommits = "RepoCommits"
+	// EdgeRepoCommit holds the string denoting the repocommit edge name in mutations.
+	EdgeRepoCommit = "RepoCommit"
 	// EdgeProvisionedNetworks holds the string denoting the provisionednetworks edge name in mutations.
 	EdgeProvisionedNetworks = "ProvisionedNetworks"
 	// EdgeTeams holds the string denoting the teams edge name in mutations.
@@ -73,13 +73,13 @@ const (
 	LatestBuildCommitInverseTable = "build_commits"
 	// LatestBuildCommitColumn is the table column denoting the LatestBuildCommit relation/edge.
 	LatestBuildCommitColumn = "build_latest_build_commit"
-	// RepoCommitsTable is the table that holds the RepoCommits relation/edge.
-	RepoCommitsTable = "builds"
-	// RepoCommitsInverseTable is the table name for the RepoCommit entity.
+	// RepoCommitTable is the table that holds the RepoCommit relation/edge.
+	RepoCommitTable = "builds"
+	// RepoCommitInverseTable is the table name for the RepoCommit entity.
 	// It exists in this package in order to avoid circular dependency with the "repocommit" package.
-	RepoCommitsInverseTable = "repo_commits"
-	// RepoCommitsColumn is the table column denoting the RepoCommits relation/edge.
-	RepoCommitsColumn = "build_repo_commits"
+	RepoCommitInverseTable = "repo_commits"
+	// RepoCommitColumn is the table column denoting the RepoCommit relation/edge.
+	RepoCommitColumn = "build_repo_commit"
 	// ProvisionedNetworksTable is the table that holds the ProvisionedNetworks relation/edge.
 	ProvisionedNetworksTable = "provisioned_networks"
 	// ProvisionedNetworksInverseTable is the table name for the ProvisionedNetwork entity.
@@ -146,7 +146,7 @@ var ForeignKeys = []string{
 	"build_environment",
 	"build_competition",
 	"build_latest_build_commit",
-	"build_repo_commits",
+	"build_repo_commit",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

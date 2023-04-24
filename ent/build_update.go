@@ -145,23 +145,23 @@ func (bu *BuildUpdate) SetLatestBuildCommit(b *BuildCommit) *BuildUpdate {
 	return bu.SetLatestBuildCommitID(b.ID)
 }
 
-// SetRepoCommitsID sets the "RepoCommits" edge to the RepoCommit entity by ID.
-func (bu *BuildUpdate) SetRepoCommitsID(id uuid.UUID) *BuildUpdate {
-	bu.mutation.SetRepoCommitsID(id)
+// SetRepoCommitID sets the "RepoCommit" edge to the RepoCommit entity by ID.
+func (bu *BuildUpdate) SetRepoCommitID(id uuid.UUID) *BuildUpdate {
+	bu.mutation.SetRepoCommitID(id)
 	return bu
 }
 
-// SetNillableRepoCommitsID sets the "RepoCommits" edge to the RepoCommit entity by ID if the given value is not nil.
-func (bu *BuildUpdate) SetNillableRepoCommitsID(id *uuid.UUID) *BuildUpdate {
+// SetNillableRepoCommitID sets the "RepoCommit" edge to the RepoCommit entity by ID if the given value is not nil.
+func (bu *BuildUpdate) SetNillableRepoCommitID(id *uuid.UUID) *BuildUpdate {
 	if id != nil {
-		bu = bu.SetRepoCommitsID(*id)
+		bu = bu.SetRepoCommitID(*id)
 	}
 	return bu
 }
 
-// SetRepoCommits sets the "RepoCommits" edge to the RepoCommit entity.
-func (bu *BuildUpdate) SetRepoCommits(r *RepoCommit) *BuildUpdate {
-	return bu.SetRepoCommitsID(r.ID)
+// SetRepoCommit sets the "RepoCommit" edge to the RepoCommit entity.
+func (bu *BuildUpdate) SetRepoCommit(r *RepoCommit) *BuildUpdate {
+	return bu.SetRepoCommitID(r.ID)
 }
 
 // AddProvisionedNetworkIDs adds the "ProvisionedNetworks" edge to the ProvisionedNetwork entity by IDs.
@@ -298,9 +298,9 @@ func (bu *BuildUpdate) ClearLatestBuildCommit() *BuildUpdate {
 	return bu
 }
 
-// ClearRepoCommits clears the "RepoCommits" edge to the RepoCommit entity.
-func (bu *BuildUpdate) ClearRepoCommits() *BuildUpdate {
-	bu.mutation.ClearRepoCommits()
+// ClearRepoCommit clears the "RepoCommit" edge to the RepoCommit entity.
+func (bu *BuildUpdate) ClearRepoCommit() *BuildUpdate {
+	bu.mutation.ClearRepoCommit()
 	return bu
 }
 
@@ -722,12 +722,12 @@ func (bu *BuildUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if bu.mutation.RepoCommitsCleared() {
+	if bu.mutation.RepoCommitCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   build.RepoCommitsTable,
-			Columns: []string{build.RepoCommitsColumn},
+			Table:   build.RepoCommitTable,
+			Columns: []string{build.RepoCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -738,12 +738,12 @@ func (bu *BuildUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := bu.mutation.RepoCommitsIDs(); len(nodes) > 0 {
+	if nodes := bu.mutation.RepoCommitIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   build.RepoCommitsTable,
-			Columns: []string{build.RepoCommitsColumn},
+			Table:   build.RepoCommitTable,
+			Columns: []string{build.RepoCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1260,23 +1260,23 @@ func (buo *BuildUpdateOne) SetLatestBuildCommit(b *BuildCommit) *BuildUpdateOne 
 	return buo.SetLatestBuildCommitID(b.ID)
 }
 
-// SetRepoCommitsID sets the "RepoCommits" edge to the RepoCommit entity by ID.
-func (buo *BuildUpdateOne) SetRepoCommitsID(id uuid.UUID) *BuildUpdateOne {
-	buo.mutation.SetRepoCommitsID(id)
+// SetRepoCommitID sets the "RepoCommit" edge to the RepoCommit entity by ID.
+func (buo *BuildUpdateOne) SetRepoCommitID(id uuid.UUID) *BuildUpdateOne {
+	buo.mutation.SetRepoCommitID(id)
 	return buo
 }
 
-// SetNillableRepoCommitsID sets the "RepoCommits" edge to the RepoCommit entity by ID if the given value is not nil.
-func (buo *BuildUpdateOne) SetNillableRepoCommitsID(id *uuid.UUID) *BuildUpdateOne {
+// SetNillableRepoCommitID sets the "RepoCommit" edge to the RepoCommit entity by ID if the given value is not nil.
+func (buo *BuildUpdateOne) SetNillableRepoCommitID(id *uuid.UUID) *BuildUpdateOne {
 	if id != nil {
-		buo = buo.SetRepoCommitsID(*id)
+		buo = buo.SetRepoCommitID(*id)
 	}
 	return buo
 }
 
-// SetRepoCommits sets the "RepoCommits" edge to the RepoCommit entity.
-func (buo *BuildUpdateOne) SetRepoCommits(r *RepoCommit) *BuildUpdateOne {
-	return buo.SetRepoCommitsID(r.ID)
+// SetRepoCommit sets the "RepoCommit" edge to the RepoCommit entity.
+func (buo *BuildUpdateOne) SetRepoCommit(r *RepoCommit) *BuildUpdateOne {
+	return buo.SetRepoCommitID(r.ID)
 }
 
 // AddProvisionedNetworkIDs adds the "ProvisionedNetworks" edge to the ProvisionedNetwork entity by IDs.
@@ -1413,9 +1413,9 @@ func (buo *BuildUpdateOne) ClearLatestBuildCommit() *BuildUpdateOne {
 	return buo
 }
 
-// ClearRepoCommits clears the "RepoCommits" edge to the RepoCommit entity.
-func (buo *BuildUpdateOne) ClearRepoCommits() *BuildUpdateOne {
-	buo.mutation.ClearRepoCommits()
+// ClearRepoCommit clears the "RepoCommit" edge to the RepoCommit entity.
+func (buo *BuildUpdateOne) ClearRepoCommit() *BuildUpdateOne {
+	buo.mutation.ClearRepoCommit()
 	return buo
 }
 
@@ -1867,12 +1867,12 @@ func (buo *BuildUpdateOne) sqlSave(ctx context.Context) (_node *Build, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if buo.mutation.RepoCommitsCleared() {
+	if buo.mutation.RepoCommitCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   build.RepoCommitsTable,
-			Columns: []string{build.RepoCommitsColumn},
+			Table:   build.RepoCommitTable,
+			Columns: []string{build.RepoCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1883,12 +1883,12 @@ func (buo *BuildUpdateOne) sqlSave(ctx context.Context) (_node *Build, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := buo.mutation.RepoCommitsIDs(); len(nodes) > 0 {
+	if nodes := buo.mutation.RepoCommitIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   build.RepoCommitsTable,
-			Columns: []string{build.RepoCommitsColumn},
+			Table:   build.RepoCommitTable,
+			Columns: []string{build.RepoCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

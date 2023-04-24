@@ -4,10 +4,10 @@ package ent
 
 import "context"
 
-func (ap *AdhocPlan) PrevAdhocPlan(ctx context.Context) ([]*AdhocPlan, error) {
-	result, err := ap.Edges.PrevAdhocPlanOrErr()
+func (ap *AdhocPlan) PrevAdhocPlans(ctx context.Context) ([]*AdhocPlan, error) {
+	result, err := ap.Edges.PrevAdhocPlansOrErr()
 	if IsNotLoaded(err) {
-		result, err = ap.QueryPrevAdhocPlan().All(ctx)
+		result, err = ap.QueryPrevAdhocPlans().All(ctx)
 	}
 	return result, err
 }
@@ -164,10 +164,10 @@ func (b *Build) LatestBuildCommit(ctx context.Context) (*BuildCommit, error) {
 	return result, MaskNotFound(err)
 }
 
-func (b *Build) RepoCommits(ctx context.Context) (*RepoCommit, error) {
-	result, err := b.Edges.RepoCommitsOrErr()
+func (b *Build) RepoCommit(ctx context.Context) (*RepoCommit, error) {
+	result, err := b.Edges.RepoCommitOrErr()
 	if IsNotLoaded(err) {
-		result, err = b.QueryRepoCommits().Only(ctx)
+		result, err = b.QueryRepoCommit().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
@@ -596,18 +596,18 @@ func (h *Host) IncludedNetworks(ctx context.Context) ([]*IncludedNetwork, error)
 	return result, err
 }
 
-func (h *Host) DependOnHostDependency(ctx context.Context) ([]*HostDependency, error) {
-	result, err := h.Edges.DependOnHostDependencyOrErr()
+func (h *Host) DependOnHostDependencies(ctx context.Context) ([]*HostDependency, error) {
+	result, err := h.Edges.DependOnHostDependenciesOrErr()
 	if IsNotLoaded(err) {
-		result, err = h.QueryDependOnHostDependency().All(ctx)
+		result, err = h.QueryDependOnHostDependencies().All(ctx)
 	}
 	return result, err
 }
 
-func (h *Host) RequiredByHostDependency(ctx context.Context) ([]*HostDependency, error) {
-	result, err := h.Edges.RequiredByHostDependencyOrErr()
+func (h *Host) RequiredByHostDependencies(ctx context.Context) ([]*HostDependency, error) {
+	result, err := h.Edges.RequiredByHostDependenciesOrErr()
 	if IsNotLoaded(err) {
-		result, err = h.QueryRequiredByHostDependency().All(ctx)
+		result, err = h.QueryRequiredByHostDependencies().All(ctx)
 	}
 	return result, err
 }
@@ -1364,10 +1364,10 @@ func (u *User) Tag(ctx context.Context) ([]*Tag, error) {
 	return result, err
 }
 
-func (u *User) Environment(ctx context.Context) ([]*Environment, error) {
-	result, err := u.Edges.EnvironmentOrErr()
+func (u *User) Environments(ctx context.Context) ([]*Environment, error) {
+	result, err := u.Edges.EnvironmentsOrErr()
 	if IsNotLoaded(err) {
-		result, err = u.QueryEnvironment().All(ctx)
+		result, err = u.QueryEnvironments().All(ctx)
 	}
 	return result, err
 }

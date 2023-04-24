@@ -210,14 +210,14 @@ func (hu *HostUpdate) AddIncludedNetworks(i ...*IncludedNetwork) *HostUpdate {
 	return hu.AddIncludedNetworkIDs(ids...)
 }
 
-// AddDependOnHostDependencyIDs adds the "DependOnHostDependency" edge to the HostDependency entity by IDs.
+// AddDependOnHostDependencyIDs adds the "DependOnHostDependencies" edge to the HostDependency entity by IDs.
 func (hu *HostUpdate) AddDependOnHostDependencyIDs(ids ...uuid.UUID) *HostUpdate {
 	hu.mutation.AddDependOnHostDependencyIDs(ids...)
 	return hu
 }
 
-// AddDependOnHostDependency adds the "DependOnHostDependency" edges to the HostDependency entity.
-func (hu *HostUpdate) AddDependOnHostDependency(h ...*HostDependency) *HostUpdate {
+// AddDependOnHostDependencies adds the "DependOnHostDependencies" edges to the HostDependency entity.
+func (hu *HostUpdate) AddDependOnHostDependencies(h ...*HostDependency) *HostUpdate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
@@ -225,14 +225,14 @@ func (hu *HostUpdate) AddDependOnHostDependency(h ...*HostDependency) *HostUpdat
 	return hu.AddDependOnHostDependencyIDs(ids...)
 }
 
-// AddRequiredByHostDependencyIDs adds the "RequiredByHostDependency" edge to the HostDependency entity by IDs.
+// AddRequiredByHostDependencyIDs adds the "RequiredByHostDependencies" edge to the HostDependency entity by IDs.
 func (hu *HostUpdate) AddRequiredByHostDependencyIDs(ids ...uuid.UUID) *HostUpdate {
 	hu.mutation.AddRequiredByHostDependencyIDs(ids...)
 	return hu
 }
 
-// AddRequiredByHostDependency adds the "RequiredByHostDependency" edges to the HostDependency entity.
-func (hu *HostUpdate) AddRequiredByHostDependency(h ...*HostDependency) *HostUpdate {
+// AddRequiredByHostDependencies adds the "RequiredByHostDependencies" edges to the HostDependency entity.
+func (hu *HostUpdate) AddRequiredByHostDependencies(h ...*HostDependency) *HostUpdate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
@@ -299,20 +299,20 @@ func (hu *HostUpdate) RemoveIncludedNetworks(i ...*IncludedNetwork) *HostUpdate 
 	return hu.RemoveIncludedNetworkIDs(ids...)
 }
 
-// ClearDependOnHostDependency clears all "DependOnHostDependency" edges to the HostDependency entity.
-func (hu *HostUpdate) ClearDependOnHostDependency() *HostUpdate {
-	hu.mutation.ClearDependOnHostDependency()
+// ClearDependOnHostDependencies clears all "DependOnHostDependencies" edges to the HostDependency entity.
+func (hu *HostUpdate) ClearDependOnHostDependencies() *HostUpdate {
+	hu.mutation.ClearDependOnHostDependencies()
 	return hu
 }
 
-// RemoveDependOnHostDependencyIDs removes the "DependOnHostDependency" edge to HostDependency entities by IDs.
+// RemoveDependOnHostDependencyIDs removes the "DependOnHostDependencies" edge to HostDependency entities by IDs.
 func (hu *HostUpdate) RemoveDependOnHostDependencyIDs(ids ...uuid.UUID) *HostUpdate {
 	hu.mutation.RemoveDependOnHostDependencyIDs(ids...)
 	return hu
 }
 
-// RemoveDependOnHostDependency removes "DependOnHostDependency" edges to HostDependency entities.
-func (hu *HostUpdate) RemoveDependOnHostDependency(h ...*HostDependency) *HostUpdate {
+// RemoveDependOnHostDependencies removes "DependOnHostDependencies" edges to HostDependency entities.
+func (hu *HostUpdate) RemoveDependOnHostDependencies(h ...*HostDependency) *HostUpdate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
@@ -320,20 +320,20 @@ func (hu *HostUpdate) RemoveDependOnHostDependency(h ...*HostDependency) *HostUp
 	return hu.RemoveDependOnHostDependencyIDs(ids...)
 }
 
-// ClearRequiredByHostDependency clears all "RequiredByHostDependency" edges to the HostDependency entity.
-func (hu *HostUpdate) ClearRequiredByHostDependency() *HostUpdate {
-	hu.mutation.ClearRequiredByHostDependency()
+// ClearRequiredByHostDependencies clears all "RequiredByHostDependencies" edges to the HostDependency entity.
+func (hu *HostUpdate) ClearRequiredByHostDependencies() *HostUpdate {
+	hu.mutation.ClearRequiredByHostDependencies()
 	return hu
 }
 
-// RemoveRequiredByHostDependencyIDs removes the "RequiredByHostDependency" edge to HostDependency entities by IDs.
+// RemoveRequiredByHostDependencyIDs removes the "RequiredByHostDependencies" edge to HostDependency entities by IDs.
 func (hu *HostUpdate) RemoveRequiredByHostDependencyIDs(ids ...uuid.UUID) *HostUpdate {
 	hu.mutation.RemoveRequiredByHostDependencyIDs(ids...)
 	return hu
 }
 
-// RemoveRequiredByHostDependency removes "RequiredByHostDependency" edges to HostDependency entities.
-func (hu *HostUpdate) RemoveRequiredByHostDependency(h ...*HostDependency) *HostUpdate {
+// RemoveRequiredByHostDependencies removes "RequiredByHostDependencies" edges to HostDependency entities.
+func (hu *HostUpdate) RemoveRequiredByHostDependencies(h ...*HostDependency) *HostUpdate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
@@ -715,12 +715,12 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if hu.mutation.DependOnHostDependencyCleared() {
+	if hu.mutation.DependOnHostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.DependOnHostDependencyTable,
-			Columns: []string{host.DependOnHostDependencyColumn},
+			Table:   host.DependOnHostDependenciesTable,
+			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -731,12 +731,12 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := hu.mutation.RemovedDependOnHostDependencyIDs(); len(nodes) > 0 && !hu.mutation.DependOnHostDependencyCleared() {
+	if nodes := hu.mutation.RemovedDependOnHostDependenciesIDs(); len(nodes) > 0 && !hu.mutation.DependOnHostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.DependOnHostDependencyTable,
-			Columns: []string{host.DependOnHostDependencyColumn},
+			Table:   host.DependOnHostDependenciesTable,
+			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -750,12 +750,12 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := hu.mutation.DependOnHostDependencyIDs(); len(nodes) > 0 {
+	if nodes := hu.mutation.DependOnHostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.DependOnHostDependencyTable,
-			Columns: []string{host.DependOnHostDependencyColumn},
+			Table:   host.DependOnHostDependenciesTable,
+			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -769,12 +769,12 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if hu.mutation.RequiredByHostDependencyCleared() {
+	if hu.mutation.RequiredByHostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.RequiredByHostDependencyTable,
-			Columns: []string{host.RequiredByHostDependencyColumn},
+			Table:   host.RequiredByHostDependenciesTable,
+			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -785,12 +785,12 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := hu.mutation.RemovedRequiredByHostDependencyIDs(); len(nodes) > 0 && !hu.mutation.RequiredByHostDependencyCleared() {
+	if nodes := hu.mutation.RemovedRequiredByHostDependenciesIDs(); len(nodes) > 0 && !hu.mutation.RequiredByHostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.RequiredByHostDependencyTable,
-			Columns: []string{host.RequiredByHostDependencyColumn},
+			Table:   host.RequiredByHostDependenciesTable,
+			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -804,12 +804,12 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := hu.mutation.RequiredByHostDependencyIDs(); len(nodes) > 0 {
+	if nodes := hu.mutation.RequiredByHostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.RequiredByHostDependencyTable,
-			Columns: []string{host.RequiredByHostDependencyColumn},
+			Table:   host.RequiredByHostDependenciesTable,
+			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1019,14 +1019,14 @@ func (huo *HostUpdateOne) AddIncludedNetworks(i ...*IncludedNetwork) *HostUpdate
 	return huo.AddIncludedNetworkIDs(ids...)
 }
 
-// AddDependOnHostDependencyIDs adds the "DependOnHostDependency" edge to the HostDependency entity by IDs.
+// AddDependOnHostDependencyIDs adds the "DependOnHostDependencies" edge to the HostDependency entity by IDs.
 func (huo *HostUpdateOne) AddDependOnHostDependencyIDs(ids ...uuid.UUID) *HostUpdateOne {
 	huo.mutation.AddDependOnHostDependencyIDs(ids...)
 	return huo
 }
 
-// AddDependOnHostDependency adds the "DependOnHostDependency" edges to the HostDependency entity.
-func (huo *HostUpdateOne) AddDependOnHostDependency(h ...*HostDependency) *HostUpdateOne {
+// AddDependOnHostDependencies adds the "DependOnHostDependencies" edges to the HostDependency entity.
+func (huo *HostUpdateOne) AddDependOnHostDependencies(h ...*HostDependency) *HostUpdateOne {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
@@ -1034,14 +1034,14 @@ func (huo *HostUpdateOne) AddDependOnHostDependency(h ...*HostDependency) *HostU
 	return huo.AddDependOnHostDependencyIDs(ids...)
 }
 
-// AddRequiredByHostDependencyIDs adds the "RequiredByHostDependency" edge to the HostDependency entity by IDs.
+// AddRequiredByHostDependencyIDs adds the "RequiredByHostDependencies" edge to the HostDependency entity by IDs.
 func (huo *HostUpdateOne) AddRequiredByHostDependencyIDs(ids ...uuid.UUID) *HostUpdateOne {
 	huo.mutation.AddRequiredByHostDependencyIDs(ids...)
 	return huo
 }
 
-// AddRequiredByHostDependency adds the "RequiredByHostDependency" edges to the HostDependency entity.
-func (huo *HostUpdateOne) AddRequiredByHostDependency(h ...*HostDependency) *HostUpdateOne {
+// AddRequiredByHostDependencies adds the "RequiredByHostDependencies" edges to the HostDependency entity.
+func (huo *HostUpdateOne) AddRequiredByHostDependencies(h ...*HostDependency) *HostUpdateOne {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
@@ -1108,20 +1108,20 @@ func (huo *HostUpdateOne) RemoveIncludedNetworks(i ...*IncludedNetwork) *HostUpd
 	return huo.RemoveIncludedNetworkIDs(ids...)
 }
 
-// ClearDependOnHostDependency clears all "DependOnHostDependency" edges to the HostDependency entity.
-func (huo *HostUpdateOne) ClearDependOnHostDependency() *HostUpdateOne {
-	huo.mutation.ClearDependOnHostDependency()
+// ClearDependOnHostDependencies clears all "DependOnHostDependencies" edges to the HostDependency entity.
+func (huo *HostUpdateOne) ClearDependOnHostDependencies() *HostUpdateOne {
+	huo.mutation.ClearDependOnHostDependencies()
 	return huo
 }
 
-// RemoveDependOnHostDependencyIDs removes the "DependOnHostDependency" edge to HostDependency entities by IDs.
+// RemoveDependOnHostDependencyIDs removes the "DependOnHostDependencies" edge to HostDependency entities by IDs.
 func (huo *HostUpdateOne) RemoveDependOnHostDependencyIDs(ids ...uuid.UUID) *HostUpdateOne {
 	huo.mutation.RemoveDependOnHostDependencyIDs(ids...)
 	return huo
 }
 
-// RemoveDependOnHostDependency removes "DependOnHostDependency" edges to HostDependency entities.
-func (huo *HostUpdateOne) RemoveDependOnHostDependency(h ...*HostDependency) *HostUpdateOne {
+// RemoveDependOnHostDependencies removes "DependOnHostDependencies" edges to HostDependency entities.
+func (huo *HostUpdateOne) RemoveDependOnHostDependencies(h ...*HostDependency) *HostUpdateOne {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
@@ -1129,20 +1129,20 @@ func (huo *HostUpdateOne) RemoveDependOnHostDependency(h ...*HostDependency) *Ho
 	return huo.RemoveDependOnHostDependencyIDs(ids...)
 }
 
-// ClearRequiredByHostDependency clears all "RequiredByHostDependency" edges to the HostDependency entity.
-func (huo *HostUpdateOne) ClearRequiredByHostDependency() *HostUpdateOne {
-	huo.mutation.ClearRequiredByHostDependency()
+// ClearRequiredByHostDependencies clears all "RequiredByHostDependencies" edges to the HostDependency entity.
+func (huo *HostUpdateOne) ClearRequiredByHostDependencies() *HostUpdateOne {
+	huo.mutation.ClearRequiredByHostDependencies()
 	return huo
 }
 
-// RemoveRequiredByHostDependencyIDs removes the "RequiredByHostDependency" edge to HostDependency entities by IDs.
+// RemoveRequiredByHostDependencyIDs removes the "RequiredByHostDependencies" edge to HostDependency entities by IDs.
 func (huo *HostUpdateOne) RemoveRequiredByHostDependencyIDs(ids ...uuid.UUID) *HostUpdateOne {
 	huo.mutation.RemoveRequiredByHostDependencyIDs(ids...)
 	return huo
 }
 
-// RemoveRequiredByHostDependency removes "RequiredByHostDependency" edges to HostDependency entities.
-func (huo *HostUpdateOne) RemoveRequiredByHostDependency(h ...*HostDependency) *HostUpdateOne {
+// RemoveRequiredByHostDependencies removes "RequiredByHostDependencies" edges to HostDependency entities.
+func (huo *HostUpdateOne) RemoveRequiredByHostDependencies(h ...*HostDependency) *HostUpdateOne {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
@@ -1554,12 +1554,12 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if huo.mutation.DependOnHostDependencyCleared() {
+	if huo.mutation.DependOnHostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.DependOnHostDependencyTable,
-			Columns: []string{host.DependOnHostDependencyColumn},
+			Table:   host.DependOnHostDependenciesTable,
+			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1570,12 +1570,12 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := huo.mutation.RemovedDependOnHostDependencyIDs(); len(nodes) > 0 && !huo.mutation.DependOnHostDependencyCleared() {
+	if nodes := huo.mutation.RemovedDependOnHostDependenciesIDs(); len(nodes) > 0 && !huo.mutation.DependOnHostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.DependOnHostDependencyTable,
-			Columns: []string{host.DependOnHostDependencyColumn},
+			Table:   host.DependOnHostDependenciesTable,
+			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1589,12 +1589,12 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := huo.mutation.DependOnHostDependencyIDs(); len(nodes) > 0 {
+	if nodes := huo.mutation.DependOnHostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.DependOnHostDependencyTable,
-			Columns: []string{host.DependOnHostDependencyColumn},
+			Table:   host.DependOnHostDependenciesTable,
+			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1608,12 +1608,12 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if huo.mutation.RequiredByHostDependencyCleared() {
+	if huo.mutation.RequiredByHostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.RequiredByHostDependencyTable,
-			Columns: []string{host.RequiredByHostDependencyColumn},
+			Table:   host.RequiredByHostDependenciesTable,
+			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1624,12 +1624,12 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := huo.mutation.RemovedRequiredByHostDependencyIDs(); len(nodes) > 0 && !huo.mutation.RequiredByHostDependencyCleared() {
+	if nodes := huo.mutation.RemovedRequiredByHostDependenciesIDs(); len(nodes) > 0 && !huo.mutation.RequiredByHostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.RequiredByHostDependencyTable,
-			Columns: []string{host.RequiredByHostDependencyColumn},
+			Table:   host.RequiredByHostDependenciesTable,
+			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1643,12 +1643,12 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := huo.mutation.RequiredByHostDependencyIDs(); len(nodes) > 0 {
+	if nodes := huo.mutation.RequiredByHostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.RequiredByHostDependencyTable,
-			Columns: []string{host.RequiredByHostDependencyColumn},
+			Table:   host.RequiredByHostDependenciesTable,
+			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

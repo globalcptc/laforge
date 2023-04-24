@@ -475,15 +475,15 @@ func (c *AdhocPlanClient) GetX(ctx context.Context, id uuid.UUID) *AdhocPlan {
 	return obj
 }
 
-// QueryPrevAdhocPlan queries the PrevAdhocPlan edge of a AdhocPlan.
-func (c *AdhocPlanClient) QueryPrevAdhocPlan(ap *AdhocPlan) *AdhocPlanQuery {
+// QueryPrevAdhocPlans queries the PrevAdhocPlans edge of a AdhocPlan.
+func (c *AdhocPlanClient) QueryPrevAdhocPlans(ap *AdhocPlan) *AdhocPlanQuery {
 	query := &AdhocPlanQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ap.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(adhocplan.Table, adhocplan.FieldID, id),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, adhocplan.PrevAdhocPlanTable, adhocplan.PrevAdhocPlanPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, true, adhocplan.PrevAdhocPlansTable, adhocplan.PrevAdhocPlansPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(ap.driver.Dialect(), step)
 		return fromV, nil
@@ -1245,15 +1245,15 @@ func (c *BuildClient) QueryLatestBuildCommit(b *Build) *BuildCommitQuery {
 	return query
 }
 
-// QueryRepoCommits queries the RepoCommits edge of a Build.
-func (c *BuildClient) QueryRepoCommits(b *Build) *RepoCommitQuery {
+// QueryRepoCommit queries the RepoCommit edge of a Build.
+func (c *BuildClient) QueryRepoCommit(b *Build) *RepoCommitQuery {
 	query := &RepoCommitQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := b.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, id),
 			sqlgraph.To(repocommit.Table, repocommit.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, build.RepoCommitsTable, build.RepoCommitsColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, build.RepoCommitTable, build.RepoCommitColumn),
 		)
 		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
 		return fromV, nil
@@ -3279,15 +3279,15 @@ func (c *HostClient) QueryIncludedNetworks(h *Host) *IncludedNetworkQuery {
 	return query
 }
 
-// QueryDependOnHostDependency queries the DependOnHostDependency edge of a Host.
-func (c *HostClient) QueryDependOnHostDependency(h *Host) *HostDependencyQuery {
+// QueryDependOnHostDependencies queries the DependOnHostDependencies edge of a Host.
+func (c *HostClient) QueryDependOnHostDependencies(h *Host) *HostDependencyQuery {
 	query := &HostDependencyQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := h.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(host.Table, host.FieldID, id),
 			sqlgraph.To(hostdependency.Table, hostdependency.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, host.DependOnHostDependencyTable, host.DependOnHostDependencyColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, host.DependOnHostDependenciesTable, host.DependOnHostDependenciesColumn),
 		)
 		fromV = sqlgraph.Neighbors(h.driver.Dialect(), step)
 		return fromV, nil
@@ -3295,15 +3295,15 @@ func (c *HostClient) QueryDependOnHostDependency(h *Host) *HostDependencyQuery {
 	return query
 }
 
-// QueryRequiredByHostDependency queries the RequiredByHostDependency edge of a Host.
-func (c *HostClient) QueryRequiredByHostDependency(h *Host) *HostDependencyQuery {
+// QueryRequiredByHostDependencies queries the RequiredByHostDependencies edge of a Host.
+func (c *HostClient) QueryRequiredByHostDependencies(h *Host) *HostDependencyQuery {
 	query := &HostDependencyQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := h.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(host.Table, host.FieldID, id),
 			sqlgraph.To(hostdependency.Table, hostdependency.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, host.RequiredByHostDependencyTable, host.RequiredByHostDependencyColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, host.RequiredByHostDependenciesTable, host.RequiredByHostDependenciesColumn),
 		)
 		fromV = sqlgraph.Neighbors(h.driver.Dialect(), step)
 		return fromV, nil
@@ -6615,15 +6615,15 @@ func (c *UserClient) QueryTag(u *User) *TagQuery {
 	return query
 }
 
-// QueryEnvironment queries the Environment edge of a User.
-func (c *UserClient) QueryEnvironment(u *User) *EnvironmentQuery {
+// QueryEnvironments queries the Environments edge of a User.
+func (c *UserClient) QueryEnvironments(u *User) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := u.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, user.EnvironmentTable, user.EnvironmentPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, true, user.EnvironmentsTable, user.EnvironmentsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil

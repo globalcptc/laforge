@@ -128,7 +128,7 @@ var (
 		{Name: "description", Type: field.TypeString},
 		{Name: "source", Type: field.TypeString},
 		{Name: "playbook_name", Type: field.TypeString},
-		{Name: "method", Type: field.TypeEnum, Enums: []string{"local"}},
+		{Name: "method", Type: field.TypeEnum, Enums: []string{"LOCAL"}},
 		{Name: "inventory", Type: field.TypeString},
 		{Name: "abs_path", Type: field.TypeString},
 		{Name: "tags", Type: field.TypeJSON},
@@ -179,7 +179,7 @@ var (
 		{Name: "build_environment", Type: field.TypeUUID},
 		{Name: "build_competition", Type: field.TypeUUID},
 		{Name: "build_latest_build_commit", Type: field.TypeUUID, Nullable: true},
-		{Name: "build_repo_commits", Type: field.TypeUUID, Nullable: true},
+		{Name: "build_repo_commit", Type: field.TypeUUID, Nullable: true},
 	}
 	// BuildsTable holds the schema information for the "builds" table.
 	BuildsTable = &schema.Table{
@@ -206,7 +206,7 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "builds_repo_commits_RepoCommits",
+				Symbol:     "builds_repo_commits_RepoCommit",
 				Columns:    []*schema.Column{BuildsColumns[8]},
 				RefColumns: []*schema.Column{RepoCommitsColumns[0]},
 				OnDelete:   schema.SetNull,

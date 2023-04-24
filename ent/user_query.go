@@ -21,15 +21,15 @@ import (
 // UserQuery is the builder for querying User entities.
 type UserQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
-	order           []OrderFunc
-	fields          []string
-	predicates      []predicate.User
-	withTag         *TagQuery
-	withEnvironment *EnvironmentQuery
-	withFKs         bool
+	limit            *int
+	offset           *int
+	unique           *bool
+	order            []OrderFunc
+	fields           []string
+	predicates       []predicate.User
+	withTag          *TagQuery
+	withEnvironments *EnvironmentQuery
+	withFKs          bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -88,8 +88,8 @@ func (uq *UserQuery) QueryTag() *TagQuery {
 	return query
 }
 
-// QueryEnvironment chains the current query on the "Environment" edge.
-func (uq *UserQuery) QueryEnvironment() *EnvironmentQuery {
+// QueryEnvironments chains the current query on the "Environments" edge.
+func (uq *UserQuery) QueryEnvironments() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: uq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := uq.prepareQuery(ctx); err != nil {
@@ -102,7 +102,7 @@ func (uq *UserQuery) QueryEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, user.EnvironmentTable, user.EnvironmentPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, true, user.EnvironmentsTable, user.EnvironmentsPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
 		return fromU, nil
@@ -286,13 +286,13 @@ func (uq *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:          uq.config,
-		limit:           uq.limit,
-		offset:          uq.offset,
-		order:           append([]OrderFunc{}, uq.order...),
-		predicates:      append([]predicate.User{}, uq.predicates...),
-		withTag:         uq.withTag.Clone(),
-		withEnvironment: uq.withEnvironment.Clone(),
+		config:           uq.config,
+		limit:            uq.limit,
+		offset:           uq.offset,
+		order:            append([]OrderFunc{}, uq.order...),
+		predicates:       append([]predicate.User{}, uq.predicates...),
+		withTag:          uq.withTag.Clone(),
+		withEnvironments: uq.withEnvironments.Clone(),
 		// clone intermediate query.
 		sql:    uq.sql.Clone(),
 		path:   uq.path,
@@ -311,14 +311,14 @@ func (uq *UserQuery) WithTag(opts ...func(*TagQuery)) *UserQuery {
 	return uq
 }
 
-// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
-func (uq *UserQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *UserQuery {
+// WithEnvironments tells the query-builder to eager-load the nodes that are connected to
+// the "Environments" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithEnvironments(opts ...func(*EnvironmentQuery)) *UserQuery {
 	query := &EnvironmentQuery{config: uq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	uq.withEnvironment = query
+	uq.withEnvironments = query
 	return uq
 }
 
@@ -393,7 +393,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		_spec       = uq.querySpec()
 		loadedTypes = [2]bool{
 			uq.withTag != nil,
-			uq.withEnvironment != nil,
+			uq.withEnvironments != nil,
 		}
 	)
 	if withFKs {
@@ -424,10 +424,10 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			return nil, err
 		}
 	}
-	if query := uq.withEnvironment; query != nil {
-		if err := uq.loadEnvironment(ctx, query, nodes,
-			func(n *User) { n.Edges.Environment = []*Environment{} },
-			func(n *User, e *Environment) { n.Edges.Environment = append(n.Edges.Environment, e) }); err != nil {
+	if query := uq.withEnvironments; query != nil {
+		if err := uq.loadEnvironments(ctx, query, nodes,
+			func(n *User) { n.Edges.Environments = []*Environment{} },
+			func(n *User, e *Environment) { n.Edges.Environments = append(n.Edges.Environments, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -465,7 +465,7 @@ func (uq *UserQuery) loadTag(ctx context.Context, query *TagQuery, nodes []*User
 	}
 	return nil
 }
-func (uq *UserQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*User, init func(*User), assign func(*User, *Environment)) error {
+func (uq *UserQuery) loadEnvironments(ctx context.Context, query *EnvironmentQuery, nodes []*User, init func(*User), assign func(*User, *Environment)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*User)
 	nids := make(map[uuid.UUID]map[*User]struct{})
@@ -477,11 +477,11 @@ func (uq *UserQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuer
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(user.EnvironmentTable)
-		s.Join(joinT).On(s.C(environment.FieldID), joinT.C(user.EnvironmentPrimaryKey[0]))
-		s.Where(sql.InValues(joinT.C(user.EnvironmentPrimaryKey[1]), edgeIDs...))
+		joinT := sql.Table(user.EnvironmentsTable)
+		s.Join(joinT).On(s.C(environment.FieldID), joinT.C(user.EnvironmentsPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(user.EnvironmentsPrimaryKey[1]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(user.EnvironmentPrimaryKey[1]))
+		s.Select(joinT.C(user.EnvironmentsPrimaryKey[1]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -515,7 +515,7 @@ func (uq *UserQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuer
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "Environment" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "Environments" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)

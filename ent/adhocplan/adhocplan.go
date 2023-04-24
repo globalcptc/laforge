@@ -11,8 +11,8 @@ const (
 	Label = "adhoc_plan"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// EdgePrevAdhocPlan holds the string denoting the prevadhocplan edge name in mutations.
-	EdgePrevAdhocPlan = "PrevAdhocPlan"
+	// EdgePrevAdhocPlans holds the string denoting the prevadhocplans edge name in mutations.
+	EdgePrevAdhocPlans = "PrevAdhocPlans"
 	// EdgeNextAdhocPlans holds the string denoting the nextadhocplans edge name in mutations.
 	EdgeNextAdhocPlans = "NextAdhocPlans"
 	// EdgeBuild holds the string denoting the build edge name in mutations.
@@ -23,8 +23,8 @@ const (
 	EdgeAgentTask = "AgentTask"
 	// Table holds the table name of the adhocplan in the database.
 	Table = "adhoc_plans"
-	// PrevAdhocPlanTable is the table that holds the PrevAdhocPlan relation/edge. The primary key declared below.
-	PrevAdhocPlanTable = "adhoc_plan_NextAdhocPlans"
+	// PrevAdhocPlansTable is the table that holds the PrevAdhocPlans relation/edge. The primary key declared below.
+	PrevAdhocPlansTable = "adhoc_plan_NextAdhocPlans"
 	// NextAdhocPlansTable is the table that holds the NextAdhocPlans relation/edge. The primary key declared below.
 	NextAdhocPlansTable = "adhoc_plan_NextAdhocPlans"
 	// BuildTable is the table that holds the Build relation/edge.
@@ -63,9 +63,9 @@ var ForeignKeys = []string{
 }
 
 var (
-	// PrevAdhocPlanPrimaryKey and PrevAdhocPlanColumn2 are the table columns denoting the
-	// primary key for the PrevAdhocPlan relation (M2M).
-	PrevAdhocPlanPrimaryKey = []string{"adhoc_plan_id", "PrevAdhocPlan_id"}
+	// PrevAdhocPlansPrimaryKey and PrevAdhocPlansColumn2 are the table columns denoting the
+	// primary key for the PrevAdhocPlans relation (M2M).
+	PrevAdhocPlansPrimaryKey = []string{"adhoc_plan_id", "PrevAdhocPlan_id"}
 	// NextAdhocPlansPrimaryKey and NextAdhocPlansColumn2 are the table columns denoting the
 	// primary key for the NextAdhocPlans relation (M2M).
 	NextAdhocPlansPrimaryKey = []string{"adhoc_plan_id", "PrevAdhocPlan_id"}

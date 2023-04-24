@@ -31,14 +31,14 @@ func (apu *AdhocPlanUpdate) Where(ps ...predicate.AdhocPlan) *AdhocPlanUpdate {
 	return apu
 }
 
-// AddPrevAdhocPlanIDs adds the "PrevAdhocPlan" edge to the AdhocPlan entity by IDs.
+// AddPrevAdhocPlanIDs adds the "PrevAdhocPlans" edge to the AdhocPlan entity by IDs.
 func (apu *AdhocPlanUpdate) AddPrevAdhocPlanIDs(ids ...uuid.UUID) *AdhocPlanUpdate {
 	apu.mutation.AddPrevAdhocPlanIDs(ids...)
 	return apu
 }
 
-// AddPrevAdhocPlan adds the "PrevAdhocPlan" edges to the AdhocPlan entity.
-func (apu *AdhocPlanUpdate) AddPrevAdhocPlan(a ...*AdhocPlan) *AdhocPlanUpdate {
+// AddPrevAdhocPlans adds the "PrevAdhocPlans" edges to the AdhocPlan entity.
+func (apu *AdhocPlanUpdate) AddPrevAdhocPlans(a ...*AdhocPlan) *AdhocPlanUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -99,20 +99,20 @@ func (apu *AdhocPlanUpdate) Mutation() *AdhocPlanMutation {
 	return apu.mutation
 }
 
-// ClearPrevAdhocPlan clears all "PrevAdhocPlan" edges to the AdhocPlan entity.
-func (apu *AdhocPlanUpdate) ClearPrevAdhocPlan() *AdhocPlanUpdate {
-	apu.mutation.ClearPrevAdhocPlan()
+// ClearPrevAdhocPlans clears all "PrevAdhocPlans" edges to the AdhocPlan entity.
+func (apu *AdhocPlanUpdate) ClearPrevAdhocPlans() *AdhocPlanUpdate {
+	apu.mutation.ClearPrevAdhocPlans()
 	return apu
 }
 
-// RemovePrevAdhocPlanIDs removes the "PrevAdhocPlan" edge to AdhocPlan entities by IDs.
+// RemovePrevAdhocPlanIDs removes the "PrevAdhocPlans" edge to AdhocPlan entities by IDs.
 func (apu *AdhocPlanUpdate) RemovePrevAdhocPlanIDs(ids ...uuid.UUID) *AdhocPlanUpdate {
 	apu.mutation.RemovePrevAdhocPlanIDs(ids...)
 	return apu
 }
 
-// RemovePrevAdhocPlan removes "PrevAdhocPlan" edges to AdhocPlan entities.
-func (apu *AdhocPlanUpdate) RemovePrevAdhocPlan(a ...*AdhocPlan) *AdhocPlanUpdate {
+// RemovePrevAdhocPlans removes "PrevAdhocPlans" edges to AdhocPlan entities.
+func (apu *AdhocPlanUpdate) RemovePrevAdhocPlans(a ...*AdhocPlan) *AdhocPlanUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -251,12 +251,12 @@ func (apu *AdhocPlanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if apu.mutation.PrevAdhocPlanCleared() {
+	if apu.mutation.PrevAdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   adhocplan.PrevAdhocPlanTable,
-			Columns: adhocplan.PrevAdhocPlanPrimaryKey,
+			Table:   adhocplan.PrevAdhocPlansTable,
+			Columns: adhocplan.PrevAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -267,12 +267,12 @@ func (apu *AdhocPlanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := apu.mutation.RemovedPrevAdhocPlanIDs(); len(nodes) > 0 && !apu.mutation.PrevAdhocPlanCleared() {
+	if nodes := apu.mutation.RemovedPrevAdhocPlansIDs(); len(nodes) > 0 && !apu.mutation.PrevAdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   adhocplan.PrevAdhocPlanTable,
-			Columns: adhocplan.PrevAdhocPlanPrimaryKey,
+			Table:   adhocplan.PrevAdhocPlansTable,
+			Columns: adhocplan.PrevAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -286,12 +286,12 @@ func (apu *AdhocPlanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := apu.mutation.PrevAdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := apu.mutation.PrevAdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   adhocplan.PrevAdhocPlanTable,
-			Columns: adhocplan.PrevAdhocPlanPrimaryKey,
+			Table:   adhocplan.PrevAdhocPlansTable,
+			Columns: adhocplan.PrevAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -483,14 +483,14 @@ type AdhocPlanUpdateOne struct {
 	mutation *AdhocPlanMutation
 }
 
-// AddPrevAdhocPlanIDs adds the "PrevAdhocPlan" edge to the AdhocPlan entity by IDs.
+// AddPrevAdhocPlanIDs adds the "PrevAdhocPlans" edge to the AdhocPlan entity by IDs.
 func (apuo *AdhocPlanUpdateOne) AddPrevAdhocPlanIDs(ids ...uuid.UUID) *AdhocPlanUpdateOne {
 	apuo.mutation.AddPrevAdhocPlanIDs(ids...)
 	return apuo
 }
 
-// AddPrevAdhocPlan adds the "PrevAdhocPlan" edges to the AdhocPlan entity.
-func (apuo *AdhocPlanUpdateOne) AddPrevAdhocPlan(a ...*AdhocPlan) *AdhocPlanUpdateOne {
+// AddPrevAdhocPlans adds the "PrevAdhocPlans" edges to the AdhocPlan entity.
+func (apuo *AdhocPlanUpdateOne) AddPrevAdhocPlans(a ...*AdhocPlan) *AdhocPlanUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -551,20 +551,20 @@ func (apuo *AdhocPlanUpdateOne) Mutation() *AdhocPlanMutation {
 	return apuo.mutation
 }
 
-// ClearPrevAdhocPlan clears all "PrevAdhocPlan" edges to the AdhocPlan entity.
-func (apuo *AdhocPlanUpdateOne) ClearPrevAdhocPlan() *AdhocPlanUpdateOne {
-	apuo.mutation.ClearPrevAdhocPlan()
+// ClearPrevAdhocPlans clears all "PrevAdhocPlans" edges to the AdhocPlan entity.
+func (apuo *AdhocPlanUpdateOne) ClearPrevAdhocPlans() *AdhocPlanUpdateOne {
+	apuo.mutation.ClearPrevAdhocPlans()
 	return apuo
 }
 
-// RemovePrevAdhocPlanIDs removes the "PrevAdhocPlan" edge to AdhocPlan entities by IDs.
+// RemovePrevAdhocPlanIDs removes the "PrevAdhocPlans" edge to AdhocPlan entities by IDs.
 func (apuo *AdhocPlanUpdateOne) RemovePrevAdhocPlanIDs(ids ...uuid.UUID) *AdhocPlanUpdateOne {
 	apuo.mutation.RemovePrevAdhocPlanIDs(ids...)
 	return apuo
 }
 
-// RemovePrevAdhocPlan removes "PrevAdhocPlan" edges to AdhocPlan entities.
-func (apuo *AdhocPlanUpdateOne) RemovePrevAdhocPlan(a ...*AdhocPlan) *AdhocPlanUpdateOne {
+// RemovePrevAdhocPlans removes "PrevAdhocPlans" edges to AdhocPlan entities.
+func (apuo *AdhocPlanUpdateOne) RemovePrevAdhocPlans(a ...*AdhocPlan) *AdhocPlanUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -733,12 +733,12 @@ func (apuo *AdhocPlanUpdateOne) sqlSave(ctx context.Context) (_node *AdhocPlan, 
 			}
 		}
 	}
-	if apuo.mutation.PrevAdhocPlanCleared() {
+	if apuo.mutation.PrevAdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   adhocplan.PrevAdhocPlanTable,
-			Columns: adhocplan.PrevAdhocPlanPrimaryKey,
+			Table:   adhocplan.PrevAdhocPlansTable,
+			Columns: adhocplan.PrevAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -749,12 +749,12 @@ func (apuo *AdhocPlanUpdateOne) sqlSave(ctx context.Context) (_node *AdhocPlan, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := apuo.mutation.RemovedPrevAdhocPlanIDs(); len(nodes) > 0 && !apuo.mutation.PrevAdhocPlanCleared() {
+	if nodes := apuo.mutation.RemovedPrevAdhocPlansIDs(); len(nodes) > 0 && !apuo.mutation.PrevAdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   adhocplan.PrevAdhocPlanTable,
-			Columns: adhocplan.PrevAdhocPlanPrimaryKey,
+			Table:   adhocplan.PrevAdhocPlansTable,
+			Columns: adhocplan.PrevAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -768,12 +768,12 @@ func (apuo *AdhocPlanUpdateOne) sqlSave(ctx context.Context) (_node *AdhocPlan, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := apuo.mutation.PrevAdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := apuo.mutation.PrevAdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   adhocplan.PrevAdhocPlanTable,
-			Columns: adhocplan.PrevAdhocPlanPrimaryKey,
+			Table:   adhocplan.PrevAdhocPlansTable,
+			Columns: adhocplan.PrevAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

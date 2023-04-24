@@ -88,9 +88,9 @@ func (ap *AdhocPlan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "AdhocPlan",
-		Name: "PrevAdhocPlan",
+		Name: "PrevAdhocPlans",
 	}
-	err = ap.QueryPrevAdhocPlan().
+	err = ap.QueryPrevAdhocPlans().
 		Select(adhocplan.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -695,9 +695,9 @@ func (b *Build) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[4] = &Edge{
 		Type: "RepoCommit",
-		Name: "RepoCommits",
+		Name: "RepoCommit",
 	}
-	err = b.QueryRepoCommits().
+	err = b.QueryRepoCommit().
 		Select(repocommit.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
@@ -2090,9 +2090,9 @@ func (h *Host) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[4] = &Edge{
 		Type: "HostDependency",
-		Name: "DependOnHostDependency",
+		Name: "DependOnHostDependencies",
 	}
-	err = h.QueryDependOnHostDependency().
+	err = h.QueryDependOnHostDependencies().
 		Select(hostdependency.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
@@ -2100,9 +2100,9 @@ func (h *Host) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[5] = &Edge{
 		Type: "HostDependency",
-		Name: "RequiredByHostDependency",
+		Name: "RequiredByHostDependencies",
 	}
-	err = h.QueryRequiredByHostDependency().
+	err = h.QueryRequiredByHostDependencies().
 		Select(hostdependency.FieldID).
 		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
@@ -3982,9 +3982,9 @@ func (u *User) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Environment",
-		Name: "Environment",
+		Name: "Environments",
 	}
-	err = u.QueryEnvironment().
+	err = u.QueryEnvironments().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {

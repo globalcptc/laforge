@@ -32,7 +32,7 @@ func (User) Fields() []ent.Field {
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("Tag", Tag.Type),
-		edge.From("Environment", Environment.Type).
+		edge.From("Environments", Environment.Type).
 			Ref("Users"),
 	}
 }

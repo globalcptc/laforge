@@ -75,14 +75,14 @@ func (uc *UserCreate) AddTag(t ...*Tag) *UserCreate {
 	return uc.AddTagIDs(ids...)
 }
 
-// AddEnvironmentIDs adds the "Environment" edge to the Environment entity by IDs.
+// AddEnvironmentIDs adds the "Environments" edge to the Environment entity by IDs.
 func (uc *UserCreate) AddEnvironmentIDs(ids ...uuid.UUID) *UserCreate {
 	uc.mutation.AddEnvironmentIDs(ids...)
 	return uc
 }
 
-// AddEnvironment adds the "Environment" edges to the Environment entity.
-func (uc *UserCreate) AddEnvironment(e ...*Environment) *UserCreate {
+// AddEnvironments adds the "Environments" edges to the Environment entity.
+func (uc *UserCreate) AddEnvironments(e ...*Environment) *UserCreate {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
@@ -274,12 +274,12 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := uc.mutation.EnvironmentIDs(); len(nodes) > 0 {
+	if nodes := uc.mutation.EnvironmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.EnvironmentTable,
-			Columns: user.EnvironmentPrimaryKey,
+			Table:   user.EnvironmentsTable,
+			Columns: user.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

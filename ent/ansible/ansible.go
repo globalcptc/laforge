@@ -100,7 +100,7 @@ type Method string
 
 // Method values.
 const (
-	MethodLocal Method = "local"
+	MethodLOCAL Method = "LOCAL"
 )
 
 func (m Method) String() string {
@@ -110,7 +110,7 @@ func (m Method) String() string {
 // MethodValidator is a validator for the "method" field enum values. It is called by the builders before save.
 func MethodValidator(m Method) error {
 	switch m {
-	case MethodLocal:
+	case MethodLOCAL:
 		return nil
 	default:
 		return fmt.Errorf("ansible: invalid enum value for method field: %q", m)

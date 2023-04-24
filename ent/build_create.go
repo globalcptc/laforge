@@ -137,23 +137,23 @@ func (bc *BuildCreate) SetLatestBuildCommit(b *BuildCommit) *BuildCreate {
 	return bc.SetLatestBuildCommitID(b.ID)
 }
 
-// SetRepoCommitsID sets the "RepoCommits" edge to the RepoCommit entity by ID.
-func (bc *BuildCreate) SetRepoCommitsID(id uuid.UUID) *BuildCreate {
-	bc.mutation.SetRepoCommitsID(id)
+// SetRepoCommitID sets the "RepoCommit" edge to the RepoCommit entity by ID.
+func (bc *BuildCreate) SetRepoCommitID(id uuid.UUID) *BuildCreate {
+	bc.mutation.SetRepoCommitID(id)
 	return bc
 }
 
-// SetNillableRepoCommitsID sets the "RepoCommits" edge to the RepoCommit entity by ID if the given value is not nil.
-func (bc *BuildCreate) SetNillableRepoCommitsID(id *uuid.UUID) *BuildCreate {
+// SetNillableRepoCommitID sets the "RepoCommit" edge to the RepoCommit entity by ID if the given value is not nil.
+func (bc *BuildCreate) SetNillableRepoCommitID(id *uuid.UUID) *BuildCreate {
 	if id != nil {
-		bc = bc.SetRepoCommitsID(*id)
+		bc = bc.SetRepoCommitID(*id)
 	}
 	return bc
 }
 
-// SetRepoCommits sets the "RepoCommits" edge to the RepoCommit entity.
-func (bc *BuildCreate) SetRepoCommits(r *RepoCommit) *BuildCreate {
-	return bc.SetRepoCommitsID(r.ID)
+// SetRepoCommit sets the "RepoCommit" edge to the RepoCommit entity.
+func (bc *BuildCreate) SetRepoCommit(r *RepoCommit) *BuildCreate {
+	return bc.SetRepoCommitID(r.ID)
 }
 
 // AddProvisionedNetworkIDs adds the "ProvisionedNetworks" edge to the ProvisionedNetwork entity by IDs.
@@ -515,12 +515,12 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		_node.build_latest_build_commit = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.RepoCommitsIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.RepoCommitIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   build.RepoCommitsTable,
-			Columns: []string{build.RepoCommitsColumn},
+			Table:   build.RepoCommitTable,
+			Columns: []string{build.RepoCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -532,7 +532,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.build_repo_commits = &nodes[0]
+		_node.build_repo_commit = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := bc.mutation.ProvisionedNetworksIDs(); len(nodes) > 0 {

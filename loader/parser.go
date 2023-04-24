@@ -796,7 +796,7 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 		}
 
 		returnedHosts = append(returnedHosts, entHost)
-		returnedHostDependencies, err := createHostDependencies(txClient, ctx, log, cHost.HCLDependOnHostDependency, envHclID, entHost)
+		returnedHostDependencies, err := createHostDependencies(txClient, ctx, log, cHost.HCLDependOnHostDependencies, envHclID, entHost)
 		if err != nil {
 			return nil, nil, err
 		}

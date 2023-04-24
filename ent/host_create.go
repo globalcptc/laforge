@@ -197,14 +197,14 @@ func (hc *HostCreate) AddIncludedNetworks(i ...*IncludedNetwork) *HostCreate {
 	return hc.AddIncludedNetworkIDs(ids...)
 }
 
-// AddDependOnHostDependencyIDs adds the "DependOnHostDependency" edge to the HostDependency entity by IDs.
+// AddDependOnHostDependencyIDs adds the "DependOnHostDependencies" edge to the HostDependency entity by IDs.
 func (hc *HostCreate) AddDependOnHostDependencyIDs(ids ...uuid.UUID) *HostCreate {
 	hc.mutation.AddDependOnHostDependencyIDs(ids...)
 	return hc
 }
 
-// AddDependOnHostDependency adds the "DependOnHostDependency" edges to the HostDependency entity.
-func (hc *HostCreate) AddDependOnHostDependency(h ...*HostDependency) *HostCreate {
+// AddDependOnHostDependencies adds the "DependOnHostDependencies" edges to the HostDependency entity.
+func (hc *HostCreate) AddDependOnHostDependencies(h ...*HostDependency) *HostCreate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
@@ -212,14 +212,14 @@ func (hc *HostCreate) AddDependOnHostDependency(h ...*HostDependency) *HostCreat
 	return hc.AddDependOnHostDependencyIDs(ids...)
 }
 
-// AddRequiredByHostDependencyIDs adds the "RequiredByHostDependency" edge to the HostDependency entity by IDs.
+// AddRequiredByHostDependencyIDs adds the "RequiredByHostDependencies" edge to the HostDependency entity by IDs.
 func (hc *HostCreate) AddRequiredByHostDependencyIDs(ids ...uuid.UUID) *HostCreate {
 	hc.mutation.AddRequiredByHostDependencyIDs(ids...)
 	return hc
 }
 
-// AddRequiredByHostDependency adds the "RequiredByHostDependency" edges to the HostDependency entity.
-func (hc *HostCreate) AddRequiredByHostDependency(h ...*HostDependency) *HostCreate {
+// AddRequiredByHostDependencies adds the "RequiredByHostDependencies" edges to the HostDependency entity.
+func (hc *HostCreate) AddRequiredByHostDependencies(h ...*HostDependency) *HostCreate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
@@ -584,12 +584,12 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := hc.mutation.DependOnHostDependencyIDs(); len(nodes) > 0 {
+	if nodes := hc.mutation.DependOnHostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.DependOnHostDependencyTable,
-			Columns: []string{host.DependOnHostDependencyColumn},
+			Table:   host.DependOnHostDependenciesTable,
+			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -603,12 +603,12 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := hc.mutation.RequiredByHostDependencyIDs(); len(nodes) > 0 {
+	if nodes := hc.mutation.RequiredByHostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.RequiredByHostDependencyTable,
-			Columns: []string{host.RequiredByHostDependencyColumn},
+			Table:   host.RequiredByHostDependenciesTable,
+			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

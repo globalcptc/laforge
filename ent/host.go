@@ -62,10 +62,10 @@ type Host struct {
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	// IncludedNetworks holds the value of the IncludedNetworks edge.
 	HCLIncludedNetworks []*IncludedNetwork `json:"IncludedNetworks,omitempty"`
-	// DependOnHostDependency holds the value of the DependOnHostDependency edge.
-	HCLDependOnHostDependency []*HostDependency `json:"DependOnHostDependency,omitempty" hcl:"depends_on,block"`
-	// RequiredByHostDependency holds the value of the RequiredByHostDependency edge.
-	HCLRequiredByHostDependency []*HostDependency `json:"RequiredByHostDependency,omitempty"`
+	// DependOnHostDependencies holds the value of the DependOnHostDependencies edge.
+	HCLDependOnHostDependencies []*HostDependency `json:"DependOnHostDependencies,omitempty" hcl:"depends_on,block"`
+	// RequiredByHostDependencies holds the value of the RequiredByHostDependencies edge.
+	HCLRequiredByHostDependencies []*HostDependency `json:"RequiredByHostDependencies,omitempty"`
 	//
 	environment_hosts *uuid.UUID
 }
@@ -80,10 +80,10 @@ type HostEdges struct {
 	Environment *Environment `json:"Environment,omitempty"`
 	// IncludedNetworks holds the value of the IncludedNetworks edge.
 	IncludedNetworks []*IncludedNetwork `json:"IncludedNetworks,omitempty"`
-	// DependOnHostDependency holds the value of the DependOnHostDependency edge.
-	DependOnHostDependency []*HostDependency `json:"DependOnHostDependency,omitempty" hcl:"depends_on,block"`
-	// RequiredByHostDependency holds the value of the RequiredByHostDependency edge.
-	RequiredByHostDependency []*HostDependency `json:"RequiredByHostDependency,omitempty"`
+	// DependOnHostDependencies holds the value of the DependOnHostDependencies edge.
+	DependOnHostDependencies []*HostDependency `json:"DependOnHostDependencies,omitempty" hcl:"depends_on,block"`
+	// RequiredByHostDependencies holds the value of the RequiredByHostDependencies edge.
+	RequiredByHostDependencies []*HostDependency `json:"RequiredByHostDependencies,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [6]bool
@@ -135,22 +135,22 @@ func (e HostEdges) IncludedNetworksOrErr() ([]*IncludedNetwork, error) {
 	return nil, &NotLoadedError{edge: "IncludedNetworks"}
 }
 
-// DependOnHostDependencyOrErr returns the DependOnHostDependency value or an error if the edge
+// DependOnHostDependenciesOrErr returns the DependOnHostDependencies value or an error if the edge
 // was not loaded in eager-loading.
-func (e HostEdges) DependOnHostDependencyOrErr() ([]*HostDependency, error) {
+func (e HostEdges) DependOnHostDependenciesOrErr() ([]*HostDependency, error) {
 	if e.loadedTypes[4] {
-		return e.DependOnHostDependency, nil
+		return e.DependOnHostDependencies, nil
 	}
-	return nil, &NotLoadedError{edge: "DependOnHostDependency"}
+	return nil, &NotLoadedError{edge: "DependOnHostDependencies"}
 }
 
-// RequiredByHostDependencyOrErr returns the RequiredByHostDependency value or an error if the edge
+// RequiredByHostDependenciesOrErr returns the RequiredByHostDependencies value or an error if the edge
 // was not loaded in eager-loading.
-func (e HostEdges) RequiredByHostDependencyOrErr() ([]*HostDependency, error) {
+func (e HostEdges) RequiredByHostDependenciesOrErr() ([]*HostDependency, error) {
 	if e.loadedTypes[5] {
-		return e.RequiredByHostDependency, nil
+		return e.RequiredByHostDependencies, nil
 	}
-	return nil, &NotLoadedError{edge: "RequiredByHostDependency"}
+	return nil, &NotLoadedError{edge: "RequiredByHostDependencies"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -327,14 +327,14 @@ func (h *Host) QueryIncludedNetworks() *IncludedNetworkQuery {
 	return (&HostClient{config: h.config}).QueryIncludedNetworks(h)
 }
 
-// QueryDependOnHostDependency queries the "DependOnHostDependency" edge of the Host entity.
-func (h *Host) QueryDependOnHostDependency() *HostDependencyQuery {
-	return (&HostClient{config: h.config}).QueryDependOnHostDependency(h)
+// QueryDependOnHostDependencies queries the "DependOnHostDependencies" edge of the Host entity.
+func (h *Host) QueryDependOnHostDependencies() *HostDependencyQuery {
+	return (&HostClient{config: h.config}).QueryDependOnHostDependencies(h)
 }
 
-// QueryRequiredByHostDependency queries the "RequiredByHostDependency" edge of the Host entity.
-func (h *Host) QueryRequiredByHostDependency() *HostDependencyQuery {
-	return (&HostClient{config: h.config}).QueryRequiredByHostDependency(h)
+// QueryRequiredByHostDependencies queries the "RequiredByHostDependencies" edge of the Host entity.
+func (h *Host) QueryRequiredByHostDependencies() *HostDependencyQuery {
+	return (&HostClient{config: h.config}).QueryRequiredByHostDependencies(h)
 }
 
 // Update returns a builder for updating this Host.

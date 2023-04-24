@@ -148,7 +148,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 	entBuild, err := client.Build.Create().
 		SetRevision(len(entEnvironment.Edges.Builds)).
 		SetEnvironmentRevision(entEnvironment.Revision).
-		SetRepoCommits(entRepoCommit).
+		SetRepoCommit(entRepoCommit).
 		SetEnvironment(entEnvironment).
 		SetStatus(entStatus).
 		SetCompetition(entCompetition).
@@ -471,7 +471,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		return entProvisionedHost, nil
 	}
 
-	entHostDependencies, err := entHost.QueryRequiredByHostDependency().
+	entHostDependencies, err := entHost.QueryRequiredByHostDependencies().
 		WithDependOnHost().
 		WithDependOnNetwork().
 		All(ctx)

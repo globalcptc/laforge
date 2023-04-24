@@ -37,14 +37,14 @@ func (apc *AdhocPlanCreate) SetNillableID(u *uuid.UUID) *AdhocPlanCreate {
 	return apc
 }
 
-// AddPrevAdhocPlanIDs adds the "PrevAdhocPlan" edge to the AdhocPlan entity by IDs.
+// AddPrevAdhocPlanIDs adds the "PrevAdhocPlans" edge to the AdhocPlan entity by IDs.
 func (apc *AdhocPlanCreate) AddPrevAdhocPlanIDs(ids ...uuid.UUID) *AdhocPlanCreate {
 	apc.mutation.AddPrevAdhocPlanIDs(ids...)
 	return apc
 }
 
-// AddPrevAdhocPlan adds the "PrevAdhocPlan" edges to the AdhocPlan entity.
-func (apc *AdhocPlanCreate) AddPrevAdhocPlan(a ...*AdhocPlan) *AdhocPlanCreate {
+// AddPrevAdhocPlans adds the "PrevAdhocPlans" edges to the AdhocPlan entity.
+func (apc *AdhocPlanCreate) AddPrevAdhocPlans(a ...*AdhocPlan) *AdhocPlanCreate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -230,12 +230,12 @@ func (apc *AdhocPlanCreate) createSpec() (*AdhocPlan, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if nodes := apc.mutation.PrevAdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := apc.mutation.PrevAdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   adhocplan.PrevAdhocPlanTable,
-			Columns: adhocplan.PrevAdhocPlanPrimaryKey,
+			Table:   adhocplan.PrevAdhocPlansTable,
+			Columns: adhocplan.PrevAdhocPlansPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

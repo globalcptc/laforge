@@ -28,7 +28,7 @@ func (Ansible) Fields() []ent.Field {
 		field.String("playbook_name").
 			StructTag(`hcl:"playbook_name,attr"`),
 		field.Enum("method").Values(
-			"local",
+			"LOCAL",
 		).StructTag(`hcl:"method,optional"`),
 		field.String("inventory").
 			StructTag(`hcl:"inventory,optional"`),
