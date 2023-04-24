@@ -47,7 +47,7 @@ func (Build) Edges() []ent.Edge {
 			}),
 		edge.To("RepoCommits", RepoCommit.Type).Unique(),
 		edge.From("ProvisionedNetworks", ProvisionedNetwork.Type).
-			Ref("ProvisionedNetworkToBuild"),
+			Ref("Build"),
 		edge.From("Teams", Team.Type).
 			Ref("TeamToBuild"),
 		edge.From("Plans", Plan.Type).

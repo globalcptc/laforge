@@ -600,13 +600,13 @@ func (tq *TeamQuery) loadTeamToProvisionedNetwork(ctx context.Context, query *Pr
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioned_network_provisioned_network_to_team
+		fk := n.provisioned_network_team
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioned_network_provisioned_network_to_team" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioned_network_team" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_network_provisioned_network_to_team" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_network_team" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

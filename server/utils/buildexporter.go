@@ -70,7 +70,7 @@ func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Bu
 			return "", err
 		}
 		for _, entProNetwork := range entProNetworks {
-			entNetwork, err := entProNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+			entNetwork, err := entProNetwork.QueryNetwork().Only(ctx)
 			if err != nil {
 				return "", err
 			}
@@ -80,7 +80,7 @@ func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Bu
 				VDIVisible:  entNetwork.VdiVisible,
 				Hosts:       []hostConf{},
 			}
-			entProHosts, err := entProNetwork.QueryProvisionedNetworkToProvisionedHost().All(ctx)
+			entProHosts, err := entProNetwork.QueryProvisionedHosts().All(ctx)
 			if err != nil {
 				return "", err
 			}

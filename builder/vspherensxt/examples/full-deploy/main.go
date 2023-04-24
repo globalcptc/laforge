@@ -77,7 +77,7 @@ package main
 // 				fmt.Println("\tOK")
 // 			}
 
-// 			// phosts, err := pnet.QueryProvisionedNetworkToProvisionedHost().All(ctx)
+// 			// phosts, err := pnet.QueryProvisionedHost().All(ctx)
 // 			// if err != nil {
 // 			// 	log.Fatalf("error while querying provisioned hosts from provisioned network: %v", err)
 // 			// }

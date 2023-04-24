@@ -24686,29 +24686,29 @@ func (m *ProvisionedHostMutation) ResetEdge(name string) error {
 // ProvisionedNetworkMutation represents an operation that mutates the ProvisionedNetwork nodes in the graph.
 type ProvisionedNetworkMutation struct {
 	config
-	op                                          Op
-	typ                                         string
-	id                                          *uuid.UUID
-	name                                        *string
-	cidr                                        *string
-	vars                                        *map[string]string
-	clearedFields                               map[string]struct{}
-	_ProvisionedNetworkToStatus                 *uuid.UUID
-	cleared_ProvisionedNetworkToStatus          bool
-	_ProvisionedNetworkToNetwork                *uuid.UUID
-	cleared_ProvisionedNetworkToNetwork         bool
-	_ProvisionedNetworkToBuild                  *uuid.UUID
-	cleared_ProvisionedNetworkToBuild           bool
-	_ProvisionedNetworkToTeam                   *uuid.UUID
-	cleared_ProvisionedNetworkToTeam            bool
-	_ProvisionedNetworkToProvisionedHost        map[uuid.UUID]struct{}
-	removed_ProvisionedNetworkToProvisionedHost map[uuid.UUID]struct{}
-	cleared_ProvisionedNetworkToProvisionedHost bool
-	_ProvisionedNetworkToPlan                   *uuid.UUID
-	cleared_ProvisionedNetworkToPlan            bool
-	done                                        bool
-	oldValue                                    func(context.Context) (*ProvisionedNetwork, error)
-	predicates                                  []predicate.ProvisionedNetwork
+	op                       Op
+	typ                      string
+	id                       *uuid.UUID
+	name                     *string
+	cidr                     *string
+	vars                     *map[string]string
+	clearedFields            map[string]struct{}
+	_Status                  *uuid.UUID
+	cleared_Status           bool
+	_Network                 *uuid.UUID
+	cleared_Network          bool
+	_Build                   *uuid.UUID
+	cleared_Build            bool
+	_Team                    *uuid.UUID
+	cleared_Team             bool
+	_ProvisionedHosts        map[uuid.UUID]struct{}
+	removed_ProvisionedHosts map[uuid.UUID]struct{}
+	cleared_ProvisionedHosts bool
+	_Plan                    *uuid.UUID
+	cleared_Plan             bool
+	done                     bool
+	oldValue                 func(context.Context) (*ProvisionedNetwork, error)
+	predicates               []predicate.ProvisionedNetwork
 }
 
 var _ ent.Mutation = (*ProvisionedNetworkMutation)(nil)
@@ -24923,253 +24923,253 @@ func (m *ProvisionedNetworkMutation) ResetVars() {
 	m.vars = nil
 }
 
-// SetProvisionedNetworkToStatusID sets the "ProvisionedNetworkToStatus" edge to the Status entity by id.
-func (m *ProvisionedNetworkMutation) SetProvisionedNetworkToStatusID(id uuid.UUID) {
-	m._ProvisionedNetworkToStatus = &id
+// SetStatusID sets the "Status" edge to the Status entity by id.
+func (m *ProvisionedNetworkMutation) SetStatusID(id uuid.UUID) {
+	m._Status = &id
 }
 
-// ClearProvisionedNetworkToStatus clears the "ProvisionedNetworkToStatus" edge to the Status entity.
-func (m *ProvisionedNetworkMutation) ClearProvisionedNetworkToStatus() {
-	m.cleared_ProvisionedNetworkToStatus = true
+// ClearStatus clears the "Status" edge to the Status entity.
+func (m *ProvisionedNetworkMutation) ClearStatus() {
+	m.cleared_Status = true
 }
 
-// ProvisionedNetworkToStatusCleared reports if the "ProvisionedNetworkToStatus" edge to the Status entity was cleared.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToStatusCleared() bool {
-	return m.cleared_ProvisionedNetworkToStatus
+// StatusCleared reports if the "Status" edge to the Status entity was cleared.
+func (m *ProvisionedNetworkMutation) StatusCleared() bool {
+	return m.cleared_Status
 }
 
-// ProvisionedNetworkToStatusID returns the "ProvisionedNetworkToStatus" edge ID in the mutation.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToStatusID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedNetworkToStatus != nil {
-		return *m._ProvisionedNetworkToStatus, true
+// StatusID returns the "Status" edge ID in the mutation.
+func (m *ProvisionedNetworkMutation) StatusID() (id uuid.UUID, exists bool) {
+	if m._Status != nil {
+		return *m._Status, true
 	}
 	return
 }
 
-// ProvisionedNetworkToStatusIDs returns the "ProvisionedNetworkToStatus" edge IDs in the mutation.
+// StatusIDs returns the "Status" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedNetworkToStatusID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToStatusIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedNetworkToStatus; id != nil {
+// StatusID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedNetworkMutation) StatusIDs() (ids []uuid.UUID) {
+	if id := m._Status; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedNetworkToStatus resets all changes to the "ProvisionedNetworkToStatus" edge.
-func (m *ProvisionedNetworkMutation) ResetProvisionedNetworkToStatus() {
-	m._ProvisionedNetworkToStatus = nil
-	m.cleared_ProvisionedNetworkToStatus = false
+// ResetStatus resets all changes to the "Status" edge.
+func (m *ProvisionedNetworkMutation) ResetStatus() {
+	m._Status = nil
+	m.cleared_Status = false
 }
 
-// SetProvisionedNetworkToNetworkID sets the "ProvisionedNetworkToNetwork" edge to the Network entity by id.
-func (m *ProvisionedNetworkMutation) SetProvisionedNetworkToNetworkID(id uuid.UUID) {
-	m._ProvisionedNetworkToNetwork = &id
+// SetNetworkID sets the "Network" edge to the Network entity by id.
+func (m *ProvisionedNetworkMutation) SetNetworkID(id uuid.UUID) {
+	m._Network = &id
 }
 
-// ClearProvisionedNetworkToNetwork clears the "ProvisionedNetworkToNetwork" edge to the Network entity.
-func (m *ProvisionedNetworkMutation) ClearProvisionedNetworkToNetwork() {
-	m.cleared_ProvisionedNetworkToNetwork = true
+// ClearNetwork clears the "Network" edge to the Network entity.
+func (m *ProvisionedNetworkMutation) ClearNetwork() {
+	m.cleared_Network = true
 }
 
-// ProvisionedNetworkToNetworkCleared reports if the "ProvisionedNetworkToNetwork" edge to the Network entity was cleared.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToNetworkCleared() bool {
-	return m.cleared_ProvisionedNetworkToNetwork
+// NetworkCleared reports if the "Network" edge to the Network entity was cleared.
+func (m *ProvisionedNetworkMutation) NetworkCleared() bool {
+	return m.cleared_Network
 }
 
-// ProvisionedNetworkToNetworkID returns the "ProvisionedNetworkToNetwork" edge ID in the mutation.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToNetworkID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedNetworkToNetwork != nil {
-		return *m._ProvisionedNetworkToNetwork, true
+// NetworkID returns the "Network" edge ID in the mutation.
+func (m *ProvisionedNetworkMutation) NetworkID() (id uuid.UUID, exists bool) {
+	if m._Network != nil {
+		return *m._Network, true
 	}
 	return
 }
 
-// ProvisionedNetworkToNetworkIDs returns the "ProvisionedNetworkToNetwork" edge IDs in the mutation.
+// NetworkIDs returns the "Network" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedNetworkToNetworkID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToNetworkIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedNetworkToNetwork; id != nil {
+// NetworkID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedNetworkMutation) NetworkIDs() (ids []uuid.UUID) {
+	if id := m._Network; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedNetworkToNetwork resets all changes to the "ProvisionedNetworkToNetwork" edge.
-func (m *ProvisionedNetworkMutation) ResetProvisionedNetworkToNetwork() {
-	m._ProvisionedNetworkToNetwork = nil
-	m.cleared_ProvisionedNetworkToNetwork = false
+// ResetNetwork resets all changes to the "Network" edge.
+func (m *ProvisionedNetworkMutation) ResetNetwork() {
+	m._Network = nil
+	m.cleared_Network = false
 }
 
-// SetProvisionedNetworkToBuildID sets the "ProvisionedNetworkToBuild" edge to the Build entity by id.
-func (m *ProvisionedNetworkMutation) SetProvisionedNetworkToBuildID(id uuid.UUID) {
-	m._ProvisionedNetworkToBuild = &id
+// SetBuildID sets the "Build" edge to the Build entity by id.
+func (m *ProvisionedNetworkMutation) SetBuildID(id uuid.UUID) {
+	m._Build = &id
 }
 
-// ClearProvisionedNetworkToBuild clears the "ProvisionedNetworkToBuild" edge to the Build entity.
-func (m *ProvisionedNetworkMutation) ClearProvisionedNetworkToBuild() {
-	m.cleared_ProvisionedNetworkToBuild = true
+// ClearBuild clears the "Build" edge to the Build entity.
+func (m *ProvisionedNetworkMutation) ClearBuild() {
+	m.cleared_Build = true
 }
 
-// ProvisionedNetworkToBuildCleared reports if the "ProvisionedNetworkToBuild" edge to the Build entity was cleared.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToBuildCleared() bool {
-	return m.cleared_ProvisionedNetworkToBuild
+// BuildCleared reports if the "Build" edge to the Build entity was cleared.
+func (m *ProvisionedNetworkMutation) BuildCleared() bool {
+	return m.cleared_Build
 }
 
-// ProvisionedNetworkToBuildID returns the "ProvisionedNetworkToBuild" edge ID in the mutation.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToBuildID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedNetworkToBuild != nil {
-		return *m._ProvisionedNetworkToBuild, true
+// BuildID returns the "Build" edge ID in the mutation.
+func (m *ProvisionedNetworkMutation) BuildID() (id uuid.UUID, exists bool) {
+	if m._Build != nil {
+		return *m._Build, true
 	}
 	return
 }
 
-// ProvisionedNetworkToBuildIDs returns the "ProvisionedNetworkToBuild" edge IDs in the mutation.
+// BuildIDs returns the "Build" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedNetworkToBuildID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToBuildIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedNetworkToBuild; id != nil {
+// BuildID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedNetworkMutation) BuildIDs() (ids []uuid.UUID) {
+	if id := m._Build; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedNetworkToBuild resets all changes to the "ProvisionedNetworkToBuild" edge.
-func (m *ProvisionedNetworkMutation) ResetProvisionedNetworkToBuild() {
-	m._ProvisionedNetworkToBuild = nil
-	m.cleared_ProvisionedNetworkToBuild = false
+// ResetBuild resets all changes to the "Build" edge.
+func (m *ProvisionedNetworkMutation) ResetBuild() {
+	m._Build = nil
+	m.cleared_Build = false
 }
 
-// SetProvisionedNetworkToTeamID sets the "ProvisionedNetworkToTeam" edge to the Team entity by id.
-func (m *ProvisionedNetworkMutation) SetProvisionedNetworkToTeamID(id uuid.UUID) {
-	m._ProvisionedNetworkToTeam = &id
+// SetTeamID sets the "Team" edge to the Team entity by id.
+func (m *ProvisionedNetworkMutation) SetTeamID(id uuid.UUID) {
+	m._Team = &id
 }
 
-// ClearProvisionedNetworkToTeam clears the "ProvisionedNetworkToTeam" edge to the Team entity.
-func (m *ProvisionedNetworkMutation) ClearProvisionedNetworkToTeam() {
-	m.cleared_ProvisionedNetworkToTeam = true
+// ClearTeam clears the "Team" edge to the Team entity.
+func (m *ProvisionedNetworkMutation) ClearTeam() {
+	m.cleared_Team = true
 }
 
-// ProvisionedNetworkToTeamCleared reports if the "ProvisionedNetworkToTeam" edge to the Team entity was cleared.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToTeamCleared() bool {
-	return m.cleared_ProvisionedNetworkToTeam
+// TeamCleared reports if the "Team" edge to the Team entity was cleared.
+func (m *ProvisionedNetworkMutation) TeamCleared() bool {
+	return m.cleared_Team
 }
 
-// ProvisionedNetworkToTeamID returns the "ProvisionedNetworkToTeam" edge ID in the mutation.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToTeamID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedNetworkToTeam != nil {
-		return *m._ProvisionedNetworkToTeam, true
+// TeamID returns the "Team" edge ID in the mutation.
+func (m *ProvisionedNetworkMutation) TeamID() (id uuid.UUID, exists bool) {
+	if m._Team != nil {
+		return *m._Team, true
 	}
 	return
 }
 
-// ProvisionedNetworkToTeamIDs returns the "ProvisionedNetworkToTeam" edge IDs in the mutation.
+// TeamIDs returns the "Team" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedNetworkToTeamID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToTeamIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedNetworkToTeam; id != nil {
+// TeamID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedNetworkMutation) TeamIDs() (ids []uuid.UUID) {
+	if id := m._Team; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedNetworkToTeam resets all changes to the "ProvisionedNetworkToTeam" edge.
-func (m *ProvisionedNetworkMutation) ResetProvisionedNetworkToTeam() {
-	m._ProvisionedNetworkToTeam = nil
-	m.cleared_ProvisionedNetworkToTeam = false
+// ResetTeam resets all changes to the "Team" edge.
+func (m *ProvisionedNetworkMutation) ResetTeam() {
+	m._Team = nil
+	m.cleared_Team = false
 }
 
-// AddProvisionedNetworkToProvisionedHostIDs adds the "ProvisionedNetworkToProvisionedHost" edge to the ProvisionedHost entity by ids.
-func (m *ProvisionedNetworkMutation) AddProvisionedNetworkToProvisionedHostIDs(ids ...uuid.UUID) {
-	if m._ProvisionedNetworkToProvisionedHost == nil {
-		m._ProvisionedNetworkToProvisionedHost = make(map[uuid.UUID]struct{})
+// AddProvisionedHostIDs adds the "ProvisionedHosts" edge to the ProvisionedHost entity by ids.
+func (m *ProvisionedNetworkMutation) AddProvisionedHostIDs(ids ...uuid.UUID) {
+	if m._ProvisionedHosts == nil {
+		m._ProvisionedHosts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._ProvisionedNetworkToProvisionedHost[ids[i]] = struct{}{}
+		m._ProvisionedHosts[ids[i]] = struct{}{}
 	}
 }
 
-// ClearProvisionedNetworkToProvisionedHost clears the "ProvisionedNetworkToProvisionedHost" edge to the ProvisionedHost entity.
-func (m *ProvisionedNetworkMutation) ClearProvisionedNetworkToProvisionedHost() {
-	m.cleared_ProvisionedNetworkToProvisionedHost = true
+// ClearProvisionedHosts clears the "ProvisionedHosts" edge to the ProvisionedHost entity.
+func (m *ProvisionedNetworkMutation) ClearProvisionedHosts() {
+	m.cleared_ProvisionedHosts = true
 }
 
-// ProvisionedNetworkToProvisionedHostCleared reports if the "ProvisionedNetworkToProvisionedHost" edge to the ProvisionedHost entity was cleared.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToProvisionedHostCleared() bool {
-	return m.cleared_ProvisionedNetworkToProvisionedHost
+// ProvisionedHostsCleared reports if the "ProvisionedHosts" edge to the ProvisionedHost entity was cleared.
+func (m *ProvisionedNetworkMutation) ProvisionedHostsCleared() bool {
+	return m.cleared_ProvisionedHosts
 }
 
-// RemoveProvisionedNetworkToProvisionedHostIDs removes the "ProvisionedNetworkToProvisionedHost" edge to the ProvisionedHost entity by IDs.
-func (m *ProvisionedNetworkMutation) RemoveProvisionedNetworkToProvisionedHostIDs(ids ...uuid.UUID) {
-	if m.removed_ProvisionedNetworkToProvisionedHost == nil {
-		m.removed_ProvisionedNetworkToProvisionedHost = make(map[uuid.UUID]struct{})
+// RemoveProvisionedHostIDs removes the "ProvisionedHosts" edge to the ProvisionedHost entity by IDs.
+func (m *ProvisionedNetworkMutation) RemoveProvisionedHostIDs(ids ...uuid.UUID) {
+	if m.removed_ProvisionedHosts == nil {
+		m.removed_ProvisionedHosts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._ProvisionedNetworkToProvisionedHost, ids[i])
-		m.removed_ProvisionedNetworkToProvisionedHost[ids[i]] = struct{}{}
+		delete(m._ProvisionedHosts, ids[i])
+		m.removed_ProvisionedHosts[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedProvisionedNetworkToProvisionedHost returns the removed IDs of the "ProvisionedNetworkToProvisionedHost" edge to the ProvisionedHost entity.
-func (m *ProvisionedNetworkMutation) RemovedProvisionedNetworkToProvisionedHostIDs() (ids []uuid.UUID) {
-	for id := range m.removed_ProvisionedNetworkToProvisionedHost {
+// RemovedProvisionedHosts returns the removed IDs of the "ProvisionedHosts" edge to the ProvisionedHost entity.
+func (m *ProvisionedNetworkMutation) RemovedProvisionedHostsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ProvisionedHosts {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ProvisionedNetworkToProvisionedHostIDs returns the "ProvisionedNetworkToProvisionedHost" edge IDs in the mutation.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToProvisionedHostIDs() (ids []uuid.UUID) {
-	for id := range m._ProvisionedNetworkToProvisionedHost {
+// ProvisionedHostsIDs returns the "ProvisionedHosts" edge IDs in the mutation.
+func (m *ProvisionedNetworkMutation) ProvisionedHostsIDs() (ids []uuid.UUID) {
+	for id := range m._ProvisionedHosts {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetProvisionedNetworkToProvisionedHost resets all changes to the "ProvisionedNetworkToProvisionedHost" edge.
-func (m *ProvisionedNetworkMutation) ResetProvisionedNetworkToProvisionedHost() {
-	m._ProvisionedNetworkToProvisionedHost = nil
-	m.cleared_ProvisionedNetworkToProvisionedHost = false
-	m.removed_ProvisionedNetworkToProvisionedHost = nil
+// ResetProvisionedHosts resets all changes to the "ProvisionedHosts" edge.
+func (m *ProvisionedNetworkMutation) ResetProvisionedHosts() {
+	m._ProvisionedHosts = nil
+	m.cleared_ProvisionedHosts = false
+	m.removed_ProvisionedHosts = nil
 }
 
-// SetProvisionedNetworkToPlanID sets the "ProvisionedNetworkToPlan" edge to the Plan entity by id.
-func (m *ProvisionedNetworkMutation) SetProvisionedNetworkToPlanID(id uuid.UUID) {
-	m._ProvisionedNetworkToPlan = &id
+// SetPlanID sets the "Plan" edge to the Plan entity by id.
+func (m *ProvisionedNetworkMutation) SetPlanID(id uuid.UUID) {
+	m._Plan = &id
 }
 
-// ClearProvisionedNetworkToPlan clears the "ProvisionedNetworkToPlan" edge to the Plan entity.
-func (m *ProvisionedNetworkMutation) ClearProvisionedNetworkToPlan() {
-	m.cleared_ProvisionedNetworkToPlan = true
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (m *ProvisionedNetworkMutation) ClearPlan() {
+	m.cleared_Plan = true
 }
 
-// ProvisionedNetworkToPlanCleared reports if the "ProvisionedNetworkToPlan" edge to the Plan entity was cleared.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToPlanCleared() bool {
-	return m.cleared_ProvisionedNetworkToPlan
+// PlanCleared reports if the "Plan" edge to the Plan entity was cleared.
+func (m *ProvisionedNetworkMutation) PlanCleared() bool {
+	return m.cleared_Plan
 }
 
-// ProvisionedNetworkToPlanID returns the "ProvisionedNetworkToPlan" edge ID in the mutation.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToPlanID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedNetworkToPlan != nil {
-		return *m._ProvisionedNetworkToPlan, true
+// PlanID returns the "Plan" edge ID in the mutation.
+func (m *ProvisionedNetworkMutation) PlanID() (id uuid.UUID, exists bool) {
+	if m._Plan != nil {
+		return *m._Plan, true
 	}
 	return
 }
 
-// ProvisionedNetworkToPlanIDs returns the "ProvisionedNetworkToPlan" edge IDs in the mutation.
+// PlanIDs returns the "Plan" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedNetworkToPlanID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedNetworkMutation) ProvisionedNetworkToPlanIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedNetworkToPlan; id != nil {
+// PlanID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedNetworkMutation) PlanIDs() (ids []uuid.UUID) {
+	if id := m._Plan; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedNetworkToPlan resets all changes to the "ProvisionedNetworkToPlan" edge.
-func (m *ProvisionedNetworkMutation) ResetProvisionedNetworkToPlan() {
-	m._ProvisionedNetworkToPlan = nil
-	m.cleared_ProvisionedNetworkToPlan = false
+// ResetPlan resets all changes to the "Plan" edge.
+func (m *ProvisionedNetworkMutation) ResetPlan() {
+	m._Plan = nil
+	m.cleared_Plan = false
 }
 
 // Where appends a list predicates to the ProvisionedNetworkMutation builder.
@@ -25325,23 +25325,23 @@ func (m *ProvisionedNetworkMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProvisionedNetworkMutation) AddedEdges() []string {
 	edges := make([]string, 0, 6)
-	if m._ProvisionedNetworkToStatus != nil {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToStatus)
+	if m._Status != nil {
+		edges = append(edges, provisionednetwork.EdgeStatus)
 	}
-	if m._ProvisionedNetworkToNetwork != nil {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToNetwork)
+	if m._Network != nil {
+		edges = append(edges, provisionednetwork.EdgeNetwork)
 	}
-	if m._ProvisionedNetworkToBuild != nil {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToBuild)
+	if m._Build != nil {
+		edges = append(edges, provisionednetwork.EdgeBuild)
 	}
-	if m._ProvisionedNetworkToTeam != nil {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToTeam)
+	if m._Team != nil {
+		edges = append(edges, provisionednetwork.EdgeTeam)
 	}
-	if m._ProvisionedNetworkToProvisionedHost != nil {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToProvisionedHost)
+	if m._ProvisionedHosts != nil {
+		edges = append(edges, provisionednetwork.EdgeProvisionedHosts)
 	}
-	if m._ProvisionedNetworkToPlan != nil {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToPlan)
+	if m._Plan != nil {
+		edges = append(edges, provisionednetwork.EdgePlan)
 	}
 	return edges
 }
@@ -25350,30 +25350,30 @@ func (m *ProvisionedNetworkMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *ProvisionedNetworkMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case provisionednetwork.EdgeProvisionedNetworkToStatus:
-		if id := m._ProvisionedNetworkToStatus; id != nil {
+	case provisionednetwork.EdgeStatus:
+		if id := m._Status; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisionednetwork.EdgeProvisionedNetworkToNetwork:
-		if id := m._ProvisionedNetworkToNetwork; id != nil {
+	case provisionednetwork.EdgeNetwork:
+		if id := m._Network; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisionednetwork.EdgeProvisionedNetworkToBuild:
-		if id := m._ProvisionedNetworkToBuild; id != nil {
+	case provisionednetwork.EdgeBuild:
+		if id := m._Build; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisionednetwork.EdgeProvisionedNetworkToTeam:
-		if id := m._ProvisionedNetworkToTeam; id != nil {
+	case provisionednetwork.EdgeTeam:
+		if id := m._Team; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisionednetwork.EdgeProvisionedNetworkToProvisionedHost:
-		ids := make([]ent.Value, 0, len(m._ProvisionedNetworkToProvisionedHost))
-		for id := range m._ProvisionedNetworkToProvisionedHost {
+	case provisionednetwork.EdgeProvisionedHosts:
+		ids := make([]ent.Value, 0, len(m._ProvisionedHosts))
+		for id := range m._ProvisionedHosts {
 			ids = append(ids, id)
 		}
 		return ids
-	case provisionednetwork.EdgeProvisionedNetworkToPlan:
-		if id := m._ProvisionedNetworkToPlan; id != nil {
+	case provisionednetwork.EdgePlan:
+		if id := m._Plan; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -25383,8 +25383,8 @@ func (m *ProvisionedNetworkMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProvisionedNetworkMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 6)
-	if m.removed_ProvisionedNetworkToProvisionedHost != nil {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToProvisionedHost)
+	if m.removed_ProvisionedHosts != nil {
+		edges = append(edges, provisionednetwork.EdgeProvisionedHosts)
 	}
 	return edges
 }
@@ -25393,9 +25393,9 @@ func (m *ProvisionedNetworkMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ProvisionedNetworkMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case provisionednetwork.EdgeProvisionedNetworkToProvisionedHost:
-		ids := make([]ent.Value, 0, len(m.removed_ProvisionedNetworkToProvisionedHost))
-		for id := range m.removed_ProvisionedNetworkToProvisionedHost {
+	case provisionednetwork.EdgeProvisionedHosts:
+		ids := make([]ent.Value, 0, len(m.removed_ProvisionedHosts))
+		for id := range m.removed_ProvisionedHosts {
 			ids = append(ids, id)
 		}
 		return ids
@@ -25406,23 +25406,23 @@ func (m *ProvisionedNetworkMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProvisionedNetworkMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 6)
-	if m.cleared_ProvisionedNetworkToStatus {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToStatus)
+	if m.cleared_Status {
+		edges = append(edges, provisionednetwork.EdgeStatus)
 	}
-	if m.cleared_ProvisionedNetworkToNetwork {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToNetwork)
+	if m.cleared_Network {
+		edges = append(edges, provisionednetwork.EdgeNetwork)
 	}
-	if m.cleared_ProvisionedNetworkToBuild {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToBuild)
+	if m.cleared_Build {
+		edges = append(edges, provisionednetwork.EdgeBuild)
 	}
-	if m.cleared_ProvisionedNetworkToTeam {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToTeam)
+	if m.cleared_Team {
+		edges = append(edges, provisionednetwork.EdgeTeam)
 	}
-	if m.cleared_ProvisionedNetworkToProvisionedHost {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToProvisionedHost)
+	if m.cleared_ProvisionedHosts {
+		edges = append(edges, provisionednetwork.EdgeProvisionedHosts)
 	}
-	if m.cleared_ProvisionedNetworkToPlan {
-		edges = append(edges, provisionednetwork.EdgeProvisionedNetworkToPlan)
+	if m.cleared_Plan {
+		edges = append(edges, provisionednetwork.EdgePlan)
 	}
 	return edges
 }
@@ -25431,18 +25431,18 @@ func (m *ProvisionedNetworkMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *ProvisionedNetworkMutation) EdgeCleared(name string) bool {
 	switch name {
-	case provisionednetwork.EdgeProvisionedNetworkToStatus:
-		return m.cleared_ProvisionedNetworkToStatus
-	case provisionednetwork.EdgeProvisionedNetworkToNetwork:
-		return m.cleared_ProvisionedNetworkToNetwork
-	case provisionednetwork.EdgeProvisionedNetworkToBuild:
-		return m.cleared_ProvisionedNetworkToBuild
-	case provisionednetwork.EdgeProvisionedNetworkToTeam:
-		return m.cleared_ProvisionedNetworkToTeam
-	case provisionednetwork.EdgeProvisionedNetworkToProvisionedHost:
-		return m.cleared_ProvisionedNetworkToProvisionedHost
-	case provisionednetwork.EdgeProvisionedNetworkToPlan:
-		return m.cleared_ProvisionedNetworkToPlan
+	case provisionednetwork.EdgeStatus:
+		return m.cleared_Status
+	case provisionednetwork.EdgeNetwork:
+		return m.cleared_Network
+	case provisionednetwork.EdgeBuild:
+		return m.cleared_Build
+	case provisionednetwork.EdgeTeam:
+		return m.cleared_Team
+	case provisionednetwork.EdgeProvisionedHosts:
+		return m.cleared_ProvisionedHosts
+	case provisionednetwork.EdgePlan:
+		return m.cleared_Plan
 	}
 	return false
 }
@@ -25451,20 +25451,20 @@ func (m *ProvisionedNetworkMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ProvisionedNetworkMutation) ClearEdge(name string) error {
 	switch name {
-	case provisionednetwork.EdgeProvisionedNetworkToStatus:
-		m.ClearProvisionedNetworkToStatus()
+	case provisionednetwork.EdgeStatus:
+		m.ClearStatus()
 		return nil
-	case provisionednetwork.EdgeProvisionedNetworkToNetwork:
-		m.ClearProvisionedNetworkToNetwork()
+	case provisionednetwork.EdgeNetwork:
+		m.ClearNetwork()
 		return nil
-	case provisionednetwork.EdgeProvisionedNetworkToBuild:
-		m.ClearProvisionedNetworkToBuild()
+	case provisionednetwork.EdgeBuild:
+		m.ClearBuild()
 		return nil
-	case provisionednetwork.EdgeProvisionedNetworkToTeam:
-		m.ClearProvisionedNetworkToTeam()
+	case provisionednetwork.EdgeTeam:
+		m.ClearTeam()
 		return nil
-	case provisionednetwork.EdgeProvisionedNetworkToPlan:
-		m.ClearProvisionedNetworkToPlan()
+	case provisionednetwork.EdgePlan:
+		m.ClearPlan()
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedNetwork unique edge %s", name)
@@ -25474,23 +25474,23 @@ func (m *ProvisionedNetworkMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ProvisionedNetworkMutation) ResetEdge(name string) error {
 	switch name {
-	case provisionednetwork.EdgeProvisionedNetworkToStatus:
-		m.ResetProvisionedNetworkToStatus()
+	case provisionednetwork.EdgeStatus:
+		m.ResetStatus()
 		return nil
-	case provisionednetwork.EdgeProvisionedNetworkToNetwork:
-		m.ResetProvisionedNetworkToNetwork()
+	case provisionednetwork.EdgeNetwork:
+		m.ResetNetwork()
 		return nil
-	case provisionednetwork.EdgeProvisionedNetworkToBuild:
-		m.ResetProvisionedNetworkToBuild()
+	case provisionednetwork.EdgeBuild:
+		m.ResetBuild()
 		return nil
-	case provisionednetwork.EdgeProvisionedNetworkToTeam:
-		m.ResetProvisionedNetworkToTeam()
+	case provisionednetwork.EdgeTeam:
+		m.ResetTeam()
 		return nil
-	case provisionednetwork.EdgeProvisionedNetworkToProvisionedHost:
-		m.ResetProvisionedNetworkToProvisionedHost()
+	case provisionednetwork.EdgeProvisionedHosts:
+		m.ResetProvisionedHosts()
 		return nil
-	case provisionednetwork.EdgeProvisionedNetworkToPlan:
-		m.ResetProvisionedNetworkToPlan()
+	case provisionednetwork.EdgePlan:
+		m.ResetPlan()
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedNetwork edge %s", name)

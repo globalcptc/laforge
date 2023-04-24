@@ -155,7 +155,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	if err != nil {
 		return fmt.Errorf("couldn't query competition from build \"%v\": %v", entBuild.ID, err)
 	}
-	entTeam, err := provisionedHost.QueryProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := provisionedHost.QueryProvisionedNetwork().QueryTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query team from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
@@ -169,7 +169,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		return fmt.Errorf("couldn't query provisioned network from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
 
-	entNetwork, err := entProNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	entNetwork, err := entProNetwork.QueryNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query network from provisioned network \"%v\": %v", entProNetwork.Name, err)
 	}
@@ -502,7 +502,7 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	defer ctxClosing.Done()
 
 	// Get information about Network from ENT
-	entTeam, err := provisionedNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := provisionedNetwork.QueryTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
@@ -517,7 +517,7 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 		return fmt.Errorf("couldn't query environment from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
 
-	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	entNetwork, err := provisionedNetwork.QueryNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query network from team \"%d\": %v", entTeam.TeamNumber, err)
 	}

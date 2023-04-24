@@ -892,50 +892,50 @@ func (ph *ProvisionedHost) GinFileMiddleware(ctx context.Context) (*GinFileMiddl
 	return result, MaskNotFound(err)
 }
 
-func (pn *ProvisionedNetwork) ProvisionedNetworkToStatus(ctx context.Context) (*Status, error) {
-	result, err := pn.Edges.ProvisionedNetworkToStatusOrErr()
+func (pn *ProvisionedNetwork) Status(ctx context.Context) (*Status, error) {
+	result, err := pn.Edges.StatusOrErr()
 	if IsNotLoaded(err) {
-		result, err = pn.QueryProvisionedNetworkToStatus().Only(ctx)
+		result, err = pn.QueryStatus().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pn *ProvisionedNetwork) ProvisionedNetworkToNetwork(ctx context.Context) (*Network, error) {
-	result, err := pn.Edges.ProvisionedNetworkToNetworkOrErr()
+func (pn *ProvisionedNetwork) Network(ctx context.Context) (*Network, error) {
+	result, err := pn.Edges.NetworkOrErr()
 	if IsNotLoaded(err) {
-		result, err = pn.QueryProvisionedNetworkToNetwork().Only(ctx)
+		result, err = pn.QueryNetwork().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pn *ProvisionedNetwork) ProvisionedNetworkToBuild(ctx context.Context) (*Build, error) {
-	result, err := pn.Edges.ProvisionedNetworkToBuildOrErr()
+func (pn *ProvisionedNetwork) Build(ctx context.Context) (*Build, error) {
+	result, err := pn.Edges.BuildOrErr()
 	if IsNotLoaded(err) {
-		result, err = pn.QueryProvisionedNetworkToBuild().Only(ctx)
+		result, err = pn.QueryBuild().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pn *ProvisionedNetwork) ProvisionedNetworkToTeam(ctx context.Context) (*Team, error) {
-	result, err := pn.Edges.ProvisionedNetworkToTeamOrErr()
+func (pn *ProvisionedNetwork) Team(ctx context.Context) (*Team, error) {
+	result, err := pn.Edges.TeamOrErr()
 	if IsNotLoaded(err) {
-		result, err = pn.QueryProvisionedNetworkToTeam().Only(ctx)
+		result, err = pn.QueryTeam().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pn *ProvisionedNetwork) ProvisionedNetworkToProvisionedHost(ctx context.Context) ([]*ProvisionedHost, error) {
-	result, err := pn.Edges.ProvisionedNetworkToProvisionedHostOrErr()
+func (pn *ProvisionedNetwork) ProvisionedHosts(ctx context.Context) ([]*ProvisionedHost, error) {
+	result, err := pn.Edges.ProvisionedHostsOrErr()
 	if IsNotLoaded(err) {
-		result, err = pn.QueryProvisionedNetworkToProvisionedHost().All(ctx)
+		result, err = pn.QueryProvisionedHosts().All(ctx)
 	}
 	return result, err
 }
 
-func (pn *ProvisionedNetwork) ProvisionedNetworkToPlan(ctx context.Context) (*Plan, error) {
-	result, err := pn.Edges.ProvisionedNetworkToPlanOrErr()
+func (pn *ProvisionedNetwork) Plan(ctx context.Context) (*Plan, error) {
+	result, err := pn.Edges.PlanOrErr()
 	if IsNotLoaded(err) {
-		result, err = pn.QueryProvisionedNetworkToPlan().Only(ctx)
+		result, err = pn.QueryPlan().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

@@ -319,7 +319,7 @@ func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus st
 			if getStatusError != nil {
 				break
 			}
-			provisionedStatus, getStatusError = pnet.QueryProvisionedNetworkToStatus().Only(ctx)
+			provisionedStatus, getStatusError = pnet.QueryStatus().Only(ctx)
 		case plan.TypeProvisionHost:
 			phost, getStatusError := entPlan.QueryProvisionedHost().Only(ctx)
 			if getStatusError != nil {
@@ -389,7 +389,7 @@ func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus st
 // 		if getStatusError != nil {
 // 			break
 // 		}
-// 		provisionedStatus, getStatusError = pnet.QueryProvisionedNetworkToStatus().Only(ctx)
+// 		provisionedStatus, getStatusError = pnet.QueryStatus().Only(ctx)
 // 	case plan.TypeProvisionHost:
 // 		phost, getStatusError := entPlan.QueryProvisionedHost().Only(ctx)
 // 		if getStatusError != nil {

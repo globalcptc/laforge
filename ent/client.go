@@ -4591,15 +4591,15 @@ func (c *ProvisionedNetworkClient) GetX(ctx context.Context, id uuid.UUID) *Prov
 	return obj
 }
 
-// QueryProvisionedNetworkToStatus queries the ProvisionedNetworkToStatus edge of a ProvisionedNetwork.
-func (c *ProvisionedNetworkClient) QueryProvisionedNetworkToStatus(pn *ProvisionedNetwork) *StatusQuery {
+// QueryStatus queries the Status edge of a ProvisionedNetwork.
+func (c *ProvisionedNetworkClient) QueryStatus(pn *ProvisionedNetwork) *StatusQuery {
 	query := &StatusQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pn.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, id),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, provisionednetwork.ProvisionedNetworkToStatusTable, provisionednetwork.ProvisionedNetworkToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, provisionednetwork.StatusTable, provisionednetwork.StatusColumn),
 		)
 		fromV = sqlgraph.Neighbors(pn.driver.Dialect(), step)
 		return fromV, nil
@@ -4607,15 +4607,15 @@ func (c *ProvisionedNetworkClient) QueryProvisionedNetworkToStatus(pn *Provision
 	return query
 }
 
-// QueryProvisionedNetworkToNetwork queries the ProvisionedNetworkToNetwork edge of a ProvisionedNetwork.
-func (c *ProvisionedNetworkClient) QueryProvisionedNetworkToNetwork(pn *ProvisionedNetwork) *NetworkQuery {
+// QueryNetwork queries the Network edge of a ProvisionedNetwork.
+func (c *ProvisionedNetworkClient) QueryNetwork(pn *ProvisionedNetwork) *NetworkQuery {
 	query := &NetworkQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pn.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, id),
 			sqlgraph.To(network.Table, network.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.ProvisionedNetworkToNetworkTable, provisionednetwork.ProvisionedNetworkToNetworkColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.NetworkTable, provisionednetwork.NetworkColumn),
 		)
 		fromV = sqlgraph.Neighbors(pn.driver.Dialect(), step)
 		return fromV, nil
@@ -4623,15 +4623,15 @@ func (c *ProvisionedNetworkClient) QueryProvisionedNetworkToNetwork(pn *Provisio
 	return query
 }
 
-// QueryProvisionedNetworkToBuild queries the ProvisionedNetworkToBuild edge of a ProvisionedNetwork.
-func (c *ProvisionedNetworkClient) QueryProvisionedNetworkToBuild(pn *ProvisionedNetwork) *BuildQuery {
+// QueryBuild queries the Build edge of a ProvisionedNetwork.
+func (c *ProvisionedNetworkClient) QueryBuild(pn *ProvisionedNetwork) *BuildQuery {
 	query := &BuildQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pn.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, id),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.ProvisionedNetworkToBuildTable, provisionednetwork.ProvisionedNetworkToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.BuildTable, provisionednetwork.BuildColumn),
 		)
 		fromV = sqlgraph.Neighbors(pn.driver.Dialect(), step)
 		return fromV, nil
@@ -4639,15 +4639,15 @@ func (c *ProvisionedNetworkClient) QueryProvisionedNetworkToBuild(pn *Provisione
 	return query
 }
 
-// QueryProvisionedNetworkToTeam queries the ProvisionedNetworkToTeam edge of a ProvisionedNetwork.
-func (c *ProvisionedNetworkClient) QueryProvisionedNetworkToTeam(pn *ProvisionedNetwork) *TeamQuery {
+// QueryTeam queries the Team edge of a ProvisionedNetwork.
+func (c *ProvisionedNetworkClient) QueryTeam(pn *ProvisionedNetwork) *TeamQuery {
 	query := &TeamQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pn.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, id),
 			sqlgraph.To(team.Table, team.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.ProvisionedNetworkToTeamTable, provisionednetwork.ProvisionedNetworkToTeamColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.TeamTable, provisionednetwork.TeamColumn),
 		)
 		fromV = sqlgraph.Neighbors(pn.driver.Dialect(), step)
 		return fromV, nil
@@ -4655,15 +4655,15 @@ func (c *ProvisionedNetworkClient) QueryProvisionedNetworkToTeam(pn *Provisioned
 	return query
 }
 
-// QueryProvisionedNetworkToProvisionedHost queries the ProvisionedNetworkToProvisionedHost edge of a ProvisionedNetwork.
-func (c *ProvisionedNetworkClient) QueryProvisionedNetworkToProvisionedHost(pn *ProvisionedNetwork) *ProvisionedHostQuery {
+// QueryProvisionedHosts queries the ProvisionedHosts edge of a ProvisionedNetwork.
+func (c *ProvisionedNetworkClient) QueryProvisionedHosts(pn *ProvisionedNetwork) *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pn.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, id),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionednetwork.ProvisionedNetworkToProvisionedHostTable, provisionednetwork.ProvisionedNetworkToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionednetwork.ProvisionedHostsTable, provisionednetwork.ProvisionedHostsColumn),
 		)
 		fromV = sqlgraph.Neighbors(pn.driver.Dialect(), step)
 		return fromV, nil
@@ -4671,15 +4671,15 @@ func (c *ProvisionedNetworkClient) QueryProvisionedNetworkToProvisionedHost(pn *
 	return query
 }
 
-// QueryProvisionedNetworkToPlan queries the ProvisionedNetworkToPlan edge of a ProvisionedNetwork.
-func (c *ProvisionedNetworkClient) QueryProvisionedNetworkToPlan(pn *ProvisionedNetwork) *PlanQuery {
+// QueryPlan queries the Plan edge of a ProvisionedNetwork.
+func (c *ProvisionedNetworkClient) QueryPlan(pn *ProvisionedNetwork) *PlanQuery {
 	query := &PlanQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := pn.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, id),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisionednetwork.ProvisionedNetworkToPlanTable, provisionednetwork.ProvisionedNetworkToPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisionednetwork.PlanTable, provisionednetwork.PlanColumn),
 		)
 		fromV = sqlgraph.Neighbors(pn.driver.Dialect(), step)
 		return fromV, nil

@@ -768,9 +768,9 @@ var (
 		{Name: "cidr", Type: field.TypeString},
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "plan_provisioned_network", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "provisioned_network_provisioned_network_to_network", Type: field.TypeUUID, Nullable: true},
-		{Name: "provisioned_network_provisioned_network_to_build", Type: field.TypeUUID, Nullable: true},
-		{Name: "provisioned_network_provisioned_network_to_team", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioned_network_network", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioned_network_build", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioned_network_team", Type: field.TypeUUID, Nullable: true},
 	}
 	// ProvisionedNetworksTable holds the schema information for the "provisioned_networks" table.
 	ProvisionedNetworksTable = &schema.Table{
@@ -785,19 +785,19 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "provisioned_networks_networks_ProvisionedNetworkToNetwork",
+				Symbol:     "provisioned_networks_networks_Network",
 				Columns:    []*schema.Column{ProvisionedNetworksColumns[5]},
 				RefColumns: []*schema.Column{NetworksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "provisioned_networks_builds_ProvisionedNetworkToBuild",
+				Symbol:     "provisioned_networks_builds_Build",
 				Columns:    []*schema.Column{ProvisionedNetworksColumns[6]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "provisioned_networks_teams_ProvisionedNetworkToTeam",
+				Symbol:     "provisioned_networks_teams_Team",
 				Columns:    []*schema.Column{ProvisionedNetworksColumns[7]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -1145,7 +1145,7 @@ var (
 		{Name: "build_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_host_status", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "provisioned_network_provisioned_network_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "provisioned_network_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_scheduled_step_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "server_task_server_task_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
@@ -1182,7 +1182,7 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "status_provisioned_networks_ProvisionedNetworkToStatus",
+				Symbol:     "status_provisioned_networks_Status",
 				Columns:    []*schema.Column{StatusColumns[12]},
 				RefColumns: []*schema.Column{ProvisionedNetworksColumns[0]},
 				OnDelete:   schema.Cascade,

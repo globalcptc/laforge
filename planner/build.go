@@ -86,7 +86,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 					logger.Log.Errorf("Failed to Query Provisioned Network. Err: %v", err)
 					return
 				}
-				entStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
+				entStatus, err := entProNetwork.QueryStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -345,7 +345,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			return
 		}
 		if parentNodeFailed {
-			networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctxClosing)
+			networkStatus, err := entProNetwork.QueryStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
 				return
@@ -487,7 +487,7 @@ func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 		}).Error("error querying host and provisioned network from provisioned host")
 		return err
 	} else {
-		entTeam, err := entProNet.QueryProvisionedNetworkToTeam().First(ctx)
+		entTeam, err := entProNet.QueryTeam().First(ctx)
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
 				"entProNet": entProNet.ID,
@@ -543,12 +543,12 @@ func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 
 func buildNetwork(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entProNetwork *ent.ProvisionedNetwork) error {
 	logger.Log.Infof("deploying %s", entProNetwork.Name)
-	networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
+	networkStatus, err := entProNetwork.QueryStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
 		return err
 	}
-	entTeam, err := entProNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := entProNetwork.QueryTeam().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting team: %v", err)
 		return err
@@ -617,7 +617,7 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 		QueryTeamToProvisionedNetwork().
 		Where(
 			provisionednetwork.
-				HasProvisionedNetworkToStatusWith(
+				HasStatusWith(
 					status.Or(
 						status.StateEQ(status.StateAWAITING),
 						status.StateEQ(status.StateINPROGRESS),
@@ -642,7 +642,7 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 		QueryTeamToProvisionedNetwork().
 		Where(
 			provisionednetwork.
-				HasProvisionedNetworkToStatusWith(
+				HasStatusWith(
 					status.Or(
 						status.StateEQ(status.StateFAILED),
 						status.StateEQ(status.StateTAINTED),
@@ -668,7 +668,7 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 		QueryTeamToProvisionedNetwork().
 		Where(
 			provisionednetwork.
-				HasProvisionedNetworkToStatusWith(
+				HasStatusWith(
 					status.StateNEQ(status.StateCOMPLETE),
 				),
 		).Exist(ctx)
@@ -691,7 +691,7 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 
 func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entProNetwork *ent.ProvisionedNetwork) error {
 	stepAwaitingInProgress, err := entProNetwork.
-		QueryProvisionedNetworkToProvisionedHost().
+		QueryProvisionedHosts().
 		Where(
 			provisionedhost.
 				HasStatusWith(
@@ -710,18 +710,18 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 		return nil
 	}
 
-	networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
+	networkStatus, err := entProNetwork.QueryStatus().Only(ctx)
 	if networkStatus.State != status.StateINPROGRESS {
 		return nil
 	}
-	entTeam, err := entProNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := entProNetwork.QueryTeam().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting team: %v", err)
 		return err
 	}
 
 	hostFailed, err := entProNetwork.
-		QueryProvisionedNetworkToProvisionedHost().
+		QueryProvisionedHosts().
 		Where(
 			provisionedhost.
 				HasStatusWith(
@@ -748,7 +748,7 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 	}
 
 	stepNotCompleted, err := entProNetwork.
-		QueryProvisionedNetworkToProvisionedHost().
+		QueryProvisionedHosts().
 		Where(
 			provisionedhost.
 				HasStatusWith(

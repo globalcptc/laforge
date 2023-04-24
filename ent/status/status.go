@@ -62,7 +62,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "provisionednetwork" package.
 	StatusToProvisionedNetworkInverseTable = "provisioned_networks"
 	// StatusToProvisionedNetworkColumn is the table column denoting the StatusToProvisionedNetwork relation/edge.
-	StatusToProvisionedNetworkColumn = "provisioned_network_provisioned_network_to_status"
+	StatusToProvisionedNetworkColumn = "provisioned_network_status"
 	// StatusToProvisionedHostTable is the table that holds the StatusToProvisionedHost relation/edge.
 	StatusToProvisionedHostTable = "status"
 	// StatusToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
@@ -133,7 +133,7 @@ var ForeignKeys = []string{
 	"build_status",
 	"plan_status",
 	"provisioned_host_status",
-	"provisioned_network_provisioned_network_to_status",
+	"provisioned_network_status",
 	"provisioning_scheduled_step_status",
 	"provisioning_step_provisioning_step_to_status",
 	"server_task_server_task_to_status",

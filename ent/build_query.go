@@ -1036,13 +1036,13 @@ func (bq *BuildQuery) loadProvisionedNetworks(ctx context.Context, query *Provis
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioned_network_provisioned_network_to_build
+		fk := n.provisioned_network_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioned_network_provisioned_network_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioned_network_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_network_provisioned_network_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_network_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

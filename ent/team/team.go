@@ -45,7 +45,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "provisionednetwork" package.
 	TeamToProvisionedNetworkInverseTable = "provisioned_networks"
 	// TeamToProvisionedNetworkColumn is the table column denoting the TeamToProvisionedNetwork relation/edge.
-	TeamToProvisionedNetworkColumn = "provisioned_network_provisioned_network_to_team"
+	TeamToProvisionedNetworkColumn = "provisioned_network_team"
 	// TeamToPlanTable is the table that holds the TeamToPlan relation/edge.
 	TeamToPlanTable = "teams"
 	// TeamToPlanInverseTable is the table name for the Plan entity.

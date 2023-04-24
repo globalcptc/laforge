@@ -71,7 +71,7 @@ func main() {
 	// }
 	// var wgconfs []wgconf
 	// for _, wg_task := range wg_tasks {
-	// 	task_team := wg_task.QueryProvisionedHost().QueryProvisionedNetwork().QueryProvisionedNetworkToTeam().OnlyX(ctx)
+	// 	task_team := wg_task.QueryProvisionedHost().QueryProvisionedNetwork().QueryTeam().OnlyX(ctx)
 	// 	task_build := task_team.QueryTeamToBuild().OnlyX(ctx)
 	// 	task_environment := task_build.QueryBuildToEnvironment().OnlyX(ctx)
 	// 	tmp := wgconf{
@@ -90,7 +90,7 @@ func main() {
 
 	// for _, teamer := range teams {
 	// 	ph, err := client.ProvisionedHost.Query().Where(provisionedhost.And(
-	// 		provisionedhost.HasProvisionedNetworkWith(provisionednetwork.HasProvisionedNetworkToTeamWith(team.IDEQ(teamer.ID))),
+	// 		provisionedhost.HasProvisionedNetworkWith(provisionednetwork.HasTeamWith(team.IDEQ(teamer.ID))),
 	// 		provisionedhost.AddonTypeEQ(provisionedhost.AddonTypeDNS),
 	// 	)).All(ctx)
 	// 	if err != nil {

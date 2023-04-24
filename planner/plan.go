@@ -368,7 +368,7 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	}
 	for _, pNetwork := range createProvisonedNetworks {
 		entHosts, err := pNetwork.
-			QueryProvisionedNetworkToNetwork().
+			QueryNetwork().
 			QueryIncludedNetworks().
 			QueryHosts().
 			All(ctx)
@@ -376,7 +376,7 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 			logger.Log.Errorf("Failed to Query Hosts for Network %v. Err: %v", pNetwork.Name, err)
 			return nil, err
 		}
-		networkPlan, err := pNetwork.QueryProvisionedNetworkToPlan().Only(ctx)
+		networkPlan, err := pNetwork.QueryPlan().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Plan for Network %v. Err: %v", pNetwork.Name, err)
 			return nil, err
@@ -409,10 +409,10 @@ func createProvisionedNetworks(ctx context.Context, client *ent.Client, laforgeC
 		SetName(entNetwork.Name).
 		SetCidr(entNetwork.Cidr).
 		SetVars(map[string]string{}).
-		SetProvisionedNetworkToStatus(entStatus).
-		SetProvisionedNetworkToNetwork(entNetwork).
-		SetProvisionedNetworkToTeam(entTeam).
-		SetProvisionedNetworkToBuild(entBuild).
+		SetStatus(entStatus).
+		SetNetwork(entNetwork).
+		SetTeam(entTeam).
+		SetBuild(entBuild).
 		Save(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to create Provisoned Network %v for Team %v. Err: %v", entNetwork.Name, entTeam.TeamNumber, err)
@@ -479,21 +479,21 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		WithNetwork().
 		All(ctx)
 
-	currentBuild := pNetwork.QueryProvisionedNetworkToBuild().WithEnvironment().OnlyX(ctx)
-	currentTeam := pNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
+	currentBuild := pNetwork.QueryBuild().WithEnvironment().OnlyX(ctx)
+	currentTeam := pNetwork.QueryTeam().OnlyX(ctx)
 
 	for _, entHostDependency := range entHostDependencies {
 		entDependsOnHost, err := client.ProvisionedHost.Query().Where(
 			provisionedhost.And(
 				provisionedhost.HasProvisionedNetworkWith(
 					provisionednetwork.And(
-						provisionednetwork.HasProvisionedNetworkToNetworkWith(
+						provisionednetwork.HasNetworkWith(
 							network.IDEQ(entHostDependency.Edges.Network.ID),
 						),
-						provisionednetwork.HasProvisionedNetworkToBuildWith(
+						provisionednetwork.HasBuildWith(
 							build.IDEQ(currentBuild.ID),
 						),
-						provisionednetwork.HasProvisionedNetworkToTeamWith(
+						provisionednetwork.HasTeamWith(
 							team.IDEQ(currentTeam.ID),
 						),
 					),
@@ -510,13 +510,13 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 			} else {
 				dependOnPnetwork, err := client.ProvisionedNetwork.Query().Where(
 					provisionednetwork.And(
-						provisionednetwork.HasProvisionedNetworkToNetworkWith(
+						provisionednetwork.HasNetworkWith(
 							network.IDEQ(entHostDependency.Edges.Network.ID),
 						),
-						provisionednetwork.HasProvisionedNetworkToBuildWith(
+						provisionednetwork.HasBuildWith(
 							build.IDEQ(currentBuild.ID),
 						),
-						provisionednetwork.HasProvisionedNetworkToTeamWith(
+						provisionednetwork.HasTeamWith(
 							team.IDEQ(currentTeam.ID),
 						),
 					),
@@ -524,7 +524,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Provined Network %v for Depended On Host %v. Err: %v", entHostDependency.Edges.Network.HclID, entHostDependency.Edges.DependOn.HclID, err)
 				}
-				dependOnPnetworkPlan, err := dependOnPnetwork.QueryProvisionedNetworkToPlan().Only(ctx)
+				dependOnPnetworkPlan, err := dependOnPnetwork.QueryPlan().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("error while retrieving plan from provisioned network: %v", err)
 					return nil, err
@@ -721,7 +721,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	}).Debug("creating provisioned step")
 	var entProvisioningStep *ent.ProvisioningStep
 	currentEnvironment, err := pHost.QueryHost().QueryEnvironment().Only(ctx)
-	currentBuild := pHost.QueryProvisionedNetwork().QueryProvisionedNetworkToBuild().WithEnvironment().OnlyX(ctx)
+	currentBuild := pHost.QueryProvisionedNetwork().QueryBuild().WithEnvironment().OnlyX(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Current Environment for Provisoned Host %v. Err: %v", pHost.ID, err)
 		return nil, err
@@ -1090,7 +1090,7 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 		"prevPlan.Type":       prevPlan.Type,
 		"prevPlan.StepNumber": prevPlan.StepNumber,
 	}).Debug("creating provisioned scheduled step")
-	entBuild, err := entProvisionedHost.QueryProvisionedNetwork().QueryProvisionedNetworkToBuild().WithEnvironment().Only(ctx)
+	entBuild, err := entProvisionedHost.QueryProvisionedNetwork().QueryBuild().WithEnvironment().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed to query current build for environment: %v", err)
 		return fmt.Errorf("failed to query build from provisioned host: %v", err)
@@ -1489,12 +1489,12 @@ func RenderScript(ctx context.Context, client *ent.Client, logger *logging.Logge
 		currentScript = entProvisioningScheduledStep.QueryScript().OnlyX(ctx)
 	}
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedNetwork().OnlyX(ctx)
-	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
+	currentTeam := currentProvisionedNetwork.QueryTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
 	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithHosts().WithNetwork().AllX(ctx)
 	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)
-	currentNetwork := currentProvisionedNetwork.QueryProvisionedNetworkToNetwork().OnlyX(ctx)
+	currentNetwork := currentProvisionedNetwork.QueryNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryHost().OnlyX(ctx)
 	currentIdentities := currentEnvironment.QueryIdentities().AllX(ctx)
 	agentScriptFile := currentProvisionedHost.QueryGinFileMiddleware().OnlyX(ctx)
@@ -1576,7 +1576,7 @@ func renderFileDownload(ctx context.Context, logger *logging.Logger, entStep int
 	}
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryHost().OnlyX(ctx)
-	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
+	currentTeam := currentProvisionedNetwork.QueryTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
 
@@ -1641,12 +1641,12 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 		currentAnsible = entProvisioningScheduledStep.QueryAnsible().OnlyX(ctx)
 	}
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedNetwork().OnlyX(ctx)
-	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
+	currentTeam := currentProvisionedNetwork.QueryTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
 	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithHosts().WithNetwork().AllX(ctx)
 	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)
-	currentNetwork := currentProvisionedNetwork.QueryProvisionedNetworkToNetwork().OnlyX(ctx)
+	currentNetwork := currentProvisionedNetwork.QueryNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryHost().OnlyX(ctx)
 	currentIdentities := currentEnvironment.QueryIdentities().AllX(ctx)
 	agentScriptFile := currentProvisionedHost.QueryGinFileMiddleware().OnlyX(ctx)

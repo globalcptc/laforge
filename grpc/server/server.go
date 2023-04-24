@@ -65,7 +65,7 @@ func (s *Server) GetHeartBeat(ctx context.Context, in *pb.HeartbeatRequest) (*pb
 		logrus.Errorf("GRPC SERVER ERROR: Cannot find client %v network. Error: %v", in.GetClientId(), err)
 		return &pb.HeartbeatReply{Status: message, AvalibleTasks: false}, nil
 	}
-	b, err := pn.QueryProvisionedNetworkToBuild().Only(ctx)
+	b, err := pn.QueryBuild().Only(ctx)
 	if err != nil {
 		logrus.Errorf("GRPC SERVER ERROR: Cannot find client %v build. Error: %v", in.GetClientId(), err)
 		return &pb.HeartbeatReply{Status: message, AvalibleTasks: false}, nil

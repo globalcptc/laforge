@@ -262,7 +262,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 		if getStatusError != nil {
 			break
 		}
-		provisionedStatus, getStatusError = pnet.QueryProvisionedNetworkToStatus().Only(ctx)
+		provisionedStatus, getStatusError = pnet.QueryStatus().Only(ctx)
 	case plan.TypeProvisionHost:
 		phost, getStatusError := entPlan.QueryProvisionedHost().Only(ctx)
 		if getStatusError != nil {
@@ -566,7 +566,7 @@ func deleteHost(client *ent.Client, logger *logging.Logger, builder *builder.Bui
 
 func deleteNetwork(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entProNetwork *ent.ProvisionedNetwork) error {
 	logger.Log.Infof("del network  | %s", entProNetwork.Name)
-	networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
+	networkStatus, err := entProNetwork.QueryStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
 		return err

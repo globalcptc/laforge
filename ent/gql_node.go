@@ -2788,9 +2788,9 @@ func (pn *ProvisionedNetwork) Node(ctx context.Context) (node *Node, err error) 
 	}
 	node.Edges[0] = &Edge{
 		Type: "Status",
-		Name: "ProvisionedNetworkToStatus",
+		Name: "Status",
 	}
-	err = pn.QueryProvisionedNetworkToStatus().
+	err = pn.QueryStatus().
 		Select(status.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -2798,9 +2798,9 @@ func (pn *ProvisionedNetwork) Node(ctx context.Context) (node *Node, err error) 
 	}
 	node.Edges[1] = &Edge{
 		Type: "Network",
-		Name: "ProvisionedNetworkToNetwork",
+		Name: "Network",
 	}
-	err = pn.QueryProvisionedNetworkToNetwork().
+	err = pn.QueryNetwork().
 		Select(network.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -2808,9 +2808,9 @@ func (pn *ProvisionedNetwork) Node(ctx context.Context) (node *Node, err error) 
 	}
 	node.Edges[2] = &Edge{
 		Type: "Build",
-		Name: "ProvisionedNetworkToBuild",
+		Name: "Build",
 	}
-	err = pn.QueryProvisionedNetworkToBuild().
+	err = pn.QueryBuild().
 		Select(build.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -2818,9 +2818,9 @@ func (pn *ProvisionedNetwork) Node(ctx context.Context) (node *Node, err error) 
 	}
 	node.Edges[3] = &Edge{
 		Type: "Team",
-		Name: "ProvisionedNetworkToTeam",
+		Name: "Team",
 	}
-	err = pn.QueryProvisionedNetworkToTeam().
+	err = pn.QueryTeam().
 		Select(team.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
@@ -2828,9 +2828,9 @@ func (pn *ProvisionedNetwork) Node(ctx context.Context) (node *Node, err error) 
 	}
 	node.Edges[4] = &Edge{
 		Type: "ProvisionedHost",
-		Name: "ProvisionedNetworkToProvisionedHost",
+		Name: "ProvisionedHosts",
 	}
-	err = pn.QueryProvisionedNetworkToProvisionedHost().
+	err = pn.QueryProvisionedHosts().
 		Select(provisionedhost.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
@@ -2838,9 +2838,9 @@ func (pn *ProvisionedNetwork) Node(ctx context.Context) (node *Node, err error) 
 	}
 	node.Edges[5] = &Edge{
 		Type: "Plan",
-		Name: "ProvisionedNetworkToPlan",
+		Name: "Plan",
 	}
-	err = pn.QueryProvisionedNetworkToPlan().
+	err = pn.QueryPlan().
 		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {

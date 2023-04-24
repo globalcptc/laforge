@@ -159,7 +159,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	if err != nil {
 		return fmt.Errorf("failed to query provisioned network from provisioned host: %v", err)
 	}
-	entNetwork, err := entProvisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	entNetwork, err := entProvisionedNetwork.QueryNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query network from provisioned network: %v", err)
 	}
@@ -171,7 +171,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	if err != nil {
 		return fmt.Errorf("failed querying competition from provisioned host: %v", err)
 	}
-	entTeam, err := entProvisionedHost.QueryProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := entProvisionedHost.QueryProvisionedNetwork().QueryTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed querying team from provisioned host: %v", err)
 	}
@@ -480,19 +480,19 @@ cd /
 func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisionedNetwork *ent.ProvisionedNetwork) (err error) {
 	ctxClosing := context.Background()
 	defer ctxClosing.Done()
-	entBuild, err := entProvisionedNetwork.QueryProvisionedNetworkToBuild().Only(ctx)
+	entBuild, err := entProvisionedNetwork.QueryBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", entProvisionedNetwork.Name, err)
 	}
-	entEnvironment, err := entProvisionedNetwork.QueryProvisionedNetworkToBuild().QueryEnvironment().Only(ctx)
+	entEnvironment, err := entProvisionedNetwork.QueryBuild().QueryEnvironment().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", entProvisionedNetwork.Name, err)
 	}
-	entNetwork, err := entProvisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	entNetwork, err := entProvisionedNetwork.QueryNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", entProvisionedNetwork.Name, err)
 	}
-	entTeam, err := entProvisionedNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := entProvisionedNetwork.QueryTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", entProvisionedNetwork.Name, err)
 	}
@@ -792,7 +792,7 @@ func (builder OpenstackBuilder) TeardownHost(ctx context.Context, entProvisioned
 }
 
 func (builder OpenstackBuilder) TeardownNetwork(ctx context.Context, entProvisionedNetwork *ent.ProvisionedNetwork) (err error) {
-	entTeam, err := entProvisionedNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := entProvisionedNetwork.QueryTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query team from proviisoned network: %v", err)
 	}

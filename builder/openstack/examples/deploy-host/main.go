@@ -69,7 +69,7 @@ func main() {
 	logrus.Infof("%d Teams", teamCount)
 	provisionedNetworkCount := build.QueryTeams().QueryTeamToProvisionedNetwork().CountX(ctx)
 	logrus.Infof("%d Provisioned Networks", provisionedNetworkCount)
-	provisionedHostCount := build.QueryTeams().QueryTeamToProvisionedNetwork().QueryProvisionedNetworkToProvisionedHost().CountX(ctx)
+	provisionedHostCount := build.QueryTeams().QueryTeamToProvisionedNetwork().QueryProvisionedHosts().CountX(ctx)
 	logrus.Infof("%d Provisioned Hosts", provisionedHostCount)
 
 	entTeam, err := build.QueryTeams().Order(ent.Asc(team.FieldTeamNumber)).First(ctx)
@@ -80,7 +80,7 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("error querying provisioned network (\"vdi\") from team: %v", err)
 	}
-	entProvisionedHost, err := entProvisionedNetwork.QueryProvisionedNetworkToProvisionedHost().First(ctx)
+	entProvisionedHost, err := entProvisionedNetwork.QueryProvisionedHosts().First(ctx)
 	if err != nil {
 		logrus.Fatalf("error querying provisioned host from provisioned network: %v", err)
 	}

@@ -79,7 +79,7 @@ func main() {
 		}
 		networkName := pn.Name
 
-		team, err := pn.QueryProvisionedNetworkToTeam().Only(ctx)
+		team, err := pn.QueryTeam().Only(ctx)
 		if err != nil {
 			logrus.Errorf("Failed to Query Team: %v", err)
 		}

@@ -32,7 +32,7 @@ func (Team) Edges() []ent.Edge {
 				OnDelete: entsql.Cascade,
 			}),
 		edge.From("TeamToProvisionedNetwork", ProvisionedNetwork.Type).
-			Ref("ProvisionedNetworkToTeam"),
+			Ref("Team"),
 		edge.From("TeamToPlan", Plan.Type).
 			Ref("Team").
 			Unique(),
