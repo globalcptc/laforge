@@ -1172,26 +1172,26 @@ func (ss *ScheduledStep) Environment(ctx context.Context) (*Environment, error) 
 	return result, MaskNotFound(err)
 }
 
-func (s *Script) ScriptToUser(ctx context.Context) ([]*User, error) {
-	result, err := s.Edges.ScriptToUserOrErr()
+func (s *Script) Users(ctx context.Context) ([]*User, error) {
+	result, err := s.Edges.UsersOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryScriptToUser().All(ctx)
+		result, err = s.QueryUsers().All(ctx)
 	}
 	return result, err
 }
 
-func (s *Script) ScriptToFinding(ctx context.Context) ([]*Finding, error) {
-	result, err := s.Edges.ScriptToFindingOrErr()
+func (s *Script) Findings(ctx context.Context) ([]*Finding, error) {
+	result, err := s.Edges.FindingsOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryScriptToFinding().All(ctx)
+		result, err = s.QueryFindings().All(ctx)
 	}
 	return result, err
 }
 
-func (s *Script) ScriptToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := s.Edges.ScriptToEnvironmentOrErr()
+func (s *Script) Environment(ctx context.Context) (*Environment, error) {
+	result, err := s.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = s.QueryScriptToEnvironment().Only(ctx)
+		result, err = s.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

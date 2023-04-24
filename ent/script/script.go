@@ -39,35 +39,35 @@ const (
 	FieldAbsPath = "abs_path"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// EdgeScriptToUser holds the string denoting the scripttouser edge name in mutations.
-	EdgeScriptToUser = "ScriptToUser"
-	// EdgeScriptToFinding holds the string denoting the scripttofinding edge name in mutations.
-	EdgeScriptToFinding = "ScriptToFinding"
-	// EdgeScriptToEnvironment holds the string denoting the scripttoenvironment edge name in mutations.
-	EdgeScriptToEnvironment = "ScriptToEnvironment"
+	// EdgeUsers holds the string denoting the users edge name in mutations.
+	EdgeUsers = "Users"
+	// EdgeFindings holds the string denoting the findings edge name in mutations.
+	EdgeFindings = "Findings"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the script in the database.
 	Table = "scripts"
-	// ScriptToUserTable is the table that holds the ScriptToUser relation/edge.
-	ScriptToUserTable = "users"
-	// ScriptToUserInverseTable is the table name for the User entity.
+	// UsersTable is the table that holds the Users relation/edge.
+	UsersTable = "users"
+	// UsersInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	ScriptToUserInverseTable = "users"
-	// ScriptToUserColumn is the table column denoting the ScriptToUser relation/edge.
-	ScriptToUserColumn = "script_script_to_user"
-	// ScriptToFindingTable is the table that holds the ScriptToFinding relation/edge.
-	ScriptToFindingTable = "findings"
-	// ScriptToFindingInverseTable is the table name for the Finding entity.
+	UsersInverseTable = "users"
+	// UsersColumn is the table column denoting the Users relation/edge.
+	UsersColumn = "script_users"
+	// FindingsTable is the table that holds the Findings relation/edge.
+	FindingsTable = "findings"
+	// FindingsInverseTable is the table name for the Finding entity.
 	// It exists in this package in order to avoid circular dependency with the "finding" package.
-	ScriptToFindingInverseTable = "findings"
-	// ScriptToFindingColumn is the table column denoting the ScriptToFinding relation/edge.
-	ScriptToFindingColumn = "script_script_to_finding"
-	// ScriptToEnvironmentTable is the table that holds the ScriptToEnvironment relation/edge.
-	ScriptToEnvironmentTable = "scripts"
-	// ScriptToEnvironmentInverseTable is the table name for the Environment entity.
+	FindingsInverseTable = "findings"
+	// FindingsColumn is the table column denoting the Findings relation/edge.
+	FindingsColumn = "script_findings"
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "scripts"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	ScriptToEnvironmentInverseTable = "environments"
-	// ScriptToEnvironmentColumn is the table column denoting the ScriptToEnvironment relation/edge.
-	ScriptToEnvironmentColumn = "environment_scripts"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_scripts"
 )
 
 // Columns holds all SQL columns for script fields.

@@ -873,7 +873,7 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 	returnedAllFindings := []*ent.Finding{}
 	for _, cScript := range configScript {
 		log.Log.Debugf("Creating Script: %v for Env: %v", cScript.HclID, envHclID)
-		returnedFindings, err := createFindings(txClient, ctx, log, cScript.HCLScriptToFinding, envHclID, cScript.HclID)
+		returnedFindings, err := createFindings(txClient, ctx, log, cScript.HCLFindings, envHclID, cScript.HclID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -882,7 +882,7 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 			Where(
 				script.And(
 					script.HclIDEQ(cScript.HclID),
-					script.HasScriptToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					script.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)
@@ -903,7 +903,7 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 					SetVars(cScript.Vars).
 					SetTags(cScript.Tags).
 					SetAbsPath(cScript.AbsPath).
-					AddScriptToFinding(returnedFindings...)
+					AddFindings(returnedFindings...)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
@@ -923,13 +923,13 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 			SetVars(cScript.Vars).
 			SetTags(cScript.Tags).
 			SetAbsPath(cScript.AbsPath).
-			ClearScriptToFinding().
+			ClearFindings().
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update Script %v. Err: %v", cScript.HclID, err)
 			return nil, nil, err
 		}
-		_, err = entScript.Update().AddScriptToFinding(returnedFindings...).Save(ctx)
+		_, err = entScript.Update().AddFindings(returnedFindings...).Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update Script %v with it's Findings. Err: %v", cScript.HclID, err)
 			return nil, nil, err

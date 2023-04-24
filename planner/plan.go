@@ -641,7 +641,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		currentEnvironment, err := entProvisionedHost.QueryHost().QueryEnvironment().Only(ctx)
 		userDataScript, err := client.Script.Query().Where(
 			script.And(
-				script.HasScriptToEnvironmentWith(
+				script.HasEnvironmentWith(
 					environment.IDEQ(currentEnvironment.ID),
 				),
 				script.HclIDEQ(userDataScriptID),
@@ -734,7 +734,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	// Check if step is script
 	entScript, err := client.Script.Query().Where(
 		script.And(
-			script.HasScriptToEnvironmentWith(
+			script.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
 			script.HclIDEQ(hclID),
@@ -1236,7 +1236,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	// Check if step is script
 	entScript, err := client.Script.Query().Where(
 		script.And(
-			script.HasScriptToEnvironmentWith(
+			script.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			script.HclIDEQ(entScheduledStep.Step),

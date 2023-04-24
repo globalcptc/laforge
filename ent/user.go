@@ -34,11 +34,11 @@ type User struct {
 	// UserToEnvironment holds the value of the UserToEnvironment edge.
 	HCLUserToEnvironment []*Environment `json:"UserToEnvironment,omitempty"`
 	//
-	ansible_users         *uuid.UUID
-	command_users         *uuid.UUID
-	finding_users         *uuid.UUID
-	host_users            *uuid.UUID
-	script_script_to_user *uuid.UUID
+	ansible_users *uuid.UUID
+	command_users *uuid.UUID
+	finding_users *uuid.UUID
+	host_users    *uuid.UUID
+	script_users  *uuid.UUID
 }
 
 // UserEdges holds the relations/edges for other nodes in the graph.
@@ -87,7 +87,7 @@ func (*User) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case user.ForeignKeys[3]: // host_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case user.ForeignKeys[4]: // script_script_to_user
+		case user.ForeignKeys[4]: // script_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type User", columns[i])
@@ -164,10 +164,10 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 			}
 		case user.ForeignKeys[4]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field script_script_to_user", values[i])
+				return fmt.Errorf("unexpected type %T for field script_users", values[i])
 			} else if value.Valid {
-				u.script_script_to_user = new(uuid.UUID)
-				*u.script_script_to_user = *value.S.(*uuid.UUID)
+				u.script_users = new(uuid.UUID)
+				*u.script_users = *value.S.(*uuid.UUID)
 			}
 		}
 	}

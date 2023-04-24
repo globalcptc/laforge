@@ -38,7 +38,7 @@ func (Finding) Edges() []ent.Edge {
 		edge.To("Host", Host.Type).
 			Unique(),
 		edge.From("Script", Script.Type).
-			Ref("ScriptToFinding").
+			Ref("Findings").
 			Unique(),
 		edge.From("Environment", Environment.Type).
 			Ref("Findings").

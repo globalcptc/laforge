@@ -55,7 +55,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "script" package.
 	ScriptInverseTable = "scripts"
 	// ScriptColumn is the table column denoting the Script relation/edge.
-	ScriptColumn = "script_script_to_finding"
+	ScriptColumn = "script_findings"
 	// EnvironmentTable is the table that holds the Environment relation/edge.
 	EnvironmentTable = "findings"
 	// EnvironmentInverseTable is the table name for the Environment entity.
@@ -80,7 +80,7 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"environment_findings",
 	"finding_host",
-	"script_script_to_finding",
+	"script_findings",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

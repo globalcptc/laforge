@@ -81,7 +81,7 @@ func main() {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.Script.Delete().Where(script.Not(script.HasScriptToEnvironment())).Exec(ctx)
+	deletedCount, err = client.Script.Delete().Where(script.Not(script.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}

@@ -382,7 +382,7 @@ func (fc *FindingCreate) createSpec() (*Finding, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.script_script_to_finding = &nodes[0]
+		_node.script_findings = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := fc.mutation.EnvironmentIDs(); len(nodes) > 0 {

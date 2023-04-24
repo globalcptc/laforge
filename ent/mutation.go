@@ -30063,37 +30063,37 @@ func (m *ScheduledStepMutation) ResetEdge(name string) error {
 // ScriptMutation represents an operation that mutates the Script nodes in the graph.
 type ScriptMutation struct {
 	config
-	op                          Op
-	typ                         string
-	id                          *uuid.UUID
-	hcl_id                      *string
-	name                        *string
-	language                    *string
-	description                 *string
-	source                      *string
-	source_type                 *string
-	cooldown                    *int
-	addcooldown                 *int
-	timeout                     *int
-	addtimeout                  *int
-	ignore_errors               *bool
-	args                        *[]string
-	disabled                    *bool
-	vars                        *map[string]string
-	abs_path                    *string
-	tags                        *map[string]string
-	clearedFields               map[string]struct{}
-	_ScriptToUser               map[uuid.UUID]struct{}
-	removed_ScriptToUser        map[uuid.UUID]struct{}
-	cleared_ScriptToUser        bool
-	_ScriptToFinding            map[uuid.UUID]struct{}
-	removed_ScriptToFinding     map[uuid.UUID]struct{}
-	cleared_ScriptToFinding     bool
-	_ScriptToEnvironment        *uuid.UUID
-	cleared_ScriptToEnvironment bool
-	done                        bool
-	oldValue                    func(context.Context) (*Script, error)
-	predicates                  []predicate.Script
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	hcl_id              *string
+	name                *string
+	language            *string
+	description         *string
+	source              *string
+	source_type         *string
+	cooldown            *int
+	addcooldown         *int
+	timeout             *int
+	addtimeout          *int
+	ignore_errors       *bool
+	args                *[]string
+	disabled            *bool
+	vars                *map[string]string
+	abs_path            *string
+	tags                *map[string]string
+	clearedFields       map[string]struct{}
+	_Users              map[uuid.UUID]struct{}
+	removed_Users       map[uuid.UUID]struct{}
+	cleared_Users       bool
+	_Findings           map[uuid.UUID]struct{}
+	removed_Findings    map[uuid.UUID]struct{}
+	cleared_Findings    bool
+	_Environment        *uuid.UUID
+	cleared_Environment bool
+	done                bool
+	oldValue            func(context.Context) (*Script, error)
+	predicates          []predicate.Script
 }
 
 var _ ent.Mutation = (*ScriptMutation)(nil)
@@ -30744,151 +30744,151 @@ func (m *ScriptMutation) ResetTags() {
 	m.tags = nil
 }
 
-// AddScriptToUserIDs adds the "ScriptToUser" edge to the User entity by ids.
-func (m *ScriptMutation) AddScriptToUserIDs(ids ...uuid.UUID) {
-	if m._ScriptToUser == nil {
-		m._ScriptToUser = make(map[uuid.UUID]struct{})
+// AddUserIDs adds the "Users" edge to the User entity by ids.
+func (m *ScriptMutation) AddUserIDs(ids ...uuid.UUID) {
+	if m._Users == nil {
+		m._Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._ScriptToUser[ids[i]] = struct{}{}
+		m._Users[ids[i]] = struct{}{}
 	}
 }
 
-// ClearScriptToUser clears the "ScriptToUser" edge to the User entity.
-func (m *ScriptMutation) ClearScriptToUser() {
-	m.cleared_ScriptToUser = true
+// ClearUsers clears the "Users" edge to the User entity.
+func (m *ScriptMutation) ClearUsers() {
+	m.cleared_Users = true
 }
 
-// ScriptToUserCleared reports if the "ScriptToUser" edge to the User entity was cleared.
-func (m *ScriptMutation) ScriptToUserCleared() bool {
-	return m.cleared_ScriptToUser
+// UsersCleared reports if the "Users" edge to the User entity was cleared.
+func (m *ScriptMutation) UsersCleared() bool {
+	return m.cleared_Users
 }
 
-// RemoveScriptToUserIDs removes the "ScriptToUser" edge to the User entity by IDs.
-func (m *ScriptMutation) RemoveScriptToUserIDs(ids ...uuid.UUID) {
-	if m.removed_ScriptToUser == nil {
-		m.removed_ScriptToUser = make(map[uuid.UUID]struct{})
+// RemoveUserIDs removes the "Users" edge to the User entity by IDs.
+func (m *ScriptMutation) RemoveUserIDs(ids ...uuid.UUID) {
+	if m.removed_Users == nil {
+		m.removed_Users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._ScriptToUser, ids[i])
-		m.removed_ScriptToUser[ids[i]] = struct{}{}
+		delete(m._Users, ids[i])
+		m.removed_Users[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedScriptToUser returns the removed IDs of the "ScriptToUser" edge to the User entity.
-func (m *ScriptMutation) RemovedScriptToUserIDs() (ids []uuid.UUID) {
-	for id := range m.removed_ScriptToUser {
+// RemovedUsers returns the removed IDs of the "Users" edge to the User entity.
+func (m *ScriptMutation) RemovedUsersIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ScriptToUserIDs returns the "ScriptToUser" edge IDs in the mutation.
-func (m *ScriptMutation) ScriptToUserIDs() (ids []uuid.UUID) {
-	for id := range m._ScriptToUser {
+// UsersIDs returns the "Users" edge IDs in the mutation.
+func (m *ScriptMutation) UsersIDs() (ids []uuid.UUID) {
+	for id := range m._Users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetScriptToUser resets all changes to the "ScriptToUser" edge.
-func (m *ScriptMutation) ResetScriptToUser() {
-	m._ScriptToUser = nil
-	m.cleared_ScriptToUser = false
-	m.removed_ScriptToUser = nil
+// ResetUsers resets all changes to the "Users" edge.
+func (m *ScriptMutation) ResetUsers() {
+	m._Users = nil
+	m.cleared_Users = false
+	m.removed_Users = nil
 }
 
-// AddScriptToFindingIDs adds the "ScriptToFinding" edge to the Finding entity by ids.
-func (m *ScriptMutation) AddScriptToFindingIDs(ids ...uuid.UUID) {
-	if m._ScriptToFinding == nil {
-		m._ScriptToFinding = make(map[uuid.UUID]struct{})
+// AddFindingIDs adds the "Findings" edge to the Finding entity by ids.
+func (m *ScriptMutation) AddFindingIDs(ids ...uuid.UUID) {
+	if m._Findings == nil {
+		m._Findings = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._ScriptToFinding[ids[i]] = struct{}{}
+		m._Findings[ids[i]] = struct{}{}
 	}
 }
 
-// ClearScriptToFinding clears the "ScriptToFinding" edge to the Finding entity.
-func (m *ScriptMutation) ClearScriptToFinding() {
-	m.cleared_ScriptToFinding = true
+// ClearFindings clears the "Findings" edge to the Finding entity.
+func (m *ScriptMutation) ClearFindings() {
+	m.cleared_Findings = true
 }
 
-// ScriptToFindingCleared reports if the "ScriptToFinding" edge to the Finding entity was cleared.
-func (m *ScriptMutation) ScriptToFindingCleared() bool {
-	return m.cleared_ScriptToFinding
+// FindingsCleared reports if the "Findings" edge to the Finding entity was cleared.
+func (m *ScriptMutation) FindingsCleared() bool {
+	return m.cleared_Findings
 }
 
-// RemoveScriptToFindingIDs removes the "ScriptToFinding" edge to the Finding entity by IDs.
-func (m *ScriptMutation) RemoveScriptToFindingIDs(ids ...uuid.UUID) {
-	if m.removed_ScriptToFinding == nil {
-		m.removed_ScriptToFinding = make(map[uuid.UUID]struct{})
+// RemoveFindingIDs removes the "Findings" edge to the Finding entity by IDs.
+func (m *ScriptMutation) RemoveFindingIDs(ids ...uuid.UUID) {
+	if m.removed_Findings == nil {
+		m.removed_Findings = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._ScriptToFinding, ids[i])
-		m.removed_ScriptToFinding[ids[i]] = struct{}{}
+		delete(m._Findings, ids[i])
+		m.removed_Findings[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedScriptToFinding returns the removed IDs of the "ScriptToFinding" edge to the Finding entity.
-func (m *ScriptMutation) RemovedScriptToFindingIDs() (ids []uuid.UUID) {
-	for id := range m.removed_ScriptToFinding {
+// RemovedFindings returns the removed IDs of the "Findings" edge to the Finding entity.
+func (m *ScriptMutation) RemovedFindingsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Findings {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ScriptToFindingIDs returns the "ScriptToFinding" edge IDs in the mutation.
-func (m *ScriptMutation) ScriptToFindingIDs() (ids []uuid.UUID) {
-	for id := range m._ScriptToFinding {
+// FindingsIDs returns the "Findings" edge IDs in the mutation.
+func (m *ScriptMutation) FindingsIDs() (ids []uuid.UUID) {
+	for id := range m._Findings {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetScriptToFinding resets all changes to the "ScriptToFinding" edge.
-func (m *ScriptMutation) ResetScriptToFinding() {
-	m._ScriptToFinding = nil
-	m.cleared_ScriptToFinding = false
-	m.removed_ScriptToFinding = nil
+// ResetFindings resets all changes to the "Findings" edge.
+func (m *ScriptMutation) ResetFindings() {
+	m._Findings = nil
+	m.cleared_Findings = false
+	m.removed_Findings = nil
 }
 
-// SetScriptToEnvironmentID sets the "ScriptToEnvironment" edge to the Environment entity by id.
-func (m *ScriptMutation) SetScriptToEnvironmentID(id uuid.UUID) {
-	m._ScriptToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *ScriptMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearScriptToEnvironment clears the "ScriptToEnvironment" edge to the Environment entity.
-func (m *ScriptMutation) ClearScriptToEnvironment() {
-	m.cleared_ScriptToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *ScriptMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// ScriptToEnvironmentCleared reports if the "ScriptToEnvironment" edge to the Environment entity was cleared.
-func (m *ScriptMutation) ScriptToEnvironmentCleared() bool {
-	return m.cleared_ScriptToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *ScriptMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// ScriptToEnvironmentID returns the "ScriptToEnvironment" edge ID in the mutation.
-func (m *ScriptMutation) ScriptToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._ScriptToEnvironment != nil {
-		return *m._ScriptToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *ScriptMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// ScriptToEnvironmentIDs returns the "ScriptToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ScriptToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *ScriptMutation) ScriptToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._ScriptToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *ScriptMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetScriptToEnvironment resets all changes to the "ScriptToEnvironment" edge.
-func (m *ScriptMutation) ResetScriptToEnvironment() {
-	m._ScriptToEnvironment = nil
-	m.cleared_ScriptToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *ScriptMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
 // Where appends a list predicates to the ScriptMutation builder.
@@ -31258,14 +31258,14 @@ func (m *ScriptMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ScriptMutation) AddedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m._ScriptToUser != nil {
-		edges = append(edges, script.EdgeScriptToUser)
+	if m._Users != nil {
+		edges = append(edges, script.EdgeUsers)
 	}
-	if m._ScriptToFinding != nil {
-		edges = append(edges, script.EdgeScriptToFinding)
+	if m._Findings != nil {
+		edges = append(edges, script.EdgeFindings)
 	}
-	if m._ScriptToEnvironment != nil {
-		edges = append(edges, script.EdgeScriptToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, script.EdgeEnvironment)
 	}
 	return edges
 }
@@ -31274,20 +31274,20 @@ func (m *ScriptMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *ScriptMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case script.EdgeScriptToUser:
-		ids := make([]ent.Value, 0, len(m._ScriptToUser))
-		for id := range m._ScriptToUser {
+	case script.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m._Users))
+		for id := range m._Users {
 			ids = append(ids, id)
 		}
 		return ids
-	case script.EdgeScriptToFinding:
-		ids := make([]ent.Value, 0, len(m._ScriptToFinding))
-		for id := range m._ScriptToFinding {
+	case script.EdgeFindings:
+		ids := make([]ent.Value, 0, len(m._Findings))
+		for id := range m._Findings {
 			ids = append(ids, id)
 		}
 		return ids
-	case script.EdgeScriptToEnvironment:
-		if id := m._ScriptToEnvironment; id != nil {
+	case script.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -31297,11 +31297,11 @@ func (m *ScriptMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ScriptMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m.removed_ScriptToUser != nil {
-		edges = append(edges, script.EdgeScriptToUser)
+	if m.removed_Users != nil {
+		edges = append(edges, script.EdgeUsers)
 	}
-	if m.removed_ScriptToFinding != nil {
-		edges = append(edges, script.EdgeScriptToFinding)
+	if m.removed_Findings != nil {
+		edges = append(edges, script.EdgeFindings)
 	}
 	return edges
 }
@@ -31310,15 +31310,15 @@ func (m *ScriptMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ScriptMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case script.EdgeScriptToUser:
-		ids := make([]ent.Value, 0, len(m.removed_ScriptToUser))
-		for id := range m.removed_ScriptToUser {
+	case script.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m.removed_Users))
+		for id := range m.removed_Users {
 			ids = append(ids, id)
 		}
 		return ids
-	case script.EdgeScriptToFinding:
-		ids := make([]ent.Value, 0, len(m.removed_ScriptToFinding))
-		for id := range m.removed_ScriptToFinding {
+	case script.EdgeFindings:
+		ids := make([]ent.Value, 0, len(m.removed_Findings))
+		for id := range m.removed_Findings {
 			ids = append(ids, id)
 		}
 		return ids
@@ -31329,14 +31329,14 @@ func (m *ScriptMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ScriptMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m.cleared_ScriptToUser {
-		edges = append(edges, script.EdgeScriptToUser)
+	if m.cleared_Users {
+		edges = append(edges, script.EdgeUsers)
 	}
-	if m.cleared_ScriptToFinding {
-		edges = append(edges, script.EdgeScriptToFinding)
+	if m.cleared_Findings {
+		edges = append(edges, script.EdgeFindings)
 	}
-	if m.cleared_ScriptToEnvironment {
-		edges = append(edges, script.EdgeScriptToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, script.EdgeEnvironment)
 	}
 	return edges
 }
@@ -31345,12 +31345,12 @@ func (m *ScriptMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *ScriptMutation) EdgeCleared(name string) bool {
 	switch name {
-	case script.EdgeScriptToUser:
-		return m.cleared_ScriptToUser
-	case script.EdgeScriptToFinding:
-		return m.cleared_ScriptToFinding
-	case script.EdgeScriptToEnvironment:
-		return m.cleared_ScriptToEnvironment
+	case script.EdgeUsers:
+		return m.cleared_Users
+	case script.EdgeFindings:
+		return m.cleared_Findings
+	case script.EdgeEnvironment:
+		return m.cleared_Environment
 	}
 	return false
 }
@@ -31359,8 +31359,8 @@ func (m *ScriptMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ScriptMutation) ClearEdge(name string) error {
 	switch name {
-	case script.EdgeScriptToEnvironment:
-		m.ClearScriptToEnvironment()
+	case script.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Script unique edge %s", name)
@@ -31370,14 +31370,14 @@ func (m *ScriptMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ScriptMutation) ResetEdge(name string) error {
 	switch name {
-	case script.EdgeScriptToUser:
-		m.ResetScriptToUser()
+	case script.EdgeUsers:
+		m.ResetUsers()
 		return nil
-	case script.EdgeScriptToFinding:
-		m.ResetScriptToFinding()
+	case script.EdgeFindings:
+		m.ResetFindings()
 		return nil
-	case script.EdgeScriptToEnvironment:
-		m.ResetScriptToEnvironment()
+	case script.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown Script edge %s", name)

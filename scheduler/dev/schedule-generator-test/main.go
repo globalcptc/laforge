@@ -172,7 +172,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	// Check if step is script
 	entScript, err := client.Script.Query().Where(
 		script.And(
-			script.HasScriptToEnvironmentWith(
+			script.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			script.HclIDEQ(entScheduledStep.Step),

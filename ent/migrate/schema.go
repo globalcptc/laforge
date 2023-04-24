@@ -461,7 +461,7 @@ var (
 		{Name: "tags", Type: field.TypeJSON},
 		{Name: "environment_findings", Type: field.TypeUUID, Nullable: true},
 		{Name: "finding_host", Type: field.TypeUUID, Nullable: true},
-		{Name: "script_script_to_finding", Type: field.TypeUUID, Nullable: true},
+		{Name: "script_findings", Type: field.TypeUUID, Nullable: true},
 	}
 	// FindingsTable holds the schema information for the "findings" table.
 	FindingsTable = &schema.Table{
@@ -482,7 +482,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "findings_scripts_ScriptToFinding",
+				Symbol:     "findings_scripts_Findings",
 				Columns:    []*schema.Column{FindingsColumns[8]},
 				RefColumns: []*schema.Column{ScriptsColumns[0]},
 				OnDelete:   schema.Cascade,
@@ -1302,7 +1302,7 @@ var (
 		{Name: "command_users", Type: field.TypeUUID, Nullable: true},
 		{Name: "finding_users", Type: field.TypeUUID, Nullable: true},
 		{Name: "host_users", Type: field.TypeUUID, Nullable: true},
-		{Name: "script_script_to_user", Type: field.TypeUUID, Nullable: true},
+		{Name: "script_users", Type: field.TypeUUID, Nullable: true},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{
@@ -1335,7 +1335,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "users_scripts_ScriptToUser",
+				Symbol:     "users_scripts_Users",
 				Columns:    []*schema.Column{UsersColumns[9]},
 				RefColumns: []*schema.Column{ScriptsColumns[0]},
 				OnDelete:   schema.SetNull,

@@ -586,10 +586,10 @@ func (fq *FindingQuery) loadScript(ctx context.Context, query *ScriptQuery, node
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Finding)
 	for i := range nodes {
-		if nodes[i].script_script_to_finding == nil {
+		if nodes[i].script_findings == nil {
 			continue
 		}
-		fk := *nodes[i].script_script_to_finding
+		fk := *nodes[i].script_findings
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -603,7 +603,7 @@ func (fq *FindingQuery) loadScript(ctx context.Context, query *ScriptQuery, node
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "script_script_to_finding" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "script_findings" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

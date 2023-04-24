@@ -5691,15 +5691,15 @@ func (c *ScriptClient) GetX(ctx context.Context, id uuid.UUID) *Script {
 	return obj
 }
 
-// QueryScriptToUser queries the ScriptToUser edge of a Script.
-func (c *ScriptClient) QueryScriptToUser(s *Script) *UserQuery {
+// QueryUsers queries the Users edge of a Script.
+func (c *ScriptClient) QueryUsers(s *Script) *UserQuery {
 	query := &UserQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := s.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(script.Table, script.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, script.ScriptToUserTable, script.ScriptToUserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, script.UsersTable, script.UsersColumn),
 		)
 		fromV = sqlgraph.Neighbors(s.driver.Dialect(), step)
 		return fromV, nil
@@ -5707,15 +5707,15 @@ func (c *ScriptClient) QueryScriptToUser(s *Script) *UserQuery {
 	return query
 }
 
-// QueryScriptToFinding queries the ScriptToFinding edge of a Script.
-func (c *ScriptClient) QueryScriptToFinding(s *Script) *FindingQuery {
+// QueryFindings queries the Findings edge of a Script.
+func (c *ScriptClient) QueryFindings(s *Script) *FindingQuery {
 	query := &FindingQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := s.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(script.Table, script.FieldID, id),
 			sqlgraph.To(finding.Table, finding.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, script.ScriptToFindingTable, script.ScriptToFindingColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, script.FindingsTable, script.FindingsColumn),
 		)
 		fromV = sqlgraph.Neighbors(s.driver.Dialect(), step)
 		return fromV, nil
@@ -5723,15 +5723,15 @@ func (c *ScriptClient) QueryScriptToFinding(s *Script) *FindingQuery {
 	return query
 }
 
-// QueryScriptToEnvironment queries the ScriptToEnvironment edge of a Script.
-func (c *ScriptClient) QueryScriptToEnvironment(s *Script) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a Script.
+func (c *ScriptClient) QueryEnvironment(s *Script) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := s.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(script.Table, script.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, script.ScriptToEnvironmentTable, script.ScriptToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, script.EnvironmentTable, script.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(s.driver.Dialect(), step)
 		return fromV, nil

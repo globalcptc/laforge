@@ -3500,9 +3500,9 @@ func (s *Script) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "User",
-		Name: "ScriptToUser",
+		Name: "Users",
 	}
-	err = s.QueryScriptToUser().
+	err = s.QueryUsers().
 		Select(user.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -3510,9 +3510,9 @@ func (s *Script) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Finding",
-		Name: "ScriptToFinding",
+		Name: "Findings",
 	}
-	err = s.QueryScriptToFinding().
+	err = s.QueryFindings().
 		Select(finding.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -3520,9 +3520,9 @@ func (s *Script) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Environment",
-		Name: "ScriptToEnvironment",
+		Name: "Environment",
 	}
-	err = s.QueryScriptToEnvironment().
+	err = s.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
