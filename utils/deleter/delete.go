@@ -196,7 +196,7 @@ func main() {
 	// 		),
 	// 	).Exec(ctx)
 	// 	amountDeleted, err = client.Team.Delete().Where(
-	// 		team.HasTeamToBuildWith(
+	// 		team.HasBuildWith(
 	// 			build.IDEQ(entBuild.ID),
 	// 		),
 	// 	).Exec(ctx)

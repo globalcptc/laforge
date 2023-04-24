@@ -93,7 +93,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "team" package.
 	TeamsInverseTable = "teams"
 	// TeamsColumn is the table column denoting the Teams relation/edge.
-	TeamsColumn = "team_team_to_build"
+	TeamsColumn = "team_build"
 	// PlansTable is the table that holds the Plans relation/edge.
 	PlansTable = "plans"
 	// PlansInverseTable is the table name for the Plan entity.

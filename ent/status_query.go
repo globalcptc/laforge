@@ -855,10 +855,10 @@ func (sq *StatusQuery) loadTeam(ctx context.Context, query *TeamQuery, nodes []*
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].team_team_to_status == nil {
+		if nodes[i].team_status == nil {
 			continue
 		}
-		fk := *nodes[i].team_team_to_status
+		fk := *nodes[i].team_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -872,7 +872,7 @@ func (sq *StatusQuery) loadTeam(ctx context.Context, query *TeamQuery, nodes []*
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "team_team_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "team_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

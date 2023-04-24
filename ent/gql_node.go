@@ -3860,9 +3860,9 @@ func (t *Team) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Build",
-		Name: "TeamToBuild",
+		Name: "Build",
 	}
-	err = t.QueryTeamToBuild().
+	err = t.QueryBuild().
 		Select(build.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -3870,9 +3870,9 @@ func (t *Team) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Status",
-		Name: "TeamToStatus",
+		Name: "Status",
 	}
-	err = t.QueryTeamToStatus().
+	err = t.QueryStatus().
 		Select(status.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -3880,9 +3880,9 @@ func (t *Team) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "ProvisionedNetwork",
-		Name: "TeamToProvisionedNetwork",
+		Name: "ProvisionedNetworks",
 	}
-	err = t.QueryTeamToProvisionedNetwork().
+	err = t.QueryProvisionedNetworks().
 		Select(provisionednetwork.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -3890,9 +3890,9 @@ func (t *Team) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "Plan",
-		Name: "TeamToPlan",
+		Name: "Plan",
 	}
-	err = t.QueryTeamToPlan().
+	err = t.QueryPlan().
 		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {

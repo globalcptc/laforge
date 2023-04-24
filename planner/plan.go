@@ -321,8 +321,8 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	}
 	entTeam, err := client.Team.Create().
 		SetTeamNumber(teamNumber).
-		SetTeamToBuild(entBuild).
-		SetTeamToStatus(entStatus).
+		SetBuild(entBuild).
+		SetStatus(entStatus).
 		SetVars(map[string]string{}).
 		Save(ctx)
 	if err != nil {
@@ -418,7 +418,7 @@ func createProvisionedNetworks(ctx context.Context, client *ent.Client, laforgeC
 		logger.Log.Errorf("Failed to create Provisoned Network %v for Team %v. Err: %v", entNetwork.Name, entTeam.TeamNumber, err)
 		return nil, err
 	}
-	teamPlanNode, err := entTeam.QueryTeamToPlan().Only(ctx)
+	teamPlanNode, err := entTeam.QueryPlan().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Plan Node for Build %v. Err: %v", entBuild.ID, err)
 		return nil, err
@@ -1490,7 +1490,7 @@ func RenderScript(ctx context.Context, client *ent.Client, logger *logging.Logge
 	}
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedNetwork().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryTeam().OnlyX(ctx)
-	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
+	currentBuild := currentTeam.QueryBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
 	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithHosts().WithNetwork().AllX(ctx)
 	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)
@@ -1577,7 +1577,7 @@ func renderFileDownload(ctx context.Context, logger *logging.Logger, entStep int
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedNetwork().OnlyX(ctx)
 	currentHost := currentProvisionedHost.QueryHost().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryTeam().OnlyX(ctx)
-	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
+	currentBuild := currentTeam.QueryBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
 
 	fileRelativePath := path.Join("builds", currentEnvironment.Name, fmt.Sprint(currentBuild.Revision), fmt.Sprint(currentTeam.TeamNumber), currentProvisionedNetwork.Name, currentHost.Hostname)
@@ -1642,7 +1642,7 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 	}
 	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedNetwork().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryTeam().OnlyX(ctx)
-	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
+	currentBuild := currentTeam.QueryBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
 	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithHosts().WithNetwork().AllX(ctx)
 	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)

@@ -507,7 +507,7 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 		return fmt.Errorf("couldn't query build from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
 
-	entBuild, err := entTeam.QueryTeamToBuild().Only(ctx)
+	entBuild, err := entTeam.QueryBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
@@ -615,7 +615,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	ctxClosing := context.Background()
 	defer ctxClosing.Done()
 
-	entBuild, err := entTeam.QueryTeamToBuild().Only(ctx)
+	entBuild, err := entTeam.QueryBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from team \"%v\": %v", entTeam.TeamNumber, err)
 	}

@@ -1149,7 +1149,7 @@ var (
 		{Name: "provisioning_scheduled_step_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_step_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "server_task_status", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "team_team_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "team_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
 	// StatusTable holds the schema information for the "status" table.
 	StatusTable = &schema.Table{
@@ -1206,7 +1206,7 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "status_teams_TeamToStatus",
+				Symbol:     "status_teams_Status",
 				Columns:    []*schema.Column{StatusColumns[16]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.Cascade,
@@ -1248,7 +1248,7 @@ var (
 		{Name: "team_number", Type: field.TypeInt},
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "plan_team", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "team_team_to_build", Type: field.TypeUUID},
+		{Name: "team_build", Type: field.TypeUUID},
 	}
 	// TeamsTable holds the schema information for the "teams" table.
 	TeamsTable = &schema.Table{
@@ -1263,7 +1263,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "teams_builds_TeamToBuild",
+				Symbol:     "teams_builds_Build",
 				Columns:    []*schema.Column{TeamsColumns[4]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.NoAction,

@@ -34053,25 +34053,25 @@ func (m *TagMutation) ResetEdge(name string) error {
 // TeamMutation represents an operation that mutates the Team nodes in the graph.
 type TeamMutation struct {
 	config
-	op                               Op
-	typ                              string
-	id                               *uuid.UUID
-	team_number                      *int
-	addteam_number                   *int
-	vars                             *map[string]string
-	clearedFields                    map[string]struct{}
-	_TeamToBuild                     *uuid.UUID
-	cleared_TeamToBuild              bool
-	_TeamToStatus                    *uuid.UUID
-	cleared_TeamToStatus             bool
-	_TeamToProvisionedNetwork        map[uuid.UUID]struct{}
-	removed_TeamToProvisionedNetwork map[uuid.UUID]struct{}
-	cleared_TeamToProvisionedNetwork bool
-	_TeamToPlan                      *uuid.UUID
-	cleared_TeamToPlan               bool
-	done                             bool
-	oldValue                         func(context.Context) (*Team, error)
-	predicates                       []predicate.Team
+	op                          Op
+	typ                         string
+	id                          *uuid.UUID
+	team_number                 *int
+	addteam_number              *int
+	vars                        *map[string]string
+	clearedFields               map[string]struct{}
+	_Build                      *uuid.UUID
+	cleared_Build               bool
+	_Status                     *uuid.UUID
+	cleared_Status              bool
+	_ProvisionedNetworks        map[uuid.UUID]struct{}
+	removed_ProvisionedNetworks map[uuid.UUID]struct{}
+	cleared_ProvisionedNetworks bool
+	_Plan                       *uuid.UUID
+	cleared_Plan                bool
+	done                        bool
+	oldValue                    func(context.Context) (*Team, error)
+	predicates                  []predicate.Team
 }
 
 var _ ent.Mutation = (*TeamMutation)(nil)
@@ -34270,175 +34270,175 @@ func (m *TeamMutation) ResetVars() {
 	m.vars = nil
 }
 
-// SetTeamToBuildID sets the "TeamToBuild" edge to the Build entity by id.
-func (m *TeamMutation) SetTeamToBuildID(id uuid.UUID) {
-	m._TeamToBuild = &id
+// SetBuildID sets the "Build" edge to the Build entity by id.
+func (m *TeamMutation) SetBuildID(id uuid.UUID) {
+	m._Build = &id
 }
 
-// ClearTeamToBuild clears the "TeamToBuild" edge to the Build entity.
-func (m *TeamMutation) ClearTeamToBuild() {
-	m.cleared_TeamToBuild = true
+// ClearBuild clears the "Build" edge to the Build entity.
+func (m *TeamMutation) ClearBuild() {
+	m.cleared_Build = true
 }
 
-// TeamToBuildCleared reports if the "TeamToBuild" edge to the Build entity was cleared.
-func (m *TeamMutation) TeamToBuildCleared() bool {
-	return m.cleared_TeamToBuild
+// BuildCleared reports if the "Build" edge to the Build entity was cleared.
+func (m *TeamMutation) BuildCleared() bool {
+	return m.cleared_Build
 }
 
-// TeamToBuildID returns the "TeamToBuild" edge ID in the mutation.
-func (m *TeamMutation) TeamToBuildID() (id uuid.UUID, exists bool) {
-	if m._TeamToBuild != nil {
-		return *m._TeamToBuild, true
+// BuildID returns the "Build" edge ID in the mutation.
+func (m *TeamMutation) BuildID() (id uuid.UUID, exists bool) {
+	if m._Build != nil {
+		return *m._Build, true
 	}
 	return
 }
 
-// TeamToBuildIDs returns the "TeamToBuild" edge IDs in the mutation.
+// BuildIDs returns the "Build" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// TeamToBuildID instead. It exists only for internal usage by the builders.
-func (m *TeamMutation) TeamToBuildIDs() (ids []uuid.UUID) {
-	if id := m._TeamToBuild; id != nil {
+// BuildID instead. It exists only for internal usage by the builders.
+func (m *TeamMutation) BuildIDs() (ids []uuid.UUID) {
+	if id := m._Build; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetTeamToBuild resets all changes to the "TeamToBuild" edge.
-func (m *TeamMutation) ResetTeamToBuild() {
-	m._TeamToBuild = nil
-	m.cleared_TeamToBuild = false
+// ResetBuild resets all changes to the "Build" edge.
+func (m *TeamMutation) ResetBuild() {
+	m._Build = nil
+	m.cleared_Build = false
 }
 
-// SetTeamToStatusID sets the "TeamToStatus" edge to the Status entity by id.
-func (m *TeamMutation) SetTeamToStatusID(id uuid.UUID) {
-	m._TeamToStatus = &id
+// SetStatusID sets the "Status" edge to the Status entity by id.
+func (m *TeamMutation) SetStatusID(id uuid.UUID) {
+	m._Status = &id
 }
 
-// ClearTeamToStatus clears the "TeamToStatus" edge to the Status entity.
-func (m *TeamMutation) ClearTeamToStatus() {
-	m.cleared_TeamToStatus = true
+// ClearStatus clears the "Status" edge to the Status entity.
+func (m *TeamMutation) ClearStatus() {
+	m.cleared_Status = true
 }
 
-// TeamToStatusCleared reports if the "TeamToStatus" edge to the Status entity was cleared.
-func (m *TeamMutation) TeamToStatusCleared() bool {
-	return m.cleared_TeamToStatus
+// StatusCleared reports if the "Status" edge to the Status entity was cleared.
+func (m *TeamMutation) StatusCleared() bool {
+	return m.cleared_Status
 }
 
-// TeamToStatusID returns the "TeamToStatus" edge ID in the mutation.
-func (m *TeamMutation) TeamToStatusID() (id uuid.UUID, exists bool) {
-	if m._TeamToStatus != nil {
-		return *m._TeamToStatus, true
+// StatusID returns the "Status" edge ID in the mutation.
+func (m *TeamMutation) StatusID() (id uuid.UUID, exists bool) {
+	if m._Status != nil {
+		return *m._Status, true
 	}
 	return
 }
 
-// TeamToStatusIDs returns the "TeamToStatus" edge IDs in the mutation.
+// StatusIDs returns the "Status" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// TeamToStatusID instead. It exists only for internal usage by the builders.
-func (m *TeamMutation) TeamToStatusIDs() (ids []uuid.UUID) {
-	if id := m._TeamToStatus; id != nil {
+// StatusID instead. It exists only for internal usage by the builders.
+func (m *TeamMutation) StatusIDs() (ids []uuid.UUID) {
+	if id := m._Status; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetTeamToStatus resets all changes to the "TeamToStatus" edge.
-func (m *TeamMutation) ResetTeamToStatus() {
-	m._TeamToStatus = nil
-	m.cleared_TeamToStatus = false
+// ResetStatus resets all changes to the "Status" edge.
+func (m *TeamMutation) ResetStatus() {
+	m._Status = nil
+	m.cleared_Status = false
 }
 
-// AddTeamToProvisionedNetworkIDs adds the "TeamToProvisionedNetwork" edge to the ProvisionedNetwork entity by ids.
-func (m *TeamMutation) AddTeamToProvisionedNetworkIDs(ids ...uuid.UUID) {
-	if m._TeamToProvisionedNetwork == nil {
-		m._TeamToProvisionedNetwork = make(map[uuid.UUID]struct{})
+// AddProvisionedNetworkIDs adds the "ProvisionedNetworks" edge to the ProvisionedNetwork entity by ids.
+func (m *TeamMutation) AddProvisionedNetworkIDs(ids ...uuid.UUID) {
+	if m._ProvisionedNetworks == nil {
+		m._ProvisionedNetworks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._TeamToProvisionedNetwork[ids[i]] = struct{}{}
+		m._ProvisionedNetworks[ids[i]] = struct{}{}
 	}
 }
 
-// ClearTeamToProvisionedNetwork clears the "TeamToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (m *TeamMutation) ClearTeamToProvisionedNetwork() {
-	m.cleared_TeamToProvisionedNetwork = true
+// ClearProvisionedNetworks clears the "ProvisionedNetworks" edge to the ProvisionedNetwork entity.
+func (m *TeamMutation) ClearProvisionedNetworks() {
+	m.cleared_ProvisionedNetworks = true
 }
 
-// TeamToProvisionedNetworkCleared reports if the "TeamToProvisionedNetwork" edge to the ProvisionedNetwork entity was cleared.
-func (m *TeamMutation) TeamToProvisionedNetworkCleared() bool {
-	return m.cleared_TeamToProvisionedNetwork
+// ProvisionedNetworksCleared reports if the "ProvisionedNetworks" edge to the ProvisionedNetwork entity was cleared.
+func (m *TeamMutation) ProvisionedNetworksCleared() bool {
+	return m.cleared_ProvisionedNetworks
 }
 
-// RemoveTeamToProvisionedNetworkIDs removes the "TeamToProvisionedNetwork" edge to the ProvisionedNetwork entity by IDs.
-func (m *TeamMutation) RemoveTeamToProvisionedNetworkIDs(ids ...uuid.UUID) {
-	if m.removed_TeamToProvisionedNetwork == nil {
-		m.removed_TeamToProvisionedNetwork = make(map[uuid.UUID]struct{})
+// RemoveProvisionedNetworkIDs removes the "ProvisionedNetworks" edge to the ProvisionedNetwork entity by IDs.
+func (m *TeamMutation) RemoveProvisionedNetworkIDs(ids ...uuid.UUID) {
+	if m.removed_ProvisionedNetworks == nil {
+		m.removed_ProvisionedNetworks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._TeamToProvisionedNetwork, ids[i])
-		m.removed_TeamToProvisionedNetwork[ids[i]] = struct{}{}
+		delete(m._ProvisionedNetworks, ids[i])
+		m.removed_ProvisionedNetworks[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedTeamToProvisionedNetwork returns the removed IDs of the "TeamToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (m *TeamMutation) RemovedTeamToProvisionedNetworkIDs() (ids []uuid.UUID) {
-	for id := range m.removed_TeamToProvisionedNetwork {
+// RemovedProvisionedNetworks returns the removed IDs of the "ProvisionedNetworks" edge to the ProvisionedNetwork entity.
+func (m *TeamMutation) RemovedProvisionedNetworksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ProvisionedNetworks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// TeamToProvisionedNetworkIDs returns the "TeamToProvisionedNetwork" edge IDs in the mutation.
-func (m *TeamMutation) TeamToProvisionedNetworkIDs() (ids []uuid.UUID) {
-	for id := range m._TeamToProvisionedNetwork {
+// ProvisionedNetworksIDs returns the "ProvisionedNetworks" edge IDs in the mutation.
+func (m *TeamMutation) ProvisionedNetworksIDs() (ids []uuid.UUID) {
+	for id := range m._ProvisionedNetworks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetTeamToProvisionedNetwork resets all changes to the "TeamToProvisionedNetwork" edge.
-func (m *TeamMutation) ResetTeamToProvisionedNetwork() {
-	m._TeamToProvisionedNetwork = nil
-	m.cleared_TeamToProvisionedNetwork = false
-	m.removed_TeamToProvisionedNetwork = nil
+// ResetProvisionedNetworks resets all changes to the "ProvisionedNetworks" edge.
+func (m *TeamMutation) ResetProvisionedNetworks() {
+	m._ProvisionedNetworks = nil
+	m.cleared_ProvisionedNetworks = false
+	m.removed_ProvisionedNetworks = nil
 }
 
-// SetTeamToPlanID sets the "TeamToPlan" edge to the Plan entity by id.
-func (m *TeamMutation) SetTeamToPlanID(id uuid.UUID) {
-	m._TeamToPlan = &id
+// SetPlanID sets the "Plan" edge to the Plan entity by id.
+func (m *TeamMutation) SetPlanID(id uuid.UUID) {
+	m._Plan = &id
 }
 
-// ClearTeamToPlan clears the "TeamToPlan" edge to the Plan entity.
-func (m *TeamMutation) ClearTeamToPlan() {
-	m.cleared_TeamToPlan = true
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (m *TeamMutation) ClearPlan() {
+	m.cleared_Plan = true
 }
 
-// TeamToPlanCleared reports if the "TeamToPlan" edge to the Plan entity was cleared.
-func (m *TeamMutation) TeamToPlanCleared() bool {
-	return m.cleared_TeamToPlan
+// PlanCleared reports if the "Plan" edge to the Plan entity was cleared.
+func (m *TeamMutation) PlanCleared() bool {
+	return m.cleared_Plan
 }
 
-// TeamToPlanID returns the "TeamToPlan" edge ID in the mutation.
-func (m *TeamMutation) TeamToPlanID() (id uuid.UUID, exists bool) {
-	if m._TeamToPlan != nil {
-		return *m._TeamToPlan, true
+// PlanID returns the "Plan" edge ID in the mutation.
+func (m *TeamMutation) PlanID() (id uuid.UUID, exists bool) {
+	if m._Plan != nil {
+		return *m._Plan, true
 	}
 	return
 }
 
-// TeamToPlanIDs returns the "TeamToPlan" edge IDs in the mutation.
+// PlanIDs returns the "Plan" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// TeamToPlanID instead. It exists only for internal usage by the builders.
-func (m *TeamMutation) TeamToPlanIDs() (ids []uuid.UUID) {
-	if id := m._TeamToPlan; id != nil {
+// PlanID instead. It exists only for internal usage by the builders.
+func (m *TeamMutation) PlanIDs() (ids []uuid.UUID) {
+	if id := m._Plan; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetTeamToPlan resets all changes to the "TeamToPlan" edge.
-func (m *TeamMutation) ResetTeamToPlan() {
-	m._TeamToPlan = nil
-	m.cleared_TeamToPlan = false
+// ResetPlan resets all changes to the "Plan" edge.
+func (m *TeamMutation) ResetPlan() {
+	m._Plan = nil
+	m.cleared_Plan = false
 }
 
 // Where appends a list predicates to the TeamMutation builder.
@@ -34592,17 +34592,17 @@ func (m *TeamMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TeamMutation) AddedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m._TeamToBuild != nil {
-		edges = append(edges, team.EdgeTeamToBuild)
+	if m._Build != nil {
+		edges = append(edges, team.EdgeBuild)
 	}
-	if m._TeamToStatus != nil {
-		edges = append(edges, team.EdgeTeamToStatus)
+	if m._Status != nil {
+		edges = append(edges, team.EdgeStatus)
 	}
-	if m._TeamToProvisionedNetwork != nil {
-		edges = append(edges, team.EdgeTeamToProvisionedNetwork)
+	if m._ProvisionedNetworks != nil {
+		edges = append(edges, team.EdgeProvisionedNetworks)
 	}
-	if m._TeamToPlan != nil {
-		edges = append(edges, team.EdgeTeamToPlan)
+	if m._Plan != nil {
+		edges = append(edges, team.EdgePlan)
 	}
 	return edges
 }
@@ -34611,22 +34611,22 @@ func (m *TeamMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *TeamMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case team.EdgeTeamToBuild:
-		if id := m._TeamToBuild; id != nil {
+	case team.EdgeBuild:
+		if id := m._Build; id != nil {
 			return []ent.Value{*id}
 		}
-	case team.EdgeTeamToStatus:
-		if id := m._TeamToStatus; id != nil {
+	case team.EdgeStatus:
+		if id := m._Status; id != nil {
 			return []ent.Value{*id}
 		}
-	case team.EdgeTeamToProvisionedNetwork:
-		ids := make([]ent.Value, 0, len(m._TeamToProvisionedNetwork))
-		for id := range m._TeamToProvisionedNetwork {
+	case team.EdgeProvisionedNetworks:
+		ids := make([]ent.Value, 0, len(m._ProvisionedNetworks))
+		for id := range m._ProvisionedNetworks {
 			ids = append(ids, id)
 		}
 		return ids
-	case team.EdgeTeamToPlan:
-		if id := m._TeamToPlan; id != nil {
+	case team.EdgePlan:
+		if id := m._Plan; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -34636,8 +34636,8 @@ func (m *TeamMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TeamMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.removed_TeamToProvisionedNetwork != nil {
-		edges = append(edges, team.EdgeTeamToProvisionedNetwork)
+	if m.removed_ProvisionedNetworks != nil {
+		edges = append(edges, team.EdgeProvisionedNetworks)
 	}
 	return edges
 }
@@ -34646,9 +34646,9 @@ func (m *TeamMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *TeamMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case team.EdgeTeamToProvisionedNetwork:
-		ids := make([]ent.Value, 0, len(m.removed_TeamToProvisionedNetwork))
-		for id := range m.removed_TeamToProvisionedNetwork {
+	case team.EdgeProvisionedNetworks:
+		ids := make([]ent.Value, 0, len(m.removed_ProvisionedNetworks))
+		for id := range m.removed_ProvisionedNetworks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -34659,17 +34659,17 @@ func (m *TeamMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TeamMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.cleared_TeamToBuild {
-		edges = append(edges, team.EdgeTeamToBuild)
+	if m.cleared_Build {
+		edges = append(edges, team.EdgeBuild)
 	}
-	if m.cleared_TeamToStatus {
-		edges = append(edges, team.EdgeTeamToStatus)
+	if m.cleared_Status {
+		edges = append(edges, team.EdgeStatus)
 	}
-	if m.cleared_TeamToProvisionedNetwork {
-		edges = append(edges, team.EdgeTeamToProvisionedNetwork)
+	if m.cleared_ProvisionedNetworks {
+		edges = append(edges, team.EdgeProvisionedNetworks)
 	}
-	if m.cleared_TeamToPlan {
-		edges = append(edges, team.EdgeTeamToPlan)
+	if m.cleared_Plan {
+		edges = append(edges, team.EdgePlan)
 	}
 	return edges
 }
@@ -34678,14 +34678,14 @@ func (m *TeamMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *TeamMutation) EdgeCleared(name string) bool {
 	switch name {
-	case team.EdgeTeamToBuild:
-		return m.cleared_TeamToBuild
-	case team.EdgeTeamToStatus:
-		return m.cleared_TeamToStatus
-	case team.EdgeTeamToProvisionedNetwork:
-		return m.cleared_TeamToProvisionedNetwork
-	case team.EdgeTeamToPlan:
-		return m.cleared_TeamToPlan
+	case team.EdgeBuild:
+		return m.cleared_Build
+	case team.EdgeStatus:
+		return m.cleared_Status
+	case team.EdgeProvisionedNetworks:
+		return m.cleared_ProvisionedNetworks
+	case team.EdgePlan:
+		return m.cleared_Plan
 	}
 	return false
 }
@@ -34694,14 +34694,14 @@ func (m *TeamMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *TeamMutation) ClearEdge(name string) error {
 	switch name {
-	case team.EdgeTeamToBuild:
-		m.ClearTeamToBuild()
+	case team.EdgeBuild:
+		m.ClearBuild()
 		return nil
-	case team.EdgeTeamToStatus:
-		m.ClearTeamToStatus()
+	case team.EdgeStatus:
+		m.ClearStatus()
 		return nil
-	case team.EdgeTeamToPlan:
-		m.ClearTeamToPlan()
+	case team.EdgePlan:
+		m.ClearPlan()
 		return nil
 	}
 	return fmt.Errorf("unknown Team unique edge %s", name)
@@ -34711,17 +34711,17 @@ func (m *TeamMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *TeamMutation) ResetEdge(name string) error {
 	switch name {
-	case team.EdgeTeamToBuild:
-		m.ResetTeamToBuild()
+	case team.EdgeBuild:
+		m.ResetBuild()
 		return nil
-	case team.EdgeTeamToStatus:
-		m.ResetTeamToStatus()
+	case team.EdgeStatus:
+		m.ResetStatus()
 		return nil
-	case team.EdgeTeamToProvisionedNetwork:
-		m.ResetTeamToProvisionedNetwork()
+	case team.EdgeProvisionedNetworks:
+		m.ResetProvisionedNetworks()
 		return nil
-	case team.EdgeTeamToPlan:
-		m.ResetTeamToPlan()
+	case team.EdgePlan:
+		m.ResetPlan()
 		return nil
 	}
 	return fmt.Errorf("unknown Team edge %s", name)

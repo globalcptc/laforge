@@ -1067,13 +1067,13 @@ func (bq *BuildQuery) loadTeams(ctx context.Context, query *TeamQuery, nodes []*
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.team_team_to_build
+		fk := n.team_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "team_team_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "team_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "team_team_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "team_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

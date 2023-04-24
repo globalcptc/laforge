@@ -377,7 +377,7 @@ func (builder VSphereNSXTBuilder) DeployNetwork(ctx context.Context, provisioned
 }
 
 func (builder VSphereNSXTBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
-	entProNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(
+	entProNetwork, err := entTeam.QueryProvisionedNetworks().Where(
 		provisionednetwork.HasNetworkWith(
 			network.NameEQ("vdi"),
 		),

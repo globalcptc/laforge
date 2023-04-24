@@ -65,7 +65,7 @@ func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Bu
 			TeamNumber: entTeam.TeamNumber,
 			Networks:   []networkConf{},
 		}
-		entProNetworks, err := entTeam.QueryTeamToProvisionedNetwork().All(ctx)
+		entProNetworks, err := entTeam.QueryProvisionedNetworks().All(ctx)
 		if err != nil {
 			return "", err
 		}

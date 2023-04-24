@@ -125,7 +125,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 					logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 					return
 				}
-				entStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+				entStatus, err := entTeam.QueryStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -411,7 +411,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			return
 		}
 		if parentNodeFailed {
-			teamStatus, err := entTeam.QueryTeamToStatus().Only(ctxClosing)
+			teamStatus, err := entTeam.QueryStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
 				return
@@ -585,7 +585,7 @@ func buildNetwork(client *ent.Client, logger *logging.Logger, builder *builder.B
 func buildTeam(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entTeam *ent.Team) error {
 	logger.Log.Infof("deploying Team: %d", entTeam.TeamNumber)
 
-	teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+	teamStatus, err := entTeam.QueryStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Team status: %v", err)
 		return err
@@ -614,7 +614,7 @@ func buildTeam(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 
 func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entTeam *ent.Team) error {
 	stepAwaitingInProgress, err := entTeam.
-		QueryTeamToProvisionedNetwork().
+		QueryProvisionedNetworks().
 		Where(
 			provisionednetwork.
 				HasStatusWith(
@@ -633,13 +633,13 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 		return nil
 	}
 
-	teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+	teamStatus, err := entTeam.QueryStatus().Only(ctx)
 	if teamStatus.State != status.StateINPROGRESS {
 		return nil
 	}
 
 	hostFailed, err := entTeam.
-		QueryTeamToProvisionedNetwork().
+		QueryProvisionedNetworks().
 		Where(
 			provisionednetwork.
 				HasStatusWith(
@@ -665,7 +665,7 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 	}
 
 	stepNotCompleted, err := entTeam.
-		QueryTeamToProvisionedNetwork().
+		QueryProvisionedNetworks().
 		Where(
 			provisionednetwork.
 				HasStatusWith(

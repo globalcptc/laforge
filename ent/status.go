@@ -72,7 +72,7 @@ type Status struct {
 	provisioning_scheduled_step_status *uuid.UUID
 	provisioning_step_status           *uuid.UUID
 	server_task_status                 *uuid.UUID
-	team_team_to_status                *uuid.UUID
+	team_status                        *uuid.UUID
 }
 
 // StatusEdges holds the relations/edges for other nodes in the graph.
@@ -255,7 +255,7 @@ func (*Status) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case status.ForeignKeys[7]: // server_task_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case status.ForeignKeys[8]: // team_team_to_status
+		case status.ForeignKeys[8]: // team_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Status", columns[i])
@@ -378,10 +378,10 @@ func (s *Status) assignValues(columns []string, values []interface{}) error {
 			}
 		case status.ForeignKeys[8]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field team_team_to_status", values[i])
+				return fmt.Errorf("unexpected type %T for field team_status", values[i])
 			} else if value.Valid {
-				s.team_team_to_status = new(uuid.UUID)
-				*s.team_team_to_status = *value.S.(*uuid.UUID)
+				s.team_status = new(uuid.UUID)
+				*s.team_status = *value.S.(*uuid.UUID)
 			}
 		}
 	}

@@ -50,68 +50,68 @@ func (tc *TeamCreate) SetNillableID(u *uuid.UUID) *TeamCreate {
 	return tc
 }
 
-// SetTeamToBuildID sets the "TeamToBuild" edge to the Build entity by ID.
-func (tc *TeamCreate) SetTeamToBuildID(id uuid.UUID) *TeamCreate {
-	tc.mutation.SetTeamToBuildID(id)
+// SetBuildID sets the "Build" edge to the Build entity by ID.
+func (tc *TeamCreate) SetBuildID(id uuid.UUID) *TeamCreate {
+	tc.mutation.SetBuildID(id)
 	return tc
 }
 
-// SetTeamToBuild sets the "TeamToBuild" edge to the Build entity.
-func (tc *TeamCreate) SetTeamToBuild(b *Build) *TeamCreate {
-	return tc.SetTeamToBuildID(b.ID)
+// SetBuild sets the "Build" edge to the Build entity.
+func (tc *TeamCreate) SetBuild(b *Build) *TeamCreate {
+	return tc.SetBuildID(b.ID)
 }
 
-// SetTeamToStatusID sets the "TeamToStatus" edge to the Status entity by ID.
-func (tc *TeamCreate) SetTeamToStatusID(id uuid.UUID) *TeamCreate {
-	tc.mutation.SetTeamToStatusID(id)
+// SetStatusID sets the "Status" edge to the Status entity by ID.
+func (tc *TeamCreate) SetStatusID(id uuid.UUID) *TeamCreate {
+	tc.mutation.SetStatusID(id)
 	return tc
 }
 
-// SetNillableTeamToStatusID sets the "TeamToStatus" edge to the Status entity by ID if the given value is not nil.
-func (tc *TeamCreate) SetNillableTeamToStatusID(id *uuid.UUID) *TeamCreate {
+// SetNillableStatusID sets the "Status" edge to the Status entity by ID if the given value is not nil.
+func (tc *TeamCreate) SetNillableStatusID(id *uuid.UUID) *TeamCreate {
 	if id != nil {
-		tc = tc.SetTeamToStatusID(*id)
+		tc = tc.SetStatusID(*id)
 	}
 	return tc
 }
 
-// SetTeamToStatus sets the "TeamToStatus" edge to the Status entity.
-func (tc *TeamCreate) SetTeamToStatus(s *Status) *TeamCreate {
-	return tc.SetTeamToStatusID(s.ID)
+// SetStatus sets the "Status" edge to the Status entity.
+func (tc *TeamCreate) SetStatus(s *Status) *TeamCreate {
+	return tc.SetStatusID(s.ID)
 }
 
-// AddTeamToProvisionedNetworkIDs adds the "TeamToProvisionedNetwork" edge to the ProvisionedNetwork entity by IDs.
-func (tc *TeamCreate) AddTeamToProvisionedNetworkIDs(ids ...uuid.UUID) *TeamCreate {
-	tc.mutation.AddTeamToProvisionedNetworkIDs(ids...)
+// AddProvisionedNetworkIDs adds the "ProvisionedNetworks" edge to the ProvisionedNetwork entity by IDs.
+func (tc *TeamCreate) AddProvisionedNetworkIDs(ids ...uuid.UUID) *TeamCreate {
+	tc.mutation.AddProvisionedNetworkIDs(ids...)
 	return tc
 }
 
-// AddTeamToProvisionedNetwork adds the "TeamToProvisionedNetwork" edges to the ProvisionedNetwork entity.
-func (tc *TeamCreate) AddTeamToProvisionedNetwork(p ...*ProvisionedNetwork) *TeamCreate {
+// AddProvisionedNetworks adds the "ProvisionedNetworks" edges to the ProvisionedNetwork entity.
+func (tc *TeamCreate) AddProvisionedNetworks(p ...*ProvisionedNetwork) *TeamCreate {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return tc.AddTeamToProvisionedNetworkIDs(ids...)
+	return tc.AddProvisionedNetworkIDs(ids...)
 }
 
-// SetTeamToPlanID sets the "TeamToPlan" edge to the Plan entity by ID.
-func (tc *TeamCreate) SetTeamToPlanID(id uuid.UUID) *TeamCreate {
-	tc.mutation.SetTeamToPlanID(id)
+// SetPlanID sets the "Plan" edge to the Plan entity by ID.
+func (tc *TeamCreate) SetPlanID(id uuid.UUID) *TeamCreate {
+	tc.mutation.SetPlanID(id)
 	return tc
 }
 
-// SetNillableTeamToPlanID sets the "TeamToPlan" edge to the Plan entity by ID if the given value is not nil.
-func (tc *TeamCreate) SetNillableTeamToPlanID(id *uuid.UUID) *TeamCreate {
+// SetNillablePlanID sets the "Plan" edge to the Plan entity by ID if the given value is not nil.
+func (tc *TeamCreate) SetNillablePlanID(id *uuid.UUID) *TeamCreate {
 	if id != nil {
-		tc = tc.SetTeamToPlanID(*id)
+		tc = tc.SetPlanID(*id)
 	}
 	return tc
 }
 
-// SetTeamToPlan sets the "TeamToPlan" edge to the Plan entity.
-func (tc *TeamCreate) SetTeamToPlan(p *Plan) *TeamCreate {
-	return tc.SetTeamToPlanID(p.ID)
+// SetPlan sets the "Plan" edge to the Plan entity.
+func (tc *TeamCreate) SetPlan(p *Plan) *TeamCreate {
+	return tc.SetPlanID(p.ID)
 }
 
 // Mutation returns the TeamMutation object of the builder.
@@ -205,8 +205,8 @@ func (tc *TeamCreate) check() error {
 	if _, ok := tc.mutation.Vars(); !ok {
 		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "Team.vars"`)}
 	}
-	if _, ok := tc.mutation.TeamToBuildID(); !ok {
-		return &ValidationError{Name: "TeamToBuild", err: errors.New(`ent: missing required edge "Team.TeamToBuild"`)}
+	if _, ok := tc.mutation.BuildID(); !ok {
+		return &ValidationError{Name: "Build", err: errors.New(`ent: missing required edge "Team.Build"`)}
 	}
 	return nil
 }
@@ -260,12 +260,12 @@ func (tc *TeamCreate) createSpec() (*Team, *sqlgraph.CreateSpec) {
 		})
 		_node.Vars = value
 	}
-	if nodes := tc.mutation.TeamToBuildIDs(); len(nodes) > 0 {
+	if nodes := tc.mutation.BuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   team.TeamToBuildTable,
-			Columns: []string{team.TeamToBuildColumn},
+			Table:   team.BuildTable,
+			Columns: []string{team.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -277,15 +277,15 @@ func (tc *TeamCreate) createSpec() (*Team, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.team_team_to_build = &nodes[0]
+		_node.team_build = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := tc.mutation.TeamToStatusIDs(); len(nodes) > 0 {
+	if nodes := tc.mutation.StatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   team.TeamToStatusTable,
-			Columns: []string{team.TeamToStatusColumn},
+			Table:   team.StatusTable,
+			Columns: []string{team.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -299,12 +299,12 @@ func (tc *TeamCreate) createSpec() (*Team, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := tc.mutation.TeamToProvisionedNetworkIDs(); len(nodes) > 0 {
+	if nodes := tc.mutation.ProvisionedNetworksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   team.TeamToProvisionedNetworkTable,
-			Columns: []string{team.TeamToProvisionedNetworkColumn},
+			Table:   team.ProvisionedNetworksTable,
+			Columns: []string{team.ProvisionedNetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -318,12 +318,12 @@ func (tc *TeamCreate) createSpec() (*Team, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := tc.mutation.TeamToPlanIDs(); len(nodes) > 0 {
+	if nodes := tc.mutation.PlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   team.TeamToPlanTable,
-			Columns: []string{team.TeamToPlanColumn},
+			Table:   team.PlanTable,
+			Columns: []string{team.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

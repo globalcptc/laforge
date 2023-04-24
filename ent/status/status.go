@@ -83,7 +83,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "team" package.
 	TeamInverseTable = "teams"
 	// TeamColumn is the table column denoting the Team relation/edge.
-	TeamColumn = "team_team_to_status"
+	TeamColumn = "team_status"
 	// PlanTable is the table that holds the Plan relation/edge.
 	PlanTable = "status"
 	// PlanInverseTable is the table name for the Plan entity.
@@ -137,7 +137,7 @@ var ForeignKeys = []string{
 	"provisioning_scheduled_step_status",
 	"provisioning_step_status",
 	"server_task_status",
-	"team_team_to_status",
+	"team_status",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

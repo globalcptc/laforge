@@ -636,11 +636,11 @@ func (builder OpenstackBuilder) DeployNetwork(ctx context.Context, entProvisione
 func (builder OpenstackBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	ctxClosing := context.Background()
 	defer ctxClosing.Done()
-	entBuild, err := entTeam.QueryTeamToBuild().Only(ctx)
+	entBuild, err := entTeam.QueryBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from team: %v", err)
 	}
-	entEnvironment, err := entTeam.QueryTeamToBuild().QueryEnvironment().Only(ctx)
+	entEnvironment, err := entTeam.QueryBuild().QueryEnvironment().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query environment from team: %v", err)
 	}

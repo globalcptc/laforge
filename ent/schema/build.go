@@ -49,7 +49,7 @@ func (Build) Edges() []ent.Edge {
 		edge.From("ProvisionedNetworks", ProvisionedNetwork.Type).
 			Ref("Build"),
 		edge.From("Teams", Team.Type).
-			Ref("TeamToBuild"),
+			Ref("Build"),
 		edge.From("Plans", Plan.Type).
 			Ref("Build"),
 		edge.From("BuildCommits", BuildCommit.Type).

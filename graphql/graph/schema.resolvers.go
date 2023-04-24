@@ -702,7 +702,7 @@ func (r *mutationResolver) CreateAgentTasks(ctx context.Context, hostHclid strin
 		if err != nil {
 			return nil, fmt.Errorf("failed querying team: %v", err)
 		}
-		entProvisionedHost, err := entTeam.QueryTeamToProvisionedNetwork().QueryProvisionedHosts().Where(provisionedhost.HasHostWith(host.HclIDEQ(hostHclid))).All(ctx)
+		entProvisionedHost, err := entTeam.QueryProvisionedNetworks().QueryProvisionedHosts().Where(provisionedhost.HasHostWith(host.HclIDEQ(hostHclid))).All(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed querying provisoned hosts: %v", err)
 		}
@@ -1478,7 +1478,7 @@ func (r *queryResolver) ListBuildStatuses(ctx context.Context, buildUUID string)
 	}
 	statuses = append(statuses, planStatuses...)
 
-	teamStatuses, err := r.client.Team.Query().Where(team.HasTeamToBuildWith(build.IDEQ(uuid))).QueryTeamToStatus().All(ctx)
+	teamStatuses, err := r.client.Team.Query().Where(team.HasBuildWith(build.IDEQ(uuid))).QueryStatus().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed querying team statuses from build: %v", err)
 	}

@@ -62,7 +62,7 @@ func main() {
 
 	for _, team := range teams {
 		fmt.Printf("Networks for Team %d\n", team.TeamNumber)
-		pnets, err := team.QueryTeamToProvisionedNetwork().All(ctx)
+		pnets, err := team.QueryProvisionedNetworks().All(ctx)
 		if err != nil {
 			log.Fatalf("error while querying provisioned netowrks from team: %v", err)
 		}

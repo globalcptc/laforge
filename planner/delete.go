@@ -256,7 +256,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 		if getStatusError != nil {
 			break
 		}
-		provisionedStatus, getStatusError = team.QueryTeamToStatus().Only(ctx)
+		provisionedStatus, getStatusError = team.QueryStatus().Only(ctx)
 	case plan.TypeProvisionNetwork:
 		pnet, getStatusError := entPlan.QueryProvisionedNetwork().Only(ctx)
 		if getStatusError != nil {
@@ -595,7 +595,7 @@ func deleteNetwork(client *ent.Client, logger *logging.Logger, builder *builder.
 
 func deleteTeam(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entTeam *ent.Team) error {
 	logger.Log.Infof("del network  | %d", entTeam.TeamNumber)
-	teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+	teamStatus, err := entTeam.QueryStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Team status: %v", err)
 		return err

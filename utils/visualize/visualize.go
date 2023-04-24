@@ -72,7 +72,7 @@ func main() {
 	// var wgconfs []wgconf
 	// for _, wg_task := range wg_tasks {
 	// 	task_team := wg_task.QueryProvisionedHost().QueryProvisionedNetwork().QueryTeam().OnlyX(ctx)
-	// 	task_build := task_team.QueryTeamToBuild().OnlyX(ctx)
+	// 	task_build := task_team.QueryBuild().OnlyX(ctx)
 	// 	task_environment := task_build.QueryBuildToEnvironment().OnlyX(ctx)
 	// 	tmp := wgconf{
 	// 		EnvironmentName: task_environment.Name,

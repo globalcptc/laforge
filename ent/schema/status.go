@@ -43,7 +43,7 @@ func (Status) Edges() []ent.Edge {
 			Ref("Status").
 			Unique(),
 		edge.From("Team", Team.Type).
-			Ref("TeamToStatus").
+			Ref("Status").
 			Unique(),
 		edge.From("Plan", Plan.Type).
 			Ref("Status").

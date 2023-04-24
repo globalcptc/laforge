@@ -67,16 +67,16 @@ func main() {
 	logrus.Info("Build contains:")
 	teamCount := build.QueryTeams().CountX(ctx)
 	logrus.Infof("%d Teams", teamCount)
-	provisionedNetworkCount := build.QueryTeams().QueryTeamToProvisionedNetwork().CountX(ctx)
+	provisionedNetworkCount := build.QueryTeams().QueryProvisionedNetworks().CountX(ctx)
 	logrus.Infof("%d Provisioned Networks", provisionedNetworkCount)
-	provisionedHostCount := build.QueryTeams().QueryTeamToProvisionedNetwork().QueryProvisionedHosts().CountX(ctx)
+	provisionedHostCount := build.QueryTeams().QueryProvisionedNetworks().QueryProvisionedHosts().CountX(ctx)
 	logrus.Infof("%d Provisioned Hosts", provisionedHostCount)
 
 	entTeam, err := build.QueryTeams().Order(ent.Asc(team.FieldTeamNumber)).First(ctx)
 	if err != nil {
 		logrus.Fatalf("error querying team from build: %v", err)
 	}
-	entProvisionedNetwork, err := entTeam.QueryTeamToProvisionedNetwork().Where(provisionednetwork.NameEQ("vdi")).Only(ctx)
+	entProvisionedNetwork, err := entTeam.QueryProvisionedNetworks().Where(provisionednetwork.NameEQ("vdi")).Only(ctx)
 	if err != nil {
 		logrus.Fatalf("error querying provisioned network (\"vdi\") from team: %v", err)
 	}

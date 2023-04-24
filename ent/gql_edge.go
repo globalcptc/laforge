@@ -1316,34 +1316,34 @@ func (s *Status) ProvisioningScheduledStep(ctx context.Context) (*ProvisioningSc
 	return result, MaskNotFound(err)
 }
 
-func (t *Team) TeamToBuild(ctx context.Context) (*Build, error) {
-	result, err := t.Edges.TeamToBuildOrErr()
+func (t *Team) Build(ctx context.Context) (*Build, error) {
+	result, err := t.Edges.BuildOrErr()
 	if IsNotLoaded(err) {
-		result, err = t.QueryTeamToBuild().Only(ctx)
+		result, err = t.QueryBuild().Only(ctx)
 	}
 	return result, err
 }
 
-func (t *Team) TeamToStatus(ctx context.Context) (*Status, error) {
-	result, err := t.Edges.TeamToStatusOrErr()
+func (t *Team) Status(ctx context.Context) (*Status, error) {
+	result, err := t.Edges.StatusOrErr()
 	if IsNotLoaded(err) {
-		result, err = t.QueryTeamToStatus().Only(ctx)
+		result, err = t.QueryStatus().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (t *Team) TeamToProvisionedNetwork(ctx context.Context) ([]*ProvisionedNetwork, error) {
-	result, err := t.Edges.TeamToProvisionedNetworkOrErr()
+func (t *Team) ProvisionedNetworks(ctx context.Context) ([]*ProvisionedNetwork, error) {
+	result, err := t.Edges.ProvisionedNetworksOrErr()
 	if IsNotLoaded(err) {
-		result, err = t.QueryTeamToProvisionedNetwork().All(ctx)
+		result, err = t.QueryProvisionedNetworks().All(ctx)
 	}
 	return result, err
 }
 
-func (t *Team) TeamToPlan(ctx context.Context) (*Plan, error) {
-	result, err := t.Edges.TeamToPlanOrErr()
+func (t *Team) Plan(ctx context.Context) (*Plan, error) {
+	result, err := t.Edges.PlanOrErr()
 	if IsNotLoaded(err) {
-		result, err = t.QueryTeamToPlan().Only(ctx)
+		result, err = t.QueryPlan().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
