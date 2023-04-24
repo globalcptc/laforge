@@ -29,10 +29,10 @@ type User struct {
 	Edges UserEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// UserToTag holds the value of the UserToTag edge.
-	HCLUserToTag []*Tag `json:"UserToTag,omitempty"`
-	// UserToEnvironment holds the value of the UserToEnvironment edge.
-	HCLUserToEnvironment []*Environment `json:"UserToEnvironment,omitempty"`
+	// Tag holds the value of the Tag edge.
+	HCLTag []*Tag `json:"Tag,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment []*Environment `json:"Environment,omitempty"`
 	//
 	ansible_users *uuid.UUID
 	command_users *uuid.UUID
@@ -43,31 +43,31 @@ type User struct {
 
 // UserEdges holds the relations/edges for other nodes in the graph.
 type UserEdges struct {
-	// UserToTag holds the value of the UserToTag edge.
-	UserToTag []*Tag `json:"UserToTag,omitempty"`
-	// UserToEnvironment holds the value of the UserToEnvironment edge.
-	UserToEnvironment []*Environment `json:"UserToEnvironment,omitempty"`
+	// Tag holds the value of the Tag edge.
+	Tag []*Tag `json:"Tag,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment []*Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
 }
 
-// UserToTagOrErr returns the UserToTag value or an error if the edge
+// TagOrErr returns the Tag value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) UserToTagOrErr() ([]*Tag, error) {
+func (e UserEdges) TagOrErr() ([]*Tag, error) {
 	if e.loadedTypes[0] {
-		return e.UserToTag, nil
+		return e.Tag, nil
 	}
-	return nil, &NotLoadedError{edge: "UserToTag"}
+	return nil, &NotLoadedError{edge: "Tag"}
 }
 
-// UserToEnvironmentOrErr returns the UserToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) UserToEnvironmentOrErr() ([]*Environment, error) {
+func (e UserEdges) EnvironmentOrErr() ([]*Environment, error) {
 	if e.loadedTypes[1] {
-		return e.UserToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "UserToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -174,14 +174,14 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 	return nil
 }
 
-// QueryUserToTag queries the "UserToTag" edge of the User entity.
-func (u *User) QueryUserToTag() *TagQuery {
-	return (&UserClient{config: u.config}).QueryUserToTag(u)
+// QueryTag queries the "Tag" edge of the User entity.
+func (u *User) QueryTag() *TagQuery {
+	return (&UserClient{config: u.config}).QueryTag(u)
 }
 
-// QueryUserToEnvironment queries the "UserToEnvironment" edge of the User entity.
-func (u *User) QueryUserToEnvironment() *EnvironmentQuery {
-	return (&UserClient{config: u.config}).QueryUserToEnvironment(u)
+// QueryEnvironment queries the "Environment" edge of the User entity.
+func (u *User) QueryEnvironment() *EnvironmentQuery {
+	return (&UserClient{config: u.config}).QueryEnvironment(u)
 }
 
 // Update returns a builder for updating this User.

@@ -19,24 +19,24 @@ const (
 	FieldEmail = "email"
 	// FieldHclID holds the string denoting the hcl_id field in the database.
 	FieldHclID = "hcl_id"
-	// EdgeUserToTag holds the string denoting the usertotag edge name in mutations.
-	EdgeUserToTag = "UserToTag"
-	// EdgeUserToEnvironment holds the string denoting the usertoenvironment edge name in mutations.
-	EdgeUserToEnvironment = "UserToEnvironment"
+	// EdgeTag holds the string denoting the tag edge name in mutations.
+	EdgeTag = "Tag"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the user in the database.
 	Table = "users"
-	// UserToTagTable is the table that holds the UserToTag relation/edge.
-	UserToTagTable = "tags"
-	// UserToTagInverseTable is the table name for the Tag entity.
+	// TagTable is the table that holds the Tag relation/edge.
+	TagTable = "tags"
+	// TagInverseTable is the table name for the Tag entity.
 	// It exists in this package in order to avoid circular dependency with the "tag" package.
-	UserToTagInverseTable = "tags"
-	// UserToTagColumn is the table column denoting the UserToTag relation/edge.
-	UserToTagColumn = "user_user_to_tag"
-	// UserToEnvironmentTable is the table that holds the UserToEnvironment relation/edge. The primary key declared below.
-	UserToEnvironmentTable = "environment_Users"
-	// UserToEnvironmentInverseTable is the table name for the Environment entity.
+	TagInverseTable = "tags"
+	// TagColumn is the table column denoting the Tag relation/edge.
+	TagColumn = "user_tag"
+	// EnvironmentTable is the table that holds the Environment relation/edge. The primary key declared below.
+	EnvironmentTable = "environment_Users"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	UserToEnvironmentInverseTable = "environments"
+	EnvironmentInverseTable = "environments"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -59,9 +59,9 @@ var ForeignKeys = []string{
 }
 
 var (
-	// UserToEnvironmentPrimaryKey and UserToEnvironmentColumn2 are the table columns denoting the
-	// primary key for the UserToEnvironment relation (M2M).
-	UserToEnvironmentPrimaryKey = []string{"environment_id", "user_id"}
+	// EnvironmentPrimaryKey and EnvironmentColumn2 are the table columns denoting the
+	// primary key for the Environment relation (M2M).
+	EnvironmentPrimaryKey = []string{"environment_id", "user_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).

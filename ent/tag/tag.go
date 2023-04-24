@@ -33,7 +33,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"included_network_tags",
-	"user_user_to_tag",
+	"user_tag",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

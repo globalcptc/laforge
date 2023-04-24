@@ -6599,15 +6599,15 @@ func (c *UserClient) GetX(ctx context.Context, id uuid.UUID) *User {
 	return obj
 }
 
-// QueryUserToTag queries the UserToTag edge of a User.
-func (c *UserClient) QueryUserToTag(u *User) *TagQuery {
+// QueryTag queries the Tag edge of a User.
+func (c *UserClient) QueryTag(u *User) *TagQuery {
 	query := &TagQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := u.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(tag.Table, tag.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.UserToTagTable, user.UserToTagColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TagTable, user.TagColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
@@ -6615,15 +6615,15 @@ func (c *UserClient) QueryUserToTag(u *User) *TagQuery {
 	return query
 }
 
-// QueryUserToEnvironment queries the UserToEnvironment edge of a User.
-func (c *UserClient) QueryUserToEnvironment(u *User) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a User.
+func (c *UserClient) QueryEnvironment(u *User) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := u.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, user.UserToEnvironmentTable, user.UserToEnvironmentPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, true, user.EnvironmentTable, user.EnvironmentPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil

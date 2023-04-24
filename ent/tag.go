@@ -24,7 +24,7 @@ type Tag struct {
 	// Description holds the value of the "description" field.
 	Description           map[string]string `json:"description,omitempty"`
 	included_network_tags *uuid.UUID
-	user_user_to_tag      *uuid.UUID
+	user_tag              *uuid.UUID
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -40,7 +40,7 @@ func (*Tag) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(uuid.UUID)
 		case tag.ForeignKeys[0]: // included_network_tags
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case tag.ForeignKeys[1]: // user_user_to_tag
+		case tag.ForeignKeys[1]: // user_tag
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Tag", columns[i])
@@ -92,10 +92,10 @@ func (t *Tag) assignValues(columns []string, values []interface{}) error {
 			}
 		case tag.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field user_user_to_tag", values[i])
+				return fmt.Errorf("unexpected type %T for field user_tag", values[i])
 			} else if value.Valid {
-				t.user_user_to_tag = new(uuid.UUID)
-				*t.user_user_to_tag = *value.S.(*uuid.UUID)
+				t.user_tag = new(uuid.UUID)
+				*t.user_tag = *value.S.(*uuid.UUID)
 			}
 		}
 	}

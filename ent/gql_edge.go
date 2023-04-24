@@ -1356,18 +1356,18 @@ func (t *Token) AuthUser(ctx context.Context) (*AuthUser, error) {
 	return result, err
 }
 
-func (u *User) UserToTag(ctx context.Context) ([]*Tag, error) {
-	result, err := u.Edges.UserToTagOrErr()
+func (u *User) Tag(ctx context.Context) ([]*Tag, error) {
+	result, err := u.Edges.TagOrErr()
 	if IsNotLoaded(err) {
-		result, err = u.QueryUserToTag().All(ctx)
+		result, err = u.QueryTag().All(ctx)
 	}
 	return result, err
 }
 
-func (u *User) UserToEnvironment(ctx context.Context) ([]*Environment, error) {
-	result, err := u.Edges.UserToEnvironmentOrErr()
+func (u *User) Environment(ctx context.Context) ([]*Environment, error) {
+	result, err := u.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = u.QueryUserToEnvironment().All(ctx)
+		result, err = u.QueryEnvironment().All(ctx)
 	}
 	return result, err
 }

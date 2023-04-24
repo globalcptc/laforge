@@ -35206,23 +35206,23 @@ func (m *TokenMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op                        Op
-	typ                       string
-	id                        *uuid.UUID
-	name                      *string
-	uuid                      *string
-	email                     *string
-	hcl_id                    *string
-	clearedFields             map[string]struct{}
-	_UserToTag                map[uuid.UUID]struct{}
-	removed_UserToTag         map[uuid.UUID]struct{}
-	cleared_UserToTag         bool
-	_UserToEnvironment        map[uuid.UUID]struct{}
-	removed_UserToEnvironment map[uuid.UUID]struct{}
-	cleared_UserToEnvironment bool
-	done                      bool
-	oldValue                  func(context.Context) (*User, error)
-	predicates                []predicate.User
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	name                *string
+	uuid                *string
+	email               *string
+	hcl_id              *string
+	clearedFields       map[string]struct{}
+	_Tag                map[uuid.UUID]struct{}
+	removed_Tag         map[uuid.UUID]struct{}
+	cleared_Tag         bool
+	_Environment        map[uuid.UUID]struct{}
+	removed_Environment map[uuid.UUID]struct{}
+	cleared_Environment bool
+	done                bool
+	oldValue            func(context.Context) (*User, error)
+	predicates          []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -35473,112 +35473,112 @@ func (m *UserMutation) ResetHclID() {
 	m.hcl_id = nil
 }
 
-// AddUserToTagIDs adds the "UserToTag" edge to the Tag entity by ids.
-func (m *UserMutation) AddUserToTagIDs(ids ...uuid.UUID) {
-	if m._UserToTag == nil {
-		m._UserToTag = make(map[uuid.UUID]struct{})
+// AddTagIDs adds the "Tag" edge to the Tag entity by ids.
+func (m *UserMutation) AddTagIDs(ids ...uuid.UUID) {
+	if m._Tag == nil {
+		m._Tag = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._UserToTag[ids[i]] = struct{}{}
+		m._Tag[ids[i]] = struct{}{}
 	}
 }
 
-// ClearUserToTag clears the "UserToTag" edge to the Tag entity.
-func (m *UserMutation) ClearUserToTag() {
-	m.cleared_UserToTag = true
+// ClearTag clears the "Tag" edge to the Tag entity.
+func (m *UserMutation) ClearTag() {
+	m.cleared_Tag = true
 }
 
-// UserToTagCleared reports if the "UserToTag" edge to the Tag entity was cleared.
-func (m *UserMutation) UserToTagCleared() bool {
-	return m.cleared_UserToTag
+// TagCleared reports if the "Tag" edge to the Tag entity was cleared.
+func (m *UserMutation) TagCleared() bool {
+	return m.cleared_Tag
 }
 
-// RemoveUserToTagIDs removes the "UserToTag" edge to the Tag entity by IDs.
-func (m *UserMutation) RemoveUserToTagIDs(ids ...uuid.UUID) {
-	if m.removed_UserToTag == nil {
-		m.removed_UserToTag = make(map[uuid.UUID]struct{})
+// RemoveTagIDs removes the "Tag" edge to the Tag entity by IDs.
+func (m *UserMutation) RemoveTagIDs(ids ...uuid.UUID) {
+	if m.removed_Tag == nil {
+		m.removed_Tag = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._UserToTag, ids[i])
-		m.removed_UserToTag[ids[i]] = struct{}{}
+		delete(m._Tag, ids[i])
+		m.removed_Tag[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedUserToTag returns the removed IDs of the "UserToTag" edge to the Tag entity.
-func (m *UserMutation) RemovedUserToTagIDs() (ids []uuid.UUID) {
-	for id := range m.removed_UserToTag {
+// RemovedTag returns the removed IDs of the "Tag" edge to the Tag entity.
+func (m *UserMutation) RemovedTagIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Tag {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// UserToTagIDs returns the "UserToTag" edge IDs in the mutation.
-func (m *UserMutation) UserToTagIDs() (ids []uuid.UUID) {
-	for id := range m._UserToTag {
+// TagIDs returns the "Tag" edge IDs in the mutation.
+func (m *UserMutation) TagIDs() (ids []uuid.UUID) {
+	for id := range m._Tag {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetUserToTag resets all changes to the "UserToTag" edge.
-func (m *UserMutation) ResetUserToTag() {
-	m._UserToTag = nil
-	m.cleared_UserToTag = false
-	m.removed_UserToTag = nil
+// ResetTag resets all changes to the "Tag" edge.
+func (m *UserMutation) ResetTag() {
+	m._Tag = nil
+	m.cleared_Tag = false
+	m.removed_Tag = nil
 }
 
-// AddUserToEnvironmentIDs adds the "UserToEnvironment" edge to the Environment entity by ids.
-func (m *UserMutation) AddUserToEnvironmentIDs(ids ...uuid.UUID) {
-	if m._UserToEnvironment == nil {
-		m._UserToEnvironment = make(map[uuid.UUID]struct{})
+// AddEnvironmentIDs adds the "Environment" edge to the Environment entity by ids.
+func (m *UserMutation) AddEnvironmentIDs(ids ...uuid.UUID) {
+	if m._Environment == nil {
+		m._Environment = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._UserToEnvironment[ids[i]] = struct{}{}
+		m._Environment[ids[i]] = struct{}{}
 	}
 }
 
-// ClearUserToEnvironment clears the "UserToEnvironment" edge to the Environment entity.
-func (m *UserMutation) ClearUserToEnvironment() {
-	m.cleared_UserToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *UserMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// UserToEnvironmentCleared reports if the "UserToEnvironment" edge to the Environment entity was cleared.
-func (m *UserMutation) UserToEnvironmentCleared() bool {
-	return m.cleared_UserToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *UserMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// RemoveUserToEnvironmentIDs removes the "UserToEnvironment" edge to the Environment entity by IDs.
-func (m *UserMutation) RemoveUserToEnvironmentIDs(ids ...uuid.UUID) {
-	if m.removed_UserToEnvironment == nil {
-		m.removed_UserToEnvironment = make(map[uuid.UUID]struct{})
+// RemoveEnvironmentIDs removes the "Environment" edge to the Environment entity by IDs.
+func (m *UserMutation) RemoveEnvironmentIDs(ids ...uuid.UUID) {
+	if m.removed_Environment == nil {
+		m.removed_Environment = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._UserToEnvironment, ids[i])
-		m.removed_UserToEnvironment[ids[i]] = struct{}{}
+		delete(m._Environment, ids[i])
+		m.removed_Environment[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedUserToEnvironment returns the removed IDs of the "UserToEnvironment" edge to the Environment entity.
-func (m *UserMutation) RemovedUserToEnvironmentIDs() (ids []uuid.UUID) {
-	for id := range m.removed_UserToEnvironment {
+// RemovedEnvironment returns the removed IDs of the "Environment" edge to the Environment entity.
+func (m *UserMutation) RemovedEnvironmentIDs() (ids []uuid.UUID) {
+	for id := range m.removed_Environment {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// UserToEnvironmentIDs returns the "UserToEnvironment" edge IDs in the mutation.
-func (m *UserMutation) UserToEnvironmentIDs() (ids []uuid.UUID) {
-	for id := range m._UserToEnvironment {
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
+func (m *UserMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	for id := range m._Environment {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetUserToEnvironment resets all changes to the "UserToEnvironment" edge.
-func (m *UserMutation) ResetUserToEnvironment() {
-	m._UserToEnvironment = nil
-	m.cleared_UserToEnvironment = false
-	m.removed_UserToEnvironment = nil
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *UserMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
+	m.removed_Environment = nil
 }
 
 // Where appends a list predicates to the UserMutation builder.
@@ -35751,11 +35751,11 @@ func (m *UserMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m._UserToTag != nil {
-		edges = append(edges, user.EdgeUserToTag)
+	if m._Tag != nil {
+		edges = append(edges, user.EdgeTag)
 	}
-	if m._UserToEnvironment != nil {
-		edges = append(edges, user.EdgeUserToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, user.EdgeEnvironment)
 	}
 	return edges
 }
@@ -35764,15 +35764,15 @@ func (m *UserMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *UserMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case user.EdgeUserToTag:
-		ids := make([]ent.Value, 0, len(m._UserToTag))
-		for id := range m._UserToTag {
+	case user.EdgeTag:
+		ids := make([]ent.Value, 0, len(m._Tag))
+		for id := range m._Tag {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeUserToEnvironment:
-		ids := make([]ent.Value, 0, len(m._UserToEnvironment))
-		for id := range m._UserToEnvironment {
+	case user.EdgeEnvironment:
+		ids := make([]ent.Value, 0, len(m._Environment))
+		for id := range m._Environment {
 			ids = append(ids, id)
 		}
 		return ids
@@ -35783,11 +35783,11 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.removed_UserToTag != nil {
-		edges = append(edges, user.EdgeUserToTag)
+	if m.removed_Tag != nil {
+		edges = append(edges, user.EdgeTag)
 	}
-	if m.removed_UserToEnvironment != nil {
-		edges = append(edges, user.EdgeUserToEnvironment)
+	if m.removed_Environment != nil {
+		edges = append(edges, user.EdgeEnvironment)
 	}
 	return edges
 }
@@ -35796,15 +35796,15 @@ func (m *UserMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case user.EdgeUserToTag:
-		ids := make([]ent.Value, 0, len(m.removed_UserToTag))
-		for id := range m.removed_UserToTag {
+	case user.EdgeTag:
+		ids := make([]ent.Value, 0, len(m.removed_Tag))
+		for id := range m.removed_Tag {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeUserToEnvironment:
-		ids := make([]ent.Value, 0, len(m.removed_UserToEnvironment))
-		for id := range m.removed_UserToEnvironment {
+	case user.EdgeEnvironment:
+		ids := make([]ent.Value, 0, len(m.removed_Environment))
+		for id := range m.removed_Environment {
 			ids = append(ids, id)
 		}
 		return ids
@@ -35815,11 +35815,11 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.cleared_UserToTag {
-		edges = append(edges, user.EdgeUserToTag)
+	if m.cleared_Tag {
+		edges = append(edges, user.EdgeTag)
 	}
-	if m.cleared_UserToEnvironment {
-		edges = append(edges, user.EdgeUserToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, user.EdgeEnvironment)
 	}
 	return edges
 }
@@ -35828,10 +35828,10 @@ func (m *UserMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *UserMutation) EdgeCleared(name string) bool {
 	switch name {
-	case user.EdgeUserToTag:
-		return m.cleared_UserToTag
-	case user.EdgeUserToEnvironment:
-		return m.cleared_UserToEnvironment
+	case user.EdgeTag:
+		return m.cleared_Tag
+	case user.EdgeEnvironment:
+		return m.cleared_Environment
 	}
 	return false
 }
@@ -35848,11 +35848,11 @@ func (m *UserMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *UserMutation) ResetEdge(name string) error {
 	switch name {
-	case user.EdgeUserToTag:
-		m.ResetUserToTag()
+	case user.EdgeTag:
+		m.ResetTag()
 		return nil
-	case user.EdgeUserToEnvironment:
-		m.ResetUserToEnvironment()
+	case user.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

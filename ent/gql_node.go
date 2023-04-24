@@ -3980,9 +3980,9 @@ func (u *User) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Tag",
-		Name: "UserToTag",
+		Name: "Tag",
 	}
-	err = u.QueryUserToTag().
+	err = u.QueryTag().
 		Select(tag.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -3990,9 +3990,9 @@ func (u *User) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Environment",
-		Name: "UserToEnvironment",
+		Name: "Environment",
 	}
-	err = u.QueryUserToEnvironment().
+	err = u.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {

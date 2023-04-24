@@ -1220,7 +1220,7 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeJSON},
 		{Name: "included_network_tags", Type: field.TypeUUID, Nullable: true},
-		{Name: "user_user_to_tag", Type: field.TypeUUID, Nullable: true},
+		{Name: "user_tag", Type: field.TypeUUID, Nullable: true},
 	}
 	// TagsTable holds the schema information for the "tags" table.
 	TagsTable = &schema.Table{
@@ -1235,7 +1235,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "tags_users_UserToTag",
+				Symbol:     "tags_users_Tag",
 				Columns:    []*schema.Column{TagsColumns[5]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
