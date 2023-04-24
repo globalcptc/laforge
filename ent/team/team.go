@@ -52,7 +52,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
 	TeamToPlanInverseTable = "plans"
 	// TeamToPlanColumn is the table column denoting the TeamToPlan relation/edge.
-	TeamToPlanColumn = "plan_plan_to_team"
+	TeamToPlanColumn = "plan_team"
 )
 
 // Columns holds all SQL columns for team fields.
@@ -65,7 +65,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "teams"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"plan_plan_to_team",
+	"plan_team",
 	"team_team_to_build",
 }
 

@@ -21816,40 +21816,40 @@ func (m *NetworkMutation) ResetEdge(name string) error {
 // PlanMutation represents an operation that mutates the Plan nodes in the graph.
 type PlanMutation struct {
 	config
-	op                                      Op
-	typ                                     string
-	id                                      *uuid.UUID
-	step_number                             *int
-	addstep_number                          *int
-	_type                                   *plan.Type
-	build_id                                *string
-	clearedFields                           map[string]struct{}
-	_PrevPlan                               map[uuid.UUID]struct{}
-	removed_PrevPlan                        map[uuid.UUID]struct{}
-	cleared_PrevPlan                        bool
-	_NextPlan                               map[uuid.UUID]struct{}
-	removed_NextPlan                        map[uuid.UUID]struct{}
-	cleared_NextPlan                        bool
-	_PlanToBuild                            *uuid.UUID
-	cleared_PlanToBuild                     bool
-	_PlanToTeam                             *uuid.UUID
-	cleared_PlanToTeam                      bool
-	_PlanToProvisionedNetwork               *uuid.UUID
-	cleared_PlanToProvisionedNetwork        bool
-	_PlanToProvisionedHost                  *uuid.UUID
-	cleared_PlanToProvisionedHost           bool
-	_PlanToProvisioningStep                 *uuid.UUID
-	cleared_PlanToProvisioningStep          bool
-	_PlanToProvisioningScheduledStep        *uuid.UUID
-	cleared_PlanToProvisioningScheduledStep bool
-	_PlanToStatus                           *uuid.UUID
-	cleared_PlanToStatus                    bool
-	_PlanToPlanDiffs                        map[uuid.UUID]struct{}
-	removed_PlanToPlanDiffs                 map[uuid.UUID]struct{}
-	cleared_PlanToPlanDiffs                 bool
-	done                                    bool
-	oldValue                                func(context.Context) (*Plan, error)
-	predicates                              []predicate.Plan
+	op                                Op
+	typ                               string
+	id                                *uuid.UUID
+	step_number                       *int
+	addstep_number                    *int
+	_type                             *plan.Type
+	build_id                          *string
+	clearedFields                     map[string]struct{}
+	_PrevPlans                        map[uuid.UUID]struct{}
+	removed_PrevPlans                 map[uuid.UUID]struct{}
+	cleared_PrevPlans                 bool
+	_NextPlans                        map[uuid.UUID]struct{}
+	removed_NextPlans                 map[uuid.UUID]struct{}
+	cleared_NextPlans                 bool
+	_Build                            *uuid.UUID
+	cleared_Build                     bool
+	_Team                             *uuid.UUID
+	cleared_Team                      bool
+	_ProvisionedNetwork               *uuid.UUID
+	cleared_ProvisionedNetwork        bool
+	_ProvisionedHost                  *uuid.UUID
+	cleared_ProvisionedHost           bool
+	_ProvisioningStep                 *uuid.UUID
+	cleared_ProvisioningStep          bool
+	_ProvisioningScheduledStep        *uuid.UUID
+	cleared_ProvisioningScheduledStep bool
+	_Status                           *uuid.UUID
+	cleared_Status                    bool
+	_PlanDiffs                        map[uuid.UUID]struct{}
+	removed_PlanDiffs                 map[uuid.UUID]struct{}
+	cleared_PlanDiffs                 bool
+	done                              bool
+	oldValue                          func(context.Context) (*Plan, error)
+	predicates                        []predicate.Plan
 }
 
 var _ ent.Mutation = (*PlanMutation)(nil)
@@ -22084,439 +22084,439 @@ func (m *PlanMutation) ResetBuildID() {
 	m.build_id = nil
 }
 
-// AddPrevPlanIDs adds the "PrevPlan" edge to the Plan entity by ids.
+// AddPrevPlanIDs adds the "PrevPlans" edge to the Plan entity by ids.
 func (m *PlanMutation) AddPrevPlanIDs(ids ...uuid.UUID) {
-	if m._PrevPlan == nil {
-		m._PrevPlan = make(map[uuid.UUID]struct{})
+	if m._PrevPlans == nil {
+		m._PrevPlans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._PrevPlan[ids[i]] = struct{}{}
+		m._PrevPlans[ids[i]] = struct{}{}
 	}
 }
 
-// ClearPrevPlan clears the "PrevPlan" edge to the Plan entity.
-func (m *PlanMutation) ClearPrevPlan() {
-	m.cleared_PrevPlan = true
+// ClearPrevPlans clears the "PrevPlans" edge to the Plan entity.
+func (m *PlanMutation) ClearPrevPlans() {
+	m.cleared_PrevPlans = true
 }
 
-// PrevPlanCleared reports if the "PrevPlan" edge to the Plan entity was cleared.
-func (m *PlanMutation) PrevPlanCleared() bool {
-	return m.cleared_PrevPlan
+// PrevPlansCleared reports if the "PrevPlans" edge to the Plan entity was cleared.
+func (m *PlanMutation) PrevPlansCleared() bool {
+	return m.cleared_PrevPlans
 }
 
-// RemovePrevPlanIDs removes the "PrevPlan" edge to the Plan entity by IDs.
+// RemovePrevPlanIDs removes the "PrevPlans" edge to the Plan entity by IDs.
 func (m *PlanMutation) RemovePrevPlanIDs(ids ...uuid.UUID) {
-	if m.removed_PrevPlan == nil {
-		m.removed_PrevPlan = make(map[uuid.UUID]struct{})
+	if m.removed_PrevPlans == nil {
+		m.removed_PrevPlans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._PrevPlan, ids[i])
-		m.removed_PrevPlan[ids[i]] = struct{}{}
+		delete(m._PrevPlans, ids[i])
+		m.removed_PrevPlans[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedPrevPlan returns the removed IDs of the "PrevPlan" edge to the Plan entity.
-func (m *PlanMutation) RemovedPrevPlanIDs() (ids []uuid.UUID) {
-	for id := range m.removed_PrevPlan {
+// RemovedPrevPlans returns the removed IDs of the "PrevPlans" edge to the Plan entity.
+func (m *PlanMutation) RemovedPrevPlansIDs() (ids []uuid.UUID) {
+	for id := range m.removed_PrevPlans {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// PrevPlanIDs returns the "PrevPlan" edge IDs in the mutation.
-func (m *PlanMutation) PrevPlanIDs() (ids []uuid.UUID) {
-	for id := range m._PrevPlan {
+// PrevPlansIDs returns the "PrevPlans" edge IDs in the mutation.
+func (m *PlanMutation) PrevPlansIDs() (ids []uuid.UUID) {
+	for id := range m._PrevPlans {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetPrevPlan resets all changes to the "PrevPlan" edge.
-func (m *PlanMutation) ResetPrevPlan() {
-	m._PrevPlan = nil
-	m.cleared_PrevPlan = false
-	m.removed_PrevPlan = nil
+// ResetPrevPlans resets all changes to the "PrevPlans" edge.
+func (m *PlanMutation) ResetPrevPlans() {
+	m._PrevPlans = nil
+	m.cleared_PrevPlans = false
+	m.removed_PrevPlans = nil
 }
 
-// AddNextPlanIDs adds the "NextPlan" edge to the Plan entity by ids.
+// AddNextPlanIDs adds the "NextPlans" edge to the Plan entity by ids.
 func (m *PlanMutation) AddNextPlanIDs(ids ...uuid.UUID) {
-	if m._NextPlan == nil {
-		m._NextPlan = make(map[uuid.UUID]struct{})
+	if m._NextPlans == nil {
+		m._NextPlans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._NextPlan[ids[i]] = struct{}{}
+		m._NextPlans[ids[i]] = struct{}{}
 	}
 }
 
-// ClearNextPlan clears the "NextPlan" edge to the Plan entity.
-func (m *PlanMutation) ClearNextPlan() {
-	m.cleared_NextPlan = true
+// ClearNextPlans clears the "NextPlans" edge to the Plan entity.
+func (m *PlanMutation) ClearNextPlans() {
+	m.cleared_NextPlans = true
 }
 
-// NextPlanCleared reports if the "NextPlan" edge to the Plan entity was cleared.
-func (m *PlanMutation) NextPlanCleared() bool {
-	return m.cleared_NextPlan
+// NextPlansCleared reports if the "NextPlans" edge to the Plan entity was cleared.
+func (m *PlanMutation) NextPlansCleared() bool {
+	return m.cleared_NextPlans
 }
 
-// RemoveNextPlanIDs removes the "NextPlan" edge to the Plan entity by IDs.
+// RemoveNextPlanIDs removes the "NextPlans" edge to the Plan entity by IDs.
 func (m *PlanMutation) RemoveNextPlanIDs(ids ...uuid.UUID) {
-	if m.removed_NextPlan == nil {
-		m.removed_NextPlan = make(map[uuid.UUID]struct{})
+	if m.removed_NextPlans == nil {
+		m.removed_NextPlans = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._NextPlan, ids[i])
-		m.removed_NextPlan[ids[i]] = struct{}{}
+		delete(m._NextPlans, ids[i])
+		m.removed_NextPlans[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedNextPlan returns the removed IDs of the "NextPlan" edge to the Plan entity.
-func (m *PlanMutation) RemovedNextPlanIDs() (ids []uuid.UUID) {
-	for id := range m.removed_NextPlan {
+// RemovedNextPlans returns the removed IDs of the "NextPlans" edge to the Plan entity.
+func (m *PlanMutation) RemovedNextPlansIDs() (ids []uuid.UUID) {
+	for id := range m.removed_NextPlans {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// NextPlanIDs returns the "NextPlan" edge IDs in the mutation.
-func (m *PlanMutation) NextPlanIDs() (ids []uuid.UUID) {
-	for id := range m._NextPlan {
+// NextPlansIDs returns the "NextPlans" edge IDs in the mutation.
+func (m *PlanMutation) NextPlansIDs() (ids []uuid.UUID) {
+	for id := range m._NextPlans {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetNextPlan resets all changes to the "NextPlan" edge.
-func (m *PlanMutation) ResetNextPlan() {
-	m._NextPlan = nil
-	m.cleared_NextPlan = false
-	m.removed_NextPlan = nil
+// ResetNextPlans resets all changes to the "NextPlans" edge.
+func (m *PlanMutation) ResetNextPlans() {
+	m._NextPlans = nil
+	m.cleared_NextPlans = false
+	m.removed_NextPlans = nil
 }
 
-// SetPlanToBuildID sets the "PlanToBuild" edge to the Build entity by id.
-func (m *PlanMutation) SetPlanToBuildID(id uuid.UUID) {
-	m._PlanToBuild = &id
+// SetBuildID sets the "Build" edge to the Build entity by id.
+func (m *PlanMutation) SetBuildID(id uuid.UUID) {
+	m._Build = &id
 }
 
-// ClearPlanToBuild clears the "PlanToBuild" edge to the Build entity.
-func (m *PlanMutation) ClearPlanToBuild() {
-	m.cleared_PlanToBuild = true
+// ClearBuild clears the "Build" edge to the Build entity.
+func (m *PlanMutation) ClearBuild() {
+	m.cleared_Build = true
 }
 
-// PlanToBuildCleared reports if the "PlanToBuild" edge to the Build entity was cleared.
-func (m *PlanMutation) PlanToBuildCleared() bool {
-	return m.cleared_PlanToBuild
+// BuildCleared reports if the "Build" edge to the Build entity was cleared.
+func (m *PlanMutation) BuildCleared() bool {
+	return m.cleared_Build
 }
 
-// PlanToBuildID returns the "PlanToBuild" edge ID in the mutation.
-func (m *PlanMutation) PlanToBuildID() (id uuid.UUID, exists bool) {
-	if m._PlanToBuild != nil {
-		return *m._PlanToBuild, true
+// BuildID returns the "Build" edge ID in the mutation.
+func (m *PlanMutation) BuildID() (id uuid.UUID, exists bool) {
+	if m._Build != nil {
+		return *m._Build, true
 	}
 	return
 }
 
-// PlanToBuildIDs returns the "PlanToBuild" edge IDs in the mutation.
+// BuildIDs returns the "Build" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// PlanToBuildID instead. It exists only for internal usage by the builders.
-func (m *PlanMutation) PlanToBuildIDs() (ids []uuid.UUID) {
-	if id := m._PlanToBuild; id != nil {
+// BuildID instead. It exists only for internal usage by the builders.
+func (m *PlanMutation) BuildIDs() (ids []uuid.UUID) {
+	if id := m._Build; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetPlanToBuild resets all changes to the "PlanToBuild" edge.
-func (m *PlanMutation) ResetPlanToBuild() {
-	m._PlanToBuild = nil
-	m.cleared_PlanToBuild = false
+// ResetBuild resets all changes to the "Build" edge.
+func (m *PlanMutation) ResetBuild() {
+	m._Build = nil
+	m.cleared_Build = false
 }
 
-// SetPlanToTeamID sets the "PlanToTeam" edge to the Team entity by id.
-func (m *PlanMutation) SetPlanToTeamID(id uuid.UUID) {
-	m._PlanToTeam = &id
+// SetTeamID sets the "Team" edge to the Team entity by id.
+func (m *PlanMutation) SetTeamID(id uuid.UUID) {
+	m._Team = &id
 }
 
-// ClearPlanToTeam clears the "PlanToTeam" edge to the Team entity.
-func (m *PlanMutation) ClearPlanToTeam() {
-	m.cleared_PlanToTeam = true
+// ClearTeam clears the "Team" edge to the Team entity.
+func (m *PlanMutation) ClearTeam() {
+	m.cleared_Team = true
 }
 
-// PlanToTeamCleared reports if the "PlanToTeam" edge to the Team entity was cleared.
-func (m *PlanMutation) PlanToTeamCleared() bool {
-	return m.cleared_PlanToTeam
+// TeamCleared reports if the "Team" edge to the Team entity was cleared.
+func (m *PlanMutation) TeamCleared() bool {
+	return m.cleared_Team
 }
 
-// PlanToTeamID returns the "PlanToTeam" edge ID in the mutation.
-func (m *PlanMutation) PlanToTeamID() (id uuid.UUID, exists bool) {
-	if m._PlanToTeam != nil {
-		return *m._PlanToTeam, true
+// TeamID returns the "Team" edge ID in the mutation.
+func (m *PlanMutation) TeamID() (id uuid.UUID, exists bool) {
+	if m._Team != nil {
+		return *m._Team, true
 	}
 	return
 }
 
-// PlanToTeamIDs returns the "PlanToTeam" edge IDs in the mutation.
+// TeamIDs returns the "Team" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// PlanToTeamID instead. It exists only for internal usage by the builders.
-func (m *PlanMutation) PlanToTeamIDs() (ids []uuid.UUID) {
-	if id := m._PlanToTeam; id != nil {
+// TeamID instead. It exists only for internal usage by the builders.
+func (m *PlanMutation) TeamIDs() (ids []uuid.UUID) {
+	if id := m._Team; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetPlanToTeam resets all changes to the "PlanToTeam" edge.
-func (m *PlanMutation) ResetPlanToTeam() {
-	m._PlanToTeam = nil
-	m.cleared_PlanToTeam = false
+// ResetTeam resets all changes to the "Team" edge.
+func (m *PlanMutation) ResetTeam() {
+	m._Team = nil
+	m.cleared_Team = false
 }
 
-// SetPlanToProvisionedNetworkID sets the "PlanToProvisionedNetwork" edge to the ProvisionedNetwork entity by id.
-func (m *PlanMutation) SetPlanToProvisionedNetworkID(id uuid.UUID) {
-	m._PlanToProvisionedNetwork = &id
+// SetProvisionedNetworkID sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity by id.
+func (m *PlanMutation) SetProvisionedNetworkID(id uuid.UUID) {
+	m._ProvisionedNetwork = &id
 }
 
-// ClearPlanToProvisionedNetwork clears the "PlanToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (m *PlanMutation) ClearPlanToProvisionedNetwork() {
-	m.cleared_PlanToProvisionedNetwork = true
+// ClearProvisionedNetwork clears the "ProvisionedNetwork" edge to the ProvisionedNetwork entity.
+func (m *PlanMutation) ClearProvisionedNetwork() {
+	m.cleared_ProvisionedNetwork = true
 }
 
-// PlanToProvisionedNetworkCleared reports if the "PlanToProvisionedNetwork" edge to the ProvisionedNetwork entity was cleared.
-func (m *PlanMutation) PlanToProvisionedNetworkCleared() bool {
-	return m.cleared_PlanToProvisionedNetwork
+// ProvisionedNetworkCleared reports if the "ProvisionedNetwork" edge to the ProvisionedNetwork entity was cleared.
+func (m *PlanMutation) ProvisionedNetworkCleared() bool {
+	return m.cleared_ProvisionedNetwork
 }
 
-// PlanToProvisionedNetworkID returns the "PlanToProvisionedNetwork" edge ID in the mutation.
-func (m *PlanMutation) PlanToProvisionedNetworkID() (id uuid.UUID, exists bool) {
-	if m._PlanToProvisionedNetwork != nil {
-		return *m._PlanToProvisionedNetwork, true
+// ProvisionedNetworkID returns the "ProvisionedNetwork" edge ID in the mutation.
+func (m *PlanMutation) ProvisionedNetworkID() (id uuid.UUID, exists bool) {
+	if m._ProvisionedNetwork != nil {
+		return *m._ProvisionedNetwork, true
 	}
 	return
 }
 
-// PlanToProvisionedNetworkIDs returns the "PlanToProvisionedNetwork" edge IDs in the mutation.
+// ProvisionedNetworkIDs returns the "ProvisionedNetwork" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// PlanToProvisionedNetworkID instead. It exists only for internal usage by the builders.
-func (m *PlanMutation) PlanToProvisionedNetworkIDs() (ids []uuid.UUID) {
-	if id := m._PlanToProvisionedNetwork; id != nil {
+// ProvisionedNetworkID instead. It exists only for internal usage by the builders.
+func (m *PlanMutation) ProvisionedNetworkIDs() (ids []uuid.UUID) {
+	if id := m._ProvisionedNetwork; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetPlanToProvisionedNetwork resets all changes to the "PlanToProvisionedNetwork" edge.
-func (m *PlanMutation) ResetPlanToProvisionedNetwork() {
-	m._PlanToProvisionedNetwork = nil
-	m.cleared_PlanToProvisionedNetwork = false
+// ResetProvisionedNetwork resets all changes to the "ProvisionedNetwork" edge.
+func (m *PlanMutation) ResetProvisionedNetwork() {
+	m._ProvisionedNetwork = nil
+	m.cleared_ProvisionedNetwork = false
 }
 
-// SetPlanToProvisionedHostID sets the "PlanToProvisionedHost" edge to the ProvisionedHost entity by id.
-func (m *PlanMutation) SetPlanToProvisionedHostID(id uuid.UUID) {
-	m._PlanToProvisionedHost = &id
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by id.
+func (m *PlanMutation) SetProvisionedHostID(id uuid.UUID) {
+	m._ProvisionedHost = &id
 }
 
-// ClearPlanToProvisionedHost clears the "PlanToProvisionedHost" edge to the ProvisionedHost entity.
-func (m *PlanMutation) ClearPlanToProvisionedHost() {
-	m.cleared_PlanToProvisionedHost = true
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (m *PlanMutation) ClearProvisionedHost() {
+	m.cleared_ProvisionedHost = true
 }
 
-// PlanToProvisionedHostCleared reports if the "PlanToProvisionedHost" edge to the ProvisionedHost entity was cleared.
-func (m *PlanMutation) PlanToProvisionedHostCleared() bool {
-	return m.cleared_PlanToProvisionedHost
+// ProvisionedHostCleared reports if the "ProvisionedHost" edge to the ProvisionedHost entity was cleared.
+func (m *PlanMutation) ProvisionedHostCleared() bool {
+	return m.cleared_ProvisionedHost
 }
 
-// PlanToProvisionedHostID returns the "PlanToProvisionedHost" edge ID in the mutation.
-func (m *PlanMutation) PlanToProvisionedHostID() (id uuid.UUID, exists bool) {
-	if m._PlanToProvisionedHost != nil {
-		return *m._PlanToProvisionedHost, true
+// ProvisionedHostID returns the "ProvisionedHost" edge ID in the mutation.
+func (m *PlanMutation) ProvisionedHostID() (id uuid.UUID, exists bool) {
+	if m._ProvisionedHost != nil {
+		return *m._ProvisionedHost, true
 	}
 	return
 }
 
-// PlanToProvisionedHostIDs returns the "PlanToProvisionedHost" edge IDs in the mutation.
+// ProvisionedHostIDs returns the "ProvisionedHost" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// PlanToProvisionedHostID instead. It exists only for internal usage by the builders.
-func (m *PlanMutation) PlanToProvisionedHostIDs() (ids []uuid.UUID) {
-	if id := m._PlanToProvisionedHost; id != nil {
+// ProvisionedHostID instead. It exists only for internal usage by the builders.
+func (m *PlanMutation) ProvisionedHostIDs() (ids []uuid.UUID) {
+	if id := m._ProvisionedHost; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetPlanToProvisionedHost resets all changes to the "PlanToProvisionedHost" edge.
-func (m *PlanMutation) ResetPlanToProvisionedHost() {
-	m._PlanToProvisionedHost = nil
-	m.cleared_PlanToProvisionedHost = false
+// ResetProvisionedHost resets all changes to the "ProvisionedHost" edge.
+func (m *PlanMutation) ResetProvisionedHost() {
+	m._ProvisionedHost = nil
+	m.cleared_ProvisionedHost = false
 }
 
-// SetPlanToProvisioningStepID sets the "PlanToProvisioningStep" edge to the ProvisioningStep entity by id.
-func (m *PlanMutation) SetPlanToProvisioningStepID(id uuid.UUID) {
-	m._PlanToProvisioningStep = &id
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by id.
+func (m *PlanMutation) SetProvisioningStepID(id uuid.UUID) {
+	m._ProvisioningStep = &id
 }
 
-// ClearPlanToProvisioningStep clears the "PlanToProvisioningStep" edge to the ProvisioningStep entity.
-func (m *PlanMutation) ClearPlanToProvisioningStep() {
-	m.cleared_PlanToProvisioningStep = true
+// ClearProvisioningStep clears the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (m *PlanMutation) ClearProvisioningStep() {
+	m.cleared_ProvisioningStep = true
 }
 
-// PlanToProvisioningStepCleared reports if the "PlanToProvisioningStep" edge to the ProvisioningStep entity was cleared.
-func (m *PlanMutation) PlanToProvisioningStepCleared() bool {
-	return m.cleared_PlanToProvisioningStep
+// ProvisioningStepCleared reports if the "ProvisioningStep" edge to the ProvisioningStep entity was cleared.
+func (m *PlanMutation) ProvisioningStepCleared() bool {
+	return m.cleared_ProvisioningStep
 }
 
-// PlanToProvisioningStepID returns the "PlanToProvisioningStep" edge ID in the mutation.
-func (m *PlanMutation) PlanToProvisioningStepID() (id uuid.UUID, exists bool) {
-	if m._PlanToProvisioningStep != nil {
-		return *m._PlanToProvisioningStep, true
+// ProvisioningStepID returns the "ProvisioningStep" edge ID in the mutation.
+func (m *PlanMutation) ProvisioningStepID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningStep != nil {
+		return *m._ProvisioningStep, true
 	}
 	return
 }
 
-// PlanToProvisioningStepIDs returns the "PlanToProvisioningStep" edge IDs in the mutation.
+// ProvisioningStepIDs returns the "ProvisioningStep" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// PlanToProvisioningStepID instead. It exists only for internal usage by the builders.
-func (m *PlanMutation) PlanToProvisioningStepIDs() (ids []uuid.UUID) {
-	if id := m._PlanToProvisioningStep; id != nil {
+// ProvisioningStepID instead. It exists only for internal usage by the builders.
+func (m *PlanMutation) ProvisioningStepIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningStep; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetPlanToProvisioningStep resets all changes to the "PlanToProvisioningStep" edge.
-func (m *PlanMutation) ResetPlanToProvisioningStep() {
-	m._PlanToProvisioningStep = nil
-	m.cleared_PlanToProvisioningStep = false
+// ResetProvisioningStep resets all changes to the "ProvisioningStep" edge.
+func (m *PlanMutation) ResetProvisioningStep() {
+	m._ProvisioningStep = nil
+	m.cleared_ProvisioningStep = false
 }
 
-// SetPlanToProvisioningScheduledStepID sets the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by id.
-func (m *PlanMutation) SetPlanToProvisioningScheduledStepID(id uuid.UUID) {
-	m._PlanToProvisioningScheduledStep = &id
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by id.
+func (m *PlanMutation) SetProvisioningScheduledStepID(id uuid.UUID) {
+	m._ProvisioningScheduledStep = &id
 }
 
-// ClearPlanToProvisioningScheduledStep clears the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (m *PlanMutation) ClearPlanToProvisioningScheduledStep() {
-	m.cleared_PlanToProvisioningScheduledStep = true
+// ClearProvisioningScheduledStep clears the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (m *PlanMutation) ClearProvisioningScheduledStep() {
+	m.cleared_ProvisioningScheduledStep = true
 }
 
-// PlanToProvisioningScheduledStepCleared reports if the "PlanToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity was cleared.
-func (m *PlanMutation) PlanToProvisioningScheduledStepCleared() bool {
-	return m.cleared_PlanToProvisioningScheduledStep
+// ProvisioningScheduledStepCleared reports if the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity was cleared.
+func (m *PlanMutation) ProvisioningScheduledStepCleared() bool {
+	return m.cleared_ProvisioningScheduledStep
 }
 
-// PlanToProvisioningScheduledStepID returns the "PlanToProvisioningScheduledStep" edge ID in the mutation.
-func (m *PlanMutation) PlanToProvisioningScheduledStepID() (id uuid.UUID, exists bool) {
-	if m._PlanToProvisioningScheduledStep != nil {
-		return *m._PlanToProvisioningScheduledStep, true
+// ProvisioningScheduledStepID returns the "ProvisioningScheduledStep" edge ID in the mutation.
+func (m *PlanMutation) ProvisioningScheduledStepID() (id uuid.UUID, exists bool) {
+	if m._ProvisioningScheduledStep != nil {
+		return *m._ProvisioningScheduledStep, true
 	}
 	return
 }
 
-// PlanToProvisioningScheduledStepIDs returns the "PlanToProvisioningScheduledStep" edge IDs in the mutation.
+// ProvisioningScheduledStepIDs returns the "ProvisioningScheduledStep" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// PlanToProvisioningScheduledStepID instead. It exists only for internal usage by the builders.
-func (m *PlanMutation) PlanToProvisioningScheduledStepIDs() (ids []uuid.UUID) {
-	if id := m._PlanToProvisioningScheduledStep; id != nil {
+// ProvisioningScheduledStepID instead. It exists only for internal usage by the builders.
+func (m *PlanMutation) ProvisioningScheduledStepIDs() (ids []uuid.UUID) {
+	if id := m._ProvisioningScheduledStep; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetPlanToProvisioningScheduledStep resets all changes to the "PlanToProvisioningScheduledStep" edge.
-func (m *PlanMutation) ResetPlanToProvisioningScheduledStep() {
-	m._PlanToProvisioningScheduledStep = nil
-	m.cleared_PlanToProvisioningScheduledStep = false
+// ResetProvisioningScheduledStep resets all changes to the "ProvisioningScheduledStep" edge.
+func (m *PlanMutation) ResetProvisioningScheduledStep() {
+	m._ProvisioningScheduledStep = nil
+	m.cleared_ProvisioningScheduledStep = false
 }
 
-// SetPlanToStatusID sets the "PlanToStatus" edge to the Status entity by id.
-func (m *PlanMutation) SetPlanToStatusID(id uuid.UUID) {
-	m._PlanToStatus = &id
+// SetStatusID sets the "Status" edge to the Status entity by id.
+func (m *PlanMutation) SetStatusID(id uuid.UUID) {
+	m._Status = &id
 }
 
-// ClearPlanToStatus clears the "PlanToStatus" edge to the Status entity.
-func (m *PlanMutation) ClearPlanToStatus() {
-	m.cleared_PlanToStatus = true
+// ClearStatus clears the "Status" edge to the Status entity.
+func (m *PlanMutation) ClearStatus() {
+	m.cleared_Status = true
 }
 
-// PlanToStatusCleared reports if the "PlanToStatus" edge to the Status entity was cleared.
-func (m *PlanMutation) PlanToStatusCleared() bool {
-	return m.cleared_PlanToStatus
+// StatusCleared reports if the "Status" edge to the Status entity was cleared.
+func (m *PlanMutation) StatusCleared() bool {
+	return m.cleared_Status
 }
 
-// PlanToStatusID returns the "PlanToStatus" edge ID in the mutation.
-func (m *PlanMutation) PlanToStatusID() (id uuid.UUID, exists bool) {
-	if m._PlanToStatus != nil {
-		return *m._PlanToStatus, true
+// StatusID returns the "Status" edge ID in the mutation.
+func (m *PlanMutation) StatusID() (id uuid.UUID, exists bool) {
+	if m._Status != nil {
+		return *m._Status, true
 	}
 	return
 }
 
-// PlanToStatusIDs returns the "PlanToStatus" edge IDs in the mutation.
+// StatusIDs returns the "Status" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// PlanToStatusID instead. It exists only for internal usage by the builders.
-func (m *PlanMutation) PlanToStatusIDs() (ids []uuid.UUID) {
-	if id := m._PlanToStatus; id != nil {
+// StatusID instead. It exists only for internal usage by the builders.
+func (m *PlanMutation) StatusIDs() (ids []uuid.UUID) {
+	if id := m._Status; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetPlanToStatus resets all changes to the "PlanToStatus" edge.
-func (m *PlanMutation) ResetPlanToStatus() {
-	m._PlanToStatus = nil
-	m.cleared_PlanToStatus = false
+// ResetStatus resets all changes to the "Status" edge.
+func (m *PlanMutation) ResetStatus() {
+	m._Status = nil
+	m.cleared_Status = false
 }
 
-// AddPlanToPlanDiffIDs adds the "PlanToPlanDiffs" edge to the PlanDiff entity by ids.
-func (m *PlanMutation) AddPlanToPlanDiffIDs(ids ...uuid.UUID) {
-	if m._PlanToPlanDiffs == nil {
-		m._PlanToPlanDiffs = make(map[uuid.UUID]struct{})
+// AddPlanDiffIDs adds the "PlanDiffs" edge to the PlanDiff entity by ids.
+func (m *PlanMutation) AddPlanDiffIDs(ids ...uuid.UUID) {
+	if m._PlanDiffs == nil {
+		m._PlanDiffs = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._PlanToPlanDiffs[ids[i]] = struct{}{}
+		m._PlanDiffs[ids[i]] = struct{}{}
 	}
 }
 
-// ClearPlanToPlanDiffs clears the "PlanToPlanDiffs" edge to the PlanDiff entity.
-func (m *PlanMutation) ClearPlanToPlanDiffs() {
-	m.cleared_PlanToPlanDiffs = true
+// ClearPlanDiffs clears the "PlanDiffs" edge to the PlanDiff entity.
+func (m *PlanMutation) ClearPlanDiffs() {
+	m.cleared_PlanDiffs = true
 }
 
-// PlanToPlanDiffsCleared reports if the "PlanToPlanDiffs" edge to the PlanDiff entity was cleared.
-func (m *PlanMutation) PlanToPlanDiffsCleared() bool {
-	return m.cleared_PlanToPlanDiffs
+// PlanDiffsCleared reports if the "PlanDiffs" edge to the PlanDiff entity was cleared.
+func (m *PlanMutation) PlanDiffsCleared() bool {
+	return m.cleared_PlanDiffs
 }
 
-// RemovePlanToPlanDiffIDs removes the "PlanToPlanDiffs" edge to the PlanDiff entity by IDs.
-func (m *PlanMutation) RemovePlanToPlanDiffIDs(ids ...uuid.UUID) {
-	if m.removed_PlanToPlanDiffs == nil {
-		m.removed_PlanToPlanDiffs = make(map[uuid.UUID]struct{})
+// RemovePlanDiffIDs removes the "PlanDiffs" edge to the PlanDiff entity by IDs.
+func (m *PlanMutation) RemovePlanDiffIDs(ids ...uuid.UUID) {
+	if m.removed_PlanDiffs == nil {
+		m.removed_PlanDiffs = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._PlanToPlanDiffs, ids[i])
-		m.removed_PlanToPlanDiffs[ids[i]] = struct{}{}
+		delete(m._PlanDiffs, ids[i])
+		m.removed_PlanDiffs[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedPlanToPlanDiffs returns the removed IDs of the "PlanToPlanDiffs" edge to the PlanDiff entity.
-func (m *PlanMutation) RemovedPlanToPlanDiffsIDs() (ids []uuid.UUID) {
-	for id := range m.removed_PlanToPlanDiffs {
+// RemovedPlanDiffs returns the removed IDs of the "PlanDiffs" edge to the PlanDiff entity.
+func (m *PlanMutation) RemovedPlanDiffsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_PlanDiffs {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// PlanToPlanDiffsIDs returns the "PlanToPlanDiffs" edge IDs in the mutation.
-func (m *PlanMutation) PlanToPlanDiffsIDs() (ids []uuid.UUID) {
-	for id := range m._PlanToPlanDiffs {
+// PlanDiffsIDs returns the "PlanDiffs" edge IDs in the mutation.
+func (m *PlanMutation) PlanDiffsIDs() (ids []uuid.UUID) {
+	for id := range m._PlanDiffs {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetPlanToPlanDiffs resets all changes to the "PlanToPlanDiffs" edge.
-func (m *PlanMutation) ResetPlanToPlanDiffs() {
-	m._PlanToPlanDiffs = nil
-	m.cleared_PlanToPlanDiffs = false
-	m.removed_PlanToPlanDiffs = nil
+// ResetPlanDiffs resets all changes to the "PlanDiffs" edge.
+func (m *PlanMutation) ResetPlanDiffs() {
+	m._PlanDiffs = nil
+	m.cleared_PlanDiffs = false
+	m.removed_PlanDiffs = nil
 }
 
 // Where appends a list predicates to the PlanMutation builder.
@@ -22687,35 +22687,35 @@ func (m *PlanMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PlanMutation) AddedEdges() []string {
 	edges := make([]string, 0, 10)
-	if m._PrevPlan != nil {
-		edges = append(edges, plan.EdgePrevPlan)
+	if m._PrevPlans != nil {
+		edges = append(edges, plan.EdgePrevPlans)
 	}
-	if m._NextPlan != nil {
-		edges = append(edges, plan.EdgeNextPlan)
+	if m._NextPlans != nil {
+		edges = append(edges, plan.EdgeNextPlans)
 	}
-	if m._PlanToBuild != nil {
-		edges = append(edges, plan.EdgePlanToBuild)
+	if m._Build != nil {
+		edges = append(edges, plan.EdgeBuild)
 	}
-	if m._PlanToTeam != nil {
-		edges = append(edges, plan.EdgePlanToTeam)
+	if m._Team != nil {
+		edges = append(edges, plan.EdgeTeam)
 	}
-	if m._PlanToProvisionedNetwork != nil {
-		edges = append(edges, plan.EdgePlanToProvisionedNetwork)
+	if m._ProvisionedNetwork != nil {
+		edges = append(edges, plan.EdgeProvisionedNetwork)
 	}
-	if m._PlanToProvisionedHost != nil {
-		edges = append(edges, plan.EdgePlanToProvisionedHost)
+	if m._ProvisionedHost != nil {
+		edges = append(edges, plan.EdgeProvisionedHost)
 	}
-	if m._PlanToProvisioningStep != nil {
-		edges = append(edges, plan.EdgePlanToProvisioningStep)
+	if m._ProvisioningStep != nil {
+		edges = append(edges, plan.EdgeProvisioningStep)
 	}
-	if m._PlanToProvisioningScheduledStep != nil {
-		edges = append(edges, plan.EdgePlanToProvisioningScheduledStep)
+	if m._ProvisioningScheduledStep != nil {
+		edges = append(edges, plan.EdgeProvisioningScheduledStep)
 	}
-	if m._PlanToStatus != nil {
-		edges = append(edges, plan.EdgePlanToStatus)
+	if m._Status != nil {
+		edges = append(edges, plan.EdgeStatus)
 	}
-	if m._PlanToPlanDiffs != nil {
-		edges = append(edges, plan.EdgePlanToPlanDiffs)
+	if m._PlanDiffs != nil {
+		edges = append(edges, plan.EdgePlanDiffs)
 	}
 	return edges
 }
@@ -22724,49 +22724,49 @@ func (m *PlanMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *PlanMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case plan.EdgePrevPlan:
-		ids := make([]ent.Value, 0, len(m._PrevPlan))
-		for id := range m._PrevPlan {
+	case plan.EdgePrevPlans:
+		ids := make([]ent.Value, 0, len(m._PrevPlans))
+		for id := range m._PrevPlans {
 			ids = append(ids, id)
 		}
 		return ids
-	case plan.EdgeNextPlan:
-		ids := make([]ent.Value, 0, len(m._NextPlan))
-		for id := range m._NextPlan {
+	case plan.EdgeNextPlans:
+		ids := make([]ent.Value, 0, len(m._NextPlans))
+		for id := range m._NextPlans {
 			ids = append(ids, id)
 		}
 		return ids
-	case plan.EdgePlanToBuild:
-		if id := m._PlanToBuild; id != nil {
+	case plan.EdgeBuild:
+		if id := m._Build; id != nil {
 			return []ent.Value{*id}
 		}
-	case plan.EdgePlanToTeam:
-		if id := m._PlanToTeam; id != nil {
+	case plan.EdgeTeam:
+		if id := m._Team; id != nil {
 			return []ent.Value{*id}
 		}
-	case plan.EdgePlanToProvisionedNetwork:
-		if id := m._PlanToProvisionedNetwork; id != nil {
+	case plan.EdgeProvisionedNetwork:
+		if id := m._ProvisionedNetwork; id != nil {
 			return []ent.Value{*id}
 		}
-	case plan.EdgePlanToProvisionedHost:
-		if id := m._PlanToProvisionedHost; id != nil {
+	case plan.EdgeProvisionedHost:
+		if id := m._ProvisionedHost; id != nil {
 			return []ent.Value{*id}
 		}
-	case plan.EdgePlanToProvisioningStep:
-		if id := m._PlanToProvisioningStep; id != nil {
+	case plan.EdgeProvisioningStep:
+		if id := m._ProvisioningStep; id != nil {
 			return []ent.Value{*id}
 		}
-	case plan.EdgePlanToProvisioningScheduledStep:
-		if id := m._PlanToProvisioningScheduledStep; id != nil {
+	case plan.EdgeProvisioningScheduledStep:
+		if id := m._ProvisioningScheduledStep; id != nil {
 			return []ent.Value{*id}
 		}
-	case plan.EdgePlanToStatus:
-		if id := m._PlanToStatus; id != nil {
+	case plan.EdgeStatus:
+		if id := m._Status; id != nil {
 			return []ent.Value{*id}
 		}
-	case plan.EdgePlanToPlanDiffs:
-		ids := make([]ent.Value, 0, len(m._PlanToPlanDiffs))
-		for id := range m._PlanToPlanDiffs {
+	case plan.EdgePlanDiffs:
+		ids := make([]ent.Value, 0, len(m._PlanDiffs))
+		for id := range m._PlanDiffs {
 			ids = append(ids, id)
 		}
 		return ids
@@ -22777,14 +22777,14 @@ func (m *PlanMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *PlanMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 10)
-	if m.removed_PrevPlan != nil {
-		edges = append(edges, plan.EdgePrevPlan)
+	if m.removed_PrevPlans != nil {
+		edges = append(edges, plan.EdgePrevPlans)
 	}
-	if m.removed_NextPlan != nil {
-		edges = append(edges, plan.EdgeNextPlan)
+	if m.removed_NextPlans != nil {
+		edges = append(edges, plan.EdgeNextPlans)
 	}
-	if m.removed_PlanToPlanDiffs != nil {
-		edges = append(edges, plan.EdgePlanToPlanDiffs)
+	if m.removed_PlanDiffs != nil {
+		edges = append(edges, plan.EdgePlanDiffs)
 	}
 	return edges
 }
@@ -22793,21 +22793,21 @@ func (m *PlanMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *PlanMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case plan.EdgePrevPlan:
-		ids := make([]ent.Value, 0, len(m.removed_PrevPlan))
-		for id := range m.removed_PrevPlan {
+	case plan.EdgePrevPlans:
+		ids := make([]ent.Value, 0, len(m.removed_PrevPlans))
+		for id := range m.removed_PrevPlans {
 			ids = append(ids, id)
 		}
 		return ids
-	case plan.EdgeNextPlan:
-		ids := make([]ent.Value, 0, len(m.removed_NextPlan))
-		for id := range m.removed_NextPlan {
+	case plan.EdgeNextPlans:
+		ids := make([]ent.Value, 0, len(m.removed_NextPlans))
+		for id := range m.removed_NextPlans {
 			ids = append(ids, id)
 		}
 		return ids
-	case plan.EdgePlanToPlanDiffs:
-		ids := make([]ent.Value, 0, len(m.removed_PlanToPlanDiffs))
-		for id := range m.removed_PlanToPlanDiffs {
+	case plan.EdgePlanDiffs:
+		ids := make([]ent.Value, 0, len(m.removed_PlanDiffs))
+		for id := range m.removed_PlanDiffs {
 			ids = append(ids, id)
 		}
 		return ids
@@ -22818,35 +22818,35 @@ func (m *PlanMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PlanMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 10)
-	if m.cleared_PrevPlan {
-		edges = append(edges, plan.EdgePrevPlan)
+	if m.cleared_PrevPlans {
+		edges = append(edges, plan.EdgePrevPlans)
 	}
-	if m.cleared_NextPlan {
-		edges = append(edges, plan.EdgeNextPlan)
+	if m.cleared_NextPlans {
+		edges = append(edges, plan.EdgeNextPlans)
 	}
-	if m.cleared_PlanToBuild {
-		edges = append(edges, plan.EdgePlanToBuild)
+	if m.cleared_Build {
+		edges = append(edges, plan.EdgeBuild)
 	}
-	if m.cleared_PlanToTeam {
-		edges = append(edges, plan.EdgePlanToTeam)
+	if m.cleared_Team {
+		edges = append(edges, plan.EdgeTeam)
 	}
-	if m.cleared_PlanToProvisionedNetwork {
-		edges = append(edges, plan.EdgePlanToProvisionedNetwork)
+	if m.cleared_ProvisionedNetwork {
+		edges = append(edges, plan.EdgeProvisionedNetwork)
 	}
-	if m.cleared_PlanToProvisionedHost {
-		edges = append(edges, plan.EdgePlanToProvisionedHost)
+	if m.cleared_ProvisionedHost {
+		edges = append(edges, plan.EdgeProvisionedHost)
 	}
-	if m.cleared_PlanToProvisioningStep {
-		edges = append(edges, plan.EdgePlanToProvisioningStep)
+	if m.cleared_ProvisioningStep {
+		edges = append(edges, plan.EdgeProvisioningStep)
 	}
-	if m.cleared_PlanToProvisioningScheduledStep {
-		edges = append(edges, plan.EdgePlanToProvisioningScheduledStep)
+	if m.cleared_ProvisioningScheduledStep {
+		edges = append(edges, plan.EdgeProvisioningScheduledStep)
 	}
-	if m.cleared_PlanToStatus {
-		edges = append(edges, plan.EdgePlanToStatus)
+	if m.cleared_Status {
+		edges = append(edges, plan.EdgeStatus)
 	}
-	if m.cleared_PlanToPlanDiffs {
-		edges = append(edges, plan.EdgePlanToPlanDiffs)
+	if m.cleared_PlanDiffs {
+		edges = append(edges, plan.EdgePlanDiffs)
 	}
 	return edges
 }
@@ -22855,26 +22855,26 @@ func (m *PlanMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *PlanMutation) EdgeCleared(name string) bool {
 	switch name {
-	case plan.EdgePrevPlan:
-		return m.cleared_PrevPlan
-	case plan.EdgeNextPlan:
-		return m.cleared_NextPlan
-	case plan.EdgePlanToBuild:
-		return m.cleared_PlanToBuild
-	case plan.EdgePlanToTeam:
-		return m.cleared_PlanToTeam
-	case plan.EdgePlanToProvisionedNetwork:
-		return m.cleared_PlanToProvisionedNetwork
-	case plan.EdgePlanToProvisionedHost:
-		return m.cleared_PlanToProvisionedHost
-	case plan.EdgePlanToProvisioningStep:
-		return m.cleared_PlanToProvisioningStep
-	case plan.EdgePlanToProvisioningScheduledStep:
-		return m.cleared_PlanToProvisioningScheduledStep
-	case plan.EdgePlanToStatus:
-		return m.cleared_PlanToStatus
-	case plan.EdgePlanToPlanDiffs:
-		return m.cleared_PlanToPlanDiffs
+	case plan.EdgePrevPlans:
+		return m.cleared_PrevPlans
+	case plan.EdgeNextPlans:
+		return m.cleared_NextPlans
+	case plan.EdgeBuild:
+		return m.cleared_Build
+	case plan.EdgeTeam:
+		return m.cleared_Team
+	case plan.EdgeProvisionedNetwork:
+		return m.cleared_ProvisionedNetwork
+	case plan.EdgeProvisionedHost:
+		return m.cleared_ProvisionedHost
+	case plan.EdgeProvisioningStep:
+		return m.cleared_ProvisioningStep
+	case plan.EdgeProvisioningScheduledStep:
+		return m.cleared_ProvisioningScheduledStep
+	case plan.EdgeStatus:
+		return m.cleared_Status
+	case plan.EdgePlanDiffs:
+		return m.cleared_PlanDiffs
 	}
 	return false
 }
@@ -22883,26 +22883,26 @@ func (m *PlanMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *PlanMutation) ClearEdge(name string) error {
 	switch name {
-	case plan.EdgePlanToBuild:
-		m.ClearPlanToBuild()
+	case plan.EdgeBuild:
+		m.ClearBuild()
 		return nil
-	case plan.EdgePlanToTeam:
-		m.ClearPlanToTeam()
+	case plan.EdgeTeam:
+		m.ClearTeam()
 		return nil
-	case plan.EdgePlanToProvisionedNetwork:
-		m.ClearPlanToProvisionedNetwork()
+	case plan.EdgeProvisionedNetwork:
+		m.ClearProvisionedNetwork()
 		return nil
-	case plan.EdgePlanToProvisionedHost:
-		m.ClearPlanToProvisionedHost()
+	case plan.EdgeProvisionedHost:
+		m.ClearProvisionedHost()
 		return nil
-	case plan.EdgePlanToProvisioningStep:
-		m.ClearPlanToProvisioningStep()
+	case plan.EdgeProvisioningStep:
+		m.ClearProvisioningStep()
 		return nil
-	case plan.EdgePlanToProvisioningScheduledStep:
-		m.ClearPlanToProvisioningScheduledStep()
+	case plan.EdgeProvisioningScheduledStep:
+		m.ClearProvisioningScheduledStep()
 		return nil
-	case plan.EdgePlanToStatus:
-		m.ClearPlanToStatus()
+	case plan.EdgeStatus:
+		m.ClearStatus()
 		return nil
 	}
 	return fmt.Errorf("unknown Plan unique edge %s", name)
@@ -22912,35 +22912,35 @@ func (m *PlanMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *PlanMutation) ResetEdge(name string) error {
 	switch name {
-	case plan.EdgePrevPlan:
-		m.ResetPrevPlan()
+	case plan.EdgePrevPlans:
+		m.ResetPrevPlans()
 		return nil
-	case plan.EdgeNextPlan:
-		m.ResetNextPlan()
+	case plan.EdgeNextPlans:
+		m.ResetNextPlans()
 		return nil
-	case plan.EdgePlanToBuild:
-		m.ResetPlanToBuild()
+	case plan.EdgeBuild:
+		m.ResetBuild()
 		return nil
-	case plan.EdgePlanToTeam:
-		m.ResetPlanToTeam()
+	case plan.EdgeTeam:
+		m.ResetTeam()
 		return nil
-	case plan.EdgePlanToProvisionedNetwork:
-		m.ResetPlanToProvisionedNetwork()
+	case plan.EdgeProvisionedNetwork:
+		m.ResetProvisionedNetwork()
 		return nil
-	case plan.EdgePlanToProvisionedHost:
-		m.ResetPlanToProvisionedHost()
+	case plan.EdgeProvisionedHost:
+		m.ResetProvisionedHost()
 		return nil
-	case plan.EdgePlanToProvisioningStep:
-		m.ResetPlanToProvisioningStep()
+	case plan.EdgeProvisioningStep:
+		m.ResetProvisioningStep()
 		return nil
-	case plan.EdgePlanToProvisioningScheduledStep:
-		m.ResetPlanToProvisioningScheduledStep()
+	case plan.EdgeProvisioningScheduledStep:
+		m.ResetProvisioningScheduledStep()
 		return nil
-	case plan.EdgePlanToStatus:
-		m.ResetPlanToStatus()
+	case plan.EdgeStatus:
+		m.ResetStatus()
 		return nil
-	case plan.EdgePlanToPlanDiffs:
-		m.ResetPlanToPlanDiffs()
+	case plan.EdgePlanDiffs:
+		m.ResetPlanDiffs()
 		return nil
 	}
 	return fmt.Errorf("unknown Plan edge %s", name)

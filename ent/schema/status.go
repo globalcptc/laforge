@@ -46,7 +46,7 @@ func (Status) Edges() []ent.Edge {
 			Ref("TeamToStatus").
 			Unique(),
 		edge.From("StatusToPlan", Plan.Type).
-			Ref("PlanToStatus").
+			Ref("Status").
 			Unique(),
 		edge.From("StatusToServerTask", ServerTask.Type).
 			Ref("ServerTaskToStatus").

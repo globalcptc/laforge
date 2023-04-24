@@ -62,7 +62,7 @@ type ProvisioningStep struct {
 	HCLProvisioningStepToGinFileMiddleware *GinFileMiddleware `json:"ProvisioningStepToGinFileMiddleware,omitempty"`
 	//
 	gin_file_middleware_provisioning_step                   *uuid.UUID
-	plan_plan_to_provisioning_step                          *uuid.UUID
+	plan_provisioning_step                                  *uuid.UUID
 	provisioning_step_provisioning_step_to_provisioned_host *uuid.UUID
 	provisioning_step_provisioning_step_to_script           *uuid.UUID
 	provisioning_step_provisioning_step_to_command          *uuid.UUID
@@ -280,7 +280,7 @@ func (*ProvisioningStep) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(uuid.UUID)
 		case provisioningstep.ForeignKeys[0]: // gin_file_middleware_provisioning_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningstep.ForeignKeys[1]: // plan_plan_to_provisioning_step
+		case provisioningstep.ForeignKeys[1]: // plan_provisioning_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisioningstep.ForeignKeys[2]: // provisioning_step_provisioning_step_to_provisioned_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -340,10 +340,10 @@ func (ps *ProvisioningStep) assignValues(columns []string, values []interface{})
 			}
 		case provisioningstep.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field plan_plan_to_provisioning_step", values[i])
+				return fmt.Errorf("unexpected type %T for field plan_provisioning_step", values[i])
 			} else if value.Valid {
-				ps.plan_plan_to_provisioning_step = new(uuid.UUID)
-				*ps.plan_plan_to_provisioning_step = *value.S.(*uuid.UUID)
+				ps.plan_provisioning_step = new(uuid.UUID)
+				*ps.plan_provisioning_step = *value.S.(*uuid.UUID)
 			}
 		case provisioningstep.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

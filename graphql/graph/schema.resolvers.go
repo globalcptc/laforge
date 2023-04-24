@@ -595,7 +595,7 @@ func (r *mutationResolver) Rebuild(ctx context.Context, rootPlans []*string) (bo
 	if err != nil {
 		return false, err
 	}
-	b, err := entPlans[0].QueryPlanToBuild().First(ctx)
+	b, err := entPlans[0].QueryBuild().First(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -1472,7 +1472,7 @@ func (r *queryResolver) ListBuildStatuses(ctx context.Context, buildUUID string)
 	}
 	statuses = append(statuses, buildStatus)
 
-	planStatuses, err := r.client.Status.Query().Where(status.HasStatusToPlanWith(plan.HasPlanToBuildWith(build.IDEQ(uuid)))).All(ctx)
+	planStatuses, err := r.client.Status.Query().Where(status.HasStatusToPlanWith(plan.HasBuildWith(build.IDEQ(uuid)))).All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed querying plan statuses from build: %v", err)
 	}
@@ -1536,12 +1536,12 @@ func (r *queryResolver) GetAllPlanStatus(ctx context.Context, buildUUID string, 
 		return nil, err
 	}
 
-	totalStatuses, err := r.client.Status.Query().Where(status.HasStatusToPlanWith(plan.HasPlanToBuildWith(build.IDEQ(uuid)))).Count(ctx)
+	totalStatuses, err := r.client.Status.Query().Where(status.HasStatusToPlanWith(plan.HasBuildWith(build.IDEQ(uuid)))).Count(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	statuses, err := r.client.Status.Query().Where(status.HasStatusToPlanWith(plan.HasPlanToBuildWith(build.IDEQ(uuid)))).Order(ent.Asc(status.FieldStartedAt)).Limit(count).Offset(offset).All(ctx)
+	statuses, err := r.client.Status.Query().Where(status.HasStatusToPlanWith(plan.HasBuildWith(build.IDEQ(uuid)))).Order(ent.Asc(status.FieldStartedAt)).Limit(count).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1565,51 +1565,51 @@ func (r *queryResolver) GetPlanStatusCounts(ctx context.Context, buildUUID strin
 	if err != nil {
 		return nil, err
 	}
-	planningCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePLANNING))).Count(ctx)
+	planningCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StatePLANNING))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all planning plans from build: %v", err)
 	}
-	awaitingCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateAWAITING))).Count(ctx)
+	awaitingCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StateAWAITING))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all awaiting plans from build: %v", err)
 	}
-	parentAwaitingCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePARENTAWAITING))).Count(ctx)
+	parentAwaitingCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StatePARENTAWAITING))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all parent_awaiting plans from build: %v", err)
 	}
-	inProgressCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateINPROGRESS))).Count(ctx)
+	inProgressCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StateINPROGRESS))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all in_progress plans from build: %v", err)
 	}
-	failedCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateFAILED))).Count(ctx)
+	failedCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StateFAILED))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all failed plans from build: %v", err)
 	}
-	completeCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateCOMPLETE))).Count(ctx)
+	completeCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StateCOMPLETE))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all complete plans from build: %v", err)
 	}
-	taintedCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTAINTED))).Count(ctx)
+	taintedCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StateTAINTED))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all tainted plans from build: %v", err)
 	}
-	toDeleteCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTODELETE))).Count(ctx)
+	toDeleteCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StateTODELETE))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all to_delete plans from build: %v", err)
 	}
-	deleteInProgressCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateDELETEINPROGRESS))).Count(ctx)
+	deleteInProgressCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StateDELETEINPROGRESS))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all delete_in_progress plans from build: %v", err)
 	}
-	deletedCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateDELETED))).Count(ctx)
+	deletedCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StateDELETED))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all deleted plans from build: %v", err)
 	}
-	toRebuildCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateTOREBUILD))).Count(ctx)
+	toRebuildCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StateTOREBUILD))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all to_rebuild plans from build: %v", err)
 	}
-	cancelledCount, err := entBuild.QueryPlans().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StateCANCELLED))).Count(ctx)
+	cancelledCount, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StateCANCELLED))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all cancelled plans from build: %v", err)
 	}

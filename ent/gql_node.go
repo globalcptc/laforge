@@ -2461,9 +2461,9 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Plan",
-		Name: "PrevPlan",
+		Name: "PrevPlans",
 	}
-	err = pl.QueryPrevPlan().
+	err = pl.QueryPrevPlans().
 		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -2471,9 +2471,9 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "Plan",
-		Name: "NextPlan",
+		Name: "NextPlans",
 	}
-	err = pl.QueryNextPlan().
+	err = pl.QueryNextPlans().
 		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -2481,9 +2481,9 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Build",
-		Name: "PlanToBuild",
+		Name: "Build",
 	}
-	err = pl.QueryPlanToBuild().
+	err = pl.QueryBuild().
 		Select(build.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -2491,9 +2491,9 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "Team",
-		Name: "PlanToTeam",
+		Name: "Team",
 	}
-	err = pl.QueryPlanToTeam().
+	err = pl.QueryTeam().
 		Select(team.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
@@ -2501,9 +2501,9 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[4] = &Edge{
 		Type: "ProvisionedNetwork",
-		Name: "PlanToProvisionedNetwork",
+		Name: "ProvisionedNetwork",
 	}
-	err = pl.QueryPlanToProvisionedNetwork().
+	err = pl.QueryProvisionedNetwork().
 		Select(provisionednetwork.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
@@ -2511,9 +2511,9 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[5] = &Edge{
 		Type: "ProvisionedHost",
-		Name: "PlanToProvisionedHost",
+		Name: "ProvisionedHost",
 	}
-	err = pl.QueryPlanToProvisionedHost().
+	err = pl.QueryProvisionedHost().
 		Select(provisionedhost.FieldID).
 		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
@@ -2521,9 +2521,9 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[6] = &Edge{
 		Type: "ProvisioningStep",
-		Name: "PlanToProvisioningStep",
+		Name: "ProvisioningStep",
 	}
-	err = pl.QueryPlanToProvisioningStep().
+	err = pl.QueryProvisioningStep().
 		Select(provisioningstep.FieldID).
 		Scan(ctx, &node.Edges[6].IDs)
 	if err != nil {
@@ -2531,9 +2531,9 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[7] = &Edge{
 		Type: "ProvisioningScheduledStep",
-		Name: "PlanToProvisioningScheduledStep",
+		Name: "ProvisioningScheduledStep",
 	}
-	err = pl.QueryPlanToProvisioningScheduledStep().
+	err = pl.QueryProvisioningScheduledStep().
 		Select(provisioningscheduledstep.FieldID).
 		Scan(ctx, &node.Edges[7].IDs)
 	if err != nil {
@@ -2541,9 +2541,9 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[8] = &Edge{
 		Type: "Status",
-		Name: "PlanToStatus",
+		Name: "Status",
 	}
-	err = pl.QueryPlanToStatus().
+	err = pl.QueryStatus().
 		Select(status.FieldID).
 		Scan(ctx, &node.Edges[8].IDs)
 	if err != nil {
@@ -2551,9 +2551,9 @@ func (pl *Plan) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[9] = &Edge{
 		Type: "PlanDiff",
-		Name: "PlanToPlanDiffs",
+		Name: "PlanDiffs",
 	}
-	err = pl.QueryPlanToPlanDiffs().
+	err = pl.QueryPlanDiffs().
 		Select(plandiff.FieldID).
 		Scan(ctx, &node.Edges[9].IDs)
 	if err != nil {

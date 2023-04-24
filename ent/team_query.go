@@ -616,10 +616,10 @@ func (tq *TeamQuery) loadTeamToPlan(ctx context.Context, query *PlanQuery, nodes
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Team)
 	for i := range nodes {
-		if nodes[i].plan_plan_to_team == nil {
+		if nodes[i].plan_team == nil {
 			continue
 		}
-		fk := *nodes[i].plan_plan_to_team
+		fk := *nodes[i].plan_team
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -633,7 +633,7 @@ func (tq *TeamQuery) loadTeamToPlan(ctx context.Context, query *PlanQuery, nodes
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_team" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_team" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

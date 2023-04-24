@@ -57,7 +57,7 @@ func (ProvisioningStep) Edges() []ent.Edge {
 		edge.To("ProvisioningStepToAnsible", Ansible.Type).
 			Unique(),
 		edge.From("ProvisioningStepToPlan", Plan.Type).
-			Ref("PlanToProvisioningStep").
+			Ref("ProvisioningStep").
 			Unique(),
 		edge.From("ProvisioningStepToAgentTask", AgentTask.Type).
 			Ref("ProvisioningStep"),

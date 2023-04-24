@@ -37,6 +37,6 @@ func (ProvisionedNetwork) Edges() []ent.Edge {
 		edge.From("ProvisionedNetworkToProvisionedHost", ProvisionedHost.Type).
 			Ref("ProvisionedHostToProvisionedNetwork"),
 		edge.From("ProvisionedNetworkToPlan", Plan.Type).
-			Ref("PlanToProvisionedNetwork").Unique(),
+			Ref("ProvisionedNetwork").Unique(),
 	}
 }

@@ -1098,13 +1098,13 @@ func (bq *BuildQuery) loadPlans(ctx context.Context, query *PlanQuery, nodes []*
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.plan_plan_to_build
+		fk := n.plan_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_plan_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "plan_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

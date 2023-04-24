@@ -100,7 +100,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
 	PlansInverseTable = "plans"
 	// PlansColumn is the table column denoting the Plans relation/edge.
-	PlansColumn = "plan_plan_to_build"
+	PlansColumn = "plan_build"
 	// BuildCommitsTable is the table that holds the BuildCommits relation/edge.
 	BuildCommitsTable = "build_commits"
 	// BuildCommitsInverseTable is the table name for the BuildCommit entity.

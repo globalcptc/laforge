@@ -114,7 +114,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
 	ProvisioningStepToPlanInverseTable = "plans"
 	// ProvisioningStepToPlanColumn is the table column denoting the ProvisioningStepToPlan relation/edge.
-	ProvisioningStepToPlanColumn = "plan_plan_to_provisioning_step"
+	ProvisioningStepToPlanColumn = "plan_provisioning_step"
 	// ProvisioningStepToAgentTaskTable is the table that holds the ProvisioningStepToAgentTask relation/edge.
 	ProvisioningStepToAgentTaskTable = "agent_tasks"
 	// ProvisioningStepToAgentTaskInverseTable is the table name for the AgentTask entity.
@@ -142,7 +142,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"gin_file_middleware_provisioning_step",
-	"plan_plan_to_provisioning_step",
+	"plan_provisioning_step",
 	"provisioning_step_provisioning_step_to_provisioned_host",
 	"provisioning_step_provisioning_step_to_script",
 	"provisioning_step_provisioning_step_to_command",

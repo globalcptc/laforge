@@ -34,7 +34,7 @@ func CreateRootCommit(client *ent.Client, rdb *redis.Client, entBuild *ent.Build
 
 	var planDiffErr error = nil
 	for _, buildPlan := range buildPlans {
-		numExistingDiffs, err := buildPlan.QueryPlanToPlanDiffs().Count(ctx)
+		numExistingDiffs, err := buildPlan.QueryPlanDiffs().Count(ctx)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"buildPlan": buildPlan.ID,

@@ -163,7 +163,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	if err != nil {
 		return fmt.Errorf("failed to query network from provisioned network: %v", err)
 	}
-	entBuild, err := entProvisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
+	entBuild, err := entProvisionedHost.QueryProvisionedHostToPlan().QueryBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed querying build from provisioned host: %v", err)
 	}

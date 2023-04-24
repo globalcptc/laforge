@@ -214,7 +214,7 @@ func main() {
 	// 	}
 	// 	logrus.Infof("Deleted %v amount of BuildCommit for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.Plan.Delete().Where(
-	// 		plan.HasPlanToBuildWith(
+	// 		plan.HasBuildWith(
 	// 			build.IDEQ(entBuild.ID),
 	// 		),
 	// 	).Exec(ctx)
@@ -223,7 +223,7 @@ func main() {
 	// 	}
 	// 	logrus.Infof("Deleted %v amount of plan for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.AdhocPlan.Delete().Where(
-	// 		adhocplan.HasAdhocPlanToBuildWith(
+	// 		adhocplan.HasAdhocBuildWith(
 	// 			build.IDEQ(entBuild.ID),
 	// 		),
 	// 	).Exec(ctx)

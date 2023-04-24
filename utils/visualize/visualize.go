@@ -131,32 +131,32 @@ func Traverse(ctx context.Context, planPath string, entPlan *ent.Plan, wg *sync.
 
 	switch entPlan.Type {
 	case plan.TypeStartBuild:
-		entPlan.QueryPlanToBuild()
-		entBuild, err := entPlan.QueryPlanToBuild().Only(ctx)
+		entPlan.QueryBuild()
+		entBuild, err := entPlan.QueryBuild().Only(ctx)
 		if err != nil {
 			return
 		}
 		planPath += fmt.Sprintf("/%s", entBuild.ID)
 	case plan.TypeStartTeam:
-		team, err := entPlan.QueryPlanToTeam().Only(ctx)
+		team, err := entPlan.QueryTeam().Only(ctx)
 		if err != nil {
 			return
 		}
 		planPath += fmt.Sprintf("/Team%d", team.TeamNumber)
 	case plan.TypeProvisionNetwork:
-		pnet, err := entPlan.QueryPlanToProvisionedNetwork().Only(ctx)
+		pnet, err := entPlan.QueryProvisionedNetwork().Only(ctx)
 		if err != nil {
 			return
 		}
 		planPath += fmt.Sprintf("/%s", pnet.Name)
 	case plan.TypeProvisionHost:
-		phost, err := entPlan.QueryPlanToProvisionedHost().Only(ctx)
+		phost, err := entPlan.QueryProvisionedHost().Only(ctx)
 		if err != nil {
 			return
 		}
 		planPath += fmt.Sprintf("/%s", phost.SubnetIP)
 	case plan.TypeExecuteStep:
-		step, err := entPlan.QueryPlanToProvisioningStep().Only(ctx)
+		step, err := entPlan.QueryProvisioningStep().Only(ctx)
 		if err != nil {
 			return
 		}
@@ -166,7 +166,7 @@ func Traverse(ctx context.Context, planPath string, entPlan *ent.Plan, wg *sync.
 	}
 	// fmt.Println(planPath)
 
-	nextPlans, err := entPlan.QueryNextPlan().All(ctx)
+	nextPlans, err := entPlan.QueryNextPlans().All(ctx)
 	if err != nil {
 		return
 	}

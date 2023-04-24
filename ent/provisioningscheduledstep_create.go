@@ -681,7 +681,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.plan_plan_to_provisioning_scheduled_step = &nodes[0]
+		_node.plan_provisioning_scheduled_step = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := pssc.mutation.GinFileMiddlewareIDs(); len(nodes) > 0 {

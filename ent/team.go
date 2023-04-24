@@ -38,7 +38,7 @@ type Team struct {
 	// TeamToPlan holds the value of the TeamToPlan edge.
 	HCLTeamToPlan *Plan `json:"TeamToPlan,omitempty"`
 	//
-	plan_plan_to_team  *uuid.UUID
+	plan_team          *uuid.UUID
 	team_team_to_build *uuid.UUID
 }
 
@@ -119,7 +119,7 @@ func (*Team) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullInt64)
 		case team.FieldID:
 			values[i] = new(uuid.UUID)
-		case team.ForeignKeys[0]: // plan_plan_to_team
+		case team.ForeignKeys[0]: // plan_team
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case team.ForeignKeys[1]: // team_team_to_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -160,10 +160,10 @@ func (t *Team) assignValues(columns []string, values []interface{}) error {
 			}
 		case team.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field plan_plan_to_team", values[i])
+				return fmt.Errorf("unexpected type %T for field plan_team", values[i])
 			} else if value.Valid {
-				t.plan_plan_to_team = new(uuid.UUID)
-				*t.plan_plan_to_team = *value.S.(*uuid.UUID)
+				t.plan_team = new(uuid.UUID)
+				*t.plan_team = *value.S.(*uuid.UUID)
 			}
 		case team.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

@@ -46,7 +46,7 @@ type ProvisionedNetwork struct {
 	// ProvisionedNetworkToPlan holds the value of the ProvisionedNetworkToPlan edge.
 	HCLProvisionedNetworkToPlan *Plan `json:"ProvisionedNetworkToPlan,omitempty"`
 	//
-	plan_plan_to_provisioned_network                   *uuid.UUID
+	plan_provisioned_network                           *uuid.UUID
 	provisioned_network_provisioned_network_to_network *uuid.UUID
 	provisioned_network_provisioned_network_to_build   *uuid.UUID
 	provisioned_network_provisioned_network_to_team    *uuid.UUID
@@ -161,7 +161,7 @@ func (*ProvisionedNetwork) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case provisionednetwork.FieldID:
 			values[i] = new(uuid.UUID)
-		case provisionednetwork.ForeignKeys[0]: // plan_plan_to_provisioned_network
+		case provisionednetwork.ForeignKeys[0]: // plan_provisioned_network
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisionednetwork.ForeignKeys[1]: // provisioned_network_provisioned_network_to_network
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -212,10 +212,10 @@ func (pn *ProvisionedNetwork) assignValues(columns []string, values []interface{
 			}
 		case provisionednetwork.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field plan_plan_to_provisioned_network", values[i])
+				return fmt.Errorf("unexpected type %T for field plan_provisioned_network", values[i])
 			} else if value.Valid {
-				pn.plan_plan_to_provisioned_network = new(uuid.UUID)
-				*pn.plan_plan_to_provisioned_network = *value.S.(*uuid.UUID)
+				pn.plan_provisioned_network = new(uuid.UUID)
+				*pn.plan_provisioned_network = *value.S.(*uuid.UUID)
 			}
 		case provisionednetwork.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

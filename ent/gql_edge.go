@@ -708,82 +708,82 @@ func (n *Network) IncludedNetworks(ctx context.Context) ([]*IncludedNetwork, err
 	return result, err
 }
 
-func (pl *Plan) PrevPlan(ctx context.Context) ([]*Plan, error) {
-	result, err := pl.Edges.PrevPlanOrErr()
+func (pl *Plan) PrevPlans(ctx context.Context) ([]*Plan, error) {
+	result, err := pl.Edges.PrevPlansOrErr()
 	if IsNotLoaded(err) {
-		result, err = pl.QueryPrevPlan().All(ctx)
+		result, err = pl.QueryPrevPlans().All(ctx)
 	}
 	return result, err
 }
 
-func (pl *Plan) NextPlan(ctx context.Context) ([]*Plan, error) {
-	result, err := pl.Edges.NextPlanOrErr()
+func (pl *Plan) NextPlans(ctx context.Context) ([]*Plan, error) {
+	result, err := pl.Edges.NextPlansOrErr()
 	if IsNotLoaded(err) {
-		result, err = pl.QueryNextPlan().All(ctx)
+		result, err = pl.QueryNextPlans().All(ctx)
 	}
 	return result, err
 }
 
-func (pl *Plan) PlanToBuild(ctx context.Context) (*Build, error) {
-	result, err := pl.Edges.PlanToBuildOrErr()
+func (pl *Plan) Build(ctx context.Context) (*Build, error) {
+	result, err := pl.Edges.BuildOrErr()
 	if IsNotLoaded(err) {
-		result, err = pl.QueryPlanToBuild().Only(ctx)
+		result, err = pl.QueryBuild().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pl *Plan) PlanToTeam(ctx context.Context) (*Team, error) {
-	result, err := pl.Edges.PlanToTeamOrErr()
+func (pl *Plan) Team(ctx context.Context) (*Team, error) {
+	result, err := pl.Edges.TeamOrErr()
 	if IsNotLoaded(err) {
-		result, err = pl.QueryPlanToTeam().Only(ctx)
+		result, err = pl.QueryTeam().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pl *Plan) PlanToProvisionedNetwork(ctx context.Context) (*ProvisionedNetwork, error) {
-	result, err := pl.Edges.PlanToProvisionedNetworkOrErr()
+func (pl *Plan) ProvisionedNetwork(ctx context.Context) (*ProvisionedNetwork, error) {
+	result, err := pl.Edges.ProvisionedNetworkOrErr()
 	if IsNotLoaded(err) {
-		result, err = pl.QueryPlanToProvisionedNetwork().Only(ctx)
+		result, err = pl.QueryProvisionedNetwork().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pl *Plan) PlanToProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
-	result, err := pl.Edges.PlanToProvisionedHostOrErr()
+func (pl *Plan) ProvisionedHost(ctx context.Context) (*ProvisionedHost, error) {
+	result, err := pl.Edges.ProvisionedHostOrErr()
 	if IsNotLoaded(err) {
-		result, err = pl.QueryPlanToProvisionedHost().Only(ctx)
+		result, err = pl.QueryProvisionedHost().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pl *Plan) PlanToProvisioningStep(ctx context.Context) (*ProvisioningStep, error) {
-	result, err := pl.Edges.PlanToProvisioningStepOrErr()
+func (pl *Plan) ProvisioningStep(ctx context.Context) (*ProvisioningStep, error) {
+	result, err := pl.Edges.ProvisioningStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = pl.QueryPlanToProvisioningStep().Only(ctx)
+		result, err = pl.QueryProvisioningStep().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pl *Plan) PlanToProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
-	result, err := pl.Edges.PlanToProvisioningScheduledStepOrErr()
+func (pl *Plan) ProvisioningScheduledStep(ctx context.Context) (*ProvisioningScheduledStep, error) {
+	result, err := pl.Edges.ProvisioningScheduledStepOrErr()
 	if IsNotLoaded(err) {
-		result, err = pl.QueryPlanToProvisioningScheduledStep().Only(ctx)
+		result, err = pl.QueryProvisioningScheduledStep().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (pl *Plan) PlanToStatus(ctx context.Context) (*Status, error) {
-	result, err := pl.Edges.PlanToStatusOrErr()
+func (pl *Plan) Status(ctx context.Context) (*Status, error) {
+	result, err := pl.Edges.StatusOrErr()
 	if IsNotLoaded(err) {
-		result, err = pl.QueryPlanToStatus().Only(ctx)
+		result, err = pl.QueryStatus().Only(ctx)
 	}
 	return result, err
 }
 
-func (pl *Plan) PlanToPlanDiffs(ctx context.Context) ([]*PlanDiff, error) {
-	result, err := pl.Edges.PlanToPlanDiffsOrErr()
+func (pl *Plan) PlanDiffs(ctx context.Context) ([]*PlanDiff, error) {
+	result, err := pl.Edges.PlanDiffsOrErr()
 	if IsNotLoaded(err) {
-		result, err = pl.QueryPlanToPlanDiffs().All(ctx)
+		result, err = pl.QueryPlanDiffs().All(ctx)
 	}
 	return result, err
 }

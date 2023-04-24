@@ -72,7 +72,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
 	ProvisionedNetworkToPlanInverseTable = "plans"
 	// ProvisionedNetworkToPlanColumn is the table column denoting the ProvisionedNetworkToPlan relation/edge.
-	ProvisionedNetworkToPlanColumn = "plan_plan_to_provisioned_network"
+	ProvisionedNetworkToPlanColumn = "plan_provisioned_network"
 )
 
 // Columns holds all SQL columns for provisionednetwork fields.
@@ -86,7 +86,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provisioned_networks"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"plan_plan_to_provisioned_network",
+	"plan_provisioned_network",
 	"provisioned_network_provisioned_network_to_network",
 	"provisioned_network_provisioned_network_to_build",
 	"provisioned_network_provisioned_network_to_team",

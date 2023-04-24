@@ -22,7 +22,7 @@ func Rebuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerC
 	ctx := context.Background()
 	defer ctx.Done()
 
-	entBuild, err := entPlans[0].QueryPlanToBuild().Only(ctx)
+	entBuild, err := entPlans[0].QueryBuild().Only(ctx)
 	if err != nil {
 		spawnedRebuildSuccessfully <- false
 		logger.Log.Errorf("error getting build from plan: %v", err)
@@ -196,7 +196,7 @@ func Rebuild(client *ent.Client, rdb *redis.Client, laforgeConfig *utils.ServerC
 }
 
 func generateRebuildCommitPlans(client *ent.Client, ctx context.Context, rootPlan *ent.Plan, entBuildCommit *ent.BuildCommit) error {
-	diffRevision, err := rootPlan.QueryPlanToPlanDiffs().Count(ctx)
+	diffRevision, err := rootPlan.QueryPlanDiffs().Count(ctx)
 	if err != nil {
 		return err
 	}
@@ -213,7 +213,7 @@ func generateRebuildCommitPlans(client *ent.Client, ctx context.Context, rootPla
 			Save(ctx)
 	}
 
-	nextPlans, err := rootPlan.QueryNextPlan().All(ctx)
+	nextPlans, err := rootPlan.QueryNextPlans().All(ctx)
 	if err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func generateRebuildCommitPlans(client *ent.Client, ctx context.Context, rootPla
 }
 
 func generateRebuildCommitPreviousPlans(client *ent.Client, ctx context.Context, rootPlan *ent.Plan, entBuildCommit *ent.BuildCommit) error {
-	diffRevision, err := rootPlan.QueryPlanToPlanDiffs().Count(ctx)
+	diffRevision, err := rootPlan.QueryPlanDiffs().Count(ctx)
 	if err != nil {
 		return err
 	}
@@ -257,9 +257,9 @@ func generateRebuildCommitPreviousPlans(client *ent.Client, ctx context.Context,
 
 	var prevPlans []*ent.Plan
 	if prevPlanPredicate != nil {
-		prevPlans, err = rootPlan.QueryPrevPlan().Where(prevPlanPredicate).All(ctx)
+		prevPlans, err = rootPlan.QueryPrevPlans().Where(prevPlanPredicate).All(ctx)
 	} else {
-		prevPlans, err = rootPlan.QueryPrevPlan().All(ctx)
+		prevPlans, err = rootPlan.QueryPrevPlans().All(ctx)
 	}
 	if err != nil {
 		return err
@@ -288,7 +288,7 @@ func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus st
 		if err != nil {
 			return err
 		}
-		entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
+		entStatus, err := entPlan.QueryStatus().Only(ctx)
 		if err != nil {
 			return err
 		}
@@ -303,31 +303,31 @@ func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus st
 		var getStatusError error = nil
 		switch entPlan.Type {
 		case plan.TypeStartBuild:
-			build, getStatusError := entPlan.QueryPlanToBuild().Only(ctx)
+			build, getStatusError := entPlan.QueryBuild().Only(ctx)
 			if getStatusError != nil {
 				break
 			}
 			provisionedStatus, getStatusError = build.QueryStatus().Only(ctx)
 		case plan.TypeStartTeam:
-			team, getStatusError := entPlan.QueryPlanToTeam().Only(ctx)
+			team, getStatusError := entPlan.QueryTeam().Only(ctx)
 			if getStatusError != nil {
 				break
 			}
 			provisionedStatus, getStatusError = team.QueryTeamToStatus().Only(ctx)
 		case plan.TypeProvisionNetwork:
-			pnet, getStatusError := entPlan.QueryPlanToProvisionedNetwork().Only(ctx)
+			pnet, getStatusError := entPlan.QueryProvisionedNetwork().Only(ctx)
 			if getStatusError != nil {
 				break
 			}
 			provisionedStatus, getStatusError = pnet.QueryProvisionedNetworkToStatus().Only(ctx)
 		case plan.TypeProvisionHost:
-			phost, getStatusError := entPlan.QueryPlanToProvisionedHost().Only(ctx)
+			phost, getStatusError := entPlan.QueryProvisionedHost().Only(ctx)
 			if getStatusError != nil {
 				break
 			}
 			provisionedStatus, getStatusError = phost.QueryProvisionedHostToStatus().Only(ctx)
 		case plan.TypeExecuteStep:
-			step, getStatusError := entPlan.QueryPlanToProvisioningStep().Only(ctx)
+			step, getStatusError := entPlan.QueryProvisioningStep().Only(ctx)
 			if getStatusError != nil {
 				break
 			}
@@ -358,7 +358,7 @@ func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus st
 }
 
 // func markForRebuildRoutine(ctx context.Context, entPlan *ent.Plan) error {
-// 	entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
+// 	entStatus, err := entPlan.QueryStatus().Only(ctx)
 // 	if err != nil {
 // 		return err
 // 	}
@@ -373,31 +373,31 @@ func markForRoutine(ctx context.Context, logger *logging.Logger, targetStatus st
 // 	var getStatusError error = nil
 // 	switch entPlan.Type {
 // 	case plan.TypeStartBuild:
-// 		build, getStatusError := entPlan.QueryPlanToBuild().Only(ctx)
+// 		build, getStatusError := entPlan.QueryBuild().Only(ctx)
 // 		if getStatusError != nil {
 // 			break
 // 		}
 // 		provisionedStatus, getStatusError = build.QueryStatus().Only(ctx)
 // 	case plan.TypeStartTeam:
-// 		team, getStatusError := entPlan.QueryPlanToTeam().Only(ctx)
+// 		team, getStatusError := entPlan.QueryTeam().Only(ctx)
 // 		if getStatusError != nil {
 // 			break
 // 		}
 // 		provisionedStatus, getStatusError = team.QueryTeamToStatus().Only(ctx)
 // 	case plan.TypeProvisionNetwork:
-// 		pnet, getStatusError := entPlan.QueryPlanToProvisionedNetwork().Only(ctx)
+// 		pnet, getStatusError := entPlan.QueryProvisionedNetwork().Only(ctx)
 // 		if getStatusError != nil {
 // 			break
 // 		}
 // 		provisionedStatus, getStatusError = pnet.QueryProvisionedNetworkToStatus().Only(ctx)
 // 	case plan.TypeProvisionHost:
-// 		phost, getStatusError := entPlan.QueryPlanToProvisionedHost().Only(ctx)
+// 		phost, getStatusError := entPlan.QueryProvisionedHost().Only(ctx)
 // 		if getStatusError != nil {
 // 			break
 // 		}
 // 		provisionedStatus, getStatusError = phost.QueryProvisionedHostToStatus().Only(ctx)
 // 	case plan.TypeExecuteStep:
-// 		step, getStatusError := entPlan.QueryPlanToProvisioningStep().Only(ctx)
+// 		step, getStatusError := entPlan.QueryProvisioningStep().Only(ctx)
 // 		if getStatusError != nil {
 // 			break
 // 		}

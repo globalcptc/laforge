@@ -69,7 +69,7 @@ func (ProvisioningScheduledStep) Edges() []ent.Edge {
 			Unique(),
 		// Plan
 		edge.From("Plan", Plan.Type).
-			Ref("PlanToProvisioningScheduledStep").
+			Ref("ProvisioningScheduledStep").
 			Unique(),
 		edge.From("GinFileMiddleware", GinFileMiddleware.Type).
 			Ref("ProvisioningScheduledStep").

@@ -147,7 +147,7 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		return fmt.Errorf("couldn't query host from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
 
-	entBuild, err := provisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
+	entBuild, err := provisionedHost.QueryProvisionedHostToPlan().QueryBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}

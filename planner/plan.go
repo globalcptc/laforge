@@ -186,9 +186,9 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 	_, err = client.Plan.Create().
 		SetType(plan.TypeStartBuild).
 		SetBuildID(entBuild.ID.String()).
-		SetPlanToBuild(entBuild).
+		SetBuild(entBuild).
 		SetStepNumber(0).
-		SetPlanToStatus(entPlanStatus).
+		SetStatus(entPlanStatus).
 		Save(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to create Plan Node for Build %v. Err: %v", entBuild.ID, err)
@@ -340,13 +340,13 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	}
 
 	_, err = client.Plan.Create().
-		AddPrevPlan(buildPlanNode).
+		AddPrevPlans(buildPlanNode).
 		SetType(plan.TypeStartTeam).
 		SetBuildID(entBuild.ID.String()).
-		SetPlanToTeam(entTeam).
-		SetPlanToBuild(entBuild).
+		SetTeam(entTeam).
+		SetBuild(entBuild).
 		SetStepNumber(1).
-		SetPlanToStatus(entPlanStatus).
+		SetStatus(entPlanStatus).
 		Save(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to create Plan Node for Team %v. Err: %v", teamNumber, err)
@@ -429,13 +429,13 @@ func createProvisionedNetworks(ctx context.Context, client *ent.Client, laforgeC
 		return nil, err
 	}
 	_, err = client.Plan.Create().
-		AddPrevPlan(teamPlanNode).
+		AddPrevPlans(teamPlanNode).
 		SetType(plan.TypeProvisionNetwork).
 		SetBuildID(entBuild.ID.String()).
-		SetPlanToProvisionedNetwork(entProvisionedNetwork).
-		SetPlanToBuild(entBuild).
+		SetProvisionedNetwork(entProvisionedNetwork).
+		SetBuild(entBuild).
 		SetStepNumber(teamPlanNode.StepNumber + 1).
-		SetPlanToStatus(entPlanStatus).
+		SetStatus(entPlanStatus).
 		Save(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to create Plan Node for Provisioned Network  %v. Err: %v", entProvisionedNetwork.Name, err)
@@ -586,13 +586,13 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 
 	// logger.Log.Infof("CREATE %s | %s | %v", pNetwork.Name, entHost.Hostname, prevPlans)
 	endPlanNode, err := client.Plan.Create().
-		AddPrevPlan(prevPlans...).
+		AddPrevPlans(prevPlans...).
 		SetType(plan.TypeProvisionHost).
 		SetBuildID(prevPlan.BuildID).
-		SetPlanToProvisionedHost(entProvisionedHost).
+		SetProvisionedHost(entProvisionedHost).
 		SetStepNumber(planStepNumber).
-		SetPlanToBuild(currentBuild).
-		SetPlanToStatus(entPlanStatus).
+		SetBuild(currentBuild).
+		SetStatus(entPlanStatus).
 		Save(ctx)
 
 	if err != nil {
@@ -1432,19 +1432,19 @@ func createStepPlan(ctx context.Context, client *ent.Client, logger *logging.Log
 		return err
 	}
 	entPlanCreate := client.Plan.Create().
-		AddPrevPlan(prevPlan).
+		AddPrevPlans(prevPlan).
 		SetBuildID(prevPlan.BuildID).
-		SetPlanToBuild(entBuild).
+		SetBuild(entBuild).
 		SetStepNumber(prevPlan.StepNumber + 1).
-		SetPlanToStatus(entPlanStatus)
+		SetStatus(entPlanStatus)
 	if entProvisioningStep != nil {
 		entPlanCreate = entPlanCreate.
 			SetType(plan.TypeExecuteStep).
-			SetPlanToProvisioningStep(entProvisioningStep)
+			SetProvisioningStep(entProvisioningStep)
 	} else if entProvisioningScheduledStep != nil {
 		entPlanCreate = entPlanCreate.
 			SetType(plan.TypeStartScheduledStep).
-			SetPlanToProvisioningScheduledStep(entProvisioningScheduledStep)
+			SetProvisioningScheduledStep(entProvisioningScheduledStep)
 	}
 	_, err = entPlanCreate.Save(ctx)
 	if err != nil {

@@ -68,7 +68,7 @@ type ProvisioningScheduledStep struct {
 	//
 	agent_task_provisioning_scheduled_step          *uuid.UUID
 	gin_file_middleware_provisioning_scheduled_step *uuid.UUID
-	plan_plan_to_provisioning_scheduled_step        *uuid.UUID
+	plan_provisioning_scheduled_step                *uuid.UUID
 	provisioning_scheduled_step_scheduled_step      *uuid.UUID
 	provisioning_scheduled_step_provisioned_host    *uuid.UUID
 	provisioning_scheduled_step_script              *uuid.UUID
@@ -310,7 +310,7 @@ func (*ProvisioningScheduledStep) scanValues(columns []string) ([]interface{}, e
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisioningscheduledstep.ForeignKeys[1]: // gin_file_middleware_provisioning_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case provisioningscheduledstep.ForeignKeys[2]: // plan_plan_to_provisioning_scheduled_step
+		case provisioningscheduledstep.ForeignKeys[2]: // plan_provisioning_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisioningscheduledstep.ForeignKeys[3]: // provisioning_scheduled_step_scheduled_step
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -379,10 +379,10 @@ func (pss *ProvisioningScheduledStep) assignValues(columns []string, values []in
 			}
 		case provisioningscheduledstep.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field plan_plan_to_provisioning_scheduled_step", values[i])
+				return fmt.Errorf("unexpected type %T for field plan_provisioning_scheduled_step", values[i])
 			} else if value.Valid {
-				pss.plan_plan_to_provisioning_scheduled_step = new(uuid.UUID)
-				*pss.plan_plan_to_provisioning_scheduled_step = *value.S.(*uuid.UUID)
+				pss.plan_provisioning_scheduled_step = new(uuid.UUID)
+				*pss.plan_provisioning_scheduled_step = *value.S.(*uuid.UUID)
 			}
 		case provisioningscheduledstep.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

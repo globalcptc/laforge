@@ -114,7 +114,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
 	ProvisionedHostToPlanInverseTable = "plans"
 	// ProvisionedHostToPlanColumn is the table column denoting the ProvisionedHostToPlan relation/edge.
-	ProvisionedHostToPlanColumn = "plan_plan_to_provisioned_host"
+	ProvisionedHostToPlanColumn = "plan_provisioned_host"
 	// ProvisionedHostToGinFileMiddlewareTable is the table that holds the ProvisionedHostToGinFileMiddleware relation/edge.
 	ProvisionedHostToGinFileMiddlewareTable = "provisioned_hosts"
 	// ProvisionedHostToGinFileMiddlewareInverseTable is the table name for the GinFileMiddleware entity.
@@ -136,7 +136,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"gin_file_middleware_provisioned_host",
-	"plan_plan_to_provisioned_host",
+	"plan_provisioned_host",
 	"provisioned_host_provisioned_host_to_provisioned_network",
 	"provisioned_host_provisioned_host_to_host",
 	"provisioned_host_provisioned_host_to_end_step_plan",

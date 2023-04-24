@@ -130,7 +130,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
 	PlanInverseTable = "plans"
 	// PlanColumn is the table column denoting the Plan relation/edge.
-	PlanColumn = "plan_plan_to_provisioning_scheduled_step"
+	PlanColumn = "plan_provisioning_scheduled_step"
 	// GinFileMiddlewareTable is the table that holds the GinFileMiddleware relation/edge.
 	GinFileMiddlewareTable = "provisioning_scheduled_steps"
 	// GinFileMiddlewareInverseTable is the table name for the GinFileMiddleware entity.
@@ -152,7 +152,7 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"agent_task_provisioning_scheduled_step",
 	"gin_file_middleware_provisioning_scheduled_step",
-	"plan_plan_to_provisioning_scheduled_step",
+	"plan_provisioning_scheduled_step",
 	"provisioning_scheduled_step_scheduled_step",
 	"provisioning_scheduled_step_provisioned_host",
 	"provisioning_scheduled_step_script",

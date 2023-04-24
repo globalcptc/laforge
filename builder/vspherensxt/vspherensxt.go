@@ -141,7 +141,7 @@ func (builder VSphereNSXTBuilder) DeployHost(ctx context.Context, provisionedHos
 		return
 	}
 
-	build, err := provisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
+	build, err := provisionedHost.QueryProvisionedHostToPlan().QueryBuild().Only(ctx)
 	if err != nil {
 		return
 	}

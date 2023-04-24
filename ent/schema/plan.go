@@ -35,22 +35,30 @@ func (Plan) Fields() []ent.Field {
 // Edges of the Plan.
 func (Plan) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("NextPlan", Plan.Type).
-			From("PrevPlan").
+		edge.To("NextPlans", Plan.Type).
+			From("PrevPlans").
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("PlanToBuild", Build.Type).Unique(),
-		edge.To("PlanToTeam", Team.Type).Unique(),
-		edge.To("PlanToProvisionedNetwork", ProvisionedNetwork.Type).Unique(),
-		edge.To("PlanToProvisionedHost", ProvisionedHost.Type).Unique(),
-		edge.To("PlanToProvisioningStep", ProvisioningStep.Type).Unique(),
-		edge.To("PlanToProvisioningScheduledStep", ProvisioningScheduledStep.Type).Unique(),
-		edge.To("PlanToStatus", Status.Type).Unique().Required().
+		edge.To("Build", Build.Type).
+			Unique(),
+		edge.To("Team", Team.Type).
+			Unique(),
+		edge.To("ProvisionedNetwork", ProvisionedNetwork.Type).
+			Unique(),
+		edge.To("ProvisionedHost", ProvisionedHost.Type).
+			Unique(),
+		edge.To("ProvisioningStep", ProvisioningStep.Type).
+			Unique(),
+		edge.To("ProvisioningScheduledStep", ProvisioningScheduledStep.Type).
+			Unique(),
+		edge.To("Status", Status.Type).
+			Unique().
+			Required().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.From("PlanToPlanDiffs", PlanDiff.Type).
+		edge.From("PlanDiffs", PlanDiff.Type).
 			Ref("PlanDiffToPlan"),
 	}
 }

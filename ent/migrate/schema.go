@@ -660,7 +660,7 @@ var (
 		{Name: "step_number", Type: field.TypeInt},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"start_build", "start_team", "provision_network", "provision_host", "execute_step", "start_scheduled_step"}},
 		{Name: "build_id", Type: field.TypeString},
-		{Name: "plan_plan_to_build", Type: field.TypeUUID, Nullable: true},
+		{Name: "plan_build", Type: field.TypeUUID, Nullable: true},
 	}
 	// PlansTable holds the schema information for the "plans" table.
 	PlansTable = &schema.Table{
@@ -669,7 +669,7 @@ var (
 		PrimaryKey: []*schema.Column{PlansColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "plans_builds_PlanToBuild",
+				Symbol:     "plans_builds_Build",
 				Columns:    []*schema.Column{PlansColumns[4]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -711,7 +711,7 @@ var (
 		{Name: "addon_type", Type: field.TypeEnum, Nullable: true, Enums: []string{"DNS"}},
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "gin_file_middleware_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "plan_plan_to_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "plan_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_host_provisioned_host_to_provisioned_network", Type: field.TypeUUID},
 		{Name: "provisioned_host_provisioned_host_to_host", Type: field.TypeUUID},
 		{Name: "provisioned_host_provisioned_host_to_end_step_plan", Type: field.TypeUUID, Nullable: true},
@@ -730,7 +730,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "provisioned_hosts_plans_PlanToProvisionedHost",
+				Symbol:     "provisioned_hosts_plans_ProvisionedHost",
 				Columns:    []*schema.Column{ProvisionedHostsColumns[5]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -767,7 +767,7 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "cidr", Type: field.TypeString},
 		{Name: "vars", Type: field.TypeJSON},
-		{Name: "plan_plan_to_provisioned_network", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "plan_provisioned_network", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_network_provisioned_network_to_network", Type: field.TypeUUID, Nullable: true},
 		{Name: "provisioned_network_provisioned_network_to_build", Type: field.TypeUUID, Nullable: true},
 		{Name: "provisioned_network_provisioned_network_to_team", Type: field.TypeUUID, Nullable: true},
@@ -779,7 +779,7 @@ var (
 		PrimaryKey: []*schema.Column{ProvisionedNetworksColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provisioned_networks_plans_PlanToProvisionedNetwork",
+				Symbol:     "provisioned_networks_plans_ProvisionedNetwork",
 				Columns:    []*schema.Column{ProvisionedNetworksColumns[4]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -811,7 +811,7 @@ var (
 		{Name: "run_time", Type: field.TypeTime},
 		{Name: "agent_task_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "gin_file_middleware_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "plan_plan_to_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "plan_provisioning_scheduled_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_scheduled_step_scheduled_step", Type: field.TypeUUID},
 		{Name: "provisioning_scheduled_step_provisioned_host", Type: field.TypeUUID},
 		{Name: "provisioning_scheduled_step_script", Type: field.TypeUUID, Nullable: true},
@@ -841,7 +841,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "provisioning_scheduled_steps_plans_PlanToProvisioningScheduledStep",
+				Symbol:     "provisioning_scheduled_steps_plans_ProvisioningScheduledStep",
 				Columns:    []*schema.Column{ProvisioningScheduledStepsColumns[5]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -908,7 +908,7 @@ var (
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"Script", "Command", "DNSRecord", "FileDelete", "FileDownload", "FileExtract", "Ansible"}},
 		{Name: "step_number", Type: field.TypeInt},
 		{Name: "gin_file_middleware_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "plan_plan_to_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "plan_provisioning_step", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_provisioned_host", Type: field.TypeUUID, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_script", Type: field.TypeUUID, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_command", Type: field.TypeUUID, Nullable: true},
@@ -931,7 +931,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "provisioning_steps_plans_PlanToProvisioningStep",
+				Symbol:     "provisioning_steps_plans_ProvisioningStep",
 				Columns:    []*schema.Column{ProvisioningStepsColumns[4]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -1143,7 +1143,7 @@ var (
 		{Name: "error", Type: field.TypeString, Nullable: true},
 		{Name: "adhoc_plan_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "build_status", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "plan_plan_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "plan_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_host_provisioned_host_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_network_provisioned_network_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_scheduled_step_status", Type: field.TypeUUID, Unique: true, Nullable: true},
@@ -1170,7 +1170,7 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "status_plans_PlanToStatus",
+				Symbol:     "status_plans_Status",
 				Columns:    []*schema.Column{StatusColumns[10]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.Cascade,
@@ -1247,7 +1247,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "team_number", Type: field.TypeInt},
 		{Name: "vars", Type: field.TypeJSON},
-		{Name: "plan_plan_to_team", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "plan_team", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "team_team_to_build", Type: field.TypeUUID},
 	}
 	// TeamsTable holds the schema information for the "teams" table.
@@ -1257,7 +1257,7 @@ var (
 		PrimaryKey: []*schema.Column{TeamsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "teams_plans_PlanToTeam",
+				Symbol:     "teams_plans_Team",
 				Columns:    []*schema.Column{TeamsColumns[3]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -1492,26 +1492,26 @@ var (
 			},
 		},
 	}
-	// PlanNextPlanColumns holds the columns for the "plan_NextPlan" table.
-	PlanNextPlanColumns = []*schema.Column{
+	// PlanNextPlansColumns holds the columns for the "plan_NextPlans" table.
+	PlanNextPlansColumns = []*schema.Column{
 		{Name: "plan_id", Type: field.TypeUUID},
 		{Name: "PrevPlan_id", Type: field.TypeUUID},
 	}
-	// PlanNextPlanTable holds the schema information for the "plan_NextPlan" table.
-	PlanNextPlanTable = &schema.Table{
-		Name:       "plan_NextPlan",
-		Columns:    PlanNextPlanColumns,
-		PrimaryKey: []*schema.Column{PlanNextPlanColumns[0], PlanNextPlanColumns[1]},
+	// PlanNextPlansTable holds the schema information for the "plan_NextPlans" table.
+	PlanNextPlansTable = &schema.Table{
+		Name:       "plan_NextPlans",
+		Columns:    PlanNextPlansColumns,
+		PrimaryKey: []*schema.Column{PlanNextPlansColumns[0], PlanNextPlansColumns[1]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "plan_NextPlan_plan_id",
-				Columns:    []*schema.Column{PlanNextPlanColumns[0]},
+				Symbol:     "plan_NextPlans_plan_id",
+				Columns:    []*schema.Column{PlanNextPlansColumns[0]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "plan_NextPlan_PrevPlan_id",
-				Columns:    []*schema.Column{PlanNextPlanColumns[1]},
+				Symbol:     "plan_NextPlans_PrevPlan_id",
+				Columns:    []*schema.Column{PlanNextPlansColumns[1]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1589,7 +1589,7 @@ var (
 		EnvironmentIncludedNetworksTable,
 		EnvironmentDNSTable,
 		IncludedNetworkHostsTable,
-		PlanNextPlanTable,
+		PlanNextPlansTable,
 		RepositoryRepositoryToEnvironmentTable,
 	}
 )
@@ -1700,8 +1700,8 @@ func init() {
 	EnvironmentDNSTable.ForeignKeys[1].RefTable = DnSsTable
 	IncludedNetworkHostsTable.ForeignKeys[0].RefTable = IncludedNetworksTable
 	IncludedNetworkHostsTable.ForeignKeys[1].RefTable = HostsTable
-	PlanNextPlanTable.ForeignKeys[0].RefTable = PlansTable
-	PlanNextPlanTable.ForeignKeys[1].RefTable = PlansTable
+	PlanNextPlansTable.ForeignKeys[0].RefTable = PlansTable
+	PlanNextPlansTable.ForeignKeys[1].RefTable = PlansTable
 	RepositoryRepositoryToEnvironmentTable.ForeignKeys[0].RefTable = RepositoriesTable
 	RepositoryRepositoryToEnvironmentTable.ForeignKeys[1].RefTable = EnvironmentsTable
 }
