@@ -5585,15 +5585,15 @@ func (c *ScheduledStepClient) GetX(ctx context.Context, id uuid.UUID) *Scheduled
 	return obj
 }
 
-// QueryScheduledStepToEnvironment queries the ScheduledStepToEnvironment edge of a ScheduledStep.
-func (c *ScheduledStepClient) QueryScheduledStepToEnvironment(ss *ScheduledStep) *EnvironmentQuery {
+// QueryEnvironment queries the Environment edge of a ScheduledStep.
+func (c *ScheduledStepClient) QueryEnvironment(ss *ScheduledStep) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ss.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(scheduledstep.Table, scheduledstep.FieldID, id),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, scheduledstep.ScheduledStepToEnvironmentTable, scheduledstep.ScheduledStepToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, scheduledstep.EnvironmentTable, scheduledstep.EnvironmentColumn),
 		)
 		fromV = sqlgraph.Neighbors(ss.driver.Dialect(), step)
 		return fromV, nil

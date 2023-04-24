@@ -165,7 +165,7 @@ func createProvisioningScheduleStep(ctx context.Context, client *ent.Client, ent
 }
 
 func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Client, entScheduledStep *ent.ScheduledStep) (*ent.ProvisioningScheduledStepCreate, error) {
-	entEnvironment, err := entScheduledStep.QueryScheduledStepToEnvironment().Only(ctx)
+	entEnvironment, err := entScheduledStep.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query environment from scheduled step: %v", err)
 	}

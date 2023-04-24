@@ -29275,23 +29275,23 @@ func (m *RepositoryMutation) ResetEdge(name string) error {
 // ScheduledStepMutation represents an operation that mutates the ScheduledStep nodes in the graph.
 type ScheduledStepMutation struct {
 	config
-	op                                 Op
-	typ                                string
-	id                                 *uuid.UUID
-	hcl_id                             *string
-	name                               *string
-	description                        *string
-	step                               *string
-	_type                              *scheduledstep.Type
-	schedule                           *string
-	run_at                             *int64
-	addrun_at                          *int64
-	clearedFields                      map[string]struct{}
-	_ScheduledStepToEnvironment        *uuid.UUID
-	cleared_ScheduledStepToEnvironment bool
-	done                               bool
-	oldValue                           func(context.Context) (*ScheduledStep, error)
-	predicates                         []predicate.ScheduledStep
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	hcl_id              *string
+	name                *string
+	description         *string
+	step                *string
+	_type               *scheduledstep.Type
+	schedule            *string
+	run_at              *int64
+	addrun_at           *int64
+	clearedFields       map[string]struct{}
+	_Environment        *uuid.UUID
+	cleared_Environment bool
+	done                bool
+	oldValue            func(context.Context) (*ScheduledStep, error)
+	predicates          []predicate.ScheduledStep
 }
 
 var _ ent.Mutation = (*ScheduledStepMutation)(nil)
@@ -29697,43 +29697,43 @@ func (m *ScheduledStepMutation) ResetRunAt() {
 	delete(m.clearedFields, scheduledstep.FieldRunAt)
 }
 
-// SetScheduledStepToEnvironmentID sets the "ScheduledStepToEnvironment" edge to the Environment entity by id.
-func (m *ScheduledStepMutation) SetScheduledStepToEnvironmentID(id uuid.UUID) {
-	m._ScheduledStepToEnvironment = &id
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
+func (m *ScheduledStepMutation) SetEnvironmentID(id uuid.UUID) {
+	m._Environment = &id
 }
 
-// ClearScheduledStepToEnvironment clears the "ScheduledStepToEnvironment" edge to the Environment entity.
-func (m *ScheduledStepMutation) ClearScheduledStepToEnvironment() {
-	m.cleared_ScheduledStepToEnvironment = true
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (m *ScheduledStepMutation) ClearEnvironment() {
+	m.cleared_Environment = true
 }
 
-// ScheduledStepToEnvironmentCleared reports if the "ScheduledStepToEnvironment" edge to the Environment entity was cleared.
-func (m *ScheduledStepMutation) ScheduledStepToEnvironmentCleared() bool {
-	return m.cleared_ScheduledStepToEnvironment
+// EnvironmentCleared reports if the "Environment" edge to the Environment entity was cleared.
+func (m *ScheduledStepMutation) EnvironmentCleared() bool {
+	return m.cleared_Environment
 }
 
-// ScheduledStepToEnvironmentID returns the "ScheduledStepToEnvironment" edge ID in the mutation.
-func (m *ScheduledStepMutation) ScheduledStepToEnvironmentID() (id uuid.UUID, exists bool) {
-	if m._ScheduledStepToEnvironment != nil {
-		return *m._ScheduledStepToEnvironment, true
+// EnvironmentID returns the "Environment" edge ID in the mutation.
+func (m *ScheduledStepMutation) EnvironmentID() (id uuid.UUID, exists bool) {
+	if m._Environment != nil {
+		return *m._Environment, true
 	}
 	return
 }
 
-// ScheduledStepToEnvironmentIDs returns the "ScheduledStepToEnvironment" edge IDs in the mutation.
+// EnvironmentIDs returns the "Environment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ScheduledStepToEnvironmentID instead. It exists only for internal usage by the builders.
-func (m *ScheduledStepMutation) ScheduledStepToEnvironmentIDs() (ids []uuid.UUID) {
-	if id := m._ScheduledStepToEnvironment; id != nil {
+// EnvironmentID instead. It exists only for internal usage by the builders.
+func (m *ScheduledStepMutation) EnvironmentIDs() (ids []uuid.UUID) {
+	if id := m._Environment; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetScheduledStepToEnvironment resets all changes to the "ScheduledStepToEnvironment" edge.
-func (m *ScheduledStepMutation) ResetScheduledStepToEnvironment() {
-	m._ScheduledStepToEnvironment = nil
-	m.cleared_ScheduledStepToEnvironment = false
+// ResetEnvironment resets all changes to the "Environment" edge.
+func (m *ScheduledStepMutation) ResetEnvironment() {
+	m._Environment = nil
+	m.cleared_Environment = false
 }
 
 // Where appends a list predicates to the ScheduledStepMutation builder.
@@ -29987,8 +29987,8 @@ func (m *ScheduledStepMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ScheduledStepMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m._ScheduledStepToEnvironment != nil {
-		edges = append(edges, scheduledstep.EdgeScheduledStepToEnvironment)
+	if m._Environment != nil {
+		edges = append(edges, scheduledstep.EdgeEnvironment)
 	}
 	return edges
 }
@@ -29997,8 +29997,8 @@ func (m *ScheduledStepMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *ScheduledStepMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case scheduledstep.EdgeScheduledStepToEnvironment:
-		if id := m._ScheduledStepToEnvironment; id != nil {
+	case scheduledstep.EdgeEnvironment:
+		if id := m._Environment; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -30022,8 +30022,8 @@ func (m *ScheduledStepMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ScheduledStepMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.cleared_ScheduledStepToEnvironment {
-		edges = append(edges, scheduledstep.EdgeScheduledStepToEnvironment)
+	if m.cleared_Environment {
+		edges = append(edges, scheduledstep.EdgeEnvironment)
 	}
 	return edges
 }
@@ -30032,8 +30032,8 @@ func (m *ScheduledStepMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *ScheduledStepMutation) EdgeCleared(name string) bool {
 	switch name {
-	case scheduledstep.EdgeScheduledStepToEnvironment:
-		return m.cleared_ScheduledStepToEnvironment
+	case scheduledstep.EdgeEnvironment:
+		return m.cleared_Environment
 	}
 	return false
 }
@@ -30042,8 +30042,8 @@ func (m *ScheduledStepMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ScheduledStepMutation) ClearEdge(name string) error {
 	switch name {
-	case scheduledstep.EdgeScheduledStepToEnvironment:
-		m.ClearScheduledStepToEnvironment()
+	case scheduledstep.EdgeEnvironment:
+		m.ClearEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown ScheduledStep unique edge %s", name)
@@ -30053,8 +30053,8 @@ func (m *ScheduledStepMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ScheduledStepMutation) ResetEdge(name string) error {
 	switch name {
-	case scheduledstep.EdgeScheduledStepToEnvironment:
-		m.ResetScheduledStepToEnvironment()
+	case scheduledstep.EdgeEnvironment:
+		m.ResetEnvironment()
 		return nil
 	}
 	return fmt.Errorf("unknown ScheduledStep edge %s", name)

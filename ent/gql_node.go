@@ -3367,9 +3367,9 @@ func (ss *ScheduledStep) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Environment",
-		Name: "ScheduledStepToEnvironment",
+		Name: "Environment",
 	}
-	err = ss.QueryScheduledStepToEnvironment().
+	err = ss.QueryEnvironment().
 		Select(environment.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {

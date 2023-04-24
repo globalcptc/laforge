@@ -36,33 +36,33 @@ type ScheduledStep struct {
 	Edges ScheduledStepEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// ScheduledStepToEnvironment holds the value of the ScheduledStepToEnvironment edge.
-	HCLScheduledStepToEnvironment *Environment `json:"ScheduledStepToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
 	environment_scheduled_steps *uuid.UUID
 }
 
 // ScheduledStepEdges holds the relations/edges for other nodes in the graph.
 type ScheduledStepEdges struct {
-	// ScheduledStepToEnvironment holds the value of the ScheduledStepToEnvironment edge.
-	ScheduledStepToEnvironment *Environment `json:"ScheduledStepToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// ScheduledStepToEnvironmentOrErr returns the ScheduledStepToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ScheduledStepEdges) ScheduledStepToEnvironmentOrErr() (*Environment, error) {
+func (e ScheduledStepEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[0] {
-		if e.ScheduledStepToEnvironment == nil {
-			// The edge ScheduledStepToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.ScheduledStepToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "ScheduledStepToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -153,9 +153,9 @@ func (ss *ScheduledStep) assignValues(columns []string, values []interface{}) er
 	return nil
 }
 
-// QueryScheduledStepToEnvironment queries the "ScheduledStepToEnvironment" edge of the ScheduledStep entity.
-func (ss *ScheduledStep) QueryScheduledStepToEnvironment() *EnvironmentQuery {
-	return (&ScheduledStepClient{config: ss.config}).QueryScheduledStepToEnvironment(ss)
+// QueryEnvironment queries the "Environment" edge of the ScheduledStep entity.
+func (ss *ScheduledStep) QueryEnvironment() *EnvironmentQuery {
+	return (&ScheduledStepClient{config: ss.config}).QueryEnvironment(ss)
 }
 
 // Update returns a builder for updating this ScheduledStep.

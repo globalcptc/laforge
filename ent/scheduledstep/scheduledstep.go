@@ -29,17 +29,17 @@ const (
 	FieldSchedule = "schedule"
 	// FieldRunAt holds the string denoting the run_at field in the database.
 	FieldRunAt = "run_at"
-	// EdgeScheduledStepToEnvironment holds the string denoting the scheduledsteptoenvironment edge name in mutations.
-	EdgeScheduledStepToEnvironment = "ScheduledStepToEnvironment"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the scheduledstep in the database.
 	Table = "scheduled_steps"
-	// ScheduledStepToEnvironmentTable is the table that holds the ScheduledStepToEnvironment relation/edge.
-	ScheduledStepToEnvironmentTable = "scheduled_steps"
-	// ScheduledStepToEnvironmentInverseTable is the table name for the Environment entity.
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "scheduled_steps"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	ScheduledStepToEnvironmentInverseTable = "environments"
-	// ScheduledStepToEnvironmentColumn is the table column denoting the ScheduledStepToEnvironment relation/edge.
-	ScheduledStepToEnvironmentColumn = "environment_scheduled_steps"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_scheduled_steps"
 )
 
 // Columns holds all SQL columns for scheduledstep fields.

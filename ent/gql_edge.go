@@ -1164,10 +1164,10 @@ func (r *Repository) RepoCommits(ctx context.Context) ([]*RepoCommit, error) {
 	return result, err
 }
 
-func (ss *ScheduledStep) ScheduledStepToEnvironment(ctx context.Context) (*Environment, error) {
-	result, err := ss.Edges.ScheduledStepToEnvironmentOrErr()
+func (ss *ScheduledStep) Environment(ctx context.Context) (*Environment, error) {
+	result, err := ss.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {
-		result, err = ss.QueryScheduledStepToEnvironment().Only(ctx)
+		result, err = ss.QueryEnvironment().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

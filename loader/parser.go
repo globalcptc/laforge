@@ -1016,7 +1016,7 @@ func createScheduledStep(txClient *ent.Tx, ctx context.Context, log *logging.Log
 			Where(
 				scheduledstep.And(
 					scheduledstep.HclIDEQ(cScheduledStep.HclID),
-					scheduledstep.HasScheduledStepToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					scheduledstep.HasEnvironmentWith(environment.HclIDEQ(envHclID)),
 				),
 			).
 			Only(ctx)

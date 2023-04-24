@@ -93,23 +93,23 @@ func (ssc *ScheduledStepCreate) SetNillableID(u *uuid.UUID) *ScheduledStepCreate
 	return ssc
 }
 
-// SetScheduledStepToEnvironmentID sets the "ScheduledStepToEnvironment" edge to the Environment entity by ID.
-func (ssc *ScheduledStepCreate) SetScheduledStepToEnvironmentID(id uuid.UUID) *ScheduledStepCreate {
-	ssc.mutation.SetScheduledStepToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (ssc *ScheduledStepCreate) SetEnvironmentID(id uuid.UUID) *ScheduledStepCreate {
+	ssc.mutation.SetEnvironmentID(id)
 	return ssc
 }
 
-// SetNillableScheduledStepToEnvironmentID sets the "ScheduledStepToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (ssc *ScheduledStepCreate) SetNillableScheduledStepToEnvironmentID(id *uuid.UUID) *ScheduledStepCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (ssc *ScheduledStepCreate) SetNillableEnvironmentID(id *uuid.UUID) *ScheduledStepCreate {
 	if id != nil {
-		ssc = ssc.SetScheduledStepToEnvironmentID(*id)
+		ssc = ssc.SetEnvironmentID(*id)
 	}
 	return ssc
 }
 
-// SetScheduledStepToEnvironment sets the "ScheduledStepToEnvironment" edge to the Environment entity.
-func (ssc *ScheduledStepCreate) SetScheduledStepToEnvironment(e *Environment) *ScheduledStepCreate {
-	return ssc.SetScheduledStepToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (ssc *ScheduledStepCreate) SetEnvironment(e *Environment) *ScheduledStepCreate {
+	return ssc.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the ScheduledStepMutation object of the builder.
@@ -309,12 +309,12 @@ func (ssc *ScheduledStepCreate) createSpec() (*ScheduledStep, *sqlgraph.CreateSp
 		})
 		_node.RunAt = value
 	}
-	if nodes := ssc.mutation.ScheduledStepToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := ssc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   scheduledstep.ScheduledStepToEnvironmentTable,
-			Columns: []string{scheduledstep.ScheduledStepToEnvironmentColumn},
+			Table:   scheduledstep.EnvironmentTable,
+			Columns: []string{scheduledstep.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
