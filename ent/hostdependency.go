@@ -28,29 +28,29 @@ type HostDependency struct {
 	Edges HostDependencyEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// DependOn holds the value of the DependOn edge.
-	HCLDependOn *Host `json:"DependOn,omitempty"`
 	// RequiredBy holds the value of the RequiredBy edge.
 	HCLRequiredBy *Host `json:"RequiredBy,omitempty"`
-	// Network holds the value of the Network edge.
-	HCLNetwork *Network `json:"Network,omitempty"`
+	// DependOnHost holds the value of the DependOnHost edge.
+	HCLDependOnHost *Host `json:"DependOnHost,omitempty"`
+	// DependOnNetwork holds the value of the DependOnNetwork edge.
+	HCLDependOnNetwork *Network `json:"DependOnNetwork,omitempty"`
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
-	environment_host_dependencies *uuid.UUID
-	host_dependency_depend_on     *uuid.UUID
-	host_dependency_required_by   *uuid.UUID
-	host_dependency_network       *uuid.UUID
+	environment_host_dependencies     *uuid.UUID
+	host_dependency_required_by       *uuid.UUID
+	host_dependency_depend_on_host    *uuid.UUID
+	host_dependency_depend_on_network *uuid.UUID
 }
 
 // HostDependencyEdges holds the relations/edges for other nodes in the graph.
 type HostDependencyEdges struct {
-	// DependOn holds the value of the DependOn edge.
-	DependOn *Host `json:"DependOn,omitempty"`
 	// RequiredBy holds the value of the RequiredBy edge.
 	RequiredBy *Host `json:"RequiredBy,omitempty"`
-	// Network holds the value of the Network edge.
-	Network *Network `json:"Network,omitempty"`
+	// DependOnHost holds the value of the DependOnHost edge.
+	DependOnHost *Host `json:"DependOnHost,omitempty"`
+	// DependOnNetwork holds the value of the DependOnNetwork edge.
+	DependOnNetwork *Network `json:"DependOnNetwork,omitempty"`
 	// Environment holds the value of the Environment edge.
 	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
@@ -58,24 +58,10 @@ type HostDependencyEdges struct {
 	loadedTypes [4]bool
 }
 
-// DependOnOrErr returns the DependOn value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e HostDependencyEdges) DependOnOrErr() (*Host, error) {
-	if e.loadedTypes[0] {
-		if e.DependOn == nil {
-			// The edge DependOn was loaded in eager-loading,
-			// but was not found.
-			return nil, &NotFoundError{label: host.Label}
-		}
-		return e.DependOn, nil
-	}
-	return nil, &NotLoadedError{edge: "DependOn"}
-}
-
 // RequiredByOrErr returns the RequiredBy value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e HostDependencyEdges) RequiredByOrErr() (*Host, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[0] {
 		if e.RequiredBy == nil {
 			// The edge RequiredBy was loaded in eager-loading,
 			// but was not found.
@@ -86,18 +72,32 @@ func (e HostDependencyEdges) RequiredByOrErr() (*Host, error) {
 	return nil, &NotLoadedError{edge: "RequiredBy"}
 }
 
-// NetworkOrErr returns the Network value or an error if the edge
+// DependOnHostOrErr returns the DependOnHost value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e HostDependencyEdges) NetworkOrErr() (*Network, error) {
+func (e HostDependencyEdges) DependOnHostOrErr() (*Host, error) {
+	if e.loadedTypes[1] {
+		if e.DependOnHost == nil {
+			// The edge DependOnHost was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: host.Label}
+		}
+		return e.DependOnHost, nil
+	}
+	return nil, &NotLoadedError{edge: "DependOnHost"}
+}
+
+// DependOnNetworkOrErr returns the DependOnNetwork value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e HostDependencyEdges) DependOnNetworkOrErr() (*Network, error) {
 	if e.loadedTypes[2] {
-		if e.Network == nil {
-			// The edge Network was loaded in eager-loading,
+		if e.DependOnNetwork == nil {
+			// The edge DependOnNetwork was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: network.Label}
 		}
-		return e.Network, nil
+		return e.DependOnNetwork, nil
 	}
-	return nil, &NotLoadedError{edge: "Network"}
+	return nil, &NotLoadedError{edge: "DependOnNetwork"}
 }
 
 // EnvironmentOrErr returns the Environment value or an error if the edge
@@ -125,11 +125,11 @@ func (*HostDependency) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(uuid.UUID)
 		case hostdependency.ForeignKeys[0]: // environment_host_dependencies
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case hostdependency.ForeignKeys[1]: // host_dependency_depend_on
+		case hostdependency.ForeignKeys[1]: // host_dependency_required_by
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case hostdependency.ForeignKeys[2]: // host_dependency_required_by
+		case hostdependency.ForeignKeys[2]: // host_dependency_depend_on_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case hostdependency.ForeignKeys[3]: // host_dependency_network
+		case hostdependency.ForeignKeys[3]: // host_dependency_depend_on_network
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type HostDependency", columns[i])
@@ -173,33 +173,28 @@ func (hd *HostDependency) assignValues(columns []string, values []interface{}) e
 			}
 		case hostdependency.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field host_dependency_depend_on", values[i])
-			} else if value.Valid {
-				hd.host_dependency_depend_on = new(uuid.UUID)
-				*hd.host_dependency_depend_on = *value.S.(*uuid.UUID)
-			}
-		case hostdependency.ForeignKeys[2]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field host_dependency_required_by", values[i])
 			} else if value.Valid {
 				hd.host_dependency_required_by = new(uuid.UUID)
 				*hd.host_dependency_required_by = *value.S.(*uuid.UUID)
 			}
+		case hostdependency.ForeignKeys[2]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field host_dependency_depend_on_host", values[i])
+			} else if value.Valid {
+				hd.host_dependency_depend_on_host = new(uuid.UUID)
+				*hd.host_dependency_depend_on_host = *value.S.(*uuid.UUID)
+			}
 		case hostdependency.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field host_dependency_network", values[i])
+				return fmt.Errorf("unexpected type %T for field host_dependency_depend_on_network", values[i])
 			} else if value.Valid {
-				hd.host_dependency_network = new(uuid.UUID)
-				*hd.host_dependency_network = *value.S.(*uuid.UUID)
+				hd.host_dependency_depend_on_network = new(uuid.UUID)
+				*hd.host_dependency_depend_on_network = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
-}
-
-// QueryDependOn queries the "DependOn" edge of the HostDependency entity.
-func (hd *HostDependency) QueryDependOn() *HostQuery {
-	return (&HostDependencyClient{config: hd.config}).QueryDependOn(hd)
 }
 
 // QueryRequiredBy queries the "RequiredBy" edge of the HostDependency entity.
@@ -207,9 +202,14 @@ func (hd *HostDependency) QueryRequiredBy() *HostQuery {
 	return (&HostDependencyClient{config: hd.config}).QueryRequiredBy(hd)
 }
 
-// QueryNetwork queries the "Network" edge of the HostDependency entity.
-func (hd *HostDependency) QueryNetwork() *NetworkQuery {
-	return (&HostDependencyClient{config: hd.config}).QueryNetwork(hd)
+// QueryDependOnHost queries the "DependOnHost" edge of the HostDependency entity.
+func (hd *HostDependency) QueryDependOnHost() *HostQuery {
+	return (&HostDependencyClient{config: hd.config}).QueryDependOnHost(hd)
+}
+
+// QueryDependOnNetwork queries the "DependOnNetwork" edge of the HostDependency entity.
+func (hd *HostDependency) QueryDependOnNetwork() *NetworkQuery {
+	return (&HostDependencyClient{config: hd.config}).QueryDependOnNetwork(hd)
 }
 
 // QueryEnvironment queries the "Environment" edge of the HostDependency entity.

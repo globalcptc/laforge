@@ -779,13 +779,13 @@ func (hq *HostQuery) loadDependOnHostDependency(ctx context.Context, query *Host
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.host_dependency_depend_on
+		fk := n.host_dependency_depend_on_host
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "host_dependency_depend_on" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "host_dependency_depend_on_host" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_dependency_depend_on" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "host_dependency_depend_on_host" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

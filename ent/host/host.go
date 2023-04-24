@@ -87,7 +87,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "hostdependency" package.
 	DependOnHostDependencyInverseTable = "host_dependencies"
 	// DependOnHostDependencyColumn is the table column denoting the DependOnHostDependency relation/edge.
-	DependOnHostDependencyColumn = "host_dependency_depend_on"
+	DependOnHostDependencyColumn = "host_dependency_depend_on_host"
 	// RequiredByHostDependencyTable is the table that holds the RequiredByHostDependency relation/edge.
 	RequiredByHostDependencyTable = "host_dependencies"
 	// RequiredByHostDependencyInverseTable is the table name for the HostDependency entity.

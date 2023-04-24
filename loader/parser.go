@@ -1480,8 +1480,8 @@ func createHostDependencies(txClient *ent.Tx, ctx context.Context, log *logging.
 		}
 		entHostDependency, err = entHostDependency.Update().
 			ClearRequiredBy().
-			ClearDependOn().
-			ClearNetwork().
+			ClearDependOnHost().
+			ClearDependOnNetwork().
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Clear Host Dependency by %v on Host %v Err: %v", dependByHost.HclID, cHostDependency.HostID, err)
@@ -1716,8 +1716,8 @@ func validateHostDependencies(txClient *ent.Tx, ctx context.Context, log *loggin
 			return nil, err
 		}
 		uncheckedHostDependency, err := uncheckedHostDependency.Update().
-			ClearDependOn().
-			ClearNetwork().
+			ClearDependOnHost().
+			ClearDependOnNetwork().
 			Save(ctx)
 		if err != nil {
 			dependedByHost, queryErr := uncheckedHostDependency.QueryRequiredBy().Only(ctx)
@@ -1729,8 +1729,8 @@ func validateHostDependencies(txClient *ent.Tx, ctx context.Context, log *loggin
 			return nil, err
 		}
 		entHostDependency, err := uncheckedHostDependency.Update().
-			SetDependOn(entHost).
-			SetNetwork(entNetwork).
+			SetDependOnHost(entHost).
+			SetDependOnNetwork(entNetwork).
 			Save(ctx)
 		if err != nil {
 			dependedByHost, queryErr := uncheckedHostDependency.QueryRequiredBy().Only(ctx)

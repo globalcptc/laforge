@@ -68,7 +68,7 @@ func (Host) Edges() []ent.Edge {
 		edge.From("IncludedNetworks", IncludedNetwork.Type).
 			Ref("Hosts"),
 		edge.From("DependOnHostDependency", HostDependency.Type).
-			Ref("DependOn").
+			Ref("DependOnHost").
 			StructTag(`hcl:"depends_on,block"`),
 		edge.From("RequiredByHostDependency", HostDependency.Type).
 			Ref("RequiredBy"),

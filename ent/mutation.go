@@ -18870,23 +18870,23 @@ func (m *HostMutation) ResetEdge(name string) error {
 // HostDependencyMutation represents an operation that mutates the HostDependency nodes in the graph.
 type HostDependencyMutation struct {
 	config
-	op                  Op
-	typ                 string
-	id                  *uuid.UUID
-	host_id             *string
-	network_id          *string
-	clearedFields       map[string]struct{}
-	_DependOn           *uuid.UUID
-	cleared_DependOn    bool
-	_RequiredBy         *uuid.UUID
-	cleared_RequiredBy  bool
-	_Network            *uuid.UUID
-	cleared_Network     bool
-	_Environment        *uuid.UUID
-	cleared_Environment bool
-	done                bool
-	oldValue            func(context.Context) (*HostDependency, error)
-	predicates          []predicate.HostDependency
+	op                      Op
+	typ                     string
+	id                      *uuid.UUID
+	host_id                 *string
+	network_id              *string
+	clearedFields           map[string]struct{}
+	_RequiredBy             *uuid.UUID
+	cleared_RequiredBy      bool
+	_DependOnHost           *uuid.UUID
+	cleared_DependOnHost    bool
+	_DependOnNetwork        *uuid.UUID
+	cleared_DependOnNetwork bool
+	_Environment            *uuid.UUID
+	cleared_Environment     bool
+	done                    bool
+	oldValue                func(context.Context) (*HostDependency, error)
+	predicates              []predicate.HostDependency
 }
 
 var _ ent.Mutation = (*HostDependencyMutation)(nil)
@@ -19065,45 +19065,6 @@ func (m *HostDependencyMutation) ResetNetworkID() {
 	m.network_id = nil
 }
 
-// SetDependOnID sets the "DependOn" edge to the Host entity by id.
-func (m *HostDependencyMutation) SetDependOnID(id uuid.UUID) {
-	m._DependOn = &id
-}
-
-// ClearDependOn clears the "DependOn" edge to the Host entity.
-func (m *HostDependencyMutation) ClearDependOn() {
-	m.cleared_DependOn = true
-}
-
-// DependOnCleared reports if the "DependOn" edge to the Host entity was cleared.
-func (m *HostDependencyMutation) DependOnCleared() bool {
-	return m.cleared_DependOn
-}
-
-// DependOnID returns the "DependOn" edge ID in the mutation.
-func (m *HostDependencyMutation) DependOnID() (id uuid.UUID, exists bool) {
-	if m._DependOn != nil {
-		return *m._DependOn, true
-	}
-	return
-}
-
-// DependOnIDs returns the "DependOn" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// DependOnID instead. It exists only for internal usage by the builders.
-func (m *HostDependencyMutation) DependOnIDs() (ids []uuid.UUID) {
-	if id := m._DependOn; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetDependOn resets all changes to the "DependOn" edge.
-func (m *HostDependencyMutation) ResetDependOn() {
-	m._DependOn = nil
-	m.cleared_DependOn = false
-}
-
 // SetRequiredByID sets the "RequiredBy" edge to the Host entity by id.
 func (m *HostDependencyMutation) SetRequiredByID(id uuid.UUID) {
 	m._RequiredBy = &id
@@ -19143,43 +19104,82 @@ func (m *HostDependencyMutation) ResetRequiredBy() {
 	m.cleared_RequiredBy = false
 }
 
-// SetNetworkID sets the "Network" edge to the Network entity by id.
-func (m *HostDependencyMutation) SetNetworkID(id uuid.UUID) {
-	m._Network = &id
+// SetDependOnHostID sets the "DependOnHost" edge to the Host entity by id.
+func (m *HostDependencyMutation) SetDependOnHostID(id uuid.UUID) {
+	m._DependOnHost = &id
 }
 
-// ClearNetwork clears the "Network" edge to the Network entity.
-func (m *HostDependencyMutation) ClearNetwork() {
-	m.cleared_Network = true
+// ClearDependOnHost clears the "DependOnHost" edge to the Host entity.
+func (m *HostDependencyMutation) ClearDependOnHost() {
+	m.cleared_DependOnHost = true
 }
 
-// NetworkCleared reports if the "Network" edge to the Network entity was cleared.
-func (m *HostDependencyMutation) NetworkCleared() bool {
-	return m.cleared_Network
+// DependOnHostCleared reports if the "DependOnHost" edge to the Host entity was cleared.
+func (m *HostDependencyMutation) DependOnHostCleared() bool {
+	return m.cleared_DependOnHost
 }
 
-// NetworkID returns the "Network" edge ID in the mutation.
-func (m *HostDependencyMutation) NetworkID() (id uuid.UUID, exists bool) {
-	if m._Network != nil {
-		return *m._Network, true
+// DependOnHostID returns the "DependOnHost" edge ID in the mutation.
+func (m *HostDependencyMutation) DependOnHostID() (id uuid.UUID, exists bool) {
+	if m._DependOnHost != nil {
+		return *m._DependOnHost, true
 	}
 	return
 }
 
-// NetworkIDs returns the "Network" edge IDs in the mutation.
+// DependOnHostIDs returns the "DependOnHost" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// NetworkID instead. It exists only for internal usage by the builders.
-func (m *HostDependencyMutation) NetworkIDs() (ids []uuid.UUID) {
-	if id := m._Network; id != nil {
+// DependOnHostID instead. It exists only for internal usage by the builders.
+func (m *HostDependencyMutation) DependOnHostIDs() (ids []uuid.UUID) {
+	if id := m._DependOnHost; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetNetwork resets all changes to the "Network" edge.
-func (m *HostDependencyMutation) ResetNetwork() {
-	m._Network = nil
-	m.cleared_Network = false
+// ResetDependOnHost resets all changes to the "DependOnHost" edge.
+func (m *HostDependencyMutation) ResetDependOnHost() {
+	m._DependOnHost = nil
+	m.cleared_DependOnHost = false
+}
+
+// SetDependOnNetworkID sets the "DependOnNetwork" edge to the Network entity by id.
+func (m *HostDependencyMutation) SetDependOnNetworkID(id uuid.UUID) {
+	m._DependOnNetwork = &id
+}
+
+// ClearDependOnNetwork clears the "DependOnNetwork" edge to the Network entity.
+func (m *HostDependencyMutation) ClearDependOnNetwork() {
+	m.cleared_DependOnNetwork = true
+}
+
+// DependOnNetworkCleared reports if the "DependOnNetwork" edge to the Network entity was cleared.
+func (m *HostDependencyMutation) DependOnNetworkCleared() bool {
+	return m.cleared_DependOnNetwork
+}
+
+// DependOnNetworkID returns the "DependOnNetwork" edge ID in the mutation.
+func (m *HostDependencyMutation) DependOnNetworkID() (id uuid.UUID, exists bool) {
+	if m._DependOnNetwork != nil {
+		return *m._DependOnNetwork, true
+	}
+	return
+}
+
+// DependOnNetworkIDs returns the "DependOnNetwork" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DependOnNetworkID instead. It exists only for internal usage by the builders.
+func (m *HostDependencyMutation) DependOnNetworkIDs() (ids []uuid.UUID) {
+	if id := m._DependOnNetwork; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetDependOnNetwork resets all changes to the "DependOnNetwork" edge.
+func (m *HostDependencyMutation) ResetDependOnNetwork() {
+	m._DependOnNetwork = nil
+	m.cleared_DependOnNetwork = false
 }
 
 // SetEnvironmentID sets the "Environment" edge to the Environment entity by id.
@@ -19357,14 +19357,14 @@ func (m *HostDependencyMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *HostDependencyMutation) AddedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m._DependOn != nil {
-		edges = append(edges, hostdependency.EdgeDependOn)
-	}
 	if m._RequiredBy != nil {
 		edges = append(edges, hostdependency.EdgeRequiredBy)
 	}
-	if m._Network != nil {
-		edges = append(edges, hostdependency.EdgeNetwork)
+	if m._DependOnHost != nil {
+		edges = append(edges, hostdependency.EdgeDependOnHost)
+	}
+	if m._DependOnNetwork != nil {
+		edges = append(edges, hostdependency.EdgeDependOnNetwork)
 	}
 	if m._Environment != nil {
 		edges = append(edges, hostdependency.EdgeEnvironment)
@@ -19376,16 +19376,16 @@ func (m *HostDependencyMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *HostDependencyMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case hostdependency.EdgeDependOn:
-		if id := m._DependOn; id != nil {
-			return []ent.Value{*id}
-		}
 	case hostdependency.EdgeRequiredBy:
 		if id := m._RequiredBy; id != nil {
 			return []ent.Value{*id}
 		}
-	case hostdependency.EdgeNetwork:
-		if id := m._Network; id != nil {
+	case hostdependency.EdgeDependOnHost:
+		if id := m._DependOnHost; id != nil {
+			return []ent.Value{*id}
+		}
+	case hostdependency.EdgeDependOnNetwork:
+		if id := m._DependOnNetwork; id != nil {
 			return []ent.Value{*id}
 		}
 	case hostdependency.EdgeEnvironment:
@@ -19413,14 +19413,14 @@ func (m *HostDependencyMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *HostDependencyMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.cleared_DependOn {
-		edges = append(edges, hostdependency.EdgeDependOn)
-	}
 	if m.cleared_RequiredBy {
 		edges = append(edges, hostdependency.EdgeRequiredBy)
 	}
-	if m.cleared_Network {
-		edges = append(edges, hostdependency.EdgeNetwork)
+	if m.cleared_DependOnHost {
+		edges = append(edges, hostdependency.EdgeDependOnHost)
+	}
+	if m.cleared_DependOnNetwork {
+		edges = append(edges, hostdependency.EdgeDependOnNetwork)
 	}
 	if m.cleared_Environment {
 		edges = append(edges, hostdependency.EdgeEnvironment)
@@ -19432,12 +19432,12 @@ func (m *HostDependencyMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *HostDependencyMutation) EdgeCleared(name string) bool {
 	switch name {
-	case hostdependency.EdgeDependOn:
-		return m.cleared_DependOn
 	case hostdependency.EdgeRequiredBy:
 		return m.cleared_RequiredBy
-	case hostdependency.EdgeNetwork:
-		return m.cleared_Network
+	case hostdependency.EdgeDependOnHost:
+		return m.cleared_DependOnHost
+	case hostdependency.EdgeDependOnNetwork:
+		return m.cleared_DependOnNetwork
 	case hostdependency.EdgeEnvironment:
 		return m.cleared_Environment
 	}
@@ -19448,14 +19448,14 @@ func (m *HostDependencyMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *HostDependencyMutation) ClearEdge(name string) error {
 	switch name {
-	case hostdependency.EdgeDependOn:
-		m.ClearDependOn()
-		return nil
 	case hostdependency.EdgeRequiredBy:
 		m.ClearRequiredBy()
 		return nil
-	case hostdependency.EdgeNetwork:
-		m.ClearNetwork()
+	case hostdependency.EdgeDependOnHost:
+		m.ClearDependOnHost()
+		return nil
+	case hostdependency.EdgeDependOnNetwork:
+		m.ClearDependOnNetwork()
 		return nil
 	case hostdependency.EdgeEnvironment:
 		m.ClearEnvironment()
@@ -19468,14 +19468,14 @@ func (m *HostDependencyMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *HostDependencyMutation) ResetEdge(name string) error {
 	switch name {
-	case hostdependency.EdgeDependOn:
-		m.ResetDependOn()
-		return nil
 	case hostdependency.EdgeRequiredBy:
 		m.ResetRequiredBy()
 		return nil
-	case hostdependency.EdgeNetwork:
-		m.ResetNetwork()
+	case hostdependency.EdgeDependOnHost:
+		m.ResetDependOnHost()
+		return nil
+	case hostdependency.EdgeDependOnNetwork:
+		m.ResetDependOnNetwork()
 		return nil
 	case hostdependency.EdgeEnvironment:
 		m.ResetEnvironment()

@@ -49,25 +49,6 @@ func (hdc *HostDependencyCreate) SetNillableID(u *uuid.UUID) *HostDependencyCrea
 	return hdc
 }
 
-// SetDependOnID sets the "DependOn" edge to the Host entity by ID.
-func (hdc *HostDependencyCreate) SetDependOnID(id uuid.UUID) *HostDependencyCreate {
-	hdc.mutation.SetDependOnID(id)
-	return hdc
-}
-
-// SetNillableDependOnID sets the "DependOn" edge to the Host entity by ID if the given value is not nil.
-func (hdc *HostDependencyCreate) SetNillableDependOnID(id *uuid.UUID) *HostDependencyCreate {
-	if id != nil {
-		hdc = hdc.SetDependOnID(*id)
-	}
-	return hdc
-}
-
-// SetDependOn sets the "DependOn" edge to the Host entity.
-func (hdc *HostDependencyCreate) SetDependOn(h *Host) *HostDependencyCreate {
-	return hdc.SetDependOnID(h.ID)
-}
-
 // SetRequiredByID sets the "RequiredBy" edge to the Host entity by ID.
 func (hdc *HostDependencyCreate) SetRequiredByID(id uuid.UUID) *HostDependencyCreate {
 	hdc.mutation.SetRequiredByID(id)
@@ -87,23 +68,42 @@ func (hdc *HostDependencyCreate) SetRequiredBy(h *Host) *HostDependencyCreate {
 	return hdc.SetRequiredByID(h.ID)
 }
 
-// SetNetworkID sets the "Network" edge to the Network entity by ID.
-func (hdc *HostDependencyCreate) SetNetworkID(id uuid.UUID) *HostDependencyCreate {
-	hdc.mutation.SetNetworkID(id)
+// SetDependOnHostID sets the "DependOnHost" edge to the Host entity by ID.
+func (hdc *HostDependencyCreate) SetDependOnHostID(id uuid.UUID) *HostDependencyCreate {
+	hdc.mutation.SetDependOnHostID(id)
 	return hdc
 }
 
-// SetNillableNetworkID sets the "Network" edge to the Network entity by ID if the given value is not nil.
-func (hdc *HostDependencyCreate) SetNillableNetworkID(id *uuid.UUID) *HostDependencyCreate {
+// SetNillableDependOnHostID sets the "DependOnHost" edge to the Host entity by ID if the given value is not nil.
+func (hdc *HostDependencyCreate) SetNillableDependOnHostID(id *uuid.UUID) *HostDependencyCreate {
 	if id != nil {
-		hdc = hdc.SetNetworkID(*id)
+		hdc = hdc.SetDependOnHostID(*id)
 	}
 	return hdc
 }
 
-// SetNetwork sets the "Network" edge to the Network entity.
-func (hdc *HostDependencyCreate) SetNetwork(n *Network) *HostDependencyCreate {
-	return hdc.SetNetworkID(n.ID)
+// SetDependOnHost sets the "DependOnHost" edge to the Host entity.
+func (hdc *HostDependencyCreate) SetDependOnHost(h *Host) *HostDependencyCreate {
+	return hdc.SetDependOnHostID(h.ID)
+}
+
+// SetDependOnNetworkID sets the "DependOnNetwork" edge to the Network entity by ID.
+func (hdc *HostDependencyCreate) SetDependOnNetworkID(id uuid.UUID) *HostDependencyCreate {
+	hdc.mutation.SetDependOnNetworkID(id)
+	return hdc
+}
+
+// SetNillableDependOnNetworkID sets the "DependOnNetwork" edge to the Network entity by ID if the given value is not nil.
+func (hdc *HostDependencyCreate) SetNillableDependOnNetworkID(id *uuid.UUID) *HostDependencyCreate {
+	if id != nil {
+		hdc = hdc.SetDependOnNetworkID(*id)
+	}
+	return hdc
+}
+
+// SetDependOnNetwork sets the "DependOnNetwork" edge to the Network entity.
+func (hdc *HostDependencyCreate) SetDependOnNetwork(n *Network) *HostDependencyCreate {
+	return hdc.SetDependOnNetworkID(n.ID)
 }
 
 // SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
@@ -268,26 +268,6 @@ func (hdc *HostDependencyCreate) createSpec() (*HostDependency, *sqlgraph.Create
 		})
 		_node.NetworkID = value
 	}
-	if nodes := hdc.mutation.DependOnIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   hostdependency.DependOnTable,
-			Columns: []string{hostdependency.DependOnColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.host_dependency_depend_on = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	if nodes := hdc.mutation.RequiredByIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -308,12 +288,32 @@ func (hdc *HostDependencyCreate) createSpec() (*HostDependency, *sqlgraph.Create
 		_node.host_dependency_required_by = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := hdc.mutation.NetworkIDs(); len(nodes) > 0 {
+	if nodes := hdc.mutation.DependOnHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   hostdependency.NetworkTable,
-			Columns: []string{hostdependency.NetworkColumn},
+			Table:   hostdependency.DependOnHostTable,
+			Columns: []string{hostdependency.DependOnHostColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: host.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.host_dependency_depend_on_host = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := hdc.mutation.DependOnNetworkIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   hostdependency.DependOnNetworkTable,
+			Columns: []string{hostdependency.DependOnNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -325,7 +325,7 @@ func (hdc *HostDependencyCreate) createSpec() (*HostDependency, *sqlgraph.Create
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.host_dependency_network = &nodes[0]
+		_node.host_dependency_depend_on_network = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := hdc.mutation.EnvironmentIDs(); len(nodes) > 0 {

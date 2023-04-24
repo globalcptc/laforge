@@ -3401,22 +3401,6 @@ func (c *HostDependencyClient) GetX(ctx context.Context, id uuid.UUID) *HostDepe
 	return obj
 }
 
-// QueryDependOn queries the DependOn edge of a HostDependency.
-func (c *HostDependencyClient) QueryDependOn(hd *HostDependency) *HostQuery {
-	query := &HostQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := hd.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(hostdependency.Table, hostdependency.FieldID, id),
-			sqlgraph.To(host.Table, host.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, hostdependency.DependOnTable, hostdependency.DependOnColumn),
-		)
-		fromV = sqlgraph.Neighbors(hd.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryRequiredBy queries the RequiredBy edge of a HostDependency.
 func (c *HostDependencyClient) QueryRequiredBy(hd *HostDependency) *HostQuery {
 	query := &HostQuery{config: c.config}
@@ -3433,15 +3417,31 @@ func (c *HostDependencyClient) QueryRequiredBy(hd *HostDependency) *HostQuery {
 	return query
 }
 
-// QueryNetwork queries the Network edge of a HostDependency.
-func (c *HostDependencyClient) QueryNetwork(hd *HostDependency) *NetworkQuery {
+// QueryDependOnHost queries the DependOnHost edge of a HostDependency.
+func (c *HostDependencyClient) QueryDependOnHost(hd *HostDependency) *HostQuery {
+	query := &HostQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := hd.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(hostdependency.Table, hostdependency.FieldID, id),
+			sqlgraph.To(host.Table, host.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, hostdependency.DependOnHostTable, hostdependency.DependOnHostColumn),
+		)
+		fromV = sqlgraph.Neighbors(hd.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDependOnNetwork queries the DependOnNetwork edge of a HostDependency.
+func (c *HostDependencyClient) QueryDependOnNetwork(hd *HostDependency) *NetworkQuery {
 	query := &NetworkQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := hd.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(hostdependency.Table, hostdependency.FieldID, id),
 			sqlgraph.To(network.Table, network.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, hostdependency.NetworkTable, hostdependency.NetworkColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, hostdependency.DependOnNetworkTable, hostdependency.DependOnNetworkColumn),
 		)
 		fromV = sqlgraph.Neighbors(hd.driver.Dialect(), step)
 		return fromV, nil

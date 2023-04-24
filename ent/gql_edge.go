@@ -612,14 +612,6 @@ func (h *Host) RequiredByHostDependency(ctx context.Context) ([]*HostDependency,
 	return result, err
 }
 
-func (hd *HostDependency) DependOn(ctx context.Context) (*Host, error) {
-	result, err := hd.Edges.DependOnOrErr()
-	if IsNotLoaded(err) {
-		result, err = hd.QueryDependOn().Only(ctx)
-	}
-	return result, MaskNotFound(err)
-}
-
 func (hd *HostDependency) RequiredBy(ctx context.Context) (*Host, error) {
 	result, err := hd.Edges.RequiredByOrErr()
 	if IsNotLoaded(err) {
@@ -628,10 +620,18 @@ func (hd *HostDependency) RequiredBy(ctx context.Context) (*Host, error) {
 	return result, MaskNotFound(err)
 }
 
-func (hd *HostDependency) Network(ctx context.Context) (*Network, error) {
-	result, err := hd.Edges.NetworkOrErr()
+func (hd *HostDependency) DependOnHost(ctx context.Context) (*Host, error) {
+	result, err := hd.Edges.DependOnHostOrErr()
 	if IsNotLoaded(err) {
-		result, err = hd.QueryNetwork().Only(ctx)
+		result, err = hd.QueryDependOnHost().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (hd *HostDependency) DependOnNetwork(ctx context.Context) (*Network, error) {
+	result, err := hd.Edges.DependOnNetworkOrErr()
+	if IsNotLoaded(err) {
+		result, err = hd.QueryDependOnNetwork().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
