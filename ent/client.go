@@ -5357,15 +5357,15 @@ func (c *RepoCommitClient) GetX(ctx context.Context, id uuid.UUID) *RepoCommit {
 	return obj
 }
 
-// QueryRepoCommitToRepository queries the RepoCommitToRepository edge of a RepoCommit.
-func (c *RepoCommitClient) QueryRepoCommitToRepository(rc *RepoCommit) *RepositoryQuery {
+// QueryRepository queries the Repository edge of a RepoCommit.
+func (c *RepoCommitClient) QueryRepository(rc *RepoCommit) *RepositoryQuery {
 	query := &RepositoryQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := rc.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(repocommit.Table, repocommit.FieldID, id),
 			sqlgraph.To(repository.Table, repository.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, repocommit.RepoCommitToRepositoryTable, repocommit.RepoCommitToRepositoryColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, repocommit.RepositoryTable, repocommit.RepositoryColumn),
 		)
 		fromV = sqlgraph.Neighbors(rc.driver.Dialect(), step)
 		return fromV, nil

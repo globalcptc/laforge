@@ -1140,10 +1140,10 @@ func (ps *ProvisioningStep) GinFileMiddleware(ctx context.Context) (*GinFileMidd
 	return result, MaskNotFound(err)
 }
 
-func (rc *RepoCommit) RepoCommitToRepository(ctx context.Context) (*Repository, error) {
-	result, err := rc.Edges.RepoCommitToRepositoryOrErr()
+func (rc *RepoCommit) Repository(ctx context.Context) (*Repository, error) {
+	result, err := rc.Edges.RepositoryOrErr()
 	if IsNotLoaded(err) {
-		result, err = rc.QueryRepoCommitToRepository().Only(ctx)
+		result, err = rc.QueryRepository().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

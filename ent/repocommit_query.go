@@ -19,14 +19,14 @@ import (
 // RepoCommitQuery is the builder for querying RepoCommit entities.
 type RepoCommitQuery struct {
 	config
-	limit                      *int
-	offset                     *int
-	unique                     *bool
-	order                      []OrderFunc
-	fields                     []string
-	predicates                 []predicate.RepoCommit
-	withRepoCommitToRepository *RepositoryQuery
-	withFKs                    bool
+	limit          *int
+	offset         *int
+	unique         *bool
+	order          []OrderFunc
+	fields         []string
+	predicates     []predicate.RepoCommit
+	withRepository *RepositoryQuery
+	withFKs        bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,8 +63,8 @@ func (rcq *RepoCommitQuery) Order(o ...OrderFunc) *RepoCommitQuery {
 	return rcq
 }
 
-// QueryRepoCommitToRepository chains the current query on the "RepoCommitToRepository" edge.
-func (rcq *RepoCommitQuery) QueryRepoCommitToRepository() *RepositoryQuery {
+// QueryRepository chains the current query on the "Repository" edge.
+func (rcq *RepoCommitQuery) QueryRepository() *RepositoryQuery {
 	query := &RepositoryQuery{config: rcq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := rcq.prepareQuery(ctx); err != nil {
@@ -77,7 +77,7 @@ func (rcq *RepoCommitQuery) QueryRepoCommitToRepository() *RepositoryQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(repocommit.Table, repocommit.FieldID, selector),
 			sqlgraph.To(repository.Table, repository.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, repocommit.RepoCommitToRepositoryTable, repocommit.RepoCommitToRepositoryColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, repocommit.RepositoryTable, repocommit.RepositoryColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(rcq.driver.Dialect(), step)
 		return fromU, nil
@@ -261,12 +261,12 @@ func (rcq *RepoCommitQuery) Clone() *RepoCommitQuery {
 		return nil
 	}
 	return &RepoCommitQuery{
-		config:                     rcq.config,
-		limit:                      rcq.limit,
-		offset:                     rcq.offset,
-		order:                      append([]OrderFunc{}, rcq.order...),
-		predicates:                 append([]predicate.RepoCommit{}, rcq.predicates...),
-		withRepoCommitToRepository: rcq.withRepoCommitToRepository.Clone(),
+		config:         rcq.config,
+		limit:          rcq.limit,
+		offset:         rcq.offset,
+		order:          append([]OrderFunc{}, rcq.order...),
+		predicates:     append([]predicate.RepoCommit{}, rcq.predicates...),
+		withRepository: rcq.withRepository.Clone(),
 		// clone intermediate query.
 		sql:    rcq.sql.Clone(),
 		path:   rcq.path,
@@ -274,14 +274,14 @@ func (rcq *RepoCommitQuery) Clone() *RepoCommitQuery {
 	}
 }
 
-// WithRepoCommitToRepository tells the query-builder to eager-load the nodes that are connected to
-// the "RepoCommitToRepository" edge. The optional arguments are used to configure the query builder of the edge.
-func (rcq *RepoCommitQuery) WithRepoCommitToRepository(opts ...func(*RepositoryQuery)) *RepoCommitQuery {
+// WithRepository tells the query-builder to eager-load the nodes that are connected to
+// the "Repository" edge. The optional arguments are used to configure the query builder of the edge.
+func (rcq *RepoCommitQuery) WithRepository(opts ...func(*RepositoryQuery)) *RepoCommitQuery {
 	query := &RepositoryQuery{config: rcq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	rcq.withRepoCommitToRepository = query
+	rcq.withRepository = query
 	return rcq
 }
 
@@ -355,10 +355,10 @@ func (rcq *RepoCommitQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		withFKs     = rcq.withFKs
 		_spec       = rcq.querySpec()
 		loadedTypes = [1]bool{
-			rcq.withRepoCommitToRepository != nil,
+			rcq.withRepository != nil,
 		}
 	)
-	if rcq.withRepoCommitToRepository != nil {
+	if rcq.withRepository != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -382,16 +382,16 @@ func (rcq *RepoCommitQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := rcq.withRepoCommitToRepository; query != nil {
-		if err := rcq.loadRepoCommitToRepository(ctx, query, nodes, nil,
-			func(n *RepoCommit, e *Repository) { n.Edges.RepoCommitToRepository = e }); err != nil {
+	if query := rcq.withRepository; query != nil {
+		if err := rcq.loadRepository(ctx, query, nodes, nil,
+			func(n *RepoCommit, e *Repository) { n.Edges.Repository = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (rcq *RepoCommitQuery) loadRepoCommitToRepository(ctx context.Context, query *RepositoryQuery, nodes []*RepoCommit, init func(*RepoCommit), assign func(*RepoCommit, *Repository)) error {
+func (rcq *RepoCommitQuery) loadRepository(ctx context.Context, query *RepositoryQuery, nodes []*RepoCommit, init func(*RepoCommit), assign func(*RepoCommit, *Repository)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*RepoCommit)
 	for i := range nodes {

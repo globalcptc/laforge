@@ -27820,24 +27820,24 @@ func (m *ProvisioningStepMutation) ResetEdge(name string) error {
 // RepoCommitMutation represents an operation that mutates the RepoCommit nodes in the graph.
 type RepoCommitMutation struct {
 	config
-	op                             Op
-	typ                            string
-	id                             *uuid.UUID
-	revision                       *int
-	addrevision                    *int
-	hash                           *string
-	author                         *object.Signature
-	committer                      *object.Signature
-	pgp_signature                  *string
-	message                        *string
-	tree_hash                      *string
-	parent_hashes                  *[]string
-	clearedFields                  map[string]struct{}
-	_RepoCommitToRepository        *uuid.UUID
-	cleared_RepoCommitToRepository bool
-	done                           bool
-	oldValue                       func(context.Context) (*RepoCommit, error)
-	predicates                     []predicate.RepoCommit
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	revision           *int
+	addrevision        *int
+	hash               *string
+	author             *object.Signature
+	committer          *object.Signature
+	pgp_signature      *string
+	message            *string
+	tree_hash          *string
+	parent_hashes      *[]string
+	clearedFields      map[string]struct{}
+	_Repository        *uuid.UUID
+	cleared_Repository bool
+	done               bool
+	oldValue           func(context.Context) (*RepoCommit, error)
+	predicates         []predicate.RepoCommit
 }
 
 var _ ent.Mutation = (*RepoCommitMutation)(nil)
@@ -28252,43 +28252,43 @@ func (m *RepoCommitMutation) ResetParentHashes() {
 	m.parent_hashes = nil
 }
 
-// SetRepoCommitToRepositoryID sets the "RepoCommitToRepository" edge to the Repository entity by id.
-func (m *RepoCommitMutation) SetRepoCommitToRepositoryID(id uuid.UUID) {
-	m._RepoCommitToRepository = &id
+// SetRepositoryID sets the "Repository" edge to the Repository entity by id.
+func (m *RepoCommitMutation) SetRepositoryID(id uuid.UUID) {
+	m._Repository = &id
 }
 
-// ClearRepoCommitToRepository clears the "RepoCommitToRepository" edge to the Repository entity.
-func (m *RepoCommitMutation) ClearRepoCommitToRepository() {
-	m.cleared_RepoCommitToRepository = true
+// ClearRepository clears the "Repository" edge to the Repository entity.
+func (m *RepoCommitMutation) ClearRepository() {
+	m.cleared_Repository = true
 }
 
-// RepoCommitToRepositoryCleared reports if the "RepoCommitToRepository" edge to the Repository entity was cleared.
-func (m *RepoCommitMutation) RepoCommitToRepositoryCleared() bool {
-	return m.cleared_RepoCommitToRepository
+// RepositoryCleared reports if the "Repository" edge to the Repository entity was cleared.
+func (m *RepoCommitMutation) RepositoryCleared() bool {
+	return m.cleared_Repository
 }
 
-// RepoCommitToRepositoryID returns the "RepoCommitToRepository" edge ID in the mutation.
-func (m *RepoCommitMutation) RepoCommitToRepositoryID() (id uuid.UUID, exists bool) {
-	if m._RepoCommitToRepository != nil {
-		return *m._RepoCommitToRepository, true
+// RepositoryID returns the "Repository" edge ID in the mutation.
+func (m *RepoCommitMutation) RepositoryID() (id uuid.UUID, exists bool) {
+	if m._Repository != nil {
+		return *m._Repository, true
 	}
 	return
 }
 
-// RepoCommitToRepositoryIDs returns the "RepoCommitToRepository" edge IDs in the mutation.
+// RepositoryIDs returns the "Repository" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// RepoCommitToRepositoryID instead. It exists only for internal usage by the builders.
-func (m *RepoCommitMutation) RepoCommitToRepositoryIDs() (ids []uuid.UUID) {
-	if id := m._RepoCommitToRepository; id != nil {
+// RepositoryID instead. It exists only for internal usage by the builders.
+func (m *RepoCommitMutation) RepositoryIDs() (ids []uuid.UUID) {
+	if id := m._Repository; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetRepoCommitToRepository resets all changes to the "RepoCommitToRepository" edge.
-func (m *RepoCommitMutation) ResetRepoCommitToRepository() {
-	m._RepoCommitToRepository = nil
-	m.cleared_RepoCommitToRepository = false
+// ResetRepository resets all changes to the "Repository" edge.
+func (m *RepoCommitMutation) ResetRepository() {
+	m._Repository = nil
+	m.cleared_Repository = false
 }
 
 // Where appends a list predicates to the RepoCommitMutation builder.
@@ -28544,8 +28544,8 @@ func (m *RepoCommitMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RepoCommitMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m._RepoCommitToRepository != nil {
-		edges = append(edges, repocommit.EdgeRepoCommitToRepository)
+	if m._Repository != nil {
+		edges = append(edges, repocommit.EdgeRepository)
 	}
 	return edges
 }
@@ -28554,8 +28554,8 @@ func (m *RepoCommitMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *RepoCommitMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case repocommit.EdgeRepoCommitToRepository:
-		if id := m._RepoCommitToRepository; id != nil {
+	case repocommit.EdgeRepository:
+		if id := m._Repository; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -28579,8 +28579,8 @@ func (m *RepoCommitMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RepoCommitMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.cleared_RepoCommitToRepository {
-		edges = append(edges, repocommit.EdgeRepoCommitToRepository)
+	if m.cleared_Repository {
+		edges = append(edges, repocommit.EdgeRepository)
 	}
 	return edges
 }
@@ -28589,8 +28589,8 @@ func (m *RepoCommitMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *RepoCommitMutation) EdgeCleared(name string) bool {
 	switch name {
-	case repocommit.EdgeRepoCommitToRepository:
-		return m.cleared_RepoCommitToRepository
+	case repocommit.EdgeRepository:
+		return m.cleared_Repository
 	}
 	return false
 }
@@ -28599,8 +28599,8 @@ func (m *RepoCommitMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *RepoCommitMutation) ClearEdge(name string) error {
 	switch name {
-	case repocommit.EdgeRepoCommitToRepository:
-		m.ClearRepoCommitToRepository()
+	case repocommit.EdgeRepository:
+		m.ClearRepository()
 		return nil
 	}
 	return fmt.Errorf("unknown RepoCommit unique edge %s", name)
@@ -28610,8 +28610,8 @@ func (m *RepoCommitMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *RepoCommitMutation) ResetEdge(name string) error {
 	switch name {
-	case repocommit.EdgeRepoCommitToRepository:
-		m.ResetRepoCommitToRepository()
+	case repocommit.EdgeRepository:
+		m.ResetRepository()
 		return nil
 	}
 	return fmt.Errorf("unknown RepoCommit edge %s", name)

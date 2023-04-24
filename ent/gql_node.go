@@ -3227,9 +3227,9 @@ func (rc *RepoCommit) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Repository",
-		Name: "RepoCommitToRepository",
+		Name: "Repository",
 	}
-	err = rc.QueryRepoCommitToRepository().
+	err = rc.QueryRepository().
 		Select(repository.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
