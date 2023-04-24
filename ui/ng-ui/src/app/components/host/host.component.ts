@@ -16,9 +16,9 @@ import { RebuildService } from '../../services/rebuild/rebuild.service';
 import { HostModalComponent } from '../host-modal/host-modal.component';
 
 // eslint-disable-next-line max-len
-type BuildCommitProvisionedHost = LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
+type BuildCommitProvisionedHost = LaForgeGetBuildCommitQuery['getBuildCommit']['Build']['Teams'][0]['ProvisionedNetworks'][0]['ProvisionedHosts'][0];
 // eslint-disable-next-line max-len
-type BuildTreeProvisionedHost = LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
+type BuildTreeProvisionedHost = LaForgeGetBuildTreeQuery['build']['Teams'][0]['ProvisionedNetworks'][0]['ProvisionedHosts'][0];
 
 @Component({
   selector: 'app-host',
@@ -30,11 +30,11 @@ export class HostComponent implements OnInit, OnDestroy {
   // @Input() status: Status;
   // @Input()
   // eslint-disable-next-line max-len
-  // provisionedHost: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
+  // provisionedHost: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedHosts'][0];
   @Input()
   // eslint-disable-next-line max-len
   provisionedHost: BuildCommitProvisionedHost | BuildTreeProvisionedHost;
-  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['PlanDiffs'] | undefined;
   // @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
   // @Input() buildAgentStatusMap: LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus'][] | undefined;
   @Input() style: 'compact' | 'collapsed' | 'expanded';
@@ -65,11 +65,11 @@ export class HostComponent implements OnInit, OnDestroy {
     if (this.mode === 'plan') {
       if (!this.getPlanDiff()) this.shouldHide.next(true);
     }
-    this.planStatus = this.status.getStatusSubject(this.provisionedHost.ProvisionedHostToPlan.PlanToStatus.id);
+    this.planStatus = this.status.getStatusSubject(this.provisionedHost.Plan.Status.id);
     const sub1 = this.planStatus.subscribe(() => this.cdRef.markForCheck());
     this.unsubscribe.push(sub1);
     if (this.mode !== 'plan') {
-      this.provisionStatus = this.status.getStatusSubject((this.provisionedHost as BuildTreeProvisionedHost).ProvisionedHostToStatus.id);
+      this.provisionStatus = this.status.getStatusSubject((this.provisionedHost as BuildTreeProvisionedHost).Status.id);
       const sub = this.provisionStatus.subscribe(() => this.cdRef.markForCheck());
       this.unsubscribe.push(sub);
     }
@@ -98,12 +98,12 @@ export class HostComponent implements OnInit, OnDestroy {
     return Date.now() / 1000 - agentStatus.timestamp > 120;
   }
 
-  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
-    return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.provisionedHost.ProvisionedHostToPlan.id)[0] ?? undefined;
+  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['PlanDiffs'][0] | undefined {
+    return this.planDiffs?.filter((pd) => pd.Plan.id === this.provisionedHost.Plan.id)[0] ?? undefined;
   }
 
   getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
-    // return this.buildStatusMap?.filter((s) => s.id === this.provisionedHost.ProvisionedHostToPlan.PlanToStatus.id)[0] ?? undefined;
+    // return this.buildStatusMap?.filter((s) => s.id === this.provisionedHost.Plan.Status.id)[0] ?? undefined;
     return this.planStatus.getValue();
   }
 
@@ -116,7 +116,7 @@ export class HostComponent implements OnInit, OnDestroy {
     if (this.mode === 'plan') {
       const planDiff = this.getPlanDiff();
       if (!planDiff) return 'fas fa-spinner fa-spin';
-      switch (planDiff.new_state) {
+      switch (planDiff.newState) {
         case LaForgeProvisionStatus.Torebuild:
           return 'fas fa-sync-alt';
         case LaForgeProvisionStatus.Todelete:
@@ -169,7 +169,7 @@ export class HostComponent implements OnInit, OnDestroy {
     if (this.mode === 'plan') {
       const planDiff = this.getPlanDiff();
       if (!planDiff) return 'dark';
-      switch (planDiff.new_state) {
+      switch (planDiff.newState) {
         case LaForgeProvisionStatus.Torebuild:
           return 'warning';
         case LaForgeProvisionStatus.Todelete:
@@ -237,9 +237,9 @@ export class HostComponent implements OnInit, OnDestroy {
 
   getChildStatus(
     // eslint-disable-next-line max-len
-    provisioningStep: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0]['ProvisionedHostToProvisioningStep'][0]
+    provisioningStep: LaForgeGetBuildCommitQuery['getBuildCommit']['Build']['Teams'][0]['ProvisionedNetworks'][0]['ProvisionedHosts'][0]['ProvisioningSteps'][0]
   ): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] {
-    // return this.buildStatusMap?.filter((s) => s.id === provisioningStep.ProvisioningStepToPlan.PlanToStatus.id)[0] ?? undefined;
+    // return this.buildStatusMap?.filter((s) => s.id === provisioningStep.ProvisioningStepToPlan.Status.id)[0] ?? undefined;
     return undefined;
   }
 

@@ -52,13 +52,13 @@
       <div class="env-info w-100">
         <mat-card-title class="d-flex align-items-center justify-content-between">
           <div>
-            {{ _build.buildToEnvironment.name }}
+            {{ _build.Environment.name }}
             <i class="fad fa-1x fa-grip-lines-vertical text-muted mx-2"></i>
             v{{ _build.revision }}
             <span class="ml-2">
               (
-              <a [href]="_build.BuildToRepoCommit.hash | gitUrl: _build.BuildToRepoCommit.RepoCommitToRepository.repo_url">
-                <u>{{ _build.BuildToRepoCommit.hash | gitHash }}</u>
+              <a [href]="_build.RepoCommit.hash | gitUrl: _build.RepoCommit.Repository.repo_url">
+                <u>{{ _build.RepoCommit.hash | gitHash }}</u>
               </a>
               )
             </span>
@@ -69,7 +69,7 @@
             <button class="btn btn-danger" (click)="cancelBuild(_build.id)" *ngIf="buildIsCancellable()">Cancel Build</button>
           </div>
         </mat-card-title>
-        <mat-card-subtitle>{{ _build.buildToEnvironment.description }}</mat-card-subtitle>
+        <mat-card-subtitle>{{ _build.Environment.description }}</mat-card-subtitle>
       </div>
       <!-- <div class="controls">
         <button
@@ -88,7 +88,7 @@
   </mat-card-header>
   <mat-card-content *ngIf="build | async as _build">
     <app-team
-      *ngFor="let team of _build.buildToTeam | sortBy: 'asc':'team_number'"
+      *ngFor="let team of _build.Teams | sortBy: 'asc':'team_number'"
       [team]="team"
       [style]="'expanded'"
       [mode]="'build'"

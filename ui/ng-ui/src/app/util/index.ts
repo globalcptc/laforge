@@ -12,7 +12,7 @@ export const hostChildrenCompleted = (
 ): boolean => {
   let numCompleted = 0;
   let totalSteps = 0;
-  for (const step of host.ProvisionedHostToProvisioningStep) {
+  for (const step of host.ProvisioningSteps) {
     totalSteps++;
     const stepStatus = getStatus(step.id);
     if (!stepStatus) numCompleted++;
@@ -30,7 +30,7 @@ export const networkChildrenCompleted = (
   return false;
   // let numCompleted = 0;
   // let totalHosts = 0;
-  // for (const host of network.ProvisionedNetworkToProvisionedHost) {
+  // for (const host of network.ProvisionedHost) {
   //   totalHosts++;
   //   if (hostChildrenCompleted(host, getStatus)) numCompleted++;
   // }

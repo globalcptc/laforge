@@ -5,7 +5,7 @@
     <!-- <h4 class="m-0">&nbsp;{{ failedChildren ? 'Has Failed Hosts' : getStatusText() }}</h4> -->
   </div>
   <div class="flex-fill d-flex align-items-center justify-content-center">
-    <h4 class="network-name m-0">#{{ data.provisioningStep.step_number }} {{ getText() }}</h4>
+    <h4 class="network-name m-0">#{{ data.provisioningStep.stepNumber }} {{ getText() }}</h4>
   </div>
   <div class="flex-fill d-flex align-items-center justify-content-end">
     <button mat-icon-button color="basic" aria-label="Close" (click)="onClose()">
@@ -36,12 +36,12 @@
       </p>
       <mat-table [dataSource]="[task]" class="bg-gray-100">
         <ng-container matColumnDef="args">
-          <mat-header-cell *matHeaderCellDef> Args </mat-header-cell>
-          <mat-cell *matCellDef="let t"> {{ t.args.replace('💔', ', ') }} </mat-cell>
+          <mat-header-cell *matHeaderCellDef>Args</mat-header-cell>
+          <mat-cell *matCellDef="let t">{{ t.args.replace('💔', ', ') }}</mat-cell>
         </ng-container>
         <ng-container matColumnDef="state">
-          <mat-header-cell *matHeaderCellDef> State </mat-header-cell>
-          <mat-cell *matCellDef="let t"> {{ t.state }} </mat-cell>
+          <mat-header-cell *matHeaderCellDef>State</mat-header-cell>
+          <mat-cell *matCellDef="let t">{{ t.state }}</mat-cell>
         </ng-container>
         <mat-header-row *matHeaderRowDef="taskColumns"></mat-header-row>
         <mat-row *matRowDef="let row; columns: taskColumns"></mat-row>
@@ -57,7 +57,7 @@
     </div>
     <!-- <div class="col-6">
       <p class="detail-title"><b>VDI Visible?</b></p>
-      <p class="detail-value">{{ data.provisionedNetwork.ProvisionedNetworkToNetwork.vdi_visible ? 'yes' : 'no' }}</p>
+      <p class="detail-value">{{ data.provisionedNetwork.Network.vdiVisible ? 'yes' : 'no' }}</p>
     </div> -->
   </div>
 </ng-container>

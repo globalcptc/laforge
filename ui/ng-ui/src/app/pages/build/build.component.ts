@@ -95,7 +95,7 @@ export class BuildComponent implements OnInit, OnDestroy {
   }
 
   viewBuildLogs() {
-    const taskUUIDs = this.build.getValue().BuildToServerTasks.map((s) => s.id);
+    const taskUUIDs = this.build.getValue().ServerTasks.map((s) => s.id);
     this.dialog.open(ViewLogsModalComponent, {
       width: '75%',
       height: '90%',
@@ -108,7 +108,7 @@ export class BuildComponent implements OnInit, OnDestroy {
   buildIsCancellable(): boolean {
     const _build = this.build.getValue();
     if (!_build) return false;
-    const _buildStatus = this.status.getStatusValue(_build.buildToStatus.id);
+    const _buildStatus = this.status.getStatusValue(_build.Status.id);
     if (!_buildStatus) return false;
     if (_buildStatus.state === LaForgeProvisionStatus.Deleted) return false;
     if (_buildStatus.state === LaForgeProvisionStatus.Deleteinprogress) return false;

@@ -42,9 +42,7 @@ export class TaskService {
       .toPromise()
       .then(({ data }) => {
         if (data) {
-          this.tasks.next(
-            [...data.getCurrentUserTasks].sort((a, b) => new Date(b.start_time).valueOf() - new Date(a.start_time).valueOf())
-          );
+          this.tasks.next([...data.getCurrentUserTasks].sort((a, b) => new Date(b.startTime).valueOf() - new Date(a.startTime).valueOf()));
         }
       });
   }
@@ -63,7 +61,7 @@ export class TaskService {
         } else {
           currentTasks.push({ ...updatedServerTask });
         }
-        this.tasks.next(currentTasks.sort((a, b) => new Date(b.start_time).valueOf() - new Date(a.start_time).valueOf()));
+        this.tasks.next(currentTasks.sort((a, b) => new Date(b.startTime).valueOf() - new Date(a.startTime).valueOf()));
         this.notifyUser();
       }
     });
