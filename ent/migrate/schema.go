@@ -666,7 +666,6 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "step_number", Type: field.TypeInt},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"start_build", "start_team", "provision_network", "provision_host", "execute_step", "start_scheduled_step"}},
-		{Name: "build_id", Type: field.TypeString},
 		{Name: "plan_build", Type: field.TypeUUID, Nullable: true},
 	}
 	// PlansTable holds the schema information for the "plans" table.
@@ -677,7 +676,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "plans_builds_Build",
-				Columns:    []*schema.Column{PlansColumns[4]},
+				Columns:    []*schema.Column{PlansColumns[3]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

@@ -27,8 +27,6 @@ type Plan struct {
 	StepNumber int `json:"step_number,omitempty"`
 	// Type holds the value of the "type" field.
 	Type plan.Type `json:"type,omitempty"`
-	// BuildID holds the value of the "build_id" field.
-	BuildID string `json:"build_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PlanQuery when eager-loading is set.
 	Edges PlanEdges `json:"edges"`
@@ -217,7 +215,7 @@ func (*Plan) scanValues(columns []string) ([]interface{}, error) {
 		switch columns[i] {
 		case plan.FieldStepNumber:
 			values[i] = new(sql.NullInt64)
-		case plan.FieldType, plan.FieldBuildID:
+		case plan.FieldType:
 			values[i] = new(sql.NullString)
 		case plan.FieldID:
 			values[i] = new(uuid.UUID)
@@ -255,12 +253,6 @@ func (pl *Plan) assignValues(columns []string, values []interface{}) error {
 				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
 				pl.Type = plan.Type(value.String)
-			}
-		case plan.FieldBuildID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field build_id", values[i])
-			} else if value.Valid {
-				pl.BuildID = value.String
 			}
 		case plan.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -351,8 +343,6 @@ func (pl *Plan) String() string {
 	builder.WriteString(fmt.Sprintf("%v", pl.StepNumber))
 	builder.WriteString(", type=")
 	builder.WriteString(fmt.Sprintf("%v", pl.Type))
-	builder.WriteString(", build_id=")
-	builder.WriteString(pl.BuildID)
 	builder.WriteByte(')')
 	return builder.String()
 }

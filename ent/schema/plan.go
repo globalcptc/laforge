@@ -28,7 +28,6 @@ func (Plan) Fields() []ent.Field {
 				"execute_step",
 				"start_scheduled_step",
 			),
-		field.String("build_id"),
 	}
 }
 

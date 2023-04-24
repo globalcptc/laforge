@@ -87,13 +87,6 @@ func StepNumber(v int) predicate.Plan {
 	})
 }
 
-// BuildID applies equality check predicate on the "build_id" field. It's identical to BuildIDEQ.
-func BuildID(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldBuildID), v))
-	})
-}
-
 // StepNumberEQ applies the EQ predicate on the "step_number" field.
 func StepNumberEQ(v int) predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
@@ -191,105 +184,6 @@ func TypeNotIn(vs ...Type) predicate.Plan {
 	}
 	return predicate.Plan(func(s *sql.Selector) {
 		s.Where(sql.NotIn(s.C(FieldType), v...))
-	})
-}
-
-// BuildIDEQ applies the EQ predicate on the "build_id" field.
-func BuildIDEQ(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldBuildID), v))
-	})
-}
-
-// BuildIDNEQ applies the NEQ predicate on the "build_id" field.
-func BuildIDNEQ(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldBuildID), v))
-	})
-}
-
-// BuildIDIn applies the In predicate on the "build_id" field.
-func BuildIDIn(vs ...string) predicate.Plan {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldBuildID), v...))
-	})
-}
-
-// BuildIDNotIn applies the NotIn predicate on the "build_id" field.
-func BuildIDNotIn(vs ...string) predicate.Plan {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldBuildID), v...))
-	})
-}
-
-// BuildIDGT applies the GT predicate on the "build_id" field.
-func BuildIDGT(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldBuildID), v))
-	})
-}
-
-// BuildIDGTE applies the GTE predicate on the "build_id" field.
-func BuildIDGTE(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldBuildID), v))
-	})
-}
-
-// BuildIDLT applies the LT predicate on the "build_id" field.
-func BuildIDLT(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldBuildID), v))
-	})
-}
-
-// BuildIDLTE applies the LTE predicate on the "build_id" field.
-func BuildIDLTE(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldBuildID), v))
-	})
-}
-
-// BuildIDContains applies the Contains predicate on the "build_id" field.
-func BuildIDContains(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldBuildID), v))
-	})
-}
-
-// BuildIDHasPrefix applies the HasPrefix predicate on the "build_id" field.
-func BuildIDHasPrefix(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldBuildID), v))
-	})
-}
-
-// BuildIDHasSuffix applies the HasSuffix predicate on the "build_id" field.
-func BuildIDHasSuffix(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldBuildID), v))
-	})
-}
-
-// BuildIDEqualFold applies the EqualFold predicate on the "build_id" field.
-func BuildIDEqualFold(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldBuildID), v))
-	})
-}
-
-// BuildIDContainsFold applies the ContainsFold predicate on the "build_id" field.
-func BuildIDContainsFold(v string) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldBuildID), v))
 	})
 }
 

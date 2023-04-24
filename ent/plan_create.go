@@ -40,12 +40,6 @@ func (pc *PlanCreate) SetType(pl plan.Type) *PlanCreate {
 	return pc
 }
 
-// SetBuildID sets the "build_id" field.
-func (pc *PlanCreate) SetBuildID(s string) *PlanCreate {
-	pc.mutation.SetBuildID(s)
-	return pc
-}
-
 // SetID sets the "id" field.
 func (pc *PlanCreate) SetID(u uuid.UUID) *PlanCreate {
 	pc.mutation.SetID(u)
@@ -326,9 +320,6 @@ func (pc *PlanCreate) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Plan.type": %w`, err)}
 		}
 	}
-	if _, ok := pc.mutation.BuildID(); !ok {
-		return &ValidationError{Name: "build_id", err: errors.New(`ent: missing required field "Plan.build_id"`)}
-	}
 	if _, ok := pc.mutation.StatusID(); !ok {
 		return &ValidationError{Name: "Status", err: errors.New(`ent: missing required edge "Plan.Status"`)}
 	}
@@ -383,14 +374,6 @@ func (pc *PlanCreate) createSpec() (*Plan, *sqlgraph.CreateSpec) {
 			Column: plan.FieldType,
 		})
 		_node.Type = value
-	}
-	if value, ok := pc.mutation.BuildID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: plan.FieldBuildID,
-		})
-		_node.BuildID = value
 	}
 	if nodes := pc.mutation.PrevPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

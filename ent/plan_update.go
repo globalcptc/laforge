@@ -55,12 +55,6 @@ func (pu *PlanUpdate) SetType(pl plan.Type) *PlanUpdate {
 	return pu
 }
 
-// SetBuildID sets the "build_id" field.
-func (pu *PlanUpdate) SetBuildID(s string) *PlanUpdate {
-	pu.mutation.SetBuildID(s)
-	return pu
-}
-
 // AddPrevPlanIDs adds the "PrevPlans" edge to the Plan entity by IDs.
 func (pu *PlanUpdate) AddPrevPlanIDs(ids ...uuid.UUID) *PlanUpdate {
 	pu.mutation.AddPrevPlanIDs(ids...)
@@ -451,13 +445,6 @@ func (pu *PlanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Type:   field.TypeEnum,
 			Value:  value,
 			Column: plan.FieldType,
-		})
-	}
-	if value, ok := pu.mutation.BuildID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: plan.FieldBuildID,
 		})
 	}
 	if pu.mutation.PrevPlansCleared() {
@@ -905,12 +892,6 @@ func (puo *PlanUpdateOne) SetType(pl plan.Type) *PlanUpdateOne {
 	return puo
 }
 
-// SetBuildID sets the "build_id" field.
-func (puo *PlanUpdateOne) SetBuildID(s string) *PlanUpdateOne {
-	puo.mutation.SetBuildID(s)
-	return puo
-}
-
 // AddPrevPlanIDs adds the "PrevPlans" edge to the Plan entity by IDs.
 func (puo *PlanUpdateOne) AddPrevPlanIDs(ids ...uuid.UUID) *PlanUpdateOne {
 	puo.mutation.AddPrevPlanIDs(ids...)
@@ -1331,13 +1312,6 @@ func (puo *PlanUpdateOne) sqlSave(ctx context.Context) (_node *Plan, err error) 
 			Type:   field.TypeEnum,
 			Value:  value,
 			Column: plan.FieldType,
-		})
-	}
-	if value, ok := puo.mutation.BuildID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: plan.FieldBuildID,
 		})
 	}
 	if puo.mutation.PrevPlansCleared() {

@@ -21822,7 +21822,6 @@ type PlanMutation struct {
 	step_number                       *int
 	addstep_number                    *int
 	_type                             *plan.Type
-	build_id                          *string
 	clearedFields                     map[string]struct{}
 	_PrevPlans                        map[uuid.UUID]struct{}
 	removed_PrevPlans                 map[uuid.UUID]struct{}
@@ -22046,42 +22045,6 @@ func (m *PlanMutation) OldType(ctx context.Context) (v plan.Type, err error) {
 // ResetType resets all changes to the "type" field.
 func (m *PlanMutation) ResetType() {
 	m._type = nil
-}
-
-// SetBuildID sets the "build_id" field.
-func (m *PlanMutation) SetBuildID(s string) {
-	m.build_id = &s
-}
-
-// BuildID returns the value of the "build_id" field in the mutation.
-func (m *PlanMutation) BuildID() (r string, exists bool) {
-	v := m.build_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldBuildID returns the old "build_id" field's value of the Plan entity.
-// If the Plan object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *PlanMutation) OldBuildID(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldBuildID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldBuildID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldBuildID: %w", err)
-	}
-	return oldValue.BuildID, nil
-}
-
-// ResetBuildID resets all changes to the "build_id" field.
-func (m *PlanMutation) ResetBuildID() {
-	m.build_id = nil
 }
 
 // AddPrevPlanIDs adds the "PrevPlans" edge to the Plan entity by ids.
@@ -22538,15 +22501,12 @@ func (m *PlanMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PlanMutation) Fields() []string {
-	fields := make([]string, 0, 3)
+	fields := make([]string, 0, 2)
 	if m.step_number != nil {
 		fields = append(fields, plan.FieldStepNumber)
 	}
 	if m._type != nil {
 		fields = append(fields, plan.FieldType)
-	}
-	if m.build_id != nil {
-		fields = append(fields, plan.FieldBuildID)
 	}
 	return fields
 }
@@ -22560,8 +22520,6 @@ func (m *PlanMutation) Field(name string) (ent.Value, bool) {
 		return m.StepNumber()
 	case plan.FieldType:
 		return m.GetType()
-	case plan.FieldBuildID:
-		return m.BuildID()
 	}
 	return nil, false
 }
@@ -22575,8 +22533,6 @@ func (m *PlanMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldStepNumber(ctx)
 	case plan.FieldType:
 		return m.OldType(ctx)
-	case plan.FieldBuildID:
-		return m.OldBuildID(ctx)
 	}
 	return nil, fmt.Errorf("unknown Plan field %s", name)
 }
@@ -22599,13 +22555,6 @@ func (m *PlanMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetType(v)
-		return nil
-	case plan.FieldBuildID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetBuildID(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Plan field %s", name)
@@ -22676,9 +22625,6 @@ func (m *PlanMutation) ResetField(name string) error {
 		return nil
 	case plan.FieldType:
 		m.ResetType()
-		return nil
-	case plan.FieldBuildID:
-		m.ResetBuildID()
 		return nil
 	}
 	return fmt.Errorf("unknown Plan field %s", name)

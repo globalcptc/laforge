@@ -185,7 +185,6 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 
 	_, err = client.Plan.Create().
 		SetType(plan.TypeStartBuild).
-		SetBuildID(entBuild.ID.String()).
 		SetBuild(entBuild).
 		SetStepNumber(0).
 		SetStatus(entPlanStatus).
@@ -342,7 +341,6 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	_, err = client.Plan.Create().
 		AddPrevPlans(buildPlanNode).
 		SetType(plan.TypeStartTeam).
-		SetBuildID(entBuild.ID.String()).
 		SetTeam(entTeam).
 		SetBuild(entBuild).
 		SetStepNumber(1).
@@ -431,7 +429,6 @@ func createProvisionedNetworks(ctx context.Context, client *ent.Client, laforgeC
 	_, err = client.Plan.Create().
 		AddPrevPlans(teamPlanNode).
 		SetType(plan.TypeProvisionNetwork).
-		SetBuildID(entBuild.ID.String()).
 		SetProvisionedNetwork(entProvisionedNetwork).
 		SetBuild(entBuild).
 		SetStepNumber(teamPlanNode.StepNumber + 1).
@@ -588,7 +585,6 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 	endPlanNode, err := client.Plan.Create().
 		AddPrevPlans(prevPlans...).
 		SetType(plan.TypeProvisionHost).
-		SetBuildID(prevPlan.BuildID).
 		SetProvisionedHost(entProvisionedHost).
 		SetStepNumber(planStepNumber).
 		SetBuild(currentBuild).
@@ -1433,7 +1429,6 @@ func createStepPlan(ctx context.Context, client *ent.Client, logger *logging.Log
 	}
 	entPlanCreate := client.Plan.Create().
 		AddPrevPlans(prevPlan).
-		SetBuildID(prevPlan.BuildID).
 		SetBuild(entBuild).
 		SetStepNumber(prevPlan.StepNumber + 1).
 		SetStatus(entPlanStatus)

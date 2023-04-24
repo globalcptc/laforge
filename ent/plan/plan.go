@@ -19,8 +19,6 @@ const (
 	FieldStepNumber = "step_number"
 	// FieldType holds the string denoting the type field in the database.
 	FieldType = "type"
-	// FieldBuildID holds the string denoting the build_id field in the database.
-	FieldBuildID = "build_id"
 	// EdgePrevPlans holds the string denoting the prevplans edge name in mutations.
 	EdgePrevPlans = "PrevPlans"
 	// EdgeNextPlans holds the string denoting the nextplans edge name in mutations.
@@ -110,7 +108,6 @@ var Columns = []string{
 	FieldID,
 	FieldStepNumber,
 	FieldType,
-	FieldBuildID,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "plans"
