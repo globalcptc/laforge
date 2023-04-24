@@ -37,7 +37,7 @@ func (Status) Edges() []ent.Edge {
 			Ref("ProvisionedNetworkToStatus").
 			Unique(),
 		edge.From("StatusToProvisionedHost", ProvisionedHost.Type).
-			Ref("ProvisionedHostToStatus").
+			Ref("Status").
 			Unique(),
 		edge.From("StatusToProvisioningStep", ProvisioningStep.Type).
 			Ref("ProvisioningStepToStatus").

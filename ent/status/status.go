@@ -69,7 +69,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
 	StatusToProvisionedHostInverseTable = "provisioned_hosts"
 	// StatusToProvisionedHostColumn is the table column denoting the StatusToProvisionedHost relation/edge.
-	StatusToProvisionedHostColumn = "provisioned_host_provisioned_host_to_status"
+	StatusToProvisionedHostColumn = "provisioned_host_status"
 	// StatusToProvisioningStepTable is the table that holds the StatusToProvisioningStep relation/edge.
 	StatusToProvisioningStepTable = "status"
 	// StatusToProvisioningStepInverseTable is the table name for the ProvisioningStep entity.
@@ -132,7 +132,7 @@ var ForeignKeys = []string{
 	"adhoc_plan_status",
 	"build_status",
 	"plan_status",
-	"provisioned_host_provisioned_host_to_status",
+	"provisioned_host_status",
 	"provisioned_network_provisioned_network_to_status",
 	"provisioning_scheduled_step_status",
 	"provisioning_step_provisioning_step_to_status",

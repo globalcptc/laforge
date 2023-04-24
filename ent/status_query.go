@@ -797,10 +797,10 @@ func (sq *StatusQuery) loadStatusToProvisionedHost(ctx context.Context, query *P
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].provisioned_host_provisioned_host_to_status == nil {
+		if nodes[i].provisioned_host_status == nil {
 			continue
 		}
-		fk := *nodes[i].provisioned_host_provisioned_host_to_status
+		fk := *nodes[i].provisioned_host_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -814,7 +814,7 @@ func (sq *StatusQuery) loadStatusToProvisionedHost(ctx context.Context, query *P
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_host_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_host_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

@@ -147,7 +147,7 @@ func waitForObject(getFunc func() (bool, error)) error {
 func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHost *ent.ProvisionedHost) (err error) {
 	ctxClosing := context.Background()
 	defer ctxClosing.Done()
-	entHost, err := entProvisionedHost.QueryProvisionedHostToHost().Only(ctx)
+	entHost, err := entProvisionedHost.QueryHost().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed querying host from provisioned host: %v", err)
 	}
@@ -155,7 +155,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	if err != nil {
 		return fmt.Errorf("failed querying disk from host: %v", err)
 	}
-	entProvisionedNetwork, err := entProvisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	entProvisionedNetwork, err := entProvisionedHost.QueryProvisionedNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query provisioned network from provisioned host: %v", err)
 	}
@@ -163,7 +163,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	if err != nil {
 		return fmt.Errorf("failed to query network from provisioned network: %v", err)
 	}
-	entBuild, err := entProvisionedHost.QueryProvisionedHostToPlan().QueryBuild().Only(ctx)
+	entBuild, err := entProvisionedHost.QueryPlan().QueryBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed querying build from provisioned host: %v", err)
 	}
@@ -171,7 +171,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	if err != nil {
 		return fmt.Errorf("failed querying competition from provisioned host: %v", err)
 	}
-	entTeam, err := entProvisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := entProvisionedHost.QueryProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed querying team from provisioned host: %v", err)
 	}
@@ -348,7 +348,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 	} else {
 		adminPassword = entCompetition.RootPassword
 	}
-	agentFile, err := entProvisionedHost.QueryProvisionedHostToGinFileMiddleware().First(ctx)
+	agentFile, err := entProvisionedHost.QueryGinFileMiddleware().First(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query gin file middleware from provisioned host: %v", err)
 	}

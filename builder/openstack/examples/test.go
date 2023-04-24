@@ -86,7 +86,7 @@ func main() {
 			// 	time.Sleep(30 * time.Second)
 
 			// 	for _, phost := range phosts {
-			// 		host, err := phost.QueryProvisionedHostToHost().Only(ctx)
+			// 		host, err := phost.QueryHost().Only(ctx)
 			// 		if err != nil {
 			// 			log.Fatalf("error while querying host from provisioned host")
 			// 		}

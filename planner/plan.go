@@ -457,10 +457,10 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 	planStepNumber := prevPlan.StepNumber + 1
 	entProvisionedHost, err := client.ProvisionedHost.Query().Where(
 		provisionedhost.And(
-			provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
+			provisionedhost.HasProvisionedNetworkWith(
 				provisionednetwork.IDEQ(pNetwork.ID),
 			),
-			provisionedhost.HasProvisionedHostToHostWith(
+			provisionedhost.HasHostWith(
 				host.IDEQ(entHost.ID),
 			),
 		),
@@ -485,7 +485,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 	for _, entHostDependency := range entHostDependencies {
 		entDependsOnHost, err := client.ProvisionedHost.Query().Where(
 			provisionedhost.And(
-				provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
+				provisionedhost.HasProvisionedNetworkWith(
 					provisionednetwork.And(
 						provisionednetwork.HasProvisionedNetworkToNetworkWith(
 							network.IDEQ(entHostDependency.Edges.Network.ID),
@@ -498,11 +498,11 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 						),
 					),
 				),
-				provisionedhost.HasProvisionedHostToHostWith(
+				provisionedhost.HasHostWith(
 					host.IDEQ(entHostDependency.Edges.DependOn.ID),
 				),
 			),
-		).WithProvisionedHostToPlan().Only(ctx)
+		).WithPlan().Only(ctx)
 		if err != nil {
 			if err != err.(*ent.NotFoundError) {
 				logger.Log.Errorf("Failed to Query Depended On Host %v for Host %v. Err: %v", entHostDependency.Edges.DependOn.HclID, entHost.HclID, err)
@@ -536,7 +536,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 				}
 			}
 		}
-		dependOnPlan, err := entDependsOnHost.QueryProvisionedHostToEndStepPlan().Only(ctx)
+		dependOnPlan, err := entDependsOnHost.QueryEndStepPlan().Only(ctx)
 		if err != nil && err != err.(*ent.NotFoundError) {
 			logger.Log.Errorf("Failed to Query Depended On Host %v Plan for Host %v. Err: %v", entHostDependency.Edges.DependOn.HclID, entHost.HclID, err)
 			return nil, err
@@ -561,10 +561,10 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 	entProvisionedHost, err = client.ProvisionedHost.Create().
 		SetSubnetIP(subnetIP).
 		SetVars(map[string]string{}).
-		SetProvisionedHostToStatus(entStatus).
-		SetProvisionedHostToProvisionedNetwork(pNetwork).
-		SetProvisionedHostToHost(entHost).
-		SetProvisionedHostToBuild(currentBuild).
+		SetStatus(entStatus).
+		SetProvisionedNetwork(pNetwork).
+		SetHost(entHost).
+		SetBuild(currentBuild).
 		Save(ctx)
 	if err != nil {
 		logrus.Errorf("error while creating provisioned host: %v", err)
@@ -638,7 +638,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 	}
 	userDataScriptID, ok := entHost.Vars["user_data_script_id"]
 	if ok {
-		currentEnvironment, err := entProvisionedHost.QueryProvisionedHostToHost().QueryEnvironment().Only(ctx)
+		currentEnvironment, err := entProvisionedHost.QueryHost().QueryEnvironment().Only(ctx)
 		userDataScript, err := client.Script.Query().Where(
 			script.And(
 				script.HasScriptToEnvironmentWith(
@@ -684,7 +684,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 			return nil, err
 		}
 	}
-	_, err = entProvisionedHost.Update().SetProvisionedHostToEndStepPlan(endPlanNode).Save(ctx)
+	_, err = entProvisionedHost.Update().SetEndStepPlan(endPlanNode).Save(ctx)
 	if err != nil {
 		logger.Log.Errorf("Unable to Update The End Step. Err: %v", err)
 		return nil, err
@@ -705,7 +705,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 }
 
 func createProvisioningStep(ctx context.Context, client *ent.Client, logger *logging.Logger, hclID string, stepNumber int, pHost *ent.ProvisionedHost, prevPlan *ent.Plan) (*ent.ProvisioningStep, error) {
-	entHost, err := pHost.QueryProvisionedHostToHost().Only(ctx)
+	entHost, err := pHost.QueryHost().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Host for Provisoned Host %v. Err: %v", pHost.ID, err)
 		return nil, err
@@ -720,8 +720,8 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		"prevPlan.StepNumber": prevPlan.StepNumber,
 	}).Debug("creating provisioned step")
 	var entProvisioningStep *ent.ProvisioningStep
-	currentEnvironment, err := pHost.QueryProvisionedHostToHost().QueryEnvironment().Only(ctx)
-	currentBuild := pHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToBuild().WithEnvironment().OnlyX(ctx)
+	currentEnvironment, err := pHost.QueryHost().QueryEnvironment().Only(ctx)
+	currentBuild := pHost.QueryProvisionedNetwork().QueryProvisionedNetworkToBuild().WithEnvironment().OnlyX(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Current Environment for Provisoned Host %v. Err: %v", pHost.ID, err)
 		return nil, err
@@ -1077,7 +1077,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 }
 
 func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, logger *logging.Logger, entScheduledStep *ent.ScheduledStep, entProvisionedHost *ent.ProvisionedHost, prevPlan *ent.Plan) error {
-	entHost, err := entProvisionedHost.QueryProvisionedHostToHost().Only(ctx)
+	entHost, err := entProvisionedHost.QueryHost().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Host for Provisoned Host %v. Err: %v", entProvisionedHost.ID, err)
 		return fmt.Errorf("failed to query host from provisioned host: %v", err)
@@ -1090,7 +1090,7 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 		"prevPlan.Type":       prevPlan.Type,
 		"prevPlan.StepNumber": prevPlan.StepNumber,
 	}).Debug("creating provisioned scheduled step")
-	entBuild, err := entProvisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToBuild().WithEnvironment().Only(ctx)
+	entBuild, err := entProvisionedHost.QueryProvisionedNetwork().QueryProvisionedNetworkToBuild().WithEnvironment().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed to query current build for environment: %v", err)
 		return fmt.Errorf("failed to query build from provisioned host: %v", err)
@@ -1488,16 +1488,16 @@ func RenderScript(ctx context.Context, client *ent.Client, logger *logging.Logge
 		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisionedHost().OnlyX(ctx)
 		currentScript = entProvisioningScheduledStep.QueryScript().OnlyX(ctx)
 	}
-	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
+	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedNetwork().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
 	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithHosts().WithNetwork().AllX(ctx)
 	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)
 	currentNetwork := currentProvisionedNetwork.QueryProvisionedNetworkToNetwork().OnlyX(ctx)
-	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
+	currentHost := currentProvisionedHost.QueryHost().OnlyX(ctx)
 	currentIdentities := currentEnvironment.QueryIdentities().AllX(ctx)
-	agentScriptFile := currentProvisionedHost.QueryProvisionedHostToGinFileMiddleware().OnlyX(ctx)
+	agentScriptFile := currentProvisionedHost.QueryGinFileMiddleware().OnlyX(ctx)
 	// Need to Make Unique and change how it's loaded in
 	currentDNS := currentCompetition.QueryDNS().FirstX(ctx)
 	templateData := TempleteContext{
@@ -1574,8 +1574,8 @@ func renderFileDownload(ctx context.Context, logger *logging.Logger, entStep int
 		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisionedHost().OnlyX(ctx)
 		currentFileDownload = entProvisioningScheduledStep.QueryFileDownload().OnlyX(ctx)
 	}
-	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
-	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
+	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedNetwork().OnlyX(ctx)
+	currentHost := currentProvisionedHost.QueryHost().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
@@ -1640,16 +1640,16 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 		currentProvisionedHost = entProvisioningScheduledStep.QueryProvisionedHost().OnlyX(ctx)
 		currentAnsible = entProvisioningScheduledStep.QueryAnsible().OnlyX(ctx)
 	}
-	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedHostToProvisionedNetwork().OnlyX(ctx)
+	currentProvisionedNetwork := currentProvisionedHost.QueryProvisionedNetwork().OnlyX(ctx)
 	currentTeam := currentProvisionedNetwork.QueryProvisionedNetworkToTeam().OnlyX(ctx)
 	currentBuild := currentTeam.QueryTeamToBuild().OnlyX(ctx)
 	currentEnvironment := currentBuild.QueryEnvironment().OnlyX(ctx)
 	currentIncludedNetwork := currentEnvironment.QueryIncludedNetworks().WithHosts().WithNetwork().AllX(ctx)
 	currentCompetition := currentBuild.QueryCompetition().OnlyX(ctx)
 	currentNetwork := currentProvisionedNetwork.QueryProvisionedNetworkToNetwork().OnlyX(ctx)
-	currentHost := currentProvisionedHost.QueryProvisionedHostToHost().OnlyX(ctx)
+	currentHost := currentProvisionedHost.QueryHost().OnlyX(ctx)
 	currentIdentities := currentEnvironment.QueryIdentities().AllX(ctx)
-	agentScriptFile := currentProvisionedHost.QueryProvisionedHostToGinFileMiddleware().OnlyX(ctx)
+	agentScriptFile := currentProvisionedHost.QueryGinFileMiddleware().OnlyX(ctx)
 	// Need to Make Unique and change how it's loaded in
 	currentDNS := currentCompetition.QueryDNS().FirstX(ctx)
 	templateData := TempleteContext{

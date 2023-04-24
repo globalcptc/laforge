@@ -104,7 +104,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 		return
 	}
 
-	taskCount, err := entProvisionedHost.QueryProvisionedHostToAgentTask().Count(ctx)
+	taskCount, err := entProvisionedHost.QueryAgentTasks().Count(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed querying umber of tasks: %v", err)
 		return

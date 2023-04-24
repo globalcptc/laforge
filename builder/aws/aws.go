@@ -142,12 +142,12 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	ctxClosing := context.Background()
 	defer ctxClosing.Done()
 	// Get information about host from ENT
-	entHost, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
+	entHost, err := provisionedHost.QueryHost().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query host from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
 
-	entBuild, err := provisionedHost.QueryProvisionedHostToPlan().QueryBuild().Only(ctx)
+	entBuild, err := provisionedHost.QueryPlan().QueryBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
@@ -155,16 +155,16 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	if err != nil {
 		return fmt.Errorf("couldn't query competition from build \"%v\": %v", entBuild.ID, err)
 	}
-	entTeam, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := provisionedHost.QueryProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query team from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
-	agentFile, err := provisionedHost.QueryProvisionedHostToGinFileMiddleware().First(ctx)
+	agentFile, err := provisionedHost.QueryGinFileMiddleware().First(ctx)
 	if err != nil {
 		return fmt.Errorf("error while querying gin file middleware from provisioned host: %v", err)
 	}
 
-	entProNetwork, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	entProNetwork, err := provisionedHost.QueryProvisionedNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query provisioned network from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}

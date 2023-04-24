@@ -67,7 +67,7 @@ type Status struct {
 	adhoc_plan_status                                 *uuid.UUID
 	build_status                                      *uuid.UUID
 	plan_status                                       *uuid.UUID
-	provisioned_host_provisioned_host_to_status       *uuid.UUID
+	provisioned_host_status                           *uuid.UUID
 	provisioned_network_provisioned_network_to_status *uuid.UUID
 	provisioning_scheduled_step_status                *uuid.UUID
 	provisioning_step_provisioning_step_to_status     *uuid.UUID
@@ -245,7 +245,7 @@ func (*Status) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case status.ForeignKeys[2]: // plan_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case status.ForeignKeys[3]: // provisioned_host_provisioned_host_to_status
+		case status.ForeignKeys[3]: // provisioned_host_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case status.ForeignKeys[4]: // provisioned_network_provisioned_network_to_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -343,10 +343,10 @@ func (s *Status) assignValues(columns []string, values []interface{}) error {
 			}
 		case status.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field provisioned_host_provisioned_host_to_status", values[i])
+				return fmt.Errorf("unexpected type %T for field provisioned_host_status", values[i])
 			} else if value.Valid {
-				s.provisioned_host_provisioned_host_to_status = new(uuid.UUID)
-				*s.provisioned_host_provisioned_host_to_status = *value.S.(*uuid.UUID)
+				s.provisioned_host_status = new(uuid.UUID)
+				*s.provisioned_host_status = *value.S.(*uuid.UUID)
 			}
 		case status.ForeignKeys[4]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {

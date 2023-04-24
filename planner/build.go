@@ -99,7 +99,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 					logger.Log.Errorf("Failed to Query Provisioned Host. Err: %v", err)
 					return
 				}
-				entStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
+				entStatus, err := entProHost.QueryStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -261,7 +261,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		return
 	}
 
-	prevNodes, err := entPlan.QueryPrevPlan().All(ctx)
+	prevNodes, err := entPlan.QueryPrevPlans().All(ctx)
 
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Plan Start %v. Err: %v", prevNodes, err)
@@ -367,7 +367,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			return
 		}
 		if parentNodeFailed {
-			hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctxClosing)
+			hostStatus, err := entProHost.QueryStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
 				return
@@ -471,7 +471,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		"plan": entPlan.ID,
 	}).Debugf("BUILDER | plan done. SPAWNING CHILDREN")
 
-	nextPlans, err := entPlan.QueryNextPlan().All(ctx)
+	nextPlans, err := entPlan.QueryNextPlans().All(ctx)
 	for _, nextPlan := range nextPlans {
 		wg.Add(1)
 		go buildRoutine(client, laforgeConfig, logger, builder, ctx, nextPlan, wg)
@@ -480,7 +480,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 }
 
 func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entProHost *ent.ProvisionedHost) error {
-	entProNet, err := entProHost.QueryProvisionedHostToProvisionedNetwork().First(ctx)
+	entProNet, err := entProHost.QueryProvisionedNetwork().First(ctx)
 	if err != nil {
 		logger.Log.WithFields(logrus.Fields{
 			"entProHost": entProHost.ID,
@@ -502,12 +502,12 @@ func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 		}
 	}
 	logger.Log.Infof("deploying %s", entProHost.SubnetIP)
-	hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
+	hostStatus, err := entProHost.QueryStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Provisioned Host status: %v", err)
 		return err
 	}
-	entProNetwork, err := entProHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	entProNetwork, err := entProHost.QueryProvisionedNetwork().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
 		return err
@@ -694,7 +694,7 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 		QueryProvisionedNetworkToProvisionedHost().
 		Where(
 			provisionedhost.
-				HasProvisionedHostToStatusWith(
+				HasStatusWith(
 					status.Or(
 						status.StateEQ(status.StateAWAITING),
 						status.StateEQ(status.StateINPROGRESS),
@@ -724,7 +724,7 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 		QueryProvisionedNetworkToProvisionedHost().
 		Where(
 			provisionedhost.
-				HasProvisionedHostToStatusWith(
+				HasStatusWith(
 					status.Or(
 						status.StateEQ(status.StateFAILED),
 						status.StateEQ(status.StateTAINTED),
@@ -751,7 +751,7 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 		QueryProvisionedNetworkToProvisionedHost().
 		Where(
 			provisionedhost.
-				HasProvisionedHostToStatusWith(
+				HasStatusWith(
 					status.StateNEQ(status.StateCOMPLETE),
 				),
 		).Exist(ctx)
@@ -774,18 +774,18 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 }
 
 func checkHostStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entProHost *ent.ProvisionedHost) error {
-	hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
+	hostStatus, err := entProHost.QueryStatus().Only(ctx)
 	if hostStatus.State != status.StateINPROGRESS {
 		return nil
 	}
-	entProNetwork, err := entProHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	entProNetwork, err := entProHost.QueryProvisionedNetwork().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
 		return err
 	}
 
 	stepFailed, err := entProHost.
-		QueryProvisionedHostToProvisioningStep().
+		QueryProvisioningSteps().
 		Where(
 			provisioningstep.
 				HasProvisioningStepToStatusWith(
@@ -809,7 +809,7 @@ func checkHostStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 	}
 
 	stepNotCompleted, err := entProHost.
-		QueryProvisionedHostToProvisioningStep().
+		QueryProvisioningSteps().
 		Where(
 			provisioningstep.
 				HasProvisioningStepToStatusWith(
@@ -853,7 +853,7 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 		return err
 	}
 
-	taskCount, err := entProvisionedHost.QueryProvisionedHostToAgentTask().Count(ctx)
+	taskCount, err := entProvisionedHost.QueryAgentTasks().Count(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed querying Number of Tasks: %v", err)
 		return err

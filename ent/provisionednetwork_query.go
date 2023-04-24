@@ -744,13 +744,13 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToProvisionedHost(ctx 
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioned_host_provisioned_host_to_provisioned_network
+		fk := n.provisioned_host_provisioned_network
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioned_host_provisioned_host_to_provisioned_network" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioned_host_provisioned_network" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_host_to_provisioned_network" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_network" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

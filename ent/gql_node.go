@@ -2643,9 +2643,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "Status",
-		Name: "ProvisionedHostToStatus",
+		Name: "Status",
 	}
-	err = ph.QueryProvisionedHostToStatus().
+	err = ph.QueryStatus().
 		Select(status.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
@@ -2653,9 +2653,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[1] = &Edge{
 		Type: "ProvisionedNetwork",
-		Name: "ProvisionedHostToProvisionedNetwork",
+		Name: "ProvisionedNetwork",
 	}
-	err = ph.QueryProvisionedHostToProvisionedNetwork().
+	err = ph.QueryProvisionedNetwork().
 		Select(provisionednetwork.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
 	if err != nil {
@@ -2663,9 +2663,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[2] = &Edge{
 		Type: "Host",
-		Name: "ProvisionedHostToHost",
+		Name: "Host",
 	}
-	err = ph.QueryProvisionedHostToHost().
+	err = ph.QueryHost().
 		Select(host.FieldID).
 		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
@@ -2673,9 +2673,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[3] = &Edge{
 		Type: "Plan",
-		Name: "ProvisionedHostToEndStepPlan",
+		Name: "EndStepPlan",
 	}
-	err = ph.QueryProvisionedHostToEndStepPlan().
+	err = ph.QueryEndStepPlan().
 		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
@@ -2683,9 +2683,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[4] = &Edge{
 		Type: "Build",
-		Name: "ProvisionedHostToBuild",
+		Name: "Build",
 	}
-	err = ph.QueryProvisionedHostToBuild().
+	err = ph.QueryBuild().
 		Select(build.FieldID).
 		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
@@ -2693,9 +2693,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[5] = &Edge{
 		Type: "ProvisioningStep",
-		Name: "ProvisionedHostToProvisioningStep",
+		Name: "ProvisioningSteps",
 	}
-	err = ph.QueryProvisionedHostToProvisioningStep().
+	err = ph.QueryProvisioningSteps().
 		Select(provisioningstep.FieldID).
 		Scan(ctx, &node.Edges[5].IDs)
 	if err != nil {
@@ -2703,9 +2703,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[6] = &Edge{
 		Type: "ProvisioningScheduledStep",
-		Name: "ProvisionedHostToProvisioningScheduledStep",
+		Name: "ProvisioningScheduledSteps",
 	}
-	err = ph.QueryProvisionedHostToProvisioningScheduledStep().
+	err = ph.QueryProvisioningScheduledSteps().
 		Select(provisioningscheduledstep.FieldID).
 		Scan(ctx, &node.Edges[6].IDs)
 	if err != nil {
@@ -2713,9 +2713,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[7] = &Edge{
 		Type: "AgentStatus",
-		Name: "ProvisionedHostToAgentStatus",
+		Name: "AgentStatuses",
 	}
-	err = ph.QueryProvisionedHostToAgentStatus().
+	err = ph.QueryAgentStatuses().
 		Select(agentstatus.FieldID).
 		Scan(ctx, &node.Edges[7].IDs)
 	if err != nil {
@@ -2723,9 +2723,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[8] = &Edge{
 		Type: "AgentTask",
-		Name: "ProvisionedHostToAgentTask",
+		Name: "AgentTasks",
 	}
-	err = ph.QueryProvisionedHostToAgentTask().
+	err = ph.QueryAgentTasks().
 		Select(agenttask.FieldID).
 		Scan(ctx, &node.Edges[8].IDs)
 	if err != nil {
@@ -2733,9 +2733,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[9] = &Edge{
 		Type: "Plan",
-		Name: "ProvisionedHostToPlan",
+		Name: "Plan",
 	}
-	err = ph.QueryProvisionedHostToPlan().
+	err = ph.QueryPlan().
 		Select(plan.FieldID).
 		Scan(ctx, &node.Edges[9].IDs)
 	if err != nil {
@@ -2743,9 +2743,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[10] = &Edge{
 		Type: "GinFileMiddleware",
-		Name: "ProvisionedHostToGinFileMiddleware",
+		Name: "GinFileMiddleware",
 	}
-	err = ph.QueryProvisionedHostToGinFileMiddleware().
+	err = ph.QueryGinFileMiddleware().
 		Select(ginfilemiddleware.FieldID).
 		Scan(ctx, &node.Edges[10].IDs)
 	if err != nil {

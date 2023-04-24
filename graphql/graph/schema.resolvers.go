@@ -543,7 +543,7 @@ func (r *mutationResolver) CreateTask(ctx context.Context, proHostUUID string, c
 	if err != nil {
 		return false, fmt.Errorf("failed querying Provisioned Host %v: %v", proHostUUID, err)
 	}
-	taskCount, err := ph.QueryProvisionedHostToAgentTask().Count(ctx)
+	taskCount, err := ph.QueryAgentTasks().Count(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed querying Number of Tasks: %v", err)
 	}
@@ -702,12 +702,12 @@ func (r *mutationResolver) CreateAgentTasks(ctx context.Context, hostHclid strin
 		if err != nil {
 			return nil, fmt.Errorf("failed querying team: %v", err)
 		}
-		entProvisionedHost, err := entTeam.QueryTeamToProvisionedNetwork().QueryProvisionedNetworkToProvisionedHost().Where(provisionedhost.HasProvisionedHostToHostWith(host.HclIDEQ(hostHclid))).All(ctx)
+		entProvisionedHost, err := entTeam.QueryTeamToProvisionedNetwork().QueryProvisionedNetworkToProvisionedHost().Where(provisionedhost.HasHostWith(host.HclIDEQ(hostHclid))).All(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed querying provisoned hosts: %v", err)
 		}
 		for _, pHost := range entProvisionedHost {
-			taskCount, err := pHost.QueryProvisionedHostToAgentTask().Count(ctx)
+			taskCount, err := pHost.QueryAgentTasks().Count(ctx)
 			if err != nil {
 				return nil, fmt.Errorf("failed querying Number of Tasks: %v", err)
 			}
@@ -744,7 +744,7 @@ func (r *mutationResolver) CreateBatchAgentTasks(ctx context.Context, proHostUUI
 		if err != nil {
 			return agentTasksReturn, fmt.Errorf("failed querying provisoned host: %v", err)
 		}
-		taskCount, err := entProvisionedHost.QueryProvisionedHostToAgentTask().Count(ctx)
+		taskCount, err := entProvisionedHost.QueryAgentTasks().Count(ctx)
 		if err != nil {
 			return agentTasksReturn, fmt.Errorf("failed querying Number of Tasks: %v", err)
 		}
@@ -1193,14 +1193,14 @@ func (r *provisionedHostResolver) ID(ctx context.Context, obj *ent.ProvisionedHo
 }
 
 func (r *provisionedHostResolver) ProvisionedHostToAgentStatus(ctx context.Context, obj *ent.ProvisionedHost) (*ent.AgentStatus, error) {
-	check, err := obj.QueryProvisionedHostToAgentStatus().Exist(ctx)
+	check, err := obj.QueryAgentStatuses().Exist(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed querying Agent Status: %v", err)
 	}
 
 	if check {
-		a, err := obj.QueryProvisionedHostToAgentStatus().Order(
+		a, err := obj.QueryAgentStatuses().Order(
 			ent.Desc(agentstatus.FieldTimestamp),
 		).First(ctx)
 		if err != nil {
@@ -1490,13 +1490,13 @@ func (r *queryResolver) ListBuildStatuses(ctx context.Context, buildUUID string)
 	}
 	statuses = append(statuses, provisionedNetworkStatuses...)
 
-	provisionedHostStatuses, err := r.client.ProvisionedHost.Query().Where(provisionedhost.HasProvisionedHostToBuildWith(build.IDEQ(uuid))).QueryProvisionedHostToStatus().All(ctx)
+	provisionedHostStatuses, err := r.client.ProvisionedHost.Query().Where(provisionedhost.HasBuildWith(build.IDEQ(uuid))).QueryStatus().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed querying provisioned host statuses from build: %v", err)
 	}
 	statuses = append(statuses, provisionedHostStatuses...)
 
-	provisioningStepStatuses, err := r.client.ProvisioningStep.Query().Where(provisioningstep.HasProvisioningStepToProvisionedHostWith(provisionedhost.HasProvisionedHostToBuildWith(build.IDEQ(uuid)))).QueryProvisioningStepToStatus().All(ctx)
+	provisioningStepStatuses, err := r.client.ProvisioningStep.Query().Where(provisioningstep.HasProvisioningStepToProvisionedHostWith(provisionedhost.HasBuildWith(build.IDEQ(uuid)))).QueryProvisioningStepToStatus().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed querying provisioning step statuses from build: %v", err)
 	}

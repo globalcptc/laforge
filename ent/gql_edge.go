@@ -804,90 +804,90 @@ func (pd *PlanDiff) Plan(ctx context.Context) (*Plan, error) {
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToStatus(ctx context.Context) (*Status, error) {
-	result, err := ph.Edges.ProvisionedHostToStatusOrErr()
+func (ph *ProvisionedHost) Status(ctx context.Context) (*Status, error) {
+	result, err := ph.Edges.StatusOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToStatus().Only(ctx)
+		result, err = ph.QueryStatus().Only(ctx)
 	}
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToProvisionedNetwork(ctx context.Context) (*ProvisionedNetwork, error) {
-	result, err := ph.Edges.ProvisionedHostToProvisionedNetworkOrErr()
+func (ph *ProvisionedHost) ProvisionedNetwork(ctx context.Context) (*ProvisionedNetwork, error) {
+	result, err := ph.Edges.ProvisionedNetworkOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+		result, err = ph.QueryProvisionedNetwork().Only(ctx)
 	}
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToHost(ctx context.Context) (*Host, error) {
-	result, err := ph.Edges.ProvisionedHostToHostOrErr()
+func (ph *ProvisionedHost) Host(ctx context.Context) (*Host, error) {
+	result, err := ph.Edges.HostOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToHost().Only(ctx)
+		result, err = ph.QueryHost().Only(ctx)
 	}
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToEndStepPlan(ctx context.Context) (*Plan, error) {
-	result, err := ph.Edges.ProvisionedHostToEndStepPlanOrErr()
+func (ph *ProvisionedHost) EndStepPlan(ctx context.Context) (*Plan, error) {
+	result, err := ph.Edges.EndStepPlanOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToEndStepPlan().Only(ctx)
+		result, err = ph.QueryEndStepPlan().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToBuild(ctx context.Context) (*Build, error) {
-	result, err := ph.Edges.ProvisionedHostToBuildOrErr()
+func (ph *ProvisionedHost) Build(ctx context.Context) (*Build, error) {
+	result, err := ph.Edges.BuildOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToBuild().Only(ctx)
+		result, err = ph.QueryBuild().Only(ctx)
 	}
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToProvisioningStep(ctx context.Context) ([]*ProvisioningStep, error) {
-	result, err := ph.Edges.ProvisionedHostToProvisioningStepOrErr()
+func (ph *ProvisionedHost) ProvisioningSteps(ctx context.Context) ([]*ProvisioningStep, error) {
+	result, err := ph.Edges.ProvisioningStepsOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToProvisioningStep().All(ctx)
+		result, err = ph.QueryProvisioningSteps().All(ctx)
 	}
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToProvisioningScheduledStep(ctx context.Context) ([]*ProvisioningScheduledStep, error) {
-	result, err := ph.Edges.ProvisionedHostToProvisioningScheduledStepOrErr()
+func (ph *ProvisionedHost) ProvisioningScheduledSteps(ctx context.Context) ([]*ProvisioningScheduledStep, error) {
+	result, err := ph.Edges.ProvisioningScheduledStepsOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToProvisioningScheduledStep().All(ctx)
+		result, err = ph.QueryProvisioningScheduledSteps().All(ctx)
 	}
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToAgentStatus(ctx context.Context) ([]*AgentStatus, error) {
-	result, err := ph.Edges.ProvisionedHostToAgentStatusOrErr()
+func (ph *ProvisionedHost) AgentStatuses(ctx context.Context) ([]*AgentStatus, error) {
+	result, err := ph.Edges.AgentStatusesOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToAgentStatus().All(ctx)
+		result, err = ph.QueryAgentStatuses().All(ctx)
 	}
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToAgentTask(ctx context.Context) ([]*AgentTask, error) {
-	result, err := ph.Edges.ProvisionedHostToAgentTaskOrErr()
+func (ph *ProvisionedHost) AgentTasks(ctx context.Context) ([]*AgentTask, error) {
+	result, err := ph.Edges.AgentTasksOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToAgentTask().All(ctx)
+		result, err = ph.QueryAgentTasks().All(ctx)
 	}
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToPlan(ctx context.Context) (*Plan, error) {
-	result, err := ph.Edges.ProvisionedHostToPlanOrErr()
+func (ph *ProvisionedHost) Plan(ctx context.Context) (*Plan, error) {
+	result, err := ph.Edges.PlanOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToPlan().Only(ctx)
+		result, err = ph.QueryPlan().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (ph *ProvisionedHost) ProvisionedHostToGinFileMiddleware(ctx context.Context) (*GinFileMiddleware, error) {
-	result, err := ph.Edges.ProvisionedHostToGinFileMiddlewareOrErr()
+func (ph *ProvisionedHost) GinFileMiddleware(ctx context.Context) (*GinFileMiddleware, error) {
+	result, err := ph.Edges.GinFileMiddlewareOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryProvisionedHostToGinFileMiddleware().Only(ctx)
+		result, err = ph.QueryGinFileMiddleware().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

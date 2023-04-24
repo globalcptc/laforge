@@ -85,7 +85,7 @@ func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Bu
 				return "", err
 			}
 			for _, entProHost := range entProHosts {
-				entHost, err := entProHost.QueryProvisionedHostToHost().Only(ctx)
+				entHost, err := entProHost.QueryHost().Only(ctx)
 				if err != nil {
 					return "", err
 				}
@@ -93,7 +93,7 @@ func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Bu
 				if err != nil {
 					return "", err
 				}
-				entAgent, err := entProHost.QueryProvisionedHostToGinFileMiddleware().First(ctx)
+				entAgent, err := entProHost.QueryGinFileMiddleware().First(ctx)
 				if err != nil {
 					return "", err
 				}

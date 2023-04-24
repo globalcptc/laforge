@@ -1468,15 +1468,15 @@ func (vs *VSphere) GenerateGuestCustomization(ctx context.Context, specName stri
 		return spec, nil
 	}
 
-	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
+	host, err := provisionedHost.QueryHost().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while querying host from provisioned host: %v", err)
 	}
-	agentFile, err := provisionedHost.QueryProvisionedHostToGinFileMiddleware().First(ctx)
+	agentFile, err := provisionedHost.QueryGinFileMiddleware().First(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while querying gin file middleware from provisioned host: %v", err)
 	}
-	env, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().QueryTeamToBuild().QueryEnvironment().Only(ctx)
+	env, err := provisionedHost.QueryProvisionedNetwork().QueryProvisionedNetworkToTeam().QueryTeamToBuild().QueryEnvironment().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while querying environment from provisioned host: %v", err)
 	}
@@ -1484,7 +1484,7 @@ func (vs *VSphere) GenerateGuestCustomization(ctx context.Context, specName stri
 	if err != nil {
 		return nil, fmt.Errorf("error while querying competition from environment: %v", err)
 	}
-	provisionedNetwork, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	provisionedNetwork, err := provisionedHost.QueryProvisionedNetwork().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("err while querying provisioned network from provisioned host: %v", err)
 	}

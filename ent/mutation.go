@@ -23484,42 +23484,42 @@ func (m *PlanDiffMutation) ResetEdge(name string) error {
 // ProvisionedHostMutation represents an operation that mutates the ProvisionedHost nodes in the graph.
 type ProvisionedHostMutation struct {
 	config
-	op                                                 Op
-	typ                                                string
-	id                                                 *uuid.UUID
-	subnet_ip                                          *string
-	addon_type                                         *provisionedhost.AddonType
-	vars                                               *map[string]string
-	clearedFields                                      map[string]struct{}
-	_ProvisionedHostToStatus                           *uuid.UUID
-	cleared_ProvisionedHostToStatus                    bool
-	_ProvisionedHostToProvisionedNetwork               *uuid.UUID
-	cleared_ProvisionedHostToProvisionedNetwork        bool
-	_ProvisionedHostToHost                             *uuid.UUID
-	cleared_ProvisionedHostToHost                      bool
-	_ProvisionedHostToEndStepPlan                      *uuid.UUID
-	cleared_ProvisionedHostToEndStepPlan               bool
-	_ProvisionedHostToBuild                            *uuid.UUID
-	cleared_ProvisionedHostToBuild                     bool
-	_ProvisionedHostToProvisioningStep                 map[uuid.UUID]struct{}
-	removed_ProvisionedHostToProvisioningStep          map[uuid.UUID]struct{}
-	cleared_ProvisionedHostToProvisioningStep          bool
-	_ProvisionedHostToProvisioningScheduledStep        map[uuid.UUID]struct{}
-	removed_ProvisionedHostToProvisioningScheduledStep map[uuid.UUID]struct{}
-	cleared_ProvisionedHostToProvisioningScheduledStep bool
-	_ProvisionedHostToAgentStatus                      map[uuid.UUID]struct{}
-	removed_ProvisionedHostToAgentStatus               map[uuid.UUID]struct{}
-	cleared_ProvisionedHostToAgentStatus               bool
-	_ProvisionedHostToAgentTask                        map[uuid.UUID]struct{}
-	removed_ProvisionedHostToAgentTask                 map[uuid.UUID]struct{}
-	cleared_ProvisionedHostToAgentTask                 bool
-	_ProvisionedHostToPlan                             *uuid.UUID
-	cleared_ProvisionedHostToPlan                      bool
-	_ProvisionedHostToGinFileMiddleware                *uuid.UUID
-	cleared_ProvisionedHostToGinFileMiddleware         bool
-	done                                               bool
-	oldValue                                           func(context.Context) (*ProvisionedHost, error)
-	predicates                                         []predicate.ProvisionedHost
+	op                                 Op
+	typ                                string
+	id                                 *uuid.UUID
+	subnet_ip                          *string
+	addon_type                         *provisionedhost.AddonType
+	vars                               *map[string]string
+	clearedFields                      map[string]struct{}
+	_Status                            *uuid.UUID
+	cleared_Status                     bool
+	_ProvisionedNetwork                *uuid.UUID
+	cleared_ProvisionedNetwork         bool
+	_Host                              *uuid.UUID
+	cleared_Host                       bool
+	_EndStepPlan                       *uuid.UUID
+	cleared_EndStepPlan                bool
+	_Build                             *uuid.UUID
+	cleared_Build                      bool
+	_ProvisioningSteps                 map[uuid.UUID]struct{}
+	removed_ProvisioningSteps          map[uuid.UUID]struct{}
+	cleared_ProvisioningSteps          bool
+	_ProvisioningScheduledSteps        map[uuid.UUID]struct{}
+	removed_ProvisioningScheduledSteps map[uuid.UUID]struct{}
+	cleared_ProvisioningScheduledSteps bool
+	_AgentStatuses                     map[uuid.UUID]struct{}
+	removed_AgentStatuses              map[uuid.UUID]struct{}
+	cleared_AgentStatuses              bool
+	_AgentTasks                        map[uuid.UUID]struct{}
+	removed_AgentTasks                 map[uuid.UUID]struct{}
+	cleared_AgentTasks                 bool
+	_Plan                              *uuid.UUID
+	cleared_Plan                       bool
+	_GinFileMiddleware                 *uuid.UUID
+	cleared_GinFileMiddleware          bool
+	done                               bool
+	oldValue                           func(context.Context) (*ProvisionedHost, error)
+	predicates                         []predicate.ProvisionedHost
 }
 
 var _ ent.Mutation = (*ProvisionedHostMutation)(nil)
@@ -23747,493 +23747,493 @@ func (m *ProvisionedHostMutation) ResetVars() {
 	m.vars = nil
 }
 
-// SetProvisionedHostToStatusID sets the "ProvisionedHostToStatus" edge to the Status entity by id.
-func (m *ProvisionedHostMutation) SetProvisionedHostToStatusID(id uuid.UUID) {
-	m._ProvisionedHostToStatus = &id
+// SetStatusID sets the "Status" edge to the Status entity by id.
+func (m *ProvisionedHostMutation) SetStatusID(id uuid.UUID) {
+	m._Status = &id
 }
 
-// ClearProvisionedHostToStatus clears the "ProvisionedHostToStatus" edge to the Status entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToStatus() {
-	m.cleared_ProvisionedHostToStatus = true
+// ClearStatus clears the "Status" edge to the Status entity.
+func (m *ProvisionedHostMutation) ClearStatus() {
+	m.cleared_Status = true
 }
 
-// ProvisionedHostToStatusCleared reports if the "ProvisionedHostToStatus" edge to the Status entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToStatusCleared() bool {
-	return m.cleared_ProvisionedHostToStatus
+// StatusCleared reports if the "Status" edge to the Status entity was cleared.
+func (m *ProvisionedHostMutation) StatusCleared() bool {
+	return m.cleared_Status
 }
 
-// ProvisionedHostToStatusID returns the "ProvisionedHostToStatus" edge ID in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToStatusID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedHostToStatus != nil {
-		return *m._ProvisionedHostToStatus, true
+// StatusID returns the "Status" edge ID in the mutation.
+func (m *ProvisionedHostMutation) StatusID() (id uuid.UUID, exists bool) {
+	if m._Status != nil {
+		return *m._Status, true
 	}
 	return
 }
 
-// ProvisionedHostToStatusIDs returns the "ProvisionedHostToStatus" edge IDs in the mutation.
+// StatusIDs returns the "Status" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedHostToStatusID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedHostMutation) ProvisionedHostToStatusIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedHostToStatus; id != nil {
+// StatusID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedHostMutation) StatusIDs() (ids []uuid.UUID) {
+	if id := m._Status; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedHostToStatus resets all changes to the "ProvisionedHostToStatus" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToStatus() {
-	m._ProvisionedHostToStatus = nil
-	m.cleared_ProvisionedHostToStatus = false
+// ResetStatus resets all changes to the "Status" edge.
+func (m *ProvisionedHostMutation) ResetStatus() {
+	m._Status = nil
+	m.cleared_Status = false
 }
 
-// SetProvisionedHostToProvisionedNetworkID sets the "ProvisionedHostToProvisionedNetwork" edge to the ProvisionedNetwork entity by id.
-func (m *ProvisionedHostMutation) SetProvisionedHostToProvisionedNetworkID(id uuid.UUID) {
-	m._ProvisionedHostToProvisionedNetwork = &id
+// SetProvisionedNetworkID sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity by id.
+func (m *ProvisionedHostMutation) SetProvisionedNetworkID(id uuid.UUID) {
+	m._ProvisionedNetwork = &id
 }
 
-// ClearProvisionedHostToProvisionedNetwork clears the "ProvisionedHostToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToProvisionedNetwork() {
-	m.cleared_ProvisionedHostToProvisionedNetwork = true
+// ClearProvisionedNetwork clears the "ProvisionedNetwork" edge to the ProvisionedNetwork entity.
+func (m *ProvisionedHostMutation) ClearProvisionedNetwork() {
+	m.cleared_ProvisionedNetwork = true
 }
 
-// ProvisionedHostToProvisionedNetworkCleared reports if the "ProvisionedHostToProvisionedNetwork" edge to the ProvisionedNetwork entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToProvisionedNetworkCleared() bool {
-	return m.cleared_ProvisionedHostToProvisionedNetwork
+// ProvisionedNetworkCleared reports if the "ProvisionedNetwork" edge to the ProvisionedNetwork entity was cleared.
+func (m *ProvisionedHostMutation) ProvisionedNetworkCleared() bool {
+	return m.cleared_ProvisionedNetwork
 }
 
-// ProvisionedHostToProvisionedNetworkID returns the "ProvisionedHostToProvisionedNetwork" edge ID in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToProvisionedNetworkID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedHostToProvisionedNetwork != nil {
-		return *m._ProvisionedHostToProvisionedNetwork, true
+// ProvisionedNetworkID returns the "ProvisionedNetwork" edge ID in the mutation.
+func (m *ProvisionedHostMutation) ProvisionedNetworkID() (id uuid.UUID, exists bool) {
+	if m._ProvisionedNetwork != nil {
+		return *m._ProvisionedNetwork, true
 	}
 	return
 }
 
-// ProvisionedHostToProvisionedNetworkIDs returns the "ProvisionedHostToProvisionedNetwork" edge IDs in the mutation.
+// ProvisionedNetworkIDs returns the "ProvisionedNetwork" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedHostToProvisionedNetworkID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedHostMutation) ProvisionedHostToProvisionedNetworkIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedHostToProvisionedNetwork; id != nil {
+// ProvisionedNetworkID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedHostMutation) ProvisionedNetworkIDs() (ids []uuid.UUID) {
+	if id := m._ProvisionedNetwork; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedHostToProvisionedNetwork resets all changes to the "ProvisionedHostToProvisionedNetwork" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToProvisionedNetwork() {
-	m._ProvisionedHostToProvisionedNetwork = nil
-	m.cleared_ProvisionedHostToProvisionedNetwork = false
+// ResetProvisionedNetwork resets all changes to the "ProvisionedNetwork" edge.
+func (m *ProvisionedHostMutation) ResetProvisionedNetwork() {
+	m._ProvisionedNetwork = nil
+	m.cleared_ProvisionedNetwork = false
 }
 
-// SetProvisionedHostToHostID sets the "ProvisionedHostToHost" edge to the Host entity by id.
-func (m *ProvisionedHostMutation) SetProvisionedHostToHostID(id uuid.UUID) {
-	m._ProvisionedHostToHost = &id
+// SetHostID sets the "Host" edge to the Host entity by id.
+func (m *ProvisionedHostMutation) SetHostID(id uuid.UUID) {
+	m._Host = &id
 }
 
-// ClearProvisionedHostToHost clears the "ProvisionedHostToHost" edge to the Host entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToHost() {
-	m.cleared_ProvisionedHostToHost = true
+// ClearHost clears the "Host" edge to the Host entity.
+func (m *ProvisionedHostMutation) ClearHost() {
+	m.cleared_Host = true
 }
 
-// ProvisionedHostToHostCleared reports if the "ProvisionedHostToHost" edge to the Host entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToHostCleared() bool {
-	return m.cleared_ProvisionedHostToHost
+// HostCleared reports if the "Host" edge to the Host entity was cleared.
+func (m *ProvisionedHostMutation) HostCleared() bool {
+	return m.cleared_Host
 }
 
-// ProvisionedHostToHostID returns the "ProvisionedHostToHost" edge ID in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToHostID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedHostToHost != nil {
-		return *m._ProvisionedHostToHost, true
+// HostID returns the "Host" edge ID in the mutation.
+func (m *ProvisionedHostMutation) HostID() (id uuid.UUID, exists bool) {
+	if m._Host != nil {
+		return *m._Host, true
 	}
 	return
 }
 
-// ProvisionedHostToHostIDs returns the "ProvisionedHostToHost" edge IDs in the mutation.
+// HostIDs returns the "Host" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedHostToHostID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedHostMutation) ProvisionedHostToHostIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedHostToHost; id != nil {
+// HostID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedHostMutation) HostIDs() (ids []uuid.UUID) {
+	if id := m._Host; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedHostToHost resets all changes to the "ProvisionedHostToHost" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToHost() {
-	m._ProvisionedHostToHost = nil
-	m.cleared_ProvisionedHostToHost = false
+// ResetHost resets all changes to the "Host" edge.
+func (m *ProvisionedHostMutation) ResetHost() {
+	m._Host = nil
+	m.cleared_Host = false
 }
 
-// SetProvisionedHostToEndStepPlanID sets the "ProvisionedHostToEndStepPlan" edge to the Plan entity by id.
-func (m *ProvisionedHostMutation) SetProvisionedHostToEndStepPlanID(id uuid.UUID) {
-	m._ProvisionedHostToEndStepPlan = &id
+// SetEndStepPlanID sets the "EndStepPlan" edge to the Plan entity by id.
+func (m *ProvisionedHostMutation) SetEndStepPlanID(id uuid.UUID) {
+	m._EndStepPlan = &id
 }
 
-// ClearProvisionedHostToEndStepPlan clears the "ProvisionedHostToEndStepPlan" edge to the Plan entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToEndStepPlan() {
-	m.cleared_ProvisionedHostToEndStepPlan = true
+// ClearEndStepPlan clears the "EndStepPlan" edge to the Plan entity.
+func (m *ProvisionedHostMutation) ClearEndStepPlan() {
+	m.cleared_EndStepPlan = true
 }
 
-// ProvisionedHostToEndStepPlanCleared reports if the "ProvisionedHostToEndStepPlan" edge to the Plan entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToEndStepPlanCleared() bool {
-	return m.cleared_ProvisionedHostToEndStepPlan
+// EndStepPlanCleared reports if the "EndStepPlan" edge to the Plan entity was cleared.
+func (m *ProvisionedHostMutation) EndStepPlanCleared() bool {
+	return m.cleared_EndStepPlan
 }
 
-// ProvisionedHostToEndStepPlanID returns the "ProvisionedHostToEndStepPlan" edge ID in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToEndStepPlanID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedHostToEndStepPlan != nil {
-		return *m._ProvisionedHostToEndStepPlan, true
+// EndStepPlanID returns the "EndStepPlan" edge ID in the mutation.
+func (m *ProvisionedHostMutation) EndStepPlanID() (id uuid.UUID, exists bool) {
+	if m._EndStepPlan != nil {
+		return *m._EndStepPlan, true
 	}
 	return
 }
 
-// ProvisionedHostToEndStepPlanIDs returns the "ProvisionedHostToEndStepPlan" edge IDs in the mutation.
+// EndStepPlanIDs returns the "EndStepPlan" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedHostToEndStepPlanID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedHostMutation) ProvisionedHostToEndStepPlanIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedHostToEndStepPlan; id != nil {
+// EndStepPlanID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedHostMutation) EndStepPlanIDs() (ids []uuid.UUID) {
+	if id := m._EndStepPlan; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedHostToEndStepPlan resets all changes to the "ProvisionedHostToEndStepPlan" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToEndStepPlan() {
-	m._ProvisionedHostToEndStepPlan = nil
-	m.cleared_ProvisionedHostToEndStepPlan = false
+// ResetEndStepPlan resets all changes to the "EndStepPlan" edge.
+func (m *ProvisionedHostMutation) ResetEndStepPlan() {
+	m._EndStepPlan = nil
+	m.cleared_EndStepPlan = false
 }
 
-// SetProvisionedHostToBuildID sets the "ProvisionedHostToBuild" edge to the Build entity by id.
-func (m *ProvisionedHostMutation) SetProvisionedHostToBuildID(id uuid.UUID) {
-	m._ProvisionedHostToBuild = &id
+// SetBuildID sets the "Build" edge to the Build entity by id.
+func (m *ProvisionedHostMutation) SetBuildID(id uuid.UUID) {
+	m._Build = &id
 }
 
-// ClearProvisionedHostToBuild clears the "ProvisionedHostToBuild" edge to the Build entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToBuild() {
-	m.cleared_ProvisionedHostToBuild = true
+// ClearBuild clears the "Build" edge to the Build entity.
+func (m *ProvisionedHostMutation) ClearBuild() {
+	m.cleared_Build = true
 }
 
-// ProvisionedHostToBuildCleared reports if the "ProvisionedHostToBuild" edge to the Build entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToBuildCleared() bool {
-	return m.cleared_ProvisionedHostToBuild
+// BuildCleared reports if the "Build" edge to the Build entity was cleared.
+func (m *ProvisionedHostMutation) BuildCleared() bool {
+	return m.cleared_Build
 }
 
-// ProvisionedHostToBuildID returns the "ProvisionedHostToBuild" edge ID in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToBuildID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedHostToBuild != nil {
-		return *m._ProvisionedHostToBuild, true
+// BuildID returns the "Build" edge ID in the mutation.
+func (m *ProvisionedHostMutation) BuildID() (id uuid.UUID, exists bool) {
+	if m._Build != nil {
+		return *m._Build, true
 	}
 	return
 }
 
-// ProvisionedHostToBuildIDs returns the "ProvisionedHostToBuild" edge IDs in the mutation.
+// BuildIDs returns the "Build" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedHostToBuildID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedHostMutation) ProvisionedHostToBuildIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedHostToBuild; id != nil {
+// BuildID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedHostMutation) BuildIDs() (ids []uuid.UUID) {
+	if id := m._Build; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedHostToBuild resets all changes to the "ProvisionedHostToBuild" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToBuild() {
-	m._ProvisionedHostToBuild = nil
-	m.cleared_ProvisionedHostToBuild = false
+// ResetBuild resets all changes to the "Build" edge.
+func (m *ProvisionedHostMutation) ResetBuild() {
+	m._Build = nil
+	m.cleared_Build = false
 }
 
-// AddProvisionedHostToProvisioningStepIDs adds the "ProvisionedHostToProvisioningStep" edge to the ProvisioningStep entity by ids.
-func (m *ProvisionedHostMutation) AddProvisionedHostToProvisioningStepIDs(ids ...uuid.UUID) {
-	if m._ProvisionedHostToProvisioningStep == nil {
-		m._ProvisionedHostToProvisioningStep = make(map[uuid.UUID]struct{})
+// AddProvisioningStepIDs adds the "ProvisioningSteps" edge to the ProvisioningStep entity by ids.
+func (m *ProvisionedHostMutation) AddProvisioningStepIDs(ids ...uuid.UUID) {
+	if m._ProvisioningSteps == nil {
+		m._ProvisioningSteps = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._ProvisionedHostToProvisioningStep[ids[i]] = struct{}{}
+		m._ProvisioningSteps[ids[i]] = struct{}{}
 	}
 }
 
-// ClearProvisionedHostToProvisioningStep clears the "ProvisionedHostToProvisioningStep" edge to the ProvisioningStep entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToProvisioningStep() {
-	m.cleared_ProvisionedHostToProvisioningStep = true
+// ClearProvisioningSteps clears the "ProvisioningSteps" edge to the ProvisioningStep entity.
+func (m *ProvisionedHostMutation) ClearProvisioningSteps() {
+	m.cleared_ProvisioningSteps = true
 }
 
-// ProvisionedHostToProvisioningStepCleared reports if the "ProvisionedHostToProvisioningStep" edge to the ProvisioningStep entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToProvisioningStepCleared() bool {
-	return m.cleared_ProvisionedHostToProvisioningStep
+// ProvisioningStepsCleared reports if the "ProvisioningSteps" edge to the ProvisioningStep entity was cleared.
+func (m *ProvisionedHostMutation) ProvisioningStepsCleared() bool {
+	return m.cleared_ProvisioningSteps
 }
 
-// RemoveProvisionedHostToProvisioningStepIDs removes the "ProvisionedHostToProvisioningStep" edge to the ProvisioningStep entity by IDs.
-func (m *ProvisionedHostMutation) RemoveProvisionedHostToProvisioningStepIDs(ids ...uuid.UUID) {
-	if m.removed_ProvisionedHostToProvisioningStep == nil {
-		m.removed_ProvisionedHostToProvisioningStep = make(map[uuid.UUID]struct{})
+// RemoveProvisioningStepIDs removes the "ProvisioningSteps" edge to the ProvisioningStep entity by IDs.
+func (m *ProvisionedHostMutation) RemoveProvisioningStepIDs(ids ...uuid.UUID) {
+	if m.removed_ProvisioningSteps == nil {
+		m.removed_ProvisioningSteps = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._ProvisionedHostToProvisioningStep, ids[i])
-		m.removed_ProvisionedHostToProvisioningStep[ids[i]] = struct{}{}
+		delete(m._ProvisioningSteps, ids[i])
+		m.removed_ProvisioningSteps[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedProvisionedHostToProvisioningStep returns the removed IDs of the "ProvisionedHostToProvisioningStep" edge to the ProvisioningStep entity.
-func (m *ProvisionedHostMutation) RemovedProvisionedHostToProvisioningStepIDs() (ids []uuid.UUID) {
-	for id := range m.removed_ProvisionedHostToProvisioningStep {
+// RemovedProvisioningSteps returns the removed IDs of the "ProvisioningSteps" edge to the ProvisioningStep entity.
+func (m *ProvisionedHostMutation) RemovedProvisioningStepsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ProvisioningSteps {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ProvisionedHostToProvisioningStepIDs returns the "ProvisionedHostToProvisioningStep" edge IDs in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToProvisioningStepIDs() (ids []uuid.UUID) {
-	for id := range m._ProvisionedHostToProvisioningStep {
+// ProvisioningStepsIDs returns the "ProvisioningSteps" edge IDs in the mutation.
+func (m *ProvisionedHostMutation) ProvisioningStepsIDs() (ids []uuid.UUID) {
+	for id := range m._ProvisioningSteps {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetProvisionedHostToProvisioningStep resets all changes to the "ProvisionedHostToProvisioningStep" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToProvisioningStep() {
-	m._ProvisionedHostToProvisioningStep = nil
-	m.cleared_ProvisionedHostToProvisioningStep = false
-	m.removed_ProvisionedHostToProvisioningStep = nil
+// ResetProvisioningSteps resets all changes to the "ProvisioningSteps" edge.
+func (m *ProvisionedHostMutation) ResetProvisioningSteps() {
+	m._ProvisioningSteps = nil
+	m.cleared_ProvisioningSteps = false
+	m.removed_ProvisioningSteps = nil
 }
 
-// AddProvisionedHostToProvisioningScheduledStepIDs adds the "ProvisionedHostToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ids.
-func (m *ProvisionedHostMutation) AddProvisionedHostToProvisioningScheduledStepIDs(ids ...uuid.UUID) {
-	if m._ProvisionedHostToProvisioningScheduledStep == nil {
-		m._ProvisionedHostToProvisioningScheduledStep = make(map[uuid.UUID]struct{})
+// AddProvisioningScheduledStepIDs adds the "ProvisioningScheduledSteps" edge to the ProvisioningScheduledStep entity by ids.
+func (m *ProvisionedHostMutation) AddProvisioningScheduledStepIDs(ids ...uuid.UUID) {
+	if m._ProvisioningScheduledSteps == nil {
+		m._ProvisioningScheduledSteps = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._ProvisionedHostToProvisioningScheduledStep[ids[i]] = struct{}{}
+		m._ProvisioningScheduledSteps[ids[i]] = struct{}{}
 	}
 }
 
-// ClearProvisionedHostToProvisioningScheduledStep clears the "ProvisionedHostToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToProvisioningScheduledStep() {
-	m.cleared_ProvisionedHostToProvisioningScheduledStep = true
+// ClearProvisioningScheduledSteps clears the "ProvisioningScheduledSteps" edge to the ProvisioningScheduledStep entity.
+func (m *ProvisionedHostMutation) ClearProvisioningScheduledSteps() {
+	m.cleared_ProvisioningScheduledSteps = true
 }
 
-// ProvisionedHostToProvisioningScheduledStepCleared reports if the "ProvisionedHostToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToProvisioningScheduledStepCleared() bool {
-	return m.cleared_ProvisionedHostToProvisioningScheduledStep
+// ProvisioningScheduledStepsCleared reports if the "ProvisioningScheduledSteps" edge to the ProvisioningScheduledStep entity was cleared.
+func (m *ProvisionedHostMutation) ProvisioningScheduledStepsCleared() bool {
+	return m.cleared_ProvisioningScheduledSteps
 }
 
-// RemoveProvisionedHostToProvisioningScheduledStepIDs removes the "ProvisionedHostToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by IDs.
-func (m *ProvisionedHostMutation) RemoveProvisionedHostToProvisioningScheduledStepIDs(ids ...uuid.UUID) {
-	if m.removed_ProvisionedHostToProvisioningScheduledStep == nil {
-		m.removed_ProvisionedHostToProvisioningScheduledStep = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m._ProvisionedHostToProvisioningScheduledStep, ids[i])
-		m.removed_ProvisionedHostToProvisioningScheduledStep[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedProvisionedHostToProvisioningScheduledStep returns the removed IDs of the "ProvisionedHostToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (m *ProvisionedHostMutation) RemovedProvisionedHostToProvisioningScheduledStepIDs() (ids []uuid.UUID) {
-	for id := range m.removed_ProvisionedHostToProvisioningScheduledStep {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ProvisionedHostToProvisioningScheduledStepIDs returns the "ProvisionedHostToProvisioningScheduledStep" edge IDs in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToProvisioningScheduledStepIDs() (ids []uuid.UUID) {
-	for id := range m._ProvisionedHostToProvisioningScheduledStep {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetProvisionedHostToProvisioningScheduledStep resets all changes to the "ProvisionedHostToProvisioningScheduledStep" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToProvisioningScheduledStep() {
-	m._ProvisionedHostToProvisioningScheduledStep = nil
-	m.cleared_ProvisionedHostToProvisioningScheduledStep = false
-	m.removed_ProvisionedHostToProvisioningScheduledStep = nil
-}
-
-// AddProvisionedHostToAgentStatuIDs adds the "ProvisionedHostToAgentStatus" edge to the AgentStatus entity by ids.
-func (m *ProvisionedHostMutation) AddProvisionedHostToAgentStatuIDs(ids ...uuid.UUID) {
-	if m._ProvisionedHostToAgentStatus == nil {
-		m._ProvisionedHostToAgentStatus = make(map[uuid.UUID]struct{})
+// RemoveProvisioningScheduledStepIDs removes the "ProvisioningScheduledSteps" edge to the ProvisioningScheduledStep entity by IDs.
+func (m *ProvisionedHostMutation) RemoveProvisioningScheduledStepIDs(ids ...uuid.UUID) {
+	if m.removed_ProvisioningScheduledSteps == nil {
+		m.removed_ProvisioningScheduledSteps = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._ProvisionedHostToAgentStatus[ids[i]] = struct{}{}
+		delete(m._ProvisioningScheduledSteps, ids[i])
+		m.removed_ProvisioningScheduledSteps[ids[i]] = struct{}{}
 	}
 }
 
-// ClearProvisionedHostToAgentStatus clears the "ProvisionedHostToAgentStatus" edge to the AgentStatus entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToAgentStatus() {
-	m.cleared_ProvisionedHostToAgentStatus = true
+// RemovedProvisioningScheduledSteps returns the removed IDs of the "ProvisioningScheduledSteps" edge to the ProvisioningScheduledStep entity.
+func (m *ProvisionedHostMutation) RemovedProvisioningScheduledStepsIDs() (ids []uuid.UUID) {
+	for id := range m.removed_ProvisioningScheduledSteps {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// ProvisionedHostToAgentStatusCleared reports if the "ProvisionedHostToAgentStatus" edge to the AgentStatus entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToAgentStatusCleared() bool {
-	return m.cleared_ProvisionedHostToAgentStatus
+// ProvisioningScheduledStepsIDs returns the "ProvisioningScheduledSteps" edge IDs in the mutation.
+func (m *ProvisionedHostMutation) ProvisioningScheduledStepsIDs() (ids []uuid.UUID) {
+	for id := range m._ProvisioningScheduledSteps {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveProvisionedHostToAgentStatuIDs removes the "ProvisionedHostToAgentStatus" edge to the AgentStatus entity by IDs.
-func (m *ProvisionedHostMutation) RemoveProvisionedHostToAgentStatuIDs(ids ...uuid.UUID) {
-	if m.removed_ProvisionedHostToAgentStatus == nil {
-		m.removed_ProvisionedHostToAgentStatus = make(map[uuid.UUID]struct{})
+// ResetProvisioningScheduledSteps resets all changes to the "ProvisioningScheduledSteps" edge.
+func (m *ProvisionedHostMutation) ResetProvisioningScheduledSteps() {
+	m._ProvisioningScheduledSteps = nil
+	m.cleared_ProvisioningScheduledSteps = false
+	m.removed_ProvisioningScheduledSteps = nil
+}
+
+// AddAgentStatuseIDs adds the "AgentStatuses" edge to the AgentStatus entity by ids.
+func (m *ProvisionedHostMutation) AddAgentStatuseIDs(ids ...uuid.UUID) {
+	if m._AgentStatuses == nil {
+		m._AgentStatuses = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._ProvisionedHostToAgentStatus, ids[i])
-		m.removed_ProvisionedHostToAgentStatus[ids[i]] = struct{}{}
+		m._AgentStatuses[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedProvisionedHostToAgentStatus returns the removed IDs of the "ProvisionedHostToAgentStatus" edge to the AgentStatus entity.
-func (m *ProvisionedHostMutation) RemovedProvisionedHostToAgentStatusIDs() (ids []uuid.UUID) {
-	for id := range m.removed_ProvisionedHostToAgentStatus {
-		ids = append(ids, id)
-	}
-	return
+// ClearAgentStatuses clears the "AgentStatuses" edge to the AgentStatus entity.
+func (m *ProvisionedHostMutation) ClearAgentStatuses() {
+	m.cleared_AgentStatuses = true
 }
 
-// ProvisionedHostToAgentStatusIDs returns the "ProvisionedHostToAgentStatus" edge IDs in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToAgentStatusIDs() (ids []uuid.UUID) {
-	for id := range m._ProvisionedHostToAgentStatus {
-		ids = append(ids, id)
-	}
-	return
+// AgentStatusesCleared reports if the "AgentStatuses" edge to the AgentStatus entity was cleared.
+func (m *ProvisionedHostMutation) AgentStatusesCleared() bool {
+	return m.cleared_AgentStatuses
 }
 
-// ResetProvisionedHostToAgentStatus resets all changes to the "ProvisionedHostToAgentStatus" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToAgentStatus() {
-	m._ProvisionedHostToAgentStatus = nil
-	m.cleared_ProvisionedHostToAgentStatus = false
-	m.removed_ProvisionedHostToAgentStatus = nil
-}
-
-// AddProvisionedHostToAgentTaskIDs adds the "ProvisionedHostToAgentTask" edge to the AgentTask entity by ids.
-func (m *ProvisionedHostMutation) AddProvisionedHostToAgentTaskIDs(ids ...uuid.UUID) {
-	if m._ProvisionedHostToAgentTask == nil {
-		m._ProvisionedHostToAgentTask = make(map[uuid.UUID]struct{})
+// RemoveAgentStatuseIDs removes the "AgentStatuses" edge to the AgentStatus entity by IDs.
+func (m *ProvisionedHostMutation) RemoveAgentStatuseIDs(ids ...uuid.UUID) {
+	if m.removed_AgentStatuses == nil {
+		m.removed_AgentStatuses = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m._ProvisionedHostToAgentTask[ids[i]] = struct{}{}
+		delete(m._AgentStatuses, ids[i])
+		m.removed_AgentStatuses[ids[i]] = struct{}{}
 	}
 }
 
-// ClearProvisionedHostToAgentTask clears the "ProvisionedHostToAgentTask" edge to the AgentTask entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToAgentTask() {
-	m.cleared_ProvisionedHostToAgentTask = true
+// RemovedAgentStatuses returns the removed IDs of the "AgentStatuses" edge to the AgentStatus entity.
+func (m *ProvisionedHostMutation) RemovedAgentStatusesIDs() (ids []uuid.UUID) {
+	for id := range m.removed_AgentStatuses {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// ProvisionedHostToAgentTaskCleared reports if the "ProvisionedHostToAgentTask" edge to the AgentTask entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToAgentTaskCleared() bool {
-	return m.cleared_ProvisionedHostToAgentTask
+// AgentStatusesIDs returns the "AgentStatuses" edge IDs in the mutation.
+func (m *ProvisionedHostMutation) AgentStatusesIDs() (ids []uuid.UUID) {
+	for id := range m._AgentStatuses {
+		ids = append(ids, id)
+	}
+	return
 }
 
-// RemoveProvisionedHostToAgentTaskIDs removes the "ProvisionedHostToAgentTask" edge to the AgentTask entity by IDs.
-func (m *ProvisionedHostMutation) RemoveProvisionedHostToAgentTaskIDs(ids ...uuid.UUID) {
-	if m.removed_ProvisionedHostToAgentTask == nil {
-		m.removed_ProvisionedHostToAgentTask = make(map[uuid.UUID]struct{})
+// ResetAgentStatuses resets all changes to the "AgentStatuses" edge.
+func (m *ProvisionedHostMutation) ResetAgentStatuses() {
+	m._AgentStatuses = nil
+	m.cleared_AgentStatuses = false
+	m.removed_AgentStatuses = nil
+}
+
+// AddAgentTaskIDs adds the "AgentTasks" edge to the AgentTask entity by ids.
+func (m *ProvisionedHostMutation) AddAgentTaskIDs(ids ...uuid.UUID) {
+	if m._AgentTasks == nil {
+		m._AgentTasks = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m._ProvisionedHostToAgentTask, ids[i])
-		m.removed_ProvisionedHostToAgentTask[ids[i]] = struct{}{}
+		m._AgentTasks[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedProvisionedHostToAgentTask returns the removed IDs of the "ProvisionedHostToAgentTask" edge to the AgentTask entity.
-func (m *ProvisionedHostMutation) RemovedProvisionedHostToAgentTaskIDs() (ids []uuid.UUID) {
-	for id := range m.removed_ProvisionedHostToAgentTask {
+// ClearAgentTasks clears the "AgentTasks" edge to the AgentTask entity.
+func (m *ProvisionedHostMutation) ClearAgentTasks() {
+	m.cleared_AgentTasks = true
+}
+
+// AgentTasksCleared reports if the "AgentTasks" edge to the AgentTask entity was cleared.
+func (m *ProvisionedHostMutation) AgentTasksCleared() bool {
+	return m.cleared_AgentTasks
+}
+
+// RemoveAgentTaskIDs removes the "AgentTasks" edge to the AgentTask entity by IDs.
+func (m *ProvisionedHostMutation) RemoveAgentTaskIDs(ids ...uuid.UUID) {
+	if m.removed_AgentTasks == nil {
+		m.removed_AgentTasks = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._AgentTasks, ids[i])
+		m.removed_AgentTasks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAgentTasks returns the removed IDs of the "AgentTasks" edge to the AgentTask entity.
+func (m *ProvisionedHostMutation) RemovedAgentTasksIDs() (ids []uuid.UUID) {
+	for id := range m.removed_AgentTasks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ProvisionedHostToAgentTaskIDs returns the "ProvisionedHostToAgentTask" edge IDs in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToAgentTaskIDs() (ids []uuid.UUID) {
-	for id := range m._ProvisionedHostToAgentTask {
+// AgentTasksIDs returns the "AgentTasks" edge IDs in the mutation.
+func (m *ProvisionedHostMutation) AgentTasksIDs() (ids []uuid.UUID) {
+	for id := range m._AgentTasks {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetProvisionedHostToAgentTask resets all changes to the "ProvisionedHostToAgentTask" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToAgentTask() {
-	m._ProvisionedHostToAgentTask = nil
-	m.cleared_ProvisionedHostToAgentTask = false
-	m.removed_ProvisionedHostToAgentTask = nil
+// ResetAgentTasks resets all changes to the "AgentTasks" edge.
+func (m *ProvisionedHostMutation) ResetAgentTasks() {
+	m._AgentTasks = nil
+	m.cleared_AgentTasks = false
+	m.removed_AgentTasks = nil
 }
 
-// SetProvisionedHostToPlanID sets the "ProvisionedHostToPlan" edge to the Plan entity by id.
-func (m *ProvisionedHostMutation) SetProvisionedHostToPlanID(id uuid.UUID) {
-	m._ProvisionedHostToPlan = &id
+// SetPlanID sets the "Plan" edge to the Plan entity by id.
+func (m *ProvisionedHostMutation) SetPlanID(id uuid.UUID) {
+	m._Plan = &id
 }
 
-// ClearProvisionedHostToPlan clears the "ProvisionedHostToPlan" edge to the Plan entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToPlan() {
-	m.cleared_ProvisionedHostToPlan = true
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (m *ProvisionedHostMutation) ClearPlan() {
+	m.cleared_Plan = true
 }
 
-// ProvisionedHostToPlanCleared reports if the "ProvisionedHostToPlan" edge to the Plan entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToPlanCleared() bool {
-	return m.cleared_ProvisionedHostToPlan
+// PlanCleared reports if the "Plan" edge to the Plan entity was cleared.
+func (m *ProvisionedHostMutation) PlanCleared() bool {
+	return m.cleared_Plan
 }
 
-// ProvisionedHostToPlanID returns the "ProvisionedHostToPlan" edge ID in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToPlanID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedHostToPlan != nil {
-		return *m._ProvisionedHostToPlan, true
+// PlanID returns the "Plan" edge ID in the mutation.
+func (m *ProvisionedHostMutation) PlanID() (id uuid.UUID, exists bool) {
+	if m._Plan != nil {
+		return *m._Plan, true
 	}
 	return
 }
 
-// ProvisionedHostToPlanIDs returns the "ProvisionedHostToPlan" edge IDs in the mutation.
+// PlanIDs returns the "Plan" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedHostToPlanID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedHostMutation) ProvisionedHostToPlanIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedHostToPlan; id != nil {
+// PlanID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedHostMutation) PlanIDs() (ids []uuid.UUID) {
+	if id := m._Plan; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedHostToPlan resets all changes to the "ProvisionedHostToPlan" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToPlan() {
-	m._ProvisionedHostToPlan = nil
-	m.cleared_ProvisionedHostToPlan = false
+// ResetPlan resets all changes to the "Plan" edge.
+func (m *ProvisionedHostMutation) ResetPlan() {
+	m._Plan = nil
+	m.cleared_Plan = false
 }
 
-// SetProvisionedHostToGinFileMiddlewareID sets the "ProvisionedHostToGinFileMiddleware" edge to the GinFileMiddleware entity by id.
-func (m *ProvisionedHostMutation) SetProvisionedHostToGinFileMiddlewareID(id uuid.UUID) {
-	m._ProvisionedHostToGinFileMiddleware = &id
+// SetGinFileMiddlewareID sets the "GinFileMiddleware" edge to the GinFileMiddleware entity by id.
+func (m *ProvisionedHostMutation) SetGinFileMiddlewareID(id uuid.UUID) {
+	m._GinFileMiddleware = &id
 }
 
-// ClearProvisionedHostToGinFileMiddleware clears the "ProvisionedHostToGinFileMiddleware" edge to the GinFileMiddleware entity.
-func (m *ProvisionedHostMutation) ClearProvisionedHostToGinFileMiddleware() {
-	m.cleared_ProvisionedHostToGinFileMiddleware = true
+// ClearGinFileMiddleware clears the "GinFileMiddleware" edge to the GinFileMiddleware entity.
+func (m *ProvisionedHostMutation) ClearGinFileMiddleware() {
+	m.cleared_GinFileMiddleware = true
 }
 
-// ProvisionedHostToGinFileMiddlewareCleared reports if the "ProvisionedHostToGinFileMiddleware" edge to the GinFileMiddleware entity was cleared.
-func (m *ProvisionedHostMutation) ProvisionedHostToGinFileMiddlewareCleared() bool {
-	return m.cleared_ProvisionedHostToGinFileMiddleware
+// GinFileMiddlewareCleared reports if the "GinFileMiddleware" edge to the GinFileMiddleware entity was cleared.
+func (m *ProvisionedHostMutation) GinFileMiddlewareCleared() bool {
+	return m.cleared_GinFileMiddleware
 }
 
-// ProvisionedHostToGinFileMiddlewareID returns the "ProvisionedHostToGinFileMiddleware" edge ID in the mutation.
-func (m *ProvisionedHostMutation) ProvisionedHostToGinFileMiddlewareID() (id uuid.UUID, exists bool) {
-	if m._ProvisionedHostToGinFileMiddleware != nil {
-		return *m._ProvisionedHostToGinFileMiddleware, true
+// GinFileMiddlewareID returns the "GinFileMiddleware" edge ID in the mutation.
+func (m *ProvisionedHostMutation) GinFileMiddlewareID() (id uuid.UUID, exists bool) {
+	if m._GinFileMiddleware != nil {
+		return *m._GinFileMiddleware, true
 	}
 	return
 }
 
-// ProvisionedHostToGinFileMiddlewareIDs returns the "ProvisionedHostToGinFileMiddleware" edge IDs in the mutation.
+// GinFileMiddlewareIDs returns the "GinFileMiddleware" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionedHostToGinFileMiddlewareID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedHostMutation) ProvisionedHostToGinFileMiddlewareIDs() (ids []uuid.UUID) {
-	if id := m._ProvisionedHostToGinFileMiddleware; id != nil {
+// GinFileMiddlewareID instead. It exists only for internal usage by the builders.
+func (m *ProvisionedHostMutation) GinFileMiddlewareIDs() (ids []uuid.UUID) {
+	if id := m._GinFileMiddleware; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProvisionedHostToGinFileMiddleware resets all changes to the "ProvisionedHostToGinFileMiddleware" edge.
-func (m *ProvisionedHostMutation) ResetProvisionedHostToGinFileMiddleware() {
-	m._ProvisionedHostToGinFileMiddleware = nil
-	m.cleared_ProvisionedHostToGinFileMiddleware = false
+// ResetGinFileMiddleware resets all changes to the "GinFileMiddleware" edge.
+func (m *ProvisionedHostMutation) ResetGinFileMiddleware() {
+	m._GinFileMiddleware = nil
+	m.cleared_GinFileMiddleware = false
 }
 
 // Where appends a list predicates to the ProvisionedHostMutation builder.
@@ -24398,38 +24398,38 @@ func (m *ProvisionedHostMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProvisionedHostMutation) AddedEdges() []string {
 	edges := make([]string, 0, 11)
-	if m._ProvisionedHostToStatus != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToStatus)
+	if m._Status != nil {
+		edges = append(edges, provisionedhost.EdgeStatus)
 	}
-	if m._ProvisionedHostToProvisionedNetwork != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisionedNetwork)
+	if m._ProvisionedNetwork != nil {
+		edges = append(edges, provisionedhost.EdgeProvisionedNetwork)
 	}
-	if m._ProvisionedHostToHost != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToHost)
+	if m._Host != nil {
+		edges = append(edges, provisionedhost.EdgeHost)
 	}
-	if m._ProvisionedHostToEndStepPlan != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToEndStepPlan)
+	if m._EndStepPlan != nil {
+		edges = append(edges, provisionedhost.EdgeEndStepPlan)
 	}
-	if m._ProvisionedHostToBuild != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToBuild)
+	if m._Build != nil {
+		edges = append(edges, provisionedhost.EdgeBuild)
 	}
-	if m._ProvisionedHostToProvisioningStep != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningStep)
+	if m._ProvisioningSteps != nil {
+		edges = append(edges, provisionedhost.EdgeProvisioningSteps)
 	}
-	if m._ProvisionedHostToProvisioningScheduledStep != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep)
+	if m._ProvisioningScheduledSteps != nil {
+		edges = append(edges, provisionedhost.EdgeProvisioningScheduledSteps)
 	}
-	if m._ProvisionedHostToAgentStatus != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToAgentStatus)
+	if m._AgentStatuses != nil {
+		edges = append(edges, provisionedhost.EdgeAgentStatuses)
 	}
-	if m._ProvisionedHostToAgentTask != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToAgentTask)
+	if m._AgentTasks != nil {
+		edges = append(edges, provisionedhost.EdgeAgentTasks)
 	}
-	if m._ProvisionedHostToPlan != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToPlan)
+	if m._Plan != nil {
+		edges = append(edges, provisionedhost.EdgePlan)
 	}
-	if m._ProvisionedHostToGinFileMiddleware != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToGinFileMiddleware)
+	if m._GinFileMiddleware != nil {
+		edges = append(edges, provisionedhost.EdgeGinFileMiddleware)
 	}
 	return edges
 }
@@ -24438,56 +24438,56 @@ func (m *ProvisionedHostMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *ProvisionedHostMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case provisionedhost.EdgeProvisionedHostToStatus:
-		if id := m._ProvisionedHostToStatus; id != nil {
+	case provisionedhost.EdgeStatus:
+		if id := m._Status; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisionedhost.EdgeProvisionedHostToProvisionedNetwork:
-		if id := m._ProvisionedHostToProvisionedNetwork; id != nil {
+	case provisionedhost.EdgeProvisionedNetwork:
+		if id := m._ProvisionedNetwork; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisionedhost.EdgeProvisionedHostToHost:
-		if id := m._ProvisionedHostToHost; id != nil {
+	case provisionedhost.EdgeHost:
+		if id := m._Host; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisionedhost.EdgeProvisionedHostToEndStepPlan:
-		if id := m._ProvisionedHostToEndStepPlan; id != nil {
+	case provisionedhost.EdgeEndStepPlan:
+		if id := m._EndStepPlan; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisionedhost.EdgeProvisionedHostToBuild:
-		if id := m._ProvisionedHostToBuild; id != nil {
+	case provisionedhost.EdgeBuild:
+		if id := m._Build; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisionedhost.EdgeProvisionedHostToProvisioningStep:
-		ids := make([]ent.Value, 0, len(m._ProvisionedHostToProvisioningStep))
-		for id := range m._ProvisionedHostToProvisioningStep {
+	case provisionedhost.EdgeProvisioningSteps:
+		ids := make([]ent.Value, 0, len(m._ProvisioningSteps))
+		for id := range m._ProvisioningSteps {
 			ids = append(ids, id)
 		}
 		return ids
-	case provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep:
-		ids := make([]ent.Value, 0, len(m._ProvisionedHostToProvisioningScheduledStep))
-		for id := range m._ProvisionedHostToProvisioningScheduledStep {
+	case provisionedhost.EdgeProvisioningScheduledSteps:
+		ids := make([]ent.Value, 0, len(m._ProvisioningScheduledSteps))
+		for id := range m._ProvisioningScheduledSteps {
 			ids = append(ids, id)
 		}
 		return ids
-	case provisionedhost.EdgeProvisionedHostToAgentStatus:
-		ids := make([]ent.Value, 0, len(m._ProvisionedHostToAgentStatus))
-		for id := range m._ProvisionedHostToAgentStatus {
+	case provisionedhost.EdgeAgentStatuses:
+		ids := make([]ent.Value, 0, len(m._AgentStatuses))
+		for id := range m._AgentStatuses {
 			ids = append(ids, id)
 		}
 		return ids
-	case provisionedhost.EdgeProvisionedHostToAgentTask:
-		ids := make([]ent.Value, 0, len(m._ProvisionedHostToAgentTask))
-		for id := range m._ProvisionedHostToAgentTask {
+	case provisionedhost.EdgeAgentTasks:
+		ids := make([]ent.Value, 0, len(m._AgentTasks))
+		for id := range m._AgentTasks {
 			ids = append(ids, id)
 		}
 		return ids
-	case provisionedhost.EdgeProvisionedHostToPlan:
-		if id := m._ProvisionedHostToPlan; id != nil {
+	case provisionedhost.EdgePlan:
+		if id := m._Plan; id != nil {
 			return []ent.Value{*id}
 		}
-	case provisionedhost.EdgeProvisionedHostToGinFileMiddleware:
-		if id := m._ProvisionedHostToGinFileMiddleware; id != nil {
+	case provisionedhost.EdgeGinFileMiddleware:
+		if id := m._GinFileMiddleware; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -24497,17 +24497,17 @@ func (m *ProvisionedHostMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProvisionedHostMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 11)
-	if m.removed_ProvisionedHostToProvisioningStep != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningStep)
+	if m.removed_ProvisioningSteps != nil {
+		edges = append(edges, provisionedhost.EdgeProvisioningSteps)
 	}
-	if m.removed_ProvisionedHostToProvisioningScheduledStep != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep)
+	if m.removed_ProvisioningScheduledSteps != nil {
+		edges = append(edges, provisionedhost.EdgeProvisioningScheduledSteps)
 	}
-	if m.removed_ProvisionedHostToAgentStatus != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToAgentStatus)
+	if m.removed_AgentStatuses != nil {
+		edges = append(edges, provisionedhost.EdgeAgentStatuses)
 	}
-	if m.removed_ProvisionedHostToAgentTask != nil {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToAgentTask)
+	if m.removed_AgentTasks != nil {
+		edges = append(edges, provisionedhost.EdgeAgentTasks)
 	}
 	return edges
 }
@@ -24516,27 +24516,27 @@ func (m *ProvisionedHostMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ProvisionedHostMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case provisionedhost.EdgeProvisionedHostToProvisioningStep:
-		ids := make([]ent.Value, 0, len(m.removed_ProvisionedHostToProvisioningStep))
-		for id := range m.removed_ProvisionedHostToProvisioningStep {
+	case provisionedhost.EdgeProvisioningSteps:
+		ids := make([]ent.Value, 0, len(m.removed_ProvisioningSteps))
+		for id := range m.removed_ProvisioningSteps {
 			ids = append(ids, id)
 		}
 		return ids
-	case provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep:
-		ids := make([]ent.Value, 0, len(m.removed_ProvisionedHostToProvisioningScheduledStep))
-		for id := range m.removed_ProvisionedHostToProvisioningScheduledStep {
+	case provisionedhost.EdgeProvisioningScheduledSteps:
+		ids := make([]ent.Value, 0, len(m.removed_ProvisioningScheduledSteps))
+		for id := range m.removed_ProvisioningScheduledSteps {
 			ids = append(ids, id)
 		}
 		return ids
-	case provisionedhost.EdgeProvisionedHostToAgentStatus:
-		ids := make([]ent.Value, 0, len(m.removed_ProvisionedHostToAgentStatus))
-		for id := range m.removed_ProvisionedHostToAgentStatus {
+	case provisionedhost.EdgeAgentStatuses:
+		ids := make([]ent.Value, 0, len(m.removed_AgentStatuses))
+		for id := range m.removed_AgentStatuses {
 			ids = append(ids, id)
 		}
 		return ids
-	case provisionedhost.EdgeProvisionedHostToAgentTask:
-		ids := make([]ent.Value, 0, len(m.removed_ProvisionedHostToAgentTask))
-		for id := range m.removed_ProvisionedHostToAgentTask {
+	case provisionedhost.EdgeAgentTasks:
+		ids := make([]ent.Value, 0, len(m.removed_AgentTasks))
+		for id := range m.removed_AgentTasks {
 			ids = append(ids, id)
 		}
 		return ids
@@ -24547,38 +24547,38 @@ func (m *ProvisionedHostMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProvisionedHostMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 11)
-	if m.cleared_ProvisionedHostToStatus {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToStatus)
+	if m.cleared_Status {
+		edges = append(edges, provisionedhost.EdgeStatus)
 	}
-	if m.cleared_ProvisionedHostToProvisionedNetwork {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisionedNetwork)
+	if m.cleared_ProvisionedNetwork {
+		edges = append(edges, provisionedhost.EdgeProvisionedNetwork)
 	}
-	if m.cleared_ProvisionedHostToHost {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToHost)
+	if m.cleared_Host {
+		edges = append(edges, provisionedhost.EdgeHost)
 	}
-	if m.cleared_ProvisionedHostToEndStepPlan {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToEndStepPlan)
+	if m.cleared_EndStepPlan {
+		edges = append(edges, provisionedhost.EdgeEndStepPlan)
 	}
-	if m.cleared_ProvisionedHostToBuild {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToBuild)
+	if m.cleared_Build {
+		edges = append(edges, provisionedhost.EdgeBuild)
 	}
-	if m.cleared_ProvisionedHostToProvisioningStep {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningStep)
+	if m.cleared_ProvisioningSteps {
+		edges = append(edges, provisionedhost.EdgeProvisioningSteps)
 	}
-	if m.cleared_ProvisionedHostToProvisioningScheduledStep {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep)
+	if m.cleared_ProvisioningScheduledSteps {
+		edges = append(edges, provisionedhost.EdgeProvisioningScheduledSteps)
 	}
-	if m.cleared_ProvisionedHostToAgentStatus {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToAgentStatus)
+	if m.cleared_AgentStatuses {
+		edges = append(edges, provisionedhost.EdgeAgentStatuses)
 	}
-	if m.cleared_ProvisionedHostToAgentTask {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToAgentTask)
+	if m.cleared_AgentTasks {
+		edges = append(edges, provisionedhost.EdgeAgentTasks)
 	}
-	if m.cleared_ProvisionedHostToPlan {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToPlan)
+	if m.cleared_Plan {
+		edges = append(edges, provisionedhost.EdgePlan)
 	}
-	if m.cleared_ProvisionedHostToGinFileMiddleware {
-		edges = append(edges, provisionedhost.EdgeProvisionedHostToGinFileMiddleware)
+	if m.cleared_GinFileMiddleware {
+		edges = append(edges, provisionedhost.EdgeGinFileMiddleware)
 	}
 	return edges
 }
@@ -24587,28 +24587,28 @@ func (m *ProvisionedHostMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *ProvisionedHostMutation) EdgeCleared(name string) bool {
 	switch name {
-	case provisionedhost.EdgeProvisionedHostToStatus:
-		return m.cleared_ProvisionedHostToStatus
-	case provisionedhost.EdgeProvisionedHostToProvisionedNetwork:
-		return m.cleared_ProvisionedHostToProvisionedNetwork
-	case provisionedhost.EdgeProvisionedHostToHost:
-		return m.cleared_ProvisionedHostToHost
-	case provisionedhost.EdgeProvisionedHostToEndStepPlan:
-		return m.cleared_ProvisionedHostToEndStepPlan
-	case provisionedhost.EdgeProvisionedHostToBuild:
-		return m.cleared_ProvisionedHostToBuild
-	case provisionedhost.EdgeProvisionedHostToProvisioningStep:
-		return m.cleared_ProvisionedHostToProvisioningStep
-	case provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep:
-		return m.cleared_ProvisionedHostToProvisioningScheduledStep
-	case provisionedhost.EdgeProvisionedHostToAgentStatus:
-		return m.cleared_ProvisionedHostToAgentStatus
-	case provisionedhost.EdgeProvisionedHostToAgentTask:
-		return m.cleared_ProvisionedHostToAgentTask
-	case provisionedhost.EdgeProvisionedHostToPlan:
-		return m.cleared_ProvisionedHostToPlan
-	case provisionedhost.EdgeProvisionedHostToGinFileMiddleware:
-		return m.cleared_ProvisionedHostToGinFileMiddleware
+	case provisionedhost.EdgeStatus:
+		return m.cleared_Status
+	case provisionedhost.EdgeProvisionedNetwork:
+		return m.cleared_ProvisionedNetwork
+	case provisionedhost.EdgeHost:
+		return m.cleared_Host
+	case provisionedhost.EdgeEndStepPlan:
+		return m.cleared_EndStepPlan
+	case provisionedhost.EdgeBuild:
+		return m.cleared_Build
+	case provisionedhost.EdgeProvisioningSteps:
+		return m.cleared_ProvisioningSteps
+	case provisionedhost.EdgeProvisioningScheduledSteps:
+		return m.cleared_ProvisioningScheduledSteps
+	case provisionedhost.EdgeAgentStatuses:
+		return m.cleared_AgentStatuses
+	case provisionedhost.EdgeAgentTasks:
+		return m.cleared_AgentTasks
+	case provisionedhost.EdgePlan:
+		return m.cleared_Plan
+	case provisionedhost.EdgeGinFileMiddleware:
+		return m.cleared_GinFileMiddleware
 	}
 	return false
 }
@@ -24617,26 +24617,26 @@ func (m *ProvisionedHostMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ProvisionedHostMutation) ClearEdge(name string) error {
 	switch name {
-	case provisionedhost.EdgeProvisionedHostToStatus:
-		m.ClearProvisionedHostToStatus()
+	case provisionedhost.EdgeStatus:
+		m.ClearStatus()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToProvisionedNetwork:
-		m.ClearProvisionedHostToProvisionedNetwork()
+	case provisionedhost.EdgeProvisionedNetwork:
+		m.ClearProvisionedNetwork()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToHost:
-		m.ClearProvisionedHostToHost()
+	case provisionedhost.EdgeHost:
+		m.ClearHost()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToEndStepPlan:
-		m.ClearProvisionedHostToEndStepPlan()
+	case provisionedhost.EdgeEndStepPlan:
+		m.ClearEndStepPlan()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToBuild:
-		m.ClearProvisionedHostToBuild()
+	case provisionedhost.EdgeBuild:
+		m.ClearBuild()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToPlan:
-		m.ClearProvisionedHostToPlan()
+	case provisionedhost.EdgePlan:
+		m.ClearPlan()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToGinFileMiddleware:
-		m.ClearProvisionedHostToGinFileMiddleware()
+	case provisionedhost.EdgeGinFileMiddleware:
+		m.ClearGinFileMiddleware()
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedHost unique edge %s", name)
@@ -24646,38 +24646,38 @@ func (m *ProvisionedHostMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ProvisionedHostMutation) ResetEdge(name string) error {
 	switch name {
-	case provisionedhost.EdgeProvisionedHostToStatus:
-		m.ResetProvisionedHostToStatus()
+	case provisionedhost.EdgeStatus:
+		m.ResetStatus()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToProvisionedNetwork:
-		m.ResetProvisionedHostToProvisionedNetwork()
+	case provisionedhost.EdgeProvisionedNetwork:
+		m.ResetProvisionedNetwork()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToHost:
-		m.ResetProvisionedHostToHost()
+	case provisionedhost.EdgeHost:
+		m.ResetHost()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToEndStepPlan:
-		m.ResetProvisionedHostToEndStepPlan()
+	case provisionedhost.EdgeEndStepPlan:
+		m.ResetEndStepPlan()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToBuild:
-		m.ResetProvisionedHostToBuild()
+	case provisionedhost.EdgeBuild:
+		m.ResetBuild()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToProvisioningStep:
-		m.ResetProvisionedHostToProvisioningStep()
+	case provisionedhost.EdgeProvisioningSteps:
+		m.ResetProvisioningSteps()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToProvisioningScheduledStep:
-		m.ResetProvisionedHostToProvisioningScheduledStep()
+	case provisionedhost.EdgeProvisioningScheduledSteps:
+		m.ResetProvisioningScheduledSteps()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToAgentStatus:
-		m.ResetProvisionedHostToAgentStatus()
+	case provisionedhost.EdgeAgentStatuses:
+		m.ResetAgentStatuses()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToAgentTask:
-		m.ResetProvisionedHostToAgentTask()
+	case provisionedhost.EdgeAgentTasks:
+		m.ResetAgentTasks()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToPlan:
-		m.ResetProvisionedHostToPlan()
+	case provisionedhost.EdgePlan:
+		m.ResetPlan()
 		return nil
-	case provisionedhost.EdgeProvisionedHostToGinFileMiddleware:
-		m.ResetProvisionedHostToGinFileMiddleware()
+	case provisionedhost.EdgeGinFileMiddleware:
+		m.ResetGinFileMiddleware()
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionedHost edge %s", name)

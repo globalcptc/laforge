@@ -60,7 +60,7 @@ func (s *Server) GetHeartBeat(ctx context.Context, in *pb.HeartbeatRequest) (*pb
 		logrus.Errorf("GRPC SERVER ERROR: Cannot find client %v. Error: %v", in.GetClientId(), err)
 		return &pb.HeartbeatReply{Status: message, AvalibleTasks: false}, nil
 	}
-	pn, err := ph.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	pn, err := ph.QueryProvisionedNetwork().Only(ctx)
 	if err != nil {
 		logrus.Errorf("GRPC SERVER ERROR: Cannot find client %v network. Error: %v", in.GetClientId(), err)
 		return &pb.HeartbeatReply{Status: message, AvalibleTasks: false}, nil
@@ -70,7 +70,7 @@ func (s *Server) GetHeartBeat(ctx context.Context, in *pb.HeartbeatRequest) (*pb
 		logrus.Errorf("GRPC SERVER ERROR: Cannot find client %v build. Error: %v", in.GetClientId(), err)
 		return &pb.HeartbeatReply{Status: message, AvalibleTasks: false}, nil
 	}
-	existingEntAgentStatus, err := ph.QueryProvisionedHostToAgentStatus().First(ctx)
+	existingEntAgentStatus, err := ph.QueryAgentStatuses().First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			createdEntAgentStatus, err := s.Client.AgentStatus.
@@ -135,7 +135,7 @@ func (s *Server) GetHeartBeat(ctx context.Context, in *pb.HeartbeatRequest) (*pb
 	}
 	// logrus.Debugf("GRPC SERVER DEBUG: Agent for client %v has sent heartbeat", in.GetClientId())
 
-	avalibleTasks, err := ph.QueryProvisionedHostToAgentTask().Where(
+	avalibleTasks, err := ph.QueryAgentTasks().Where(
 		agenttask.Or(
 			agenttask.StateEQ(agenttask.StateAWAITING),
 			agenttask.StateEQ(agenttask.StateINPROGRESS),
@@ -161,7 +161,7 @@ func (s *Server) GetTask(ctx context.Context, in *pb.TaskRequest) (*pb.TaskReply
 		logrus.Errorf("GRPC SERVER ERROR: Cannot find client %v. Error: %v", in.GetClientId(), err)
 		return &pb.TaskReply{Id: "", Command: pb.TaskReply_DEFAULT}, nil
 	}
-	entAgentTask, err := ph.QueryProvisionedHostToAgentTask().Order(ent.Asc(agenttask.FieldNumber)).Where(
+	entAgentTask, err := ph.QueryAgentTasks().Order(ent.Asc(agenttask.FieldNumber)).Where(
 		agenttask.Or(
 			agenttask.StateEQ(agenttask.StateAWAITING),
 			agenttask.StateEQ(agenttask.StateINPROGRESS),

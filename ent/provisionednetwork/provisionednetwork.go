@@ -65,7 +65,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
 	ProvisionedNetworkToProvisionedHostInverseTable = "provisioned_hosts"
 	// ProvisionedNetworkToProvisionedHostColumn is the table column denoting the ProvisionedNetworkToProvisionedHost relation/edge.
-	ProvisionedNetworkToProvisionedHostColumn = "provisioned_host_provisioned_host_to_provisioned_network"
+	ProvisionedNetworkToProvisionedHostColumn = "provisioned_host_provisioned_network"
 	// ProvisionedNetworkToPlanTable is the table that holds the ProvisionedNetworkToPlan relation/edge.
 	ProvisionedNetworkToPlanTable = "provisioned_networks"
 	// ProvisionedNetworkToPlanInverseTable is the table name for the Plan entity.

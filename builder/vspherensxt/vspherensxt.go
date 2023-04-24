@@ -110,7 +110,7 @@ func (builder VSphereNSXTBuilder) generateNetworkName(competition *ent.Competiti
 
 // DeployHost deploys a given host from the environment to VSphere
 func (builder VSphereNSXTBuilder) DeployHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
-	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
+	host, err := provisionedHost.QueryHost().Only(ctx)
 	if err != nil {
 		return
 	}
@@ -141,7 +141,7 @@ func (builder VSphereNSXTBuilder) DeployHost(ctx context.Context, provisionedHos
 		return
 	}
 
-	build, err := provisionedHost.QueryProvisionedHostToPlan().QueryBuild().Only(ctx)
+	build, err := provisionedHost.QueryPlan().QueryBuild().Only(ctx)
 	if err != nil {
 		return
 	}
@@ -149,11 +149,11 @@ func (builder VSphereNSXTBuilder) DeployHost(ctx context.Context, provisionedHos
 	if err != nil {
 		return
 	}
-	network, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToNetwork().Only(ctx)
+	network, err := provisionedHost.QueryProvisionedNetwork().QueryProvisionedNetworkToNetwork().Only(ctx)
 	if err != nil {
 		return
 	}
-	team, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
+	team, err := provisionedHost.QueryProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
 		return
 	}
@@ -395,11 +395,11 @@ func (builder VSphereNSXTBuilder) DeployTeam(ctx context.Context, entTeam *ent.T
 }
 
 func (builder VSphereNSXTBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
-	host, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
+	host, err := provisionedHost.QueryHost().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query host from provisioned host \"%s\": %v", provisionedHost.ID, err)
 	}
-	entBuild, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToBuild().Only(ctx)
+	entBuild, err := provisionedHost.QueryProvisionedNetwork().QueryProvisionedNetworkToBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from provisioned host \"%s\": %v", provisionedHost.ID, err)
 	}
@@ -407,7 +407,7 @@ func (builder VSphereNSXTBuilder) TeardownHost(ctx context.Context, provisionedH
 	if err != nil {
 		return fmt.Errorf("couldn't query competition from build \"%s\": %v", entBuild.ID, err)
 	}
-	entTeam, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := provisionedHost.QueryProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from network \"%s\": %v", provisionedHost.ID, err)
 	}

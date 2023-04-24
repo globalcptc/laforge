@@ -268,7 +268,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 		if getStatusError != nil {
 			break
 		}
-		provisionedStatus, getStatusError = phost.QueryProvisionedHostToStatus().Only(ctx)
+		provisionedStatus, getStatusError = phost.QueryStatus().Only(ctx)
 	case plan.TypeExecuteStep:
 		step, getStatusError := entPlan.QueryProvisioningStep().Only(ctx)
 		if getStatusError != nil {
@@ -496,7 +496,7 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 
 func deleteHost(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entProHost *ent.ProvisionedHost) error {
 	logger.Log.Infof("del host     | %s", entProHost.SubnetIP)
-	hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
+	hostStatus, err := entProHost.QueryStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Provisioned Host status: %v", err)
 		return err
@@ -520,7 +520,7 @@ func deleteHost(client *ent.Client, logger *logging.Logger, builder *builder.Bui
 		}
 		rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
 		// Set delete on the User Data script
-		step, saveErr := entProHost.QueryProvisionedHostToProvisioningStep().Where(provisioningstep.StepNumberEQ(0)).Only(ctx)
+		step, saveErr := entProHost.QueryProvisioningSteps().Where(provisioningstep.StepNumberEQ(0)).Only(ctx)
 		if saveErr != nil {
 			logger.Log.Errorf("error while querying userdata script from Provisioned Host: %v", saveErr)
 			return saveErr

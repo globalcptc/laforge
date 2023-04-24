@@ -712,10 +712,10 @@ var (
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "gin_file_middleware_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_provisioned_host", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "provisioned_host_provisioned_host_to_provisioned_network", Type: field.TypeUUID},
-		{Name: "provisioned_host_provisioned_host_to_host", Type: field.TypeUUID},
-		{Name: "provisioned_host_provisioned_host_to_end_step_plan", Type: field.TypeUUID, Nullable: true},
-		{Name: "provisioned_host_provisioned_host_to_build", Type: field.TypeUUID},
+		{Name: "provisioned_host_provisioned_network", Type: field.TypeUUID},
+		{Name: "provisioned_host_host", Type: field.TypeUUID},
+		{Name: "provisioned_host_end_step_plan", Type: field.TypeUUID, Nullable: true},
+		{Name: "provisioned_host_build", Type: field.TypeUUID},
 	}
 	// ProvisionedHostsTable holds the schema information for the "provisioned_hosts" table.
 	ProvisionedHostsTable = &schema.Table{
@@ -736,25 +736,25 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "provisioned_hosts_provisioned_networks_ProvisionedHostToProvisionedNetwork",
+				Symbol:     "provisioned_hosts_provisioned_networks_ProvisionedNetwork",
 				Columns:    []*schema.Column{ProvisionedHostsColumns[6]},
 				RefColumns: []*schema.Column{ProvisionedNetworksColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "provisioned_hosts_hosts_ProvisionedHostToHost",
+				Symbol:     "provisioned_hosts_hosts_Host",
 				Columns:    []*schema.Column{ProvisionedHostsColumns[7]},
 				RefColumns: []*schema.Column{HostsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "provisioned_hosts_plans_ProvisionedHostToEndStepPlan",
+				Symbol:     "provisioned_hosts_plans_EndStepPlan",
 				Columns:    []*schema.Column{ProvisionedHostsColumns[8]},
 				RefColumns: []*schema.Column{PlansColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "provisioned_hosts_builds_ProvisionedHostToBuild",
+				Symbol:     "provisioned_hosts_builds_Build",
 				Columns:    []*schema.Column{ProvisionedHostsColumns[9]},
 				RefColumns: []*schema.Column{BuildsColumns[0]},
 				OnDelete:   schema.NoAction,
@@ -1144,7 +1144,7 @@ var (
 		{Name: "adhoc_plan_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "build_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "plan_status", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "provisioned_host_provisioned_host_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "provisioned_host_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioned_network_provisioned_network_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_scheduled_step_status", Type: field.TypeUUID, Unique: true, Nullable: true},
 		{Name: "provisioning_step_provisioning_step_to_status", Type: field.TypeUUID, Unique: true, Nullable: true},
@@ -1176,7 +1176,7 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "status_provisioned_hosts_ProvisionedHostToStatus",
+				Symbol:     "status_provisioned_hosts_Status",
 				Columns:    []*schema.Column{StatusColumns[11]},
 				RefColumns: []*schema.Column{ProvisionedHostsColumns[0]},
 				OnDelete:   schema.Cascade,

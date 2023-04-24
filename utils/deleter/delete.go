@@ -133,7 +133,7 @@ func main() {
 	// for _, entBuild := range entBuilds {
 	// 	amountDeleted, err := client.GinFileMiddleware.Delete().Where(
 	// 		ginfilemiddleware.HasProvisionedHostWith(
-	// 			provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
+	// 			provisionedhost.HasProvisionedNetworkWith(
 	// 				provisionednetwork.HasProvisionedNetworkToBuildWith(
 	// 					build.IDEQ(entBuild.ID),
 	// 				),
@@ -155,7 +155,7 @@ func main() {
 	// 	logrus.Infof("Deleted %v amount of agentstatus for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.AgentTask.Delete().Where(
 	// 		agenttask.HasAgentTaskToProvisionedHostWith(
-	// 			provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
+	// 			provisionedhost.HasProvisionedNetworkWith(
 	// 				provisionednetwork.HasProvisionedNetworkToBuildWith(
 	// 					build.IDEQ(entBuild.ID),
 	// 				),
@@ -168,7 +168,7 @@ func main() {
 	// 	logrus.Infof("Deleted %v amount of agenttask for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.ProvisioningStep.Delete().Where(
 	// 		provisioningstep.HasProvisioningStepToProvisionedHostWith(
-	// 			provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
+	// 			provisionedhost.HasProvisionedNetworkWith(
 	// 				provisionednetwork.HasProvisionedNetworkToBuildWith(
 	// 					build.IDEQ(entBuild.ID),
 	// 				),
@@ -180,7 +180,7 @@ func main() {
 	// 	}
 	// 	logrus.Infof("Deleted %v amount of pstep for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.ProvisionedHost.Delete().Where(
-	// 		provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
+	// 		provisionedhost.HasProvisionedNetworkWith(
 	// 			provisionednetwork.HasProvisionedNetworkToBuildWith(
 	// 				build.IDEQ(entBuild.ID),
 	// 			),

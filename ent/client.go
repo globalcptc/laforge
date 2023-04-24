@@ -4325,15 +4325,15 @@ func (c *ProvisionedHostClient) GetX(ctx context.Context, id uuid.UUID) *Provisi
 	return obj
 }
 
-// QueryProvisionedHostToStatus queries the ProvisionedHostToStatus edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToStatus(ph *ProvisionedHost) *StatusQuery {
+// QueryStatus queries the Status edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryStatus(ph *ProvisionedHost) *StatusQuery {
 	query := &StatusQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, provisionedhost.ProvisionedHostToStatusTable, provisionedhost.ProvisionedHostToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, provisionedhost.StatusTable, provisionedhost.StatusColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4341,15 +4341,15 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToStatus(ph *ProvisionedHost
 	return query
 }
 
-// QueryProvisionedHostToProvisionedNetwork queries the ProvisionedHostToProvisionedNetwork edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToProvisionedNetwork(ph *ProvisionedHost) *ProvisionedNetworkQuery {
+// QueryProvisionedNetwork queries the ProvisionedNetwork edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryProvisionedNetwork(ph *ProvisionedHost) *ProvisionedNetworkQuery {
 	query := &ProvisionedNetworkQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(provisionednetwork.Table, provisionednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.ProvisionedHostToProvisionedNetworkTable, provisionedhost.ProvisionedHostToProvisionedNetworkColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.ProvisionedNetworkTable, provisionedhost.ProvisionedNetworkColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4357,15 +4357,15 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToProvisionedNetwork(ph *Pro
 	return query
 }
 
-// QueryProvisionedHostToHost queries the ProvisionedHostToHost edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToHost(ph *ProvisionedHost) *HostQuery {
+// QueryHost queries the Host edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryHost(ph *ProvisionedHost) *HostQuery {
 	query := &HostQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(host.Table, host.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.ProvisionedHostToHostTable, provisionedhost.ProvisionedHostToHostColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.HostTable, provisionedhost.HostColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4373,15 +4373,15 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToHost(ph *ProvisionedHost) 
 	return query
 }
 
-// QueryProvisionedHostToEndStepPlan queries the ProvisionedHostToEndStepPlan edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToEndStepPlan(ph *ProvisionedHost) *PlanQuery {
+// QueryEndStepPlan queries the EndStepPlan edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryEndStepPlan(ph *ProvisionedHost) *PlanQuery {
 	query := &PlanQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.ProvisionedHostToEndStepPlanTable, provisionedhost.ProvisionedHostToEndStepPlanColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.EndStepPlanTable, provisionedhost.EndStepPlanColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4389,15 +4389,15 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToEndStepPlan(ph *Provisione
 	return query
 }
 
-// QueryProvisionedHostToBuild queries the ProvisionedHostToBuild edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToBuild(ph *ProvisionedHost) *BuildQuery {
+// QueryBuild queries the Build edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryBuild(ph *ProvisionedHost) *BuildQuery {
 	query := &BuildQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.ProvisionedHostToBuildTable, provisionedhost.ProvisionedHostToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.BuildTable, provisionedhost.BuildColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4405,15 +4405,15 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToBuild(ph *ProvisionedHost)
 	return query
 }
 
-// QueryProvisionedHostToProvisioningStep queries the ProvisionedHostToProvisioningStep edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToProvisioningStep(ph *ProvisionedHost) *ProvisioningStepQuery {
+// QueryProvisioningSteps queries the ProvisioningSteps edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryProvisioningSteps(ph *ProvisionedHost) *ProvisioningStepQuery {
 	query := &ProvisioningStepQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(provisioningstep.Table, provisioningstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToProvisioningStepTable, provisionedhost.ProvisionedHostToProvisioningStepColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisioningStepsTable, provisionedhost.ProvisioningStepsColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4421,15 +4421,15 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToProvisioningStep(ph *Provi
 	return query
 }
 
-// QueryProvisionedHostToProvisioningScheduledStep queries the ProvisionedHostToProvisioningScheduledStep edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToProvisioningScheduledStep(ph *ProvisionedHost) *ProvisioningScheduledStepQuery {
+// QueryProvisioningScheduledSteps queries the ProvisioningScheduledSteps edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryProvisioningScheduledSteps(ph *ProvisionedHost) *ProvisioningScheduledStepQuery {
 	query := &ProvisioningScheduledStepQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToProvisioningScheduledStepTable, provisionedhost.ProvisionedHostToProvisioningScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisioningScheduledStepsTable, provisionedhost.ProvisioningScheduledStepsColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4437,15 +4437,15 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToProvisioningScheduledStep(
 	return query
 }
 
-// QueryProvisionedHostToAgentStatus queries the ProvisionedHostToAgentStatus edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToAgentStatus(ph *ProvisionedHost) *AgentStatusQuery {
+// QueryAgentStatuses queries the AgentStatuses edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryAgentStatuses(ph *ProvisionedHost) *AgentStatusQuery {
 	query := &AgentStatusQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(agentstatus.Table, agentstatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToAgentStatusTable, provisionedhost.ProvisionedHostToAgentStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.AgentStatusesTable, provisionedhost.AgentStatusesColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4453,15 +4453,15 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToAgentStatus(ph *Provisione
 	return query
 }
 
-// QueryProvisionedHostToAgentTask queries the ProvisionedHostToAgentTask edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToAgentTask(ph *ProvisionedHost) *AgentTaskQuery {
+// QueryAgentTasks queries the AgentTasks edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryAgentTasks(ph *ProvisionedHost) *AgentTaskQuery {
 	query := &AgentTaskQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(agenttask.Table, agenttask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToAgentTaskTable, provisionedhost.ProvisionedHostToAgentTaskColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.AgentTasksTable, provisionedhost.AgentTasksColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4469,15 +4469,15 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToAgentTask(ph *ProvisionedH
 	return query
 }
 
-// QueryProvisionedHostToPlan queries the ProvisionedHostToPlan edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToPlan(ph *ProvisionedHost) *PlanQuery {
+// QueryPlan queries the Plan edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryPlan(ph *ProvisionedHost) *PlanQuery {
 	query := &PlanQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisionedhost.ProvisionedHostToPlanTable, provisionedhost.ProvisionedHostToPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisionedhost.PlanTable, provisionedhost.PlanColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
@@ -4485,15 +4485,15 @@ func (c *ProvisionedHostClient) QueryProvisionedHostToPlan(ph *ProvisionedHost) 
 	return query
 }
 
-// QueryProvisionedHostToGinFileMiddleware queries the ProvisionedHostToGinFileMiddleware edge of a ProvisionedHost.
-func (c *ProvisionedHostClient) QueryProvisionedHostToGinFileMiddleware(ph *ProvisionedHost) *GinFileMiddlewareQuery {
+// QueryGinFileMiddleware queries the GinFileMiddleware edge of a ProvisionedHost.
+func (c *ProvisionedHostClient) QueryGinFileMiddleware(ph *ProvisionedHost) *GinFileMiddlewareQuery {
 	query := &GinFileMiddlewareQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := ph.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, id),
 			sqlgraph.To(ginfilemiddleware.Table, ginfilemiddleware.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisionedhost.ProvisionedHostToGinFileMiddlewareTable, provisionedhost.ProvisionedHostToGinFileMiddlewareColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisionedhost.GinFileMiddlewareTable, provisionedhost.GinFileMiddlewareColumn),
 		)
 		fromV = sqlgraph.Neighbors(ph.driver.Dialect(), step)
 		return fromV, nil
