@@ -48,15 +48,15 @@ func (tu *TokenUpdate) AddExpireAt(i int64) *TokenUpdate {
 	return tu
 }
 
-// SetTokenToAuthUserID sets the "TokenToAuthUser" edge to the AuthUser entity by ID.
-func (tu *TokenUpdate) SetTokenToAuthUserID(id uuid.UUID) *TokenUpdate {
-	tu.mutation.SetTokenToAuthUserID(id)
+// SetAuthUserID sets the "AuthUser" edge to the AuthUser entity by ID.
+func (tu *TokenUpdate) SetAuthUserID(id uuid.UUID) *TokenUpdate {
+	tu.mutation.SetAuthUserID(id)
 	return tu
 }
 
-// SetTokenToAuthUser sets the "TokenToAuthUser" edge to the AuthUser entity.
-func (tu *TokenUpdate) SetTokenToAuthUser(a *AuthUser) *TokenUpdate {
-	return tu.SetTokenToAuthUserID(a.ID)
+// SetAuthUser sets the "AuthUser" edge to the AuthUser entity.
+func (tu *TokenUpdate) SetAuthUser(a *AuthUser) *TokenUpdate {
+	return tu.SetAuthUserID(a.ID)
 }
 
 // Mutation returns the TokenMutation object of the builder.
@@ -64,9 +64,9 @@ func (tu *TokenUpdate) Mutation() *TokenMutation {
 	return tu.mutation
 }
 
-// ClearTokenToAuthUser clears the "TokenToAuthUser" edge to the AuthUser entity.
-func (tu *TokenUpdate) ClearTokenToAuthUser() *TokenUpdate {
-	tu.mutation.ClearTokenToAuthUser()
+// ClearAuthUser clears the "AuthUser" edge to the AuthUser entity.
+func (tu *TokenUpdate) ClearAuthUser() *TokenUpdate {
+	tu.mutation.ClearAuthUser()
 	return tu
 }
 
@@ -132,8 +132,8 @@ func (tu *TokenUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (tu *TokenUpdate) check() error {
-	if _, ok := tu.mutation.TokenToAuthUserID(); tu.mutation.TokenToAuthUserCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "Token.TokenToAuthUser"`)
+	if _, ok := tu.mutation.AuthUserID(); tu.mutation.AuthUserCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Token.AuthUser"`)
 	}
 	return nil
 }
@@ -177,12 +177,12 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: token.FieldExpireAt,
 		})
 	}
-	if tu.mutation.TokenToAuthUserCleared() {
+	if tu.mutation.AuthUserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   token.TokenToAuthUserTable,
-			Columns: []string{token.TokenToAuthUserColumn},
+			Table:   token.AuthUserTable,
+			Columns: []string{token.AuthUserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -193,12 +193,12 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tu.mutation.TokenToAuthUserIDs(); len(nodes) > 0 {
+	if nodes := tu.mutation.AuthUserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   token.TokenToAuthUserTable,
-			Columns: []string{token.TokenToAuthUserColumn},
+			Table:   token.AuthUserTable,
+			Columns: []string{token.AuthUserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -250,15 +250,15 @@ func (tuo *TokenUpdateOne) AddExpireAt(i int64) *TokenUpdateOne {
 	return tuo
 }
 
-// SetTokenToAuthUserID sets the "TokenToAuthUser" edge to the AuthUser entity by ID.
-func (tuo *TokenUpdateOne) SetTokenToAuthUserID(id uuid.UUID) *TokenUpdateOne {
-	tuo.mutation.SetTokenToAuthUserID(id)
+// SetAuthUserID sets the "AuthUser" edge to the AuthUser entity by ID.
+func (tuo *TokenUpdateOne) SetAuthUserID(id uuid.UUID) *TokenUpdateOne {
+	tuo.mutation.SetAuthUserID(id)
 	return tuo
 }
 
-// SetTokenToAuthUser sets the "TokenToAuthUser" edge to the AuthUser entity.
-func (tuo *TokenUpdateOne) SetTokenToAuthUser(a *AuthUser) *TokenUpdateOne {
-	return tuo.SetTokenToAuthUserID(a.ID)
+// SetAuthUser sets the "AuthUser" edge to the AuthUser entity.
+func (tuo *TokenUpdateOne) SetAuthUser(a *AuthUser) *TokenUpdateOne {
+	return tuo.SetAuthUserID(a.ID)
 }
 
 // Mutation returns the TokenMutation object of the builder.
@@ -266,9 +266,9 @@ func (tuo *TokenUpdateOne) Mutation() *TokenMutation {
 	return tuo.mutation
 }
 
-// ClearTokenToAuthUser clears the "TokenToAuthUser" edge to the AuthUser entity.
-func (tuo *TokenUpdateOne) ClearTokenToAuthUser() *TokenUpdateOne {
-	tuo.mutation.ClearTokenToAuthUser()
+// ClearAuthUser clears the "AuthUser" edge to the AuthUser entity.
+func (tuo *TokenUpdateOne) ClearAuthUser() *TokenUpdateOne {
+	tuo.mutation.ClearAuthUser()
 	return tuo
 }
 
@@ -347,8 +347,8 @@ func (tuo *TokenUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (tuo *TokenUpdateOne) check() error {
-	if _, ok := tuo.mutation.TokenToAuthUserID(); tuo.mutation.TokenToAuthUserCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "Token.TokenToAuthUser"`)
+	if _, ok := tuo.mutation.AuthUserID(); tuo.mutation.AuthUserCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Token.AuthUser"`)
 	}
 	return nil
 }
@@ -409,12 +409,12 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 			Column: token.FieldExpireAt,
 		})
 	}
-	if tuo.mutation.TokenToAuthUserCleared() {
+	if tuo.mutation.AuthUserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   token.TokenToAuthUserTable,
-			Columns: []string{token.TokenToAuthUserColumn},
+			Table:   token.AuthUserTable,
+			Columns: []string{token.AuthUserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -425,12 +425,12 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tuo.mutation.TokenToAuthUserIDs(); len(nodes) > 0 {
+	if nodes := tuo.mutation.AuthUserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   token.TokenToAuthUserTable,
-			Columns: []string{token.TokenToAuthUserColumn},
+			Table:   token.AuthUserTable,
+			Columns: []string{token.AuthUserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

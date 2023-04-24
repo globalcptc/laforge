@@ -34730,18 +34730,18 @@ func (m *TeamMutation) ResetEdge(name string) error {
 // TokenMutation represents an operation that mutates the Token nodes in the graph.
 type TokenMutation struct {
 	config
-	op                      Op
-	typ                     string
-	id                      *uuid.UUID
-	token                   *string
-	expire_at               *int64
-	addexpire_at            *int64
-	clearedFields           map[string]struct{}
-	_TokenToAuthUser        *uuid.UUID
-	cleared_TokenToAuthUser bool
-	done                    bool
-	oldValue                func(context.Context) (*Token, error)
-	predicates              []predicate.Token
+	op               Op
+	typ              string
+	id               *uuid.UUID
+	token            *string
+	expire_at        *int64
+	addexpire_at     *int64
+	clearedFields    map[string]struct{}
+	_AuthUser        *uuid.UUID
+	cleared_AuthUser bool
+	done             bool
+	oldValue         func(context.Context) (*Token, error)
+	predicates       []predicate.Token
 }
 
 var _ ent.Mutation = (*TokenMutation)(nil)
@@ -34940,43 +34940,43 @@ func (m *TokenMutation) ResetExpireAt() {
 	m.addexpire_at = nil
 }
 
-// SetTokenToAuthUserID sets the "TokenToAuthUser" edge to the AuthUser entity by id.
-func (m *TokenMutation) SetTokenToAuthUserID(id uuid.UUID) {
-	m._TokenToAuthUser = &id
+// SetAuthUserID sets the "AuthUser" edge to the AuthUser entity by id.
+func (m *TokenMutation) SetAuthUserID(id uuid.UUID) {
+	m._AuthUser = &id
 }
 
-// ClearTokenToAuthUser clears the "TokenToAuthUser" edge to the AuthUser entity.
-func (m *TokenMutation) ClearTokenToAuthUser() {
-	m.cleared_TokenToAuthUser = true
+// ClearAuthUser clears the "AuthUser" edge to the AuthUser entity.
+func (m *TokenMutation) ClearAuthUser() {
+	m.cleared_AuthUser = true
 }
 
-// TokenToAuthUserCleared reports if the "TokenToAuthUser" edge to the AuthUser entity was cleared.
-func (m *TokenMutation) TokenToAuthUserCleared() bool {
-	return m.cleared_TokenToAuthUser
+// AuthUserCleared reports if the "AuthUser" edge to the AuthUser entity was cleared.
+func (m *TokenMutation) AuthUserCleared() bool {
+	return m.cleared_AuthUser
 }
 
-// TokenToAuthUserID returns the "TokenToAuthUser" edge ID in the mutation.
-func (m *TokenMutation) TokenToAuthUserID() (id uuid.UUID, exists bool) {
-	if m._TokenToAuthUser != nil {
-		return *m._TokenToAuthUser, true
+// AuthUserID returns the "AuthUser" edge ID in the mutation.
+func (m *TokenMutation) AuthUserID() (id uuid.UUID, exists bool) {
+	if m._AuthUser != nil {
+		return *m._AuthUser, true
 	}
 	return
 }
 
-// TokenToAuthUserIDs returns the "TokenToAuthUser" edge IDs in the mutation.
+// AuthUserIDs returns the "AuthUser" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// TokenToAuthUserID instead. It exists only for internal usage by the builders.
-func (m *TokenMutation) TokenToAuthUserIDs() (ids []uuid.UUID) {
-	if id := m._TokenToAuthUser; id != nil {
+// AuthUserID instead. It exists only for internal usage by the builders.
+func (m *TokenMutation) AuthUserIDs() (ids []uuid.UUID) {
+	if id := m._AuthUser; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetTokenToAuthUser resets all changes to the "TokenToAuthUser" edge.
-func (m *TokenMutation) ResetTokenToAuthUser() {
-	m._TokenToAuthUser = nil
-	m.cleared_TokenToAuthUser = false
+// ResetAuthUser resets all changes to the "AuthUser" edge.
+func (m *TokenMutation) ResetAuthUser() {
+	m._AuthUser = nil
+	m.cleared_AuthUser = false
 }
 
 // Where appends a list predicates to the TokenMutation builder.
@@ -35130,8 +35130,8 @@ func (m *TokenMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TokenMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m._TokenToAuthUser != nil {
-		edges = append(edges, token.EdgeTokenToAuthUser)
+	if m._AuthUser != nil {
+		edges = append(edges, token.EdgeAuthUser)
 	}
 	return edges
 }
@@ -35140,8 +35140,8 @@ func (m *TokenMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *TokenMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case token.EdgeTokenToAuthUser:
-		if id := m._TokenToAuthUser; id != nil {
+	case token.EdgeAuthUser:
+		if id := m._AuthUser; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -35165,8 +35165,8 @@ func (m *TokenMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TokenMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.cleared_TokenToAuthUser {
-		edges = append(edges, token.EdgeTokenToAuthUser)
+	if m.cleared_AuthUser {
+		edges = append(edges, token.EdgeAuthUser)
 	}
 	return edges
 }
@@ -35175,8 +35175,8 @@ func (m *TokenMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *TokenMutation) EdgeCleared(name string) bool {
 	switch name {
-	case token.EdgeTokenToAuthUser:
-		return m.cleared_TokenToAuthUser
+	case token.EdgeAuthUser:
+		return m.cleared_AuthUser
 	}
 	return false
 }
@@ -35185,8 +35185,8 @@ func (m *TokenMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *TokenMutation) ClearEdge(name string) error {
 	switch name {
-	case token.EdgeTokenToAuthUser:
-		m.ClearTokenToAuthUser()
+	case token.EdgeAuthUser:
+		m.ClearAuthUser()
 		return nil
 	}
 	return fmt.Errorf("unknown Token unique edge %s", name)
@@ -35196,8 +35196,8 @@ func (m *TokenMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *TokenMutation) ResetEdge(name string) error {
 	switch name {
-	case token.EdgeTokenToAuthUser:
-		m.ResetTokenToAuthUser()
+	case token.EdgeAuthUser:
+		m.ResetAuthUser()
 		return nil
 	}
 	return fmt.Errorf("unknown Token edge %s", name)

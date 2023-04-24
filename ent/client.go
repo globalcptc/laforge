@@ -6493,15 +6493,15 @@ func (c *TokenClient) GetX(ctx context.Context, id uuid.UUID) *Token {
 	return obj
 }
 
-// QueryTokenToAuthUser queries the TokenToAuthUser edge of a Token.
-func (c *TokenClient) QueryTokenToAuthUser(t *Token) *AuthUserQuery {
+// QueryAuthUser queries the AuthUser edge of a Token.
+func (c *TokenClient) QueryAuthUser(t *Token) *AuthUserQuery {
 	query := &AuthUserQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := t.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(token.Table, token.FieldID, id),
 			sqlgraph.To(authuser.Table, authuser.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, token.TokenToAuthUserTable, token.TokenToAuthUserColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, token.AuthUserTable, token.AuthUserColumn),
 		)
 		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
 		return fromV, nil

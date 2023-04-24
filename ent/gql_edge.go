@@ -1348,10 +1348,10 @@ func (t *Team) Plan(ctx context.Context) (*Plan, error) {
 	return result, MaskNotFound(err)
 }
 
-func (t *Token) TokenToAuthUser(ctx context.Context) (*AuthUser, error) {
-	result, err := t.Edges.TokenToAuthUserOrErr()
+func (t *Token) AuthUser(ctx context.Context) (*AuthUser, error) {
+	result, err := t.Edges.AuthUserOrErr()
 	if IsNotLoaded(err) {
-		result, err = t.QueryTokenToAuthUser().Only(ctx)
+		result, err = t.QueryAuthUser().Only(ctx)
 	}
 	return result, err
 }

@@ -26,33 +26,33 @@ type Token struct {
 	Edges TokenEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// TokenToAuthUser holds the value of the TokenToAuthUser edge.
-	HCLTokenToAuthUser *AuthUser `json:"TokenToAuthUser,omitempty"`
+	// AuthUser holds the value of the AuthUser edge.
+	HCLAuthUser *AuthUser `json:"AuthUser,omitempty"`
 	//
 	auth_user_tokens *uuid.UUID
 }
 
 // TokenEdges holds the relations/edges for other nodes in the graph.
 type TokenEdges struct {
-	// TokenToAuthUser holds the value of the TokenToAuthUser edge.
-	TokenToAuthUser *AuthUser `json:"TokenToAuthUser,omitempty"`
+	// AuthUser holds the value of the AuthUser edge.
+	AuthUser *AuthUser `json:"AuthUser,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// TokenToAuthUserOrErr returns the TokenToAuthUser value or an error if the edge
+// AuthUserOrErr returns the AuthUser value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e TokenEdges) TokenToAuthUserOrErr() (*AuthUser, error) {
+func (e TokenEdges) AuthUserOrErr() (*AuthUser, error) {
 	if e.loadedTypes[0] {
-		if e.TokenToAuthUser == nil {
-			// The edge TokenToAuthUser was loaded in eager-loading,
+		if e.AuthUser == nil {
+			// The edge AuthUser was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: authuser.Label}
 		}
-		return e.TokenToAuthUser, nil
+		return e.AuthUser, nil
 	}
-	return nil, &NotLoadedError{edge: "TokenToAuthUser"}
+	return nil, &NotLoadedError{edge: "AuthUser"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -113,9 +113,9 @@ func (t *Token) assignValues(columns []string, values []interface{}) error {
 	return nil
 }
 
-// QueryTokenToAuthUser queries the "TokenToAuthUser" edge of the Token entity.
-func (t *Token) QueryTokenToAuthUser() *AuthUserQuery {
-	return (&TokenClient{config: t.config}).QueryTokenToAuthUser(t)
+// QueryAuthUser queries the "AuthUser" edge of the Token entity.
+func (t *Token) QueryAuthUser() *AuthUserQuery {
+	return (&TokenClient{config: t.config}).QueryAuthUser(t)
 }
 
 // Update returns a builder for updating this Token.

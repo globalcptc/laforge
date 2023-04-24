@@ -3927,9 +3927,9 @@ func (t *Token) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[0] = &Edge{
 		Type: "AuthUser",
-		Name: "TokenToAuthUser",
+		Name: "AuthUser",
 	}
-	err = t.QueryTokenToAuthUser().
+	err = t.QueryAuthUser().
 		Select(authuser.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
