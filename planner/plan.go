@@ -1390,7 +1390,9 @@ func renderFiles(ctx context.Context, client *ent.Client, logger *logging.Logger
 			case provisioningstep.TypeAnsible:
 				filePath, err = renderAnsible(ctx, client, logger, entProvisioningStep)
 			default:
-				err = fmt.Errorf("failed to render provisioning step files: unknown step type")
+				// err = fmt.Errorf("failed to render provisioning step files: unknown step type")
+				// Rendering is not needed for all other step types
+				return nil
 			}
 		} else if entProvisioningScheduledStep != nil {
 			switch entProvisioningScheduledStep.Type {
@@ -1401,7 +1403,9 @@ func renderFiles(ctx context.Context, client *ent.Client, logger *logging.Logger
 			case provisioningscheduledstep.TypeAnsible:
 				filePath, err = renderAnsible(ctx, client, logger, entProvisioningScheduledStep)
 			default:
-				err = fmt.Errorf("failed to render provisioning scheduled step files: unknown step type")
+				// err = fmt.Errorf("failed to render provisioning scheduled step files: unknown step type")
+				// Rendering is not needed for all other step types
+				return nil
 			}
 		}
 		if err != nil {
