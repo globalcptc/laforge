@@ -10,9 +10,34 @@ import (
 	"github.com/gen0cide/laforge/ent"
 )
 
+type AgentConfig struct {
+	GrpcServerURI  string `json:"GrpcServerUri"`
+	APIDownloadURL string `json:"ApiDownloadUrl"`
+}
+
 type AgentStatusBatch struct {
 	AgentStatuses []*ent.AgentStatus `json:"agentStatuses"`
 	PageInfo      *LaForgePageInfo   `json:"pageInfo"`
+}
+
+type AuthConfig struct {
+	GithubID      string `json:"GithubId"`
+	CookieTimeout int    `json:"CookieTimeout"`
+}
+
+type BuilderConfig struct {
+	Builder    string `json:"Builder"`
+	ConfigFile string `json:"ConfigFile"`
+}
+
+type DatabaseConfig struct {
+	PostgresURI string `json:"PostgresUri"`
+	AdminUser   string `json:"AdminUser"`
+}
+
+type GraphqlConfig struct {
+	Hostname       string `json:"Hostname"`
+	RedisServerURI string `json:"RedisServerUri"`
 }
 
 type LaForgePageInfo struct {
@@ -36,9 +61,27 @@ type PlanCounts struct {
 	Cancelled        int `json:"cancelled"`
 }
 
+type ServerConfig struct {
+	ConfigFile string                 `json:"ConfigFile"`
+	Debug      *bool                  `json:"Debug"`
+	LogFolder  string                 `json:"LogFolder"`
+	GinMode    string                 `json:"GinMode"`
+	Builders   map[string]interface{} `json:"Builders"`
+	Database   *DatabaseConfig        `json:"Database"`
+	Auth       *AuthConfig            `json:"Auth"`
+	UI         *UIConfig              `json:"UI"`
+	Agent      *AgentConfig           `json:"Agent"`
+	Graphql    *GraphqlConfig         `json:"Graphql"`
+}
+
 type StatusBatch struct {
 	Statuses []*ent.Status    `json:"statuses"`
 	PageInfo *LaForgePageInfo `json:"pageInfo"`
+}
+
+type UIConfig struct {
+	HTTPSEnabled   bool      `json:"HttpsEnabled"`
+	AllowedOrigins []*string `json:"AllowedOrigins"`
 }
 
 type ConfigMap struct {

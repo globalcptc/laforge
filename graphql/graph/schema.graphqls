@@ -535,7 +535,7 @@ type ProvisionedHost {
   Build: Build!
   ProvisioningSteps: [ProvisioningStep]!
   ProvisioningScheduledSteps: [ProvisioningScheduledStep]!
-  AgentStatus: AgentStatus
+  AgentStatuses: [AgentStatus]!
   AgentTasks: [AgentTask]!
   Plan: Plan!
   GinFileMiddleware: GinFileMiddleware

@@ -183,7 +183,7 @@ query GetBuildTree($buildId: String!) {
               }
             }
           }
-          AgentStatus {
+          AgentStatuses {
             clientId
           }
         }

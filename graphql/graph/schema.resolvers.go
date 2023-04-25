@@ -1745,6 +1745,10 @@ func (r *queryResolver) ServerTasks(ctx context.Context, taskUUIDs []*string) ([
 	return serverTasks, nil
 }
 
+func (r *queryResolver) ServerConfig(ctx context.Context) (*model.ServerConfig, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
 func (r *repoCommitResolver) ID(ctx context.Context, obj *ent.RepoCommit) (string, error) {
 	return obj.ID.String(), nil
 }
