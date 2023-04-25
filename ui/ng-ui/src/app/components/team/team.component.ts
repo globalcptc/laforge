@@ -191,7 +191,7 @@ export class TeamComponent implements OnInit, OnDestroy {
       //   if (teamPlan?.PlanDiffs.length > 0) {
       //     const latestDiff = [...teamPlan.PlanDiffs].sort((a, b) => b.revision - a.revision)[0];
       //     // expand if latest diff is a part of the latest commit
-      //     if (latestCommit && latestCommit.BuildCommitToPlanDiffs.filter((diff) => diff.id === latestDiff.id).length > 0) {
+      //     if (latestCommit && latestCommit.PlanDiffs.filter((diff) => diff.id === latestDiff.id).length > 0) {
       //       // this.expandOverride = true;
       return false;
       //     }

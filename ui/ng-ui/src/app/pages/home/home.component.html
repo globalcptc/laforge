@@ -33,7 +33,9 @@
           <b>{{ environment.name }}</b>
         </div>
         <div class="commit-hash">
-          <a [href]="getLatestCommitLink(environment)" target="_blank" rel="noreferrer">{{ getLatestCommitHash(environment) }}</a>
+          <a [href]="getLatestCommitLink(environment)" target="_blank" rel="noreferrer">
+            {{ environment.Repositories[0].branchName }}@{{ getLatestCommitHash(environment) }}
+          </a>
         </div>
         <div class="owner">{{ getLastCommitter(environment) }}</div>
         <div class="team-count">
@@ -56,15 +58,15 @@
             </button> -->
             <button class="btn btn-success" [ngClass]="{ 'btn-icon': showIconsOnly }" (click)="createBuild(environment)">
               <i class="fa fa-hammer" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
-              <ng-container *ngIf="!showIconsOnly">Build</ng-container>
+              <div class="btn-text" *ngIf="!showIconsOnly">Build</div>
             </button>
             <button class="btn btn-info" [ngClass]="{ 'btn-icon': showIconsOnly }" (click)="updateEnvironmentFromGit(environment)">
               <i class="fa fa-sync-alt" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
-              <ng-container *ngIf="!showIconsOnly">Pull</ng-container>
+              <div class="btn-text" *ngIf="!showIconsOnly">Pull</div>
             </button>
             <button class="btn btn-dark" [ngClass]="{ 'btn-icon': showIconsOnly }" (click)="viewEnvironmentLogs(environment)">
               <i class="fa fa-scroll" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
-              <ng-container *ngIf="!showIconsOnly">View Logs</ng-container>
+              <div class="btn-text" *ngIf="!showIconsOnly">Logs</div>
             </button>
             <!-- <button class="btn btn-danger" [ngClass]="{ 'btn-icon': showIconsOnly }">
               <i class="fa fa-bomb" [ngClass]="!showIconsOnly ? 'mr-1' : ''"></i>
@@ -134,9 +136,9 @@
             <div class="time">
               <ng-container *ngIf="buildCommit.ServerTasks.length > 0">
                 {{ buildCommit.ServerTasks[0].startTime | dateAgo }}
-                <span *ngIf="buildCommit.ServerTask[0].end_time">
+                <span *ngIf="buildCommit.ServerTasks[0].end_time">
                   , took
-                  {{ buildCommit.ServerTasks[0].end_time | dateBetween: buildCommit.ServerTask[0].startTime }}
+                  {{ buildCommit.ServerTasks[0].end_time | dateBetween: buildCommit.ServerTasks[0].startTime }}
                 </span>
               </ng-container>
             </div>
@@ -153,11 +155,7 @@
                   *ngIf="buildIsCancellable(buildCommit) || buildCommitIsCancellable(buildCommit)"
                   class="btn btn-danger"
                   [ngClass]="{ 'btn-icon': showIconsOnly }"
-                  (click)="
-                    buildIsCancellable(buildCommit.BuildCommitToBuild.id)
-                      ? cancelBuild(buildCommit.BuildCommitToBuild.id)
-                      : cancelBuildCommit(buildCommit)
-                  "
+                  (click)="buildIsCancellable(buildCommit.Build.id) ? cancelBuild(buildCommit.Build.id) : cancelBuildCommit(buildCommit)"
                 >
                   <ng-container *ngIf="showIconsOnly"><i class="fa fa-times"></i></ng-container>
                   <ng-container *ngIf="!showIconsOnly">Cancel</ng-container>
@@ -175,7 +173,7 @@
                   *ngIf="buildCommitIsViewable(buildCommit)"
                   class="btn btn-info"
                   [ngClass]="{ 'btn-icon': showIconsOnly }"
-                  [href]="'/build/' + buildCommit.BuildCommitToBuild.id"
+                  [href]="'/build/' + buildCommit.Build.id"
                 >
                   <ng-container *ngIf="showIconsOnly"><i class="fa fa-eye"></i></ng-container>
                   <ng-container *ngIf="!showIconsOnly">View Progress</ng-container>
@@ -184,7 +182,7 @@
                   *ngIf="buildCommitIsManagable(buildCommit)"
                   class="btn btn-dark"
                   [ngClass]="{ 'btn-icon': showIconsOnly }"
-                  [href]="'/manage/' + buildCommit.BuildCommitToBuild.id"
+                  [href]="'/manage/' + buildCommit.Build.id"
                 >
                   <ng-container *ngIf="showIconsOnly"><i class="fa fa-cogs"></i></ng-container>
                   <ng-container *ngIf="!showIconsOnly">Manage</ng-container>

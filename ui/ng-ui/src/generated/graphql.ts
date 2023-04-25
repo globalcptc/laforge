@@ -1558,7 +1558,7 @@ export type LaForgeListEnvironmentsQuery = { __typename?: 'Query' } & {
         { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name' | 'teamCount'> & {
             Repositories: Array<
               Maybe<
-                { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repoUrl'> & {
+                { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repoUrl' | 'branchName' | 'environmentFilepath'> & {
                     RepoCommits: Array<
                       Maybe<{ __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'revision' | 'author' | 'hash'>>
                     >;
@@ -2833,6 +2833,8 @@ export const ListEnvironmentsDocument = gql`
       Repositories {
         id
         repoUrl
+        branchName
+        environmentFilepath
         RepoCommits {
           id
           revision

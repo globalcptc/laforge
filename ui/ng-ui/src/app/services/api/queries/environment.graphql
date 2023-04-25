@@ -198,6 +198,8 @@ query ListEnvironments {
     Repositories {
       id
       repoUrl
+      branchName
+      environmentFilepath
       RepoCommits {
         id
         revision

@@ -57,7 +57,7 @@
             v{{ _build.revision }}
             <span class="ml-2">
               (
-              <a [href]="_build.RepoCommit.hash | gitUrl: _build.RepoCommit.Repository.repo_url">
+              <a [href]="_build.RepoCommit.hash | gitUrl: _build.RepoCommit.Repository.repoUrl">
                 <u>{{ _build.RepoCommit.hash | gitHash }}</u>
               </a>
               )
