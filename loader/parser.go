@@ -66,7 +66,7 @@ type DefinedConfigs struct {
 	DefinedFileExtract    []*ent.FileExtract            `hcl:"file_extract,block" json:"file_extract,omitempty"`
 	DefinedIdentities     []*ent.Identity               `hcl:"identity,block" json:"identities,omitempty"`
 	DefinedAnsible        []*ent.Ansible                `hcl:"ansible,block" json:"ansible,omitempty"`
-	DefinedScheduledSteps []*ent.ScheduledStep          `hcl:"schedule_step,block" json:"schedule_step,omitempty"`
+	DefinedScheduledSteps []*ent.ScheduledStep          `hcl:"scheduled,block" json:"scheduled,omitempty"`
 	Competitions          map[string]*ent.Competition   `json:"-"`
 	Hosts                 map[string]*ent.Host          `json:"-"`
 	Networks              map[string]*ent.Network       `json:"-"`
