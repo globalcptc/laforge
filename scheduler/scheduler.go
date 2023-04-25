@@ -47,6 +47,11 @@ func SchedulerWatchdog(ctx context.Context, client *ent.Client, rdb *redis.Clien
 				continue
 			}
 			for _, entProvisioningScheduledStep := range provisioningScheduledStepsToExecute {
+				err = MarkInProgress(ctx, rdb, schedulerLogger, entProvisioningScheduledStep)
+				if err != nil {
+					schedulerLogger.Log.Errorf("failed to mark scheduled step as in-progress: %v", err)
+					continue
+				}
 				go ExecuteScheduledStep(ctx, client, rdb, schedulerLogger, laforgeConfig, entProvisioningScheduledStep)
 			}
 		}
@@ -95,6 +100,33 @@ func GetStepsToExecute(ctx context.Context, client *ent.Client) ([]*ent.Provisio
 	return entProvisioningScheduledSteps, nil
 }
 
+func MarkInProgress(ctx context.Context, rdb *redis.Client, logger *logging.Logger, entProvisioningScheduledStep *ent.ProvisioningScheduledStep) error {
+	entPlan, err := entProvisioningScheduledStep.Plan(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query plan from provisioning scheduled step: %v", err)
+	}
+	planStatus, err := entPlan.Status(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query status from plan: %v", err)
+		
+	}
+	entStatus, err := entProvisioningScheduledStep.Status(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query provisioned scheduled step status: %v", err)
+	}
+	err = entStatus.Update().SetState(status.StateINPROGRESS).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update provisioned scheduled step status: %v", err)
+	}
+	rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
+	err = planStatus.Update().SetState(status.StateINPROGRESS).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update plan status: %v", err)
+	}
+	rdb.Publish(ctx, "updatedStatus", planStatus.ID.String())
+	return nil
+}
+
 func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Client, logger *logging.Logger, laforgeConfig *utils.ServerConfig, entProvisioningScheduledStep *ent.ProvisioningScheduledStep) {
 	entScheduledStep, err := entProvisioningScheduledStep.ScheduledStep(ctx)
 	if err != nil {
@@ -111,24 +143,11 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 		logger.Log.Error("failed to query status from plan: %v", err)
 		return
 	}
-	
 	entStatus, err := entProvisioningScheduledStep.Status(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed to query provisioned scheduled step status: %v", err)
 		return
 	}
-	err = entStatus.Update().SetState(status.StateINPROGRESS).Exec(ctx)
-	if err != nil {
-		logger.Log.Errorf("failed to update provisioned scheduled step status: %v", err)
-		return
-	}
-	rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
-	err = planStatus.Update().SetState(status.StateINPROGRESS).Exec(ctx)
-	if err != nil {
-		logger.Log.Errorf("failed to update plan status: %v", err)
-		return
-	}
-	rdb.Publish(ctx, "updatedStatus", planStatus.ID.String())
 	logger.Log.Debugf("executing %s scheduled step \"%s\" to run \"%s\"", entProvisioningScheduledStep.Type, entScheduledStep.HclID, entScheduledStep.Step)
 
 	entProvisionedHost, err := entProvisioningScheduledStep.ProvisionedHost(ctx)
