@@ -33,7 +33,7 @@ export class NetworkModalComponent {
     let totalHosts = 0;
     for (const host of this.data.provisionedNetwork.ProvisionedHosts) {
       totalHosts++;
-      if (host.AgentStatus?.clientId) numWithAgentData++;
+      if (host.AgentStatuses[0]?.clientId) numWithAgentData++;
       let totalSteps = 0;
       let totalCompletedSteps = 0;
       for (const step of host.ProvisioningSteps) {
@@ -52,7 +52,7 @@ export class NetworkModalComponent {
     let totalAgents = 0;
     for (const host of this.data.provisionedNetwork.ProvisionedHosts) {
       totalAgents++;
-      if (host.AgentStatus?.clientId) numWithAgentData++;
+      if (host.AgentStatuses[0]?.clientId) numWithAgentData++;
     }
     if (numWithAgentData === totalAgents) {
       this.failedChildren = false;

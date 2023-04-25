@@ -62,7 +62,7 @@ export class StepModalComponent implements OnInit {
   // let totalAgents = 0;
   // for (const host of this.data.provisioningStep.ProvisionedHosts) {
   //   totalAgents++;
-  //   if (host.AgentStatus?.clientId) numWithAgentData++;
+  //   if (host.AgentStatuses[0]?.clientId) numWithAgentData++;
   // }
   // if (numWithAgentData === totalAgents) {
   //   this.failedChildren = false;
