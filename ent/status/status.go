@@ -29,89 +29,89 @@ const (
 	FieldCompleted = "completed"
 	// FieldError holds the string denoting the error field in the database.
 	FieldError = "error"
-	// EdgeStatusToBuild holds the string denoting the statustobuild edge name in mutations.
-	EdgeStatusToBuild = "StatusToBuild"
-	// EdgeStatusToProvisionedNetwork holds the string denoting the statustoprovisionednetwork edge name in mutations.
-	EdgeStatusToProvisionedNetwork = "StatusToProvisionedNetwork"
-	// EdgeStatusToProvisionedHost holds the string denoting the statustoprovisionedhost edge name in mutations.
-	EdgeStatusToProvisionedHost = "StatusToProvisionedHost"
-	// EdgeStatusToProvisioningStep holds the string denoting the statustoprovisioningstep edge name in mutations.
-	EdgeStatusToProvisioningStep = "StatusToProvisioningStep"
-	// EdgeStatusToTeam holds the string denoting the statustoteam edge name in mutations.
-	EdgeStatusToTeam = "StatusToTeam"
-	// EdgeStatusToPlan holds the string denoting the statustoplan edge name in mutations.
-	EdgeStatusToPlan = "StatusToPlan"
-	// EdgeStatusToServerTask holds the string denoting the statustoservertask edge name in mutations.
-	EdgeStatusToServerTask = "StatusToServerTask"
-	// EdgeStatusToAdhocPlan holds the string denoting the statustoadhocplan edge name in mutations.
-	EdgeStatusToAdhocPlan = "StatusToAdhocPlan"
-	// EdgeStatusToProvisioningScheduledStep holds the string denoting the statustoprovisioningscheduledstep edge name in mutations.
-	EdgeStatusToProvisioningScheduledStep = "StatusToProvisioningScheduledStep"
+	// EdgeBuild holds the string denoting the build edge name in mutations.
+	EdgeBuild = "Build"
+	// EdgeProvisionedNetwork holds the string denoting the provisionednetwork edge name in mutations.
+	EdgeProvisionedNetwork = "ProvisionedNetwork"
+	// EdgeProvisionedHost holds the string denoting the provisionedhost edge name in mutations.
+	EdgeProvisionedHost = "ProvisionedHost"
+	// EdgeProvisioningStep holds the string denoting the provisioningstep edge name in mutations.
+	EdgeProvisioningStep = "ProvisioningStep"
+	// EdgeTeam holds the string denoting the team edge name in mutations.
+	EdgeTeam = "Team"
+	// EdgePlan holds the string denoting the plan edge name in mutations.
+	EdgePlan = "Plan"
+	// EdgeServerTask holds the string denoting the servertask edge name in mutations.
+	EdgeServerTask = "ServerTask"
+	// EdgeAdhocPlan holds the string denoting the adhocplan edge name in mutations.
+	EdgeAdhocPlan = "AdhocPlan"
+	// EdgeProvisioningScheduledStep holds the string denoting the provisioningscheduledstep edge name in mutations.
+	EdgeProvisioningScheduledStep = "ProvisioningScheduledStep"
 	// Table holds the table name of the status in the database.
 	Table = "status"
-	// StatusToBuildTable is the table that holds the StatusToBuild relation/edge.
-	StatusToBuildTable = "status"
-	// StatusToBuildInverseTable is the table name for the Build entity.
+	// BuildTable is the table that holds the Build relation/edge.
+	BuildTable = "status"
+	// BuildInverseTable is the table name for the Build entity.
 	// It exists in this package in order to avoid circular dependency with the "build" package.
-	StatusToBuildInverseTable = "builds"
-	// StatusToBuildColumn is the table column denoting the StatusToBuild relation/edge.
-	StatusToBuildColumn = "build_build_to_status"
-	// StatusToProvisionedNetworkTable is the table that holds the StatusToProvisionedNetwork relation/edge.
-	StatusToProvisionedNetworkTable = "status"
-	// StatusToProvisionedNetworkInverseTable is the table name for the ProvisionedNetwork entity.
+	BuildInverseTable = "builds"
+	// BuildColumn is the table column denoting the Build relation/edge.
+	BuildColumn = "build_status"
+	// ProvisionedNetworkTable is the table that holds the ProvisionedNetwork relation/edge.
+	ProvisionedNetworkTable = "status"
+	// ProvisionedNetworkInverseTable is the table name for the ProvisionedNetwork entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionednetwork" package.
-	StatusToProvisionedNetworkInverseTable = "provisioned_networks"
-	// StatusToProvisionedNetworkColumn is the table column denoting the StatusToProvisionedNetwork relation/edge.
-	StatusToProvisionedNetworkColumn = "provisioned_network_provisioned_network_to_status"
-	// StatusToProvisionedHostTable is the table that holds the StatusToProvisionedHost relation/edge.
-	StatusToProvisionedHostTable = "status"
-	// StatusToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
+	ProvisionedNetworkInverseTable = "provisioned_networks"
+	// ProvisionedNetworkColumn is the table column denoting the ProvisionedNetwork relation/edge.
+	ProvisionedNetworkColumn = "provisioned_network_status"
+	// ProvisionedHostTable is the table that holds the ProvisionedHost relation/edge.
+	ProvisionedHostTable = "status"
+	// ProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
-	StatusToProvisionedHostInverseTable = "provisioned_hosts"
-	// StatusToProvisionedHostColumn is the table column denoting the StatusToProvisionedHost relation/edge.
-	StatusToProvisionedHostColumn = "provisioned_host_provisioned_host_to_status"
-	// StatusToProvisioningStepTable is the table that holds the StatusToProvisioningStep relation/edge.
-	StatusToProvisioningStepTable = "status"
-	// StatusToProvisioningStepInverseTable is the table name for the ProvisioningStep entity.
+	ProvisionedHostInverseTable = "provisioned_hosts"
+	// ProvisionedHostColumn is the table column denoting the ProvisionedHost relation/edge.
+	ProvisionedHostColumn = "provisioned_host_status"
+	// ProvisioningStepTable is the table that holds the ProvisioningStep relation/edge.
+	ProvisioningStepTable = "status"
+	// ProvisioningStepInverseTable is the table name for the ProvisioningStep entity.
 	// It exists in this package in order to avoid circular dependency with the "provisioningstep" package.
-	StatusToProvisioningStepInverseTable = "provisioning_steps"
-	// StatusToProvisioningStepColumn is the table column denoting the StatusToProvisioningStep relation/edge.
-	StatusToProvisioningStepColumn = "provisioning_step_provisioning_step_to_status"
-	// StatusToTeamTable is the table that holds the StatusToTeam relation/edge.
-	StatusToTeamTable = "status"
-	// StatusToTeamInverseTable is the table name for the Team entity.
+	ProvisioningStepInverseTable = "provisioning_steps"
+	// ProvisioningStepColumn is the table column denoting the ProvisioningStep relation/edge.
+	ProvisioningStepColumn = "provisioning_step_status"
+	// TeamTable is the table that holds the Team relation/edge.
+	TeamTable = "status"
+	// TeamInverseTable is the table name for the Team entity.
 	// It exists in this package in order to avoid circular dependency with the "team" package.
-	StatusToTeamInverseTable = "teams"
-	// StatusToTeamColumn is the table column denoting the StatusToTeam relation/edge.
-	StatusToTeamColumn = "team_team_to_status"
-	// StatusToPlanTable is the table that holds the StatusToPlan relation/edge.
-	StatusToPlanTable = "status"
-	// StatusToPlanInverseTable is the table name for the Plan entity.
+	TeamInverseTable = "teams"
+	// TeamColumn is the table column denoting the Team relation/edge.
+	TeamColumn = "team_status"
+	// PlanTable is the table that holds the Plan relation/edge.
+	PlanTable = "status"
+	// PlanInverseTable is the table name for the Plan entity.
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
-	StatusToPlanInverseTable = "plans"
-	// StatusToPlanColumn is the table column denoting the StatusToPlan relation/edge.
-	StatusToPlanColumn = "plan_plan_to_status"
-	// StatusToServerTaskTable is the table that holds the StatusToServerTask relation/edge.
-	StatusToServerTaskTable = "status"
-	// StatusToServerTaskInverseTable is the table name for the ServerTask entity.
+	PlanInverseTable = "plans"
+	// PlanColumn is the table column denoting the Plan relation/edge.
+	PlanColumn = "plan_status"
+	// ServerTaskTable is the table that holds the ServerTask relation/edge.
+	ServerTaskTable = "status"
+	// ServerTaskInverseTable is the table name for the ServerTask entity.
 	// It exists in this package in order to avoid circular dependency with the "servertask" package.
-	StatusToServerTaskInverseTable = "server_tasks"
-	// StatusToServerTaskColumn is the table column denoting the StatusToServerTask relation/edge.
-	StatusToServerTaskColumn = "server_task_server_task_to_status"
-	// StatusToAdhocPlanTable is the table that holds the StatusToAdhocPlan relation/edge.
-	StatusToAdhocPlanTable = "status"
-	// StatusToAdhocPlanInverseTable is the table name for the AdhocPlan entity.
+	ServerTaskInverseTable = "server_tasks"
+	// ServerTaskColumn is the table column denoting the ServerTask relation/edge.
+	ServerTaskColumn = "server_task_status"
+	// AdhocPlanTable is the table that holds the AdhocPlan relation/edge.
+	AdhocPlanTable = "status"
+	// AdhocPlanInverseTable is the table name for the AdhocPlan entity.
 	// It exists in this package in order to avoid circular dependency with the "adhocplan" package.
-	StatusToAdhocPlanInverseTable = "adhoc_plans"
-	// StatusToAdhocPlanColumn is the table column denoting the StatusToAdhocPlan relation/edge.
-	StatusToAdhocPlanColumn = "adhoc_plan_adhoc_plan_to_status"
-	// StatusToProvisioningScheduledStepTable is the table that holds the StatusToProvisioningScheduledStep relation/edge.
-	StatusToProvisioningScheduledStepTable = "status"
-	// StatusToProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
+	AdhocPlanInverseTable = "adhoc_plans"
+	// AdhocPlanColumn is the table column denoting the AdhocPlan relation/edge.
+	AdhocPlanColumn = "adhoc_plan_status"
+	// ProvisioningScheduledStepTable is the table that holds the ProvisioningScheduledStep relation/edge.
+	ProvisioningScheduledStepTable = "status"
+	// ProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
 	// It exists in this package in order to avoid circular dependency with the "provisioningscheduledstep" package.
-	StatusToProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
-	// StatusToProvisioningScheduledStepColumn is the table column denoting the StatusToProvisioningScheduledStep relation/edge.
-	StatusToProvisioningScheduledStepColumn = "provisioning_scheduled_step_status"
+	ProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
+	// ProvisioningScheduledStepColumn is the table column denoting the ProvisioningScheduledStep relation/edge.
+	ProvisioningScheduledStepColumn = "provisioning_scheduled_step_status"
 )
 
 // Columns holds all SQL columns for status fields.
@@ -129,15 +129,15 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "status"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"adhoc_plan_adhoc_plan_to_status",
-	"build_build_to_status",
-	"plan_plan_to_status",
-	"provisioned_host_provisioned_host_to_status",
-	"provisioned_network_provisioned_network_to_status",
+	"adhoc_plan_status",
+	"build_status",
+	"plan_status",
+	"provisioned_host_status",
+	"provisioned_network_status",
 	"provisioning_scheduled_step_status",
-	"provisioning_step_provisioning_step_to_status",
-	"server_task_server_task_to_status",
-	"team_team_to_status",
+	"provisioning_step_status",
+	"server_task_status",
+	"team_status",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

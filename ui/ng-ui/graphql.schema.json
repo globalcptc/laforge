@@ -11,6 +11,123 @@
     },
     "types": [
       {
+        "kind": "OBJECT",
+        "name": "AdhocPlan",
+        "description": null,
+        "fields": [
+          {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "NextAdhocPlans",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "LIST",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "AdhocPlan",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "PrevAdhocPlans",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "LIST",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "AdhocPlan",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Build",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Build",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Status",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Status",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "AgentTask",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "AgentTask",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "SCALAR",
+        "name": "ID",
+        "description": "The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `\"4\"`) or integer (such as `4`) input value will be accepted as an ID.",
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
         "kind": "ENUM",
         "name": "AgentCommand",
         "description": null,
@@ -309,6 +426,42 @@
             },
             "isDeprecated": false,
             "deprecationReason": null
+          },
+          {
+            "name": "ProvisionedHost",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisionedHost",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisionedNetwork",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisionedNetwork",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Build",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Build",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
           }
         ],
         "inputFields": null,
@@ -487,7 +640,7 @@
             "deprecationReason": null
           },
           {
-            "name": "error_message",
+            "name": "errorMessage",
             "description": null,
             "args": [],
             "type": {
@@ -497,20 +650,66 @@
             },
             "isDeprecated": false,
             "deprecationReason": null
+          },
+          {
+            "name": "ProvisioningStep",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisioningStep",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisioningScheduledStep",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisioningScheduledStep",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisionedHost",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "ProvisionedHost",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "AdhocPlans",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "LIST",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "AdhocPlan",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
           }
         ],
         "inputFields": null,
         "interfaces": [],
-        "enumValues": null,
-        "possibleTypes": null
-      },
-      {
-        "kind": "SCALAR",
-        "name": "ID",
-        "description": "The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `\"4\"`) or integer (such as `4`) input value will be accepted as an ID.",
-        "fields": null,
-        "inputFields": null,
-        "interfaces": null,
         "enumValues": null,
         "possibleTypes": null
       },
@@ -542,6 +741,222 @@
           },
           {
             "name": "COMPLETE",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "Ansible",
+        "description": null,
+        "fields": [
+          {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "hclId",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "name",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "description",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "source",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "playbookName",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "method",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "ENUM",
+                "name": "AnsibleMethod",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "inventory",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "absPath",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "tags",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "LIST",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "tagMap",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Users",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "LIST",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "User",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Environment",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Environment",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "ENUM",
+        "name": "AnsibleMethod",
+        "description": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": [
+          {
+            "name": "LOCAL",
             "description": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -587,39 +1002,7 @@
             "deprecationReason": null
           },
           {
-            "name": "role",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "ENUM",
-                "name": "RoleLevel",
-                "ofType": null
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "provider",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "ENUM",
-                "name": "ProviderType",
-                "ofType": null
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "first_name",
+            "name": "firstName",
             "description": null,
             "args": [],
             "type": {
@@ -635,7 +1018,7 @@
             "deprecationReason": null
           },
           {
-            "name": "last_name",
+            "name": "lastName",
             "description": null,
             "args": [],
             "type": {
@@ -729,6 +1112,54 @@
             },
             "isDeprecated": false,
             "deprecationReason": null
+          },
+          {
+            "name": "role",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "ENUM",
+                "name": "RoleLevel",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "provider",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "ENUM",
+                "name": "ProviderType",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ServerTasks",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "LIST",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "ServerTask",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
           }
         ],
         "inputFields": null,
@@ -774,7 +1205,7 @@
             "deprecationReason": null
           },
           {
-            "name": "environment_revision",
+            "name": "environmentRevision",
             "description": null,
             "args": [],
             "type": {
@@ -790,7 +1221,7 @@
             "deprecationReason": null
           },
           {
-            "name": "completed_plan",
+            "name": "completedPlan",
             "description": null,
             "args": [],
             "type": {
@@ -806,7 +1237,7 @@
             "deprecationReason": null
           },
           {
-            "name": "buildToStatus",
+            "name": "Status",
             "description": null,
             "args": [],
             "type": {
@@ -822,7 +1253,7 @@
             "deprecationReason": null
           },
           {
-            "name": "buildToEnvironment",
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -838,7 +1269,7 @@
             "deprecationReason": null
           },
           {
-            "name": "buildToCompetition",
+            "name": "Competition",
             "description": null,
             "args": [],
             "type": {
@@ -854,7 +1285,35 @@
             "deprecationReason": null
           },
           {
-            "name": "buildToProvisionedNetwork",
+            "name": "LatestBuildCommit",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "BuildCommit",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "RepoCommit",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "RepoCommit",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisionedNetworks",
             "description": null,
             "args": [],
             "type": {
@@ -874,7 +1333,7 @@
             "deprecationReason": null
           },
           {
-            "name": "buildToTeam",
+            "name": "Teams",
             "description": null,
             "args": [],
             "type": {
@@ -894,7 +1353,7 @@
             "deprecationReason": null
           },
           {
-            "name": "buildToPlan",
+            "name": "Plans",
             "description": null,
             "args": [],
             "type": {
@@ -914,19 +1373,7 @@
             "deprecationReason": null
           },
           {
-            "name": "BuildToLatestBuildCommit",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "OBJECT",
-              "name": "BuildCommit",
-              "ofType": null
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "BuildToBuildCommits",
+            "name": "BuildCommits",
             "description": null,
             "args": [],
             "type": {
@@ -946,23 +1393,47 @@
             "deprecationReason": null
           },
           {
-            "name": "BuildToRepoCommit",
+            "name": "AdhocPlans",
             "description": null,
             "args": [],
             "type": {
               "kind": "NON_NULL",
               "name": null,
               "ofType": {
-                "kind": "OBJECT",
-                "name": "RepoCommit",
-                "ofType": null
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "AdhocPlan",
+                  "ofType": null
+                }
               }
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "BuildToServerTasks",
+            "name": "AgentStatuses",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "AgentStatus",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ServerTasks",
             "description": null,
             "args": [],
             "type": {
@@ -1083,7 +1554,7 @@
             "deprecationReason": null
           },
           {
-            "name": "BuildCommitToBuild",
+            "name": "Build",
             "description": null,
             "args": [],
             "type": {
@@ -1099,27 +1570,7 @@
             "deprecationReason": null
           },
           {
-            "name": "BuildCommitToPlanDiffs",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "PlanDiff",
-                  "ofType": null
-                }
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "BuildCommitToServerTask",
+            "name": "ServerTasks",
             "description": null,
             "args": [],
             "type": {
@@ -1131,6 +1582,26 @@
                 "ofType": {
                   "kind": "OBJECT",
                   "name": "ServerTask",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "PlanDiffs",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "PlanDiff",
                   "ofType": null
                 }
               }
@@ -1236,7 +1707,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -1416,7 +1887,27 @@
             "deprecationReason": null
           },
           {
-            "name": "CommandToEnvironment",
+            "name": "Users",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "User",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -1459,7 +1950,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -1475,7 +1966,7 @@
             "deprecationReason": null
           },
           {
-            "name": "root_password",
+            "name": "rootPassword",
             "description": null,
             "args": [],
             "type": {
@@ -1486,6 +1977,30 @@
                 "name": "String",
                 "ofType": null
               }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "startTime",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "Int",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "stopTime",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "Int",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -1523,7 +2038,7 @@
             "deprecationReason": null
           },
           {
-            "name": "competitionToDNS",
+            "name": "DNS",
             "description": null,
             "args": [],
             "type": {
@@ -1543,7 +2058,7 @@
             "deprecationReason": null
           },
           {
-            "name": "CompetitionToEnvironment",
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -1559,7 +2074,7 @@
             "deprecationReason": null
           },
           {
-            "name": "CompetitionToBuild",
+            "name": "Builds",
             "description": null,
             "args": [],
             "type": {
@@ -1606,7 +2121,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -1638,7 +2153,7 @@
             "deprecationReason": null
           },
           {
-            "name": "root_domain",
+            "name": "rootDomain",
             "description": null,
             "args": [],
             "type": {
@@ -1654,7 +2169,7 @@
             "deprecationReason": null
           },
           {
-            "name": "dns_servers",
+            "name": "dnsServers",
             "description": null,
             "args": [],
             "type": {
@@ -1674,7 +2189,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ntp_servers",
+            "name": "ntpServers",
             "description": null,
             "args": [],
             "type": {
@@ -1710,7 +2225,7 @@
             "deprecationReason": null
           },
           {
-            "name": "DNSToEnvironment",
+            "name": "Environments",
             "description": null,
             "args": [],
             "type": {
@@ -1730,7 +2245,7 @@
             "deprecationReason": null
           },
           {
-            "name": "DNSToCompetition",
+            "name": "Competitions",
             "description": null,
             "args": [],
             "type": {
@@ -1777,7 +2292,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -1917,7 +2432,7 @@
             "deprecationReason": null
           },
           {
-            "name": "DNSRecordToEnvironment",
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -1944,6 +2459,22 @@
         "description": null,
         "fields": [
           {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "size",
             "description": null,
             "args": [],
@@ -1960,7 +2491,7 @@
             "deprecationReason": null
           },
           {
-            "name": "DiskToHost",
+            "name": "Host",
             "description": null,
             "args": [],
             "type": {
@@ -2003,7 +2534,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -2019,7 +2550,7 @@
             "deprecationReason": null
           },
           {
-            "name": "competition_id",
+            "name": "competitionId",
             "description": null,
             "args": [],
             "type": {
@@ -2083,7 +2614,7 @@
             "deprecationReason": null
           },
           {
-            "name": "team_count",
+            "name": "teamCount",
             "description": null,
             "args": [],
             "type": {
@@ -2115,7 +2646,7 @@
             "deprecationReason": null
           },
           {
-            "name": "admin_cidrs",
+            "name": "adminCidrs",
             "description": null,
             "args": [],
             "type": {
@@ -2135,7 +2666,7 @@
             "deprecationReason": null
           },
           {
-            "name": "exposed_vdi_ports",
+            "name": "exposedVdiPorts",
             "description": null,
             "args": [],
             "type": {
@@ -2187,7 +2718,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToUser",
+            "name": "Users",
             "description": null,
             "args": [],
             "type": {
@@ -2207,7 +2738,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToHost",
+            "name": "Hosts",
             "description": null,
             "args": [],
             "type": {
@@ -2227,7 +2758,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToCompetition",
+            "name": "Competitions",
             "description": null,
             "args": [],
             "type": {
@@ -2247,7 +2778,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToIdentity",
+            "name": "Identities",
             "description": null,
             "args": [],
             "type": {
@@ -2267,7 +2798,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToCommand",
+            "name": "Commands",
             "description": null,
             "args": [],
             "type": {
@@ -2287,7 +2818,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToScript",
+            "name": "Scripts",
             "description": null,
             "args": [],
             "type": {
@@ -2307,7 +2838,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToFileDownload",
+            "name": "FileDownloads",
             "description": null,
             "args": [],
             "type": {
@@ -2327,7 +2858,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToFileDelete",
+            "name": "FileDeletes",
             "description": null,
             "args": [],
             "type": {
@@ -2347,7 +2878,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToFileExtract",
+            "name": "FileExtracts",
             "description": null,
             "args": [],
             "type": {
@@ -2367,7 +2898,47 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToDNSRecord",
+            "name": "IncludedNetworks",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "IncludedNetwork",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Findings",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Finding",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "DNSRecords",
             "description": null,
             "args": [],
             "type": {
@@ -2387,7 +2958,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToDNS",
+            "name": "DNS",
             "description": null,
             "args": [],
             "type": {
@@ -2407,7 +2978,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToNetwork",
+            "name": "Networks",
             "description": null,
             "args": [],
             "type": {
@@ -2427,7 +2998,67 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToBuild",
+            "name": "HostDependencies",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "HostDependency",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Ansibles",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Ansible",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ScheduledSteps",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "ScheduledStep",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Builds",
             "description": null,
             "args": [],
             "type": {
@@ -2447,7 +3078,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToRepository",
+            "name": "Repositories",
             "description": null,
             "args": [],
             "type": {
@@ -2467,7 +3098,7 @@
             "deprecationReason": null
           },
           {
-            "name": "EnvironmentToServerTask",
+            "name": "ServerTasks",
             "description": null,
             "args": [],
             "type": {
@@ -2514,7 +3145,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -2566,7 +3197,7 @@
             "deprecationReason": null
           },
           {
-            "name": "FileDeleteToEnvironment",
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -2609,7 +3240,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -2773,7 +3404,7 @@
             "deprecationReason": null
           },
           {
-            "name": "FileDownloadToEnvironment",
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -2816,7 +3447,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -2900,7 +3531,7 @@
             "deprecationReason": null
           },
           {
-            "name": "FileExtractToEnvironment",
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -2926,6 +3557,22 @@
         "name": "Finding",
         "description": null,
         "fields": [
+          {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
           {
             "name": "name",
             "description": null,
@@ -3011,7 +3658,7 @@
             "deprecationReason": null
           },
           {
-            "name": "FindingToUser",
+            "name": "Users",
             "description": null,
             "args": [],
             "type": {
@@ -3031,33 +3678,37 @@
             "deprecationReason": null
           },
           {
-            "name": "FindingToScript",
+            "name": "Host",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Script",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "Host",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "FindingToEnvironment",
+            "name": "Script",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Environment",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "Script",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Environment",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Environment",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -3158,6 +3809,117 @@
       },
       {
         "kind": "OBJECT",
+        "name": "GinFileMiddleware",
+        "description": null,
+        "fields": [
+          {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "urlId",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "filePath",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "accessed",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisionedHost",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisionedHost",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisioningStep",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisioningStep",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisioningScheduledStep",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisioningScheduledStep",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
         "name": "Host",
         "description": null,
         "fields": [
@@ -3178,7 +3940,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -3242,7 +4004,7 @@
             "deprecationReason": null
           },
           {
-            "name": "last_octet",
+            "name": "lastOctet",
             "description": null,
             "args": [],
             "type": {
@@ -3258,7 +4020,7 @@
             "deprecationReason": null
           },
           {
-            "name": "instance_size",
+            "name": "instanceSize",
             "description": null,
             "args": [],
             "type": {
@@ -3274,7 +4036,7 @@
             "deprecationReason": null
           },
           {
-            "name": "allow_mac_changes",
+            "name": "allowMacChanges",
             "description": null,
             "args": [],
             "type": {
@@ -3290,7 +4052,7 @@
             "deprecationReason": null
           },
           {
-            "name": "exposed_tcp_ports",
+            "name": "exposedTcpPorts",
             "description": null,
             "args": [],
             "type": {
@@ -3310,7 +4072,7 @@
             "deprecationReason": null
           },
           {
-            "name": "exposed_udp_ports",
+            "name": "exposedUdpPorts",
             "description": null,
             "args": [],
             "type": {
@@ -3330,7 +4092,7 @@
             "deprecationReason": null
           },
           {
-            "name": "override_password",
+            "name": "overridePassword",
             "description": null,
             "args": [],
             "type": {
@@ -3362,7 +4124,7 @@
             "deprecationReason": null
           },
           {
-            "name": "user_groups",
+            "name": "userGroups",
             "description": null,
             "args": [],
             "type": {
@@ -3382,7 +4144,7 @@
             "deprecationReason": null
           },
           {
-            "name": "provision_steps",
+            "name": "provisionSteps",
             "description": null,
             "args": [],
             "type": {
@@ -3422,7 +4184,7 @@
             "deprecationReason": null
           },
           {
-            "name": "HostToDisk",
+            "name": "Disk",
             "description": null,
             "args": [],
             "type": {
@@ -3438,7 +4200,27 @@
             "deprecationReason": null
           },
           {
-            "name": "HostToEnvironment",
+            "name": "Users",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "User",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -3449,6 +4231,173 @@
                 "name": "Environment",
                 "ofType": null
               }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "IncludedNetworks",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "IncludedNetwork",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "DependOnHostDependencies",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "HostDependency",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "RequiredByHostDependencies",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "HostDependency",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "HostDependency",
+        "description": null,
+        "fields": [
+          {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "hostId",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "networkId",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "RequiredBy",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Host",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "DependOnHost",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Host",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "DependOnNetwork",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Network",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Environment",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Environment",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -3481,7 +4430,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclid",
             "description": null,
             "args": [],
             "type": {
@@ -3497,7 +4446,7 @@
             "deprecationReason": null
           },
           {
-            "name": "first_name",
+            "name": "firstName",
             "description": null,
             "args": [],
             "type": {
@@ -3513,7 +4462,7 @@
             "deprecationReason": null
           },
           {
-            "name": "last_name",
+            "name": "lastName",
             "description": null,
             "args": [],
             "type": {
@@ -3577,7 +4526,7 @@
             "deprecationReason": null
           },
           {
-            "name": "avatar_file",
+            "name": "avatarFile",
             "description": null,
             "args": [],
             "type": {
@@ -3633,7 +4582,7 @@
             "deprecationReason": null
           },
           {
-            "name": "IdentityToEnvironment",
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -3643,6 +4592,141 @@
                 "kind": "OBJECT",
                 "name": "Environment",
                 "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "IncludedNetwork",
+        "description": null,
+        "fields": [
+          {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "name",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "includedHosts",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Tags",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Tag",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Hosts",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Host",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Network",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Network",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Environments",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Environment",
+                  "ofType": null
+                }
               }
             },
             "isDeprecated": false,
@@ -4862,7 +5946,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -4910,7 +5994,7 @@
             "deprecationReason": null
           },
           {
-            "name": "vdi_visible",
+            "name": "vdiVisible",
             "description": null,
             "args": [],
             "type": {
@@ -4962,7 +6046,7 @@
             "deprecationReason": null
           },
           {
-            "name": "NetworkToEnvironment",
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -4972,6 +6056,46 @@
                 "kind": "OBJECT",
                 "name": "Environment",
                 "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "HostDependencies",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "HostDependency",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "IncludedNetworks",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "IncludedNetwork",
+                  "ofType": null
+                }
               }
             },
             "isDeprecated": false,
@@ -5005,7 +6129,7 @@
             "deprecationReason": null
           },
           {
-            "name": "step_number",
+            "name": "stepNumber",
             "description": null,
             "args": [],
             "type": {
@@ -5037,23 +6161,7 @@
             "deprecationReason": null
           },
           {
-            "name": "build_id",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "NextPlan",
+            "name": "NextPlans",
             "description": null,
             "args": [],
             "type": {
@@ -5073,7 +6181,7 @@
             "deprecationReason": null
           },
           {
-            "name": "PrevPlan",
+            "name": "PrevPlans",
             "description": null,
             "args": [],
             "type": {
@@ -5093,87 +6201,79 @@
             "deprecationReason": null
           },
           {
-            "name": "PlanToBuild",
+            "name": "Build",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Build",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "Build",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "PlanToTeam",
+            "name": "Team",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Team",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "Team",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "PlanToProvisionedNetwork",
+            "name": "ProvisionedNetwork",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "ProvisionedNetwork",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "ProvisionedNetwork",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "PlanToProvisionedHost",
+            "name": "ProvisionedHost",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "ProvisionedHost",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "ProvisionedHost",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "PlanToProvisioningStep",
+            "name": "ProvisioningStep",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "ProvisioningStep",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "ProvisioningStep",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "PlanToStatus",
+            "name": "ProvisioningScheduledStep",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisioningScheduledStep",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Status",
             "description": null,
             "args": [],
             "type": {
@@ -5189,7 +6289,7 @@
             "deprecationReason": null
           },
           {
-            "name": "PlanToPlanDiffs",
+            "name": "PlanDiffs",
             "description": null,
             "args": [],
             "type": {
@@ -5471,7 +6571,7 @@
             "deprecationReason": null
           },
           {
-            "name": "new_state",
+            "name": "newState",
             "description": null,
             "args": [],
             "type": {
@@ -5487,7 +6587,7 @@
             "deprecationReason": null
           },
           {
-            "name": "PlanDiffToBuildCommit",
+            "name": "BuildCommit",
             "description": null,
             "args": [],
             "type": {
@@ -5503,7 +6603,7 @@
             "deprecationReason": null
           },
           {
-            "name": "PlanDiffToPlan",
+            "name": "Plan",
             "description": null,
             "args": [],
             "type": {
@@ -5770,7 +6870,7 @@
             "deprecationReason": null
           },
           {
-            "name": "subnet_ip",
+            "name": "subnetIp",
             "description": null,
             "args": [],
             "type": {
@@ -5786,7 +6886,35 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedHostToStatus",
+            "name": "addonType",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "ENUM",
+              "name": "ProvisionedHostAddonType",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "vars",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "LIST",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "varsMap",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Status",
             "description": null,
             "args": [],
             "type": {
@@ -5802,7 +6930,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedHostToProvisionedNetwork",
+            "name": "ProvisionedNetwork",
             "description": null,
             "args": [],
             "type": {
@@ -5818,7 +6946,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedHostToHost",
+            "name": "Host",
             "description": null,
             "args": [],
             "type": {
@@ -5834,7 +6962,35 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedHostToProvisioningStep",
+            "name": "EndStepPlan",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Plan",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Build",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Build",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisioningSteps",
             "description": null,
             "args": [],
             "type": {
@@ -5854,7 +7010,27 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedHostToAgentStatus",
+            "name": "ProvisioningScheduledSteps",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "ProvisioningScheduledStep",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "AgentStatus",
             "description": null,
             "args": [],
             "type": {
@@ -5866,7 +7042,27 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedHostToPlan",
+            "name": "AgentTasks",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "AgentTask",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Plan",
             "description": null,
             "args": [],
             "type": {
@@ -5880,11 +7076,40 @@
             },
             "isDeprecated": false,
             "deprecationReason": null
+          },
+          {
+            "name": "GinFileMiddleware",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "GinFileMiddleware",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
           }
         ],
         "inputFields": null,
         "interfaces": [],
         "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "ENUM",
+        "name": "ProvisionedHostAddonType",
+        "description": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": [
+          {
+            "name": "DNS",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
         "possibleTypes": null
       },
       {
@@ -5941,15 +7166,15 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedNetworkToStatus",
+            "name": "vars",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
                 "kind": "OBJECT",
-                "name": "Status",
+                "name": "varsMap",
                 "ofType": null
               }
             },
@@ -5957,55 +7182,55 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedNetworkToNetwork",
+            "name": "Status",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Network",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "Status",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedNetworkToBuild",
+            "name": "Network",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Build",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "Network",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedNetworkToTeam",
+            "name": "Build",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Team",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "Build",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedNetworkToProvisionedHost",
+            "name": "Team",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Team",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisionedHosts",
             "description": null,
             "args": [],
             "type": {
@@ -6025,17 +7250,13 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisionedNetworkToPlan",
+            "name": "Plan",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Plan",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "Plan",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -6044,6 +7265,296 @@
         "inputFields": null,
         "interfaces": [],
         "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "ProvisioningScheduledStep",
+        "description": null,
+        "fields": [
+          {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "type",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "ENUM",
+                "name": "ProvisioningScheduledStepType",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "runTime",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Time",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Status",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Status",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ScheduledStep",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "ScheduledStep",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisionedHost",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "ProvisionedHost",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Script",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Script",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Command",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Command",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "DNSRecord",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "DNSRecord",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "FileDelete",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "FileDelete",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "FileDownload",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "FileDownload",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "FileExtract",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "FileExtract",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Ansible",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Ansible",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "AgentTasks",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "AgentTask",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Plan",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Plan",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "GinFileMiddleware",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "GinFileMiddleware",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "ENUM",
+        "name": "ProvisioningScheduledStepType",
+        "description": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": [
+          {
+            "name": "Ansible",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Script",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Command",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "DNSRecord",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "FileDelete",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "FileDownload",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "FileExtract",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Undefined",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
         "possibleTypes": null
       },
       {
@@ -6084,7 +7595,7 @@
             "deprecationReason": null
           },
           {
-            "name": "step_number",
+            "name": "stepNumber",
             "description": null,
             "args": [],
             "type": {
@@ -6100,23 +7611,19 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisioningStepToStatus",
+            "name": "Status",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Status",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "Status",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "ProvisioningStepToProvisionedHost",
+            "name": "ProvisionedHost",
             "description": null,
             "args": [],
             "type": {
@@ -6132,7 +7639,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisioningStepToScript",
+            "name": "Script",
             "description": null,
             "args": [],
             "type": {
@@ -6144,7 +7651,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisioningStepToCommand",
+            "name": "Command",
             "description": null,
             "args": [],
             "type": {
@@ -6156,7 +7663,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisioningStepToDNSRecord",
+            "name": "DNSRecord",
             "description": null,
             "args": [],
             "type": {
@@ -6168,7 +7675,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisioningStepToFileDelete",
+            "name": "FileDelete",
             "description": null,
             "args": [],
             "type": {
@@ -6180,7 +7687,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisioningStepToFileDownload",
+            "name": "FileDownload",
             "description": null,
             "args": [],
             "type": {
@@ -6192,7 +7699,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisioningStepToFileExtract",
+            "name": "FileExtract",
             "description": null,
             "args": [],
             "type": {
@@ -6204,12 +7711,56 @@
             "deprecationReason": null
           },
           {
-            "name": "ProvisioningStepToPlan",
+            "name": "Ansible",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Ansible",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Plan",
             "description": null,
             "args": [],
             "type": {
               "kind": "OBJECT",
               "name": "Plan",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "AgentTasks",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "AgentTask",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "GinFileMiddleware",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "GinFileMiddleware",
               "ofType": null
             },
             "isDeprecated": false,
@@ -7120,7 +8671,7 @@
             "deprecationReason": null
           },
           {
-            "name": "pgp_signature",
+            "name": "pgpSignature",
             "description": null,
             "args": [],
             "type": {
@@ -7152,7 +8703,7 @@
             "deprecationReason": null
           },
           {
-            "name": "tree_hash",
+            "name": "treeHash",
             "description": null,
             "args": [],
             "type": {
@@ -7168,7 +8719,7 @@
             "deprecationReason": null
           },
           {
-            "name": "parent_hashes",
+            "name": "parentHashes",
             "description": null,
             "args": [],
             "type": {
@@ -7188,7 +8739,7 @@
             "deprecationReason": null
           },
           {
-            "name": "RepoCommitToRepository",
+            "name": "Repository",
             "description": null,
             "args": [],
             "type": {
@@ -7231,7 +8782,7 @@
             "deprecationReason": null
           },
           {
-            "name": "repo_url",
+            "name": "repoUrl",
             "description": null,
             "args": [],
             "type": {
@@ -7247,7 +8798,7 @@
             "deprecationReason": null
           },
           {
-            "name": "branch_name",
+            "name": "branchName",
             "description": null,
             "args": [],
             "type": {
@@ -7263,7 +8814,7 @@
             "deprecationReason": null
           },
           {
-            "name": "environment_filepath",
+            "name": "environmentFilepath",
             "description": null,
             "args": [],
             "type": {
@@ -7279,7 +8830,27 @@
             "deprecationReason": null
           },
           {
-            "name": "RepositoryToRepoCommit",
+            "name": "Environments",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Environment",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "RepoCommits",
             "description": null,
             "args": [],
             "type": {
@@ -7335,6 +8906,172 @@
       },
       {
         "kind": "OBJECT",
+        "name": "ScheduledStep",
+        "description": null,
+        "fields": [
+          {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "hclId",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "name",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "description",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "step",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "type",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "ENUM",
+                "name": "ScheduledStepType",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "schedule",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "runAt",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "Int",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Environment",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Environment",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "ENUM",
+        "name": "ScheduledStepType",
+        "description": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": [
+          {
+            "name": "CRON",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "RUNONCE",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
         "name": "Script",
         "description": null,
         "fields": [
@@ -7355,7 +9092,7 @@
             "deprecationReason": null
           },
           {
-            "name": "hcl_id",
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -7435,7 +9172,7 @@
             "deprecationReason": null
           },
           {
-            "name": "source_type",
+            "name": "sourceType",
             "description": null,
             "args": [],
             "type": {
@@ -7483,7 +9220,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ignore_errors",
+            "name": "ignoreErrors",
             "description": null,
             "args": [],
             "type": {
@@ -7583,7 +9320,27 @@
             "deprecationReason": null
           },
           {
-            "name": "scriptToFinding",
+            "name": "Users",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "User",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Findings",
             "description": null,
             "args": [],
             "type": {
@@ -7603,7 +9360,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ScriptToEnvironment",
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -7662,7 +9419,7 @@
             "deprecationReason": null
           },
           {
-            "name": "start_time",
+            "name": "startTime",
             "description": null,
             "args": [],
             "type": {
@@ -7674,7 +9431,7 @@
             "deprecationReason": null
           },
           {
-            "name": "end_time",
+            "name": "endTime",
             "description": null,
             "args": [],
             "type": {
@@ -7702,7 +9459,7 @@
             "deprecationReason": null
           },
           {
-            "name": "log_file_path",
+            "name": "logFilePath",
             "description": null,
             "args": [],
             "type": {
@@ -7714,7 +9471,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ServerTaskToAuthUser",
+            "name": "AuthUser",
             "description": null,
             "args": [],
             "type": {
@@ -7730,7 +9487,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ServerTaskToStatus",
+            "name": "Status",
             "description": null,
             "args": [],
             "type": {
@@ -7746,7 +9503,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ServerTaskToEnvironment",
+            "name": "Environment",
             "description": null,
             "args": [],
             "type": {
@@ -7758,7 +9515,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ServerTaskToBuild",
+            "name": "Build",
             "description": null,
             "args": [],
             "type": {
@@ -7770,13 +9527,33 @@
             "deprecationReason": null
           },
           {
-            "name": "ServerTaskToBuildCommit",
+            "name": "BuildCommit",
             "description": null,
             "args": [],
             "type": {
               "kind": "OBJECT",
               "name": "BuildCommit",
               "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "GinFileMiddleware",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "GinFileMiddleware",
+                  "ofType": null
+                }
+              }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -7872,7 +9649,7 @@
             "deprecationReason": null
           },
           {
-            "name": "status_for",
+            "name": "statusFor",
             "description": null,
             "args": [],
             "type": {
@@ -7888,7 +9665,7 @@
             "deprecationReason": null
           },
           {
-            "name": "started_at",
+            "name": "startedAt",
             "description": null,
             "args": [],
             "type": {
@@ -7904,7 +9681,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ended_at",
+            "name": "endedAt",
             "description": null,
             "args": [],
             "type": {
@@ -7958,6 +9735,114 @@
             "type": {
               "kind": "SCALAR",
               "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Build",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Build",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisionedNetwork",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisionedNetwork",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisionedHost",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisionedHost",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisioningStep",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisioningStep",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Team",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Team",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Plan",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "Plan",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ServerTask",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ServerTask",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "AdhocPlan",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "AdhocPlan",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "ProvisioningScheduledStep",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ProvisioningScheduledStep",
               "ofType": null
             },
             "isDeprecated": false,
@@ -8158,6 +10043,85 @@
       },
       {
         "kind": "OBJECT",
+        "name": "Tag",
+        "description": null,
+        "fields": [
+          {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "uuid",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "name",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "description",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "tagMap",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
         "name": "Team",
         "description": null,
         "fields": [
@@ -8178,7 +10142,7 @@
             "deprecationReason": null
           },
           {
-            "name": "team_number",
+            "name": "teamNumber",
             "description": null,
             "args": [],
             "type": {
@@ -8194,7 +10158,7 @@
             "deprecationReason": null
           },
           {
-            "name": "TeamToBuild",
+            "name": "Build",
             "description": null,
             "args": [],
             "type": {
@@ -8210,23 +10174,19 @@
             "deprecationReason": null
           },
           {
-            "name": "TeamToStatus",
+            "name": "Status",
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Status",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "Status",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "TeamToProvisionedNetwork",
+            "name": "ProvisionedNetworks",
             "description": null,
             "args": [],
             "type": {
@@ -8246,7 +10206,7 @@
             "deprecationReason": null
           },
           {
-            "name": "TeamToPlan",
+            "name": "Plan",
             "description": null,
             "args": [],
             "type": {
@@ -8284,6 +10244,22 @@
         "fields": [
           {
             "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "hclId",
             "description": null,
             "args": [],
             "type": {
@@ -8341,6 +10317,46 @@
                 "kind": "SCALAR",
                 "name": "String",
                 "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Tag",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Tag",
+                  "ofType": null
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "Environments",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Environment",
+                  "ofType": null
+                }
               }
             },
             "isDeprecated": false,

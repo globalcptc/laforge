@@ -29,45 +29,45 @@ type User struct {
 	Edges UserEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// UserToTag holds the value of the UserToTag edge.
-	HCLUserToTag []*Tag `json:"UserToTag,omitempty"`
-	// UserToEnvironment holds the value of the UserToEnvironment edge.
-	HCLUserToEnvironment []*Environment `json:"UserToEnvironment,omitempty"`
+	// Tag holds the value of the Tag edge.
+	HCLTag []*Tag `json:"Tag,omitempty"`
+	// Environments holds the value of the Environments edge.
+	HCLEnvironments []*Environment `json:"Environments,omitempty"`
 	//
-	ansible_ansible_to_user *uuid.UUID
-	command_command_to_user *uuid.UUID
-	finding_finding_to_user *uuid.UUID
-	host_host_to_user       *uuid.UUID
-	script_script_to_user   *uuid.UUID
+	ansible_users *uuid.UUID
+	command_users *uuid.UUID
+	finding_users *uuid.UUID
+	host_users    *uuid.UUID
+	script_users  *uuid.UUID
 }
 
 // UserEdges holds the relations/edges for other nodes in the graph.
 type UserEdges struct {
-	// UserToTag holds the value of the UserToTag edge.
-	UserToTag []*Tag `json:"UserToTag,omitempty"`
-	// UserToEnvironment holds the value of the UserToEnvironment edge.
-	UserToEnvironment []*Environment `json:"UserToEnvironment,omitempty"`
+	// Tag holds the value of the Tag edge.
+	Tag []*Tag `json:"Tag,omitempty"`
+	// Environments holds the value of the Environments edge.
+	Environments []*Environment `json:"Environments,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
 }
 
-// UserToTagOrErr returns the UserToTag value or an error if the edge
+// TagOrErr returns the Tag value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) UserToTagOrErr() ([]*Tag, error) {
+func (e UserEdges) TagOrErr() ([]*Tag, error) {
 	if e.loadedTypes[0] {
-		return e.UserToTag, nil
+		return e.Tag, nil
 	}
-	return nil, &NotLoadedError{edge: "UserToTag"}
+	return nil, &NotLoadedError{edge: "Tag"}
 }
 
-// UserToEnvironmentOrErr returns the UserToEnvironment value or an error if the edge
+// EnvironmentsOrErr returns the Environments value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) UserToEnvironmentOrErr() ([]*Environment, error) {
+func (e UserEdges) EnvironmentsOrErr() ([]*Environment, error) {
 	if e.loadedTypes[1] {
-		return e.UserToEnvironment, nil
+		return e.Environments, nil
 	}
-	return nil, &NotLoadedError{edge: "UserToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environments"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -79,15 +79,15 @@ func (*User) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case user.FieldID:
 			values[i] = new(uuid.UUID)
-		case user.ForeignKeys[0]: // ansible_ansible_to_user
+		case user.ForeignKeys[0]: // ansible_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case user.ForeignKeys[1]: // command_command_to_user
+		case user.ForeignKeys[1]: // command_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case user.ForeignKeys[2]: // finding_finding_to_user
+		case user.ForeignKeys[2]: // finding_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case user.ForeignKeys[3]: // host_host_to_user
+		case user.ForeignKeys[3]: // host_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case user.ForeignKeys[4]: // script_script_to_user
+		case user.ForeignKeys[4]: // script_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type User", columns[i])
@@ -136,52 +136,52 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 			}
 		case user.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field ansible_ansible_to_user", values[i])
+				return fmt.Errorf("unexpected type %T for field ansible_users", values[i])
 			} else if value.Valid {
-				u.ansible_ansible_to_user = new(uuid.UUID)
-				*u.ansible_ansible_to_user = *value.S.(*uuid.UUID)
+				u.ansible_users = new(uuid.UUID)
+				*u.ansible_users = *value.S.(*uuid.UUID)
 			}
 		case user.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field command_command_to_user", values[i])
+				return fmt.Errorf("unexpected type %T for field command_users", values[i])
 			} else if value.Valid {
-				u.command_command_to_user = new(uuid.UUID)
-				*u.command_command_to_user = *value.S.(*uuid.UUID)
+				u.command_users = new(uuid.UUID)
+				*u.command_users = *value.S.(*uuid.UUID)
 			}
 		case user.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field finding_finding_to_user", values[i])
+				return fmt.Errorf("unexpected type %T for field finding_users", values[i])
 			} else if value.Valid {
-				u.finding_finding_to_user = new(uuid.UUID)
-				*u.finding_finding_to_user = *value.S.(*uuid.UUID)
+				u.finding_users = new(uuid.UUID)
+				*u.finding_users = *value.S.(*uuid.UUID)
 			}
 		case user.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field host_host_to_user", values[i])
+				return fmt.Errorf("unexpected type %T for field host_users", values[i])
 			} else if value.Valid {
-				u.host_host_to_user = new(uuid.UUID)
-				*u.host_host_to_user = *value.S.(*uuid.UUID)
+				u.host_users = new(uuid.UUID)
+				*u.host_users = *value.S.(*uuid.UUID)
 			}
 		case user.ForeignKeys[4]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field script_script_to_user", values[i])
+				return fmt.Errorf("unexpected type %T for field script_users", values[i])
 			} else if value.Valid {
-				u.script_script_to_user = new(uuid.UUID)
-				*u.script_script_to_user = *value.S.(*uuid.UUID)
+				u.script_users = new(uuid.UUID)
+				*u.script_users = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryUserToTag queries the "UserToTag" edge of the User entity.
-func (u *User) QueryUserToTag() *TagQuery {
-	return (&UserClient{config: u.config}).QueryUserToTag(u)
+// QueryTag queries the "Tag" edge of the User entity.
+func (u *User) QueryTag() *TagQuery {
+	return (&UserClient{config: u.config}).QueryTag(u)
 }
 
-// QueryUserToEnvironment queries the "UserToEnvironment" edge of the User entity.
-func (u *User) QueryUserToEnvironment() *EnvironmentQuery {
-	return (&UserClient{config: u.config}).QueryUserToEnvironment(u)
+// QueryEnvironments queries the "Environments" edge of the User entity.
+func (u *User) QueryEnvironments() *EnvironmentQuery {
+	return (&UserClient{config: u.config}).QueryEnvironments(u)
 }
 
 // Update returns a builder for updating this User.

@@ -52,71 +52,70 @@ type AgentStatus struct {
 	Edges AgentStatusEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// AgentStatusToProvisionedHost holds the value of the AgentStatusToProvisionedHost edge.
-	HCLAgentStatusToProvisionedHost *ProvisionedHost `json:"AgentStatusToProvisionedHost,omitempty"`
-	// AgentStatusToProvisionedNetwork holds the value of the AgentStatusToProvisionedNetwork edge.
-	HCLAgentStatusToProvisionedNetwork *ProvisionedNetwork `json:"AgentStatusToProvisionedNetwork,omitempty"`
-	// AgentStatusToBuild holds the value of the AgentStatusToBuild edge.
-	HCLAgentStatusToBuild *Build `json:"AgentStatusToBuild,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	HCLProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// ProvisionedNetwork holds the value of the ProvisionedNetwork edge.
+	HCLProvisionedNetwork *ProvisionedNetwork `json:"ProvisionedNetwork,omitempty"`
+	// Build holds the value of the Build edge.
+	HCLBuild *Build `json:"Build,omitempty"`
 	//
-	agent_status_agent_status_to_provisioned_host    *uuid.UUID
-	agent_status_agent_status_to_provisioned_network *uuid.UUID
-	agent_status_agent_status_to_build               *uuid.UUID
+	agent_status_provisioned_network *uuid.UUID
+	agent_status_build               *uuid.UUID
 }
 
 // AgentStatusEdges holds the relations/edges for other nodes in the graph.
 type AgentStatusEdges struct {
-	// AgentStatusToProvisionedHost holds the value of the AgentStatusToProvisionedHost edge.
-	AgentStatusToProvisionedHost *ProvisionedHost `json:"AgentStatusToProvisionedHost,omitempty"`
-	// AgentStatusToProvisionedNetwork holds the value of the AgentStatusToProvisionedNetwork edge.
-	AgentStatusToProvisionedNetwork *ProvisionedNetwork `json:"AgentStatusToProvisionedNetwork,omitempty"`
-	// AgentStatusToBuild holds the value of the AgentStatusToBuild edge.
-	AgentStatusToBuild *Build `json:"AgentStatusToBuild,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	ProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// ProvisionedNetwork holds the value of the ProvisionedNetwork edge.
+	ProvisionedNetwork *ProvisionedNetwork `json:"ProvisionedNetwork,omitempty"`
+	// Build holds the value of the Build edge.
+	Build *Build `json:"Build,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
 }
 
-// AgentStatusToProvisionedHostOrErr returns the AgentStatusToProvisionedHost value or an error if the edge
+// ProvisionedHostOrErr returns the ProvisionedHost value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e AgentStatusEdges) AgentStatusToProvisionedHostOrErr() (*ProvisionedHost, error) {
+func (e AgentStatusEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[0] {
-		if e.AgentStatusToProvisionedHost == nil {
-			// The edge AgentStatusToProvisionedHost was loaded in eager-loading,
+		if e.ProvisionedHost == nil {
+			// The edge ProvisionedHost was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
-		return e.AgentStatusToProvisionedHost, nil
+		return e.ProvisionedHost, nil
 	}
-	return nil, &NotLoadedError{edge: "AgentStatusToProvisionedHost"}
+	return nil, &NotLoadedError{edge: "ProvisionedHost"}
 }
 
-// AgentStatusToProvisionedNetworkOrErr returns the AgentStatusToProvisionedNetwork value or an error if the edge
+// ProvisionedNetworkOrErr returns the ProvisionedNetwork value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e AgentStatusEdges) AgentStatusToProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
+func (e AgentStatusEdges) ProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
 	if e.loadedTypes[1] {
-		if e.AgentStatusToProvisionedNetwork == nil {
-			// The edge AgentStatusToProvisionedNetwork was loaded in eager-loading,
+		if e.ProvisionedNetwork == nil {
+			// The edge ProvisionedNetwork was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisionednetwork.Label}
 		}
-		return e.AgentStatusToProvisionedNetwork, nil
+		return e.ProvisionedNetwork, nil
 	}
-	return nil, &NotLoadedError{edge: "AgentStatusToProvisionedNetwork"}
+	return nil, &NotLoadedError{edge: "ProvisionedNetwork"}
 }
 
-// AgentStatusToBuildOrErr returns the AgentStatusToBuild value or an error if the edge
+// BuildOrErr returns the Build value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e AgentStatusEdges) AgentStatusToBuildOrErr() (*Build, error) {
+func (e AgentStatusEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[2] {
-		if e.AgentStatusToBuild == nil {
-			// The edge AgentStatusToBuild was loaded in eager-loading,
+		if e.Build == nil {
+			// The edge Build was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
-		return e.AgentStatusToBuild, nil
+		return e.Build, nil
 	}
-	return nil, &NotLoadedError{edge: "AgentStatusToBuild"}
+	return nil, &NotLoadedError{edge: "Build"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -132,11 +131,9 @@ func (*AgentStatus) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case agentstatus.FieldID:
 			values[i] = new(uuid.UUID)
-		case agentstatus.ForeignKeys[0]: // agent_status_agent_status_to_provisioned_host
+		case agentstatus.ForeignKeys[0]: // agent_status_provisioned_network
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case agentstatus.ForeignKeys[1]: // agent_status_agent_status_to_provisioned_network
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case agentstatus.ForeignKeys[2]: // agent_status_agent_status_to_build
+		case agentstatus.ForeignKeys[1]: // agent_status_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type AgentStatus", columns[i])
@@ -245,43 +242,36 @@ func (as *AgentStatus) assignValues(columns []string, values []interface{}) erro
 			}
 		case agentstatus.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field agent_status_agent_status_to_provisioned_host", values[i])
+				return fmt.Errorf("unexpected type %T for field agent_status_provisioned_network", values[i])
 			} else if value.Valid {
-				as.agent_status_agent_status_to_provisioned_host = new(uuid.UUID)
-				*as.agent_status_agent_status_to_provisioned_host = *value.S.(*uuid.UUID)
+				as.agent_status_provisioned_network = new(uuid.UUID)
+				*as.agent_status_provisioned_network = *value.S.(*uuid.UUID)
 			}
 		case agentstatus.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field agent_status_agent_status_to_provisioned_network", values[i])
+				return fmt.Errorf("unexpected type %T for field agent_status_build", values[i])
 			} else if value.Valid {
-				as.agent_status_agent_status_to_provisioned_network = new(uuid.UUID)
-				*as.agent_status_agent_status_to_provisioned_network = *value.S.(*uuid.UUID)
-			}
-		case agentstatus.ForeignKeys[2]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field agent_status_agent_status_to_build", values[i])
-			} else if value.Valid {
-				as.agent_status_agent_status_to_build = new(uuid.UUID)
-				*as.agent_status_agent_status_to_build = *value.S.(*uuid.UUID)
+				as.agent_status_build = new(uuid.UUID)
+				*as.agent_status_build = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryAgentStatusToProvisionedHost queries the "AgentStatusToProvisionedHost" edge of the AgentStatus entity.
-func (as *AgentStatus) QueryAgentStatusToProvisionedHost() *ProvisionedHostQuery {
-	return (&AgentStatusClient{config: as.config}).QueryAgentStatusToProvisionedHost(as)
+// QueryProvisionedHost queries the "ProvisionedHost" edge of the AgentStatus entity.
+func (as *AgentStatus) QueryProvisionedHost() *ProvisionedHostQuery {
+	return (&AgentStatusClient{config: as.config}).QueryProvisionedHost(as)
 }
 
-// QueryAgentStatusToProvisionedNetwork queries the "AgentStatusToProvisionedNetwork" edge of the AgentStatus entity.
-func (as *AgentStatus) QueryAgentStatusToProvisionedNetwork() *ProvisionedNetworkQuery {
-	return (&AgentStatusClient{config: as.config}).QueryAgentStatusToProvisionedNetwork(as)
+// QueryProvisionedNetwork queries the "ProvisionedNetwork" edge of the AgentStatus entity.
+func (as *AgentStatus) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
+	return (&AgentStatusClient{config: as.config}).QueryProvisionedNetwork(as)
 }
 
-// QueryAgentStatusToBuild queries the "AgentStatusToBuild" edge of the AgentStatus entity.
-func (as *AgentStatus) QueryAgentStatusToBuild() *BuildQuery {
-	return (&AgentStatusClient{config: as.config}).QueryAgentStatusToBuild(as)
+// QueryBuild queries the "Build" edge of the AgentStatus entity.
+func (as *AgentStatus) QueryBuild() *BuildQuery {
+	return (&AgentStatusClient{config: as.config}).QueryBuild(as)
 }
 
 // Update returns a builder for updating this AgentStatus.

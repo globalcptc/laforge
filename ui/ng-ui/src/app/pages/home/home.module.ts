@@ -3,6 +3,7 @@ import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { MatInputModule } from '@angular/material/input';
@@ -34,7 +35,8 @@ const routes: Routes = [
     MatTableModule,
     LaforgePipesModule,
     MatSlideToggleModule,
-    FormsModule
+    FormsModule,
+    MatChipsModule
   ]
 })
 export class HomeModule {}

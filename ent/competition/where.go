@@ -462,25 +462,25 @@ func StopTimeNotNil() predicate.Competition {
 	})
 }
 
-// HasCompetitionToDNS applies the HasEdge predicate on the "CompetitionToDNS" edge.
-func HasCompetitionToDNS() predicate.Competition {
+// HasDNS applies the HasEdge predicate on the "DNS" edge.
+func HasDNS() predicate.Competition {
 	return predicate.Competition(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CompetitionToDNSTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, CompetitionToDNSTable, CompetitionToDNSPrimaryKey...),
+			sqlgraph.To(DNSTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, DNSTable, DNSPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasCompetitionToDNSWith applies the HasEdge predicate on the "CompetitionToDNS" edge with a given conditions (other predicates).
-func HasCompetitionToDNSWith(preds ...predicate.DNS) predicate.Competition {
+// HasDNSWith applies the HasEdge predicate on the "DNS" edge with a given conditions (other predicates).
+func HasDNSWith(preds ...predicate.DNS) predicate.Competition {
 	return predicate.Competition(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CompetitionToDNSInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, CompetitionToDNSTable, CompetitionToDNSPrimaryKey...),
+			sqlgraph.To(DNSInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, DNSTable, DNSPrimaryKey...),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -490,25 +490,25 @@ func HasCompetitionToDNSWith(preds ...predicate.DNS) predicate.Competition {
 	})
 }
 
-// HasCompetitionToEnvironment applies the HasEdge predicate on the "CompetitionToEnvironment" edge.
-func HasCompetitionToEnvironment() predicate.Competition {
+// HasEnvironment applies the HasEdge predicate on the "Environment" edge.
+func HasEnvironment() predicate.Competition {
 	return predicate.Competition(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CompetitionToEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, CompetitionToEnvironmentTable, CompetitionToEnvironmentColumn),
+			sqlgraph.To(EnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasCompetitionToEnvironmentWith applies the HasEdge predicate on the "CompetitionToEnvironment" edge with a given conditions (other predicates).
-func HasCompetitionToEnvironmentWith(preds ...predicate.Environment) predicate.Competition {
+// HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
+func HasEnvironmentWith(preds ...predicate.Environment) predicate.Competition {
 	return predicate.Competition(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CompetitionToEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, CompetitionToEnvironmentTable, CompetitionToEnvironmentColumn),
+			sqlgraph.To(EnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -518,25 +518,25 @@ func HasCompetitionToEnvironmentWith(preds ...predicate.Environment) predicate.C
 	})
 }
 
-// HasCompetitionToBuild applies the HasEdge predicate on the "CompetitionToBuild" edge.
-func HasCompetitionToBuild() predicate.Competition {
+// HasBuilds applies the HasEdge predicate on the "Builds" edge.
+func HasBuilds() predicate.Competition {
 	return predicate.Competition(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CompetitionToBuildTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, CompetitionToBuildTable, CompetitionToBuildColumn),
+			sqlgraph.To(BuildsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, BuildsTable, BuildsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasCompetitionToBuildWith applies the HasEdge predicate on the "CompetitionToBuild" edge with a given conditions (other predicates).
-func HasCompetitionToBuildWith(preds ...predicate.Build) predicate.Competition {
+// HasBuildsWith applies the HasEdge predicate on the "Builds" edge with a given conditions (other predicates).
+func HasBuildsWith(preds ...predicate.Build) predicate.Competition {
 	return predicate.Competition(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CompetitionToBuildInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, CompetitionToBuildTable, CompetitionToBuildColumn),
+			sqlgraph.To(BuildsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, BuildsTable, BuildsColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

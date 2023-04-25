@@ -68,7 +68,7 @@ export class ManageComponent implements OnInit, OnDestroy {
   initBuildTree(): void {
     this.api.getBuildTree(this.buildId).then((b) => {
       this.build.next(b);
-      this.buildStatus = this.status.getStatusSubject(b.buildToStatus.id);
+      this.buildStatus = this.status.getStatusSubject(b.Status.id);
     });
   }
 
@@ -110,7 +110,7 @@ export class ManageComponent implements OnInit, OnDestroy {
     this.dialog.open(DeleteBuildModalComponent, {
       width: '50%',
       data: {
-        buildName: `${this.build.getValue().buildToEnvironment.name} v${this.build.getValue().revision}`,
+        buildName: `${this.build.getValue().Environment.name} v${this.build.getValue().revision}`,
         buildId: this.buildId
       }
     });

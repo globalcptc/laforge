@@ -54,103 +54,103 @@ type Host struct {
 	Edges HostEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// HostToDisk holds the value of the HostToDisk edge.
-	HCLHostToDisk *Disk `json:"HostToDisk,omitempty" hcl:"disk,block"`
-	// HostToUser holds the value of the HostToUser edge.
-	HCLHostToUser []*User `json:"HostToUser,omitempty" hcl:"maintainer,block"`
-	// HostToEnvironment holds the value of the HostToEnvironment edge.
-	HCLHostToEnvironment *Environment `json:"HostToEnvironment,omitempty"`
-	// HostToIncludedNetwork holds the value of the HostToIncludedNetwork edge.
-	HCLHostToIncludedNetwork []*IncludedNetwork `json:"HostToIncludedNetwork,omitempty"`
-	// DependOnHostToHostDependency holds the value of the DependOnHostToHostDependency edge.
-	HCLDependOnHostToHostDependency []*HostDependency `json:"DependOnHostToHostDependency,omitempty" hcl:"depends_on,block"`
-	// DependByHostToHostDependency holds the value of the DependByHostToHostDependency edge.
-	HCLDependByHostToHostDependency []*HostDependency `json:"DependByHostToHostDependency,omitempty"`
+	// Disk holds the value of the Disk edge.
+	HCLDisk *Disk `json:"Disk,omitempty" hcl:"disk,block"`
+	// Users holds the value of the Users edge.
+	HCLUsers []*User `json:"Users,omitempty" hcl:"maintainer,block"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
+	// IncludedNetworks holds the value of the IncludedNetworks edge.
+	HCLIncludedNetworks []*IncludedNetwork `json:"IncludedNetworks,omitempty"`
+	// DependOnHostDependencies holds the value of the DependOnHostDependencies edge.
+	HCLDependOnHostDependencies []*HostDependency `json:"DependOnHostDependencies,omitempty" hcl:"depends_on,block"`
+	// RequiredByHostDependencies holds the value of the RequiredByHostDependencies edge.
+	HCLRequiredByHostDependencies []*HostDependency `json:"RequiredByHostDependencies,omitempty"`
 	//
-	environment_environment_to_host *uuid.UUID
+	environment_hosts *uuid.UUID
 }
 
 // HostEdges holds the relations/edges for other nodes in the graph.
 type HostEdges struct {
-	// HostToDisk holds the value of the HostToDisk edge.
-	HostToDisk *Disk `json:"HostToDisk,omitempty" hcl:"disk,block"`
-	// HostToUser holds the value of the HostToUser edge.
-	HostToUser []*User `json:"HostToUser,omitempty" hcl:"maintainer,block"`
-	// HostToEnvironment holds the value of the HostToEnvironment edge.
-	HostToEnvironment *Environment `json:"HostToEnvironment,omitempty"`
-	// HostToIncludedNetwork holds the value of the HostToIncludedNetwork edge.
-	HostToIncludedNetwork []*IncludedNetwork `json:"HostToIncludedNetwork,omitempty"`
-	// DependOnHostToHostDependency holds the value of the DependOnHostToHostDependency edge.
-	DependOnHostToHostDependency []*HostDependency `json:"DependOnHostToHostDependency,omitempty" hcl:"depends_on,block"`
-	// DependByHostToHostDependency holds the value of the DependByHostToHostDependency edge.
-	DependByHostToHostDependency []*HostDependency `json:"DependByHostToHostDependency,omitempty"`
+	// Disk holds the value of the Disk edge.
+	Disk *Disk `json:"Disk,omitempty" hcl:"disk,block"`
+	// Users holds the value of the Users edge.
+	Users []*User `json:"Users,omitempty" hcl:"maintainer,block"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
+	// IncludedNetworks holds the value of the IncludedNetworks edge.
+	IncludedNetworks []*IncludedNetwork `json:"IncludedNetworks,omitempty"`
+	// DependOnHostDependencies holds the value of the DependOnHostDependencies edge.
+	DependOnHostDependencies []*HostDependency `json:"DependOnHostDependencies,omitempty" hcl:"depends_on,block"`
+	// RequiredByHostDependencies holds the value of the RequiredByHostDependencies edge.
+	RequiredByHostDependencies []*HostDependency `json:"RequiredByHostDependencies,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [6]bool
 }
 
-// HostToDiskOrErr returns the HostToDisk value or an error if the edge
+// DiskOrErr returns the Disk value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e HostEdges) HostToDiskOrErr() (*Disk, error) {
+func (e HostEdges) DiskOrErr() (*Disk, error) {
 	if e.loadedTypes[0] {
-		if e.HostToDisk == nil {
-			// The edge HostToDisk was loaded in eager-loading,
+		if e.Disk == nil {
+			// The edge Disk was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: disk.Label}
 		}
-		return e.HostToDisk, nil
+		return e.Disk, nil
 	}
-	return nil, &NotLoadedError{edge: "HostToDisk"}
+	return nil, &NotLoadedError{edge: "Disk"}
 }
 
-// HostToUserOrErr returns the HostToUser value or an error if the edge
+// UsersOrErr returns the Users value or an error if the edge
 // was not loaded in eager-loading.
-func (e HostEdges) HostToUserOrErr() ([]*User, error) {
+func (e HostEdges) UsersOrErr() ([]*User, error) {
 	if e.loadedTypes[1] {
-		return e.HostToUser, nil
+		return e.Users, nil
 	}
-	return nil, &NotLoadedError{edge: "HostToUser"}
+	return nil, &NotLoadedError{edge: "Users"}
 }
 
-// HostToEnvironmentOrErr returns the HostToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e HostEdges) HostToEnvironmentOrErr() (*Environment, error) {
+func (e HostEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[2] {
-		if e.HostToEnvironment == nil {
-			// The edge HostToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.HostToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "HostToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
-// HostToIncludedNetworkOrErr returns the HostToIncludedNetwork value or an error if the edge
+// IncludedNetworksOrErr returns the IncludedNetworks value or an error if the edge
 // was not loaded in eager-loading.
-func (e HostEdges) HostToIncludedNetworkOrErr() ([]*IncludedNetwork, error) {
+func (e HostEdges) IncludedNetworksOrErr() ([]*IncludedNetwork, error) {
 	if e.loadedTypes[3] {
-		return e.HostToIncludedNetwork, nil
+		return e.IncludedNetworks, nil
 	}
-	return nil, &NotLoadedError{edge: "HostToIncludedNetwork"}
+	return nil, &NotLoadedError{edge: "IncludedNetworks"}
 }
 
-// DependOnHostToHostDependencyOrErr returns the DependOnHostToHostDependency value or an error if the edge
+// DependOnHostDependenciesOrErr returns the DependOnHostDependencies value or an error if the edge
 // was not loaded in eager-loading.
-func (e HostEdges) DependOnHostToHostDependencyOrErr() ([]*HostDependency, error) {
+func (e HostEdges) DependOnHostDependenciesOrErr() ([]*HostDependency, error) {
 	if e.loadedTypes[4] {
-		return e.DependOnHostToHostDependency, nil
+		return e.DependOnHostDependencies, nil
 	}
-	return nil, &NotLoadedError{edge: "DependOnHostToHostDependency"}
+	return nil, &NotLoadedError{edge: "DependOnHostDependencies"}
 }
 
-// DependByHostToHostDependencyOrErr returns the DependByHostToHostDependency value or an error if the edge
+// RequiredByHostDependenciesOrErr returns the RequiredByHostDependencies value or an error if the edge
 // was not loaded in eager-loading.
-func (e HostEdges) DependByHostToHostDependencyOrErr() ([]*HostDependency, error) {
+func (e HostEdges) RequiredByHostDependenciesOrErr() ([]*HostDependency, error) {
 	if e.loadedTypes[5] {
-		return e.DependByHostToHostDependency, nil
+		return e.RequiredByHostDependencies, nil
 	}
-	return nil, &NotLoadedError{edge: "DependByHostToHostDependency"}
+	return nil, &NotLoadedError{edge: "RequiredByHostDependencies"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -168,7 +168,7 @@ func (*Host) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case host.FieldID:
 			values[i] = new(uuid.UUID)
-		case host.ForeignKeys[0]: // environment_environment_to_host
+		case host.ForeignKeys[0]: // environment_hosts
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Host", columns[i])
@@ -297,44 +297,44 @@ func (h *Host) assignValues(columns []string, values []interface{}) error {
 			}
 		case host.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_host", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_hosts", values[i])
 			} else if value.Valid {
-				h.environment_environment_to_host = new(uuid.UUID)
-				*h.environment_environment_to_host = *value.S.(*uuid.UUID)
+				h.environment_hosts = new(uuid.UUID)
+				*h.environment_hosts = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryHostToDisk queries the "HostToDisk" edge of the Host entity.
-func (h *Host) QueryHostToDisk() *DiskQuery {
-	return (&HostClient{config: h.config}).QueryHostToDisk(h)
+// QueryDisk queries the "Disk" edge of the Host entity.
+func (h *Host) QueryDisk() *DiskQuery {
+	return (&HostClient{config: h.config}).QueryDisk(h)
 }
 
-// QueryHostToUser queries the "HostToUser" edge of the Host entity.
-func (h *Host) QueryHostToUser() *UserQuery {
-	return (&HostClient{config: h.config}).QueryHostToUser(h)
+// QueryUsers queries the "Users" edge of the Host entity.
+func (h *Host) QueryUsers() *UserQuery {
+	return (&HostClient{config: h.config}).QueryUsers(h)
 }
 
-// QueryHostToEnvironment queries the "HostToEnvironment" edge of the Host entity.
-func (h *Host) QueryHostToEnvironment() *EnvironmentQuery {
-	return (&HostClient{config: h.config}).QueryHostToEnvironment(h)
+// QueryEnvironment queries the "Environment" edge of the Host entity.
+func (h *Host) QueryEnvironment() *EnvironmentQuery {
+	return (&HostClient{config: h.config}).QueryEnvironment(h)
 }
 
-// QueryHostToIncludedNetwork queries the "HostToIncludedNetwork" edge of the Host entity.
-func (h *Host) QueryHostToIncludedNetwork() *IncludedNetworkQuery {
-	return (&HostClient{config: h.config}).QueryHostToIncludedNetwork(h)
+// QueryIncludedNetworks queries the "IncludedNetworks" edge of the Host entity.
+func (h *Host) QueryIncludedNetworks() *IncludedNetworkQuery {
+	return (&HostClient{config: h.config}).QueryIncludedNetworks(h)
 }
 
-// QueryDependOnHostToHostDependency queries the "DependOnHostToHostDependency" edge of the Host entity.
-func (h *Host) QueryDependOnHostToHostDependency() *HostDependencyQuery {
-	return (&HostClient{config: h.config}).QueryDependOnHostToHostDependency(h)
+// QueryDependOnHostDependencies queries the "DependOnHostDependencies" edge of the Host entity.
+func (h *Host) QueryDependOnHostDependencies() *HostDependencyQuery {
+	return (&HostClient{config: h.config}).QueryDependOnHostDependencies(h)
 }
 
-// QueryDependByHostToHostDependency queries the "DependByHostToHostDependency" edge of the Host entity.
-func (h *Host) QueryDependByHostToHostDependency() *HostDependencyQuery {
-	return (&HostClient{config: h.config}).QueryDependByHostToHostDependency(h)
+// QueryRequiredByHostDependencies queries the "RequiredByHostDependencies" edge of the Host entity.
+func (h *Host) QueryRequiredByHostDependencies() *HostDependencyQuery {
+	return (&HostClient{config: h.config}).QueryRequiredByHostDependencies(h)
 }
 
 // Update returns a builder for updating this Host.

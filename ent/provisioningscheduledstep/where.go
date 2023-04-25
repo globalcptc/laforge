@@ -469,25 +469,25 @@ func HasAnsibleWith(preds ...predicate.Ansible) predicate.ProvisioningScheduledS
 	})
 }
 
-// HasAgentTask applies the HasEdge predicate on the "AgentTask" edge.
-func HasAgentTask() predicate.ProvisioningScheduledStep {
+// HasAgentTasks applies the HasEdge predicate on the "AgentTasks" edge.
+func HasAgentTasks() predicate.ProvisioningScheduledStep {
 	return predicate.ProvisioningScheduledStep(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AgentTaskTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, AgentTaskTable, AgentTaskColumn),
+			sqlgraph.To(AgentTasksTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, AgentTasksTable, AgentTasksColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAgentTaskWith applies the HasEdge predicate on the "AgentTask" edge with a given conditions (other predicates).
-func HasAgentTaskWith(preds ...predicate.AgentTask) predicate.ProvisioningScheduledStep {
+// HasAgentTasksWith applies the HasEdge predicate on the "AgentTasks" edge with a given conditions (other predicates).
+func HasAgentTasksWith(preds ...predicate.AgentTask) predicate.ProvisioningScheduledStep {
 	return predicate.ProvisioningScheduledStep(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AgentTaskInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, AgentTaskTable, AgentTaskColumn),
+			sqlgraph.To(AgentTasksInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, AgentTasksTable, AgentTasksColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

@@ -19,14 +19,14 @@ import (
 // ScheduledStepQuery is the builder for querying ScheduledStep entities.
 type ScheduledStepQuery struct {
 	config
-	limit                          *int
-	offset                         *int
-	unique                         *bool
-	order                          []OrderFunc
-	fields                         []string
-	predicates                     []predicate.ScheduledStep
-	withScheduledStepToEnvironment *EnvironmentQuery
-	withFKs                        bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.ScheduledStep
+	withEnvironment *EnvironmentQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,8 +63,8 @@ func (ssq *ScheduledStepQuery) Order(o ...OrderFunc) *ScheduledStepQuery {
 	return ssq
 }
 
-// QueryScheduledStepToEnvironment chains the current query on the "ScheduledStepToEnvironment" edge.
-func (ssq *ScheduledStepQuery) QueryScheduledStepToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (ssq *ScheduledStepQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: ssq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := ssq.prepareQuery(ctx); err != nil {
@@ -77,7 +77,7 @@ func (ssq *ScheduledStepQuery) QueryScheduledStepToEnvironment() *EnvironmentQue
 		step := sqlgraph.NewStep(
 			sqlgraph.From(scheduledstep.Table, scheduledstep.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, scheduledstep.ScheduledStepToEnvironmentTable, scheduledstep.ScheduledStepToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, scheduledstep.EnvironmentTable, scheduledstep.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(ssq.driver.Dialect(), step)
 		return fromU, nil
@@ -261,12 +261,12 @@ func (ssq *ScheduledStepQuery) Clone() *ScheduledStepQuery {
 		return nil
 	}
 	return &ScheduledStepQuery{
-		config:                         ssq.config,
-		limit:                          ssq.limit,
-		offset:                         ssq.offset,
-		order:                          append([]OrderFunc{}, ssq.order...),
-		predicates:                     append([]predicate.ScheduledStep{}, ssq.predicates...),
-		withScheduledStepToEnvironment: ssq.withScheduledStepToEnvironment.Clone(),
+		config:          ssq.config,
+		limit:           ssq.limit,
+		offset:          ssq.offset,
+		order:           append([]OrderFunc{}, ssq.order...),
+		predicates:      append([]predicate.ScheduledStep{}, ssq.predicates...),
+		withEnvironment: ssq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    ssq.sql.Clone(),
 		path:   ssq.path,
@@ -274,14 +274,14 @@ func (ssq *ScheduledStepQuery) Clone() *ScheduledStepQuery {
 	}
 }
 
-// WithScheduledStepToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "ScheduledStepToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (ssq *ScheduledStepQuery) WithScheduledStepToEnvironment(opts ...func(*EnvironmentQuery)) *ScheduledStepQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (ssq *ScheduledStepQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *ScheduledStepQuery {
 	query := &EnvironmentQuery{config: ssq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	ssq.withScheduledStepToEnvironment = query
+	ssq.withEnvironment = query
 	return ssq
 }
 
@@ -355,10 +355,10 @@ func (ssq *ScheduledStepQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 		withFKs     = ssq.withFKs
 		_spec       = ssq.querySpec()
 		loadedTypes = [1]bool{
-			ssq.withScheduledStepToEnvironment != nil,
+			ssq.withEnvironment != nil,
 		}
 	)
-	if ssq.withScheduledStepToEnvironment != nil {
+	if ssq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -382,23 +382,23 @@ func (ssq *ScheduledStepQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := ssq.withScheduledStepToEnvironment; query != nil {
-		if err := ssq.loadScheduledStepToEnvironment(ctx, query, nodes, nil,
-			func(n *ScheduledStep, e *Environment) { n.Edges.ScheduledStepToEnvironment = e }); err != nil {
+	if query := ssq.withEnvironment; query != nil {
+		if err := ssq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *ScheduledStep, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (ssq *ScheduledStepQuery) loadScheduledStepToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*ScheduledStep, init func(*ScheduledStep), assign func(*ScheduledStep, *Environment)) error {
+func (ssq *ScheduledStepQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*ScheduledStep, init func(*ScheduledStep), assign func(*ScheduledStep, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ScheduledStep)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_scheduled_step == nil {
+		if nodes[i].environment_scheduled_steps == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_scheduled_step
+		fk := *nodes[i].environment_scheduled_steps
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (ssq *ScheduledStepQuery) loadScheduledStepToEnvironment(ctx context.Contex
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_scheduled_step" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_scheduled_steps" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

@@ -64,15 +64,14 @@ func (ProvisioningScheduledStep) Edges() []ent.Edge {
 		edge.To("Ansible", Ansible.Type).
 			Unique(),
 		// AgentTask
-		edge.From("AgentTask", AgentTask.Type).
-			Ref("AgentTaskToProvisioningScheduledStep").
-			Unique(),
+		edge.From("AgentTasks", AgentTask.Type).
+			Ref("ProvisioningScheduledStep"),
 		// Plan
 		edge.From("Plan", Plan.Type).
-			Ref("PlanToProvisioningScheduledStep").
+			Ref("ProvisioningScheduledStep").
 			Unique(),
 		edge.From("GinFileMiddleware", GinFileMiddleware.Type).
-			Ref("GinFileMiddlewareToProvisioningScheduledStep").
+			Ref("ProvisioningScheduledStep").
 			Unique(),
 	}
 }

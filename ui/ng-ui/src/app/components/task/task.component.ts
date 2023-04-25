@@ -18,7 +18,7 @@ export class TaskComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.taskStatus = { ...this.task.ServerTaskToStatus };
+    this.taskStatus = { ...this.task.Status };
 
     const sub = this.envService.statusUpdate.asObservable().subscribe(() => {
       this.checkTaskStatus();
@@ -32,8 +32,8 @@ export class TaskComponent implements OnInit, OnDestroy {
   }
 
   checkTaskStatus(): void {
-    if (!this.task.ServerTaskToStatus) return;
-    const updatedStatus = this.envService.getStatus(this.task.ServerTaskToStatus.id);
+    if (!this.task.Status) return;
+    const updatedStatus = this.envService.getStatus(this.task.Status.id);
     if (updatedStatus) {
       this.taskStatus = updatedStatus;
       this.cdRef.markForCheck();

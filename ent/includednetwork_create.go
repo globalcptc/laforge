@@ -30,9 +30,9 @@ func (inc *IncludedNetworkCreate) SetName(s string) *IncludedNetworkCreate {
 	return inc
 }
 
-// SetHosts sets the "hosts" field.
-func (inc *IncludedNetworkCreate) SetHosts(s []string) *IncludedNetworkCreate {
-	inc.mutation.SetHosts(s)
+// SetIncludedHosts sets the "included_hosts" field.
+func (inc *IncludedNetworkCreate) SetIncludedHosts(s []string) *IncludedNetworkCreate {
+	inc.mutation.SetIncludedHosts(s)
 	return inc
 }
 
@@ -50,68 +50,68 @@ func (inc *IncludedNetworkCreate) SetNillableID(u *uuid.UUID) *IncludedNetworkCr
 	return inc
 }
 
-// AddIncludedNetworkToTagIDs adds the "IncludedNetworkToTag" edge to the Tag entity by IDs.
-func (inc *IncludedNetworkCreate) AddIncludedNetworkToTagIDs(ids ...uuid.UUID) *IncludedNetworkCreate {
-	inc.mutation.AddIncludedNetworkToTagIDs(ids...)
+// AddTagIDs adds the "Tags" edge to the Tag entity by IDs.
+func (inc *IncludedNetworkCreate) AddTagIDs(ids ...uuid.UUID) *IncludedNetworkCreate {
+	inc.mutation.AddTagIDs(ids...)
 	return inc
 }
 
-// AddIncludedNetworkToTag adds the "IncludedNetworkToTag" edges to the Tag entity.
-func (inc *IncludedNetworkCreate) AddIncludedNetworkToTag(t ...*Tag) *IncludedNetworkCreate {
+// AddTags adds the "Tags" edges to the Tag entity.
+func (inc *IncludedNetworkCreate) AddTags(t ...*Tag) *IncludedNetworkCreate {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return inc.AddIncludedNetworkToTagIDs(ids...)
+	return inc.AddTagIDs(ids...)
 }
 
-// AddIncludedNetworkToHostIDs adds the "IncludedNetworkToHost" edge to the Host entity by IDs.
-func (inc *IncludedNetworkCreate) AddIncludedNetworkToHostIDs(ids ...uuid.UUID) *IncludedNetworkCreate {
-	inc.mutation.AddIncludedNetworkToHostIDs(ids...)
+// AddHostIDs adds the "Hosts" edge to the Host entity by IDs.
+func (inc *IncludedNetworkCreate) AddHostIDs(ids ...uuid.UUID) *IncludedNetworkCreate {
+	inc.mutation.AddHostIDs(ids...)
 	return inc
 }
 
-// AddIncludedNetworkToHost adds the "IncludedNetworkToHost" edges to the Host entity.
-func (inc *IncludedNetworkCreate) AddIncludedNetworkToHost(h ...*Host) *IncludedNetworkCreate {
+// AddHosts adds the "Hosts" edges to the Host entity.
+func (inc *IncludedNetworkCreate) AddHosts(h ...*Host) *IncludedNetworkCreate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return inc.AddIncludedNetworkToHostIDs(ids...)
+	return inc.AddHostIDs(ids...)
 }
 
-// SetIncludedNetworkToNetworkID sets the "IncludedNetworkToNetwork" edge to the Network entity by ID.
-func (inc *IncludedNetworkCreate) SetIncludedNetworkToNetworkID(id uuid.UUID) *IncludedNetworkCreate {
-	inc.mutation.SetIncludedNetworkToNetworkID(id)
+// SetNetworkID sets the "Network" edge to the Network entity by ID.
+func (inc *IncludedNetworkCreate) SetNetworkID(id uuid.UUID) *IncludedNetworkCreate {
+	inc.mutation.SetNetworkID(id)
 	return inc
 }
 
-// SetNillableIncludedNetworkToNetworkID sets the "IncludedNetworkToNetwork" edge to the Network entity by ID if the given value is not nil.
-func (inc *IncludedNetworkCreate) SetNillableIncludedNetworkToNetworkID(id *uuid.UUID) *IncludedNetworkCreate {
+// SetNillableNetworkID sets the "Network" edge to the Network entity by ID if the given value is not nil.
+func (inc *IncludedNetworkCreate) SetNillableNetworkID(id *uuid.UUID) *IncludedNetworkCreate {
 	if id != nil {
-		inc = inc.SetIncludedNetworkToNetworkID(*id)
+		inc = inc.SetNetworkID(*id)
 	}
 	return inc
 }
 
-// SetIncludedNetworkToNetwork sets the "IncludedNetworkToNetwork" edge to the Network entity.
-func (inc *IncludedNetworkCreate) SetIncludedNetworkToNetwork(n *Network) *IncludedNetworkCreate {
-	return inc.SetIncludedNetworkToNetworkID(n.ID)
+// SetNetwork sets the "Network" edge to the Network entity.
+func (inc *IncludedNetworkCreate) SetNetwork(n *Network) *IncludedNetworkCreate {
+	return inc.SetNetworkID(n.ID)
 }
 
-// AddIncludedNetworkToEnvironmentIDs adds the "IncludedNetworkToEnvironment" edge to the Environment entity by IDs.
-func (inc *IncludedNetworkCreate) AddIncludedNetworkToEnvironmentIDs(ids ...uuid.UUID) *IncludedNetworkCreate {
-	inc.mutation.AddIncludedNetworkToEnvironmentIDs(ids...)
+// AddEnvironmentIDs adds the "Environments" edge to the Environment entity by IDs.
+func (inc *IncludedNetworkCreate) AddEnvironmentIDs(ids ...uuid.UUID) *IncludedNetworkCreate {
+	inc.mutation.AddEnvironmentIDs(ids...)
 	return inc
 }
 
-// AddIncludedNetworkToEnvironment adds the "IncludedNetworkToEnvironment" edges to the Environment entity.
-func (inc *IncludedNetworkCreate) AddIncludedNetworkToEnvironment(e ...*Environment) *IncludedNetworkCreate {
+// AddEnvironments adds the "Environments" edges to the Environment entity.
+func (inc *IncludedNetworkCreate) AddEnvironments(e ...*Environment) *IncludedNetworkCreate {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return inc.AddIncludedNetworkToEnvironmentIDs(ids...)
+	return inc.AddEnvironmentIDs(ids...)
 }
 
 // Mutation returns the IncludedNetworkMutation object of the builder.
@@ -202,8 +202,8 @@ func (inc *IncludedNetworkCreate) check() error {
 	if _, ok := inc.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "IncludedNetwork.name"`)}
 	}
-	if _, ok := inc.mutation.Hosts(); !ok {
-		return &ValidationError{Name: "hosts", err: errors.New(`ent: missing required field "IncludedNetwork.hosts"`)}
+	if _, ok := inc.mutation.IncludedHosts(); !ok {
+		return &ValidationError{Name: "included_hosts", err: errors.New(`ent: missing required field "IncludedNetwork.included_hosts"`)}
 	}
 	return nil
 }
@@ -249,20 +249,20 @@ func (inc *IncludedNetworkCreate) createSpec() (*IncludedNetwork, *sqlgraph.Crea
 		})
 		_node.Name = value
 	}
-	if value, ok := inc.mutation.Hosts(); ok {
+	if value, ok := inc.mutation.IncludedHosts(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeJSON,
 			Value:  value,
-			Column: includednetwork.FieldHosts,
+			Column: includednetwork.FieldIncludedHosts,
 		})
-		_node.Hosts = value
+		_node.IncludedHosts = value
 	}
-	if nodes := inc.mutation.IncludedNetworkToTagIDs(); len(nodes) > 0 {
+	if nodes := inc.mutation.TagsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   includednetwork.IncludedNetworkToTagTable,
-			Columns: []string{includednetwork.IncludedNetworkToTagColumn},
+			Table:   includednetwork.TagsTable,
+			Columns: []string{includednetwork.TagsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -276,12 +276,12 @@ func (inc *IncludedNetworkCreate) createSpec() (*IncludedNetwork, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := inc.mutation.IncludedNetworkToHostIDs(); len(nodes) > 0 {
+	if nodes := inc.mutation.HostsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   includednetwork.IncludedNetworkToHostTable,
-			Columns: includednetwork.IncludedNetworkToHostPrimaryKey,
+			Table:   includednetwork.HostsTable,
+			Columns: includednetwork.HostsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -295,12 +295,12 @@ func (inc *IncludedNetworkCreate) createSpec() (*IncludedNetwork, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := inc.mutation.IncludedNetworkToNetworkIDs(); len(nodes) > 0 {
+	if nodes := inc.mutation.NetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   includednetwork.IncludedNetworkToNetworkTable,
-			Columns: []string{includednetwork.IncludedNetworkToNetworkColumn},
+			Table:   includednetwork.NetworkTable,
+			Columns: []string{includednetwork.NetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -312,15 +312,15 @@ func (inc *IncludedNetworkCreate) createSpec() (*IncludedNetwork, *sqlgraph.Crea
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.included_network_included_network_to_network = &nodes[0]
+		_node.included_network_network = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := inc.mutation.IncludedNetworkToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := inc.mutation.EnvironmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   includednetwork.IncludedNetworkToEnvironmentTable,
-			Columns: includednetwork.IncludedNetworkToEnvironmentPrimaryKey,
+			Table:   includednetwork.EnvironmentsTable,
+			Columns: includednetwork.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

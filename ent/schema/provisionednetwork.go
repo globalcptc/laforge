@@ -27,16 +27,21 @@ func (ProvisionedNetwork) Fields() []ent.Field {
 // Edges of the ProvisionedNetwork.
 func (ProvisionedNetwork) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("ProvisionedNetworkToStatus", Status.Type).Unique().
+		edge.To("Status", Status.Type).
+			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("ProvisionedNetworkToNetwork", Network.Type).Unique(),
-		edge.To("ProvisionedNetworkToBuild", Build.Type).Unique(),
-		edge.To("ProvisionedNetworkToTeam", Team.Type).Unique(),
-		edge.From("ProvisionedNetworkToProvisionedHost", ProvisionedHost.Type).
-			Ref("ProvisionedHostToProvisionedNetwork"),
-		edge.From("ProvisionedNetworkToPlan", Plan.Type).
-			Ref("PlanToProvisionedNetwork").Unique(),
+		edge.To("Network", Network.Type).
+			Unique(),
+		edge.To("Build", Build.Type).
+			Unique(),
+		edge.To("Team", Team.Type).
+			Unique(),
+		edge.From("ProvisionedHosts", ProvisionedHost.Type).
+			Ref("ProvisionedNetwork"),
+		edge.From("Plan", Plan.Type).
+			Ref("ProvisionedNetwork").
+			Unique(),
 	}
 }

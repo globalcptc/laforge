@@ -504,25 +504,25 @@ func TypeContainsFold(v string) predicate.FileExtract {
 	})
 }
 
-// HasFileExtractToEnvironment applies the HasEdge predicate on the "FileExtractToEnvironment" edge.
-func HasFileExtractToEnvironment() predicate.FileExtract {
+// HasEnvironment applies the HasEdge predicate on the "Environment" edge.
+func HasEnvironment() predicate.FileExtract {
 	return predicate.FileExtract(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileExtractToEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, FileExtractToEnvironmentTable, FileExtractToEnvironmentColumn),
+			sqlgraph.To(EnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasFileExtractToEnvironmentWith applies the HasEdge predicate on the "FileExtractToEnvironment" edge with a given conditions (other predicates).
-func HasFileExtractToEnvironmentWith(preds ...predicate.Environment) predicate.FileExtract {
+// HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
+func HasEnvironmentWith(preds ...predicate.Environment) predicate.FileExtract {
 	return predicate.FileExtract(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileExtractToEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, FileExtractToEnvironmentTable, FileExtractToEnvironmentColumn),
+			sqlgraph.To(EnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

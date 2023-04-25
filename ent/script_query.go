@@ -22,16 +22,16 @@ import (
 // ScriptQuery is the builder for querying Script entities.
 type ScriptQuery struct {
 	config
-	limit                   *int
-	offset                  *int
-	unique                  *bool
-	order                   []OrderFunc
-	fields                  []string
-	predicates              []predicate.Script
-	withScriptToUser        *UserQuery
-	withScriptToFinding     *FindingQuery
-	withScriptToEnvironment *EnvironmentQuery
-	withFKs                 bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.Script
+	withUsers       *UserQuery
+	withFindings    *FindingQuery
+	withEnvironment *EnvironmentQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -68,8 +68,8 @@ func (sq *ScriptQuery) Order(o ...OrderFunc) *ScriptQuery {
 	return sq
 }
 
-// QueryScriptToUser chains the current query on the "ScriptToUser" edge.
-func (sq *ScriptQuery) QueryScriptToUser() *UserQuery {
+// QueryUsers chains the current query on the "Users" edge.
+func (sq *ScriptQuery) QueryUsers() *UserQuery {
 	query := &UserQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
@@ -82,7 +82,7 @@ func (sq *ScriptQuery) QueryScriptToUser() *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(script.Table, script.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, script.ScriptToUserTable, script.ScriptToUserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, script.UsersTable, script.UsersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -90,8 +90,8 @@ func (sq *ScriptQuery) QueryScriptToUser() *UserQuery {
 	return query
 }
 
-// QueryScriptToFinding chains the current query on the "ScriptToFinding" edge.
-func (sq *ScriptQuery) QueryScriptToFinding() *FindingQuery {
+// QueryFindings chains the current query on the "Findings" edge.
+func (sq *ScriptQuery) QueryFindings() *FindingQuery {
 	query := &FindingQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
@@ -104,7 +104,7 @@ func (sq *ScriptQuery) QueryScriptToFinding() *FindingQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(script.Table, script.FieldID, selector),
 			sqlgraph.To(finding.Table, finding.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, script.ScriptToFindingTable, script.ScriptToFindingColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, script.FindingsTable, script.FindingsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -112,8 +112,8 @@ func (sq *ScriptQuery) QueryScriptToFinding() *FindingQuery {
 	return query
 }
 
-// QueryScriptToEnvironment chains the current query on the "ScriptToEnvironment" edge.
-func (sq *ScriptQuery) QueryScriptToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (sq *ScriptQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
@@ -126,7 +126,7 @@ func (sq *ScriptQuery) QueryScriptToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(script.Table, script.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, script.ScriptToEnvironmentTable, script.ScriptToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, script.EnvironmentTable, script.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -310,14 +310,14 @@ func (sq *ScriptQuery) Clone() *ScriptQuery {
 		return nil
 	}
 	return &ScriptQuery{
-		config:                  sq.config,
-		limit:                   sq.limit,
-		offset:                  sq.offset,
-		order:                   append([]OrderFunc{}, sq.order...),
-		predicates:              append([]predicate.Script{}, sq.predicates...),
-		withScriptToUser:        sq.withScriptToUser.Clone(),
-		withScriptToFinding:     sq.withScriptToFinding.Clone(),
-		withScriptToEnvironment: sq.withScriptToEnvironment.Clone(),
+		config:          sq.config,
+		limit:           sq.limit,
+		offset:          sq.offset,
+		order:           append([]OrderFunc{}, sq.order...),
+		predicates:      append([]predicate.Script{}, sq.predicates...),
+		withUsers:       sq.withUsers.Clone(),
+		withFindings:    sq.withFindings.Clone(),
+		withEnvironment: sq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    sq.sql.Clone(),
 		path:   sq.path,
@@ -325,36 +325,36 @@ func (sq *ScriptQuery) Clone() *ScriptQuery {
 	}
 }
 
-// WithScriptToUser tells the query-builder to eager-load the nodes that are connected to
-// the "ScriptToUser" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *ScriptQuery) WithScriptToUser(opts ...func(*UserQuery)) *ScriptQuery {
+// WithUsers tells the query-builder to eager-load the nodes that are connected to
+// the "Users" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *ScriptQuery) WithUsers(opts ...func(*UserQuery)) *ScriptQuery {
 	query := &UserQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withScriptToUser = query
+	sq.withUsers = query
 	return sq
 }
 
-// WithScriptToFinding tells the query-builder to eager-load the nodes that are connected to
-// the "ScriptToFinding" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *ScriptQuery) WithScriptToFinding(opts ...func(*FindingQuery)) *ScriptQuery {
+// WithFindings tells the query-builder to eager-load the nodes that are connected to
+// the "Findings" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *ScriptQuery) WithFindings(opts ...func(*FindingQuery)) *ScriptQuery {
 	query := &FindingQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withScriptToFinding = query
+	sq.withFindings = query
 	return sq
 }
 
-// WithScriptToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "ScriptToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *ScriptQuery) WithScriptToEnvironment(opts ...func(*EnvironmentQuery)) *ScriptQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *ScriptQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *ScriptQuery {
 	query := &EnvironmentQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withScriptToEnvironment = query
+	sq.withEnvironment = query
 	return sq
 }
 
@@ -428,12 +428,12 @@ func (sq *ScriptQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Scrip
 		withFKs     = sq.withFKs
 		_spec       = sq.querySpec()
 		loadedTypes = [3]bool{
-			sq.withScriptToUser != nil,
-			sq.withScriptToFinding != nil,
-			sq.withScriptToEnvironment != nil,
+			sq.withUsers != nil,
+			sq.withFindings != nil,
+			sq.withEnvironment != nil,
 		}
 	)
-	if sq.withScriptToEnvironment != nil {
+	if sq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -457,30 +457,30 @@ func (sq *ScriptQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Scrip
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := sq.withScriptToUser; query != nil {
-		if err := sq.loadScriptToUser(ctx, query, nodes,
-			func(n *Script) { n.Edges.ScriptToUser = []*User{} },
-			func(n *Script, e *User) { n.Edges.ScriptToUser = append(n.Edges.ScriptToUser, e) }); err != nil {
+	if query := sq.withUsers; query != nil {
+		if err := sq.loadUsers(ctx, query, nodes,
+			func(n *Script) { n.Edges.Users = []*User{} },
+			func(n *Script, e *User) { n.Edges.Users = append(n.Edges.Users, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := sq.withScriptToFinding; query != nil {
-		if err := sq.loadScriptToFinding(ctx, query, nodes,
-			func(n *Script) { n.Edges.ScriptToFinding = []*Finding{} },
-			func(n *Script, e *Finding) { n.Edges.ScriptToFinding = append(n.Edges.ScriptToFinding, e) }); err != nil {
+	if query := sq.withFindings; query != nil {
+		if err := sq.loadFindings(ctx, query, nodes,
+			func(n *Script) { n.Edges.Findings = []*Finding{} },
+			func(n *Script, e *Finding) { n.Edges.Findings = append(n.Edges.Findings, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := sq.withScriptToEnvironment; query != nil {
-		if err := sq.loadScriptToEnvironment(ctx, query, nodes, nil,
-			func(n *Script, e *Environment) { n.Edges.ScriptToEnvironment = e }); err != nil {
+	if query := sq.withEnvironment; query != nil {
+		if err := sq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *Script, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (sq *ScriptQuery) loadScriptToUser(ctx context.Context, query *UserQuery, nodes []*Script, init func(*Script), assign func(*Script, *User)) error {
+func (sq *ScriptQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*Script, init func(*Script), assign func(*Script, *User)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Script)
 	for i := range nodes {
@@ -492,26 +492,26 @@ func (sq *ScriptQuery) loadScriptToUser(ctx context.Context, query *UserQuery, n
 	}
 	query.withFKs = true
 	query.Where(predicate.User(func(s *sql.Selector) {
-		s.Where(sql.InValues(script.ScriptToUserColumn, fks...))
+		s.Where(sql.InValues(script.UsersColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.script_script_to_user
+		fk := n.script_users
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "script_script_to_user" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "script_users" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "script_script_to_user" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "script_users" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (sq *ScriptQuery) loadScriptToFinding(ctx context.Context, query *FindingQuery, nodes []*Script, init func(*Script), assign func(*Script, *Finding)) error {
+func (sq *ScriptQuery) loadFindings(ctx context.Context, query *FindingQuery, nodes []*Script, init func(*Script), assign func(*Script, *Finding)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Script)
 	for i := range nodes {
@@ -523,33 +523,33 @@ func (sq *ScriptQuery) loadScriptToFinding(ctx context.Context, query *FindingQu
 	}
 	query.withFKs = true
 	query.Where(predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.InValues(script.ScriptToFindingColumn, fks...))
+		s.Where(sql.InValues(script.FindingsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.script_script_to_finding
+		fk := n.script_findings
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "script_script_to_finding" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "script_findings" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "script_script_to_finding" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "script_findings" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (sq *ScriptQuery) loadScriptToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Script, init func(*Script), assign func(*Script, *Environment)) error {
+func (sq *ScriptQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Script, init func(*Script), assign func(*Script, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Script)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_script == nil {
+		if nodes[i].environment_scripts == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_script
+		fk := *nodes[i].environment_scripts
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -563,7 +563,7 @@ func (sq *ScriptQuery) loadScriptToEnvironment(ctx context.Context, query *Envir
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_script" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_scripts" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

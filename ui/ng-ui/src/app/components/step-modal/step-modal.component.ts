@@ -60,9 +60,9 @@ export class StepModalComponent implements OnInit {
   // getStatus(): ProvisionStatus {
   // let numWithAgentData = 0;
   // let totalAgents = 0;
-  // for (const host of this.data.provisioningStep.ProvisionedNetworkToProvisionedHost) {
+  // for (const host of this.data.provisioningStep.ProvisionedHosts) {
   //   totalAgents++;
-  //   if (host.ProvisionedHostToAgentStatus?.clientId) numWithAgentData++;
+  //   if (host.AgentStatus?.clientId) numWithAgentData++;
   // }
   // if (numWithAgentData === totalAgents) {
   //   this.failedChildren = false;
@@ -126,18 +126,14 @@ export class StepModalComponent implements OnInit {
   getText(): string {
     switch (this.data.provisioningStep.type) {
       case LaForgeProvisioningStepType.Script:
-        return `${
-          this.data.provisioningStep.ProvisioningStepToScript.source
-        } ${this.data.provisioningStep.ProvisioningStepToScript.args.join(' ')}`;
+        return `${this.data.provisioningStep.Script.source} ${this.data.provisioningStep.Script.args.join(' ')}`;
       case LaForgeProvisioningStepType.Command:
-        return `${
-          this.data.provisioningStep.ProvisioningStepToCommand.program
-        } ${this.data.provisioningStep.ProvisioningStepToCommand.args.join(' ')}`;
+        return `${this.data.provisioningStep.Command.program} ${this.data.provisioningStep.Command.args.join(' ')}`;
       case LaForgeProvisioningStepType.DnsRecord:
         return 'DNSRecord';
       case LaForgeProvisioningStepType.FileDownload:
         // eslint-disable-next-line max-len
-        return `${this.data.provisioningStep.ProvisioningStepToFileDownload.source} -> ${this.data.provisioningStep.ProvisioningStepToFileDownload.destination}`;
+        return `${this.data.provisioningStep.FileDownload.source} -> ${this.data.provisioningStep.FileDownload.destination}`;
       case LaForgeProvisioningStepType.FileDelete:
         return 'FileDelete';
       case LaForgeProvisioningStepType.FileExtract:

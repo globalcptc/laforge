@@ -104,7 +104,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 		return
 	}
 
-	taskCount, err := entProvisionedHost.QueryProvisionedHostToAgentTask().Count(ctx)
+	taskCount, err := entProvisionedHost.QueryAgentTasks().Count(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed querying umber of tasks: %v", err)
 		return
@@ -135,8 +135,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			SetArgs(entScript.Source + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + "true").
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningScheduledStep(entProvisioningScheduledStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
@@ -148,8 +148,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			SetArgs(entScript.Source + "💔" + strings.Join(entScript.Args, " ")).
 			SetNumber(taskCount + 1).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningScheduledStep(entProvisioningScheduledStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Execute: %v", err)
@@ -160,8 +160,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			SetArgs(entScript.Source).
 			SetNumber(taskCount + 2).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningScheduledStep(entProvisioningScheduledStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
@@ -180,8 +180,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 				SetArgs("").
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningScheduledStep(entProvisioningScheduledStep).
 				Save(ctx)
 			if err != nil {
 				logger.Log.Errorf("failed Creating Agent Task for Reboot Command: %v", err)
@@ -193,8 +193,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 				SetArgs(entCommand.Program + "💔" + strings.Join(entCommand.Args, " ")).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningScheduledStep(entProvisioningScheduledStep).
 				Save(ctx)
 			if err != nil {
 				logger.Log.Errorf("failed Creating Agent Task for Command: %v", err)
@@ -212,8 +212,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			SetArgs(entFileDelete.Path).
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningScheduledStep(entProvisioningScheduledStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for File Delete: %v", err)
@@ -236,8 +236,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 				SetArgs(entFileDownload.Destination + "💔" + entFileDownload.Source + "💔" + strings.ToLower(fmt.Sprintf("%v", entFileDownload.IsTxt))).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningScheduledStep(entProvisioningScheduledStep).
 				Save(ctx)
 		} else {
 			_, err = client.AgentTask.Create().
@@ -245,8 +245,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 				SetArgs(entFileDownload.Destination + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + strings.ToLower(fmt.Sprintf("%v", entFileDownload.IsTxt))).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningScheduledStep(entProvisioningScheduledStep).
 				Save(ctx)
 		}
 		if err != nil {
@@ -264,8 +264,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			SetArgs(entFileExtract.Source + "💔" + entFileExtract.Destination).
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningScheduledStep(entProvisioningScheduledStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for File Extract: %v", err)
@@ -289,8 +289,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + "false").
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningScheduledStep(entProvisioningScheduledStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
@@ -301,8 +301,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + "/tmp").
 			SetNumber(taskCount + 1).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningScheduledStep(entProvisioningScheduledStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
@@ -313,8 +313,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			SetArgs("/tmp/" + entAnsible.Name + "/" + entAnsible.PlaybookName + "💔" + string(entAnsible.Method) + "💔" + entAnsible.Inventory).
 			SetNumber(taskCount + 2).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningScheduledStep(entProvisioningScheduledStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Execute: %v", err)
@@ -325,8 +325,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			SetArgs("/tmp/" + entAnsible.Name).
 			SetNumber(taskCount + 3).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningScheduledStep(entProvisioningScheduledStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
@@ -337,8 +337,8 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			SetArgs("/tmp/" + entAnsible.Name + ".zip").
 			SetNumber(taskCount + 4).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningScheduledStep(entProvisioningScheduledStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningScheduledStep(entProvisioningScheduledStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
@@ -349,7 +349,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 	}
 
 	for {
-		taskFailed, err := entProvisioningScheduledStep.QueryAgentTask().Where(
+		taskFailed, err := entProvisioningScheduledStep.QueryAgentTasks().Where(
 			agenttask.StateEQ(
 				agenttask.StateFAILED,
 			),
@@ -371,7 +371,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 			return
 		}
 
-		taskRunning, err := entProvisioningScheduledStep.QueryAgentTask().Where(
+		taskRunning, err := entProvisioningScheduledStep.QueryAgentTasks().Where(
 			agenttask.StateNEQ(
 				agenttask.StateCOMPLETE,
 			),

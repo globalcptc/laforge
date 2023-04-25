@@ -63,61 +63,61 @@ func (gfmc *GinFileMiddlewareCreate) SetNillableID(u *uuid.UUID) *GinFileMiddlew
 	return gfmc
 }
 
-// SetGinFileMiddlewareToProvisionedHostID sets the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (gfmc *GinFileMiddlewareCreate) SetGinFileMiddlewareToProvisionedHostID(id uuid.UUID) *GinFileMiddlewareCreate {
-	gfmc.mutation.SetGinFileMiddlewareToProvisionedHostID(id)
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (gfmc *GinFileMiddlewareCreate) SetProvisionedHostID(id uuid.UUID) *GinFileMiddlewareCreate {
+	gfmc.mutation.SetProvisionedHostID(id)
 	return gfmc
 }
 
-// SetNillableGinFileMiddlewareToProvisionedHostID sets the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
-func (gfmc *GinFileMiddlewareCreate) SetNillableGinFileMiddlewareToProvisionedHostID(id *uuid.UUID) *GinFileMiddlewareCreate {
+// SetNillableProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
+func (gfmc *GinFileMiddlewareCreate) SetNillableProvisionedHostID(id *uuid.UUID) *GinFileMiddlewareCreate {
 	if id != nil {
-		gfmc = gfmc.SetGinFileMiddlewareToProvisionedHostID(*id)
+		gfmc = gfmc.SetProvisionedHostID(*id)
 	}
 	return gfmc
 }
 
-// SetGinFileMiddlewareToProvisionedHost sets the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity.
-func (gfmc *GinFileMiddlewareCreate) SetGinFileMiddlewareToProvisionedHost(p *ProvisionedHost) *GinFileMiddlewareCreate {
-	return gfmc.SetGinFileMiddlewareToProvisionedHostID(p.ID)
+// SetProvisionedHost sets the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (gfmc *GinFileMiddlewareCreate) SetProvisionedHost(p *ProvisionedHost) *GinFileMiddlewareCreate {
+	return gfmc.SetProvisionedHostID(p.ID)
 }
 
-// SetGinFileMiddlewareToProvisioningStepID sets the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity by ID.
-func (gfmc *GinFileMiddlewareCreate) SetGinFileMiddlewareToProvisioningStepID(id uuid.UUID) *GinFileMiddlewareCreate {
-	gfmc.mutation.SetGinFileMiddlewareToProvisioningStepID(id)
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID.
+func (gfmc *GinFileMiddlewareCreate) SetProvisioningStepID(id uuid.UUID) *GinFileMiddlewareCreate {
+	gfmc.mutation.SetProvisioningStepID(id)
 	return gfmc
 }
 
-// SetNillableGinFileMiddlewareToProvisioningStepID sets the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
-func (gfmc *GinFileMiddlewareCreate) SetNillableGinFileMiddlewareToProvisioningStepID(id *uuid.UUID) *GinFileMiddlewareCreate {
+// SetNillableProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
+func (gfmc *GinFileMiddlewareCreate) SetNillableProvisioningStepID(id *uuid.UUID) *GinFileMiddlewareCreate {
 	if id != nil {
-		gfmc = gfmc.SetGinFileMiddlewareToProvisioningStepID(*id)
+		gfmc = gfmc.SetProvisioningStepID(*id)
 	}
 	return gfmc
 }
 
-// SetGinFileMiddlewareToProvisioningStep sets the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity.
-func (gfmc *GinFileMiddlewareCreate) SetGinFileMiddlewareToProvisioningStep(p *ProvisioningStep) *GinFileMiddlewareCreate {
-	return gfmc.SetGinFileMiddlewareToProvisioningStepID(p.ID)
+// SetProvisioningStep sets the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (gfmc *GinFileMiddlewareCreate) SetProvisioningStep(p *ProvisioningStep) *GinFileMiddlewareCreate {
+	return gfmc.SetProvisioningStepID(p.ID)
 }
 
-// SetGinFileMiddlewareToProvisioningScheduledStepID sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
-func (gfmc *GinFileMiddlewareCreate) SetGinFileMiddlewareToProvisioningScheduledStepID(id uuid.UUID) *GinFileMiddlewareCreate {
-	gfmc.mutation.SetGinFileMiddlewareToProvisioningScheduledStepID(id)
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (gfmc *GinFileMiddlewareCreate) SetProvisioningScheduledStepID(id uuid.UUID) *GinFileMiddlewareCreate {
+	gfmc.mutation.SetProvisioningScheduledStepID(id)
 	return gfmc
 }
 
-// SetNillableGinFileMiddlewareToProvisioningScheduledStepID sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
-func (gfmc *GinFileMiddlewareCreate) SetNillableGinFileMiddlewareToProvisioningScheduledStepID(id *uuid.UUID) *GinFileMiddlewareCreate {
+// SetNillableProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (gfmc *GinFileMiddlewareCreate) SetNillableProvisioningScheduledStepID(id *uuid.UUID) *GinFileMiddlewareCreate {
 	if id != nil {
-		gfmc = gfmc.SetGinFileMiddlewareToProvisioningScheduledStepID(*id)
+		gfmc = gfmc.SetProvisioningScheduledStepID(*id)
 	}
 	return gfmc
 }
 
-// SetGinFileMiddlewareToProvisioningScheduledStep sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (gfmc *GinFileMiddlewareCreate) SetGinFileMiddlewareToProvisioningScheduledStep(p *ProvisioningScheduledStep) *GinFileMiddlewareCreate {
-	return gfmc.SetGinFileMiddlewareToProvisioningScheduledStepID(p.ID)
+// SetProvisioningScheduledStep sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (gfmc *GinFileMiddlewareCreate) SetProvisioningScheduledStep(p *ProvisioningScheduledStep) *GinFileMiddlewareCreate {
+	return gfmc.SetProvisioningScheduledStepID(p.ID)
 }
 
 // Mutation returns the GinFileMiddlewareMutation object of the builder.
@@ -278,12 +278,12 @@ func (gfmc *GinFileMiddlewareCreate) createSpec() (*GinFileMiddleware, *sqlgraph
 		})
 		_node.Accessed = value
 	}
-	if nodes := gfmc.mutation.GinFileMiddlewareToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := gfmc.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisionedHostTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisionedHostColumn},
+			Table:   ginfilemiddleware.ProvisionedHostTable,
+			Columns: []string{ginfilemiddleware.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -297,12 +297,12 @@ func (gfmc *GinFileMiddlewareCreate) createSpec() (*GinFileMiddleware, *sqlgraph
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := gfmc.mutation.GinFileMiddlewareToProvisioningStepIDs(); len(nodes) > 0 {
+	if nodes := gfmc.mutation.ProvisioningStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisioningStepTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisioningStepColumn},
+			Table:   ginfilemiddleware.ProvisioningStepTable,
+			Columns: []string{ginfilemiddleware.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -316,12 +316,12 @@ func (gfmc *GinFileMiddlewareCreate) createSpec() (*GinFileMiddleware, *sqlgraph
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := gfmc.mutation.GinFileMiddlewareToProvisioningScheduledStepIDs(); len(nodes) > 0 {
+	if nodes := gfmc.mutation.ProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepColumn},
+			Table:   ginfilemiddleware.ProvisioningScheduledStepTable,
+			Columns: []string{ginfilemiddleware.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

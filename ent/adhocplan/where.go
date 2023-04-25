@@ -80,25 +80,25 @@ func IDLTE(id uuid.UUID) predicate.AdhocPlan {
 	})
 }
 
-// HasPrevAdhocPlan applies the HasEdge predicate on the "PrevAdhocPlan" edge.
-func HasPrevAdhocPlan() predicate.AdhocPlan {
+// HasPrevAdhocPlans applies the HasEdge predicate on the "PrevAdhocPlans" edge.
+func HasPrevAdhocPlans() predicate.AdhocPlan {
 	return predicate.AdhocPlan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(PrevAdhocPlanTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, PrevAdhocPlanTable, PrevAdhocPlanPrimaryKey...),
+			sqlgraph.To(PrevAdhocPlansTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, PrevAdhocPlansTable, PrevAdhocPlansPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasPrevAdhocPlanWith applies the HasEdge predicate on the "PrevAdhocPlan" edge with a given conditions (other predicates).
-func HasPrevAdhocPlanWith(preds ...predicate.AdhocPlan) predicate.AdhocPlan {
+// HasPrevAdhocPlansWith applies the HasEdge predicate on the "PrevAdhocPlans" edge with a given conditions (other predicates).
+func HasPrevAdhocPlansWith(preds ...predicate.AdhocPlan) predicate.AdhocPlan {
 	return predicate.AdhocPlan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, PrevAdhocPlanTable, PrevAdhocPlanPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, true, PrevAdhocPlansTable, PrevAdhocPlansPrimaryKey...),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -108,25 +108,25 @@ func HasPrevAdhocPlanWith(preds ...predicate.AdhocPlan) predicate.AdhocPlan {
 	})
 }
 
-// HasNextAdhocPlan applies the HasEdge predicate on the "NextAdhocPlan" edge.
-func HasNextAdhocPlan() predicate.AdhocPlan {
+// HasNextAdhocPlans applies the HasEdge predicate on the "NextAdhocPlans" edge.
+func HasNextAdhocPlans() predicate.AdhocPlan {
 	return predicate.AdhocPlan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NextAdhocPlanTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, NextAdhocPlanTable, NextAdhocPlanPrimaryKey...),
+			sqlgraph.To(NextAdhocPlansTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, NextAdhocPlansTable, NextAdhocPlansPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasNextAdhocPlanWith applies the HasEdge predicate on the "NextAdhocPlan" edge with a given conditions (other predicates).
-func HasNextAdhocPlanWith(preds ...predicate.AdhocPlan) predicate.AdhocPlan {
+// HasNextAdhocPlansWith applies the HasEdge predicate on the "NextAdhocPlans" edge with a given conditions (other predicates).
+func HasNextAdhocPlansWith(preds ...predicate.AdhocPlan) predicate.AdhocPlan {
 	return predicate.AdhocPlan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, NextAdhocPlanTable, NextAdhocPlanPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, NextAdhocPlansTable, NextAdhocPlansPrimaryKey...),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -136,25 +136,25 @@ func HasNextAdhocPlanWith(preds ...predicate.AdhocPlan) predicate.AdhocPlan {
 	})
 }
 
-// HasAdhocPlanToBuild applies the HasEdge predicate on the "AdhocPlanToBuild" edge.
-func HasAdhocPlanToBuild() predicate.AdhocPlan {
+// HasBuild applies the HasEdge predicate on the "Build" edge.
+func HasBuild() predicate.AdhocPlan {
 	return predicate.AdhocPlan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AdhocPlanToBuildTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, AdhocPlanToBuildTable, AdhocPlanToBuildColumn),
+			sqlgraph.To(BuildTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAdhocPlanToBuildWith applies the HasEdge predicate on the "AdhocPlanToBuild" edge with a given conditions (other predicates).
-func HasAdhocPlanToBuildWith(preds ...predicate.Build) predicate.AdhocPlan {
+// HasBuildWith applies the HasEdge predicate on the "Build" edge with a given conditions (other predicates).
+func HasBuildWith(preds ...predicate.Build) predicate.AdhocPlan {
 	return predicate.AdhocPlan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AdhocPlanToBuildInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, AdhocPlanToBuildTable, AdhocPlanToBuildColumn),
+			sqlgraph.To(BuildInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -164,25 +164,25 @@ func HasAdhocPlanToBuildWith(preds ...predicate.Build) predicate.AdhocPlan {
 	})
 }
 
-// HasAdhocPlanToStatus applies the HasEdge predicate on the "AdhocPlanToStatus" edge.
-func HasAdhocPlanToStatus() predicate.AdhocPlan {
+// HasStatus applies the HasEdge predicate on the "Status" edge.
+func HasStatus() predicate.AdhocPlan {
 	return predicate.AdhocPlan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AdhocPlanToStatusTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, AdhocPlanToStatusTable, AdhocPlanToStatusColumn),
+			sqlgraph.To(StatusTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAdhocPlanToStatusWith applies the HasEdge predicate on the "AdhocPlanToStatus" edge with a given conditions (other predicates).
-func HasAdhocPlanToStatusWith(preds ...predicate.Status) predicate.AdhocPlan {
+// HasStatusWith applies the HasEdge predicate on the "Status" edge with a given conditions (other predicates).
+func HasStatusWith(preds ...predicate.Status) predicate.AdhocPlan {
 	return predicate.AdhocPlan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AdhocPlanToStatusInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, AdhocPlanToStatusTable, AdhocPlanToStatusColumn),
+			sqlgraph.To(StatusInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -192,25 +192,25 @@ func HasAdhocPlanToStatusWith(preds ...predicate.Status) predicate.AdhocPlan {
 	})
 }
 
-// HasAdhocPlanToAgentTask applies the HasEdge predicate on the "AdhocPlanToAgentTask" edge.
-func HasAdhocPlanToAgentTask() predicate.AdhocPlan {
+// HasAgentTask applies the HasEdge predicate on the "AgentTask" edge.
+func HasAgentTask() predicate.AdhocPlan {
 	return predicate.AdhocPlan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AdhocPlanToAgentTaskTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, AdhocPlanToAgentTaskTable, AdhocPlanToAgentTaskColumn),
+			sqlgraph.To(AgentTaskTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, AgentTaskTable, AgentTaskColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAdhocPlanToAgentTaskWith applies the HasEdge predicate on the "AdhocPlanToAgentTask" edge with a given conditions (other predicates).
-func HasAdhocPlanToAgentTaskWith(preds ...predicate.AgentTask) predicate.AdhocPlan {
+// HasAgentTaskWith applies the HasEdge predicate on the "AgentTask" edge with a given conditions (other predicates).
+func HasAgentTaskWith(preds ...predicate.AgentTask) predicate.AdhocPlan {
 	return predicate.AdhocPlan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AdhocPlanToAgentTaskInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, AdhocPlanToAgentTaskTable, AdhocPlanToAgentTaskColumn),
+			sqlgraph.To(AgentTaskInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, AgentTaskTable, AgentTaskColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

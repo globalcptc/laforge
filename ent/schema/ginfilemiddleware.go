@@ -27,11 +27,11 @@ func (GinFileMiddleware) Fields() []ent.Field {
 // Edges of the GinFileMiddleware.
 func (GinFileMiddleware) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("GinFileMiddlewareToProvisionedHost", ProvisionedHost.Type).
+		edge.To("ProvisionedHost", ProvisionedHost.Type).
 			Unique(),
-		edge.To("GinFileMiddlewareToProvisioningStep", ProvisioningStep.Type).
+		edge.To("ProvisioningStep", ProvisioningStep.Type).
 			Unique(),
-		edge.To("GinFileMiddlewareToProvisioningScheduledStep", ProvisioningScheduledStep.Type).
+		edge.To("ProvisioningScheduledStep", ProvisioningScheduledStep.Type).
 			Unique(),
 	}
 }

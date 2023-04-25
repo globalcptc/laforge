@@ -26,7 +26,7 @@ class HostModalComponent implements OnInit, OnDestroy {
     @Inject(MAT_DIALOG_DATA)
     public data: {
       // eslint-disable-next-line max-len
-      provisionedHost: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0];
+      provisionedHost: LaForgeGetBuildTreeQuery['build']['Teams'][0]['ProvisionedNetworks'][0]['ProvisionedHosts'][0];
       planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
       provisionedHostStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
       agentStatus: LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus'];
@@ -59,18 +59,15 @@ class HostModalComponent implements OnInit, OnDestroy {
   }
 
   checkPlanStatus(): void {
-    this.data.planStatus =
-      this.envService.getStatus(this.data.provisionedHost.ProvisionedHostToPlan.PlanToStatus.id) || this.data.planStatus;
+    this.data.planStatus = this.envService.getStatus(this.data.provisionedHost.Plan.Status.id) || this.data.planStatus;
   }
 
   checkProvisionedHostStatus(): void {
-    this.data.provisionedHostStatus =
-      this.envService.getStatus(this.data.provisionedHost.ProvisionedHostToStatus.id) || this.data.provisionedHostStatus;
+    this.data.provisionedHostStatus = this.envService.getStatus(this.data.provisionedHost.Status.id) || this.data.provisionedHostStatus;
   }
 
   checkAgentStatus(): void {
-    this.data.agentStatus =
-      this.envService.getAgentStatus(this.data.provisionedHost.ProvisionedHostToAgentStatus.clientId) || this.data.agentStatus;
+    this.data.agentStatus = this.envService.getAgentStatus(this.data.provisionedHost.id) || this.data.agentStatus;
   }
 
   isAgentStale(): boolean {

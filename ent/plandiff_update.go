@@ -49,26 +49,26 @@ func (pdu *PlanDiffUpdate) SetNewState(ps plandiff.NewState) *PlanDiffUpdate {
 	return pdu
 }
 
-// SetPlanDiffToBuildCommitID sets the "PlanDiffToBuildCommit" edge to the BuildCommit entity by ID.
-func (pdu *PlanDiffUpdate) SetPlanDiffToBuildCommitID(id uuid.UUID) *PlanDiffUpdate {
-	pdu.mutation.SetPlanDiffToBuildCommitID(id)
+// SetBuildCommitID sets the "BuildCommit" edge to the BuildCommit entity by ID.
+func (pdu *PlanDiffUpdate) SetBuildCommitID(id uuid.UUID) *PlanDiffUpdate {
+	pdu.mutation.SetBuildCommitID(id)
 	return pdu
 }
 
-// SetPlanDiffToBuildCommit sets the "PlanDiffToBuildCommit" edge to the BuildCommit entity.
-func (pdu *PlanDiffUpdate) SetPlanDiffToBuildCommit(b *BuildCommit) *PlanDiffUpdate {
-	return pdu.SetPlanDiffToBuildCommitID(b.ID)
+// SetBuildCommit sets the "BuildCommit" edge to the BuildCommit entity.
+func (pdu *PlanDiffUpdate) SetBuildCommit(b *BuildCommit) *PlanDiffUpdate {
+	return pdu.SetBuildCommitID(b.ID)
 }
 
-// SetPlanDiffToPlanID sets the "PlanDiffToPlan" edge to the Plan entity by ID.
-func (pdu *PlanDiffUpdate) SetPlanDiffToPlanID(id uuid.UUID) *PlanDiffUpdate {
-	pdu.mutation.SetPlanDiffToPlanID(id)
+// SetPlanID sets the "Plan" edge to the Plan entity by ID.
+func (pdu *PlanDiffUpdate) SetPlanID(id uuid.UUID) *PlanDiffUpdate {
+	pdu.mutation.SetPlanID(id)
 	return pdu
 }
 
-// SetPlanDiffToPlan sets the "PlanDiffToPlan" edge to the Plan entity.
-func (pdu *PlanDiffUpdate) SetPlanDiffToPlan(p *Plan) *PlanDiffUpdate {
-	return pdu.SetPlanDiffToPlanID(p.ID)
+// SetPlan sets the "Plan" edge to the Plan entity.
+func (pdu *PlanDiffUpdate) SetPlan(p *Plan) *PlanDiffUpdate {
+	return pdu.SetPlanID(p.ID)
 }
 
 // Mutation returns the PlanDiffMutation object of the builder.
@@ -76,15 +76,15 @@ func (pdu *PlanDiffUpdate) Mutation() *PlanDiffMutation {
 	return pdu.mutation
 }
 
-// ClearPlanDiffToBuildCommit clears the "PlanDiffToBuildCommit" edge to the BuildCommit entity.
-func (pdu *PlanDiffUpdate) ClearPlanDiffToBuildCommit() *PlanDiffUpdate {
-	pdu.mutation.ClearPlanDiffToBuildCommit()
+// ClearBuildCommit clears the "BuildCommit" edge to the BuildCommit entity.
+func (pdu *PlanDiffUpdate) ClearBuildCommit() *PlanDiffUpdate {
+	pdu.mutation.ClearBuildCommit()
 	return pdu
 }
 
-// ClearPlanDiffToPlan clears the "PlanDiffToPlan" edge to the Plan entity.
-func (pdu *PlanDiffUpdate) ClearPlanDiffToPlan() *PlanDiffUpdate {
-	pdu.mutation.ClearPlanDiffToPlan()
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (pdu *PlanDiffUpdate) ClearPlan() *PlanDiffUpdate {
+	pdu.mutation.ClearPlan()
 	return pdu
 }
 
@@ -155,11 +155,11 @@ func (pdu *PlanDiffUpdate) check() error {
 			return &ValidationError{Name: "new_state", err: fmt.Errorf(`ent: validator failed for field "PlanDiff.new_state": %w`, err)}
 		}
 	}
-	if _, ok := pdu.mutation.PlanDiffToBuildCommitID(); pdu.mutation.PlanDiffToBuildCommitCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "PlanDiff.PlanDiffToBuildCommit"`)
+	if _, ok := pdu.mutation.BuildCommitID(); pdu.mutation.BuildCommitCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "PlanDiff.BuildCommit"`)
 	}
-	if _, ok := pdu.mutation.PlanDiffToPlanID(); pdu.mutation.PlanDiffToPlanCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "PlanDiff.PlanDiffToPlan"`)
+	if _, ok := pdu.mutation.PlanID(); pdu.mutation.PlanCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "PlanDiff.Plan"`)
 	}
 	return nil
 }
@@ -203,12 +203,12 @@ func (pdu *PlanDiffUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: plandiff.FieldNewState,
 		})
 	}
-	if pdu.mutation.PlanDiffToBuildCommitCleared() {
+	if pdu.mutation.BuildCommitCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   plandiff.PlanDiffToBuildCommitTable,
-			Columns: []string{plandiff.PlanDiffToBuildCommitColumn},
+			Table:   plandiff.BuildCommitTable,
+			Columns: []string{plandiff.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -219,12 +219,12 @@ func (pdu *PlanDiffUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pdu.mutation.PlanDiffToBuildCommitIDs(); len(nodes) > 0 {
+	if nodes := pdu.mutation.BuildCommitIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   plandiff.PlanDiffToBuildCommitTable,
-			Columns: []string{plandiff.PlanDiffToBuildCommitColumn},
+			Table:   plandiff.BuildCommitTable,
+			Columns: []string{plandiff.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -238,12 +238,12 @@ func (pdu *PlanDiffUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pdu.mutation.PlanDiffToPlanCleared() {
+	if pdu.mutation.PlanCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   plandiff.PlanDiffToPlanTable,
-			Columns: []string{plandiff.PlanDiffToPlanColumn},
+			Table:   plandiff.PlanTable,
+			Columns: []string{plandiff.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -254,12 +254,12 @@ func (pdu *PlanDiffUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pdu.mutation.PlanDiffToPlanIDs(); len(nodes) > 0 {
+	if nodes := pdu.mutation.PlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   plandiff.PlanDiffToPlanTable,
-			Columns: []string{plandiff.PlanDiffToPlanColumn},
+			Table:   plandiff.PlanTable,
+			Columns: []string{plandiff.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -311,26 +311,26 @@ func (pduo *PlanDiffUpdateOne) SetNewState(ps plandiff.NewState) *PlanDiffUpdate
 	return pduo
 }
 
-// SetPlanDiffToBuildCommitID sets the "PlanDiffToBuildCommit" edge to the BuildCommit entity by ID.
-func (pduo *PlanDiffUpdateOne) SetPlanDiffToBuildCommitID(id uuid.UUID) *PlanDiffUpdateOne {
-	pduo.mutation.SetPlanDiffToBuildCommitID(id)
+// SetBuildCommitID sets the "BuildCommit" edge to the BuildCommit entity by ID.
+func (pduo *PlanDiffUpdateOne) SetBuildCommitID(id uuid.UUID) *PlanDiffUpdateOne {
+	pduo.mutation.SetBuildCommitID(id)
 	return pduo
 }
 
-// SetPlanDiffToBuildCommit sets the "PlanDiffToBuildCommit" edge to the BuildCommit entity.
-func (pduo *PlanDiffUpdateOne) SetPlanDiffToBuildCommit(b *BuildCommit) *PlanDiffUpdateOne {
-	return pduo.SetPlanDiffToBuildCommitID(b.ID)
+// SetBuildCommit sets the "BuildCommit" edge to the BuildCommit entity.
+func (pduo *PlanDiffUpdateOne) SetBuildCommit(b *BuildCommit) *PlanDiffUpdateOne {
+	return pduo.SetBuildCommitID(b.ID)
 }
 
-// SetPlanDiffToPlanID sets the "PlanDiffToPlan" edge to the Plan entity by ID.
-func (pduo *PlanDiffUpdateOne) SetPlanDiffToPlanID(id uuid.UUID) *PlanDiffUpdateOne {
-	pduo.mutation.SetPlanDiffToPlanID(id)
+// SetPlanID sets the "Plan" edge to the Plan entity by ID.
+func (pduo *PlanDiffUpdateOne) SetPlanID(id uuid.UUID) *PlanDiffUpdateOne {
+	pduo.mutation.SetPlanID(id)
 	return pduo
 }
 
-// SetPlanDiffToPlan sets the "PlanDiffToPlan" edge to the Plan entity.
-func (pduo *PlanDiffUpdateOne) SetPlanDiffToPlan(p *Plan) *PlanDiffUpdateOne {
-	return pduo.SetPlanDiffToPlanID(p.ID)
+// SetPlan sets the "Plan" edge to the Plan entity.
+func (pduo *PlanDiffUpdateOne) SetPlan(p *Plan) *PlanDiffUpdateOne {
+	return pduo.SetPlanID(p.ID)
 }
 
 // Mutation returns the PlanDiffMutation object of the builder.
@@ -338,15 +338,15 @@ func (pduo *PlanDiffUpdateOne) Mutation() *PlanDiffMutation {
 	return pduo.mutation
 }
 
-// ClearPlanDiffToBuildCommit clears the "PlanDiffToBuildCommit" edge to the BuildCommit entity.
-func (pduo *PlanDiffUpdateOne) ClearPlanDiffToBuildCommit() *PlanDiffUpdateOne {
-	pduo.mutation.ClearPlanDiffToBuildCommit()
+// ClearBuildCommit clears the "BuildCommit" edge to the BuildCommit entity.
+func (pduo *PlanDiffUpdateOne) ClearBuildCommit() *PlanDiffUpdateOne {
+	pduo.mutation.ClearBuildCommit()
 	return pduo
 }
 
-// ClearPlanDiffToPlan clears the "PlanDiffToPlan" edge to the Plan entity.
-func (pduo *PlanDiffUpdateOne) ClearPlanDiffToPlan() *PlanDiffUpdateOne {
-	pduo.mutation.ClearPlanDiffToPlan()
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (pduo *PlanDiffUpdateOne) ClearPlan() *PlanDiffUpdateOne {
+	pduo.mutation.ClearPlan()
 	return pduo
 }
 
@@ -430,11 +430,11 @@ func (pduo *PlanDiffUpdateOne) check() error {
 			return &ValidationError{Name: "new_state", err: fmt.Errorf(`ent: validator failed for field "PlanDiff.new_state": %w`, err)}
 		}
 	}
-	if _, ok := pduo.mutation.PlanDiffToBuildCommitID(); pduo.mutation.PlanDiffToBuildCommitCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "PlanDiff.PlanDiffToBuildCommit"`)
+	if _, ok := pduo.mutation.BuildCommitID(); pduo.mutation.BuildCommitCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "PlanDiff.BuildCommit"`)
 	}
-	if _, ok := pduo.mutation.PlanDiffToPlanID(); pduo.mutation.PlanDiffToPlanCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "PlanDiff.PlanDiffToPlan"`)
+	if _, ok := pduo.mutation.PlanID(); pduo.mutation.PlanCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "PlanDiff.Plan"`)
 	}
 	return nil
 }
@@ -495,12 +495,12 @@ func (pduo *PlanDiffUpdateOne) sqlSave(ctx context.Context) (_node *PlanDiff, er
 			Column: plandiff.FieldNewState,
 		})
 	}
-	if pduo.mutation.PlanDiffToBuildCommitCleared() {
+	if pduo.mutation.BuildCommitCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   plandiff.PlanDiffToBuildCommitTable,
-			Columns: []string{plandiff.PlanDiffToBuildCommitColumn},
+			Table:   plandiff.BuildCommitTable,
+			Columns: []string{plandiff.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -511,12 +511,12 @@ func (pduo *PlanDiffUpdateOne) sqlSave(ctx context.Context) (_node *PlanDiff, er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pduo.mutation.PlanDiffToBuildCommitIDs(); len(nodes) > 0 {
+	if nodes := pduo.mutation.BuildCommitIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   plandiff.PlanDiffToBuildCommitTable,
-			Columns: []string{plandiff.PlanDiffToBuildCommitColumn},
+			Table:   plandiff.BuildCommitTable,
+			Columns: []string{plandiff.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -530,12 +530,12 @@ func (pduo *PlanDiffUpdateOne) sqlSave(ctx context.Context) (_node *PlanDiff, er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pduo.mutation.PlanDiffToPlanCleared() {
+	if pduo.mutation.PlanCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   plandiff.PlanDiffToPlanTable,
-			Columns: []string{plandiff.PlanDiffToPlanColumn},
+			Table:   plandiff.PlanTable,
+			Columns: []string{plandiff.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -546,12 +546,12 @@ func (pduo *PlanDiffUpdateOne) sqlSave(ctx context.Context) (_node *PlanDiff, er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pduo.mutation.PlanDiffToPlanIDs(); len(nodes) > 0 {
+	if nodes := pduo.mutation.PlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   plandiff.PlanDiffToPlanTable,
-			Columns: []string{plandiff.PlanDiffToPlanColumn},
+			Table:   plandiff.PlanTable,
+			Columns: []string{plandiff.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

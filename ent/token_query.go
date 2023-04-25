@@ -19,14 +19,14 @@ import (
 // TokenQuery is the builder for querying Token entities.
 type TokenQuery struct {
 	config
-	limit               *int
-	offset              *int
-	unique              *bool
-	order               []OrderFunc
-	fields              []string
-	predicates          []predicate.Token
-	withTokenToAuthUser *AuthUserQuery
-	withFKs             bool
+	limit        *int
+	offset       *int
+	unique       *bool
+	order        []OrderFunc
+	fields       []string
+	predicates   []predicate.Token
+	withAuthUser *AuthUserQuery
+	withFKs      bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,8 +63,8 @@ func (tq *TokenQuery) Order(o ...OrderFunc) *TokenQuery {
 	return tq
 }
 
-// QueryTokenToAuthUser chains the current query on the "TokenToAuthUser" edge.
-func (tq *TokenQuery) QueryTokenToAuthUser() *AuthUserQuery {
+// QueryAuthUser chains the current query on the "AuthUser" edge.
+func (tq *TokenQuery) QueryAuthUser() *AuthUserQuery {
 	query := &AuthUserQuery{config: tq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := tq.prepareQuery(ctx); err != nil {
@@ -77,7 +77,7 @@ func (tq *TokenQuery) QueryTokenToAuthUser() *AuthUserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(token.Table, token.FieldID, selector),
 			sqlgraph.To(authuser.Table, authuser.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, token.TokenToAuthUserTable, token.TokenToAuthUserColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, token.AuthUserTable, token.AuthUserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -261,12 +261,12 @@ func (tq *TokenQuery) Clone() *TokenQuery {
 		return nil
 	}
 	return &TokenQuery{
-		config:              tq.config,
-		limit:               tq.limit,
-		offset:              tq.offset,
-		order:               append([]OrderFunc{}, tq.order...),
-		predicates:          append([]predicate.Token{}, tq.predicates...),
-		withTokenToAuthUser: tq.withTokenToAuthUser.Clone(),
+		config:       tq.config,
+		limit:        tq.limit,
+		offset:       tq.offset,
+		order:        append([]OrderFunc{}, tq.order...),
+		predicates:   append([]predicate.Token{}, tq.predicates...),
+		withAuthUser: tq.withAuthUser.Clone(),
 		// clone intermediate query.
 		sql:    tq.sql.Clone(),
 		path:   tq.path,
@@ -274,14 +274,14 @@ func (tq *TokenQuery) Clone() *TokenQuery {
 	}
 }
 
-// WithTokenToAuthUser tells the query-builder to eager-load the nodes that are connected to
-// the "TokenToAuthUser" edge. The optional arguments are used to configure the query builder of the edge.
-func (tq *TokenQuery) WithTokenToAuthUser(opts ...func(*AuthUserQuery)) *TokenQuery {
+// WithAuthUser tells the query-builder to eager-load the nodes that are connected to
+// the "AuthUser" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TokenQuery) WithAuthUser(opts ...func(*AuthUserQuery)) *TokenQuery {
 	query := &AuthUserQuery{config: tq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	tq.withTokenToAuthUser = query
+	tq.withAuthUser = query
 	return tq
 }
 
@@ -355,10 +355,10 @@ func (tq *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token,
 		withFKs     = tq.withFKs
 		_spec       = tq.querySpec()
 		loadedTypes = [1]bool{
-			tq.withTokenToAuthUser != nil,
+			tq.withAuthUser != nil,
 		}
 	)
-	if tq.withTokenToAuthUser != nil {
+	if tq.withAuthUser != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -382,23 +382,23 @@ func (tq *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := tq.withTokenToAuthUser; query != nil {
-		if err := tq.loadTokenToAuthUser(ctx, query, nodes, nil,
-			func(n *Token, e *AuthUser) { n.Edges.TokenToAuthUser = e }); err != nil {
+	if query := tq.withAuthUser; query != nil {
+		if err := tq.loadAuthUser(ctx, query, nodes, nil,
+			func(n *Token, e *AuthUser) { n.Edges.AuthUser = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (tq *TokenQuery) loadTokenToAuthUser(ctx context.Context, query *AuthUserQuery, nodes []*Token, init func(*Token), assign func(*Token, *AuthUser)) error {
+func (tq *TokenQuery) loadAuthUser(ctx context.Context, query *AuthUserQuery, nodes []*Token, init func(*Token), assign func(*Token, *AuthUser)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Token)
 	for i := range nodes {
-		if nodes[i].auth_user_auth_user_to_token == nil {
+		if nodes[i].auth_user_tokens == nil {
 			continue
 		}
-		fk := *nodes[i].auth_user_auth_user_to_token
+		fk := *nodes[i].auth_user_tokens
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (tq *TokenQuery) loadTokenToAuthUser(ctx context.Context, query *AuthUserQu
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "auth_user_auth_user_to_token" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "auth_user_tokens" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

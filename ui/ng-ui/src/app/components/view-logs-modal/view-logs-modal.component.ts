@@ -35,7 +35,7 @@ export class ViewLogsModalComponent implements OnInit {
     this.api
       .getServerTasks(this.data.taskUUIDs)
       .then((serverTasks) =>
-        this.serverTasks.next([...serverTasks].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()))
+        this.serverTasks.next([...serverTasks].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()))
       );
   }
 

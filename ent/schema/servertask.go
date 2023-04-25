@@ -36,14 +36,21 @@ func (ServerTask) Fields() []ent.Field {
 // Edges of the ServerTask.
 func (ServerTask) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("ServerTaskToAuthUser", AuthUser.Type).Unique().Required(),
-		edge.To("ServerTaskToStatus", Status.Type).Unique().Required().
+		edge.To("AuthUser", AuthUser.Type).
+			Unique().
+			Required(),
+		edge.To("Status", Status.Type).
+			Unique().
+			Required().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("ServerTaskToEnvironment", Environment.Type).Unique(),
-		edge.To("ServerTaskToBuild", Build.Type).Unique(),
-		edge.To("ServerTaskToBuildCommit", BuildCommit.Type).Unique(),
-		edge.To("ServerTaskToGinFileMiddleware", GinFileMiddleware.Type),
+		edge.To("Environment", Environment.Type).
+			Unique(),
+		edge.To("Build", Build.Type).
+			Unique(),
+		edge.To("BuildCommit", BuildCommit.Type).
+			Unique(),
+		edge.To("GinFileMiddleware", GinFileMiddleware.Type),
 	}
 }

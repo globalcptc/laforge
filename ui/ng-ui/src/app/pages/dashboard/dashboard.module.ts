@@ -3,11 +3,13 @@ import { NgModule } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { MatInputModule } from '@angular/material/input';
 import { MatTableModule } from '@angular/material/table';
 import { Routes, RouterModule } from '@angular/router';
+
 import { LaforgePipesModule } from 'src/app/pipes/pipes.module';
 
 import { DashboardComponent } from './dashboard.component';
@@ -31,6 +33,7 @@ const routes: Routes = [
     ReactiveFormsModule,
     MatButtonModule,
     MatTableModule,
+    MatChipsModule,
     LaforgePipesModule
   ]
 })

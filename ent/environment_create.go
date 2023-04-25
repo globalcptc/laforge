@@ -120,304 +120,304 @@ func (ec *EnvironmentCreate) SetNillableID(u *uuid.UUID) *EnvironmentCreate {
 	return ec
 }
 
-// AddEnvironmentToUserIDs adds the "EnvironmentToUser" edge to the User entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToUserIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToUserIDs(ids...)
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (ec *EnvironmentCreate) AddUserIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddUserIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToUser adds the "EnvironmentToUser" edges to the User entity.
-func (ec *EnvironmentCreate) AddEnvironmentToUser(u ...*User) *EnvironmentCreate {
+// AddUsers adds the "Users" edges to the User entity.
+func (ec *EnvironmentCreate) AddUsers(u ...*User) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return ec.AddEnvironmentToUserIDs(ids...)
+	return ec.AddUserIDs(ids...)
 }
 
-// AddEnvironmentToHostIDs adds the "EnvironmentToHost" edge to the Host entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToHostIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToHostIDs(ids...)
+// AddHostIDs adds the "Hosts" edge to the Host entity by IDs.
+func (ec *EnvironmentCreate) AddHostIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddHostIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToHost adds the "EnvironmentToHost" edges to the Host entity.
-func (ec *EnvironmentCreate) AddEnvironmentToHost(h ...*Host) *EnvironmentCreate {
+// AddHosts adds the "Hosts" edges to the Host entity.
+func (ec *EnvironmentCreate) AddHosts(h ...*Host) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return ec.AddEnvironmentToHostIDs(ids...)
+	return ec.AddHostIDs(ids...)
 }
 
-// AddEnvironmentToCompetitionIDs adds the "EnvironmentToCompetition" edge to the Competition entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToCompetitionIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToCompetitionIDs(ids...)
+// AddCompetitionIDs adds the "Competitions" edge to the Competition entity by IDs.
+func (ec *EnvironmentCreate) AddCompetitionIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddCompetitionIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToCompetition adds the "EnvironmentToCompetition" edges to the Competition entity.
-func (ec *EnvironmentCreate) AddEnvironmentToCompetition(c ...*Competition) *EnvironmentCreate {
+// AddCompetitions adds the "Competitions" edges to the Competition entity.
+func (ec *EnvironmentCreate) AddCompetitions(c ...*Competition) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(c))
 	for i := range c {
 		ids[i] = c[i].ID
 	}
-	return ec.AddEnvironmentToCompetitionIDs(ids...)
+	return ec.AddCompetitionIDs(ids...)
 }
 
-// AddEnvironmentToIdentityIDs adds the "EnvironmentToIdentity" edge to the Identity entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToIdentityIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToIdentityIDs(ids...)
+// AddIdentityIDs adds the "Identities" edge to the Identity entity by IDs.
+func (ec *EnvironmentCreate) AddIdentityIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddIdentityIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToIdentity adds the "EnvironmentToIdentity" edges to the Identity entity.
-func (ec *EnvironmentCreate) AddEnvironmentToIdentity(i ...*Identity) *EnvironmentCreate {
+// AddIdentities adds the "Identities" edges to the Identity entity.
+func (ec *EnvironmentCreate) AddIdentities(i ...*Identity) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return ec.AddEnvironmentToIdentityIDs(ids...)
+	return ec.AddIdentityIDs(ids...)
 }
 
-// AddEnvironmentToCommandIDs adds the "EnvironmentToCommand" edge to the Command entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToCommandIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToCommandIDs(ids...)
+// AddCommandIDs adds the "Commands" edge to the Command entity by IDs.
+func (ec *EnvironmentCreate) AddCommandIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddCommandIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToCommand adds the "EnvironmentToCommand" edges to the Command entity.
-func (ec *EnvironmentCreate) AddEnvironmentToCommand(c ...*Command) *EnvironmentCreate {
+// AddCommands adds the "Commands" edges to the Command entity.
+func (ec *EnvironmentCreate) AddCommands(c ...*Command) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(c))
 	for i := range c {
 		ids[i] = c[i].ID
 	}
-	return ec.AddEnvironmentToCommandIDs(ids...)
+	return ec.AddCommandIDs(ids...)
 }
 
-// AddEnvironmentToScriptIDs adds the "EnvironmentToScript" edge to the Script entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToScriptIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToScriptIDs(ids...)
+// AddScriptIDs adds the "Scripts" edge to the Script entity by IDs.
+func (ec *EnvironmentCreate) AddScriptIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddScriptIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToScript adds the "EnvironmentToScript" edges to the Script entity.
-func (ec *EnvironmentCreate) AddEnvironmentToScript(s ...*Script) *EnvironmentCreate {
+// AddScripts adds the "Scripts" edges to the Script entity.
+func (ec *EnvironmentCreate) AddScripts(s ...*Script) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return ec.AddEnvironmentToScriptIDs(ids...)
+	return ec.AddScriptIDs(ids...)
 }
 
-// AddEnvironmentToFileDownloadIDs adds the "EnvironmentToFileDownload" edge to the FileDownload entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToFileDownloadIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToFileDownloadIDs(ids...)
+// AddFileDownloadIDs adds the "FileDownloads" edge to the FileDownload entity by IDs.
+func (ec *EnvironmentCreate) AddFileDownloadIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddFileDownloadIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToFileDownload adds the "EnvironmentToFileDownload" edges to the FileDownload entity.
-func (ec *EnvironmentCreate) AddEnvironmentToFileDownload(f ...*FileDownload) *EnvironmentCreate {
+// AddFileDownloads adds the "FileDownloads" edges to the FileDownload entity.
+func (ec *EnvironmentCreate) AddFileDownloads(f ...*FileDownload) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return ec.AddEnvironmentToFileDownloadIDs(ids...)
+	return ec.AddFileDownloadIDs(ids...)
 }
 
-// AddEnvironmentToFileDeleteIDs adds the "EnvironmentToFileDelete" edge to the FileDelete entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToFileDeleteIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToFileDeleteIDs(ids...)
+// AddFileDeleteIDs adds the "FileDeletes" edge to the FileDelete entity by IDs.
+func (ec *EnvironmentCreate) AddFileDeleteIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddFileDeleteIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToFileDelete adds the "EnvironmentToFileDelete" edges to the FileDelete entity.
-func (ec *EnvironmentCreate) AddEnvironmentToFileDelete(f ...*FileDelete) *EnvironmentCreate {
+// AddFileDeletes adds the "FileDeletes" edges to the FileDelete entity.
+func (ec *EnvironmentCreate) AddFileDeletes(f ...*FileDelete) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return ec.AddEnvironmentToFileDeleteIDs(ids...)
+	return ec.AddFileDeleteIDs(ids...)
 }
 
-// AddEnvironmentToFileExtractIDs adds the "EnvironmentToFileExtract" edge to the FileExtract entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToFileExtractIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToFileExtractIDs(ids...)
+// AddFileExtractIDs adds the "FileExtracts" edge to the FileExtract entity by IDs.
+func (ec *EnvironmentCreate) AddFileExtractIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddFileExtractIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToFileExtract adds the "EnvironmentToFileExtract" edges to the FileExtract entity.
-func (ec *EnvironmentCreate) AddEnvironmentToFileExtract(f ...*FileExtract) *EnvironmentCreate {
+// AddFileExtracts adds the "FileExtracts" edges to the FileExtract entity.
+func (ec *EnvironmentCreate) AddFileExtracts(f ...*FileExtract) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return ec.AddEnvironmentToFileExtractIDs(ids...)
+	return ec.AddFileExtractIDs(ids...)
 }
 
-// AddEnvironmentToIncludedNetworkIDs adds the "EnvironmentToIncludedNetwork" edge to the IncludedNetwork entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToIncludedNetworkIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToIncludedNetworkIDs(ids...)
+// AddIncludedNetworkIDs adds the "IncludedNetworks" edge to the IncludedNetwork entity by IDs.
+func (ec *EnvironmentCreate) AddIncludedNetworkIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddIncludedNetworkIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToIncludedNetwork adds the "EnvironmentToIncludedNetwork" edges to the IncludedNetwork entity.
-func (ec *EnvironmentCreate) AddEnvironmentToIncludedNetwork(i ...*IncludedNetwork) *EnvironmentCreate {
+// AddIncludedNetworks adds the "IncludedNetworks" edges to the IncludedNetwork entity.
+func (ec *EnvironmentCreate) AddIncludedNetworks(i ...*IncludedNetwork) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return ec.AddEnvironmentToIncludedNetworkIDs(ids...)
+	return ec.AddIncludedNetworkIDs(ids...)
 }
 
-// AddEnvironmentToFindingIDs adds the "EnvironmentToFinding" edge to the Finding entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToFindingIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToFindingIDs(ids...)
+// AddFindingIDs adds the "Findings" edge to the Finding entity by IDs.
+func (ec *EnvironmentCreate) AddFindingIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddFindingIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToFinding adds the "EnvironmentToFinding" edges to the Finding entity.
-func (ec *EnvironmentCreate) AddEnvironmentToFinding(f ...*Finding) *EnvironmentCreate {
+// AddFindings adds the "Findings" edges to the Finding entity.
+func (ec *EnvironmentCreate) AddFindings(f ...*Finding) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return ec.AddEnvironmentToFindingIDs(ids...)
+	return ec.AddFindingIDs(ids...)
 }
 
-// AddEnvironmentToDNSRecordIDs adds the "EnvironmentToDNSRecord" edge to the DNSRecord entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToDNSRecordIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToDNSRecordIDs(ids...)
+// AddDNSRecordIDs adds the "DNSRecords" edge to the DNSRecord entity by IDs.
+func (ec *EnvironmentCreate) AddDNSRecordIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddDNSRecordIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToDNSRecord adds the "EnvironmentToDNSRecord" edges to the DNSRecord entity.
-func (ec *EnvironmentCreate) AddEnvironmentToDNSRecord(d ...*DNSRecord) *EnvironmentCreate {
+// AddDNSRecords adds the "DNSRecords" edges to the DNSRecord entity.
+func (ec *EnvironmentCreate) AddDNSRecords(d ...*DNSRecord) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
-	return ec.AddEnvironmentToDNSRecordIDs(ids...)
+	return ec.AddDNSRecordIDs(ids...)
 }
 
-// AddEnvironmentToDNSIDs adds the "EnvironmentToDNS" edge to the DNS entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToDNSIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToDNSIDs(ids...)
+// AddDNSIDs adds the "DNS" edge to the DNS entity by IDs.
+func (ec *EnvironmentCreate) AddDNSIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddDNSIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToDNS adds the "EnvironmentToDNS" edges to the DNS entity.
-func (ec *EnvironmentCreate) AddEnvironmentToDNS(d ...*DNS) *EnvironmentCreate {
+// AddDNS adds the "DNS" edges to the DNS entity.
+func (ec *EnvironmentCreate) AddDNS(d ...*DNS) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
-	return ec.AddEnvironmentToDNSIDs(ids...)
+	return ec.AddDNSIDs(ids...)
 }
 
-// AddEnvironmentToNetworkIDs adds the "EnvironmentToNetwork" edge to the Network entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToNetworkIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToNetworkIDs(ids...)
+// AddNetworkIDs adds the "Networks" edge to the Network entity by IDs.
+func (ec *EnvironmentCreate) AddNetworkIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddNetworkIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToNetwork adds the "EnvironmentToNetwork" edges to the Network entity.
-func (ec *EnvironmentCreate) AddEnvironmentToNetwork(n ...*Network) *EnvironmentCreate {
+// AddNetworks adds the "Networks" edges to the Network entity.
+func (ec *EnvironmentCreate) AddNetworks(n ...*Network) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(n))
 	for i := range n {
 		ids[i] = n[i].ID
 	}
-	return ec.AddEnvironmentToNetworkIDs(ids...)
+	return ec.AddNetworkIDs(ids...)
 }
 
-// AddEnvironmentToHostDependencyIDs adds the "EnvironmentToHostDependency" edge to the HostDependency entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToHostDependencyIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToHostDependencyIDs(ids...)
+// AddHostDependencyIDs adds the "HostDependencies" edge to the HostDependency entity by IDs.
+func (ec *EnvironmentCreate) AddHostDependencyIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddHostDependencyIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToHostDependency adds the "EnvironmentToHostDependency" edges to the HostDependency entity.
-func (ec *EnvironmentCreate) AddEnvironmentToHostDependency(h ...*HostDependency) *EnvironmentCreate {
+// AddHostDependencies adds the "HostDependencies" edges to the HostDependency entity.
+func (ec *EnvironmentCreate) AddHostDependencies(h ...*HostDependency) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return ec.AddEnvironmentToHostDependencyIDs(ids...)
+	return ec.AddHostDependencyIDs(ids...)
 }
 
-// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToAnsibleIDs(ids...)
+// AddAnsibleIDs adds the "Ansibles" edge to the Ansible entity by IDs.
+func (ec *EnvironmentCreate) AddAnsibleIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddAnsibleIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToAnsible adds the "EnvironmentToAnsible" edges to the Ansible entity.
-func (ec *EnvironmentCreate) AddEnvironmentToAnsible(a ...*Ansible) *EnvironmentCreate {
+// AddAnsibles adds the "Ansibles" edges to the Ansible entity.
+func (ec *EnvironmentCreate) AddAnsibles(a ...*Ansible) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return ec.AddEnvironmentToAnsibleIDs(ids...)
+	return ec.AddAnsibleIDs(ids...)
 }
 
-// AddEnvironmentToScheduledStepIDs adds the "EnvironmentToScheduledStep" edge to the ScheduledStep entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToScheduledStepIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToScheduledStepIDs(ids...)
+// AddScheduledStepIDs adds the "ScheduledSteps" edge to the ScheduledStep entity by IDs.
+func (ec *EnvironmentCreate) AddScheduledStepIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddScheduledStepIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToScheduledStep adds the "EnvironmentToScheduledStep" edges to the ScheduledStep entity.
-func (ec *EnvironmentCreate) AddEnvironmentToScheduledStep(s ...*ScheduledStep) *EnvironmentCreate {
+// AddScheduledSteps adds the "ScheduledSteps" edges to the ScheduledStep entity.
+func (ec *EnvironmentCreate) AddScheduledSteps(s ...*ScheduledStep) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return ec.AddEnvironmentToScheduledStepIDs(ids...)
+	return ec.AddScheduledStepIDs(ids...)
 }
 
-// AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToBuildIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToBuildIDs(ids...)
+// AddBuildIDs adds the "Builds" edge to the Build entity by IDs.
+func (ec *EnvironmentCreate) AddBuildIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddBuildIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToBuild adds the "EnvironmentToBuild" edges to the Build entity.
-func (ec *EnvironmentCreate) AddEnvironmentToBuild(b ...*Build) *EnvironmentCreate {
+// AddBuilds adds the "Builds" edges to the Build entity.
+func (ec *EnvironmentCreate) AddBuilds(b ...*Build) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(b))
 	for i := range b {
 		ids[i] = b[i].ID
 	}
-	return ec.AddEnvironmentToBuildIDs(ids...)
+	return ec.AddBuildIDs(ids...)
 }
 
-// AddEnvironmentToRepositoryIDs adds the "EnvironmentToRepository" edge to the Repository entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToRepositoryIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToRepositoryIDs(ids...)
+// AddRepositoryIDs adds the "Repositories" edge to the Repository entity by IDs.
+func (ec *EnvironmentCreate) AddRepositoryIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddRepositoryIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToRepository adds the "EnvironmentToRepository" edges to the Repository entity.
-func (ec *EnvironmentCreate) AddEnvironmentToRepository(r ...*Repository) *EnvironmentCreate {
+// AddRepositories adds the "Repositories" edges to the Repository entity.
+func (ec *EnvironmentCreate) AddRepositories(r ...*Repository) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(r))
 	for i := range r {
 		ids[i] = r[i].ID
 	}
-	return ec.AddEnvironmentToRepositoryIDs(ids...)
+	return ec.AddRepositoryIDs(ids...)
 }
 
-// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
-func (ec *EnvironmentCreate) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentCreate {
-	ec.mutation.AddEnvironmentToServerTaskIDs(ids...)
+// AddServerTaskIDs adds the "ServerTasks" edge to the ServerTask entity by IDs.
+func (ec *EnvironmentCreate) AddServerTaskIDs(ids ...uuid.UUID) *EnvironmentCreate {
+	ec.mutation.AddServerTaskIDs(ids...)
 	return ec
 }
 
-// AddEnvironmentToServerTask adds the "EnvironmentToServerTask" edges to the ServerTask entity.
-func (ec *EnvironmentCreate) AddEnvironmentToServerTask(s ...*ServerTask) *EnvironmentCreate {
+// AddServerTasks adds the "ServerTasks" edges to the ServerTask entity.
+func (ec *EnvironmentCreate) AddServerTasks(s ...*ServerTask) *EnvironmentCreate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return ec.AddEnvironmentToServerTaskIDs(ids...)
+	return ec.AddServerTaskIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -662,12 +662,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		})
 		_node.Tags = value
 	}
-	if nodes := ec.mutation.EnvironmentToUserIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToUserTable,
-			Columns: environment.EnvironmentToUserPrimaryKey,
+			Table:   environment.UsersTable,
+			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -681,12 +681,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToHostIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.HostsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostTable,
-			Columns: []string{environment.EnvironmentToHostColumn},
+			Table:   environment.HostsTable,
+			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -700,12 +700,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToCompetitionIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.CompetitionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToCompetitionTable,
-			Columns: []string{environment.EnvironmentToCompetitionColumn},
+			Table:   environment.CompetitionsTable,
+			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -719,12 +719,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToIdentityIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.IdentitiesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIdentityTable,
-			Columns: []string{environment.EnvironmentToIdentityColumn},
+			Table:   environment.IdentitiesTable,
+			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -738,12 +738,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToCommandIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.CommandsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToCommandTable,
-			Columns: []string{environment.EnvironmentToCommandColumn},
+			Table:   environment.CommandsTable,
+			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -757,12 +757,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToScriptIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.ScriptsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScriptTable,
-			Columns: []string{environment.EnvironmentToScriptColumn},
+			Table:   environment.ScriptsTable,
+			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -776,12 +776,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToFileDownloadIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.FileDownloadsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDownloadTable,
-			Columns: []string{environment.EnvironmentToFileDownloadColumn},
+			Table:   environment.FileDownloadsTable,
+			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -795,12 +795,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToFileDeleteIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.FileDeletesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDeleteTable,
-			Columns: []string{environment.EnvironmentToFileDeleteColumn},
+			Table:   environment.FileDeletesTable,
+			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -814,12 +814,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToFileExtractIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.FileExtractsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileExtractTable,
-			Columns: []string{environment.EnvironmentToFileExtractColumn},
+			Table:   environment.FileExtractsTable,
+			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -833,12 +833,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToIncludedNetworkIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.IncludedNetworksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIncludedNetworkTable,
-			Columns: environment.EnvironmentToIncludedNetworkPrimaryKey,
+			Table:   environment.IncludedNetworksTable,
+			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -852,12 +852,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToFindingIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.FindingsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFindingTable,
-			Columns: []string{environment.EnvironmentToFindingColumn},
+			Table:   environment.FindingsTable,
+			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -871,12 +871,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToDNSRecordIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.DNSRecordsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSRecordTable,
-			Columns: []string{environment.EnvironmentToDNSRecordColumn},
+			Table:   environment.DNSRecordsTable,
+			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -890,12 +890,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToDNSIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.DNSIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSTable,
-			Columns: environment.EnvironmentToDNSPrimaryKey,
+			Table:   environment.DNSTable,
+			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -909,12 +909,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToNetworkIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.NetworksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToNetworkTable,
-			Columns: []string{environment.EnvironmentToNetworkColumn},
+			Table:   environment.NetworksTable,
+			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -928,12 +928,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToHostDependencyIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.HostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostDependencyTable,
-			Columns: []string{environment.EnvironmentToHostDependencyColumn},
+			Table:   environment.HostDependenciesTable,
+			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -947,12 +947,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToAnsibleIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.AnsiblesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToAnsibleTable,
-			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Table:   environment.AnsiblesTable,
+			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -966,12 +966,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToScheduledStepIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.ScheduledStepsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScheduledStepTable,
-			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Table:   environment.ScheduledStepsTable,
+			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -985,12 +985,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToBuildIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.BuildsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   environment.EnvironmentToBuildTable,
-			Columns: []string{environment.EnvironmentToBuildColumn},
+			Table:   environment.BuildsTable,
+			Columns: []string{environment.BuildsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1004,12 +1004,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToRepositoryIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.RepositoriesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   environment.EnvironmentToRepositoryTable,
-			Columns: environment.EnvironmentToRepositoryPrimaryKey,
+			Table:   environment.RepositoriesTable,
+			Columns: environment.RepositoriesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1023,12 +1023,12 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ec.mutation.EnvironmentToServerTaskIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.ServerTasksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   environment.EnvironmentToServerTaskTable,
-			Columns: []string{environment.EnvironmentToServerTaskColumn},
+			Table:   environment.ServerTasksTable,
+			Columns: []string{environment.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

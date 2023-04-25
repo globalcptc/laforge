@@ -33,17 +33,17 @@ const (
 	FieldIsTxt = "is_txt"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// EdgeFileDownloadToEnvironment holds the string denoting the filedownloadtoenvironment edge name in mutations.
-	EdgeFileDownloadToEnvironment = "FileDownloadToEnvironment"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the filedownload in the database.
 	Table = "file_downloads"
-	// FileDownloadToEnvironmentTable is the table that holds the FileDownloadToEnvironment relation/edge.
-	FileDownloadToEnvironmentTable = "file_downloads"
-	// FileDownloadToEnvironmentInverseTable is the table name for the Environment entity.
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "file_downloads"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	FileDownloadToEnvironmentInverseTable = "environments"
-	// FileDownloadToEnvironmentColumn is the table column denoting the FileDownloadToEnvironment relation/edge.
-	FileDownloadToEnvironmentColumn = "environment_environment_to_file_download"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_file_downloads"
 )
 
 // Columns holds all SQL columns for filedownload fields.
@@ -65,7 +65,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "file_downloads"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_file_download",
+	"environment_file_downloads",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

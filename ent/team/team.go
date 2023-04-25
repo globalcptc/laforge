@@ -15,44 +15,44 @@ const (
 	FieldTeamNumber = "team_number"
 	// FieldVars holds the string denoting the vars field in the database.
 	FieldVars = "vars"
-	// EdgeTeamToBuild holds the string denoting the teamtobuild edge name in mutations.
-	EdgeTeamToBuild = "TeamToBuild"
-	// EdgeTeamToStatus holds the string denoting the teamtostatus edge name in mutations.
-	EdgeTeamToStatus = "TeamToStatus"
-	// EdgeTeamToProvisionedNetwork holds the string denoting the teamtoprovisionednetwork edge name in mutations.
-	EdgeTeamToProvisionedNetwork = "TeamToProvisionedNetwork"
-	// EdgeTeamToPlan holds the string denoting the teamtoplan edge name in mutations.
-	EdgeTeamToPlan = "TeamToPlan"
+	// EdgeBuild holds the string denoting the build edge name in mutations.
+	EdgeBuild = "Build"
+	// EdgeStatus holds the string denoting the status edge name in mutations.
+	EdgeStatus = "Status"
+	// EdgeProvisionedNetworks holds the string denoting the provisionednetworks edge name in mutations.
+	EdgeProvisionedNetworks = "ProvisionedNetworks"
+	// EdgePlan holds the string denoting the plan edge name in mutations.
+	EdgePlan = "Plan"
 	// Table holds the table name of the team in the database.
 	Table = "teams"
-	// TeamToBuildTable is the table that holds the TeamToBuild relation/edge.
-	TeamToBuildTable = "teams"
-	// TeamToBuildInverseTable is the table name for the Build entity.
+	// BuildTable is the table that holds the Build relation/edge.
+	BuildTable = "teams"
+	// BuildInverseTable is the table name for the Build entity.
 	// It exists in this package in order to avoid circular dependency with the "build" package.
-	TeamToBuildInverseTable = "builds"
-	// TeamToBuildColumn is the table column denoting the TeamToBuild relation/edge.
-	TeamToBuildColumn = "team_team_to_build"
-	// TeamToStatusTable is the table that holds the TeamToStatus relation/edge.
-	TeamToStatusTable = "status"
-	// TeamToStatusInverseTable is the table name for the Status entity.
+	BuildInverseTable = "builds"
+	// BuildColumn is the table column denoting the Build relation/edge.
+	BuildColumn = "team_build"
+	// StatusTable is the table that holds the Status relation/edge.
+	StatusTable = "status"
+	// StatusInverseTable is the table name for the Status entity.
 	// It exists in this package in order to avoid circular dependency with the "status" package.
-	TeamToStatusInverseTable = "status"
-	// TeamToStatusColumn is the table column denoting the TeamToStatus relation/edge.
-	TeamToStatusColumn = "team_team_to_status"
-	// TeamToProvisionedNetworkTable is the table that holds the TeamToProvisionedNetwork relation/edge.
-	TeamToProvisionedNetworkTable = "provisioned_networks"
-	// TeamToProvisionedNetworkInverseTable is the table name for the ProvisionedNetwork entity.
+	StatusInverseTable = "status"
+	// StatusColumn is the table column denoting the Status relation/edge.
+	StatusColumn = "team_status"
+	// ProvisionedNetworksTable is the table that holds the ProvisionedNetworks relation/edge.
+	ProvisionedNetworksTable = "provisioned_networks"
+	// ProvisionedNetworksInverseTable is the table name for the ProvisionedNetwork entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionednetwork" package.
-	TeamToProvisionedNetworkInverseTable = "provisioned_networks"
-	// TeamToProvisionedNetworkColumn is the table column denoting the TeamToProvisionedNetwork relation/edge.
-	TeamToProvisionedNetworkColumn = "provisioned_network_provisioned_network_to_team"
-	// TeamToPlanTable is the table that holds the TeamToPlan relation/edge.
-	TeamToPlanTable = "teams"
-	// TeamToPlanInverseTable is the table name for the Plan entity.
+	ProvisionedNetworksInverseTable = "provisioned_networks"
+	// ProvisionedNetworksColumn is the table column denoting the ProvisionedNetworks relation/edge.
+	ProvisionedNetworksColumn = "provisioned_network_team"
+	// PlanTable is the table that holds the Plan relation/edge.
+	PlanTable = "teams"
+	// PlanInverseTable is the table name for the Plan entity.
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
-	TeamToPlanInverseTable = "plans"
-	// TeamToPlanColumn is the table column denoting the TeamToPlan relation/edge.
-	TeamToPlanColumn = "plan_plan_to_team"
+	PlanInverseTable = "plans"
+	// PlanColumn is the table column denoting the Plan relation/edge.
+	PlanColumn = "plan_team"
 )
 
 // Columns holds all SQL columns for team fields.
@@ -65,8 +65,8 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "teams"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"plan_plan_to_team",
-	"team_team_to_build",
+	"plan_team",
+	"team_build",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

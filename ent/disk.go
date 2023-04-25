@@ -24,33 +24,33 @@ type Disk struct {
 	Edges DiskEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// DiskToHost holds the value of the DiskToHost edge.
-	HCLDiskToHost *Host `json:"DiskToHost,omitempty"`
+	// Host holds the value of the Host edge.
+	HCLHost *Host `json:"Host,omitempty"`
 	//
-	host_host_to_disk *uuid.UUID
+	host_disk *uuid.UUID
 }
 
 // DiskEdges holds the relations/edges for other nodes in the graph.
 type DiskEdges struct {
-	// DiskToHost holds the value of the DiskToHost edge.
-	DiskToHost *Host `json:"DiskToHost,omitempty"`
+	// Host holds the value of the Host edge.
+	Host *Host `json:"Host,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// DiskToHostOrErr returns the DiskToHost value or an error if the edge
+// HostOrErr returns the Host value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e DiskEdges) DiskToHostOrErr() (*Host, error) {
+func (e DiskEdges) HostOrErr() (*Host, error) {
 	if e.loadedTypes[0] {
-		if e.DiskToHost == nil {
-			// The edge DiskToHost was loaded in eager-loading,
+		if e.Host == nil {
+			// The edge Host was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: host.Label}
 		}
-		return e.DiskToHost, nil
+		return e.Host, nil
 	}
-	return nil, &NotLoadedError{edge: "DiskToHost"}
+	return nil, &NotLoadedError{edge: "Host"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -62,7 +62,7 @@ func (*Disk) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullInt64)
 		case disk.FieldID:
 			values[i] = new(uuid.UUID)
-		case disk.ForeignKeys[0]: // host_host_to_disk
+		case disk.ForeignKeys[0]: // host_disk
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Disk", columns[i])
@@ -93,19 +93,19 @@ func (d *Disk) assignValues(columns []string, values []interface{}) error {
 			}
 		case disk.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field host_host_to_disk", values[i])
+				return fmt.Errorf("unexpected type %T for field host_disk", values[i])
 			} else if value.Valid {
-				d.host_host_to_disk = new(uuid.UUID)
-				*d.host_host_to_disk = *value.S.(*uuid.UUID)
+				d.host_disk = new(uuid.UUID)
+				*d.host_disk = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryDiskToHost queries the "DiskToHost" edge of the Disk entity.
-func (d *Disk) QueryDiskToHost() *HostQuery {
-	return (&DiskClient{config: d.config}).QueryDiskToHost(d)
+// QueryHost queries the "Host" edge of the Disk entity.
+func (d *Disk) QueryHost() *HostQuery {
+	return (&DiskClient{config: d.config}).QueryHost(d)
 }
 
 // Update returns a builder for updating this Disk.

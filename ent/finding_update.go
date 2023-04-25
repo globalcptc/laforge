@@ -62,76 +62,76 @@ func (fu *FindingUpdate) SetTags(m map[string]string) *FindingUpdate {
 	return fu
 }
 
-// AddFindingToUserIDs adds the "FindingToUser" edge to the User entity by IDs.
-func (fu *FindingUpdate) AddFindingToUserIDs(ids ...uuid.UUID) *FindingUpdate {
-	fu.mutation.AddFindingToUserIDs(ids...)
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (fu *FindingUpdate) AddUserIDs(ids ...uuid.UUID) *FindingUpdate {
+	fu.mutation.AddUserIDs(ids...)
 	return fu
 }
 
-// AddFindingToUser adds the "FindingToUser" edges to the User entity.
-func (fu *FindingUpdate) AddFindingToUser(u ...*User) *FindingUpdate {
+// AddUsers adds the "Users" edges to the User entity.
+func (fu *FindingUpdate) AddUsers(u ...*User) *FindingUpdate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return fu.AddFindingToUserIDs(ids...)
+	return fu.AddUserIDs(ids...)
 }
 
-// SetFindingToHostID sets the "FindingToHost" edge to the Host entity by ID.
-func (fu *FindingUpdate) SetFindingToHostID(id uuid.UUID) *FindingUpdate {
-	fu.mutation.SetFindingToHostID(id)
+// SetHostID sets the "Host" edge to the Host entity by ID.
+func (fu *FindingUpdate) SetHostID(id uuid.UUID) *FindingUpdate {
+	fu.mutation.SetHostID(id)
 	return fu
 }
 
-// SetNillableFindingToHostID sets the "FindingToHost" edge to the Host entity by ID if the given value is not nil.
-func (fu *FindingUpdate) SetNillableFindingToHostID(id *uuid.UUID) *FindingUpdate {
+// SetNillableHostID sets the "Host" edge to the Host entity by ID if the given value is not nil.
+func (fu *FindingUpdate) SetNillableHostID(id *uuid.UUID) *FindingUpdate {
 	if id != nil {
-		fu = fu.SetFindingToHostID(*id)
+		fu = fu.SetHostID(*id)
 	}
 	return fu
 }
 
-// SetFindingToHost sets the "FindingToHost" edge to the Host entity.
-func (fu *FindingUpdate) SetFindingToHost(h *Host) *FindingUpdate {
-	return fu.SetFindingToHostID(h.ID)
+// SetHost sets the "Host" edge to the Host entity.
+func (fu *FindingUpdate) SetHost(h *Host) *FindingUpdate {
+	return fu.SetHostID(h.ID)
 }
 
-// SetFindingToScriptID sets the "FindingToScript" edge to the Script entity by ID.
-func (fu *FindingUpdate) SetFindingToScriptID(id uuid.UUID) *FindingUpdate {
-	fu.mutation.SetFindingToScriptID(id)
+// SetScriptID sets the "Script" edge to the Script entity by ID.
+func (fu *FindingUpdate) SetScriptID(id uuid.UUID) *FindingUpdate {
+	fu.mutation.SetScriptID(id)
 	return fu
 }
 
-// SetNillableFindingToScriptID sets the "FindingToScript" edge to the Script entity by ID if the given value is not nil.
-func (fu *FindingUpdate) SetNillableFindingToScriptID(id *uuid.UUID) *FindingUpdate {
+// SetNillableScriptID sets the "Script" edge to the Script entity by ID if the given value is not nil.
+func (fu *FindingUpdate) SetNillableScriptID(id *uuid.UUID) *FindingUpdate {
 	if id != nil {
-		fu = fu.SetFindingToScriptID(*id)
+		fu = fu.SetScriptID(*id)
 	}
 	return fu
 }
 
-// SetFindingToScript sets the "FindingToScript" edge to the Script entity.
-func (fu *FindingUpdate) SetFindingToScript(s *Script) *FindingUpdate {
-	return fu.SetFindingToScriptID(s.ID)
+// SetScript sets the "Script" edge to the Script entity.
+func (fu *FindingUpdate) SetScript(s *Script) *FindingUpdate {
+	return fu.SetScriptID(s.ID)
 }
 
-// SetFindingToEnvironmentID sets the "FindingToEnvironment" edge to the Environment entity by ID.
-func (fu *FindingUpdate) SetFindingToEnvironmentID(id uuid.UUID) *FindingUpdate {
-	fu.mutation.SetFindingToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (fu *FindingUpdate) SetEnvironmentID(id uuid.UUID) *FindingUpdate {
+	fu.mutation.SetEnvironmentID(id)
 	return fu
 }
 
-// SetNillableFindingToEnvironmentID sets the "FindingToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (fu *FindingUpdate) SetNillableFindingToEnvironmentID(id *uuid.UUID) *FindingUpdate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (fu *FindingUpdate) SetNillableEnvironmentID(id *uuid.UUID) *FindingUpdate {
 	if id != nil {
-		fu = fu.SetFindingToEnvironmentID(*id)
+		fu = fu.SetEnvironmentID(*id)
 	}
 	return fu
 }
 
-// SetFindingToEnvironment sets the "FindingToEnvironment" edge to the Environment entity.
-func (fu *FindingUpdate) SetFindingToEnvironment(e *Environment) *FindingUpdate {
-	return fu.SetFindingToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (fu *FindingUpdate) SetEnvironment(e *Environment) *FindingUpdate {
+	return fu.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the FindingMutation object of the builder.
@@ -139,42 +139,42 @@ func (fu *FindingUpdate) Mutation() *FindingMutation {
 	return fu.mutation
 }
 
-// ClearFindingToUser clears all "FindingToUser" edges to the User entity.
-func (fu *FindingUpdate) ClearFindingToUser() *FindingUpdate {
-	fu.mutation.ClearFindingToUser()
+// ClearUsers clears all "Users" edges to the User entity.
+func (fu *FindingUpdate) ClearUsers() *FindingUpdate {
+	fu.mutation.ClearUsers()
 	return fu
 }
 
-// RemoveFindingToUserIDs removes the "FindingToUser" edge to User entities by IDs.
-func (fu *FindingUpdate) RemoveFindingToUserIDs(ids ...uuid.UUID) *FindingUpdate {
-	fu.mutation.RemoveFindingToUserIDs(ids...)
+// RemoveUserIDs removes the "Users" edge to User entities by IDs.
+func (fu *FindingUpdate) RemoveUserIDs(ids ...uuid.UUID) *FindingUpdate {
+	fu.mutation.RemoveUserIDs(ids...)
 	return fu
 }
 
-// RemoveFindingToUser removes "FindingToUser" edges to User entities.
-func (fu *FindingUpdate) RemoveFindingToUser(u ...*User) *FindingUpdate {
+// RemoveUsers removes "Users" edges to User entities.
+func (fu *FindingUpdate) RemoveUsers(u ...*User) *FindingUpdate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return fu.RemoveFindingToUserIDs(ids...)
+	return fu.RemoveUserIDs(ids...)
 }
 
-// ClearFindingToHost clears the "FindingToHost" edge to the Host entity.
-func (fu *FindingUpdate) ClearFindingToHost() *FindingUpdate {
-	fu.mutation.ClearFindingToHost()
+// ClearHost clears the "Host" edge to the Host entity.
+func (fu *FindingUpdate) ClearHost() *FindingUpdate {
+	fu.mutation.ClearHost()
 	return fu
 }
 
-// ClearFindingToScript clears the "FindingToScript" edge to the Script entity.
-func (fu *FindingUpdate) ClearFindingToScript() *FindingUpdate {
-	fu.mutation.ClearFindingToScript()
+// ClearScript clears the "Script" edge to the Script entity.
+func (fu *FindingUpdate) ClearScript() *FindingUpdate {
+	fu.mutation.ClearScript()
 	return fu
 }
 
-// ClearFindingToEnvironment clears the "FindingToEnvironment" edge to the Environment entity.
-func (fu *FindingUpdate) ClearFindingToEnvironment() *FindingUpdate {
-	fu.mutation.ClearFindingToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (fu *FindingUpdate) ClearEnvironment() *FindingUpdate {
+	fu.mutation.ClearEnvironment()
 	return fu
 }
 
@@ -306,12 +306,12 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: finding.FieldTags,
 		})
 	}
-	if fu.mutation.FindingToUserCleared() {
+	if fu.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   finding.FindingToUserTable,
-			Columns: []string{finding.FindingToUserColumn},
+			Table:   finding.UsersTable,
+			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -322,12 +322,12 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fu.mutation.RemovedFindingToUserIDs(); len(nodes) > 0 && !fu.mutation.FindingToUserCleared() {
+	if nodes := fu.mutation.RemovedUsersIDs(); len(nodes) > 0 && !fu.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   finding.FindingToUserTable,
-			Columns: []string{finding.FindingToUserColumn},
+			Table:   finding.UsersTable,
+			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -341,12 +341,12 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fu.mutation.FindingToUserIDs(); len(nodes) > 0 {
+	if nodes := fu.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   finding.FindingToUserTable,
-			Columns: []string{finding.FindingToUserColumn},
+			Table:   finding.UsersTable,
+			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -360,12 +360,12 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if fu.mutation.FindingToHostCleared() {
+	if fu.mutation.HostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   finding.FindingToHostTable,
-			Columns: []string{finding.FindingToHostColumn},
+			Table:   finding.HostTable,
+			Columns: []string{finding.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -376,12 +376,12 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fu.mutation.FindingToHostIDs(); len(nodes) > 0 {
+	if nodes := fu.mutation.HostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   finding.FindingToHostTable,
-			Columns: []string{finding.FindingToHostColumn},
+			Table:   finding.HostTable,
+			Columns: []string{finding.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -395,12 +395,12 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if fu.mutation.FindingToScriptCleared() {
+	if fu.mutation.ScriptCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   finding.FindingToScriptTable,
-			Columns: []string{finding.FindingToScriptColumn},
+			Table:   finding.ScriptTable,
+			Columns: []string{finding.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -411,12 +411,12 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fu.mutation.FindingToScriptIDs(); len(nodes) > 0 {
+	if nodes := fu.mutation.ScriptIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   finding.FindingToScriptTable,
-			Columns: []string{finding.FindingToScriptColumn},
+			Table:   finding.ScriptTable,
+			Columns: []string{finding.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -430,12 +430,12 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if fu.mutation.FindingToEnvironmentCleared() {
+	if fu.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   finding.FindingToEnvironmentTable,
-			Columns: []string{finding.FindingToEnvironmentColumn},
+			Table:   finding.EnvironmentTable,
+			Columns: []string{finding.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -446,12 +446,12 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fu.mutation.FindingToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := fu.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   finding.FindingToEnvironmentTable,
-			Columns: []string{finding.FindingToEnvironmentColumn},
+			Table:   finding.EnvironmentTable,
+			Columns: []string{finding.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -514,76 +514,76 @@ func (fuo *FindingUpdateOne) SetTags(m map[string]string) *FindingUpdateOne {
 	return fuo
 }
 
-// AddFindingToUserIDs adds the "FindingToUser" edge to the User entity by IDs.
-func (fuo *FindingUpdateOne) AddFindingToUserIDs(ids ...uuid.UUID) *FindingUpdateOne {
-	fuo.mutation.AddFindingToUserIDs(ids...)
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (fuo *FindingUpdateOne) AddUserIDs(ids ...uuid.UUID) *FindingUpdateOne {
+	fuo.mutation.AddUserIDs(ids...)
 	return fuo
 }
 
-// AddFindingToUser adds the "FindingToUser" edges to the User entity.
-func (fuo *FindingUpdateOne) AddFindingToUser(u ...*User) *FindingUpdateOne {
+// AddUsers adds the "Users" edges to the User entity.
+func (fuo *FindingUpdateOne) AddUsers(u ...*User) *FindingUpdateOne {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return fuo.AddFindingToUserIDs(ids...)
+	return fuo.AddUserIDs(ids...)
 }
 
-// SetFindingToHostID sets the "FindingToHost" edge to the Host entity by ID.
-func (fuo *FindingUpdateOne) SetFindingToHostID(id uuid.UUID) *FindingUpdateOne {
-	fuo.mutation.SetFindingToHostID(id)
+// SetHostID sets the "Host" edge to the Host entity by ID.
+func (fuo *FindingUpdateOne) SetHostID(id uuid.UUID) *FindingUpdateOne {
+	fuo.mutation.SetHostID(id)
 	return fuo
 }
 
-// SetNillableFindingToHostID sets the "FindingToHost" edge to the Host entity by ID if the given value is not nil.
-func (fuo *FindingUpdateOne) SetNillableFindingToHostID(id *uuid.UUID) *FindingUpdateOne {
+// SetNillableHostID sets the "Host" edge to the Host entity by ID if the given value is not nil.
+func (fuo *FindingUpdateOne) SetNillableHostID(id *uuid.UUID) *FindingUpdateOne {
 	if id != nil {
-		fuo = fuo.SetFindingToHostID(*id)
+		fuo = fuo.SetHostID(*id)
 	}
 	return fuo
 }
 
-// SetFindingToHost sets the "FindingToHost" edge to the Host entity.
-func (fuo *FindingUpdateOne) SetFindingToHost(h *Host) *FindingUpdateOne {
-	return fuo.SetFindingToHostID(h.ID)
+// SetHost sets the "Host" edge to the Host entity.
+func (fuo *FindingUpdateOne) SetHost(h *Host) *FindingUpdateOne {
+	return fuo.SetHostID(h.ID)
 }
 
-// SetFindingToScriptID sets the "FindingToScript" edge to the Script entity by ID.
-func (fuo *FindingUpdateOne) SetFindingToScriptID(id uuid.UUID) *FindingUpdateOne {
-	fuo.mutation.SetFindingToScriptID(id)
+// SetScriptID sets the "Script" edge to the Script entity by ID.
+func (fuo *FindingUpdateOne) SetScriptID(id uuid.UUID) *FindingUpdateOne {
+	fuo.mutation.SetScriptID(id)
 	return fuo
 }
 
-// SetNillableFindingToScriptID sets the "FindingToScript" edge to the Script entity by ID if the given value is not nil.
-func (fuo *FindingUpdateOne) SetNillableFindingToScriptID(id *uuid.UUID) *FindingUpdateOne {
+// SetNillableScriptID sets the "Script" edge to the Script entity by ID if the given value is not nil.
+func (fuo *FindingUpdateOne) SetNillableScriptID(id *uuid.UUID) *FindingUpdateOne {
 	if id != nil {
-		fuo = fuo.SetFindingToScriptID(*id)
+		fuo = fuo.SetScriptID(*id)
 	}
 	return fuo
 }
 
-// SetFindingToScript sets the "FindingToScript" edge to the Script entity.
-func (fuo *FindingUpdateOne) SetFindingToScript(s *Script) *FindingUpdateOne {
-	return fuo.SetFindingToScriptID(s.ID)
+// SetScript sets the "Script" edge to the Script entity.
+func (fuo *FindingUpdateOne) SetScript(s *Script) *FindingUpdateOne {
+	return fuo.SetScriptID(s.ID)
 }
 
-// SetFindingToEnvironmentID sets the "FindingToEnvironment" edge to the Environment entity by ID.
-func (fuo *FindingUpdateOne) SetFindingToEnvironmentID(id uuid.UUID) *FindingUpdateOne {
-	fuo.mutation.SetFindingToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (fuo *FindingUpdateOne) SetEnvironmentID(id uuid.UUID) *FindingUpdateOne {
+	fuo.mutation.SetEnvironmentID(id)
 	return fuo
 }
 
-// SetNillableFindingToEnvironmentID sets the "FindingToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (fuo *FindingUpdateOne) SetNillableFindingToEnvironmentID(id *uuid.UUID) *FindingUpdateOne {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (fuo *FindingUpdateOne) SetNillableEnvironmentID(id *uuid.UUID) *FindingUpdateOne {
 	if id != nil {
-		fuo = fuo.SetFindingToEnvironmentID(*id)
+		fuo = fuo.SetEnvironmentID(*id)
 	}
 	return fuo
 }
 
-// SetFindingToEnvironment sets the "FindingToEnvironment" edge to the Environment entity.
-func (fuo *FindingUpdateOne) SetFindingToEnvironment(e *Environment) *FindingUpdateOne {
-	return fuo.SetFindingToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (fuo *FindingUpdateOne) SetEnvironment(e *Environment) *FindingUpdateOne {
+	return fuo.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the FindingMutation object of the builder.
@@ -591,42 +591,42 @@ func (fuo *FindingUpdateOne) Mutation() *FindingMutation {
 	return fuo.mutation
 }
 
-// ClearFindingToUser clears all "FindingToUser" edges to the User entity.
-func (fuo *FindingUpdateOne) ClearFindingToUser() *FindingUpdateOne {
-	fuo.mutation.ClearFindingToUser()
+// ClearUsers clears all "Users" edges to the User entity.
+func (fuo *FindingUpdateOne) ClearUsers() *FindingUpdateOne {
+	fuo.mutation.ClearUsers()
 	return fuo
 }
 
-// RemoveFindingToUserIDs removes the "FindingToUser" edge to User entities by IDs.
-func (fuo *FindingUpdateOne) RemoveFindingToUserIDs(ids ...uuid.UUID) *FindingUpdateOne {
-	fuo.mutation.RemoveFindingToUserIDs(ids...)
+// RemoveUserIDs removes the "Users" edge to User entities by IDs.
+func (fuo *FindingUpdateOne) RemoveUserIDs(ids ...uuid.UUID) *FindingUpdateOne {
+	fuo.mutation.RemoveUserIDs(ids...)
 	return fuo
 }
 
-// RemoveFindingToUser removes "FindingToUser" edges to User entities.
-func (fuo *FindingUpdateOne) RemoveFindingToUser(u ...*User) *FindingUpdateOne {
+// RemoveUsers removes "Users" edges to User entities.
+func (fuo *FindingUpdateOne) RemoveUsers(u ...*User) *FindingUpdateOne {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return fuo.RemoveFindingToUserIDs(ids...)
+	return fuo.RemoveUserIDs(ids...)
 }
 
-// ClearFindingToHost clears the "FindingToHost" edge to the Host entity.
-func (fuo *FindingUpdateOne) ClearFindingToHost() *FindingUpdateOne {
-	fuo.mutation.ClearFindingToHost()
+// ClearHost clears the "Host" edge to the Host entity.
+func (fuo *FindingUpdateOne) ClearHost() *FindingUpdateOne {
+	fuo.mutation.ClearHost()
 	return fuo
 }
 
-// ClearFindingToScript clears the "FindingToScript" edge to the Script entity.
-func (fuo *FindingUpdateOne) ClearFindingToScript() *FindingUpdateOne {
-	fuo.mutation.ClearFindingToScript()
+// ClearScript clears the "Script" edge to the Script entity.
+func (fuo *FindingUpdateOne) ClearScript() *FindingUpdateOne {
+	fuo.mutation.ClearScript()
 	return fuo
 }
 
-// ClearFindingToEnvironment clears the "FindingToEnvironment" edge to the Environment entity.
-func (fuo *FindingUpdateOne) ClearFindingToEnvironment() *FindingUpdateOne {
-	fuo.mutation.ClearFindingToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (fuo *FindingUpdateOne) ClearEnvironment() *FindingUpdateOne {
+	fuo.mutation.ClearEnvironment()
 	return fuo
 }
 
@@ -788,12 +788,12 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 			Column: finding.FieldTags,
 		})
 	}
-	if fuo.mutation.FindingToUserCleared() {
+	if fuo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   finding.FindingToUserTable,
-			Columns: []string{finding.FindingToUserColumn},
+			Table:   finding.UsersTable,
+			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -804,12 +804,12 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fuo.mutation.RemovedFindingToUserIDs(); len(nodes) > 0 && !fuo.mutation.FindingToUserCleared() {
+	if nodes := fuo.mutation.RemovedUsersIDs(); len(nodes) > 0 && !fuo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   finding.FindingToUserTable,
-			Columns: []string{finding.FindingToUserColumn},
+			Table:   finding.UsersTable,
+			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -823,12 +823,12 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fuo.mutation.FindingToUserIDs(); len(nodes) > 0 {
+	if nodes := fuo.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   finding.FindingToUserTable,
-			Columns: []string{finding.FindingToUserColumn},
+			Table:   finding.UsersTable,
+			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -842,12 +842,12 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if fuo.mutation.FindingToHostCleared() {
+	if fuo.mutation.HostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   finding.FindingToHostTable,
-			Columns: []string{finding.FindingToHostColumn},
+			Table:   finding.HostTable,
+			Columns: []string{finding.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -858,12 +858,12 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fuo.mutation.FindingToHostIDs(); len(nodes) > 0 {
+	if nodes := fuo.mutation.HostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   finding.FindingToHostTable,
-			Columns: []string{finding.FindingToHostColumn},
+			Table:   finding.HostTable,
+			Columns: []string{finding.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -877,12 +877,12 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if fuo.mutation.FindingToScriptCleared() {
+	if fuo.mutation.ScriptCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   finding.FindingToScriptTable,
-			Columns: []string{finding.FindingToScriptColumn},
+			Table:   finding.ScriptTable,
+			Columns: []string{finding.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -893,12 +893,12 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fuo.mutation.FindingToScriptIDs(); len(nodes) > 0 {
+	if nodes := fuo.mutation.ScriptIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   finding.FindingToScriptTable,
-			Columns: []string{finding.FindingToScriptColumn},
+			Table:   finding.ScriptTable,
+			Columns: []string{finding.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -912,12 +912,12 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if fuo.mutation.FindingToEnvironmentCleared() {
+	if fuo.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   finding.FindingToEnvironmentTable,
-			Columns: []string{finding.FindingToEnvironmentColumn},
+			Table:   finding.EnvironmentTable,
+			Columns: []string{finding.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -928,12 +928,12 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fuo.mutation.FindingToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := fuo.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   finding.FindingToEnvironmentTable,
-			Columns: []string{finding.FindingToEnvironmentColumn},
+			Table:   finding.EnvironmentTable,
+			Columns: []string{finding.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

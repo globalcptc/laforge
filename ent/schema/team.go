@@ -26,15 +26,18 @@ func (Team) Fields() []ent.Field {
 // Edges of the Team.
 func (Team) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("TeamToBuild", Build.Type).Unique().Required(),
-		edge.To("TeamToStatus", Status.Type).Unique().
+		edge.To("Build", Build.Type).
+			Unique().
+			Required(),
+		edge.To("Status", Status.Type).
+			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.From("TeamToProvisionedNetwork", ProvisionedNetwork.Type).
-			Ref("ProvisionedNetworkToTeam"),
-		edge.From("TeamToPlan", Plan.Type).
-			Ref("PlanToTeam").
+		edge.From("ProvisionedNetworks", ProvisionedNetwork.Type).
+			Ref("Team"),
+		edge.From("Plan", Plan.Type).
+			Ref("Team").
 			Unique(),
 	}
 }

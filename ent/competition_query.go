@@ -22,16 +22,16 @@ import (
 // CompetitionQuery is the builder for querying Competition entities.
 type CompetitionQuery struct {
 	config
-	limit                        *int
-	offset                       *int
-	unique                       *bool
-	order                        []OrderFunc
-	fields                       []string
-	predicates                   []predicate.Competition
-	withCompetitionToDNS         *DNSQuery
-	withCompetitionToEnvironment *EnvironmentQuery
-	withCompetitionToBuild       *BuildQuery
-	withFKs                      bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.Competition
+	withDNS         *DNSQuery
+	withEnvironment *EnvironmentQuery
+	withBuilds      *BuildQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -68,8 +68,8 @@ func (cq *CompetitionQuery) Order(o ...OrderFunc) *CompetitionQuery {
 	return cq
 }
 
-// QueryCompetitionToDNS chains the current query on the "CompetitionToDNS" edge.
-func (cq *CompetitionQuery) QueryCompetitionToDNS() *DNSQuery {
+// QueryDNS chains the current query on the "DNS" edge.
+func (cq *CompetitionQuery) QueryDNS() *DNSQuery {
 	query := &DNSQuery{config: cq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
@@ -82,7 +82,7 @@ func (cq *CompetitionQuery) QueryCompetitionToDNS() *DNSQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(competition.Table, competition.FieldID, selector),
 			sqlgraph.To(dns.Table, dns.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, competition.CompetitionToDNSTable, competition.CompetitionToDNSPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, competition.DNSTable, competition.DNSPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
 		return fromU, nil
@@ -90,8 +90,8 @@ func (cq *CompetitionQuery) QueryCompetitionToDNS() *DNSQuery {
 	return query
 }
 
-// QueryCompetitionToEnvironment chains the current query on the "CompetitionToEnvironment" edge.
-func (cq *CompetitionQuery) QueryCompetitionToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (cq *CompetitionQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: cq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
@@ -104,7 +104,7 @@ func (cq *CompetitionQuery) QueryCompetitionToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(competition.Table, competition.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, competition.CompetitionToEnvironmentTable, competition.CompetitionToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, competition.EnvironmentTable, competition.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
 		return fromU, nil
@@ -112,8 +112,8 @@ func (cq *CompetitionQuery) QueryCompetitionToEnvironment() *EnvironmentQuery {
 	return query
 }
 
-// QueryCompetitionToBuild chains the current query on the "CompetitionToBuild" edge.
-func (cq *CompetitionQuery) QueryCompetitionToBuild() *BuildQuery {
+// QueryBuilds chains the current query on the "Builds" edge.
+func (cq *CompetitionQuery) QueryBuilds() *BuildQuery {
 	query := &BuildQuery{config: cq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
@@ -126,7 +126,7 @@ func (cq *CompetitionQuery) QueryCompetitionToBuild() *BuildQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(competition.Table, competition.FieldID, selector),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, competition.CompetitionToBuildTable, competition.CompetitionToBuildColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, competition.BuildsTable, competition.BuildsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
 		return fromU, nil
@@ -310,14 +310,14 @@ func (cq *CompetitionQuery) Clone() *CompetitionQuery {
 		return nil
 	}
 	return &CompetitionQuery{
-		config:                       cq.config,
-		limit:                        cq.limit,
-		offset:                       cq.offset,
-		order:                        append([]OrderFunc{}, cq.order...),
-		predicates:                   append([]predicate.Competition{}, cq.predicates...),
-		withCompetitionToDNS:         cq.withCompetitionToDNS.Clone(),
-		withCompetitionToEnvironment: cq.withCompetitionToEnvironment.Clone(),
-		withCompetitionToBuild:       cq.withCompetitionToBuild.Clone(),
+		config:          cq.config,
+		limit:           cq.limit,
+		offset:          cq.offset,
+		order:           append([]OrderFunc{}, cq.order...),
+		predicates:      append([]predicate.Competition{}, cq.predicates...),
+		withDNS:         cq.withDNS.Clone(),
+		withEnvironment: cq.withEnvironment.Clone(),
+		withBuilds:      cq.withBuilds.Clone(),
 		// clone intermediate query.
 		sql:    cq.sql.Clone(),
 		path:   cq.path,
@@ -325,36 +325,36 @@ func (cq *CompetitionQuery) Clone() *CompetitionQuery {
 	}
 }
 
-// WithCompetitionToDNS tells the query-builder to eager-load the nodes that are connected to
-// the "CompetitionToDNS" edge. The optional arguments are used to configure the query builder of the edge.
-func (cq *CompetitionQuery) WithCompetitionToDNS(opts ...func(*DNSQuery)) *CompetitionQuery {
+// WithDNS tells the query-builder to eager-load the nodes that are connected to
+// the "DNS" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CompetitionQuery) WithDNS(opts ...func(*DNSQuery)) *CompetitionQuery {
 	query := &DNSQuery{config: cq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	cq.withCompetitionToDNS = query
+	cq.withDNS = query
 	return cq
 }
 
-// WithCompetitionToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "CompetitionToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (cq *CompetitionQuery) WithCompetitionToEnvironment(opts ...func(*EnvironmentQuery)) *CompetitionQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CompetitionQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *CompetitionQuery {
 	query := &EnvironmentQuery{config: cq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	cq.withCompetitionToEnvironment = query
+	cq.withEnvironment = query
 	return cq
 }
 
-// WithCompetitionToBuild tells the query-builder to eager-load the nodes that are connected to
-// the "CompetitionToBuild" edge. The optional arguments are used to configure the query builder of the edge.
-func (cq *CompetitionQuery) WithCompetitionToBuild(opts ...func(*BuildQuery)) *CompetitionQuery {
+// WithBuilds tells the query-builder to eager-load the nodes that are connected to
+// the "Builds" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CompetitionQuery) WithBuilds(opts ...func(*BuildQuery)) *CompetitionQuery {
 	query := &BuildQuery{config: cq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	cq.withCompetitionToBuild = query
+	cq.withBuilds = query
 	return cq
 }
 
@@ -428,12 +428,12 @@ func (cq *CompetitionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		withFKs     = cq.withFKs
 		_spec       = cq.querySpec()
 		loadedTypes = [3]bool{
-			cq.withCompetitionToDNS != nil,
-			cq.withCompetitionToEnvironment != nil,
-			cq.withCompetitionToBuild != nil,
+			cq.withDNS != nil,
+			cq.withEnvironment != nil,
+			cq.withBuilds != nil,
 		}
 	)
-	if cq.withCompetitionToEnvironment != nil {
+	if cq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -457,30 +457,30 @@ func (cq *CompetitionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := cq.withCompetitionToDNS; query != nil {
-		if err := cq.loadCompetitionToDNS(ctx, query, nodes,
-			func(n *Competition) { n.Edges.CompetitionToDNS = []*DNS{} },
-			func(n *Competition, e *DNS) { n.Edges.CompetitionToDNS = append(n.Edges.CompetitionToDNS, e) }); err != nil {
+	if query := cq.withDNS; query != nil {
+		if err := cq.loadDNS(ctx, query, nodes,
+			func(n *Competition) { n.Edges.DNS = []*DNS{} },
+			func(n *Competition, e *DNS) { n.Edges.DNS = append(n.Edges.DNS, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := cq.withCompetitionToEnvironment; query != nil {
-		if err := cq.loadCompetitionToEnvironment(ctx, query, nodes, nil,
-			func(n *Competition, e *Environment) { n.Edges.CompetitionToEnvironment = e }); err != nil {
+	if query := cq.withEnvironment; query != nil {
+		if err := cq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *Competition, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := cq.withCompetitionToBuild; query != nil {
-		if err := cq.loadCompetitionToBuild(ctx, query, nodes,
-			func(n *Competition) { n.Edges.CompetitionToBuild = []*Build{} },
-			func(n *Competition, e *Build) { n.Edges.CompetitionToBuild = append(n.Edges.CompetitionToBuild, e) }); err != nil {
+	if query := cq.withBuilds; query != nil {
+		if err := cq.loadBuilds(ctx, query, nodes,
+			func(n *Competition) { n.Edges.Builds = []*Build{} },
+			func(n *Competition, e *Build) { n.Edges.Builds = append(n.Edges.Builds, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (cq *CompetitionQuery) loadCompetitionToDNS(ctx context.Context, query *DNSQuery, nodes []*Competition, init func(*Competition), assign func(*Competition, *DNS)) error {
+func (cq *CompetitionQuery) loadDNS(ctx context.Context, query *DNSQuery, nodes []*Competition, init func(*Competition), assign func(*Competition, *DNS)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*Competition)
 	nids := make(map[uuid.UUID]map[*Competition]struct{})
@@ -492,11 +492,11 @@ func (cq *CompetitionQuery) loadCompetitionToDNS(ctx context.Context, query *DNS
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(competition.CompetitionToDNSTable)
-		s.Join(joinT).On(s.C(dns.FieldID), joinT.C(competition.CompetitionToDNSPrimaryKey[1]))
-		s.Where(sql.InValues(joinT.C(competition.CompetitionToDNSPrimaryKey[0]), edgeIDs...))
+		joinT := sql.Table(competition.DNSTable)
+		s.Join(joinT).On(s.C(dns.FieldID), joinT.C(competition.DNSPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(competition.DNSPrimaryKey[0]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(competition.CompetitionToDNSPrimaryKey[0]))
+		s.Select(joinT.C(competition.DNSPrimaryKey[0]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -530,7 +530,7 @@ func (cq *CompetitionQuery) loadCompetitionToDNS(ctx context.Context, query *DNS
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "CompetitionToDNS" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "DNS" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
@@ -538,14 +538,14 @@ func (cq *CompetitionQuery) loadCompetitionToDNS(ctx context.Context, query *DNS
 	}
 	return nil
 }
-func (cq *CompetitionQuery) loadCompetitionToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Competition, init func(*Competition), assign func(*Competition, *Environment)) error {
+func (cq *CompetitionQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Competition, init func(*Competition), assign func(*Competition, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Competition)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_competition == nil {
+		if nodes[i].environment_competitions == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_competition
+		fk := *nodes[i].environment_competitions
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -559,7 +559,7 @@ func (cq *CompetitionQuery) loadCompetitionToEnvironment(ctx context.Context, qu
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_competition" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_competitions" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -567,7 +567,7 @@ func (cq *CompetitionQuery) loadCompetitionToEnvironment(ctx context.Context, qu
 	}
 	return nil
 }
-func (cq *CompetitionQuery) loadCompetitionToBuild(ctx context.Context, query *BuildQuery, nodes []*Competition, init func(*Competition), assign func(*Competition, *Build)) error {
+func (cq *CompetitionQuery) loadBuilds(ctx context.Context, query *BuildQuery, nodes []*Competition, init func(*Competition), assign func(*Competition, *Build)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Competition)
 	for i := range nodes {
@@ -579,20 +579,20 @@ func (cq *CompetitionQuery) loadCompetitionToBuild(ctx context.Context, query *B
 	}
 	query.withFKs = true
 	query.Where(predicate.Build(func(s *sql.Selector) {
-		s.Where(sql.InValues(competition.CompetitionToBuildColumn, fks...))
+		s.Where(sql.InValues(competition.BuildsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.build_build_to_competition
+		fk := n.build_competition
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "build_build_to_competition" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "build_competition" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_build_to_competition" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_competition" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

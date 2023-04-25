@@ -129,102 +129,102 @@ func (hc *HostCreate) SetNillableID(u *uuid.UUID) *HostCreate {
 	return hc
 }
 
-// SetHostToDiskID sets the "HostToDisk" edge to the Disk entity by ID.
-func (hc *HostCreate) SetHostToDiskID(id uuid.UUID) *HostCreate {
-	hc.mutation.SetHostToDiskID(id)
+// SetDiskID sets the "Disk" edge to the Disk entity by ID.
+func (hc *HostCreate) SetDiskID(id uuid.UUID) *HostCreate {
+	hc.mutation.SetDiskID(id)
 	return hc
 }
 
-// SetNillableHostToDiskID sets the "HostToDisk" edge to the Disk entity by ID if the given value is not nil.
-func (hc *HostCreate) SetNillableHostToDiskID(id *uuid.UUID) *HostCreate {
+// SetNillableDiskID sets the "Disk" edge to the Disk entity by ID if the given value is not nil.
+func (hc *HostCreate) SetNillableDiskID(id *uuid.UUID) *HostCreate {
 	if id != nil {
-		hc = hc.SetHostToDiskID(*id)
+		hc = hc.SetDiskID(*id)
 	}
 	return hc
 }
 
-// SetHostToDisk sets the "HostToDisk" edge to the Disk entity.
-func (hc *HostCreate) SetHostToDisk(d *Disk) *HostCreate {
-	return hc.SetHostToDiskID(d.ID)
+// SetDisk sets the "Disk" edge to the Disk entity.
+func (hc *HostCreate) SetDisk(d *Disk) *HostCreate {
+	return hc.SetDiskID(d.ID)
 }
 
-// AddHostToUserIDs adds the "HostToUser" edge to the User entity by IDs.
-func (hc *HostCreate) AddHostToUserIDs(ids ...uuid.UUID) *HostCreate {
-	hc.mutation.AddHostToUserIDs(ids...)
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (hc *HostCreate) AddUserIDs(ids ...uuid.UUID) *HostCreate {
+	hc.mutation.AddUserIDs(ids...)
 	return hc
 }
 
-// AddHostToUser adds the "HostToUser" edges to the User entity.
-func (hc *HostCreate) AddHostToUser(u ...*User) *HostCreate {
+// AddUsers adds the "Users" edges to the User entity.
+func (hc *HostCreate) AddUsers(u ...*User) *HostCreate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return hc.AddHostToUserIDs(ids...)
+	return hc.AddUserIDs(ids...)
 }
 
-// SetHostToEnvironmentID sets the "HostToEnvironment" edge to the Environment entity by ID.
-func (hc *HostCreate) SetHostToEnvironmentID(id uuid.UUID) *HostCreate {
-	hc.mutation.SetHostToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (hc *HostCreate) SetEnvironmentID(id uuid.UUID) *HostCreate {
+	hc.mutation.SetEnvironmentID(id)
 	return hc
 }
 
-// SetNillableHostToEnvironmentID sets the "HostToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (hc *HostCreate) SetNillableHostToEnvironmentID(id *uuid.UUID) *HostCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (hc *HostCreate) SetNillableEnvironmentID(id *uuid.UUID) *HostCreate {
 	if id != nil {
-		hc = hc.SetHostToEnvironmentID(*id)
+		hc = hc.SetEnvironmentID(*id)
 	}
 	return hc
 }
 
-// SetHostToEnvironment sets the "HostToEnvironment" edge to the Environment entity.
-func (hc *HostCreate) SetHostToEnvironment(e *Environment) *HostCreate {
-	return hc.SetHostToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (hc *HostCreate) SetEnvironment(e *Environment) *HostCreate {
+	return hc.SetEnvironmentID(e.ID)
 }
 
-// AddHostToIncludedNetworkIDs adds the "HostToIncludedNetwork" edge to the IncludedNetwork entity by IDs.
-func (hc *HostCreate) AddHostToIncludedNetworkIDs(ids ...uuid.UUID) *HostCreate {
-	hc.mutation.AddHostToIncludedNetworkIDs(ids...)
+// AddIncludedNetworkIDs adds the "IncludedNetworks" edge to the IncludedNetwork entity by IDs.
+func (hc *HostCreate) AddIncludedNetworkIDs(ids ...uuid.UUID) *HostCreate {
+	hc.mutation.AddIncludedNetworkIDs(ids...)
 	return hc
 }
 
-// AddHostToIncludedNetwork adds the "HostToIncludedNetwork" edges to the IncludedNetwork entity.
-func (hc *HostCreate) AddHostToIncludedNetwork(i ...*IncludedNetwork) *HostCreate {
+// AddIncludedNetworks adds the "IncludedNetworks" edges to the IncludedNetwork entity.
+func (hc *HostCreate) AddIncludedNetworks(i ...*IncludedNetwork) *HostCreate {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return hc.AddHostToIncludedNetworkIDs(ids...)
+	return hc.AddIncludedNetworkIDs(ids...)
 }
 
-// AddDependOnHostToHostDependencyIDs adds the "DependOnHostToHostDependency" edge to the HostDependency entity by IDs.
-func (hc *HostCreate) AddDependOnHostToHostDependencyIDs(ids ...uuid.UUID) *HostCreate {
-	hc.mutation.AddDependOnHostToHostDependencyIDs(ids...)
+// AddDependOnHostDependencyIDs adds the "DependOnHostDependencies" edge to the HostDependency entity by IDs.
+func (hc *HostCreate) AddDependOnHostDependencyIDs(ids ...uuid.UUID) *HostCreate {
+	hc.mutation.AddDependOnHostDependencyIDs(ids...)
 	return hc
 }
 
-// AddDependOnHostToHostDependency adds the "DependOnHostToHostDependency" edges to the HostDependency entity.
-func (hc *HostCreate) AddDependOnHostToHostDependency(h ...*HostDependency) *HostCreate {
+// AddDependOnHostDependencies adds the "DependOnHostDependencies" edges to the HostDependency entity.
+func (hc *HostCreate) AddDependOnHostDependencies(h ...*HostDependency) *HostCreate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return hc.AddDependOnHostToHostDependencyIDs(ids...)
+	return hc.AddDependOnHostDependencyIDs(ids...)
 }
 
-// AddDependByHostToHostDependencyIDs adds the "DependByHostToHostDependency" edge to the HostDependency entity by IDs.
-func (hc *HostCreate) AddDependByHostToHostDependencyIDs(ids ...uuid.UUID) *HostCreate {
-	hc.mutation.AddDependByHostToHostDependencyIDs(ids...)
+// AddRequiredByHostDependencyIDs adds the "RequiredByHostDependencies" edge to the HostDependency entity by IDs.
+func (hc *HostCreate) AddRequiredByHostDependencyIDs(ids ...uuid.UUID) *HostCreate {
+	hc.mutation.AddRequiredByHostDependencyIDs(ids...)
 	return hc
 }
 
-// AddDependByHostToHostDependency adds the "DependByHostToHostDependency" edges to the HostDependency entity.
-func (hc *HostCreate) AddDependByHostToHostDependency(h ...*HostDependency) *HostCreate {
+// AddRequiredByHostDependencies adds the "RequiredByHostDependencies" edges to the HostDependency entity.
+func (hc *HostCreate) AddRequiredByHostDependencies(h ...*HostDependency) *HostCreate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return hc.AddDependByHostToHostDependencyIDs(ids...)
+	return hc.AddRequiredByHostDependencyIDs(ids...)
 }
 
 // Mutation returns the HostMutation object of the builder.
@@ -507,12 +507,12 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 		})
 		_node.Tags = value
 	}
-	if nodes := hc.mutation.HostToDiskIDs(); len(nodes) > 0 {
+	if nodes := hc.mutation.DiskIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   host.HostToDiskTable,
-			Columns: []string{host.HostToDiskColumn},
+			Table:   host.DiskTable,
+			Columns: []string{host.DiskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -526,12 +526,12 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := hc.mutation.HostToUserIDs(); len(nodes) > 0 {
+	if nodes := hc.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   host.HostToUserTable,
-			Columns: []string{host.HostToUserColumn},
+			Table:   host.UsersTable,
+			Columns: []string{host.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -545,12 +545,12 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := hc.mutation.HostToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := hc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   host.HostToEnvironmentTable,
-			Columns: []string{host.HostToEnvironmentColumn},
+			Table:   host.EnvironmentTable,
+			Columns: []string{host.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -562,15 +562,15 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.environment_environment_to_host = &nodes[0]
+		_node.environment_hosts = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := hc.mutation.HostToIncludedNetworkIDs(); len(nodes) > 0 {
+	if nodes := hc.mutation.IncludedNetworksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   host.HostToIncludedNetworkTable,
-			Columns: host.HostToIncludedNetworkPrimaryKey,
+			Table:   host.IncludedNetworksTable,
+			Columns: host.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -584,12 +584,12 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := hc.mutation.DependOnHostToHostDependencyIDs(); len(nodes) > 0 {
+	if nodes := hc.mutation.DependOnHostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.DependOnHostToHostDependencyTable,
-			Columns: []string{host.DependOnHostToHostDependencyColumn},
+			Table:   host.DependOnHostDependenciesTable,
+			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -603,12 +603,12 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := hc.mutation.DependByHostToHostDependencyIDs(); len(nodes) > 0 {
+	if nodes := hc.mutation.RequiredByHostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   host.DependByHostToHostDependencyTable,
-			Columns: []string{host.DependByHostToHostDependencyColumn},
+			Table:   host.RequiredByHostDependenciesTable,
+			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

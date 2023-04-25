@@ -60,34 +60,34 @@ func (uc *UserCreate) SetNillableID(u *uuid.UUID) *UserCreate {
 	return uc
 }
 
-// AddUserToTagIDs adds the "UserToTag" edge to the Tag entity by IDs.
-func (uc *UserCreate) AddUserToTagIDs(ids ...uuid.UUID) *UserCreate {
-	uc.mutation.AddUserToTagIDs(ids...)
+// AddTagIDs adds the "Tag" edge to the Tag entity by IDs.
+func (uc *UserCreate) AddTagIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddTagIDs(ids...)
 	return uc
 }
 
-// AddUserToTag adds the "UserToTag" edges to the Tag entity.
-func (uc *UserCreate) AddUserToTag(t ...*Tag) *UserCreate {
+// AddTag adds the "Tag" edges to the Tag entity.
+func (uc *UserCreate) AddTag(t ...*Tag) *UserCreate {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return uc.AddUserToTagIDs(ids...)
+	return uc.AddTagIDs(ids...)
 }
 
-// AddUserToEnvironmentIDs adds the "UserToEnvironment" edge to the Environment entity by IDs.
-func (uc *UserCreate) AddUserToEnvironmentIDs(ids ...uuid.UUID) *UserCreate {
-	uc.mutation.AddUserToEnvironmentIDs(ids...)
+// AddEnvironmentIDs adds the "Environments" edge to the Environment entity by IDs.
+func (uc *UserCreate) AddEnvironmentIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddEnvironmentIDs(ids...)
 	return uc
 }
 
-// AddUserToEnvironment adds the "UserToEnvironment" edges to the Environment entity.
-func (uc *UserCreate) AddUserToEnvironment(e ...*Environment) *UserCreate {
+// AddEnvironments adds the "Environments" edges to the Environment entity.
+func (uc *UserCreate) AddEnvironments(e ...*Environment) *UserCreate {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return uc.AddUserToEnvironmentIDs(ids...)
+	return uc.AddEnvironmentIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -255,12 +255,12 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		})
 		_node.HclID = value
 	}
-	if nodes := uc.mutation.UserToTagIDs(); len(nodes) > 0 {
+	if nodes := uc.mutation.TagIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.UserToTagTable,
-			Columns: []string{user.UserToTagColumn},
+			Table:   user.TagTable,
+			Columns: []string{user.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -274,12 +274,12 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := uc.mutation.UserToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := uc.mutation.EnvironmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.UserToEnvironmentTable,
-			Columns: user.UserToEnvironmentPrimaryKey,
+			Table:   user.EnvironmentsTable,
+			Columns: user.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

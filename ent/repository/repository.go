@@ -19,24 +19,24 @@ const (
 	FieldEnviromentFilepath = "enviroment_filepath"
 	// FieldFolderPath holds the string denoting the folder_path field in the database.
 	FieldFolderPath = "folder_path"
-	// EdgeRepositoryToEnvironment holds the string denoting the repositorytoenvironment edge name in mutations.
-	EdgeRepositoryToEnvironment = "RepositoryToEnvironment"
-	// EdgeRepositoryToRepoCommit holds the string denoting the repositorytorepocommit edge name in mutations.
-	EdgeRepositoryToRepoCommit = "RepositoryToRepoCommit"
+	// EdgeEnvironments holds the string denoting the environments edge name in mutations.
+	EdgeEnvironments = "Environments"
+	// EdgeRepoCommits holds the string denoting the repocommits edge name in mutations.
+	EdgeRepoCommits = "RepoCommits"
 	// Table holds the table name of the repository in the database.
 	Table = "repositories"
-	// RepositoryToEnvironmentTable is the table that holds the RepositoryToEnvironment relation/edge. The primary key declared below.
-	RepositoryToEnvironmentTable = "repository_RepositoryToEnvironment"
-	// RepositoryToEnvironmentInverseTable is the table name for the Environment entity.
+	// EnvironmentsTable is the table that holds the Environments relation/edge. The primary key declared below.
+	EnvironmentsTable = "repository_Environments"
+	// EnvironmentsInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	RepositoryToEnvironmentInverseTable = "environments"
-	// RepositoryToRepoCommitTable is the table that holds the RepositoryToRepoCommit relation/edge.
-	RepositoryToRepoCommitTable = "repo_commits"
-	// RepositoryToRepoCommitInverseTable is the table name for the RepoCommit entity.
+	EnvironmentsInverseTable = "environments"
+	// RepoCommitsTable is the table that holds the RepoCommits relation/edge.
+	RepoCommitsTable = "repo_commits"
+	// RepoCommitsInverseTable is the table name for the RepoCommit entity.
 	// It exists in this package in order to avoid circular dependency with the "repocommit" package.
-	RepositoryToRepoCommitInverseTable = "repo_commits"
-	// RepositoryToRepoCommitColumn is the table column denoting the RepositoryToRepoCommit relation/edge.
-	RepositoryToRepoCommitColumn = "repository_repository_to_repo_commit"
+	RepoCommitsInverseTable = "repo_commits"
+	// RepoCommitsColumn is the table column denoting the RepoCommits relation/edge.
+	RepoCommitsColumn = "repository_repo_commits"
 )
 
 // Columns holds all SQL columns for repository fields.
@@ -49,9 +49,9 @@ var Columns = []string{
 }
 
 var (
-	// RepositoryToEnvironmentPrimaryKey and RepositoryToEnvironmentColumn2 are the table columns denoting the
-	// primary key for the RepositoryToEnvironment relation (M2M).
-	RepositoryToEnvironmentPrimaryKey = []string{"repository_id", "environment_id"}
+	// EnvironmentsPrimaryKey and EnvironmentsColumn2 are the table columns denoting the
+	// primary key for the Environments relation (M2M).
+	EnvironmentsPrimaryKey = []string{"repository_id", "environment_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).

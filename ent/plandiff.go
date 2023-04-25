@@ -27,52 +27,52 @@ type PlanDiff struct {
 	Edges PlanDiffEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// PlanDiffToBuildCommit holds the value of the PlanDiffToBuildCommit edge.
-	HCLPlanDiffToBuildCommit *BuildCommit `json:"PlanDiffToBuildCommit,omitempty"`
-	// PlanDiffToPlan holds the value of the PlanDiffToPlan edge.
-	HCLPlanDiffToPlan *Plan `json:"PlanDiffToPlan,omitempty"`
+	// BuildCommit holds the value of the BuildCommit edge.
+	HCLBuildCommit *BuildCommit `json:"BuildCommit,omitempty"`
+	// Plan holds the value of the Plan edge.
+	HCLPlan *Plan `json:"Plan,omitempty"`
 	//
-	plan_diff_plan_diff_to_build_commit *uuid.UUID
-	plan_diff_plan_diff_to_plan         *uuid.UUID
+	plan_diff_build_commit *uuid.UUID
+	plan_diff_plan         *uuid.UUID
 }
 
 // PlanDiffEdges holds the relations/edges for other nodes in the graph.
 type PlanDiffEdges struct {
-	// PlanDiffToBuildCommit holds the value of the PlanDiffToBuildCommit edge.
-	PlanDiffToBuildCommit *BuildCommit `json:"PlanDiffToBuildCommit,omitempty"`
-	// PlanDiffToPlan holds the value of the PlanDiffToPlan edge.
-	PlanDiffToPlan *Plan `json:"PlanDiffToPlan,omitempty"`
+	// BuildCommit holds the value of the BuildCommit edge.
+	BuildCommit *BuildCommit `json:"BuildCommit,omitempty"`
+	// Plan holds the value of the Plan edge.
+	Plan *Plan `json:"Plan,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
 }
 
-// PlanDiffToBuildCommitOrErr returns the PlanDiffToBuildCommit value or an error if the edge
+// BuildCommitOrErr returns the BuildCommit value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e PlanDiffEdges) PlanDiffToBuildCommitOrErr() (*BuildCommit, error) {
+func (e PlanDiffEdges) BuildCommitOrErr() (*BuildCommit, error) {
 	if e.loadedTypes[0] {
-		if e.PlanDiffToBuildCommit == nil {
-			// The edge PlanDiffToBuildCommit was loaded in eager-loading,
+		if e.BuildCommit == nil {
+			// The edge BuildCommit was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: buildcommit.Label}
 		}
-		return e.PlanDiffToBuildCommit, nil
+		return e.BuildCommit, nil
 	}
-	return nil, &NotLoadedError{edge: "PlanDiffToBuildCommit"}
+	return nil, &NotLoadedError{edge: "BuildCommit"}
 }
 
-// PlanDiffToPlanOrErr returns the PlanDiffToPlan value or an error if the edge
+// PlanOrErr returns the Plan value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e PlanDiffEdges) PlanDiffToPlanOrErr() (*Plan, error) {
+func (e PlanDiffEdges) PlanOrErr() (*Plan, error) {
 	if e.loadedTypes[1] {
-		if e.PlanDiffToPlan == nil {
-			// The edge PlanDiffToPlan was loaded in eager-loading,
+		if e.Plan == nil {
+			// The edge Plan was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: plan.Label}
 		}
-		return e.PlanDiffToPlan, nil
+		return e.Plan, nil
 	}
-	return nil, &NotLoadedError{edge: "PlanDiffToPlan"}
+	return nil, &NotLoadedError{edge: "Plan"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -86,9 +86,9 @@ func (*PlanDiff) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case plandiff.FieldID:
 			values[i] = new(uuid.UUID)
-		case plandiff.ForeignKeys[0]: // plan_diff_plan_diff_to_build_commit
+		case plandiff.ForeignKeys[0]: // plan_diff_build_commit
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case plandiff.ForeignKeys[1]: // plan_diff_plan_diff_to_plan
+		case plandiff.ForeignKeys[1]: // plan_diff_plan
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type PlanDiff", columns[i])
@@ -125,31 +125,31 @@ func (pd *PlanDiff) assignValues(columns []string, values []interface{}) error {
 			}
 		case plandiff.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field plan_diff_plan_diff_to_build_commit", values[i])
+				return fmt.Errorf("unexpected type %T for field plan_diff_build_commit", values[i])
 			} else if value.Valid {
-				pd.plan_diff_plan_diff_to_build_commit = new(uuid.UUID)
-				*pd.plan_diff_plan_diff_to_build_commit = *value.S.(*uuid.UUID)
+				pd.plan_diff_build_commit = new(uuid.UUID)
+				*pd.plan_diff_build_commit = *value.S.(*uuid.UUID)
 			}
 		case plandiff.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field plan_diff_plan_diff_to_plan", values[i])
+				return fmt.Errorf("unexpected type %T for field plan_diff_plan", values[i])
 			} else if value.Valid {
-				pd.plan_diff_plan_diff_to_plan = new(uuid.UUID)
-				*pd.plan_diff_plan_diff_to_plan = *value.S.(*uuid.UUID)
+				pd.plan_diff_plan = new(uuid.UUID)
+				*pd.plan_diff_plan = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryPlanDiffToBuildCommit queries the "PlanDiffToBuildCommit" edge of the PlanDiff entity.
-func (pd *PlanDiff) QueryPlanDiffToBuildCommit() *BuildCommitQuery {
-	return (&PlanDiffClient{config: pd.config}).QueryPlanDiffToBuildCommit(pd)
+// QueryBuildCommit queries the "BuildCommit" edge of the PlanDiff entity.
+func (pd *PlanDiff) QueryBuildCommit() *BuildCommitQuery {
+	return (&PlanDiffClient{config: pd.config}).QueryBuildCommit(pd)
 }
 
-// QueryPlanDiffToPlan queries the "PlanDiffToPlan" edge of the PlanDiff entity.
-func (pd *PlanDiff) QueryPlanDiffToPlan() *PlanQuery {
-	return (&PlanDiffClient{config: pd.config}).QueryPlanDiffToPlan(pd)
+// QueryPlan queries the "Plan" edge of the PlanDiff entity.
+func (pd *PlanDiff) QueryPlan() *PlanQuery {
+	return (&PlanDiffClient{config: pd.config}).QueryPlan(pd)
 }
 
 // Update returns a builder for updating this PlanDiff.

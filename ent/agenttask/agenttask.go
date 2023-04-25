@@ -27,44 +27,44 @@ const (
 	FieldState = "state"
 	// FieldErrorMessage holds the string denoting the error_message field in the database.
 	FieldErrorMessage = "error_message"
-	// EdgeAgentTaskToProvisioningStep holds the string denoting the agenttasktoprovisioningstep edge name in mutations.
-	EdgeAgentTaskToProvisioningStep = "AgentTaskToProvisioningStep"
-	// EdgeAgentTaskToProvisioningScheduledStep holds the string denoting the agenttasktoprovisioningscheduledstep edge name in mutations.
-	EdgeAgentTaskToProvisioningScheduledStep = "AgentTaskToProvisioningScheduledStep"
-	// EdgeAgentTaskToProvisionedHost holds the string denoting the agenttasktoprovisionedhost edge name in mutations.
-	EdgeAgentTaskToProvisionedHost = "AgentTaskToProvisionedHost"
-	// EdgeAgentTaskToAdhocPlan holds the string denoting the agenttasktoadhocplan edge name in mutations.
-	EdgeAgentTaskToAdhocPlan = "AgentTaskToAdhocPlan"
+	// EdgeProvisioningStep holds the string denoting the provisioningstep edge name in mutations.
+	EdgeProvisioningStep = "ProvisioningStep"
+	// EdgeProvisioningScheduledStep holds the string denoting the provisioningscheduledstep edge name in mutations.
+	EdgeProvisioningScheduledStep = "ProvisioningScheduledStep"
+	// EdgeProvisionedHost holds the string denoting the provisionedhost edge name in mutations.
+	EdgeProvisionedHost = "ProvisionedHost"
+	// EdgeAdhocPlans holds the string denoting the adhocplans edge name in mutations.
+	EdgeAdhocPlans = "AdhocPlans"
 	// Table holds the table name of the agenttask in the database.
 	Table = "agent_tasks"
-	// AgentTaskToProvisioningStepTable is the table that holds the AgentTaskToProvisioningStep relation/edge.
-	AgentTaskToProvisioningStepTable = "agent_tasks"
-	// AgentTaskToProvisioningStepInverseTable is the table name for the ProvisioningStep entity.
+	// ProvisioningStepTable is the table that holds the ProvisioningStep relation/edge.
+	ProvisioningStepTable = "agent_tasks"
+	// ProvisioningStepInverseTable is the table name for the ProvisioningStep entity.
 	// It exists in this package in order to avoid circular dependency with the "provisioningstep" package.
-	AgentTaskToProvisioningStepInverseTable = "provisioning_steps"
-	// AgentTaskToProvisioningStepColumn is the table column denoting the AgentTaskToProvisioningStep relation/edge.
-	AgentTaskToProvisioningStepColumn = "agent_task_agent_task_to_provisioning_step"
-	// AgentTaskToProvisioningScheduledStepTable is the table that holds the AgentTaskToProvisioningScheduledStep relation/edge.
-	AgentTaskToProvisioningScheduledStepTable = "provisioning_scheduled_steps"
-	// AgentTaskToProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
+	ProvisioningStepInverseTable = "provisioning_steps"
+	// ProvisioningStepColumn is the table column denoting the ProvisioningStep relation/edge.
+	ProvisioningStepColumn = "agent_task_provisioning_step"
+	// ProvisioningScheduledStepTable is the table that holds the ProvisioningScheduledStep relation/edge.
+	ProvisioningScheduledStepTable = "agent_tasks"
+	// ProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
 	// It exists in this package in order to avoid circular dependency with the "provisioningscheduledstep" package.
-	AgentTaskToProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
-	// AgentTaskToProvisioningScheduledStepColumn is the table column denoting the AgentTaskToProvisioningScheduledStep relation/edge.
-	AgentTaskToProvisioningScheduledStepColumn = "agent_task_agent_task_to_provisioning_scheduled_step"
-	// AgentTaskToProvisionedHostTable is the table that holds the AgentTaskToProvisionedHost relation/edge.
-	AgentTaskToProvisionedHostTable = "agent_tasks"
-	// AgentTaskToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
+	ProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
+	// ProvisioningScheduledStepColumn is the table column denoting the ProvisioningScheduledStep relation/edge.
+	ProvisioningScheduledStepColumn = "agent_task_provisioning_scheduled_step"
+	// ProvisionedHostTable is the table that holds the ProvisionedHost relation/edge.
+	ProvisionedHostTable = "agent_tasks"
+	// ProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
-	AgentTaskToProvisionedHostInverseTable = "provisioned_hosts"
-	// AgentTaskToProvisionedHostColumn is the table column denoting the AgentTaskToProvisionedHost relation/edge.
-	AgentTaskToProvisionedHostColumn = "agent_task_agent_task_to_provisioned_host"
-	// AgentTaskToAdhocPlanTable is the table that holds the AgentTaskToAdhocPlan relation/edge.
-	AgentTaskToAdhocPlanTable = "adhoc_plans"
-	// AgentTaskToAdhocPlanInverseTable is the table name for the AdhocPlan entity.
+	ProvisionedHostInverseTable = "provisioned_hosts"
+	// ProvisionedHostColumn is the table column denoting the ProvisionedHost relation/edge.
+	ProvisionedHostColumn = "agent_task_provisioned_host"
+	// AdhocPlansTable is the table that holds the AdhocPlans relation/edge.
+	AdhocPlansTable = "adhoc_plans"
+	// AdhocPlansInverseTable is the table name for the AdhocPlan entity.
 	// It exists in this package in order to avoid circular dependency with the "adhocplan" package.
-	AgentTaskToAdhocPlanInverseTable = "adhoc_plans"
-	// AgentTaskToAdhocPlanColumn is the table column denoting the AgentTaskToAdhocPlan relation/edge.
-	AgentTaskToAdhocPlanColumn = "adhoc_plan_adhoc_plan_to_agent_task"
+	AdhocPlansInverseTable = "adhoc_plans"
+	// AdhocPlansColumn is the table column denoting the AdhocPlans relation/edge.
+	AdhocPlansColumn = "adhoc_plan_agent_task"
 )
 
 // Columns holds all SQL columns for agenttask fields.
@@ -81,8 +81,9 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "agent_tasks"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"agent_task_agent_task_to_provisioning_step",
-	"agent_task_agent_task_to_provisioned_host",
+	"agent_task_provisioning_step",
+	"agent_task_provisioning_scheduled_step",
+	"agent_task_provisioned_host",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

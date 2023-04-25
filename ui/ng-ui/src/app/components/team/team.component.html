@@ -15,7 +15,7 @@
       </div>
       <div class="team-details">
         <span class="team-number">
-          <b>Team {{ team.team_number }}</b>
+          <b>Team {{ team.teamNumber }}</b>
         </span>
       </div>
       <div class="toggle-collapse" *ngIf="shouldCollapse()">
@@ -24,7 +24,7 @@
     </div>
     <div class="networks" *ngIf="expandOverride || (!shouldCollapse() && style === 'expanded') || style === 'compact'">
       <app-network
-        *ngFor="let provNetwork of team.TeamToProvisionedNetwork | sortBy: 'asc':'name'"
+        *ngFor="let provNetwork of team.ProvisionedNetworks | sortBy: 'asc':'name'"
         [provisionedNetwork]="provNetwork"
         [planDiffs]="planDiffs"
         [style]="style"

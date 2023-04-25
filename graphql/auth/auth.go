@@ -95,7 +95,7 @@ func Middleware(client *ent.Client, laforgeConfig *utils.ServerConfig) gin.Handl
 			return
 		}
 
-		entAuthUser, err := entToken.QueryTokenToAuthUser().Only(ctx)
+		entAuthUser, err := entToken.QueryAuthUser().Only(ctx)
 		if err != nil {
 			if secure_cookie {
 				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)

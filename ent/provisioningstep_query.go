@@ -31,25 +31,25 @@ import (
 // ProvisioningStepQuery is the builder for querying ProvisioningStep entities.
 type ProvisioningStepQuery struct {
 	config
-	limit                                   *int
-	offset                                  *int
-	unique                                  *bool
-	order                                   []OrderFunc
-	fields                                  []string
-	predicates                              []predicate.ProvisioningStep
-	withProvisioningStepToStatus            *StatusQuery
-	withProvisioningStepToProvisionedHost   *ProvisionedHostQuery
-	withProvisioningStepToScript            *ScriptQuery
-	withProvisioningStepToCommand           *CommandQuery
-	withProvisioningStepToDNSRecord         *DNSRecordQuery
-	withProvisioningStepToFileDelete        *FileDeleteQuery
-	withProvisioningStepToFileDownload      *FileDownloadQuery
-	withProvisioningStepToFileExtract       *FileExtractQuery
-	withProvisioningStepToAnsible           *AnsibleQuery
-	withProvisioningStepToPlan              *PlanQuery
-	withProvisioningStepToAgentTask         *AgentTaskQuery
-	withProvisioningStepToGinFileMiddleware *GinFileMiddlewareQuery
-	withFKs                                 bool
+	limit                 *int
+	offset                *int
+	unique                *bool
+	order                 []OrderFunc
+	fields                []string
+	predicates            []predicate.ProvisioningStep
+	withStatus            *StatusQuery
+	withProvisionedHost   *ProvisionedHostQuery
+	withScript            *ScriptQuery
+	withCommand           *CommandQuery
+	withDNSRecord         *DNSRecordQuery
+	withFileDelete        *FileDeleteQuery
+	withFileDownload      *FileDownloadQuery
+	withFileExtract       *FileExtractQuery
+	withAnsible           *AnsibleQuery
+	withPlan              *PlanQuery
+	withAgentTasks        *AgentTaskQuery
+	withGinFileMiddleware *GinFileMiddlewareQuery
+	withFKs               bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -86,8 +86,8 @@ func (psq *ProvisioningStepQuery) Order(o ...OrderFunc) *ProvisioningStepQuery {
 	return psq
 }
 
-// QueryProvisioningStepToStatus chains the current query on the "ProvisioningStepToStatus" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToStatus() *StatusQuery {
+// QueryStatus chains the current query on the "Status" edge.
+func (psq *ProvisioningStepQuery) QueryStatus() *StatusQuery {
 	query := &StatusQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -100,7 +100,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToStatus() *StatusQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, provisioningstep.ProvisioningStepToStatusTable, provisioningstep.ProvisioningStepToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, provisioningstep.StatusTable, provisioningstep.StatusColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -108,8 +108,8 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToStatus() *StatusQuery {
 	return query
 }
 
-// QueryProvisioningStepToProvisionedHost chains the current query on the "ProvisioningStepToProvisionedHost" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToProvisionedHost() *ProvisionedHostQuery {
+// QueryProvisionedHost chains the current query on the "ProvisionedHost" edge.
+func (psq *ProvisioningStepQuery) QueryProvisionedHost() *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -122,7 +122,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToProvisionedHost() *Prov
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToProvisionedHostTable, provisioningstep.ProvisioningStepToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisionedHostTable, provisioningstep.ProvisionedHostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -130,8 +130,8 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToProvisionedHost() *Prov
 	return query
 }
 
-// QueryProvisioningStepToScript chains the current query on the "ProvisioningStepToScript" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToScript() *ScriptQuery {
+// QueryScript chains the current query on the "Script" edge.
+func (psq *ProvisioningStepQuery) QueryScript() *ScriptQuery {
 	query := &ScriptQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -144,7 +144,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToScript() *ScriptQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(script.Table, script.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToScriptTable, provisioningstep.ProvisioningStepToScriptColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ScriptTable, provisioningstep.ScriptColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -152,8 +152,8 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToScript() *ScriptQuery {
 	return query
 }
 
-// QueryProvisioningStepToCommand chains the current query on the "ProvisioningStepToCommand" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToCommand() *CommandQuery {
+// QueryCommand chains the current query on the "Command" edge.
+func (psq *ProvisioningStepQuery) QueryCommand() *CommandQuery {
 	query := &CommandQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -166,7 +166,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToCommand() *CommandQuery
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(command.Table, command.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToCommandTable, provisioningstep.ProvisioningStepToCommandColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.CommandTable, provisioningstep.CommandColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -174,8 +174,8 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToCommand() *CommandQuery
 	return query
 }
 
-// QueryProvisioningStepToDNSRecord chains the current query on the "ProvisioningStepToDNSRecord" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToDNSRecord() *DNSRecordQuery {
+// QueryDNSRecord chains the current query on the "DNSRecord" edge.
+func (psq *ProvisioningStepQuery) QueryDNSRecord() *DNSRecordQuery {
 	query := &DNSRecordQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -188,7 +188,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToDNSRecord() *DNSRecordQ
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(dnsrecord.Table, dnsrecord.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToDNSRecordTable, provisioningstep.ProvisioningStepToDNSRecordColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.DNSRecordTable, provisioningstep.DNSRecordColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -196,8 +196,8 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToDNSRecord() *DNSRecordQ
 	return query
 }
 
-// QueryProvisioningStepToFileDelete chains the current query on the "ProvisioningStepToFileDelete" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToFileDelete() *FileDeleteQuery {
+// QueryFileDelete chains the current query on the "FileDelete" edge.
+func (psq *ProvisioningStepQuery) QueryFileDelete() *FileDeleteQuery {
 	query := &FileDeleteQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -210,7 +210,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToFileDelete() *FileDelet
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(filedelete.Table, filedelete.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToFileDeleteTable, provisioningstep.ProvisioningStepToFileDeleteColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.FileDeleteTable, provisioningstep.FileDeleteColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -218,8 +218,8 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToFileDelete() *FileDelet
 	return query
 }
 
-// QueryProvisioningStepToFileDownload chains the current query on the "ProvisioningStepToFileDownload" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToFileDownload() *FileDownloadQuery {
+// QueryFileDownload chains the current query on the "FileDownload" edge.
+func (psq *ProvisioningStepQuery) QueryFileDownload() *FileDownloadQuery {
 	query := &FileDownloadQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -232,7 +232,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToFileDownload() *FileDow
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(filedownload.Table, filedownload.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToFileDownloadTable, provisioningstep.ProvisioningStepToFileDownloadColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.FileDownloadTable, provisioningstep.FileDownloadColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -240,8 +240,8 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToFileDownload() *FileDow
 	return query
 }
 
-// QueryProvisioningStepToFileExtract chains the current query on the "ProvisioningStepToFileExtract" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToFileExtract() *FileExtractQuery {
+// QueryFileExtract chains the current query on the "FileExtract" edge.
+func (psq *ProvisioningStepQuery) QueryFileExtract() *FileExtractQuery {
 	query := &FileExtractQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -254,7 +254,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToFileExtract() *FileExtr
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(fileextract.Table, fileextract.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToFileExtractTable, provisioningstep.ProvisioningStepToFileExtractColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.FileExtractTable, provisioningstep.FileExtractColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -262,8 +262,8 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToFileExtract() *FileExtr
 	return query
 }
 
-// QueryProvisioningStepToAnsible chains the current query on the "ProvisioningStepToAnsible" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToAnsible() *AnsibleQuery {
+// QueryAnsible chains the current query on the "Ansible" edge.
+func (psq *ProvisioningStepQuery) QueryAnsible() *AnsibleQuery {
 	query := &AnsibleQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -276,7 +276,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToAnsible() *AnsibleQuery
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(ansible.Table, ansible.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.ProvisioningStepToAnsibleTable, provisioningstep.ProvisioningStepToAnsibleColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisioningstep.AnsibleTable, provisioningstep.AnsibleColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -284,8 +284,8 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToAnsible() *AnsibleQuery
 	return query
 }
 
-// QueryProvisioningStepToPlan chains the current query on the "ProvisioningStepToPlan" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToPlan() *PlanQuery {
+// QueryPlan chains the current query on the "Plan" edge.
+func (psq *ProvisioningStepQuery) QueryPlan() *PlanQuery {
 	query := &PlanQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -298,7 +298,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToPlan() *PlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisioningstep.ProvisioningStepToPlanTable, provisioningstep.ProvisioningStepToPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisioningstep.PlanTable, provisioningstep.PlanColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -306,8 +306,8 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToPlan() *PlanQuery {
 	return query
 }
 
-// QueryProvisioningStepToAgentTask chains the current query on the "ProvisioningStepToAgentTask" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToAgentTask() *AgentTaskQuery {
+// QueryAgentTasks chains the current query on the "AgentTasks" edge.
+func (psq *ProvisioningStepQuery) QueryAgentTasks() *AgentTaskQuery {
 	query := &AgentTaskQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -320,7 +320,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToAgentTask() *AgentTaskQ
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(agenttask.Table, agenttask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisioningstep.ProvisioningStepToAgentTaskTable, provisioningstep.ProvisioningStepToAgentTaskColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisioningstep.AgentTasksTable, provisioningstep.AgentTasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -328,8 +328,8 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToAgentTask() *AgentTaskQ
 	return query
 }
 
-// QueryProvisioningStepToGinFileMiddleware chains the current query on the "ProvisioningStepToGinFileMiddleware" edge.
-func (psq *ProvisioningStepQuery) QueryProvisioningStepToGinFileMiddleware() *GinFileMiddlewareQuery {
+// QueryGinFileMiddleware chains the current query on the "GinFileMiddleware" edge.
+func (psq *ProvisioningStepQuery) QueryGinFileMiddleware() *GinFileMiddlewareQuery {
 	query := &GinFileMiddlewareQuery{config: psq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := psq.prepareQuery(ctx); err != nil {
@@ -342,7 +342,7 @@ func (psq *ProvisioningStepQuery) QueryProvisioningStepToGinFileMiddleware() *Gi
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningstep.Table, provisioningstep.FieldID, selector),
 			sqlgraph.To(ginfilemiddleware.Table, ginfilemiddleware.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisioningstep.ProvisioningStepToGinFileMiddlewareTable, provisioningstep.ProvisioningStepToGinFileMiddlewareColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisioningstep.GinFileMiddlewareTable, provisioningstep.GinFileMiddlewareColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(psq.driver.Dialect(), step)
 		return fromU, nil
@@ -526,23 +526,23 @@ func (psq *ProvisioningStepQuery) Clone() *ProvisioningStepQuery {
 		return nil
 	}
 	return &ProvisioningStepQuery{
-		config:                                  psq.config,
-		limit:                                   psq.limit,
-		offset:                                  psq.offset,
-		order:                                   append([]OrderFunc{}, psq.order...),
-		predicates:                              append([]predicate.ProvisioningStep{}, psq.predicates...),
-		withProvisioningStepToStatus:            psq.withProvisioningStepToStatus.Clone(),
-		withProvisioningStepToProvisionedHost:   psq.withProvisioningStepToProvisionedHost.Clone(),
-		withProvisioningStepToScript:            psq.withProvisioningStepToScript.Clone(),
-		withProvisioningStepToCommand:           psq.withProvisioningStepToCommand.Clone(),
-		withProvisioningStepToDNSRecord:         psq.withProvisioningStepToDNSRecord.Clone(),
-		withProvisioningStepToFileDelete:        psq.withProvisioningStepToFileDelete.Clone(),
-		withProvisioningStepToFileDownload:      psq.withProvisioningStepToFileDownload.Clone(),
-		withProvisioningStepToFileExtract:       psq.withProvisioningStepToFileExtract.Clone(),
-		withProvisioningStepToAnsible:           psq.withProvisioningStepToAnsible.Clone(),
-		withProvisioningStepToPlan:              psq.withProvisioningStepToPlan.Clone(),
-		withProvisioningStepToAgentTask:         psq.withProvisioningStepToAgentTask.Clone(),
-		withProvisioningStepToGinFileMiddleware: psq.withProvisioningStepToGinFileMiddleware.Clone(),
+		config:                psq.config,
+		limit:                 psq.limit,
+		offset:                psq.offset,
+		order:                 append([]OrderFunc{}, psq.order...),
+		predicates:            append([]predicate.ProvisioningStep{}, psq.predicates...),
+		withStatus:            psq.withStatus.Clone(),
+		withProvisionedHost:   psq.withProvisionedHost.Clone(),
+		withScript:            psq.withScript.Clone(),
+		withCommand:           psq.withCommand.Clone(),
+		withDNSRecord:         psq.withDNSRecord.Clone(),
+		withFileDelete:        psq.withFileDelete.Clone(),
+		withFileDownload:      psq.withFileDownload.Clone(),
+		withFileExtract:       psq.withFileExtract.Clone(),
+		withAnsible:           psq.withAnsible.Clone(),
+		withPlan:              psq.withPlan.Clone(),
+		withAgentTasks:        psq.withAgentTasks.Clone(),
+		withGinFileMiddleware: psq.withGinFileMiddleware.Clone(),
 		// clone intermediate query.
 		sql:    psq.sql.Clone(),
 		path:   psq.path,
@@ -550,135 +550,135 @@ func (psq *ProvisioningStepQuery) Clone() *ProvisioningStepQuery {
 	}
 }
 
-// WithProvisioningStepToStatus tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToStatus" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToStatus(opts ...func(*StatusQuery)) *ProvisioningStepQuery {
+// WithStatus tells the query-builder to eager-load the nodes that are connected to
+// the "Status" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithStatus(opts ...func(*StatusQuery)) *ProvisioningStepQuery {
 	query := &StatusQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToStatus = query
+	psq.withStatus = query
 	return psq
 }
 
-// WithProvisioningStepToProvisionedHost tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToProvisionedHost(opts ...func(*ProvisionedHostQuery)) *ProvisioningStepQuery {
+// WithProvisionedHost tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuery)) *ProvisioningStepQuery {
 	query := &ProvisionedHostQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToProvisionedHost = query
+	psq.withProvisionedHost = query
 	return psq
 }
 
-// WithProvisioningStepToScript tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToScript" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToScript(opts ...func(*ScriptQuery)) *ProvisioningStepQuery {
+// WithScript tells the query-builder to eager-load the nodes that are connected to
+// the "Script" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithScript(opts ...func(*ScriptQuery)) *ProvisioningStepQuery {
 	query := &ScriptQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToScript = query
+	psq.withScript = query
 	return psq
 }
 
-// WithProvisioningStepToCommand tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToCommand" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToCommand(opts ...func(*CommandQuery)) *ProvisioningStepQuery {
+// WithCommand tells the query-builder to eager-load the nodes that are connected to
+// the "Command" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithCommand(opts ...func(*CommandQuery)) *ProvisioningStepQuery {
 	query := &CommandQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToCommand = query
+	psq.withCommand = query
 	return psq
 }
 
-// WithProvisioningStepToDNSRecord tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToDNSRecord" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToDNSRecord(opts ...func(*DNSRecordQuery)) *ProvisioningStepQuery {
+// WithDNSRecord tells the query-builder to eager-load the nodes that are connected to
+// the "DNSRecord" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithDNSRecord(opts ...func(*DNSRecordQuery)) *ProvisioningStepQuery {
 	query := &DNSRecordQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToDNSRecord = query
+	psq.withDNSRecord = query
 	return psq
 }
 
-// WithProvisioningStepToFileDelete tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToFileDelete" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToFileDelete(opts ...func(*FileDeleteQuery)) *ProvisioningStepQuery {
+// WithFileDelete tells the query-builder to eager-load the nodes that are connected to
+// the "FileDelete" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithFileDelete(opts ...func(*FileDeleteQuery)) *ProvisioningStepQuery {
 	query := &FileDeleteQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToFileDelete = query
+	psq.withFileDelete = query
 	return psq
 }
 
-// WithProvisioningStepToFileDownload tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToFileDownload" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToFileDownload(opts ...func(*FileDownloadQuery)) *ProvisioningStepQuery {
+// WithFileDownload tells the query-builder to eager-load the nodes that are connected to
+// the "FileDownload" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithFileDownload(opts ...func(*FileDownloadQuery)) *ProvisioningStepQuery {
 	query := &FileDownloadQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToFileDownload = query
+	psq.withFileDownload = query
 	return psq
 }
 
-// WithProvisioningStepToFileExtract tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToFileExtract" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToFileExtract(opts ...func(*FileExtractQuery)) *ProvisioningStepQuery {
+// WithFileExtract tells the query-builder to eager-load the nodes that are connected to
+// the "FileExtract" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithFileExtract(opts ...func(*FileExtractQuery)) *ProvisioningStepQuery {
 	query := &FileExtractQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToFileExtract = query
+	psq.withFileExtract = query
 	return psq
 }
 
-// WithProvisioningStepToAnsible tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToAnsible" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToAnsible(opts ...func(*AnsibleQuery)) *ProvisioningStepQuery {
+// WithAnsible tells the query-builder to eager-load the nodes that are connected to
+// the "Ansible" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithAnsible(opts ...func(*AnsibleQuery)) *ProvisioningStepQuery {
 	query := &AnsibleQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToAnsible = query
+	psq.withAnsible = query
 	return psq
 }
 
-// WithProvisioningStepToPlan tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToPlan(opts ...func(*PlanQuery)) *ProvisioningStepQuery {
+// WithPlan tells the query-builder to eager-load the nodes that are connected to
+// the "Plan" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithPlan(opts ...func(*PlanQuery)) *ProvisioningStepQuery {
 	query := &PlanQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToPlan = query
+	psq.withPlan = query
 	return psq
 }
 
-// WithProvisioningStepToAgentTask tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToAgentTask" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToAgentTask(opts ...func(*AgentTaskQuery)) *ProvisioningStepQuery {
+// WithAgentTasks tells the query-builder to eager-load the nodes that are connected to
+// the "AgentTasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithAgentTasks(opts ...func(*AgentTaskQuery)) *ProvisioningStepQuery {
 	query := &AgentTaskQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToAgentTask = query
+	psq.withAgentTasks = query
 	return psq
 }
 
-// WithProvisioningStepToGinFileMiddleware tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisioningStepToGinFileMiddleware" edge. The optional arguments are used to configure the query builder of the edge.
-func (psq *ProvisioningStepQuery) WithProvisioningStepToGinFileMiddleware(opts ...func(*GinFileMiddlewareQuery)) *ProvisioningStepQuery {
+// WithGinFileMiddleware tells the query-builder to eager-load the nodes that are connected to
+// the "GinFileMiddleware" edge. The optional arguments are used to configure the query builder of the edge.
+func (psq *ProvisioningStepQuery) WithGinFileMiddleware(opts ...func(*GinFileMiddlewareQuery)) *ProvisioningStepQuery {
 	query := &GinFileMiddlewareQuery{config: psq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	psq.withProvisioningStepToGinFileMiddleware = query
+	psq.withGinFileMiddleware = query
 	return psq
 }
 
@@ -752,21 +752,21 @@ func (psq *ProvisioningStepQuery) sqlAll(ctx context.Context, hooks ...queryHook
 		withFKs     = psq.withFKs
 		_spec       = psq.querySpec()
 		loadedTypes = [12]bool{
-			psq.withProvisioningStepToStatus != nil,
-			psq.withProvisioningStepToProvisionedHost != nil,
-			psq.withProvisioningStepToScript != nil,
-			psq.withProvisioningStepToCommand != nil,
-			psq.withProvisioningStepToDNSRecord != nil,
-			psq.withProvisioningStepToFileDelete != nil,
-			psq.withProvisioningStepToFileDownload != nil,
-			psq.withProvisioningStepToFileExtract != nil,
-			psq.withProvisioningStepToAnsible != nil,
-			psq.withProvisioningStepToPlan != nil,
-			psq.withProvisioningStepToAgentTask != nil,
-			psq.withProvisioningStepToGinFileMiddleware != nil,
+			psq.withStatus != nil,
+			psq.withProvisionedHost != nil,
+			psq.withScript != nil,
+			psq.withCommand != nil,
+			psq.withDNSRecord != nil,
+			psq.withFileDelete != nil,
+			psq.withFileDownload != nil,
+			psq.withFileExtract != nil,
+			psq.withAnsible != nil,
+			psq.withPlan != nil,
+			psq.withAgentTasks != nil,
+			psq.withGinFileMiddleware != nil,
 		}
 	)
-	if psq.withProvisioningStepToProvisionedHost != nil || psq.withProvisioningStepToScript != nil || psq.withProvisioningStepToCommand != nil || psq.withProvisioningStepToDNSRecord != nil || psq.withProvisioningStepToFileDelete != nil || psq.withProvisioningStepToFileDownload != nil || psq.withProvisioningStepToFileExtract != nil || psq.withProvisioningStepToAnsible != nil || psq.withProvisioningStepToPlan != nil || psq.withProvisioningStepToGinFileMiddleware != nil {
+	if psq.withProvisionedHost != nil || psq.withScript != nil || psq.withCommand != nil || psq.withDNSRecord != nil || psq.withFileDelete != nil || psq.withFileDownload != nil || psq.withFileExtract != nil || psq.withAnsible != nil || psq.withPlan != nil || psq.withGinFileMiddleware != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -790,85 +790,83 @@ func (psq *ProvisioningStepQuery) sqlAll(ctx context.Context, hooks ...queryHook
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := psq.withProvisioningStepToStatus; query != nil {
-		if err := psq.loadProvisioningStepToStatus(ctx, query, nodes, nil,
-			func(n *ProvisioningStep, e *Status) { n.Edges.ProvisioningStepToStatus = e }); err != nil {
+	if query := psq.withStatus; query != nil {
+		if err := psq.loadStatus(ctx, query, nodes, nil,
+			func(n *ProvisioningStep, e *Status) { n.Edges.Status = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := psq.withProvisioningStepToProvisionedHost; query != nil {
-		if err := psq.loadProvisioningStepToProvisionedHost(ctx, query, nodes, nil,
-			func(n *ProvisioningStep, e *ProvisionedHost) { n.Edges.ProvisioningStepToProvisionedHost = e }); err != nil {
+	if query := psq.withProvisionedHost; query != nil {
+		if err := psq.loadProvisionedHost(ctx, query, nodes, nil,
+			func(n *ProvisioningStep, e *ProvisionedHost) { n.Edges.ProvisionedHost = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := psq.withProvisioningStepToScript; query != nil {
-		if err := psq.loadProvisioningStepToScript(ctx, query, nodes, nil,
-			func(n *ProvisioningStep, e *Script) { n.Edges.ProvisioningStepToScript = e }); err != nil {
+	if query := psq.withScript; query != nil {
+		if err := psq.loadScript(ctx, query, nodes, nil,
+			func(n *ProvisioningStep, e *Script) { n.Edges.Script = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := psq.withProvisioningStepToCommand; query != nil {
-		if err := psq.loadProvisioningStepToCommand(ctx, query, nodes, nil,
-			func(n *ProvisioningStep, e *Command) { n.Edges.ProvisioningStepToCommand = e }); err != nil {
+	if query := psq.withCommand; query != nil {
+		if err := psq.loadCommand(ctx, query, nodes, nil,
+			func(n *ProvisioningStep, e *Command) { n.Edges.Command = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := psq.withProvisioningStepToDNSRecord; query != nil {
-		if err := psq.loadProvisioningStepToDNSRecord(ctx, query, nodes, nil,
-			func(n *ProvisioningStep, e *DNSRecord) { n.Edges.ProvisioningStepToDNSRecord = e }); err != nil {
+	if query := psq.withDNSRecord; query != nil {
+		if err := psq.loadDNSRecord(ctx, query, nodes, nil,
+			func(n *ProvisioningStep, e *DNSRecord) { n.Edges.DNSRecord = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := psq.withProvisioningStepToFileDelete; query != nil {
-		if err := psq.loadProvisioningStepToFileDelete(ctx, query, nodes, nil,
-			func(n *ProvisioningStep, e *FileDelete) { n.Edges.ProvisioningStepToFileDelete = e }); err != nil {
+	if query := psq.withFileDelete; query != nil {
+		if err := psq.loadFileDelete(ctx, query, nodes, nil,
+			func(n *ProvisioningStep, e *FileDelete) { n.Edges.FileDelete = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := psq.withProvisioningStepToFileDownload; query != nil {
-		if err := psq.loadProvisioningStepToFileDownload(ctx, query, nodes, nil,
-			func(n *ProvisioningStep, e *FileDownload) { n.Edges.ProvisioningStepToFileDownload = e }); err != nil {
+	if query := psq.withFileDownload; query != nil {
+		if err := psq.loadFileDownload(ctx, query, nodes, nil,
+			func(n *ProvisioningStep, e *FileDownload) { n.Edges.FileDownload = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := psq.withProvisioningStepToFileExtract; query != nil {
-		if err := psq.loadProvisioningStepToFileExtract(ctx, query, nodes, nil,
-			func(n *ProvisioningStep, e *FileExtract) { n.Edges.ProvisioningStepToFileExtract = e }); err != nil {
+	if query := psq.withFileExtract; query != nil {
+		if err := psq.loadFileExtract(ctx, query, nodes, nil,
+			func(n *ProvisioningStep, e *FileExtract) { n.Edges.FileExtract = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := psq.withProvisioningStepToAnsible; query != nil {
-		if err := psq.loadProvisioningStepToAnsible(ctx, query, nodes, nil,
-			func(n *ProvisioningStep, e *Ansible) { n.Edges.ProvisioningStepToAnsible = e }); err != nil {
+	if query := psq.withAnsible; query != nil {
+		if err := psq.loadAnsible(ctx, query, nodes, nil,
+			func(n *ProvisioningStep, e *Ansible) { n.Edges.Ansible = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := psq.withProvisioningStepToPlan; query != nil {
-		if err := psq.loadProvisioningStepToPlan(ctx, query, nodes, nil,
-			func(n *ProvisioningStep, e *Plan) { n.Edges.ProvisioningStepToPlan = e }); err != nil {
+	if query := psq.withPlan; query != nil {
+		if err := psq.loadPlan(ctx, query, nodes, nil,
+			func(n *ProvisioningStep, e *Plan) { n.Edges.Plan = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := psq.withProvisioningStepToAgentTask; query != nil {
-		if err := psq.loadProvisioningStepToAgentTask(ctx, query, nodes,
-			func(n *ProvisioningStep) { n.Edges.ProvisioningStepToAgentTask = []*AgentTask{} },
-			func(n *ProvisioningStep, e *AgentTask) {
-				n.Edges.ProvisioningStepToAgentTask = append(n.Edges.ProvisioningStepToAgentTask, e)
-			}); err != nil {
+	if query := psq.withAgentTasks; query != nil {
+		if err := psq.loadAgentTasks(ctx, query, nodes,
+			func(n *ProvisioningStep) { n.Edges.AgentTasks = []*AgentTask{} },
+			func(n *ProvisioningStep, e *AgentTask) { n.Edges.AgentTasks = append(n.Edges.AgentTasks, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := psq.withProvisioningStepToGinFileMiddleware; query != nil {
-		if err := psq.loadProvisioningStepToGinFileMiddleware(ctx, query, nodes, nil,
-			func(n *ProvisioningStep, e *GinFileMiddleware) { n.Edges.ProvisioningStepToGinFileMiddleware = e }); err != nil {
+	if query := psq.withGinFileMiddleware; query != nil {
+		if err := psq.loadGinFileMiddleware(ctx, query, nodes, nil,
+			func(n *ProvisioningStep, e *GinFileMiddleware) { n.Edges.GinFileMiddleware = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (psq *ProvisioningStepQuery) loadProvisioningStepToStatus(ctx context.Context, query *StatusQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *Status)) error {
+func (psq *ProvisioningStepQuery) loadStatus(ctx context.Context, query *StatusQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *Status)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*ProvisioningStep)
 	for i := range nodes {
@@ -877,33 +875,33 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToStatus(ctx context.Conte
 	}
 	query.withFKs = true
 	query.Where(predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisioningstep.ProvisioningStepToStatusColumn, fks...))
+		s.Where(sql.InValues(provisioningstep.StatusColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioning_step_provisioning_step_to_status
+		fk := n.provisioning_step_status
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioning_step_provisioning_step_to_status" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioning_step_status" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_status" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_status" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (psq *ProvisioningStepQuery) loadProvisioningStepToProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *ProvisionedHost)) error {
+func (psq *ProvisioningStepQuery) loadProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *ProvisionedHost)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningStep)
 	for i := range nodes {
-		if nodes[i].provisioning_step_provisioning_step_to_provisioned_host == nil {
+		if nodes[i].provisioning_step_provisioned_host == nil {
 			continue
 		}
-		fk := *nodes[i].provisioning_step_provisioning_step_to_provisioned_host
+		fk := *nodes[i].provisioning_step_provisioned_host
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -917,7 +915,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToProvisionedHost(ctx cont
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_provisioned_host" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioned_host" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -925,14 +923,14 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToProvisionedHost(ctx cont
 	}
 	return nil
 }
-func (psq *ProvisioningStepQuery) loadProvisioningStepToScript(ctx context.Context, query *ScriptQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *Script)) error {
+func (psq *ProvisioningStepQuery) loadScript(ctx context.Context, query *ScriptQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *Script)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningStep)
 	for i := range nodes {
-		if nodes[i].provisioning_step_provisioning_step_to_script == nil {
+		if nodes[i].provisioning_step_script == nil {
 			continue
 		}
-		fk := *nodes[i].provisioning_step_provisioning_step_to_script
+		fk := *nodes[i].provisioning_step_script
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -946,7 +944,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToScript(ctx context.Conte
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_script" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_script" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -954,14 +952,14 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToScript(ctx context.Conte
 	}
 	return nil
 }
-func (psq *ProvisioningStepQuery) loadProvisioningStepToCommand(ctx context.Context, query *CommandQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *Command)) error {
+func (psq *ProvisioningStepQuery) loadCommand(ctx context.Context, query *CommandQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *Command)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningStep)
 	for i := range nodes {
-		if nodes[i].provisioning_step_provisioning_step_to_command == nil {
+		if nodes[i].provisioning_step_command == nil {
 			continue
 		}
-		fk := *nodes[i].provisioning_step_provisioning_step_to_command
+		fk := *nodes[i].provisioning_step_command
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -975,7 +973,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToCommand(ctx context.Cont
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_command" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_command" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -983,14 +981,14 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToCommand(ctx context.Cont
 	}
 	return nil
 }
-func (psq *ProvisioningStepQuery) loadProvisioningStepToDNSRecord(ctx context.Context, query *DNSRecordQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *DNSRecord)) error {
+func (psq *ProvisioningStepQuery) loadDNSRecord(ctx context.Context, query *DNSRecordQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *DNSRecord)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningStep)
 	for i := range nodes {
-		if nodes[i].provisioning_step_provisioning_step_to_dns_record == nil {
+		if nodes[i].provisioning_step_dns_record == nil {
 			continue
 		}
-		fk := *nodes[i].provisioning_step_provisioning_step_to_dns_record
+		fk := *nodes[i].provisioning_step_dns_record
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1004,7 +1002,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToDNSRecord(ctx context.Co
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_dns_record" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_dns_record" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -1012,14 +1010,14 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToDNSRecord(ctx context.Co
 	}
 	return nil
 }
-func (psq *ProvisioningStepQuery) loadProvisioningStepToFileDelete(ctx context.Context, query *FileDeleteQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *FileDelete)) error {
+func (psq *ProvisioningStepQuery) loadFileDelete(ctx context.Context, query *FileDeleteQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *FileDelete)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningStep)
 	for i := range nodes {
-		if nodes[i].provisioning_step_provisioning_step_to_file_delete == nil {
+		if nodes[i].provisioning_step_file_delete == nil {
 			continue
 		}
-		fk := *nodes[i].provisioning_step_provisioning_step_to_file_delete
+		fk := *nodes[i].provisioning_step_file_delete
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1033,7 +1031,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToFileDelete(ctx context.C
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_file_delete" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_file_delete" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -1041,14 +1039,14 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToFileDelete(ctx context.C
 	}
 	return nil
 }
-func (psq *ProvisioningStepQuery) loadProvisioningStepToFileDownload(ctx context.Context, query *FileDownloadQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *FileDownload)) error {
+func (psq *ProvisioningStepQuery) loadFileDownload(ctx context.Context, query *FileDownloadQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *FileDownload)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningStep)
 	for i := range nodes {
-		if nodes[i].provisioning_step_provisioning_step_to_file_download == nil {
+		if nodes[i].provisioning_step_file_download == nil {
 			continue
 		}
-		fk := *nodes[i].provisioning_step_provisioning_step_to_file_download
+		fk := *nodes[i].provisioning_step_file_download
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1062,7 +1060,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToFileDownload(ctx context
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_file_download" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_file_download" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -1070,14 +1068,14 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToFileDownload(ctx context
 	}
 	return nil
 }
-func (psq *ProvisioningStepQuery) loadProvisioningStepToFileExtract(ctx context.Context, query *FileExtractQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *FileExtract)) error {
+func (psq *ProvisioningStepQuery) loadFileExtract(ctx context.Context, query *FileExtractQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *FileExtract)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningStep)
 	for i := range nodes {
-		if nodes[i].provisioning_step_provisioning_step_to_file_extract == nil {
+		if nodes[i].provisioning_step_file_extract == nil {
 			continue
 		}
-		fk := *nodes[i].provisioning_step_provisioning_step_to_file_extract
+		fk := *nodes[i].provisioning_step_file_extract
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1091,7 +1089,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToFileExtract(ctx context.
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_file_extract" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_file_extract" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -1099,14 +1097,14 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToFileExtract(ctx context.
 	}
 	return nil
 }
-func (psq *ProvisioningStepQuery) loadProvisioningStepToAnsible(ctx context.Context, query *AnsibleQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *Ansible)) error {
+func (psq *ProvisioningStepQuery) loadAnsible(ctx context.Context, query *AnsibleQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *Ansible)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningStep)
 	for i := range nodes {
-		if nodes[i].provisioning_step_provisioning_step_to_ansible == nil {
+		if nodes[i].provisioning_step_ansible == nil {
 			continue
 		}
-		fk := *nodes[i].provisioning_step_provisioning_step_to_ansible
+		fk := *nodes[i].provisioning_step_ansible
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1120,7 +1118,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToAnsible(ctx context.Cont
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_ansible" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_ansible" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -1128,14 +1126,14 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToAnsible(ctx context.Cont
 	}
 	return nil
 }
-func (psq *ProvisioningStepQuery) loadProvisioningStepToPlan(ctx context.Context, query *PlanQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *Plan)) error {
+func (psq *ProvisioningStepQuery) loadPlan(ctx context.Context, query *PlanQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *Plan)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningStep)
 	for i := range nodes {
-		if nodes[i].plan_plan_to_provisioning_step == nil {
+		if nodes[i].plan_provisioning_step == nil {
 			continue
 		}
-		fk := *nodes[i].plan_plan_to_provisioning_step
+		fk := *nodes[i].plan_provisioning_step
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1149,7 +1147,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToPlan(ctx context.Context
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_provisioning_step" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_provisioning_step" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -1157,7 +1155,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToPlan(ctx context.Context
 	}
 	return nil
 }
-func (psq *ProvisioningStepQuery) loadProvisioningStepToAgentTask(ctx context.Context, query *AgentTaskQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *AgentTask)) error {
+func (psq *ProvisioningStepQuery) loadAgentTasks(ctx context.Context, query *AgentTaskQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *AgentTask)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*ProvisioningStep)
 	for i := range nodes {
@@ -1169,33 +1167,33 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToAgentTask(ctx context.Co
 	}
 	query.withFKs = true
 	query.Where(predicate.AgentTask(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisioningstep.ProvisioningStepToAgentTaskColumn, fks...))
+		s.Where(sql.InValues(provisioningstep.AgentTasksColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_task_agent_task_to_provisioning_step
+		fk := n.agent_task_provisioning_step
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_task_agent_task_to_provisioning_step" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "agent_task_provisioning_step" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_provisioning_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_task_provisioning_step" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (psq *ProvisioningStepQuery) loadProvisioningStepToGinFileMiddleware(ctx context.Context, query *GinFileMiddlewareQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *GinFileMiddleware)) error {
+func (psq *ProvisioningStepQuery) loadGinFileMiddleware(ctx context.Context, query *GinFileMiddlewareQuery, nodes []*ProvisioningStep, init func(*ProvisioningStep), assign func(*ProvisioningStep, *GinFileMiddleware)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningStep)
 	for i := range nodes {
-		if nodes[i].gin_file_middleware_gin_file_middleware_to_provisioning_step == nil {
+		if nodes[i].gin_file_middleware_provisioning_step == nil {
 			continue
 		}
-		fk := *nodes[i].gin_file_middleware_gin_file_middleware_to_provisioning_step
+		fk := *nodes[i].gin_file_middleware_provisioning_step
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1209,7 +1207,7 @@ func (psq *ProvisioningStepQuery) loadProvisioningStepToGinFileMiddleware(ctx co
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_gin_file_middleware_to_provisioning_step" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_provisioning_step" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

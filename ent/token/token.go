@@ -15,17 +15,17 @@ const (
 	FieldToken = "token"
 	// FieldExpireAt holds the string denoting the expire_at field in the database.
 	FieldExpireAt = "expire_at"
-	// EdgeTokenToAuthUser holds the string denoting the tokentoauthuser edge name in mutations.
-	EdgeTokenToAuthUser = "TokenToAuthUser"
+	// EdgeAuthUser holds the string denoting the authuser edge name in mutations.
+	EdgeAuthUser = "AuthUser"
 	// Table holds the table name of the token in the database.
 	Table = "tokens"
-	// TokenToAuthUserTable is the table that holds the TokenToAuthUser relation/edge.
-	TokenToAuthUserTable = "tokens"
-	// TokenToAuthUserInverseTable is the table name for the AuthUser entity.
+	// AuthUserTable is the table that holds the AuthUser relation/edge.
+	AuthUserTable = "tokens"
+	// AuthUserInverseTable is the table name for the AuthUser entity.
 	// It exists in this package in order to avoid circular dependency with the "authuser" package.
-	TokenToAuthUserInverseTable = "auth_users"
-	// TokenToAuthUserColumn is the table column denoting the TokenToAuthUser relation/edge.
-	TokenToAuthUserColumn = "auth_user_auth_user_to_token"
+	AuthUserInverseTable = "auth_users"
+	// AuthUserColumn is the table column denoting the AuthUser relation/edge.
+	AuthUserColumn = "auth_user_tokens"
 )
 
 // Columns holds all SQL columns for token fields.
@@ -38,7 +38,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "tokens"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"auth_user_auth_user_to_token",
+	"auth_user_tokens",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

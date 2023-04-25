@@ -296,25 +296,25 @@ func CreatedAtLTE(v time.Time) predicate.BuildCommit {
 	})
 }
 
-// HasBuildCommitToBuild applies the HasEdge predicate on the "BuildCommitToBuild" edge.
-func HasBuildCommitToBuild() predicate.BuildCommit {
+// HasBuild applies the HasEdge predicate on the "Build" edge.
+func HasBuild() predicate.BuildCommit {
 	return predicate.BuildCommit(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildCommitToBuildTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, BuildCommitToBuildTable, BuildCommitToBuildColumn),
+			sqlgraph.To(BuildTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasBuildCommitToBuildWith applies the HasEdge predicate on the "BuildCommitToBuild" edge with a given conditions (other predicates).
-func HasBuildCommitToBuildWith(preds ...predicate.Build) predicate.BuildCommit {
+// HasBuildWith applies the HasEdge predicate on the "Build" edge with a given conditions (other predicates).
+func HasBuildWith(preds ...predicate.Build) predicate.BuildCommit {
 	return predicate.BuildCommit(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildCommitToBuildInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, BuildCommitToBuildTable, BuildCommitToBuildColumn),
+			sqlgraph.To(BuildInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -324,25 +324,25 @@ func HasBuildCommitToBuildWith(preds ...predicate.Build) predicate.BuildCommit {
 	})
 }
 
-// HasBuildCommitToServerTask applies the HasEdge predicate on the "BuildCommitToServerTask" edge.
-func HasBuildCommitToServerTask() predicate.BuildCommit {
+// HasServerTasks applies the HasEdge predicate on the "ServerTasks" edge.
+func HasServerTasks() predicate.BuildCommit {
 	return predicate.BuildCommit(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildCommitToServerTaskTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, BuildCommitToServerTaskTable, BuildCommitToServerTaskColumn),
+			sqlgraph.To(ServerTasksTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, ServerTasksTable, ServerTasksColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasBuildCommitToServerTaskWith applies the HasEdge predicate on the "BuildCommitToServerTask" edge with a given conditions (other predicates).
-func HasBuildCommitToServerTaskWith(preds ...predicate.ServerTask) predicate.BuildCommit {
+// HasServerTasksWith applies the HasEdge predicate on the "ServerTasks" edge with a given conditions (other predicates).
+func HasServerTasksWith(preds ...predicate.ServerTask) predicate.BuildCommit {
 	return predicate.BuildCommit(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildCommitToServerTaskInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, BuildCommitToServerTaskTable, BuildCommitToServerTaskColumn),
+			sqlgraph.To(ServerTasksInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, ServerTasksTable, ServerTasksColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -352,25 +352,25 @@ func HasBuildCommitToServerTaskWith(preds ...predicate.ServerTask) predicate.Bui
 	})
 }
 
-// HasBuildCommitToPlanDiffs applies the HasEdge predicate on the "BuildCommitToPlanDiffs" edge.
-func HasBuildCommitToPlanDiffs() predicate.BuildCommit {
+// HasPlanDiffs applies the HasEdge predicate on the "PlanDiffs" edge.
+func HasPlanDiffs() predicate.BuildCommit {
 	return predicate.BuildCommit(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildCommitToPlanDiffsTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, BuildCommitToPlanDiffsTable, BuildCommitToPlanDiffsColumn),
+			sqlgraph.To(PlanDiffsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, PlanDiffsTable, PlanDiffsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasBuildCommitToPlanDiffsWith applies the HasEdge predicate on the "BuildCommitToPlanDiffs" edge with a given conditions (other predicates).
-func HasBuildCommitToPlanDiffsWith(preds ...predicate.PlanDiff) predicate.BuildCommit {
+// HasPlanDiffsWith applies the HasEdge predicate on the "PlanDiffs" edge with a given conditions (other predicates).
+func HasPlanDiffsWith(preds ...predicate.PlanDiff) predicate.BuildCommit {
 	return predicate.BuildCommit(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildCommitToPlanDiffsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, BuildCommitToPlanDiffsTable, BuildCommitToPlanDiffsColumn),
+			sqlgraph.To(PlanDiffsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, PlanDiffsTable, PlanDiffsColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

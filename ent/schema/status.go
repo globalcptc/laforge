@@ -30,31 +30,31 @@ func (Status) Fields() []ent.Field {
 // Edges of the Status.
 func (Status) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("StatusToBuild", Build.Type).
-			Ref("BuildToStatus").
+		edge.From("Build", Build.Type).
+			Ref("Status").
 			Unique(),
-		edge.From("StatusToProvisionedNetwork", ProvisionedNetwork.Type).
-			Ref("ProvisionedNetworkToStatus").
+		edge.From("ProvisionedNetwork", ProvisionedNetwork.Type).
+			Ref("Status").
 			Unique(),
-		edge.From("StatusToProvisionedHost", ProvisionedHost.Type).
-			Ref("ProvisionedHostToStatus").
+		edge.From("ProvisionedHost", ProvisionedHost.Type).
+			Ref("Status").
 			Unique(),
-		edge.From("StatusToProvisioningStep", ProvisioningStep.Type).
-			Ref("ProvisioningStepToStatus").
+		edge.From("ProvisioningStep", ProvisioningStep.Type).
+			Ref("Status").
 			Unique(),
-		edge.From("StatusToTeam", Team.Type).
-			Ref("TeamToStatus").
+		edge.From("Team", Team.Type).
+			Ref("Status").
 			Unique(),
-		edge.From("StatusToPlan", Plan.Type).
-			Ref("PlanToStatus").
+		edge.From("Plan", Plan.Type).
+			Ref("Status").
 			Unique(),
-		edge.From("StatusToServerTask", ServerTask.Type).
-			Ref("ServerTaskToStatus").
+		edge.From("ServerTask", ServerTask.Type).
+			Ref("Status").
 			Unique(),
-		edge.From("StatusToAdhocPlan", AdhocPlan.Type).
-			Ref("AdhocPlanToStatus").
+		edge.From("AdhocPlan", AdhocPlan.Type).
+			Ref("Status").
 			Unique(),
-		edge.From("StatusToProvisioningScheduledStep", ProvisioningScheduledStep.Type).
+		edge.From("ProvisioningScheduledStep", ProvisioningScheduledStep.Type).
 			Ref("Status").
 			Unique(),
 	}

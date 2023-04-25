@@ -39,8 +39,8 @@ const (
 	EdgeFileExtract = "FileExtract"
 	// EdgeAnsible holds the string denoting the ansible edge name in mutations.
 	EdgeAnsible = "Ansible"
-	// EdgeAgentTask holds the string denoting the agenttask edge name in mutations.
-	EdgeAgentTask = "AgentTask"
+	// EdgeAgentTasks holds the string denoting the agenttasks edge name in mutations.
+	EdgeAgentTasks = "AgentTasks"
 	// EdgePlan holds the string denoting the plan edge name in mutations.
 	EdgePlan = "Plan"
 	// EdgeGinFileMiddleware holds the string denoting the ginfilemiddleware edge name in mutations.
@@ -117,27 +117,27 @@ const (
 	AnsibleInverseTable = "ansibles"
 	// AnsibleColumn is the table column denoting the Ansible relation/edge.
 	AnsibleColumn = "provisioning_scheduled_step_ansible"
-	// AgentTaskTable is the table that holds the AgentTask relation/edge.
-	AgentTaskTable = "provisioning_scheduled_steps"
-	// AgentTaskInverseTable is the table name for the AgentTask entity.
+	// AgentTasksTable is the table that holds the AgentTasks relation/edge.
+	AgentTasksTable = "agent_tasks"
+	// AgentTasksInverseTable is the table name for the AgentTask entity.
 	// It exists in this package in order to avoid circular dependency with the "agenttask" package.
-	AgentTaskInverseTable = "agent_tasks"
-	// AgentTaskColumn is the table column denoting the AgentTask relation/edge.
-	AgentTaskColumn = "agent_task_agent_task_to_provisioning_scheduled_step"
+	AgentTasksInverseTable = "agent_tasks"
+	// AgentTasksColumn is the table column denoting the AgentTasks relation/edge.
+	AgentTasksColumn = "agent_task_provisioning_scheduled_step"
 	// PlanTable is the table that holds the Plan relation/edge.
 	PlanTable = "provisioning_scheduled_steps"
 	// PlanInverseTable is the table name for the Plan entity.
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
 	PlanInverseTable = "plans"
 	// PlanColumn is the table column denoting the Plan relation/edge.
-	PlanColumn = "plan_plan_to_provisioning_scheduled_step"
+	PlanColumn = "plan_provisioning_scheduled_step"
 	// GinFileMiddlewareTable is the table that holds the GinFileMiddleware relation/edge.
 	GinFileMiddlewareTable = "provisioning_scheduled_steps"
 	// GinFileMiddlewareInverseTable is the table name for the GinFileMiddleware entity.
 	// It exists in this package in order to avoid circular dependency with the "ginfilemiddleware" package.
 	GinFileMiddlewareInverseTable = "gin_file_middlewares"
 	// GinFileMiddlewareColumn is the table column denoting the GinFileMiddleware relation/edge.
-	GinFileMiddlewareColumn = "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step"
+	GinFileMiddlewareColumn = "gin_file_middleware_provisioning_scheduled_step"
 )
 
 // Columns holds all SQL columns for provisioningscheduledstep fields.
@@ -150,9 +150,8 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provisioning_scheduled_steps"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"agent_task_agent_task_to_provisioning_scheduled_step",
-	"gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step",
-	"plan_plan_to_provisioning_scheduled_step",
+	"gin_file_middleware_provisioning_scheduled_step",
+	"plan_provisioning_scheduled_step",
 	"provisioning_scheduled_step_scheduled_step",
 	"provisioning_scheduled_step_provisioned_host",
 	"provisioning_scheduled_step_script",

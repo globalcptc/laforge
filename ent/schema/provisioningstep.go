@@ -35,34 +35,34 @@ func (ProvisioningStep) Fields() []ent.Field {
 // Edges of the ProvisioningStep.
 func (ProvisioningStep) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("ProvisioningStepToStatus", Status.Type).
+		edge.To("Status", Status.Type).
 			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("ProvisioningStepToProvisionedHost", ProvisionedHost.Type).
+		edge.To("ProvisionedHost", ProvisionedHost.Type).
 			Unique(),
-		edge.To("ProvisioningStepToScript", Script.Type).
+		edge.To("Script", Script.Type).
 			Unique(),
-		edge.To("ProvisioningStepToCommand", Command.Type).
+		edge.To("Command", Command.Type).
 			Unique(),
-		edge.To("ProvisioningStepToDNSRecord", DNSRecord.Type).
+		edge.To("DNSRecord", DNSRecord.Type).
 			Unique(),
-		edge.To("ProvisioningStepToFileDelete", FileDelete.Type).
+		edge.To("FileDelete", FileDelete.Type).
 			Unique(),
-		edge.To("ProvisioningStepToFileDownload", FileDownload.Type).
+		edge.To("FileDownload", FileDownload.Type).
 			Unique(),
-		edge.To("ProvisioningStepToFileExtract", FileExtract.Type).
+		edge.To("FileExtract", FileExtract.Type).
 			Unique(),
-		edge.To("ProvisioningStepToAnsible", Ansible.Type).
+		edge.To("Ansible", Ansible.Type).
 			Unique(),
-		edge.From("ProvisioningStepToPlan", Plan.Type).
-			Ref("PlanToProvisioningStep").
+		edge.From("Plan", Plan.Type).
+			Ref("ProvisioningStep").
 			Unique(),
-		edge.From("ProvisioningStepToAgentTask", AgentTask.Type).
-			Ref("AgentTaskToProvisioningStep"),
-		edge.From("ProvisioningStepToGinFileMiddleware", GinFileMiddleware.Type).
-			Ref("GinFileMiddlewareToProvisioningStep").
+		edge.From("AgentTasks", AgentTask.Type).
+			Ref("ProvisioningStep"),
+		edge.From("GinFileMiddleware", GinFileMiddleware.Type).
+			Ref("ProvisioningStep").
 			Unique(),
 	}
 }

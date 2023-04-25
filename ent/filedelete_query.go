@@ -19,14 +19,14 @@ import (
 // FileDeleteQuery is the builder for querying FileDelete entities.
 type FileDeleteQuery struct {
 	config
-	limit                       *int
-	offset                      *int
-	unique                      *bool
-	order                       []OrderFunc
-	fields                      []string
-	predicates                  []predicate.FileDelete
-	withFileDeleteToEnvironment *EnvironmentQuery
-	withFKs                     bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.FileDelete
+	withEnvironment *EnvironmentQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,8 +63,8 @@ func (fdq *FileDeleteQuery) Order(o ...OrderFunc) *FileDeleteQuery {
 	return fdq
 }
 
-// QueryFileDeleteToEnvironment chains the current query on the "FileDeleteToEnvironment" edge.
-func (fdq *FileDeleteQuery) QueryFileDeleteToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (fdq *FileDeleteQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: fdq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := fdq.prepareQuery(ctx); err != nil {
@@ -77,7 +77,7 @@ func (fdq *FileDeleteQuery) QueryFileDeleteToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(filedelete.Table, filedelete.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, filedelete.FileDeleteToEnvironmentTable, filedelete.FileDeleteToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, filedelete.EnvironmentTable, filedelete.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(fdq.driver.Dialect(), step)
 		return fromU, nil
@@ -261,12 +261,12 @@ func (fdq *FileDeleteQuery) Clone() *FileDeleteQuery {
 		return nil
 	}
 	return &FileDeleteQuery{
-		config:                      fdq.config,
-		limit:                       fdq.limit,
-		offset:                      fdq.offset,
-		order:                       append([]OrderFunc{}, fdq.order...),
-		predicates:                  append([]predicate.FileDelete{}, fdq.predicates...),
-		withFileDeleteToEnvironment: fdq.withFileDeleteToEnvironment.Clone(),
+		config:          fdq.config,
+		limit:           fdq.limit,
+		offset:          fdq.offset,
+		order:           append([]OrderFunc{}, fdq.order...),
+		predicates:      append([]predicate.FileDelete{}, fdq.predicates...),
+		withEnvironment: fdq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    fdq.sql.Clone(),
 		path:   fdq.path,
@@ -274,14 +274,14 @@ func (fdq *FileDeleteQuery) Clone() *FileDeleteQuery {
 	}
 }
 
-// WithFileDeleteToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "FileDeleteToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (fdq *FileDeleteQuery) WithFileDeleteToEnvironment(opts ...func(*EnvironmentQuery)) *FileDeleteQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (fdq *FileDeleteQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *FileDeleteQuery {
 	query := &EnvironmentQuery{config: fdq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	fdq.withFileDeleteToEnvironment = query
+	fdq.withEnvironment = query
 	return fdq
 }
 
@@ -355,10 +355,10 @@ func (fdq *FileDeleteQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		withFKs     = fdq.withFKs
 		_spec       = fdq.querySpec()
 		loadedTypes = [1]bool{
-			fdq.withFileDeleteToEnvironment != nil,
+			fdq.withEnvironment != nil,
 		}
 	)
-	if fdq.withFileDeleteToEnvironment != nil {
+	if fdq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -382,23 +382,23 @@ func (fdq *FileDeleteQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := fdq.withFileDeleteToEnvironment; query != nil {
-		if err := fdq.loadFileDeleteToEnvironment(ctx, query, nodes, nil,
-			func(n *FileDelete, e *Environment) { n.Edges.FileDeleteToEnvironment = e }); err != nil {
+	if query := fdq.withEnvironment; query != nil {
+		if err := fdq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *FileDelete, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (fdq *FileDeleteQuery) loadFileDeleteToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*FileDelete, init func(*FileDelete), assign func(*FileDelete, *Environment)) error {
+func (fdq *FileDeleteQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*FileDelete, init func(*FileDelete), assign func(*FileDelete, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*FileDelete)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_file_delete == nil {
+		if nodes[i].environment_file_deletes == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_file_delete
+		fk := *nodes[i].environment_file_deletes
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (fdq *FileDeleteQuery) loadFileDeleteToEnvironment(ctx context.Context, que
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_file_delete" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_file_deletes" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

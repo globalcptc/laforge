@@ -37,26 +37,26 @@ const (
 	FieldRole = "role"
 	// FieldProvider holds the string denoting the provider field in the database.
 	FieldProvider = "provider"
-	// EdgeAuthUserToToken holds the string denoting the authusertotoken edge name in mutations.
-	EdgeAuthUserToToken = "AuthUserToToken"
-	// EdgeAuthUserToServerTasks holds the string denoting the authusertoservertasks edge name in mutations.
-	EdgeAuthUserToServerTasks = "AuthUserToServerTasks"
+	// EdgeTokens holds the string denoting the tokens edge name in mutations.
+	EdgeTokens = "Tokens"
+	// EdgeServerTasks holds the string denoting the servertasks edge name in mutations.
+	EdgeServerTasks = "ServerTasks"
 	// Table holds the table name of the authuser in the database.
 	Table = "auth_users"
-	// AuthUserToTokenTable is the table that holds the AuthUserToToken relation/edge.
-	AuthUserToTokenTable = "tokens"
-	// AuthUserToTokenInverseTable is the table name for the Token entity.
+	// TokensTable is the table that holds the Tokens relation/edge.
+	TokensTable = "tokens"
+	// TokensInverseTable is the table name for the Token entity.
 	// It exists in this package in order to avoid circular dependency with the "token" package.
-	AuthUserToTokenInverseTable = "tokens"
-	// AuthUserToTokenColumn is the table column denoting the AuthUserToToken relation/edge.
-	AuthUserToTokenColumn = "auth_user_auth_user_to_token"
-	// AuthUserToServerTasksTable is the table that holds the AuthUserToServerTasks relation/edge.
-	AuthUserToServerTasksTable = "server_tasks"
-	// AuthUserToServerTasksInverseTable is the table name for the ServerTask entity.
+	TokensInverseTable = "tokens"
+	// TokensColumn is the table column denoting the Tokens relation/edge.
+	TokensColumn = "auth_user_tokens"
+	// ServerTasksTable is the table that holds the ServerTasks relation/edge.
+	ServerTasksTable = "server_tasks"
+	// ServerTasksInverseTable is the table name for the ServerTask entity.
 	// It exists in this package in order to avoid circular dependency with the "servertask" package.
-	AuthUserToServerTasksInverseTable = "server_tasks"
-	// AuthUserToServerTasksColumn is the table column denoting the AuthUserToServerTasks relation/edge.
-	AuthUserToServerTasksColumn = "server_task_server_task_to_auth_user"
+	ServerTasksInverseTable = "server_tasks"
+	// ServerTasksColumn is the table column denoting the ServerTasks relation/edge.
+	ServerTasksColumn = "server_task_auth_user"
 )
 
 // Columns holds all SQL columns for authuser fields.

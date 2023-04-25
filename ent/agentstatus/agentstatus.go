@@ -39,35 +39,35 @@ const (
 	FieldUsedMem = "used_mem"
 	// FieldTimestamp holds the string denoting the timestamp field in the database.
 	FieldTimestamp = "timestamp"
-	// EdgeAgentStatusToProvisionedHost holds the string denoting the agentstatustoprovisionedhost edge name in mutations.
-	EdgeAgentStatusToProvisionedHost = "AgentStatusToProvisionedHost"
-	// EdgeAgentStatusToProvisionedNetwork holds the string denoting the agentstatustoprovisionednetwork edge name in mutations.
-	EdgeAgentStatusToProvisionedNetwork = "AgentStatusToProvisionedNetwork"
-	// EdgeAgentStatusToBuild holds the string denoting the agentstatustobuild edge name in mutations.
-	EdgeAgentStatusToBuild = "AgentStatusToBuild"
+	// EdgeProvisionedHost holds the string denoting the provisionedhost edge name in mutations.
+	EdgeProvisionedHost = "ProvisionedHost"
+	// EdgeProvisionedNetwork holds the string denoting the provisionednetwork edge name in mutations.
+	EdgeProvisionedNetwork = "ProvisionedNetwork"
+	// EdgeBuild holds the string denoting the build edge name in mutations.
+	EdgeBuild = "Build"
 	// Table holds the table name of the agentstatus in the database.
 	Table = "agent_status"
-	// AgentStatusToProvisionedHostTable is the table that holds the AgentStatusToProvisionedHost relation/edge.
-	AgentStatusToProvisionedHostTable = "agent_status"
-	// AgentStatusToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
+	// ProvisionedHostTable is the table that holds the ProvisionedHost relation/edge.
+	ProvisionedHostTable = "provisioned_hosts"
+	// ProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
-	AgentStatusToProvisionedHostInverseTable = "provisioned_hosts"
-	// AgentStatusToProvisionedHostColumn is the table column denoting the AgentStatusToProvisionedHost relation/edge.
-	AgentStatusToProvisionedHostColumn = "agent_status_agent_status_to_provisioned_host"
-	// AgentStatusToProvisionedNetworkTable is the table that holds the AgentStatusToProvisionedNetwork relation/edge.
-	AgentStatusToProvisionedNetworkTable = "agent_status"
-	// AgentStatusToProvisionedNetworkInverseTable is the table name for the ProvisionedNetwork entity.
+	ProvisionedHostInverseTable = "provisioned_hosts"
+	// ProvisionedHostColumn is the table column denoting the ProvisionedHost relation/edge.
+	ProvisionedHostColumn = "agent_status_provisioned_host"
+	// ProvisionedNetworkTable is the table that holds the ProvisionedNetwork relation/edge.
+	ProvisionedNetworkTable = "agent_status"
+	// ProvisionedNetworkInverseTable is the table name for the ProvisionedNetwork entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionednetwork" package.
-	AgentStatusToProvisionedNetworkInverseTable = "provisioned_networks"
-	// AgentStatusToProvisionedNetworkColumn is the table column denoting the AgentStatusToProvisionedNetwork relation/edge.
-	AgentStatusToProvisionedNetworkColumn = "agent_status_agent_status_to_provisioned_network"
-	// AgentStatusToBuildTable is the table that holds the AgentStatusToBuild relation/edge.
-	AgentStatusToBuildTable = "agent_status"
-	// AgentStatusToBuildInverseTable is the table name for the Build entity.
+	ProvisionedNetworkInverseTable = "provisioned_networks"
+	// ProvisionedNetworkColumn is the table column denoting the ProvisionedNetwork relation/edge.
+	ProvisionedNetworkColumn = "agent_status_provisioned_network"
+	// BuildTable is the table that holds the Build relation/edge.
+	BuildTable = "agent_status"
+	// BuildInverseTable is the table name for the Build entity.
 	// It exists in this package in order to avoid circular dependency with the "build" package.
-	AgentStatusToBuildInverseTable = "builds"
-	// AgentStatusToBuildColumn is the table column denoting the AgentStatusToBuild relation/edge.
-	AgentStatusToBuildColumn = "agent_status_agent_status_to_build"
+	BuildInverseTable = "builds"
+	// BuildColumn is the table column denoting the Build relation/edge.
+	BuildColumn = "agent_status_build"
 )
 
 // Columns holds all SQL columns for agentstatus fields.
@@ -92,9 +92,8 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "agent_status"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"agent_status_agent_status_to_provisioned_host",
-	"agent_status_agent_status_to_provisioned_network",
-	"agent_status_agent_status_to_build",
+	"agent_status_provisioned_network",
+	"agent_status_build",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

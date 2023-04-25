@@ -91,68 +91,68 @@ func (atu *AgentTaskUpdate) SetNillableErrorMessage(s *string) *AgentTaskUpdate 
 	return atu
 }
 
-// SetAgentTaskToProvisioningStepID sets the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity by ID.
-func (atu *AgentTaskUpdate) SetAgentTaskToProvisioningStepID(id uuid.UUID) *AgentTaskUpdate {
-	atu.mutation.SetAgentTaskToProvisioningStepID(id)
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID.
+func (atu *AgentTaskUpdate) SetProvisioningStepID(id uuid.UUID) *AgentTaskUpdate {
+	atu.mutation.SetProvisioningStepID(id)
 	return atu
 }
 
-// SetNillableAgentTaskToProvisioningStepID sets the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
-func (atu *AgentTaskUpdate) SetNillableAgentTaskToProvisioningStepID(id *uuid.UUID) *AgentTaskUpdate {
+// SetNillableProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
+func (atu *AgentTaskUpdate) SetNillableProvisioningStepID(id *uuid.UUID) *AgentTaskUpdate {
 	if id != nil {
-		atu = atu.SetAgentTaskToProvisioningStepID(*id)
+		atu = atu.SetProvisioningStepID(*id)
 	}
 	return atu
 }
 
-// SetAgentTaskToProvisioningStep sets the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity.
-func (atu *AgentTaskUpdate) SetAgentTaskToProvisioningStep(p *ProvisioningStep) *AgentTaskUpdate {
-	return atu.SetAgentTaskToProvisioningStepID(p.ID)
+// SetProvisioningStep sets the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (atu *AgentTaskUpdate) SetProvisioningStep(p *ProvisioningStep) *AgentTaskUpdate {
+	return atu.SetProvisioningStepID(p.ID)
 }
 
-// SetAgentTaskToProvisioningScheduledStepID sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
-func (atu *AgentTaskUpdate) SetAgentTaskToProvisioningScheduledStepID(id uuid.UUID) *AgentTaskUpdate {
-	atu.mutation.SetAgentTaskToProvisioningScheduledStepID(id)
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (atu *AgentTaskUpdate) SetProvisioningScheduledStepID(id uuid.UUID) *AgentTaskUpdate {
+	atu.mutation.SetProvisioningScheduledStepID(id)
 	return atu
 }
 
-// SetNillableAgentTaskToProvisioningScheduledStepID sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
-func (atu *AgentTaskUpdate) SetNillableAgentTaskToProvisioningScheduledStepID(id *uuid.UUID) *AgentTaskUpdate {
+// SetNillableProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (atu *AgentTaskUpdate) SetNillableProvisioningScheduledStepID(id *uuid.UUID) *AgentTaskUpdate {
 	if id != nil {
-		atu = atu.SetAgentTaskToProvisioningScheduledStepID(*id)
+		atu = atu.SetProvisioningScheduledStepID(*id)
 	}
 	return atu
 }
 
-// SetAgentTaskToProvisioningScheduledStep sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (atu *AgentTaskUpdate) SetAgentTaskToProvisioningScheduledStep(p *ProvisioningScheduledStep) *AgentTaskUpdate {
-	return atu.SetAgentTaskToProvisioningScheduledStepID(p.ID)
+// SetProvisioningScheduledStep sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (atu *AgentTaskUpdate) SetProvisioningScheduledStep(p *ProvisioningScheduledStep) *AgentTaskUpdate {
+	return atu.SetProvisioningScheduledStepID(p.ID)
 }
 
-// SetAgentTaskToProvisionedHostID sets the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (atu *AgentTaskUpdate) SetAgentTaskToProvisionedHostID(id uuid.UUID) *AgentTaskUpdate {
-	atu.mutation.SetAgentTaskToProvisionedHostID(id)
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (atu *AgentTaskUpdate) SetProvisionedHostID(id uuid.UUID) *AgentTaskUpdate {
+	atu.mutation.SetProvisionedHostID(id)
 	return atu
 }
 
-// SetAgentTaskToProvisionedHost sets the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity.
-func (atu *AgentTaskUpdate) SetAgentTaskToProvisionedHost(p *ProvisionedHost) *AgentTaskUpdate {
-	return atu.SetAgentTaskToProvisionedHostID(p.ID)
+// SetProvisionedHost sets the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (atu *AgentTaskUpdate) SetProvisionedHost(p *ProvisionedHost) *AgentTaskUpdate {
+	return atu.SetProvisionedHostID(p.ID)
 }
 
-// AddAgentTaskToAdhocPlanIDs adds the "AgentTaskToAdhocPlan" edge to the AdhocPlan entity by IDs.
-func (atu *AgentTaskUpdate) AddAgentTaskToAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdate {
-	atu.mutation.AddAgentTaskToAdhocPlanIDs(ids...)
+// AddAdhocPlanIDs adds the "AdhocPlans" edge to the AdhocPlan entity by IDs.
+func (atu *AgentTaskUpdate) AddAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdate {
+	atu.mutation.AddAdhocPlanIDs(ids...)
 	return atu
 }
 
-// AddAgentTaskToAdhocPlan adds the "AgentTaskToAdhocPlan" edges to the AdhocPlan entity.
-func (atu *AgentTaskUpdate) AddAgentTaskToAdhocPlan(a ...*AdhocPlan) *AgentTaskUpdate {
+// AddAdhocPlans adds the "AdhocPlans" edges to the AdhocPlan entity.
+func (atu *AgentTaskUpdate) AddAdhocPlans(a ...*AdhocPlan) *AgentTaskUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return atu.AddAgentTaskToAdhocPlanIDs(ids...)
+	return atu.AddAdhocPlanIDs(ids...)
 }
 
 // Mutation returns the AgentTaskMutation object of the builder.
@@ -160,43 +160,43 @@ func (atu *AgentTaskUpdate) Mutation() *AgentTaskMutation {
 	return atu.mutation
 }
 
-// ClearAgentTaskToProvisioningStep clears the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity.
-func (atu *AgentTaskUpdate) ClearAgentTaskToProvisioningStep() *AgentTaskUpdate {
-	atu.mutation.ClearAgentTaskToProvisioningStep()
+// ClearProvisioningStep clears the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (atu *AgentTaskUpdate) ClearProvisioningStep() *AgentTaskUpdate {
+	atu.mutation.ClearProvisioningStep()
 	return atu
 }
 
-// ClearAgentTaskToProvisioningScheduledStep clears the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (atu *AgentTaskUpdate) ClearAgentTaskToProvisioningScheduledStep() *AgentTaskUpdate {
-	atu.mutation.ClearAgentTaskToProvisioningScheduledStep()
+// ClearProvisioningScheduledStep clears the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (atu *AgentTaskUpdate) ClearProvisioningScheduledStep() *AgentTaskUpdate {
+	atu.mutation.ClearProvisioningScheduledStep()
 	return atu
 }
 
-// ClearAgentTaskToProvisionedHost clears the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity.
-func (atu *AgentTaskUpdate) ClearAgentTaskToProvisionedHost() *AgentTaskUpdate {
-	atu.mutation.ClearAgentTaskToProvisionedHost()
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (atu *AgentTaskUpdate) ClearProvisionedHost() *AgentTaskUpdate {
+	atu.mutation.ClearProvisionedHost()
 	return atu
 }
 
-// ClearAgentTaskToAdhocPlan clears all "AgentTaskToAdhocPlan" edges to the AdhocPlan entity.
-func (atu *AgentTaskUpdate) ClearAgentTaskToAdhocPlan() *AgentTaskUpdate {
-	atu.mutation.ClearAgentTaskToAdhocPlan()
+// ClearAdhocPlans clears all "AdhocPlans" edges to the AdhocPlan entity.
+func (atu *AgentTaskUpdate) ClearAdhocPlans() *AgentTaskUpdate {
+	atu.mutation.ClearAdhocPlans()
 	return atu
 }
 
-// RemoveAgentTaskToAdhocPlanIDs removes the "AgentTaskToAdhocPlan" edge to AdhocPlan entities by IDs.
-func (atu *AgentTaskUpdate) RemoveAgentTaskToAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdate {
-	atu.mutation.RemoveAgentTaskToAdhocPlanIDs(ids...)
+// RemoveAdhocPlanIDs removes the "AdhocPlans" edge to AdhocPlan entities by IDs.
+func (atu *AgentTaskUpdate) RemoveAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdate {
+	atu.mutation.RemoveAdhocPlanIDs(ids...)
 	return atu
 }
 
-// RemoveAgentTaskToAdhocPlan removes "AgentTaskToAdhocPlan" edges to AdhocPlan entities.
-func (atu *AgentTaskUpdate) RemoveAgentTaskToAdhocPlan(a ...*AdhocPlan) *AgentTaskUpdate {
+// RemoveAdhocPlans removes "AdhocPlans" edges to AdhocPlan entities.
+func (atu *AgentTaskUpdate) RemoveAdhocPlans(a ...*AdhocPlan) *AgentTaskUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return atu.RemoveAgentTaskToAdhocPlanIDs(ids...)
+	return atu.RemoveAdhocPlanIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -271,8 +271,8 @@ func (atu *AgentTaskUpdate) check() error {
 			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "AgentTask.state": %w`, err)}
 		}
 	}
-	if _, ok := atu.mutation.AgentTaskToProvisionedHostID(); atu.mutation.AgentTaskToProvisionedHostCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "AgentTask.AgentTaskToProvisionedHost"`)
+	if _, ok := atu.mutation.ProvisionedHostID(); atu.mutation.ProvisionedHostCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "AgentTask.ProvisionedHost"`)
 	}
 	return nil
 }
@@ -344,12 +344,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: agenttask.FieldErrorMessage,
 		})
 	}
-	if atu.mutation.AgentTaskToProvisioningStepCleared() {
+	if atu.mutation.ProvisioningStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisioningStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisioningStepColumn},
+			Table:   agenttask.ProvisioningStepTable,
+			Columns: []string{agenttask.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -360,12 +360,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atu.mutation.AgentTaskToProvisioningStepIDs(); len(nodes) > 0 {
+	if nodes := atu.mutation.ProvisioningStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisioningStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisioningStepColumn},
+			Table:   agenttask.ProvisioningStepTable,
+			Columns: []string{agenttask.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -379,12 +379,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if atu.mutation.AgentTaskToProvisioningScheduledStepCleared() {
+	if atu.mutation.ProvisioningScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisioningScheduledStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisioningScheduledStepColumn},
+			Table:   agenttask.ProvisioningScheduledStepTable,
+			Columns: []string{agenttask.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -395,12 +395,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atu.mutation.AgentTaskToProvisioningScheduledStepIDs(); len(nodes) > 0 {
+	if nodes := atu.mutation.ProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisioningScheduledStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisioningScheduledStepColumn},
+			Table:   agenttask.ProvisioningScheduledStepTable,
+			Columns: []string{agenttask.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -414,12 +414,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if atu.mutation.AgentTaskToProvisionedHostCleared() {
+	if atu.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisionedHostTable,
-			Columns: []string{agenttask.AgentTaskToProvisionedHostColumn},
+			Table:   agenttask.ProvisionedHostTable,
+			Columns: []string{agenttask.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -430,12 +430,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atu.mutation.AgentTaskToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := atu.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisionedHostTable,
-			Columns: []string{agenttask.AgentTaskToProvisionedHostColumn},
+			Table:   agenttask.ProvisionedHostTable,
+			Columns: []string{agenttask.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -449,12 +449,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if atu.mutation.AgentTaskToAdhocPlanCleared() {
+	if atu.mutation.AdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AgentTaskToAdhocPlanTable,
-			Columns: []string{agenttask.AgentTaskToAdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -465,12 +465,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atu.mutation.RemovedAgentTaskToAdhocPlanIDs(); len(nodes) > 0 && !atu.mutation.AgentTaskToAdhocPlanCleared() {
+	if nodes := atu.mutation.RemovedAdhocPlansIDs(); len(nodes) > 0 && !atu.mutation.AdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AgentTaskToAdhocPlanTable,
-			Columns: []string{agenttask.AgentTaskToAdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -484,12 +484,12 @@ func (atu *AgentTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atu.mutation.AgentTaskToAdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := atu.mutation.AdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AgentTaskToAdhocPlanTable,
-			Columns: []string{agenttask.AgentTaskToAdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -581,68 +581,68 @@ func (atuo *AgentTaskUpdateOne) SetNillableErrorMessage(s *string) *AgentTaskUpd
 	return atuo
 }
 
-// SetAgentTaskToProvisioningStepID sets the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity by ID.
-func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisioningStepID(id uuid.UUID) *AgentTaskUpdateOne {
-	atuo.mutation.SetAgentTaskToProvisioningStepID(id)
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID.
+func (atuo *AgentTaskUpdateOne) SetProvisioningStepID(id uuid.UUID) *AgentTaskUpdateOne {
+	atuo.mutation.SetProvisioningStepID(id)
 	return atuo
 }
 
-// SetNillableAgentTaskToProvisioningStepID sets the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
-func (atuo *AgentTaskUpdateOne) SetNillableAgentTaskToProvisioningStepID(id *uuid.UUID) *AgentTaskUpdateOne {
+// SetNillableProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
+func (atuo *AgentTaskUpdateOne) SetNillableProvisioningStepID(id *uuid.UUID) *AgentTaskUpdateOne {
 	if id != nil {
-		atuo = atuo.SetAgentTaskToProvisioningStepID(*id)
+		atuo = atuo.SetProvisioningStepID(*id)
 	}
 	return atuo
 }
 
-// SetAgentTaskToProvisioningStep sets the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity.
-func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisioningStep(p *ProvisioningStep) *AgentTaskUpdateOne {
-	return atuo.SetAgentTaskToProvisioningStepID(p.ID)
+// SetProvisioningStep sets the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (atuo *AgentTaskUpdateOne) SetProvisioningStep(p *ProvisioningStep) *AgentTaskUpdateOne {
+	return atuo.SetProvisioningStepID(p.ID)
 }
 
-// SetAgentTaskToProvisioningScheduledStepID sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
-func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisioningScheduledStepID(id uuid.UUID) *AgentTaskUpdateOne {
-	atuo.mutation.SetAgentTaskToProvisioningScheduledStepID(id)
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (atuo *AgentTaskUpdateOne) SetProvisioningScheduledStepID(id uuid.UUID) *AgentTaskUpdateOne {
+	atuo.mutation.SetProvisioningScheduledStepID(id)
 	return atuo
 }
 
-// SetNillableAgentTaskToProvisioningScheduledStepID sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
-func (atuo *AgentTaskUpdateOne) SetNillableAgentTaskToProvisioningScheduledStepID(id *uuid.UUID) *AgentTaskUpdateOne {
+// SetNillableProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (atuo *AgentTaskUpdateOne) SetNillableProvisioningScheduledStepID(id *uuid.UUID) *AgentTaskUpdateOne {
 	if id != nil {
-		atuo = atuo.SetAgentTaskToProvisioningScheduledStepID(*id)
+		atuo = atuo.SetProvisioningScheduledStepID(*id)
 	}
 	return atuo
 }
 
-// SetAgentTaskToProvisioningScheduledStep sets the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisioningScheduledStep(p *ProvisioningScheduledStep) *AgentTaskUpdateOne {
-	return atuo.SetAgentTaskToProvisioningScheduledStepID(p.ID)
+// SetProvisioningScheduledStep sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (atuo *AgentTaskUpdateOne) SetProvisioningScheduledStep(p *ProvisioningScheduledStep) *AgentTaskUpdateOne {
+	return atuo.SetProvisioningScheduledStepID(p.ID)
 }
 
-// SetAgentTaskToProvisionedHostID sets the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisionedHostID(id uuid.UUID) *AgentTaskUpdateOne {
-	atuo.mutation.SetAgentTaskToProvisionedHostID(id)
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (atuo *AgentTaskUpdateOne) SetProvisionedHostID(id uuid.UUID) *AgentTaskUpdateOne {
+	atuo.mutation.SetProvisionedHostID(id)
 	return atuo
 }
 
-// SetAgentTaskToProvisionedHost sets the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity.
-func (atuo *AgentTaskUpdateOne) SetAgentTaskToProvisionedHost(p *ProvisionedHost) *AgentTaskUpdateOne {
-	return atuo.SetAgentTaskToProvisionedHostID(p.ID)
+// SetProvisionedHost sets the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (atuo *AgentTaskUpdateOne) SetProvisionedHost(p *ProvisionedHost) *AgentTaskUpdateOne {
+	return atuo.SetProvisionedHostID(p.ID)
 }
 
-// AddAgentTaskToAdhocPlanIDs adds the "AgentTaskToAdhocPlan" edge to the AdhocPlan entity by IDs.
-func (atuo *AgentTaskUpdateOne) AddAgentTaskToAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdateOne {
-	atuo.mutation.AddAgentTaskToAdhocPlanIDs(ids...)
+// AddAdhocPlanIDs adds the "AdhocPlans" edge to the AdhocPlan entity by IDs.
+func (atuo *AgentTaskUpdateOne) AddAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdateOne {
+	atuo.mutation.AddAdhocPlanIDs(ids...)
 	return atuo
 }
 
-// AddAgentTaskToAdhocPlan adds the "AgentTaskToAdhocPlan" edges to the AdhocPlan entity.
-func (atuo *AgentTaskUpdateOne) AddAgentTaskToAdhocPlan(a ...*AdhocPlan) *AgentTaskUpdateOne {
+// AddAdhocPlans adds the "AdhocPlans" edges to the AdhocPlan entity.
+func (atuo *AgentTaskUpdateOne) AddAdhocPlans(a ...*AdhocPlan) *AgentTaskUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return atuo.AddAgentTaskToAdhocPlanIDs(ids...)
+	return atuo.AddAdhocPlanIDs(ids...)
 }
 
 // Mutation returns the AgentTaskMutation object of the builder.
@@ -650,43 +650,43 @@ func (atuo *AgentTaskUpdateOne) Mutation() *AgentTaskMutation {
 	return atuo.mutation
 }
 
-// ClearAgentTaskToProvisioningStep clears the "AgentTaskToProvisioningStep" edge to the ProvisioningStep entity.
-func (atuo *AgentTaskUpdateOne) ClearAgentTaskToProvisioningStep() *AgentTaskUpdateOne {
-	atuo.mutation.ClearAgentTaskToProvisioningStep()
+// ClearProvisioningStep clears the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (atuo *AgentTaskUpdateOne) ClearProvisioningStep() *AgentTaskUpdateOne {
+	atuo.mutation.ClearProvisioningStep()
 	return atuo
 }
 
-// ClearAgentTaskToProvisioningScheduledStep clears the "AgentTaskToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (atuo *AgentTaskUpdateOne) ClearAgentTaskToProvisioningScheduledStep() *AgentTaskUpdateOne {
-	atuo.mutation.ClearAgentTaskToProvisioningScheduledStep()
+// ClearProvisioningScheduledStep clears the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (atuo *AgentTaskUpdateOne) ClearProvisioningScheduledStep() *AgentTaskUpdateOne {
+	atuo.mutation.ClearProvisioningScheduledStep()
 	return atuo
 }
 
-// ClearAgentTaskToProvisionedHost clears the "AgentTaskToProvisionedHost" edge to the ProvisionedHost entity.
-func (atuo *AgentTaskUpdateOne) ClearAgentTaskToProvisionedHost() *AgentTaskUpdateOne {
-	atuo.mutation.ClearAgentTaskToProvisionedHost()
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (atuo *AgentTaskUpdateOne) ClearProvisionedHost() *AgentTaskUpdateOne {
+	atuo.mutation.ClearProvisionedHost()
 	return atuo
 }
 
-// ClearAgentTaskToAdhocPlan clears all "AgentTaskToAdhocPlan" edges to the AdhocPlan entity.
-func (atuo *AgentTaskUpdateOne) ClearAgentTaskToAdhocPlan() *AgentTaskUpdateOne {
-	atuo.mutation.ClearAgentTaskToAdhocPlan()
+// ClearAdhocPlans clears all "AdhocPlans" edges to the AdhocPlan entity.
+func (atuo *AgentTaskUpdateOne) ClearAdhocPlans() *AgentTaskUpdateOne {
+	atuo.mutation.ClearAdhocPlans()
 	return atuo
 }
 
-// RemoveAgentTaskToAdhocPlanIDs removes the "AgentTaskToAdhocPlan" edge to AdhocPlan entities by IDs.
-func (atuo *AgentTaskUpdateOne) RemoveAgentTaskToAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdateOne {
-	atuo.mutation.RemoveAgentTaskToAdhocPlanIDs(ids...)
+// RemoveAdhocPlanIDs removes the "AdhocPlans" edge to AdhocPlan entities by IDs.
+func (atuo *AgentTaskUpdateOne) RemoveAdhocPlanIDs(ids ...uuid.UUID) *AgentTaskUpdateOne {
+	atuo.mutation.RemoveAdhocPlanIDs(ids...)
 	return atuo
 }
 
-// RemoveAgentTaskToAdhocPlan removes "AgentTaskToAdhocPlan" edges to AdhocPlan entities.
-func (atuo *AgentTaskUpdateOne) RemoveAgentTaskToAdhocPlan(a ...*AdhocPlan) *AgentTaskUpdateOne {
+// RemoveAdhocPlans removes "AdhocPlans" edges to AdhocPlan entities.
+func (atuo *AgentTaskUpdateOne) RemoveAdhocPlans(a ...*AdhocPlan) *AgentTaskUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return atuo.RemoveAgentTaskToAdhocPlanIDs(ids...)
+	return atuo.RemoveAdhocPlanIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -774,8 +774,8 @@ func (atuo *AgentTaskUpdateOne) check() error {
 			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "AgentTask.state": %w`, err)}
 		}
 	}
-	if _, ok := atuo.mutation.AgentTaskToProvisionedHostID(); atuo.mutation.AgentTaskToProvisionedHostCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "AgentTask.AgentTaskToProvisionedHost"`)
+	if _, ok := atuo.mutation.ProvisionedHostID(); atuo.mutation.ProvisionedHostCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "AgentTask.ProvisionedHost"`)
 	}
 	return nil
 }
@@ -864,12 +864,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 			Column: agenttask.FieldErrorMessage,
 		})
 	}
-	if atuo.mutation.AgentTaskToProvisioningStepCleared() {
+	if atuo.mutation.ProvisioningStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisioningStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisioningStepColumn},
+			Table:   agenttask.ProvisioningStepTable,
+			Columns: []string{agenttask.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -880,12 +880,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atuo.mutation.AgentTaskToProvisioningStepIDs(); len(nodes) > 0 {
+	if nodes := atuo.mutation.ProvisioningStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisioningStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisioningStepColumn},
+			Table:   agenttask.ProvisioningStepTable,
+			Columns: []string{agenttask.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -899,12 +899,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if atuo.mutation.AgentTaskToProvisioningScheduledStepCleared() {
+	if atuo.mutation.ProvisioningScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisioningScheduledStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisioningScheduledStepColumn},
+			Table:   agenttask.ProvisioningScheduledStepTable,
+			Columns: []string{agenttask.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -915,12 +915,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atuo.mutation.AgentTaskToProvisioningScheduledStepIDs(); len(nodes) > 0 {
+	if nodes := atuo.mutation.ProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisioningScheduledStepTable,
-			Columns: []string{agenttask.AgentTaskToProvisioningScheduledStepColumn},
+			Table:   agenttask.ProvisioningScheduledStepTable,
+			Columns: []string{agenttask.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -934,12 +934,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if atuo.mutation.AgentTaskToProvisionedHostCleared() {
+	if atuo.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisionedHostTable,
-			Columns: []string{agenttask.AgentTaskToProvisionedHostColumn},
+			Table:   agenttask.ProvisionedHostTable,
+			Columns: []string{agenttask.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -950,12 +950,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atuo.mutation.AgentTaskToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := atuo.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   agenttask.AgentTaskToProvisionedHostTable,
-			Columns: []string{agenttask.AgentTaskToProvisionedHostColumn},
+			Table:   agenttask.ProvisionedHostTable,
+			Columns: []string{agenttask.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -969,12 +969,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if atuo.mutation.AgentTaskToAdhocPlanCleared() {
+	if atuo.mutation.AdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AgentTaskToAdhocPlanTable,
-			Columns: []string{agenttask.AgentTaskToAdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -985,12 +985,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atuo.mutation.RemovedAgentTaskToAdhocPlanIDs(); len(nodes) > 0 && !atuo.mutation.AgentTaskToAdhocPlanCleared() {
+	if nodes := atuo.mutation.RemovedAdhocPlansIDs(); len(nodes) > 0 && !atuo.mutation.AdhocPlansCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AgentTaskToAdhocPlanTable,
-			Columns: []string{agenttask.AgentTaskToAdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1004,12 +1004,12 @@ func (atuo *AgentTaskUpdateOne) sqlSave(ctx context.Context) (_node *AgentTask, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atuo.mutation.AgentTaskToAdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := atuo.mutation.AdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   agenttask.AgentTaskToAdhocPlanTable,
-			Columns: []string{agenttask.AgentTaskToAdhocPlanColumn},
+			Table:   agenttask.AdhocPlansTable,
+			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

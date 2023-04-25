@@ -19,116 +19,116 @@ const (
 	FieldVars = "vars"
 	// FieldCompletedPlan holds the string denoting the completed_plan field in the database.
 	FieldCompletedPlan = "completed_plan"
-	// EdgeBuildToStatus holds the string denoting the buildtostatus edge name in mutations.
-	EdgeBuildToStatus = "BuildToStatus"
-	// EdgeBuildToEnvironment holds the string denoting the buildtoenvironment edge name in mutations.
-	EdgeBuildToEnvironment = "BuildToEnvironment"
-	// EdgeBuildToCompetition holds the string denoting the buildtocompetition edge name in mutations.
-	EdgeBuildToCompetition = "BuildToCompetition"
-	// EdgeBuildToLatestBuildCommit holds the string denoting the buildtolatestbuildcommit edge name in mutations.
-	EdgeBuildToLatestBuildCommit = "BuildToLatestBuildCommit"
-	// EdgeBuildToRepoCommit holds the string denoting the buildtorepocommit edge name in mutations.
-	EdgeBuildToRepoCommit = "BuildToRepoCommit"
-	// EdgeBuildToProvisionedNetwork holds the string denoting the buildtoprovisionednetwork edge name in mutations.
-	EdgeBuildToProvisionedNetwork = "BuildToProvisionedNetwork"
-	// EdgeBuildToTeam holds the string denoting the buildtoteam edge name in mutations.
-	EdgeBuildToTeam = "BuildToTeam"
-	// EdgeBuildToPlan holds the string denoting the buildtoplan edge name in mutations.
-	EdgeBuildToPlan = "BuildToPlan"
-	// EdgeBuildToBuildCommits holds the string denoting the buildtobuildcommits edge name in mutations.
-	EdgeBuildToBuildCommits = "BuildToBuildCommits"
-	// EdgeBuildToAdhocPlans holds the string denoting the buildtoadhocplans edge name in mutations.
-	EdgeBuildToAdhocPlans = "BuildToAdhocPlans"
-	// EdgeBuildToAgentStatuses holds the string denoting the buildtoagentstatuses edge name in mutations.
-	EdgeBuildToAgentStatuses = "BuildToAgentStatuses"
-	// EdgeBuildToServerTasks holds the string denoting the buildtoservertasks edge name in mutations.
-	EdgeBuildToServerTasks = "BuildToServerTasks"
+	// EdgeStatus holds the string denoting the status edge name in mutations.
+	EdgeStatus = "Status"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
+	// EdgeCompetition holds the string denoting the competition edge name in mutations.
+	EdgeCompetition = "Competition"
+	// EdgeLatestBuildCommit holds the string denoting the latestbuildcommit edge name in mutations.
+	EdgeLatestBuildCommit = "LatestBuildCommit"
+	// EdgeRepoCommit holds the string denoting the repocommit edge name in mutations.
+	EdgeRepoCommit = "RepoCommit"
+	// EdgeProvisionedNetworks holds the string denoting the provisionednetworks edge name in mutations.
+	EdgeProvisionedNetworks = "ProvisionedNetworks"
+	// EdgeTeams holds the string denoting the teams edge name in mutations.
+	EdgeTeams = "Teams"
+	// EdgePlans holds the string denoting the plans edge name in mutations.
+	EdgePlans = "Plans"
+	// EdgeBuildCommits holds the string denoting the buildcommits edge name in mutations.
+	EdgeBuildCommits = "BuildCommits"
+	// EdgeAdhocPlans holds the string denoting the adhocplans edge name in mutations.
+	EdgeAdhocPlans = "AdhocPlans"
+	// EdgeAgentStatuses holds the string denoting the agentstatuses edge name in mutations.
+	EdgeAgentStatuses = "AgentStatuses"
+	// EdgeServerTasks holds the string denoting the servertasks edge name in mutations.
+	EdgeServerTasks = "ServerTasks"
 	// Table holds the table name of the build in the database.
 	Table = "builds"
-	// BuildToStatusTable is the table that holds the BuildToStatus relation/edge.
-	BuildToStatusTable = "status"
-	// BuildToStatusInverseTable is the table name for the Status entity.
+	// StatusTable is the table that holds the Status relation/edge.
+	StatusTable = "status"
+	// StatusInverseTable is the table name for the Status entity.
 	// It exists in this package in order to avoid circular dependency with the "status" package.
-	BuildToStatusInverseTable = "status"
-	// BuildToStatusColumn is the table column denoting the BuildToStatus relation/edge.
-	BuildToStatusColumn = "build_build_to_status"
-	// BuildToEnvironmentTable is the table that holds the BuildToEnvironment relation/edge.
-	BuildToEnvironmentTable = "builds"
-	// BuildToEnvironmentInverseTable is the table name for the Environment entity.
+	StatusInverseTable = "status"
+	// StatusColumn is the table column denoting the Status relation/edge.
+	StatusColumn = "build_status"
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "builds"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	BuildToEnvironmentInverseTable = "environments"
-	// BuildToEnvironmentColumn is the table column denoting the BuildToEnvironment relation/edge.
-	BuildToEnvironmentColumn = "build_build_to_environment"
-	// BuildToCompetitionTable is the table that holds the BuildToCompetition relation/edge.
-	BuildToCompetitionTable = "builds"
-	// BuildToCompetitionInverseTable is the table name for the Competition entity.
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "build_environment"
+	// CompetitionTable is the table that holds the Competition relation/edge.
+	CompetitionTable = "builds"
+	// CompetitionInverseTable is the table name for the Competition entity.
 	// It exists in this package in order to avoid circular dependency with the "competition" package.
-	BuildToCompetitionInverseTable = "competitions"
-	// BuildToCompetitionColumn is the table column denoting the BuildToCompetition relation/edge.
-	BuildToCompetitionColumn = "build_build_to_competition"
-	// BuildToLatestBuildCommitTable is the table that holds the BuildToLatestBuildCommit relation/edge.
-	BuildToLatestBuildCommitTable = "builds"
-	// BuildToLatestBuildCommitInverseTable is the table name for the BuildCommit entity.
+	CompetitionInverseTable = "competitions"
+	// CompetitionColumn is the table column denoting the Competition relation/edge.
+	CompetitionColumn = "build_competition"
+	// LatestBuildCommitTable is the table that holds the LatestBuildCommit relation/edge.
+	LatestBuildCommitTable = "builds"
+	// LatestBuildCommitInverseTable is the table name for the BuildCommit entity.
 	// It exists in this package in order to avoid circular dependency with the "buildcommit" package.
-	BuildToLatestBuildCommitInverseTable = "build_commits"
-	// BuildToLatestBuildCommitColumn is the table column denoting the BuildToLatestBuildCommit relation/edge.
-	BuildToLatestBuildCommitColumn = "build_build_to_latest_build_commit"
-	// BuildToRepoCommitTable is the table that holds the BuildToRepoCommit relation/edge.
-	BuildToRepoCommitTable = "builds"
-	// BuildToRepoCommitInverseTable is the table name for the RepoCommit entity.
+	LatestBuildCommitInverseTable = "build_commits"
+	// LatestBuildCommitColumn is the table column denoting the LatestBuildCommit relation/edge.
+	LatestBuildCommitColumn = "build_latest_build_commit"
+	// RepoCommitTable is the table that holds the RepoCommit relation/edge.
+	RepoCommitTable = "builds"
+	// RepoCommitInverseTable is the table name for the RepoCommit entity.
 	// It exists in this package in order to avoid circular dependency with the "repocommit" package.
-	BuildToRepoCommitInverseTable = "repo_commits"
-	// BuildToRepoCommitColumn is the table column denoting the BuildToRepoCommit relation/edge.
-	BuildToRepoCommitColumn = "build_build_to_repo_commit"
-	// BuildToProvisionedNetworkTable is the table that holds the BuildToProvisionedNetwork relation/edge.
-	BuildToProvisionedNetworkTable = "provisioned_networks"
-	// BuildToProvisionedNetworkInverseTable is the table name for the ProvisionedNetwork entity.
+	RepoCommitInverseTable = "repo_commits"
+	// RepoCommitColumn is the table column denoting the RepoCommit relation/edge.
+	RepoCommitColumn = "build_repo_commit"
+	// ProvisionedNetworksTable is the table that holds the ProvisionedNetworks relation/edge.
+	ProvisionedNetworksTable = "provisioned_networks"
+	// ProvisionedNetworksInverseTable is the table name for the ProvisionedNetwork entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionednetwork" package.
-	BuildToProvisionedNetworkInverseTable = "provisioned_networks"
-	// BuildToProvisionedNetworkColumn is the table column denoting the BuildToProvisionedNetwork relation/edge.
-	BuildToProvisionedNetworkColumn = "provisioned_network_provisioned_network_to_build"
-	// BuildToTeamTable is the table that holds the BuildToTeam relation/edge.
-	BuildToTeamTable = "teams"
-	// BuildToTeamInverseTable is the table name for the Team entity.
+	ProvisionedNetworksInverseTable = "provisioned_networks"
+	// ProvisionedNetworksColumn is the table column denoting the ProvisionedNetworks relation/edge.
+	ProvisionedNetworksColumn = "provisioned_network_build"
+	// TeamsTable is the table that holds the Teams relation/edge.
+	TeamsTable = "teams"
+	// TeamsInverseTable is the table name for the Team entity.
 	// It exists in this package in order to avoid circular dependency with the "team" package.
-	BuildToTeamInverseTable = "teams"
-	// BuildToTeamColumn is the table column denoting the BuildToTeam relation/edge.
-	BuildToTeamColumn = "team_team_to_build"
-	// BuildToPlanTable is the table that holds the BuildToPlan relation/edge.
-	BuildToPlanTable = "plans"
-	// BuildToPlanInverseTable is the table name for the Plan entity.
+	TeamsInverseTable = "teams"
+	// TeamsColumn is the table column denoting the Teams relation/edge.
+	TeamsColumn = "team_build"
+	// PlansTable is the table that holds the Plans relation/edge.
+	PlansTable = "plans"
+	// PlansInverseTable is the table name for the Plan entity.
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
-	BuildToPlanInverseTable = "plans"
-	// BuildToPlanColumn is the table column denoting the BuildToPlan relation/edge.
-	BuildToPlanColumn = "plan_plan_to_build"
-	// BuildToBuildCommitsTable is the table that holds the BuildToBuildCommits relation/edge.
-	BuildToBuildCommitsTable = "build_commits"
-	// BuildToBuildCommitsInverseTable is the table name for the BuildCommit entity.
+	PlansInverseTable = "plans"
+	// PlansColumn is the table column denoting the Plans relation/edge.
+	PlansColumn = "plan_build"
+	// BuildCommitsTable is the table that holds the BuildCommits relation/edge.
+	BuildCommitsTable = "build_commits"
+	// BuildCommitsInverseTable is the table name for the BuildCommit entity.
 	// It exists in this package in order to avoid circular dependency with the "buildcommit" package.
-	BuildToBuildCommitsInverseTable = "build_commits"
-	// BuildToBuildCommitsColumn is the table column denoting the BuildToBuildCommits relation/edge.
-	BuildToBuildCommitsColumn = "build_commit_build_commit_to_build"
-	// BuildToAdhocPlansTable is the table that holds the BuildToAdhocPlans relation/edge.
-	BuildToAdhocPlansTable = "adhoc_plans"
-	// BuildToAdhocPlansInverseTable is the table name for the AdhocPlan entity.
+	BuildCommitsInverseTable = "build_commits"
+	// BuildCommitsColumn is the table column denoting the BuildCommits relation/edge.
+	BuildCommitsColumn = "build_commit_build"
+	// AdhocPlansTable is the table that holds the AdhocPlans relation/edge.
+	AdhocPlansTable = "adhoc_plans"
+	// AdhocPlansInverseTable is the table name for the AdhocPlan entity.
 	// It exists in this package in order to avoid circular dependency with the "adhocplan" package.
-	BuildToAdhocPlansInverseTable = "adhoc_plans"
-	// BuildToAdhocPlansColumn is the table column denoting the BuildToAdhocPlans relation/edge.
-	BuildToAdhocPlansColumn = "adhoc_plan_adhoc_plan_to_build"
-	// BuildToAgentStatusesTable is the table that holds the BuildToAgentStatuses relation/edge.
-	BuildToAgentStatusesTable = "agent_status"
-	// BuildToAgentStatusesInverseTable is the table name for the AgentStatus entity.
+	AdhocPlansInverseTable = "adhoc_plans"
+	// AdhocPlansColumn is the table column denoting the AdhocPlans relation/edge.
+	AdhocPlansColumn = "adhoc_plan_build"
+	// AgentStatusesTable is the table that holds the AgentStatuses relation/edge.
+	AgentStatusesTable = "agent_status"
+	// AgentStatusesInverseTable is the table name for the AgentStatus entity.
 	// It exists in this package in order to avoid circular dependency with the "agentstatus" package.
-	BuildToAgentStatusesInverseTable = "agent_status"
-	// BuildToAgentStatusesColumn is the table column denoting the BuildToAgentStatuses relation/edge.
-	BuildToAgentStatusesColumn = "agent_status_agent_status_to_build"
-	// BuildToServerTasksTable is the table that holds the BuildToServerTasks relation/edge.
-	BuildToServerTasksTable = "server_tasks"
-	// BuildToServerTasksInverseTable is the table name for the ServerTask entity.
+	AgentStatusesInverseTable = "agent_status"
+	// AgentStatusesColumn is the table column denoting the AgentStatuses relation/edge.
+	AgentStatusesColumn = "agent_status_build"
+	// ServerTasksTable is the table that holds the ServerTasks relation/edge.
+	ServerTasksTable = "server_tasks"
+	// ServerTasksInverseTable is the table name for the ServerTask entity.
 	// It exists in this package in order to avoid circular dependency with the "servertask" package.
-	BuildToServerTasksInverseTable = "server_tasks"
-	// BuildToServerTasksColumn is the table column denoting the BuildToServerTasks relation/edge.
-	BuildToServerTasksColumn = "server_task_server_task_to_build"
+	ServerTasksInverseTable = "server_tasks"
+	// ServerTasksColumn is the table column denoting the ServerTasks relation/edge.
+	ServerTasksColumn = "server_task_build"
 )
 
 // Columns holds all SQL columns for build fields.
@@ -143,10 +143,10 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "builds"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"build_build_to_environment",
-	"build_build_to_competition",
-	"build_build_to_latest_build_commit",
-	"build_build_to_repo_commit",
+	"build_environment",
+	"build_competition",
+	"build_latest_build_commit",
+	"build_repo_commit",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

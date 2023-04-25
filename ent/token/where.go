@@ -257,25 +257,25 @@ func ExpireAtLTE(v int64) predicate.Token {
 	})
 }
 
-// HasTokenToAuthUser applies the HasEdge predicate on the "TokenToAuthUser" edge.
-func HasTokenToAuthUser() predicate.Token {
+// HasAuthUser applies the HasEdge predicate on the "AuthUser" edge.
+func HasAuthUser() predicate.Token {
 	return predicate.Token(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(TokenToAuthUserTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, TokenToAuthUserTable, TokenToAuthUserColumn),
+			sqlgraph.To(AuthUserTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, AuthUserTable, AuthUserColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasTokenToAuthUserWith applies the HasEdge predicate on the "TokenToAuthUser" edge with a given conditions (other predicates).
-func HasTokenToAuthUserWith(preds ...predicate.AuthUser) predicate.Token {
+// HasAuthUserWith applies the HasEdge predicate on the "AuthUser" edge with a given conditions (other predicates).
+func HasAuthUserWith(preds ...predicate.AuthUser) predicate.Token {
 	return predicate.Token(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(TokenToAuthUserInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, TokenToAuthUserTable, TokenToAuthUserColumn),
+			sqlgraph.To(AuthUserInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, AuthUserTable, AuthUserColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

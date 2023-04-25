@@ -48,7 +48,7 @@ type ProvisioningScheduledStepQuery struct {
 	withFileDownload      *FileDownloadQuery
 	withFileExtract       *FileExtractQuery
 	withAnsible           *AnsibleQuery
-	withAgentTask         *AgentTaskQuery
+	withAgentTasks        *AgentTaskQuery
 	withPlan              *PlanQuery
 	withGinFileMiddleware *GinFileMiddlewareQuery
 	withFKs               bool
@@ -308,8 +308,8 @@ func (pssq *ProvisioningScheduledStepQuery) QueryAnsible() *AnsibleQuery {
 	return query
 }
 
-// QueryAgentTask chains the current query on the "AgentTask" edge.
-func (pssq *ProvisioningScheduledStepQuery) QueryAgentTask() *AgentTaskQuery {
+// QueryAgentTasks chains the current query on the "AgentTasks" edge.
+func (pssq *ProvisioningScheduledStepQuery) QueryAgentTasks() *AgentTaskQuery {
 	query := &AgentTaskQuery{config: pssq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pssq.prepareQuery(ctx); err != nil {
@@ -322,7 +322,7 @@ func (pssq *ProvisioningScheduledStepQuery) QueryAgentTask() *AgentTaskQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID, selector),
 			sqlgraph.To(agenttask.Table, agenttask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisioningscheduledstep.AgentTaskTable, provisioningscheduledstep.AgentTaskColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisioningscheduledstep.AgentTasksTable, provisioningscheduledstep.AgentTasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pssq.driver.Dialect(), step)
 		return fromU, nil
@@ -565,7 +565,7 @@ func (pssq *ProvisioningScheduledStepQuery) Clone() *ProvisioningScheduledStepQu
 		withFileDownload:      pssq.withFileDownload.Clone(),
 		withFileExtract:       pssq.withFileExtract.Clone(),
 		withAnsible:           pssq.withAnsible.Clone(),
-		withAgentTask:         pssq.withAgentTask.Clone(),
+		withAgentTasks:        pssq.withAgentTasks.Clone(),
 		withPlan:              pssq.withPlan.Clone(),
 		withGinFileMiddleware: pssq.withGinFileMiddleware.Clone(),
 		// clone intermediate query.
@@ -685,14 +685,14 @@ func (pssq *ProvisioningScheduledStepQuery) WithAnsible(opts ...func(*AnsibleQue
 	return pssq
 }
 
-// WithAgentTask tells the query-builder to eager-load the nodes that are connected to
-// the "AgentTask" edge. The optional arguments are used to configure the query builder of the edge.
-func (pssq *ProvisioningScheduledStepQuery) WithAgentTask(opts ...func(*AgentTaskQuery)) *ProvisioningScheduledStepQuery {
+// WithAgentTasks tells the query-builder to eager-load the nodes that are connected to
+// the "AgentTasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (pssq *ProvisioningScheduledStepQuery) WithAgentTasks(opts ...func(*AgentTaskQuery)) *ProvisioningScheduledStepQuery {
 	query := &AgentTaskQuery{config: pssq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pssq.withAgentTask = query
+	pssq.withAgentTasks = query
 	return pssq
 }
 
@@ -798,12 +798,12 @@ func (pssq *ProvisioningScheduledStepQuery) sqlAll(ctx context.Context, hooks ..
 			pssq.withFileDownload != nil,
 			pssq.withFileExtract != nil,
 			pssq.withAnsible != nil,
-			pssq.withAgentTask != nil,
+			pssq.withAgentTasks != nil,
 			pssq.withPlan != nil,
 			pssq.withGinFileMiddleware != nil,
 		}
 	)
-	if pssq.withScheduledStep != nil || pssq.withProvisionedHost != nil || pssq.withScript != nil || pssq.withCommand != nil || pssq.withDNSRecord != nil || pssq.withFileDelete != nil || pssq.withFileDownload != nil || pssq.withFileExtract != nil || pssq.withAnsible != nil || pssq.withAgentTask != nil || pssq.withPlan != nil || pssq.withGinFileMiddleware != nil {
+	if pssq.withScheduledStep != nil || pssq.withProvisionedHost != nil || pssq.withScript != nil || pssq.withCommand != nil || pssq.withDNSRecord != nil || pssq.withFileDelete != nil || pssq.withFileDownload != nil || pssq.withFileExtract != nil || pssq.withAnsible != nil || pssq.withPlan != nil || pssq.withGinFileMiddleware != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -887,9 +887,10 @@ func (pssq *ProvisioningScheduledStepQuery) sqlAll(ctx context.Context, hooks ..
 			return nil, err
 		}
 	}
-	if query := pssq.withAgentTask; query != nil {
-		if err := pssq.loadAgentTask(ctx, query, nodes, nil,
-			func(n *ProvisioningScheduledStep, e *AgentTask) { n.Edges.AgentTask = e }); err != nil {
+	if query := pssq.withAgentTasks; query != nil {
+		if err := pssq.loadAgentTasks(ctx, query, nodes,
+			func(n *ProvisioningScheduledStep) { n.Edges.AgentTasks = []*AgentTask{} },
+			func(n *ProvisioningScheduledStep, e *AgentTask) { n.Edges.AgentTasks = append(n.Edges.AgentTasks, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1197,32 +1198,34 @@ func (pssq *ProvisioningScheduledStepQuery) loadAnsible(ctx context.Context, que
 	}
 	return nil
 }
-func (pssq *ProvisioningScheduledStepQuery) loadAgentTask(ctx context.Context, query *AgentTaskQuery, nodes []*ProvisioningScheduledStep, init func(*ProvisioningScheduledStep), assign func(*ProvisioningScheduledStep, *AgentTask)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*ProvisioningScheduledStep)
+func (pssq *ProvisioningScheduledStepQuery) loadAgentTasks(ctx context.Context, query *AgentTaskQuery, nodes []*ProvisioningScheduledStep, init func(*ProvisioningScheduledStep), assign func(*ProvisioningScheduledStep, *AgentTask)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*ProvisioningScheduledStep)
 	for i := range nodes {
-		if nodes[i].agent_task_agent_task_to_provisioning_scheduled_step == nil {
-			continue
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
 		}
-		fk := *nodes[i].agent_task_agent_task_to_provisioning_scheduled_step
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.Where(agenttask.IDIn(ids...))
+	query.withFKs = true
+	query.Where(predicate.AgentTask(func(s *sql.Selector) {
+		s.Where(sql.InValues(provisioningscheduledstep.AgentTasksColumn, fks...))
+	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
+		fk := n.agent_task_provisioning_scheduled_step
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "agent_task_provisioning_scheduled_step" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_provisioning_scheduled_step" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_task_provisioning_scheduled_step" returned %v for node %v`, *fk, n.ID)
 		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
+		assign(node, n)
 	}
 	return nil
 }
@@ -1230,10 +1233,10 @@ func (pssq *ProvisioningScheduledStepQuery) loadPlan(ctx context.Context, query 
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningScheduledStep)
 	for i := range nodes {
-		if nodes[i].plan_plan_to_provisioning_scheduled_step == nil {
+		if nodes[i].plan_provisioning_scheduled_step == nil {
 			continue
 		}
-		fk := *nodes[i].plan_plan_to_provisioning_scheduled_step
+		fk := *nodes[i].plan_provisioning_scheduled_step
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1247,7 +1250,7 @@ func (pssq *ProvisioningScheduledStepQuery) loadPlan(ctx context.Context, query 
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_provisioning_scheduled_step" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_provisioning_scheduled_step" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -1259,10 +1262,10 @@ func (pssq *ProvisioningScheduledStepQuery) loadGinFileMiddleware(ctx context.Co
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisioningScheduledStep)
 	for i := range nodes {
-		if nodes[i].gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step == nil {
+		if nodes[i].gin_file_middleware_provisioning_scheduled_step == nil {
 			continue
 		}
-		fk := *nodes[i].gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step
+		fk := *nodes[i].gin_file_middleware_provisioning_scheduled_step
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1276,7 +1279,7 @@ func (pssq *ProvisioningScheduledStepQuery) loadGinFileMiddleware(ctx context.Co
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_provisioning_scheduled_step" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

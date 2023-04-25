@@ -22,6 +22,7 @@ import (
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
+	"github.com/gen0cide/laforge/ent/migrate"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/graphql/auth"
@@ -229,7 +230,11 @@ func main() {
 	defer client.Close()
 
 	// Run the auto migration tool.
-	if err := client.Schema.Create(ctx); err != nil {
+	if err := client.Schema.Create(
+		ctx,
+		migrate.WithDropIndex(true),
+		migrate.WithDropColumn(true),
+	); err != nil {
 		logrus.Fatalf("failed creating schema resources: %v", err)
 	}
 
@@ -248,7 +253,7 @@ func main() {
 
 	// Fail all Server Tasks that got interrupted
 	go func(client *ent.Client, ctx context.Context) {
-		interruptedServerTasks, err := client.ServerTask.Query().Where(servertask.HasServerTaskToStatusWith(status.StateEQ(status.StateINPROGRESS))).All(ctx)
+		interruptedServerTasks, err := client.ServerTask.Query().Where(servertask.HasStatusWith(status.StateEQ(status.StateINPROGRESS))).All(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
 				logrus.Info("no interrupted server tasks found.")
@@ -258,7 +263,7 @@ func main() {
 			return
 		}
 		for _, task := range interruptedServerTasks {
-			entStatus, err := task.QueryServerTaskToStatus().Only(ctx)
+			entStatus, err := task.QueryStatus().Only(ctx)
 			if err != nil {
 				logrus.WithFields(logrus.Fields{
 					"taskId": task.ID,
@@ -279,7 +284,7 @@ func main() {
 				}).Errorf("error while setting FAILED status on server task: %v", err)
 				continue
 			}
-			entBuildCommit, _ := task.QueryServerTaskToBuildCommit().Only(ctx)
+			entBuildCommit, _ := task.QueryBuildCommit().Only(ctx)
 			if entBuildCommit != nil && entBuildCommit.State == buildcommit.StateINPROGRESS {
 				err := entBuildCommit.Update().SetState(buildcommit.StateCANCELLED).Exec(ctx)
 				if err != nil {

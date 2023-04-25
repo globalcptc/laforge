@@ -4,7 +4,7 @@
     <h4 class="m-0">&nbsp;{{ isAgentStale() ? (!data.agentStatus ? 'No Connection' : 'Connection Lost') : 'Connected' }}</h4>
   </div>
   <div class="flex-fill d-flex align-items-center justify-content-center">
-    <h4 class="host-name m-0">{{ data.provisionedHost.ProvisionedHostToHost.hostname }}</h4>
+    <h4 class="host-name m-0">{{ data.provisionedHost.Host.hostname }}</h4>
   </div>
   <div class="flex-fill d-flex align-items-center justify-content-end">
     <button mat-icon-button color="basic" aria-label="Close" (click)="onClose()">
@@ -85,72 +85,60 @@
   </div>
   <div class="col-6">
     <p class="detail-title"><b>Host ID</b></p>
-    <p class="detail-value">{{ data.provisionedHost.ProvisionedHostToHost.id }}</p>
+    <p class="detail-value">{{ data.provisionedHost.Host.id }}</p>
   </div>
   <div class="col-6">
     <p class="detail-title"><b>OS</b></p>
-    <p class="detail-value">{{ data.provisionedHost.ProvisionedHostToHost.OS }}</p>
+    <p class="detail-value">{{ data.provisionedHost.Host.OS }}</p>
   </div>
   <div class="col-6">
     <p class="detail-title"><b>Allow MAC Changes?</b></p>
-    <p class="detail-value">{{ data.provisionedHost.ProvisionedHostToHost.allow_mac_changes ? 'yes' : 'no' }}</p>
+    <p class="detail-value">{{ data.provisionedHost.Host.allowMacChanges ? 'yes' : 'no' }}</p>
   </div>
   <div class="col-6">
     <p class="detail-title"><b>Exposed TCP Ports</b></p>
     <p class="detail-value">
-      {{
-        data.provisionedHost.ProvisionedHostToHost.exposed_tcp_ports.length > 0
-          ? data.provisionedHost.ProvisionedHostToHost.exposed_tcp_ports.join(', ')
-          : 'N/A'
-      }}
+      {{ data.provisionedHost.Host.exposedTcpPorts.length > 0 ? data.provisionedHost.Host.exposedTcpPorts.join(', ') : 'N/A' }}
     </p>
   </div>
   <div class="col-6">
     <p class="detail-title"><b>Exposed UDP Ports</b></p>
     <p class="detail-value">
-      {{
-        data.provisionedHost.ProvisionedHostToHost.exposed_udp_ports.length > 0
-          ? data.provisionedHost.ProvisionedHostToHost.exposed_udp_ports.join(', ')
-          : 'N/A'
-      }}
+      {{ data.provisionedHost.Host.exposedUdpPorts.length > 0 ? data.provisionedHost.Host.exposedUdpPorts.join(', ') : 'N/A' }}
     </p>
   </div>
   <div class="col-6">
     <p class="detail-title"><b>User Groups</b></p>
     <p class="detail-value">
-      {{
-        data.provisionedHost.ProvisionedHostToHost.user_groups.length > 0
-          ? data.provisionedHost.ProvisionedHostToHost.user_groups.join(', ')
-          : 'N/A'
-      }}
+      {{ data.provisionedHost.Host.userGroups.length > 0 ? data.provisionedHost.Host.userGroups.join(', ') : 'N/A' }}
     </p>
   </div>
   <div class="col-6">
     <p class="detail-title"><b>Override Password</b></p>
-    <p class="detail-value">{{ data.provisionedHost.ProvisionedHostToHost.override_password }}</p>
+    <p class="detail-value">{{ data.provisionedHost.Host.overridePassword }}</p>
   </div>
   <div class="col-6">
     <p class="detail-title"><b>Ip Address</b></p>
-    <p class="detail-value">{{ data.provisionedHost.subnet_ip }}</p>
+    <p class="detail-value">{{ data.provisionedHost.subnetIp }}</p>
   </div>
   <!-- <div class="col-6">
     <p class="detail-title"><b>Maintainer</b></p>
     <p class="detail-value">
-      {{ data.provisionedHost.ProvisionedHostToHost.maintainer.name }} <{{ data.provisionedHost.ProvisionedHostToHost.maintainer.email }}>
+      {{ data.provisionedHost.Host.maintainer.name }} <{{ data.provisionedHost.Host.maintainer.email }}>
     </p>
   </div> -->
 </div>
 <div class="row">
   <div class="col-12">
     <p class="detail-title"><b>Vars</b></p>
-    <mat-table [dataSource]="data.provisionedHost.ProvisionedHostToHost.vars" class="bg-gray-100">
+    <mat-table [dataSource]="data.provisionedHost.Host.vars" class="bg-gray-100">
       <ng-container matColumnDef="key">
-        <mat-header-cell *matHeaderCellDef> Key </mat-header-cell>
-        <mat-cell *matCellDef="let varMap"> {{ varMap.key }} </mat-cell>
+        <mat-header-cell *matHeaderCellDef>Key</mat-header-cell>
+        <mat-cell *matCellDef="let varMap">{{ varMap.key }}</mat-cell>
       </ng-container>
       <ng-container matColumnDef="value">
-        <mat-header-cell *matHeaderCellDef> Value </mat-header-cell>
-        <mat-cell *matCellDef="let varMap"> {{ varMap.value }} </mat-cell>
+        <mat-header-cell *matHeaderCellDef>Value</mat-header-cell>
+        <mat-cell *matCellDef="let varMap">{{ varMap.value }}</mat-cell>
       </ng-container>
       <mat-header-row *matHeaderRowDef="varsColumns"></mat-header-row>
       <mat-row *matRowDef="let row; columns: varsColumns"></mat-row>
@@ -158,14 +146,14 @@
   </div>
   <div class="col-12">
     <p class="detail-title"><b>Tags</b></p>
-    <mat-table [dataSource]="data.provisionedHost.ProvisionedHostToHost.tags" class="bg-gray-100">
+    <mat-table [dataSource]="data.provisionedHost.Host.tags" class="bg-gray-100">
       <ng-container matColumnDef="name">
-        <mat-header-cell *matHeaderCellDef> Key </mat-header-cell>
-        <mat-cell *matCellDef="let tag"> {{ tag.name }} </mat-cell>
+        <mat-header-cell *matHeaderCellDef>Key</mat-header-cell>
+        <mat-cell *matCellDef="let tag">{{ tag.name }}</mat-cell>
       </ng-container>
       <ng-container matColumnDef="description">
-        <mat-header-cell *matHeaderCellDef> Value </mat-header-cell>
-        <mat-cell *matCellDef="let tag"> {{ tag.description }} </mat-cell>
+        <mat-header-cell *matHeaderCellDef>Value</mat-header-cell>
+        <mat-cell *matCellDef="let tag">{{ tag.description }}</mat-cell>
       </ng-container>
       <mat-header-row *matHeaderRowDef="tagsColumns"></mat-header-row>
       <mat-row *matRowDef="let row; columns: tagsColumns"></mat-row>
@@ -174,12 +162,12 @@
   <div class="col-12">
     <p class="detail-title"><b>Steps</b></p>
     <app-step
-      *ngFor="let step of data.provisionedHost.ProvisionedHostToProvisioningStep | sortBy: 'asc':'step_number'; let i = index"
+      *ngFor="let step of data.provisionedHost.ProvisioningSteps | sortBy: 'asc':'stepNumber'; let i = index"
       [stepNumber]="i + 1"
       [provisioningStep]="step"
       [showDetail]="false"
       [style]="'compact'"
     ></app-step>
-    <!-- <i class="fas fa-2x fa-sync fa-spin" *ngIf="data.provisionedHost.ProvisionedHostToProvisioningStep == null"></i> -->
+    <!-- <i class="fas fa-2x fa-sync fa-spin" *ngIf="data.provisionedHost.ProvisioningStep == null"></i> -->
   </div>
 </div>

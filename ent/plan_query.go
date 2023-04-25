@@ -27,23 +27,23 @@ import (
 // PlanQuery is the builder for querying Plan entities.
 type PlanQuery struct {
 	config
-	limit                               *int
-	offset                              *int
-	unique                              *bool
-	order                               []OrderFunc
-	fields                              []string
-	predicates                          []predicate.Plan
-	withPrevPlan                        *PlanQuery
-	withNextPlan                        *PlanQuery
-	withPlanToBuild                     *BuildQuery
-	withPlanToTeam                      *TeamQuery
-	withPlanToProvisionedNetwork        *ProvisionedNetworkQuery
-	withPlanToProvisionedHost           *ProvisionedHostQuery
-	withPlanToProvisioningStep          *ProvisioningStepQuery
-	withPlanToProvisioningScheduledStep *ProvisioningScheduledStepQuery
-	withPlanToStatus                    *StatusQuery
-	withPlanToPlanDiffs                 *PlanDiffQuery
-	withFKs                             bool
+	limit                         *int
+	offset                        *int
+	unique                        *bool
+	order                         []OrderFunc
+	fields                        []string
+	predicates                    []predicate.Plan
+	withPrevPlans                 *PlanQuery
+	withNextPlans                 *PlanQuery
+	withBuild                     *BuildQuery
+	withTeam                      *TeamQuery
+	withProvisionedNetwork        *ProvisionedNetworkQuery
+	withProvisionedHost           *ProvisionedHostQuery
+	withProvisioningStep          *ProvisioningStepQuery
+	withProvisioningScheduledStep *ProvisioningScheduledStepQuery
+	withStatus                    *StatusQuery
+	withPlanDiffs                 *PlanDiffQuery
+	withFKs                       bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -80,8 +80,8 @@ func (pq *PlanQuery) Order(o ...OrderFunc) *PlanQuery {
 	return pq
 }
 
-// QueryPrevPlan chains the current query on the "PrevPlan" edge.
-func (pq *PlanQuery) QueryPrevPlan() *PlanQuery {
+// QueryPrevPlans chains the current query on the "PrevPlans" edge.
+func (pq *PlanQuery) QueryPrevPlans() *PlanQuery {
 	query := &PlanQuery{config: pq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pq.prepareQuery(ctx); err != nil {
@@ -94,7 +94,7 @@ func (pq *PlanQuery) QueryPrevPlan() *PlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plan.Table, plan.FieldID, selector),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, plan.PrevPlanTable, plan.PrevPlanPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, true, plan.PrevPlansTable, plan.PrevPlansPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -102,8 +102,8 @@ func (pq *PlanQuery) QueryPrevPlan() *PlanQuery {
 	return query
 }
 
-// QueryNextPlan chains the current query on the "NextPlan" edge.
-func (pq *PlanQuery) QueryNextPlan() *PlanQuery {
+// QueryNextPlans chains the current query on the "NextPlans" edge.
+func (pq *PlanQuery) QueryNextPlans() *PlanQuery {
 	query := &PlanQuery{config: pq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pq.prepareQuery(ctx); err != nil {
@@ -116,7 +116,7 @@ func (pq *PlanQuery) QueryNextPlan() *PlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plan.Table, plan.FieldID, selector),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, plan.NextPlanTable, plan.NextPlanPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, plan.NextPlansTable, plan.NextPlansPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -124,8 +124,8 @@ func (pq *PlanQuery) QueryNextPlan() *PlanQuery {
 	return query
 }
 
-// QueryPlanToBuild chains the current query on the "PlanToBuild" edge.
-func (pq *PlanQuery) QueryPlanToBuild() *BuildQuery {
+// QueryBuild chains the current query on the "Build" edge.
+func (pq *PlanQuery) QueryBuild() *BuildQuery {
 	query := &BuildQuery{config: pq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pq.prepareQuery(ctx); err != nil {
@@ -138,7 +138,7 @@ func (pq *PlanQuery) QueryPlanToBuild() *BuildQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plan.Table, plan.FieldID, selector),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, plan.PlanToBuildTable, plan.PlanToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, plan.BuildTable, plan.BuildColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -146,8 +146,8 @@ func (pq *PlanQuery) QueryPlanToBuild() *BuildQuery {
 	return query
 }
 
-// QueryPlanToTeam chains the current query on the "PlanToTeam" edge.
-func (pq *PlanQuery) QueryPlanToTeam() *TeamQuery {
+// QueryTeam chains the current query on the "Team" edge.
+func (pq *PlanQuery) QueryTeam() *TeamQuery {
 	query := &TeamQuery{config: pq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pq.prepareQuery(ctx); err != nil {
@@ -160,7 +160,7 @@ func (pq *PlanQuery) QueryPlanToTeam() *TeamQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plan.Table, plan.FieldID, selector),
 			sqlgraph.To(team.Table, team.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, plan.PlanToTeamTable, plan.PlanToTeamColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, plan.TeamTable, plan.TeamColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -168,8 +168,8 @@ func (pq *PlanQuery) QueryPlanToTeam() *TeamQuery {
 	return query
 }
 
-// QueryPlanToProvisionedNetwork chains the current query on the "PlanToProvisionedNetwork" edge.
-func (pq *PlanQuery) QueryPlanToProvisionedNetwork() *ProvisionedNetworkQuery {
+// QueryProvisionedNetwork chains the current query on the "ProvisionedNetwork" edge.
+func (pq *PlanQuery) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
 	query := &ProvisionedNetworkQuery{config: pq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pq.prepareQuery(ctx); err != nil {
@@ -182,7 +182,7 @@ func (pq *PlanQuery) QueryPlanToProvisionedNetwork() *ProvisionedNetworkQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plan.Table, plan.FieldID, selector),
 			sqlgraph.To(provisionednetwork.Table, provisionednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, plan.PlanToProvisionedNetworkTable, plan.PlanToProvisionedNetworkColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, plan.ProvisionedNetworkTable, plan.ProvisionedNetworkColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -190,8 +190,8 @@ func (pq *PlanQuery) QueryPlanToProvisionedNetwork() *ProvisionedNetworkQuery {
 	return query
 }
 
-// QueryPlanToProvisionedHost chains the current query on the "PlanToProvisionedHost" edge.
-func (pq *PlanQuery) QueryPlanToProvisionedHost() *ProvisionedHostQuery {
+// QueryProvisionedHost chains the current query on the "ProvisionedHost" edge.
+func (pq *PlanQuery) QueryProvisionedHost() *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: pq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pq.prepareQuery(ctx); err != nil {
@@ -204,7 +204,7 @@ func (pq *PlanQuery) QueryPlanToProvisionedHost() *ProvisionedHostQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plan.Table, plan.FieldID, selector),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, plan.PlanToProvisionedHostTable, plan.PlanToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, plan.ProvisionedHostTable, plan.ProvisionedHostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -212,8 +212,8 @@ func (pq *PlanQuery) QueryPlanToProvisionedHost() *ProvisionedHostQuery {
 	return query
 }
 
-// QueryPlanToProvisioningStep chains the current query on the "PlanToProvisioningStep" edge.
-func (pq *PlanQuery) QueryPlanToProvisioningStep() *ProvisioningStepQuery {
+// QueryProvisioningStep chains the current query on the "ProvisioningStep" edge.
+func (pq *PlanQuery) QueryProvisioningStep() *ProvisioningStepQuery {
 	query := &ProvisioningStepQuery{config: pq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pq.prepareQuery(ctx); err != nil {
@@ -226,7 +226,7 @@ func (pq *PlanQuery) QueryPlanToProvisioningStep() *ProvisioningStepQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plan.Table, plan.FieldID, selector),
 			sqlgraph.To(provisioningstep.Table, provisioningstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, plan.PlanToProvisioningStepTable, plan.PlanToProvisioningStepColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, plan.ProvisioningStepTable, plan.ProvisioningStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -234,8 +234,8 @@ func (pq *PlanQuery) QueryPlanToProvisioningStep() *ProvisioningStepQuery {
 	return query
 }
 
-// QueryPlanToProvisioningScheduledStep chains the current query on the "PlanToProvisioningScheduledStep" edge.
-func (pq *PlanQuery) QueryPlanToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+// QueryProvisioningScheduledStep chains the current query on the "ProvisioningScheduledStep" edge.
+func (pq *PlanQuery) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
 	query := &ProvisioningScheduledStepQuery{config: pq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pq.prepareQuery(ctx); err != nil {
@@ -248,7 +248,7 @@ func (pq *PlanQuery) QueryPlanToProvisioningScheduledStep() *ProvisioningSchedul
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plan.Table, plan.FieldID, selector),
 			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, plan.PlanToProvisioningScheduledStepTable, plan.PlanToProvisioningScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, plan.ProvisioningScheduledStepTable, plan.ProvisioningScheduledStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -256,8 +256,8 @@ func (pq *PlanQuery) QueryPlanToProvisioningScheduledStep() *ProvisioningSchedul
 	return query
 }
 
-// QueryPlanToStatus chains the current query on the "PlanToStatus" edge.
-func (pq *PlanQuery) QueryPlanToStatus() *StatusQuery {
+// QueryStatus chains the current query on the "Status" edge.
+func (pq *PlanQuery) QueryStatus() *StatusQuery {
 	query := &StatusQuery{config: pq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pq.prepareQuery(ctx); err != nil {
@@ -270,7 +270,7 @@ func (pq *PlanQuery) QueryPlanToStatus() *StatusQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plan.Table, plan.FieldID, selector),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, plan.PlanToStatusTable, plan.PlanToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, plan.StatusTable, plan.StatusColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -278,8 +278,8 @@ func (pq *PlanQuery) QueryPlanToStatus() *StatusQuery {
 	return query
 }
 
-// QueryPlanToPlanDiffs chains the current query on the "PlanToPlanDiffs" edge.
-func (pq *PlanQuery) QueryPlanToPlanDiffs() *PlanDiffQuery {
+// QueryPlanDiffs chains the current query on the "PlanDiffs" edge.
+func (pq *PlanQuery) QueryPlanDiffs() *PlanDiffQuery {
 	query := &PlanDiffQuery{config: pq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pq.prepareQuery(ctx); err != nil {
@@ -292,7 +292,7 @@ func (pq *PlanQuery) QueryPlanToPlanDiffs() *PlanDiffQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(plan.Table, plan.FieldID, selector),
 			sqlgraph.To(plandiff.Table, plandiff.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, plan.PlanToPlanDiffsTable, plan.PlanToPlanDiffsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, plan.PlanDiffsTable, plan.PlanDiffsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -476,21 +476,21 @@ func (pq *PlanQuery) Clone() *PlanQuery {
 		return nil
 	}
 	return &PlanQuery{
-		config:                              pq.config,
-		limit:                               pq.limit,
-		offset:                              pq.offset,
-		order:                               append([]OrderFunc{}, pq.order...),
-		predicates:                          append([]predicate.Plan{}, pq.predicates...),
-		withPrevPlan:                        pq.withPrevPlan.Clone(),
-		withNextPlan:                        pq.withNextPlan.Clone(),
-		withPlanToBuild:                     pq.withPlanToBuild.Clone(),
-		withPlanToTeam:                      pq.withPlanToTeam.Clone(),
-		withPlanToProvisionedNetwork:        pq.withPlanToProvisionedNetwork.Clone(),
-		withPlanToProvisionedHost:           pq.withPlanToProvisionedHost.Clone(),
-		withPlanToProvisioningStep:          pq.withPlanToProvisioningStep.Clone(),
-		withPlanToProvisioningScheduledStep: pq.withPlanToProvisioningScheduledStep.Clone(),
-		withPlanToStatus:                    pq.withPlanToStatus.Clone(),
-		withPlanToPlanDiffs:                 pq.withPlanToPlanDiffs.Clone(),
+		config:                        pq.config,
+		limit:                         pq.limit,
+		offset:                        pq.offset,
+		order:                         append([]OrderFunc{}, pq.order...),
+		predicates:                    append([]predicate.Plan{}, pq.predicates...),
+		withPrevPlans:                 pq.withPrevPlans.Clone(),
+		withNextPlans:                 pq.withNextPlans.Clone(),
+		withBuild:                     pq.withBuild.Clone(),
+		withTeam:                      pq.withTeam.Clone(),
+		withProvisionedNetwork:        pq.withProvisionedNetwork.Clone(),
+		withProvisionedHost:           pq.withProvisionedHost.Clone(),
+		withProvisioningStep:          pq.withProvisioningStep.Clone(),
+		withProvisioningScheduledStep: pq.withProvisioningScheduledStep.Clone(),
+		withStatus:                    pq.withStatus.Clone(),
+		withPlanDiffs:                 pq.withPlanDiffs.Clone(),
 		// clone intermediate query.
 		sql:    pq.sql.Clone(),
 		path:   pq.path,
@@ -498,113 +498,113 @@ func (pq *PlanQuery) Clone() *PlanQuery {
 	}
 }
 
-// WithPrevPlan tells the query-builder to eager-load the nodes that are connected to
-// the "PrevPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (pq *PlanQuery) WithPrevPlan(opts ...func(*PlanQuery)) *PlanQuery {
+// WithPrevPlans tells the query-builder to eager-load the nodes that are connected to
+// the "PrevPlans" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PlanQuery) WithPrevPlans(opts ...func(*PlanQuery)) *PlanQuery {
 	query := &PlanQuery{config: pq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pq.withPrevPlan = query
+	pq.withPrevPlans = query
 	return pq
 }
 
-// WithNextPlan tells the query-builder to eager-load the nodes that are connected to
-// the "NextPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (pq *PlanQuery) WithNextPlan(opts ...func(*PlanQuery)) *PlanQuery {
+// WithNextPlans tells the query-builder to eager-load the nodes that are connected to
+// the "NextPlans" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PlanQuery) WithNextPlans(opts ...func(*PlanQuery)) *PlanQuery {
 	query := &PlanQuery{config: pq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pq.withNextPlan = query
+	pq.withNextPlans = query
 	return pq
 }
 
-// WithPlanToBuild tells the query-builder to eager-load the nodes that are connected to
-// the "PlanToBuild" edge. The optional arguments are used to configure the query builder of the edge.
-func (pq *PlanQuery) WithPlanToBuild(opts ...func(*BuildQuery)) *PlanQuery {
+// WithBuild tells the query-builder to eager-load the nodes that are connected to
+// the "Build" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PlanQuery) WithBuild(opts ...func(*BuildQuery)) *PlanQuery {
 	query := &BuildQuery{config: pq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pq.withPlanToBuild = query
+	pq.withBuild = query
 	return pq
 }
 
-// WithPlanToTeam tells the query-builder to eager-load the nodes that are connected to
-// the "PlanToTeam" edge. The optional arguments are used to configure the query builder of the edge.
-func (pq *PlanQuery) WithPlanToTeam(opts ...func(*TeamQuery)) *PlanQuery {
+// WithTeam tells the query-builder to eager-load the nodes that are connected to
+// the "Team" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PlanQuery) WithTeam(opts ...func(*TeamQuery)) *PlanQuery {
 	query := &TeamQuery{config: pq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pq.withPlanToTeam = query
+	pq.withTeam = query
 	return pq
 }
 
-// WithPlanToProvisionedNetwork tells the query-builder to eager-load the nodes that are connected to
-// the "PlanToProvisionedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
-func (pq *PlanQuery) WithPlanToProvisionedNetwork(opts ...func(*ProvisionedNetworkQuery)) *PlanQuery {
+// WithProvisionedNetwork tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PlanQuery) WithProvisionedNetwork(opts ...func(*ProvisionedNetworkQuery)) *PlanQuery {
 	query := &ProvisionedNetworkQuery{config: pq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pq.withPlanToProvisionedNetwork = query
+	pq.withProvisionedNetwork = query
 	return pq
 }
 
-// WithPlanToProvisionedHost tells the query-builder to eager-load the nodes that are connected to
-// the "PlanToProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
-func (pq *PlanQuery) WithPlanToProvisionedHost(opts ...func(*ProvisionedHostQuery)) *PlanQuery {
+// WithProvisionedHost tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PlanQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuery)) *PlanQuery {
 	query := &ProvisionedHostQuery{config: pq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pq.withPlanToProvisionedHost = query
+	pq.withProvisionedHost = query
 	return pq
 }
 
-// WithPlanToProvisioningStep tells the query-builder to eager-load the nodes that are connected to
-// the "PlanToProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (pq *PlanQuery) WithPlanToProvisioningStep(opts ...func(*ProvisioningStepQuery)) *PlanQuery {
+// WithProvisioningStep tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PlanQuery) WithProvisioningStep(opts ...func(*ProvisioningStepQuery)) *PlanQuery {
 	query := &ProvisioningStepQuery{config: pq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pq.withPlanToProvisioningStep = query
+	pq.withProvisioningStep = query
 	return pq
 }
 
-// WithPlanToProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
-// the "PlanToProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (pq *PlanQuery) WithPlanToProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *PlanQuery {
+// WithProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PlanQuery) WithProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *PlanQuery {
 	query := &ProvisioningScheduledStepQuery{config: pq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pq.withPlanToProvisioningScheduledStep = query
+	pq.withProvisioningScheduledStep = query
 	return pq
 }
 
-// WithPlanToStatus tells the query-builder to eager-load the nodes that are connected to
-// the "PlanToStatus" edge. The optional arguments are used to configure the query builder of the edge.
-func (pq *PlanQuery) WithPlanToStatus(opts ...func(*StatusQuery)) *PlanQuery {
+// WithStatus tells the query-builder to eager-load the nodes that are connected to
+// the "Status" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PlanQuery) WithStatus(opts ...func(*StatusQuery)) *PlanQuery {
 	query := &StatusQuery{config: pq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pq.withPlanToStatus = query
+	pq.withStatus = query
 	return pq
 }
 
-// WithPlanToPlanDiffs tells the query-builder to eager-load the nodes that are connected to
-// the "PlanToPlanDiffs" edge. The optional arguments are used to configure the query builder of the edge.
-func (pq *PlanQuery) WithPlanToPlanDiffs(opts ...func(*PlanDiffQuery)) *PlanQuery {
+// WithPlanDiffs tells the query-builder to eager-load the nodes that are connected to
+// the "PlanDiffs" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PlanQuery) WithPlanDiffs(opts ...func(*PlanDiffQuery)) *PlanQuery {
 	query := &PlanDiffQuery{config: pq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pq.withPlanToPlanDiffs = query
+	pq.withPlanDiffs = query
 	return pq
 }
 
@@ -678,19 +678,19 @@ func (pq *PlanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Plan, e
 		withFKs     = pq.withFKs
 		_spec       = pq.querySpec()
 		loadedTypes = [10]bool{
-			pq.withPrevPlan != nil,
-			pq.withNextPlan != nil,
-			pq.withPlanToBuild != nil,
-			pq.withPlanToTeam != nil,
-			pq.withPlanToProvisionedNetwork != nil,
-			pq.withPlanToProvisionedHost != nil,
-			pq.withPlanToProvisioningStep != nil,
-			pq.withPlanToProvisioningScheduledStep != nil,
-			pq.withPlanToStatus != nil,
-			pq.withPlanToPlanDiffs != nil,
+			pq.withPrevPlans != nil,
+			pq.withNextPlans != nil,
+			pq.withBuild != nil,
+			pq.withTeam != nil,
+			pq.withProvisionedNetwork != nil,
+			pq.withProvisionedHost != nil,
+			pq.withProvisioningStep != nil,
+			pq.withProvisioningScheduledStep != nil,
+			pq.withStatus != nil,
+			pq.withPlanDiffs != nil,
 		}
 	)
-	if pq.withPlanToBuild != nil {
+	if pq.withBuild != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -714,73 +714,73 @@ func (pq *PlanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Plan, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := pq.withPrevPlan; query != nil {
-		if err := pq.loadPrevPlan(ctx, query, nodes,
-			func(n *Plan) { n.Edges.PrevPlan = []*Plan{} },
-			func(n *Plan, e *Plan) { n.Edges.PrevPlan = append(n.Edges.PrevPlan, e) }); err != nil {
+	if query := pq.withPrevPlans; query != nil {
+		if err := pq.loadPrevPlans(ctx, query, nodes,
+			func(n *Plan) { n.Edges.PrevPlans = []*Plan{} },
+			func(n *Plan, e *Plan) { n.Edges.PrevPlans = append(n.Edges.PrevPlans, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pq.withNextPlan; query != nil {
-		if err := pq.loadNextPlan(ctx, query, nodes,
-			func(n *Plan) { n.Edges.NextPlan = []*Plan{} },
-			func(n *Plan, e *Plan) { n.Edges.NextPlan = append(n.Edges.NextPlan, e) }); err != nil {
+	if query := pq.withNextPlans; query != nil {
+		if err := pq.loadNextPlans(ctx, query, nodes,
+			func(n *Plan) { n.Edges.NextPlans = []*Plan{} },
+			func(n *Plan, e *Plan) { n.Edges.NextPlans = append(n.Edges.NextPlans, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pq.withPlanToBuild; query != nil {
-		if err := pq.loadPlanToBuild(ctx, query, nodes, nil,
-			func(n *Plan, e *Build) { n.Edges.PlanToBuild = e }); err != nil {
+	if query := pq.withBuild; query != nil {
+		if err := pq.loadBuild(ctx, query, nodes, nil,
+			func(n *Plan, e *Build) { n.Edges.Build = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pq.withPlanToTeam; query != nil {
-		if err := pq.loadPlanToTeam(ctx, query, nodes, nil,
-			func(n *Plan, e *Team) { n.Edges.PlanToTeam = e }); err != nil {
+	if query := pq.withTeam; query != nil {
+		if err := pq.loadTeam(ctx, query, nodes, nil,
+			func(n *Plan, e *Team) { n.Edges.Team = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pq.withPlanToProvisionedNetwork; query != nil {
-		if err := pq.loadPlanToProvisionedNetwork(ctx, query, nodes, nil,
-			func(n *Plan, e *ProvisionedNetwork) { n.Edges.PlanToProvisionedNetwork = e }); err != nil {
+	if query := pq.withProvisionedNetwork; query != nil {
+		if err := pq.loadProvisionedNetwork(ctx, query, nodes, nil,
+			func(n *Plan, e *ProvisionedNetwork) { n.Edges.ProvisionedNetwork = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pq.withPlanToProvisionedHost; query != nil {
-		if err := pq.loadPlanToProvisionedHost(ctx, query, nodes, nil,
-			func(n *Plan, e *ProvisionedHost) { n.Edges.PlanToProvisionedHost = e }); err != nil {
+	if query := pq.withProvisionedHost; query != nil {
+		if err := pq.loadProvisionedHost(ctx, query, nodes, nil,
+			func(n *Plan, e *ProvisionedHost) { n.Edges.ProvisionedHost = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pq.withPlanToProvisioningStep; query != nil {
-		if err := pq.loadPlanToProvisioningStep(ctx, query, nodes, nil,
-			func(n *Plan, e *ProvisioningStep) { n.Edges.PlanToProvisioningStep = e }); err != nil {
+	if query := pq.withProvisioningStep; query != nil {
+		if err := pq.loadProvisioningStep(ctx, query, nodes, nil,
+			func(n *Plan, e *ProvisioningStep) { n.Edges.ProvisioningStep = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pq.withPlanToProvisioningScheduledStep; query != nil {
-		if err := pq.loadPlanToProvisioningScheduledStep(ctx, query, nodes, nil,
-			func(n *Plan, e *ProvisioningScheduledStep) { n.Edges.PlanToProvisioningScheduledStep = e }); err != nil {
+	if query := pq.withProvisioningScheduledStep; query != nil {
+		if err := pq.loadProvisioningScheduledStep(ctx, query, nodes, nil,
+			func(n *Plan, e *ProvisioningScheduledStep) { n.Edges.ProvisioningScheduledStep = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pq.withPlanToStatus; query != nil {
-		if err := pq.loadPlanToStatus(ctx, query, nodes, nil,
-			func(n *Plan, e *Status) { n.Edges.PlanToStatus = e }); err != nil {
+	if query := pq.withStatus; query != nil {
+		if err := pq.loadStatus(ctx, query, nodes, nil,
+			func(n *Plan, e *Status) { n.Edges.Status = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pq.withPlanToPlanDiffs; query != nil {
-		if err := pq.loadPlanToPlanDiffs(ctx, query, nodes,
-			func(n *Plan) { n.Edges.PlanToPlanDiffs = []*PlanDiff{} },
-			func(n *Plan, e *PlanDiff) { n.Edges.PlanToPlanDiffs = append(n.Edges.PlanToPlanDiffs, e) }); err != nil {
+	if query := pq.withPlanDiffs; query != nil {
+		if err := pq.loadPlanDiffs(ctx, query, nodes,
+			func(n *Plan) { n.Edges.PlanDiffs = []*PlanDiff{} },
+			func(n *Plan, e *PlanDiff) { n.Edges.PlanDiffs = append(n.Edges.PlanDiffs, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (pq *PlanQuery) loadPrevPlan(ctx context.Context, query *PlanQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *Plan)) error {
+func (pq *PlanQuery) loadPrevPlans(ctx context.Context, query *PlanQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *Plan)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*Plan)
 	nids := make(map[uuid.UUID]map[*Plan]struct{})
@@ -792,11 +792,11 @@ func (pq *PlanQuery) loadPrevPlan(ctx context.Context, query *PlanQuery, nodes [
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(plan.PrevPlanTable)
-		s.Join(joinT).On(s.C(plan.FieldID), joinT.C(plan.PrevPlanPrimaryKey[0]))
-		s.Where(sql.InValues(joinT.C(plan.PrevPlanPrimaryKey[1]), edgeIDs...))
+		joinT := sql.Table(plan.PrevPlansTable)
+		s.Join(joinT).On(s.C(plan.FieldID), joinT.C(plan.PrevPlansPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(plan.PrevPlansPrimaryKey[1]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(plan.PrevPlanPrimaryKey[1]))
+		s.Select(joinT.C(plan.PrevPlansPrimaryKey[1]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -830,7 +830,7 @@ func (pq *PlanQuery) loadPrevPlan(ctx context.Context, query *PlanQuery, nodes [
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "PrevPlan" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "PrevPlans" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
@@ -838,7 +838,7 @@ func (pq *PlanQuery) loadPrevPlan(ctx context.Context, query *PlanQuery, nodes [
 	}
 	return nil
 }
-func (pq *PlanQuery) loadNextPlan(ctx context.Context, query *PlanQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *Plan)) error {
+func (pq *PlanQuery) loadNextPlans(ctx context.Context, query *PlanQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *Plan)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*Plan)
 	nids := make(map[uuid.UUID]map[*Plan]struct{})
@@ -850,11 +850,11 @@ func (pq *PlanQuery) loadNextPlan(ctx context.Context, query *PlanQuery, nodes [
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(plan.NextPlanTable)
-		s.Join(joinT).On(s.C(plan.FieldID), joinT.C(plan.NextPlanPrimaryKey[1]))
-		s.Where(sql.InValues(joinT.C(plan.NextPlanPrimaryKey[0]), edgeIDs...))
+		joinT := sql.Table(plan.NextPlansTable)
+		s.Join(joinT).On(s.C(plan.FieldID), joinT.C(plan.NextPlansPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(plan.NextPlansPrimaryKey[0]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(plan.NextPlanPrimaryKey[0]))
+		s.Select(joinT.C(plan.NextPlansPrimaryKey[0]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -888,7 +888,7 @@ func (pq *PlanQuery) loadNextPlan(ctx context.Context, query *PlanQuery, nodes [
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "NextPlan" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "NextPlans" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
@@ -896,14 +896,14 @@ func (pq *PlanQuery) loadNextPlan(ctx context.Context, query *PlanQuery, nodes [
 	}
 	return nil
 }
-func (pq *PlanQuery) loadPlanToBuild(ctx context.Context, query *BuildQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *Build)) error {
+func (pq *PlanQuery) loadBuild(ctx context.Context, query *BuildQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *Build)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Plan)
 	for i := range nodes {
-		if nodes[i].plan_plan_to_build == nil {
+		if nodes[i].plan_build == nil {
 			continue
 		}
-		fk := *nodes[i].plan_plan_to_build
+		fk := *nodes[i].plan_build
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -917,7 +917,7 @@ func (pq *PlanQuery) loadPlanToBuild(ctx context.Context, query *BuildQuery, nod
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_build" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_build" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -925,7 +925,7 @@ func (pq *PlanQuery) loadPlanToBuild(ctx context.Context, query *BuildQuery, nod
 	}
 	return nil
 }
-func (pq *PlanQuery) loadPlanToTeam(ctx context.Context, query *TeamQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *Team)) error {
+func (pq *PlanQuery) loadTeam(ctx context.Context, query *TeamQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *Team)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Plan)
 	for i := range nodes {
@@ -934,26 +934,26 @@ func (pq *PlanQuery) loadPlanToTeam(ctx context.Context, query *TeamQuery, nodes
 	}
 	query.withFKs = true
 	query.Where(predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.InValues(plan.PlanToTeamColumn, fks...))
+		s.Where(sql.InValues(plan.TeamColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.plan_plan_to_team
+		fk := n.plan_team
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_plan_to_team" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "plan_team" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_team" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_team" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (pq *PlanQuery) loadPlanToProvisionedNetwork(ctx context.Context, query *ProvisionedNetworkQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *ProvisionedNetwork)) error {
+func (pq *PlanQuery) loadProvisionedNetwork(ctx context.Context, query *ProvisionedNetworkQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *ProvisionedNetwork)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Plan)
 	for i := range nodes {
@@ -962,26 +962,26 @@ func (pq *PlanQuery) loadPlanToProvisionedNetwork(ctx context.Context, query *Pr
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisionedNetwork(func(s *sql.Selector) {
-		s.Where(sql.InValues(plan.PlanToProvisionedNetworkColumn, fks...))
+		s.Where(sql.InValues(plan.ProvisionedNetworkColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.plan_plan_to_provisioned_network
+		fk := n.plan_provisioned_network
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_plan_to_provisioned_network" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "plan_provisioned_network" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_provisioned_network" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_provisioned_network" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (pq *PlanQuery) loadPlanToProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *ProvisionedHost)) error {
+func (pq *PlanQuery) loadProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *ProvisionedHost)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Plan)
 	for i := range nodes {
@@ -990,26 +990,26 @@ func (pq *PlanQuery) loadPlanToProvisionedHost(ctx context.Context, query *Provi
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisionedHost(func(s *sql.Selector) {
-		s.Where(sql.InValues(plan.PlanToProvisionedHostColumn, fks...))
+		s.Where(sql.InValues(plan.ProvisionedHostColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.plan_plan_to_provisioned_host
+		fk := n.plan_provisioned_host
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_plan_to_provisioned_host" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "plan_provisioned_host" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_provisioned_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_provisioned_host" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (pq *PlanQuery) loadPlanToProvisioningStep(ctx context.Context, query *ProvisioningStepQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *ProvisioningStep)) error {
+func (pq *PlanQuery) loadProvisioningStep(ctx context.Context, query *ProvisioningStepQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *ProvisioningStep)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Plan)
 	for i := range nodes {
@@ -1018,26 +1018,26 @@ func (pq *PlanQuery) loadPlanToProvisioningStep(ctx context.Context, query *Prov
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisioningStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(plan.PlanToProvisioningStepColumn, fks...))
+		s.Where(sql.InValues(plan.ProvisioningStepColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.plan_plan_to_provisioning_step
+		fk := n.plan_provisioning_step
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_plan_to_provisioning_step" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "plan_provisioning_step" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_provisioning_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_provisioning_step" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (pq *PlanQuery) loadPlanToProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *ProvisioningScheduledStep)) error {
+func (pq *PlanQuery) loadProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *ProvisioningScheduledStep)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Plan)
 	for i := range nodes {
@@ -1046,26 +1046,26 @@ func (pq *PlanQuery) loadPlanToProvisioningScheduledStep(ctx context.Context, qu
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisioningScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(plan.PlanToProvisioningScheduledStepColumn, fks...))
+		s.Where(sql.InValues(plan.ProvisioningScheduledStepColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.plan_plan_to_provisioning_scheduled_step
+		fk := n.plan_provisioning_scheduled_step
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_plan_to_provisioning_scheduled_step" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "plan_provisioning_scheduled_step" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_provisioning_scheduled_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_provisioning_scheduled_step" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (pq *PlanQuery) loadPlanToStatus(ctx context.Context, query *StatusQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *Status)) error {
+func (pq *PlanQuery) loadStatus(ctx context.Context, query *StatusQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *Status)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Plan)
 	for i := range nodes {
@@ -1074,26 +1074,26 @@ func (pq *PlanQuery) loadPlanToStatus(ctx context.Context, query *StatusQuery, n
 	}
 	query.withFKs = true
 	query.Where(predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.InValues(plan.PlanToStatusColumn, fks...))
+		s.Where(sql.InValues(plan.StatusColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.plan_plan_to_status
+		fk := n.plan_status
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_plan_to_status" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "plan_status" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_status" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_status" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (pq *PlanQuery) loadPlanToPlanDiffs(ctx context.Context, query *PlanDiffQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *PlanDiff)) error {
+func (pq *PlanQuery) loadPlanDiffs(ctx context.Context, query *PlanDiffQuery, nodes []*Plan, init func(*Plan), assign func(*Plan, *PlanDiff)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Plan)
 	for i := range nodes {
@@ -1105,20 +1105,20 @@ func (pq *PlanQuery) loadPlanToPlanDiffs(ctx context.Context, query *PlanDiffQue
 	}
 	query.withFKs = true
 	query.Where(predicate.PlanDiff(func(s *sql.Selector) {
-		s.Where(sql.InValues(plan.PlanToPlanDiffsColumn, fks...))
+		s.Where(sql.InValues(plan.PlanDiffsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.plan_diff_plan_diff_to_plan
+		fk := n.plan_diff_plan
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_diff_plan_diff_to_plan" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "plan_diff_plan" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_diff_plan_diff_to_plan" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_diff_plan" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

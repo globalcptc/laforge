@@ -292,25 +292,25 @@ func PathContainsFold(v string) predicate.FileDelete {
 	})
 }
 
-// HasFileDeleteToEnvironment applies the HasEdge predicate on the "FileDeleteToEnvironment" edge.
-func HasFileDeleteToEnvironment() predicate.FileDelete {
+// HasEnvironment applies the HasEdge predicate on the "Environment" edge.
+func HasEnvironment() predicate.FileDelete {
 	return predicate.FileDelete(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileDeleteToEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, FileDeleteToEnvironmentTable, FileDeleteToEnvironmentColumn),
+			sqlgraph.To(EnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasFileDeleteToEnvironmentWith applies the HasEdge predicate on the "FileDeleteToEnvironment" edge with a given conditions (other predicates).
-func HasFileDeleteToEnvironmentWith(preds ...predicate.Environment) predicate.FileDelete {
+// HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
+func HasEnvironmentWith(preds ...predicate.Environment) predicate.FileDelete {
 	return predicate.FileDelete(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileDeleteToEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, FileDeleteToEnvironmentTable, FileDeleteToEnvironmentColumn),
+			sqlgraph.To(EnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

@@ -29,17 +29,17 @@ const (
 	FieldVars = "vars"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// EdgeIdentityToEnvironment holds the string denoting the identitytoenvironment edge name in mutations.
-	EdgeIdentityToEnvironment = "IdentityToEnvironment"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the identity in the database.
 	Table = "identities"
-	// IdentityToEnvironmentTable is the table that holds the IdentityToEnvironment relation/edge.
-	IdentityToEnvironmentTable = "identities"
-	// IdentityToEnvironmentInverseTable is the table name for the Environment entity.
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "identities"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	IdentityToEnvironmentInverseTable = "environments"
-	// IdentityToEnvironmentColumn is the table column denoting the IdentityToEnvironment relation/edge.
-	IdentityToEnvironmentColumn = "environment_environment_to_identity"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_identities"
 )
 
 // Columns holds all SQL columns for identity fields.
@@ -59,7 +59,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "identities"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_identity",
+	"environment_identities",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

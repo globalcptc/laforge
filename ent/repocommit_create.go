@@ -84,23 +84,23 @@ func (rcc *RepoCommitCreate) SetNillableID(u *uuid.UUID) *RepoCommitCreate {
 	return rcc
 }
 
-// SetRepoCommitToRepositoryID sets the "RepoCommitToRepository" edge to the Repository entity by ID.
-func (rcc *RepoCommitCreate) SetRepoCommitToRepositoryID(id uuid.UUID) *RepoCommitCreate {
-	rcc.mutation.SetRepoCommitToRepositoryID(id)
+// SetRepositoryID sets the "Repository" edge to the Repository entity by ID.
+func (rcc *RepoCommitCreate) SetRepositoryID(id uuid.UUID) *RepoCommitCreate {
+	rcc.mutation.SetRepositoryID(id)
 	return rcc
 }
 
-// SetNillableRepoCommitToRepositoryID sets the "RepoCommitToRepository" edge to the Repository entity by ID if the given value is not nil.
-func (rcc *RepoCommitCreate) SetNillableRepoCommitToRepositoryID(id *uuid.UUID) *RepoCommitCreate {
+// SetNillableRepositoryID sets the "Repository" edge to the Repository entity by ID if the given value is not nil.
+func (rcc *RepoCommitCreate) SetNillableRepositoryID(id *uuid.UUID) *RepoCommitCreate {
 	if id != nil {
-		rcc = rcc.SetRepoCommitToRepositoryID(*id)
+		rcc = rcc.SetRepositoryID(*id)
 	}
 	return rcc
 }
 
-// SetRepoCommitToRepository sets the "RepoCommitToRepository" edge to the Repository entity.
-func (rcc *RepoCommitCreate) SetRepoCommitToRepository(r *Repository) *RepoCommitCreate {
-	return rcc.SetRepoCommitToRepositoryID(r.ID)
+// SetRepository sets the "Repository" edge to the Repository entity.
+func (rcc *RepoCommitCreate) SetRepository(r *Repository) *RepoCommitCreate {
+	return rcc.SetRepositoryID(r.ID)
 }
 
 // Mutation returns the RepoCommitMutation object of the builder.
@@ -312,12 +312,12 @@ func (rcc *RepoCommitCreate) createSpec() (*RepoCommit, *sqlgraph.CreateSpec) {
 		})
 		_node.ParentHashes = value
 	}
-	if nodes := rcc.mutation.RepoCommitToRepositoryIDs(); len(nodes) > 0 {
+	if nodes := rcc.mutation.RepositoryIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   repocommit.RepoCommitToRepositoryTable,
-			Columns: []string{repocommit.RepoCommitToRepositoryColumn},
+			Table:   repocommit.RepositoryTable,
+			Columns: []string{repocommit.RepositoryColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -329,7 +329,7 @@ func (rcc *RepoCommitCreate) createSpec() (*RepoCommit, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.repository_repository_to_repo_commit = &nodes[0]
+		_node.repository_repo_commits = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

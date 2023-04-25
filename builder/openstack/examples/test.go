@@ -51,18 +51,18 @@ func main() {
 		log.Fatalf("error while creating Openstack builder: %v", err)
 	}
 
-	build, err := env.QueryEnvironmentToBuild().Only(ctx)
+	build, err := env.QueryBuilds().Only(ctx)
 	if err != nil {
 		log.Fatalf("error querying build from env: %v", err)
 	}
-	teams, err := build.QueryBuildToTeam().All(ctx)
+	teams, err := build.QueryTeams().All(ctx)
 	if err != nil {
 		log.Fatalf("error querying teams from build: %v", err)
 	}
 
 	for _, team := range teams {
 		fmt.Printf("Networks for Team %d\n", team.TeamNumber)
-		pnets, err := team.QueryTeamToProvisionedNetwork().All(ctx)
+		pnets, err := team.QueryProvisionedNetworks().All(ctx)
 		if err != nil {
 			log.Fatalf("error while querying provisioned netowrks from team: %v", err)
 		}
@@ -77,7 +77,7 @@ func main() {
 				fmt.Println("\tOK")
 			}
 
-			// phosts, err := pnet.QueryProvisionedNetworkToProvisionedHost().All(ctx)
+			// phosts, err := pnet.QueryProvisionedHost().All(ctx)
 			// if err != nil {
 			// 	log.Fatalf("error while querying provisioned hosts from provisioned network: %v", err)
 			// }
@@ -86,7 +86,7 @@ func main() {
 			// 	time.Sleep(30 * time.Second)
 
 			// 	for _, phost := range phosts {
-			// 		host, err := phost.QueryProvisionedHostToHost().Only(ctx)
+			// 		host, err := phost.QueryHost().Only(ctx)
 			// 		if err != nil {
 			// 			log.Fatalf("error while querying host from provisioned host")
 			// 		}

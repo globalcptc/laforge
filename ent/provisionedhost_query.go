@@ -29,24 +29,24 @@ import (
 // ProvisionedHostQuery is the builder for querying ProvisionedHost entities.
 type ProvisionedHostQuery struct {
 	config
-	limit                                          *int
-	offset                                         *int
-	unique                                         *bool
-	order                                          []OrderFunc
-	fields                                         []string
-	predicates                                     []predicate.ProvisionedHost
-	withProvisionedHostToStatus                    *StatusQuery
-	withProvisionedHostToProvisionedNetwork        *ProvisionedNetworkQuery
-	withProvisionedHostToHost                      *HostQuery
-	withProvisionedHostToEndStepPlan               *PlanQuery
-	withProvisionedHostToBuild                     *BuildQuery
-	withProvisionedHostToProvisioningStep          *ProvisioningStepQuery
-	withProvisionedHostToProvisioningScheduledStep *ProvisioningScheduledStepQuery
-	withProvisionedHostToAgentStatus               *AgentStatusQuery
-	withProvisionedHostToAgentTask                 *AgentTaskQuery
-	withProvisionedHostToPlan                      *PlanQuery
-	withProvisionedHostToGinFileMiddleware         *GinFileMiddlewareQuery
-	withFKs                                        bool
+	limit                          *int
+	offset                         *int
+	unique                         *bool
+	order                          []OrderFunc
+	fields                         []string
+	predicates                     []predicate.ProvisionedHost
+	withStatus                     *StatusQuery
+	withProvisionedNetwork         *ProvisionedNetworkQuery
+	withHost                       *HostQuery
+	withEndStepPlan                *PlanQuery
+	withBuild                      *BuildQuery
+	withProvisioningSteps          *ProvisioningStepQuery
+	withProvisioningScheduledSteps *ProvisioningScheduledStepQuery
+	withAgentStatus                *AgentStatusQuery
+	withAgentTasks                 *AgentTaskQuery
+	withPlan                       *PlanQuery
+	withGinFileMiddleware          *GinFileMiddlewareQuery
+	withFKs                        bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -83,8 +83,8 @@ func (phq *ProvisionedHostQuery) Order(o ...OrderFunc) *ProvisionedHostQuery {
 	return phq
 }
 
-// QueryProvisionedHostToStatus chains the current query on the "ProvisionedHostToStatus" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToStatus() *StatusQuery {
+// QueryStatus chains the current query on the "Status" edge.
+func (phq *ProvisionedHostQuery) QueryStatus() *StatusQuery {
 	query := &StatusQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -97,7 +97,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToStatus() *StatusQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, provisionedhost.ProvisionedHostToStatusTable, provisionedhost.ProvisionedHostToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, provisionedhost.StatusTable, provisionedhost.StatusColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -105,8 +105,8 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToStatus() *StatusQuery {
 	return query
 }
 
-// QueryProvisionedHostToProvisionedNetwork chains the current query on the "ProvisionedHostToProvisionedNetwork" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisionedNetwork() *ProvisionedNetworkQuery {
+// QueryProvisionedNetwork chains the current query on the "ProvisionedNetwork" edge.
+func (phq *ProvisionedHostQuery) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
 	query := &ProvisionedNetworkQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -119,7 +119,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisionedNetwork() *Pro
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(provisionednetwork.Table, provisionednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.ProvisionedHostToProvisionedNetworkTable, provisionedhost.ProvisionedHostToProvisionedNetworkColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.ProvisionedNetworkTable, provisionedhost.ProvisionedNetworkColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -127,8 +127,8 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisionedNetwork() *Pro
 	return query
 }
 
-// QueryProvisionedHostToHost chains the current query on the "ProvisionedHostToHost" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToHost() *HostQuery {
+// QueryHost chains the current query on the "Host" edge.
+func (phq *ProvisionedHostQuery) QueryHost() *HostQuery {
 	query := &HostQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -141,7 +141,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToHost() *HostQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(host.Table, host.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.ProvisionedHostToHostTable, provisionedhost.ProvisionedHostToHostColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.HostTable, provisionedhost.HostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -149,8 +149,8 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToHost() *HostQuery {
 	return query
 }
 
-// QueryProvisionedHostToEndStepPlan chains the current query on the "ProvisionedHostToEndStepPlan" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToEndStepPlan() *PlanQuery {
+// QueryEndStepPlan chains the current query on the "EndStepPlan" edge.
+func (phq *ProvisionedHostQuery) QueryEndStepPlan() *PlanQuery {
 	query := &PlanQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -163,7 +163,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToEndStepPlan() *PlanQuery 
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.ProvisionedHostToEndStepPlanTable, provisionedhost.ProvisionedHostToEndStepPlanColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.EndStepPlanTable, provisionedhost.EndStepPlanColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -171,8 +171,8 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToEndStepPlan() *PlanQuery 
 	return query
 }
 
-// QueryProvisionedHostToBuild chains the current query on the "ProvisionedHostToBuild" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToBuild() *BuildQuery {
+// QueryBuild chains the current query on the "Build" edge.
+func (phq *ProvisionedHostQuery) QueryBuild() *BuildQuery {
 	query := &BuildQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -185,7 +185,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToBuild() *BuildQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.ProvisionedHostToBuildTable, provisionedhost.ProvisionedHostToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionedhost.BuildTable, provisionedhost.BuildColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -193,8 +193,8 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToBuild() *BuildQuery {
 	return query
 }
 
-// QueryProvisionedHostToProvisioningStep chains the current query on the "ProvisionedHostToProvisioningStep" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisioningStep() *ProvisioningStepQuery {
+// QueryProvisioningSteps chains the current query on the "ProvisioningSteps" edge.
+func (phq *ProvisionedHostQuery) QueryProvisioningSteps() *ProvisioningStepQuery {
 	query := &ProvisioningStepQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -207,7 +207,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisioningStep() *Provi
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(provisioningstep.Table, provisioningstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToProvisioningStepTable, provisionedhost.ProvisionedHostToProvisioningStepColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisioningStepsTable, provisionedhost.ProvisioningStepsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -215,8 +215,8 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisioningStep() *Provi
 	return query
 }
 
-// QueryProvisionedHostToProvisioningScheduledStep chains the current query on the "ProvisionedHostToProvisioningScheduledStep" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+// QueryProvisioningScheduledSteps chains the current query on the "ProvisioningScheduledSteps" edge.
+func (phq *ProvisionedHostQuery) QueryProvisioningScheduledSteps() *ProvisioningScheduledStepQuery {
 	query := &ProvisioningScheduledStepQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -229,7 +229,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisioningScheduledStep
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToProvisioningScheduledStepTable, provisionedhost.ProvisionedHostToProvisioningScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisioningScheduledStepsTable, provisionedhost.ProvisioningScheduledStepsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -237,8 +237,8 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToProvisioningScheduledStep
 	return query
 }
 
-// QueryProvisionedHostToAgentStatus chains the current query on the "ProvisionedHostToAgentStatus" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToAgentStatus() *AgentStatusQuery {
+// QueryAgentStatus chains the current query on the "AgentStatus" edge.
+func (phq *ProvisionedHostQuery) QueryAgentStatus() *AgentStatusQuery {
 	query := &AgentStatusQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -251,7 +251,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToAgentStatus() *AgentStatu
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(agentstatus.Table, agentstatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToAgentStatusTable, provisionedhost.ProvisionedHostToAgentStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisionedhost.AgentStatusTable, provisionedhost.AgentStatusColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -259,8 +259,8 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToAgentStatus() *AgentStatu
 	return query
 }
 
-// QueryProvisionedHostToAgentTask chains the current query on the "ProvisionedHostToAgentTask" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToAgentTask() *AgentTaskQuery {
+// QueryAgentTasks chains the current query on the "AgentTasks" edge.
+func (phq *ProvisionedHostQuery) QueryAgentTasks() *AgentTaskQuery {
 	query := &AgentTaskQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -273,7 +273,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToAgentTask() *AgentTaskQue
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(agenttask.Table, agenttask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.ProvisionedHostToAgentTaskTable, provisionedhost.ProvisionedHostToAgentTaskColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.AgentTasksTable, provisionedhost.AgentTasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -281,8 +281,8 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToAgentTask() *AgentTaskQue
 	return query
 }
 
-// QueryProvisionedHostToPlan chains the current query on the "ProvisionedHostToPlan" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToPlan() *PlanQuery {
+// QueryPlan chains the current query on the "Plan" edge.
+func (phq *ProvisionedHostQuery) QueryPlan() *PlanQuery {
 	query := &PlanQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -295,7 +295,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToPlan() *PlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisionedhost.ProvisionedHostToPlanTable, provisionedhost.ProvisionedHostToPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisionedhost.PlanTable, provisionedhost.PlanColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -303,8 +303,8 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToPlan() *PlanQuery {
 	return query
 }
 
-// QueryProvisionedHostToGinFileMiddleware chains the current query on the "ProvisionedHostToGinFileMiddleware" edge.
-func (phq *ProvisionedHostQuery) QueryProvisionedHostToGinFileMiddleware() *GinFileMiddlewareQuery {
+// QueryGinFileMiddleware chains the current query on the "GinFileMiddleware" edge.
+func (phq *ProvisionedHostQuery) QueryGinFileMiddleware() *GinFileMiddlewareQuery {
 	query := &GinFileMiddlewareQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -317,7 +317,7 @@ func (phq *ProvisionedHostQuery) QueryProvisionedHostToGinFileMiddleware() *GinF
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(ginfilemiddleware.Table, ginfilemiddleware.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisionedhost.ProvisionedHostToGinFileMiddlewareTable, provisionedhost.ProvisionedHostToGinFileMiddlewareColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisionedhost.GinFileMiddlewareTable, provisionedhost.GinFileMiddlewareColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -501,22 +501,22 @@ func (phq *ProvisionedHostQuery) Clone() *ProvisionedHostQuery {
 		return nil
 	}
 	return &ProvisionedHostQuery{
-		config:                                  phq.config,
-		limit:                                   phq.limit,
-		offset:                                  phq.offset,
-		order:                                   append([]OrderFunc{}, phq.order...),
-		predicates:                              append([]predicate.ProvisionedHost{}, phq.predicates...),
-		withProvisionedHostToStatus:             phq.withProvisionedHostToStatus.Clone(),
-		withProvisionedHostToProvisionedNetwork: phq.withProvisionedHostToProvisionedNetwork.Clone(),
-		withProvisionedHostToHost:               phq.withProvisionedHostToHost.Clone(),
-		withProvisionedHostToEndStepPlan:        phq.withProvisionedHostToEndStepPlan.Clone(),
-		withProvisionedHostToBuild:              phq.withProvisionedHostToBuild.Clone(),
-		withProvisionedHostToProvisioningStep:   phq.withProvisionedHostToProvisioningStep.Clone(),
-		withProvisionedHostToProvisioningScheduledStep: phq.withProvisionedHostToProvisioningScheduledStep.Clone(),
-		withProvisionedHostToAgentStatus:               phq.withProvisionedHostToAgentStatus.Clone(),
-		withProvisionedHostToAgentTask:                 phq.withProvisionedHostToAgentTask.Clone(),
-		withProvisionedHostToPlan:                      phq.withProvisionedHostToPlan.Clone(),
-		withProvisionedHostToGinFileMiddleware:         phq.withProvisionedHostToGinFileMiddleware.Clone(),
+		config:                         phq.config,
+		limit:                          phq.limit,
+		offset:                         phq.offset,
+		order:                          append([]OrderFunc{}, phq.order...),
+		predicates:                     append([]predicate.ProvisionedHost{}, phq.predicates...),
+		withStatus:                     phq.withStatus.Clone(),
+		withProvisionedNetwork:         phq.withProvisionedNetwork.Clone(),
+		withHost:                       phq.withHost.Clone(),
+		withEndStepPlan:                phq.withEndStepPlan.Clone(),
+		withBuild:                      phq.withBuild.Clone(),
+		withProvisioningSteps:          phq.withProvisioningSteps.Clone(),
+		withProvisioningScheduledSteps: phq.withProvisioningScheduledSteps.Clone(),
+		withAgentStatus:                phq.withAgentStatus.Clone(),
+		withAgentTasks:                 phq.withAgentTasks.Clone(),
+		withPlan:                       phq.withPlan.Clone(),
+		withGinFileMiddleware:          phq.withGinFileMiddleware.Clone(),
 		// clone intermediate query.
 		sql:    phq.sql.Clone(),
 		path:   phq.path,
@@ -524,124 +524,124 @@ func (phq *ProvisionedHostQuery) Clone() *ProvisionedHostQuery {
 	}
 }
 
-// WithProvisionedHostToStatus tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToStatus" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToStatus(opts ...func(*StatusQuery)) *ProvisionedHostQuery {
+// WithStatus tells the query-builder to eager-load the nodes that are connected to
+// the "Status" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithStatus(opts ...func(*StatusQuery)) *ProvisionedHostQuery {
 	query := &StatusQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToStatus = query
+	phq.withStatus = query
 	return phq
 }
 
-// WithProvisionedHostToProvisionedNetwork tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToProvisionedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToProvisionedNetwork(opts ...func(*ProvisionedNetworkQuery)) *ProvisionedHostQuery {
+// WithProvisionedNetwork tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithProvisionedNetwork(opts ...func(*ProvisionedNetworkQuery)) *ProvisionedHostQuery {
 	query := &ProvisionedNetworkQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToProvisionedNetwork = query
+	phq.withProvisionedNetwork = query
 	return phq
 }
 
-// WithProvisionedHostToHost tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToHost" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToHost(opts ...func(*HostQuery)) *ProvisionedHostQuery {
+// WithHost tells the query-builder to eager-load the nodes that are connected to
+// the "Host" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithHost(opts ...func(*HostQuery)) *ProvisionedHostQuery {
 	query := &HostQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToHost = query
+	phq.withHost = query
 	return phq
 }
 
-// WithProvisionedHostToEndStepPlan tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToEndStepPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToEndStepPlan(opts ...func(*PlanQuery)) *ProvisionedHostQuery {
+// WithEndStepPlan tells the query-builder to eager-load the nodes that are connected to
+// the "EndStepPlan" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithEndStepPlan(opts ...func(*PlanQuery)) *ProvisionedHostQuery {
 	query := &PlanQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToEndStepPlan = query
+	phq.withEndStepPlan = query
 	return phq
 }
 
-// WithProvisionedHostToBuild tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToBuild" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToBuild(opts ...func(*BuildQuery)) *ProvisionedHostQuery {
+// WithBuild tells the query-builder to eager-load the nodes that are connected to
+// the "Build" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithBuild(opts ...func(*BuildQuery)) *ProvisionedHostQuery {
 	query := &BuildQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToBuild = query
+	phq.withBuild = query
 	return phq
 }
 
-// WithProvisionedHostToProvisioningStep tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToProvisioningStep(opts ...func(*ProvisioningStepQuery)) *ProvisionedHostQuery {
+// WithProvisioningSteps tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningSteps" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithProvisioningSteps(opts ...func(*ProvisioningStepQuery)) *ProvisionedHostQuery {
 	query := &ProvisioningStepQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToProvisioningStep = query
+	phq.withProvisioningSteps = query
 	return phq
 }
 
-// WithProvisionedHostToProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *ProvisionedHostQuery {
+// WithProvisioningScheduledSteps tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningScheduledSteps" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithProvisioningScheduledSteps(opts ...func(*ProvisioningScheduledStepQuery)) *ProvisionedHostQuery {
 	query := &ProvisioningScheduledStepQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToProvisioningScheduledStep = query
+	phq.withProvisioningScheduledSteps = query
 	return phq
 }
 
-// WithProvisionedHostToAgentStatus tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToAgentStatus" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToAgentStatus(opts ...func(*AgentStatusQuery)) *ProvisionedHostQuery {
+// WithAgentStatus tells the query-builder to eager-load the nodes that are connected to
+// the "AgentStatus" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithAgentStatus(opts ...func(*AgentStatusQuery)) *ProvisionedHostQuery {
 	query := &AgentStatusQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToAgentStatus = query
+	phq.withAgentStatus = query
 	return phq
 }
 
-// WithProvisionedHostToAgentTask tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToAgentTask" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToAgentTask(opts ...func(*AgentTaskQuery)) *ProvisionedHostQuery {
+// WithAgentTasks tells the query-builder to eager-load the nodes that are connected to
+// the "AgentTasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithAgentTasks(opts ...func(*AgentTaskQuery)) *ProvisionedHostQuery {
 	query := &AgentTaskQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToAgentTask = query
+	phq.withAgentTasks = query
 	return phq
 }
 
-// WithProvisionedHostToPlan tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToPlan(opts ...func(*PlanQuery)) *ProvisionedHostQuery {
+// WithPlan tells the query-builder to eager-load the nodes that are connected to
+// the "Plan" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithPlan(opts ...func(*PlanQuery)) *ProvisionedHostQuery {
 	query := &PlanQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToPlan = query
+	phq.withPlan = query
 	return phq
 }
 
-// WithProvisionedHostToGinFileMiddleware tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedHostToGinFileMiddleware" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithProvisionedHostToGinFileMiddleware(opts ...func(*GinFileMiddlewareQuery)) *ProvisionedHostQuery {
+// WithGinFileMiddleware tells the query-builder to eager-load the nodes that are connected to
+// the "GinFileMiddleware" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithGinFileMiddleware(opts ...func(*GinFileMiddlewareQuery)) *ProvisionedHostQuery {
 	query := &GinFileMiddlewareQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withProvisionedHostToGinFileMiddleware = query
+	phq.withGinFileMiddleware = query
 	return phq
 }
 
@@ -715,20 +715,20 @@ func (phq *ProvisionedHostQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 		withFKs     = phq.withFKs
 		_spec       = phq.querySpec()
 		loadedTypes = [11]bool{
-			phq.withProvisionedHostToStatus != nil,
-			phq.withProvisionedHostToProvisionedNetwork != nil,
-			phq.withProvisionedHostToHost != nil,
-			phq.withProvisionedHostToEndStepPlan != nil,
-			phq.withProvisionedHostToBuild != nil,
-			phq.withProvisionedHostToProvisioningStep != nil,
-			phq.withProvisionedHostToProvisioningScheduledStep != nil,
-			phq.withProvisionedHostToAgentStatus != nil,
-			phq.withProvisionedHostToAgentTask != nil,
-			phq.withProvisionedHostToPlan != nil,
-			phq.withProvisionedHostToGinFileMiddleware != nil,
+			phq.withStatus != nil,
+			phq.withProvisionedNetwork != nil,
+			phq.withHost != nil,
+			phq.withEndStepPlan != nil,
+			phq.withBuild != nil,
+			phq.withProvisioningSteps != nil,
+			phq.withProvisioningScheduledSteps != nil,
+			phq.withAgentStatus != nil,
+			phq.withAgentTasks != nil,
+			phq.withPlan != nil,
+			phq.withGinFileMiddleware != nil,
 		}
 	)
-	if phq.withProvisionedHostToProvisionedNetwork != nil || phq.withProvisionedHostToHost != nil || phq.withProvisionedHostToEndStepPlan != nil || phq.withProvisionedHostToBuild != nil || phq.withProvisionedHostToPlan != nil || phq.withProvisionedHostToGinFileMiddleware != nil {
+	if phq.withProvisionedNetwork != nil || phq.withHost != nil || phq.withEndStepPlan != nil || phq.withBuild != nil || phq.withAgentStatus != nil || phq.withPlan != nil || phq.withGinFileMiddleware != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -752,90 +752,83 @@ func (phq *ProvisionedHostQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := phq.withProvisionedHostToStatus; query != nil {
-		if err := phq.loadProvisionedHostToStatus(ctx, query, nodes, nil,
-			func(n *ProvisionedHost, e *Status) { n.Edges.ProvisionedHostToStatus = e }); err != nil {
+	if query := phq.withStatus; query != nil {
+		if err := phq.loadStatus(ctx, query, nodes, nil,
+			func(n *ProvisionedHost, e *Status) { n.Edges.Status = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := phq.withProvisionedHostToProvisionedNetwork; query != nil {
-		if err := phq.loadProvisionedHostToProvisionedNetwork(ctx, query, nodes, nil,
-			func(n *ProvisionedHost, e *ProvisionedNetwork) { n.Edges.ProvisionedHostToProvisionedNetwork = e }); err != nil {
+	if query := phq.withProvisionedNetwork; query != nil {
+		if err := phq.loadProvisionedNetwork(ctx, query, nodes, nil,
+			func(n *ProvisionedHost, e *ProvisionedNetwork) { n.Edges.ProvisionedNetwork = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := phq.withProvisionedHostToHost; query != nil {
-		if err := phq.loadProvisionedHostToHost(ctx, query, nodes, nil,
-			func(n *ProvisionedHost, e *Host) { n.Edges.ProvisionedHostToHost = e }); err != nil {
+	if query := phq.withHost; query != nil {
+		if err := phq.loadHost(ctx, query, nodes, nil,
+			func(n *ProvisionedHost, e *Host) { n.Edges.Host = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := phq.withProvisionedHostToEndStepPlan; query != nil {
-		if err := phq.loadProvisionedHostToEndStepPlan(ctx, query, nodes, nil,
-			func(n *ProvisionedHost, e *Plan) { n.Edges.ProvisionedHostToEndStepPlan = e }); err != nil {
+	if query := phq.withEndStepPlan; query != nil {
+		if err := phq.loadEndStepPlan(ctx, query, nodes, nil,
+			func(n *ProvisionedHost, e *Plan) { n.Edges.EndStepPlan = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := phq.withProvisionedHostToBuild; query != nil {
-		if err := phq.loadProvisionedHostToBuild(ctx, query, nodes, nil,
-			func(n *ProvisionedHost, e *Build) { n.Edges.ProvisionedHostToBuild = e }); err != nil {
+	if query := phq.withBuild; query != nil {
+		if err := phq.loadBuild(ctx, query, nodes, nil,
+			func(n *ProvisionedHost, e *Build) { n.Edges.Build = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := phq.withProvisionedHostToProvisioningStep; query != nil {
-		if err := phq.loadProvisionedHostToProvisioningStep(ctx, query, nodes,
-			func(n *ProvisionedHost) { n.Edges.ProvisionedHostToProvisioningStep = []*ProvisioningStep{} },
+	if query := phq.withProvisioningSteps; query != nil {
+		if err := phq.loadProvisioningSteps(ctx, query, nodes,
+			func(n *ProvisionedHost) { n.Edges.ProvisioningSteps = []*ProvisioningStep{} },
 			func(n *ProvisionedHost, e *ProvisioningStep) {
-				n.Edges.ProvisionedHostToProvisioningStep = append(n.Edges.ProvisionedHostToProvisioningStep, e)
+				n.Edges.ProvisioningSteps = append(n.Edges.ProvisioningSteps, e)
 			}); err != nil {
 			return nil, err
 		}
 	}
-	if query := phq.withProvisionedHostToProvisioningScheduledStep; query != nil {
-		if err := phq.loadProvisionedHostToProvisioningScheduledStep(ctx, query, nodes,
-			func(n *ProvisionedHost) {
-				n.Edges.ProvisionedHostToProvisioningScheduledStep = []*ProvisioningScheduledStep{}
-			},
+	if query := phq.withProvisioningScheduledSteps; query != nil {
+		if err := phq.loadProvisioningScheduledSteps(ctx, query, nodes,
+			func(n *ProvisionedHost) { n.Edges.ProvisioningScheduledSteps = []*ProvisioningScheduledStep{} },
 			func(n *ProvisionedHost, e *ProvisioningScheduledStep) {
-				n.Edges.ProvisionedHostToProvisioningScheduledStep = append(n.Edges.ProvisionedHostToProvisioningScheduledStep, e)
+				n.Edges.ProvisioningScheduledSteps = append(n.Edges.ProvisioningScheduledSteps, e)
 			}); err != nil {
 			return nil, err
 		}
 	}
-	if query := phq.withProvisionedHostToAgentStatus; query != nil {
-		if err := phq.loadProvisionedHostToAgentStatus(ctx, query, nodes,
-			func(n *ProvisionedHost) { n.Edges.ProvisionedHostToAgentStatus = []*AgentStatus{} },
-			func(n *ProvisionedHost, e *AgentStatus) {
-				n.Edges.ProvisionedHostToAgentStatus = append(n.Edges.ProvisionedHostToAgentStatus, e)
-			}); err != nil {
+	if query := phq.withAgentStatus; query != nil {
+		if err := phq.loadAgentStatus(ctx, query, nodes, nil,
+			func(n *ProvisionedHost, e *AgentStatus) { n.Edges.AgentStatus = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := phq.withProvisionedHostToAgentTask; query != nil {
-		if err := phq.loadProvisionedHostToAgentTask(ctx, query, nodes,
-			func(n *ProvisionedHost) { n.Edges.ProvisionedHostToAgentTask = []*AgentTask{} },
-			func(n *ProvisionedHost, e *AgentTask) {
-				n.Edges.ProvisionedHostToAgentTask = append(n.Edges.ProvisionedHostToAgentTask, e)
-			}); err != nil {
+	if query := phq.withAgentTasks; query != nil {
+		if err := phq.loadAgentTasks(ctx, query, nodes,
+			func(n *ProvisionedHost) { n.Edges.AgentTasks = []*AgentTask{} },
+			func(n *ProvisionedHost, e *AgentTask) { n.Edges.AgentTasks = append(n.Edges.AgentTasks, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := phq.withProvisionedHostToPlan; query != nil {
-		if err := phq.loadProvisionedHostToPlan(ctx, query, nodes, nil,
-			func(n *ProvisionedHost, e *Plan) { n.Edges.ProvisionedHostToPlan = e }); err != nil {
+	if query := phq.withPlan; query != nil {
+		if err := phq.loadPlan(ctx, query, nodes, nil,
+			func(n *ProvisionedHost, e *Plan) { n.Edges.Plan = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := phq.withProvisionedHostToGinFileMiddleware; query != nil {
-		if err := phq.loadProvisionedHostToGinFileMiddleware(ctx, query, nodes, nil,
-			func(n *ProvisionedHost, e *GinFileMiddleware) { n.Edges.ProvisionedHostToGinFileMiddleware = e }); err != nil {
+	if query := phq.withGinFileMiddleware; query != nil {
+		if err := phq.loadGinFileMiddleware(ctx, query, nodes, nil,
+			func(n *ProvisionedHost, e *GinFileMiddleware) { n.Edges.GinFileMiddleware = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (phq *ProvisionedHostQuery) loadProvisionedHostToStatus(ctx context.Context, query *StatusQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *Status)) error {
+func (phq *ProvisionedHostQuery) loadStatus(ctx context.Context, query *StatusQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *Status)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*ProvisionedHost)
 	for i := range nodes {
@@ -844,33 +837,33 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToStatus(ctx context.Context
 	}
 	query.withFKs = true
 	query.Where(predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisionedhost.ProvisionedHostToStatusColumn, fks...))
+		s.Where(sql.InValues(provisionedhost.StatusColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioned_host_provisioned_host_to_status
+		fk := n.provisioned_host_status
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioned_host_provisioned_host_to_status" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioned_host_status" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_host_to_status" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_host_status" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisionedNetwork(ctx context.Context, query *ProvisionedNetworkQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *ProvisionedNetwork)) error {
+func (phq *ProvisionedHostQuery) loadProvisionedNetwork(ctx context.Context, query *ProvisionedNetworkQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *ProvisionedNetwork)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionedHost)
 	for i := range nodes {
-		if nodes[i].provisioned_host_provisioned_host_to_provisioned_network == nil {
+		if nodes[i].provisioned_host_provisioned_network == nil {
 			continue
 		}
-		fk := *nodes[i].provisioned_host_provisioned_host_to_provisioned_network
+		fk := *nodes[i].provisioned_host_provisioned_network
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -884,7 +877,7 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisionedNetwork(ctx con
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_host_to_provisioned_network" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_network" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -892,14 +885,14 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisionedNetwork(ctx con
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadProvisionedHostToHost(ctx context.Context, query *HostQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *Host)) error {
+func (phq *ProvisionedHostQuery) loadHost(ctx context.Context, query *HostQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *Host)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionedHost)
 	for i := range nodes {
-		if nodes[i].provisioned_host_provisioned_host_to_host == nil {
+		if nodes[i].provisioned_host_host == nil {
 			continue
 		}
-		fk := *nodes[i].provisioned_host_provisioned_host_to_host
+		fk := *nodes[i].provisioned_host_host
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -913,7 +906,7 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToHost(ctx context.Context, 
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_host_to_host" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_host_host" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -921,14 +914,14 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToHost(ctx context.Context, 
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadProvisionedHostToEndStepPlan(ctx context.Context, query *PlanQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *Plan)) error {
+func (phq *ProvisionedHostQuery) loadEndStepPlan(ctx context.Context, query *PlanQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *Plan)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionedHost)
 	for i := range nodes {
-		if nodes[i].provisioned_host_provisioned_host_to_end_step_plan == nil {
+		if nodes[i].provisioned_host_end_step_plan == nil {
 			continue
 		}
-		fk := *nodes[i].provisioned_host_provisioned_host_to_end_step_plan
+		fk := *nodes[i].provisioned_host_end_step_plan
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -942,7 +935,7 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToEndStepPlan(ctx context.Co
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_host_to_end_step_plan" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_host_end_step_plan" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -950,14 +943,14 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToEndStepPlan(ctx context.Co
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadProvisionedHostToBuild(ctx context.Context, query *BuildQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *Build)) error {
+func (phq *ProvisionedHostQuery) loadBuild(ctx context.Context, query *BuildQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *Build)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionedHost)
 	for i := range nodes {
-		if nodes[i].provisioned_host_provisioned_host_to_build == nil {
+		if nodes[i].provisioned_host_build == nil {
 			continue
 		}
-		fk := *nodes[i].provisioned_host_provisioned_host_to_build
+		fk := *nodes[i].provisioned_host_build
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -971,7 +964,7 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToBuild(ctx context.Context,
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_host_to_build" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_host_build" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -979,7 +972,7 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToBuild(ctx context.Context,
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisioningStep(ctx context.Context, query *ProvisioningStepQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *ProvisioningStep)) error {
+func (phq *ProvisionedHostQuery) loadProvisioningSteps(ctx context.Context, query *ProvisioningStepQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *ProvisioningStep)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*ProvisionedHost)
 	for i := range nodes {
@@ -991,26 +984,26 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisioningStep(ctx conte
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisioningStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisionedhost.ProvisionedHostToProvisioningStepColumn, fks...))
+		s.Where(sql.InValues(provisionedhost.ProvisioningStepsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioning_step_provisioning_step_to_provisioned_host
+		fk := n.provisioning_step_provisioned_host
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioning_step_provisioning_step_to_provisioned_host" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioning_step_provisioned_host" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_provisioned_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioned_host" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *ProvisioningScheduledStep)) error {
+func (phq *ProvisionedHostQuery) loadProvisioningScheduledSteps(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *ProvisioningScheduledStep)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*ProvisionedHost)
 	for i := range nodes {
@@ -1022,7 +1015,7 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisioningScheduledStep(
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisioningScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisionedhost.ProvisionedHostToProvisioningScheduledStepColumn, fks...))
+		s.Where(sql.InValues(provisionedhost.ProvisioningScheduledStepsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -1041,38 +1034,36 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToProvisioningScheduledStep(
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadProvisionedHostToAgentStatus(ctx context.Context, query *AgentStatusQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *AgentStatus)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*ProvisionedHost)
+func (phq *ProvisionedHostQuery) loadAgentStatus(ctx context.Context, query *AgentStatusQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *AgentStatus)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*ProvisionedHost)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		if nodes[i].agent_status_provisioned_host == nil {
+			continue
 		}
+		fk := *nodes[i].agent_status_provisioned_host
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.withFKs = true
-	query.Where(predicate.AgentStatus(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisionedhost.ProvisionedHostToAgentStatusColumn, fks...))
-	}))
+	query.Where(agentstatus.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_status_agent_status_to_provisioned_host
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_status_agent_status_to_provisioned_host" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_status_agent_status_to_provisioned_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_status_provisioned_host" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadProvisionedHostToAgentTask(ctx context.Context, query *AgentTaskQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *AgentTask)) error {
+func (phq *ProvisionedHostQuery) loadAgentTasks(ctx context.Context, query *AgentTaskQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *AgentTask)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*ProvisionedHost)
 	for i := range nodes {
@@ -1084,33 +1075,33 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToAgentTask(ctx context.Cont
 	}
 	query.withFKs = true
 	query.Where(predicate.AgentTask(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisionedhost.ProvisionedHostToAgentTaskColumn, fks...))
+		s.Where(sql.InValues(provisionedhost.AgentTasksColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_task_agent_task_to_provisioned_host
+		fk := n.agent_task_provisioned_host
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_task_agent_task_to_provisioned_host" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "agent_task_provisioned_host" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_provisioned_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_task_provisioned_host" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadProvisionedHostToPlan(ctx context.Context, query *PlanQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *Plan)) error {
+func (phq *ProvisionedHostQuery) loadPlan(ctx context.Context, query *PlanQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *Plan)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionedHost)
 	for i := range nodes {
-		if nodes[i].plan_plan_to_provisioned_host == nil {
+		if nodes[i].plan_provisioned_host == nil {
 			continue
 		}
-		fk := *nodes[i].plan_plan_to_provisioned_host
+		fk := *nodes[i].plan_provisioned_host
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1124,7 +1115,7 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToPlan(ctx context.Context, 
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_provisioned_host" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_provisioned_host" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -1132,14 +1123,14 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToPlan(ctx context.Context, 
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadProvisionedHostToGinFileMiddleware(ctx context.Context, query *GinFileMiddlewareQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *GinFileMiddleware)) error {
+func (phq *ProvisionedHostQuery) loadGinFileMiddleware(ctx context.Context, query *GinFileMiddlewareQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *GinFileMiddleware)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionedHost)
 	for i := range nodes {
-		if nodes[i].gin_file_middleware_gin_file_middleware_to_provisioned_host == nil {
+		if nodes[i].gin_file_middleware_provisioned_host == nil {
 			continue
 		}
-		fk := *nodes[i].gin_file_middleware_gin_file_middleware_to_provisioned_host
+		fk := *nodes[i].gin_file_middleware_provisioned_host
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1153,7 +1144,7 @@ func (phq *ProvisionedHostQuery) loadProvisionedHostToGinFileMiddleware(ctx cont
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_gin_file_middleware_to_provisioned_host" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_provisioned_host" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

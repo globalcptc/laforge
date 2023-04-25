@@ -2,45 +2,45 @@ query GetBuildTree($buildId: String!) {
   build(buildUUID: $buildId) {
     id
     revision
-    buildToEnvironment {
+    Environment {
       id
       name
       description
-      team_count
-      admin_cidrs
-      exposed_vdi_ports
+      teamCount
+      adminCidrs
+      exposedVdiPorts
     }
-    BuildToRepoCommit {
+    RepoCommit {
       id
       hash
       committer
-      RepoCommitToRepository {
+      Repository {
         id
-        repo_url
+        repoUrl
       }
     }
-    buildToStatus {
+    Status {
       id
     }
-    buildToTeam {
+    Teams {
       id
-      team_number
-      TeamToStatus {
+      teamNumber
+      Status {
         id
       }
-      TeamToPlan {
+      Plan {
         id
-        PlanToStatus {
+        Status {
           id
         }
       }
-      TeamToProvisionedNetwork {
+      ProvisionedNetworks {
         id
         name
         cidr
-        ProvisionedNetworkToNetwork {
+        Network {
           id
-          vdi_visible
+          vdiVisible
           vars {
             key
             value
@@ -50,28 +50,28 @@ query GetBuildTree($buildId: String!) {
             value
           }
         }
-        ProvisionedNetworkToStatus {
+        Status {
           id
         }
-        ProvisionedNetworkToPlan {
+        Plan {
           id
-          PlanToStatus {
+          Status {
             id
           }
         }
-        ProvisionedNetworkToProvisionedHost {
+        ProvisionedHosts {
           id
-          subnet_ip
-          ProvisionedHostToHost {
+          subnetIp
+          Host {
             id
             hostname
             description
             OS
-            allow_mac_changes
-            exposed_tcp_ports
-            exposed_udp_ports
-            user_groups
-            override_password
+            allowMacChanges
+            exposedTcpPorts
+            exposedUdpPorts
+            userGroups
+            overridePassword
             vars {
               key
               value
@@ -81,26 +81,26 @@ query GetBuildTree($buildId: String!) {
               value
             }
           }
-          ProvisionedHostToStatus {
+          Status {
             id
           }
-          ProvisionedHostToPlan {
+          Plan {
             id
-            PlanToStatus {
+            Status {
               id
             }
           }
-          ProvisionedHostToProvisioningStep {
+          ProvisioningSteps {
             id
             type
-            step_number
-            ProvisioningStepToScript {
+            stepNumber
+            Script {
               id
               name
               language
               description
               source
-              source_type
+              sourceType
               disabled
               args
               vars {
@@ -112,7 +112,7 @@ query GetBuildTree($buildId: String!) {
                 value
               }
             }
-            ProvisioningStepToCommand {
+            Command {
               id
               name
               description
@@ -128,7 +128,7 @@ query GetBuildTree($buildId: String!) {
                 value
               }
             }
-            ProvisioningStepToDNSRecord {
+            DNSRecord {
               id
               name
               values
@@ -144,7 +144,7 @@ query GetBuildTree($buildId: String!) {
                 value
               }
             }
-            ProvisioningStepToFileDownload {
+            FileDownload {
               id
               source
               sourceType
@@ -155,7 +155,7 @@ query GetBuildTree($buildId: String!) {
                 value
               }
             }
-            ProvisioningStepToFileDelete {
+            FileDelete {
               id
               path
               tags {
@@ -163,7 +163,7 @@ query GetBuildTree($buildId: String!) {
                 value
               }
             }
-            ProvisioningStepToFileExtract {
+            FileExtract {
               id
               source
               destination
@@ -173,23 +173,23 @@ query GetBuildTree($buildId: String!) {
                 value
               }
             }
-            ProvisioningStepToStatus {
+            Status {
               id
             }
-            ProvisioningStepToPlan {
+            Plan {
               id
-              PlanToStatus {
+              Status {
                 id
               }
             }
           }
-          ProvisionedHostToAgentStatus {
+          AgentStatus {
             clientId
           }
         }
       }
     }
-    BuildToServerTasks {
+    ServerTasks {
       id
     }
   }
@@ -198,7 +198,7 @@ query GetBuildTree($buildId: String!) {
 query GetBuildPlans($buildId: String!) {
   build(buildUUID: $buildId) {
     id
-    buildToPlan {
+    Plans {
       ...PlanFields
     }
   }
@@ -207,25 +207,25 @@ query GetBuildPlans($buildId: String!) {
 query GetBuildStatuses($buildUUID: String!) {
   build(buildUUID: $buildUUID) {
     id
-    buildToPlan {
+    Plans {
       id
-      PlanToStatus {
+      Status {
         ...StatusFields
       }
     }
-    buildToTeam {
+    Teams {
       id
-      TeamToStatus {
+      Status {
         ...StatusFields
       }
-      TeamToProvisionedNetwork {
+      ProvisionedNetworks {
         id
-        ProvisionedNetworkToStatus {
+        Status {
           ...StatusFields
         }
-        ProvisionedNetworkToProvisionedHost {
+        ProvisionedHosts {
           id
-          ProvisionedHostToStatus {
+          Status {
             ...StatusFields
           }
         }
@@ -237,7 +237,7 @@ query GetBuildStatuses($buildUUID: String!) {
 query GetBuildCommits($buildId: String!) {
   build(buildUUID: $buildId) {
     id
-    BuildToBuildCommits {
+    BuildCommits {
       ...BuildCommitFields
     }
   }

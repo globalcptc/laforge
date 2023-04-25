@@ -26,15 +26,15 @@ export class StepComponent implements OnInit, OnDestroy {
   @Input() stepNumber: number;
   @Input()
   // eslint-disable-next-line max-len
-  provisioningStep: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0]['ProvisionedHostToProvisioningStep'][0];
-  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  provisioningStep: LaForgeGetBuildTreeQuery['build']['Teams'][0]['ProvisionedNetworks'][0]['ProvisionedHosts'][0]['ProvisioningSteps'][0];
+  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['PlanDiffs'] | undefined;
   // @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
   @Input() showDetail: boolean;
   @Input() style: 'compact' | 'expanded';
   @Input() mode: 'plan' | 'build' | 'manage';
   // planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
   provisioningStepStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
-  latestDiff: LaForgePlanFieldsFragment['PlanToPlanDiffs'][0];
+  latestDiff: LaForgePlanFieldsFragment['PlanDiffs'][0];
   planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
 
   constructor(
@@ -48,8 +48,8 @@ export class StepComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    if (this.provisioningStep.ProvisioningStepToPlan?.PlanToStatus?.id) {
-      this.planStatus = this.status.getStatusSubject(this.provisioningStep.ProvisioningStepToPlan.PlanToStatus.id);
+    if (this.provisioningStep.Plan?.Status?.id) {
+      this.planStatus = this.status.getStatusSubject(this.provisioningStep.Plan.Status.id);
       const sub = this.planStatus.subscribe(() => this.cdRef.markForCheck());
       this.unsubscribe.push(sub);
     }
@@ -90,13 +90,13 @@ export class StepComponent implements OnInit, OnDestroy {
     });
   }
 
-  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
-    return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.provisioningStep.ProvisioningStepToPlan.id)[0] ?? undefined;
+  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['PlanDiffs'][0] | undefined {
+    return this.planDiffs?.filter((pd) => pd.Plan.id === this.provisioningStep.Plan.id)[0] ?? undefined;
   }
 
   getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
     // return (
-    //   this.buildStatusMap?.filter((s) => s.id === this.provisioningStep.ProvisioningStepToPlan?.PlanToStatus.id ?? null)[0] ?? undefined
+    //   this.buildStatusMap?.filter((s) => s.id === this.provisioningStep.ProvisioningStepToPlan?.Status.id ?? null)[0] ?? undefined
     // );
     return this.planStatus?.getValue() ?? undefined;
   }
@@ -126,7 +126,7 @@ export class StepComponent implements OnInit, OnDestroy {
     if (this.mode === 'plan') {
       const planDiff = this.getPlanDiff();
       if (!planDiff) return 'dark';
-      switch (planDiff.new_state) {
+      switch (planDiff.newState) {
         case LaForgeProvisionStatus.Torebuild:
           return 'warning';
         case LaForgeProvisionStatus.Planning:
@@ -161,16 +161,14 @@ export class StepComponent implements OnInit, OnDestroy {
   getText(): string {
     switch (this.provisioningStep.type) {
       case LaForgeProvisioningStepType.Script:
-        return `${this.provisioningStep.ProvisioningStepToScript.source} ${this.provisioningStep.ProvisioningStepToScript.args.join(' ')}`;
+        return `${this.provisioningStep.Script.source} ${this.provisioningStep.Script.args.join(' ')}`;
       case LaForgeProvisioningStepType.Command:
-        return `${this.provisioningStep.ProvisioningStepToCommand.program} ${this.provisioningStep.ProvisioningStepToCommand.args.join(
-          ' '
-        )}`;
+        return `${this.provisioningStep.Command.program} ${this.provisioningStep.Command.args.join(' ')}`;
       case LaForgeProvisioningStepType.DnsRecord:
         return 'DNSRecord';
       case LaForgeProvisioningStepType.FileDownload:
         // eslint-disable-next-line max-len
-        return `${this.provisioningStep.ProvisioningStepToFileDownload.source} -> ${this.provisioningStep.ProvisioningStepToFileDownload.destination}`;
+        return `${this.provisioningStep.FileDownload.source} -> ${this.provisioningStep.FileDownload.destination}`;
       case LaForgeProvisioningStepType.FileDelete:
         return 'FileDelete';
       case LaForgeProvisioningStepType.FileExtract:

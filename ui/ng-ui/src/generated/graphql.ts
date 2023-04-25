@@ -15,6 +15,16 @@ export type Scalars = {
   Time: any;
 };
 
+export type LaForgeAdhocPlan = {
+  __typename?: 'AdhocPlan';
+  id: Scalars['ID'];
+  NextAdhocPlans?: Maybe<Array<Maybe<LaForgeAdhocPlan>>>;
+  PrevAdhocPlans?: Maybe<Array<Maybe<LaForgeAdhocPlan>>>;
+  Build: LaForgeBuild;
+  Status: LaForgeStatus;
+  AgentTask: LaForgeAgentTask;
+};
+
 export enum LaForgeAgentCommand {
   Default = 'DEFAULT',
   Delete = 'DELETE',
@@ -46,6 +56,9 @@ export type LaForgeAgentStatus = {
   freeMem: Scalars['Int'];
   usedMem: Scalars['Int'];
   timestamp: Scalars['Int'];
+  ProvisionedHost?: Maybe<LaForgeProvisionedHost>;
+  ProvisionedNetwork?: Maybe<LaForgeProvisionedNetwork>;
+  Build?: Maybe<LaForgeBuild>;
 };
 
 export type LaForgeAgentStatusBatch = {
@@ -62,7 +75,11 @@ export type LaForgeAgentTask = {
   number: Scalars['Int'];
   output?: Maybe<Scalars['String']>;
   state: LaForgeAgentTaskState;
-  error_message?: Maybe<Scalars['String']>;
+  errorMessage?: Maybe<Scalars['String']>;
+  ProvisioningStep?: Maybe<LaForgeProvisioningStep>;
+  ProvisioningScheduledStep?: Maybe<LaForgeProvisioningScheduledStep>;
+  ProvisionedHost: LaForgeProvisionedHost;
+  AdhocPlans?: Maybe<Array<Maybe<LaForgeAdhocPlan>>>;
 };
 
 export enum LaForgeAgentTaskState {
@@ -72,37 +89,60 @@ export enum LaForgeAgentTaskState {
   Complete = 'COMPLETE'
 }
 
+export type LaForgeAnsible = {
+  __typename?: 'Ansible';
+  id: Scalars['ID'];
+  hclId: Scalars['String'];
+  name: Scalars['String'];
+  description: Scalars['String'];
+  source: Scalars['String'];
+  playbookName: Scalars['String'];
+  method: LaForgeAnsibleMethod;
+  inventory: Scalars['String'];
+  absPath: Scalars['String'];
+  tags?: Maybe<Array<Maybe<LaForgeTagMap>>>;
+  Users?: Maybe<Array<Maybe<LaForgeUser>>>;
+  Environment?: Maybe<LaForgeEnvironment>;
+};
+
+export enum LaForgeAnsibleMethod {
+  Local = 'LOCAL'
+}
+
 export type LaForgeAuthUser = {
   __typename?: 'AuthUser';
   id: Scalars['ID'];
   username: Scalars['String'];
-  role: LaForgeRoleLevel;
-  provider: LaForgeProviderType;
-  first_name: Scalars['String'];
-  last_name: Scalars['String'];
+  firstName: Scalars['String'];
+  lastName: Scalars['String'];
   email: Scalars['String'];
   phone: Scalars['String'];
   company: Scalars['String'];
   occupation: Scalars['String'];
   publicKey: Scalars['String'];
+  role: LaForgeRoleLevel;
+  provider: LaForgeProviderType;
+  ServerTasks?: Maybe<Array<Maybe<LaForgeServerTask>>>;
 };
 
 export type LaForgeBuild = {
   __typename?: 'Build';
   id: Scalars['ID'];
   revision: Scalars['Int'];
-  environment_revision: Scalars['Int'];
-  completed_plan: Scalars['Boolean'];
-  buildToStatus: LaForgeStatus;
-  buildToEnvironment: LaForgeEnvironment;
-  buildToCompetition: LaForgeCompetition;
-  buildToProvisionedNetwork: Array<Maybe<LaForgeProvisionedNetwork>>;
-  buildToTeam: Array<Maybe<LaForgeTeam>>;
-  buildToPlan: Array<Maybe<LaForgePlan>>;
-  BuildToLatestBuildCommit?: Maybe<LaForgeBuildCommit>;
-  BuildToBuildCommits: Array<Maybe<LaForgeBuildCommit>>;
-  BuildToRepoCommit: LaForgeRepoCommit;
-  BuildToServerTasks: Array<Maybe<LaForgeServerTask>>;
+  environmentRevision: Scalars['Int'];
+  completedPlan: Scalars['Boolean'];
+  Status: LaForgeStatus;
+  Environment: LaForgeEnvironment;
+  Competition: LaForgeCompetition;
+  LatestBuildCommit?: Maybe<LaForgeBuildCommit>;
+  RepoCommit: LaForgeRepoCommit;
+  ProvisionedNetworks: Array<Maybe<LaForgeProvisionedNetwork>>;
+  Teams: Array<Maybe<LaForgeTeam>>;
+  Plans: Array<Maybe<LaForgePlan>>;
+  BuildCommits: Array<Maybe<LaForgeBuildCommit>>;
+  AdhocPlans: Array<Maybe<LaForgeAdhocPlan>>;
+  AgentStatuses: Array<Maybe<LaForgeAgentStatus>>;
+  ServerTasks: Array<Maybe<LaForgeServerTask>>;
 };
 
 export type LaForgeBuildCommit = {
@@ -112,9 +152,9 @@ export type LaForgeBuildCommit = {
   revision: Scalars['Int'];
   state: LaForgeBuildCommitState;
   createdAt: Scalars['Time'];
-  BuildCommitToBuild: LaForgeBuild;
-  BuildCommitToPlanDiffs: Array<Maybe<LaForgePlanDiff>>;
-  BuildCommitToServerTask: Array<Maybe<LaForgeServerTask>>;
+  Build: LaForgeBuild;
+  ServerTasks: Array<Maybe<LaForgeServerTask>>;
+  PlanDiffs: Array<Maybe<LaForgePlanDiff>>;
 };
 
 export enum LaForgeBuildCommitState {
@@ -134,7 +174,7 @@ export enum LaForgeBuildCommitType {
 export type LaForgeCommand = {
   __typename?: 'Command';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
+  hclId: Scalars['String'];
   name: Scalars['String'];
   description: Scalars['String'];
   program: Scalars['String'];
@@ -145,38 +185,41 @@ export type LaForgeCommand = {
   timeout: Scalars['Int'];
   vars?: Maybe<Array<Maybe<LaForgeVarsMap>>>;
   tags?: Maybe<Array<Maybe<LaForgeTagMap>>>;
-  CommandToEnvironment: LaForgeEnvironment;
+  Users: Array<Maybe<LaForgeUser>>;
+  Environment: LaForgeEnvironment;
 };
 
 export type LaForgeCompetition = {
   __typename?: 'Competition';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
-  root_password: Scalars['String'];
+  hclId: Scalars['String'];
+  rootPassword: Scalars['String'];
+  startTime?: Maybe<Scalars['Int']>;
+  stopTime?: Maybe<Scalars['Int']>;
   config?: Maybe<Array<Maybe<LaForgeConfigMap>>>;
   tags?: Maybe<Array<Maybe<LaForgeTagMap>>>;
-  competitionToDNS: Array<Maybe<LaForgeDns>>;
-  CompetitionToEnvironment: LaForgeEnvironment;
-  CompetitionToBuild: Array<Maybe<LaForgeBuild>>;
+  DNS: Array<Maybe<LaForgeDns>>;
+  Environment: LaForgeEnvironment;
+  Builds: Array<Maybe<LaForgeBuild>>;
 };
 
 export type LaForgeDns = {
   __typename?: 'DNS';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
+  hclId: Scalars['String'];
   type: Scalars['String'];
-  root_domain: Scalars['String'];
-  dns_servers: Array<Maybe<Scalars['String']>>;
-  ntp_servers: Array<Maybe<Scalars['String']>>;
+  rootDomain: Scalars['String'];
+  dnsServers: Array<Maybe<Scalars['String']>>;
+  ntpServers: Array<Maybe<Scalars['String']>>;
   config?: Maybe<Array<Maybe<LaForgeConfigMap>>>;
-  DNSToEnvironment: Array<Maybe<LaForgeEnvironment>>;
-  DNSToCompetition: Array<Maybe<LaForgeCompetition>>;
+  Environments: Array<Maybe<LaForgeEnvironment>>;
+  Competitions: Array<Maybe<LaForgeCompetition>>;
 };
 
 export type LaForgeDnsRecord = {
   __typename?: 'DNSRecord';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
+  hclId: Scalars['String'];
   name: Scalars['String'];
   values: Array<Maybe<Scalars['String']>>;
   type: Scalars['String'];
@@ -184,59 +227,65 @@ export type LaForgeDnsRecord = {
   vars: Array<Maybe<LaForgeVarsMap>>;
   disabled: Scalars['Boolean'];
   tags: Array<Maybe<LaForgeTagMap>>;
-  DNSRecordToEnvironment: LaForgeEnvironment;
+  Environment: LaForgeEnvironment;
 };
 
 export type LaForgeDisk = {
   __typename?: 'Disk';
+  id: Scalars['ID'];
   size: Scalars['Int'];
-  DiskToHost: LaForgeHost;
+  Host: LaForgeHost;
 };
 
 export type LaForgeEnvironment = {
   __typename?: 'Environment';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
-  competition_id: Scalars['String'];
+  hclId: Scalars['String'];
+  competitionId: Scalars['String'];
   name: Scalars['String'];
   description: Scalars['String'];
   builder: Scalars['String'];
-  team_count: Scalars['Int'];
+  teamCount: Scalars['Int'];
   revision: Scalars['Int'];
-  admin_cidrs: Array<Maybe<Scalars['String']>>;
-  exposed_vdi_ports: Array<Maybe<Scalars['String']>>;
+  adminCidrs: Array<Maybe<Scalars['String']>>;
+  exposedVdiPorts: Array<Maybe<Scalars['String']>>;
   config?: Maybe<Array<Maybe<LaForgeConfigMap>>>;
   tags?: Maybe<Array<Maybe<LaForgeTagMap>>>;
-  EnvironmentToUser: Array<Maybe<LaForgeUser>>;
-  EnvironmentToHost: Array<Maybe<LaForgeHost>>;
-  EnvironmentToCompetition: Array<Maybe<LaForgeCompetition>>;
-  EnvironmentToIdentity: Array<Maybe<LaForgeIdentity>>;
-  EnvironmentToCommand: Array<Maybe<LaForgeCommand>>;
-  EnvironmentToScript: Array<Maybe<LaForgeScript>>;
-  EnvironmentToFileDownload: Array<Maybe<LaForgeFileDownload>>;
-  EnvironmentToFileDelete: Array<Maybe<LaForgeFileDelete>>;
-  EnvironmentToFileExtract: Array<Maybe<LaForgeFileExtract>>;
-  EnvironmentToDNSRecord: Array<Maybe<LaForgeDnsRecord>>;
-  EnvironmentToDNS: Array<Maybe<LaForgeDns>>;
-  EnvironmentToNetwork: Array<Maybe<LaForgeNetwork>>;
-  EnvironmentToBuild: Array<Maybe<LaForgeBuild>>;
-  EnvironmentToRepository: Array<Maybe<LaForgeRepository>>;
-  EnvironmentToServerTask: Array<Maybe<LaForgeServerTask>>;
+  Users: Array<Maybe<LaForgeUser>>;
+  Hosts: Array<Maybe<LaForgeHost>>;
+  Competitions: Array<Maybe<LaForgeCompetition>>;
+  Identities: Array<Maybe<LaForgeIdentity>>;
+  Commands: Array<Maybe<LaForgeCommand>>;
+  Scripts: Array<Maybe<LaForgeScript>>;
+  FileDownloads: Array<Maybe<LaForgeFileDownload>>;
+  FileDeletes: Array<Maybe<LaForgeFileDelete>>;
+  FileExtracts: Array<Maybe<LaForgeFileExtract>>;
+  IncludedNetworks: Array<Maybe<LaForgeIncludedNetwork>>;
+  Findings: Array<Maybe<LaForgeFinding>>;
+  DNSRecords: Array<Maybe<LaForgeDnsRecord>>;
+  DNS: Array<Maybe<LaForgeDns>>;
+  Networks: Array<Maybe<LaForgeNetwork>>;
+  HostDependencies: Array<Maybe<LaForgeHostDependency>>;
+  Ansibles: Array<Maybe<LaForgeAnsible>>;
+  ScheduledSteps: Array<Maybe<LaForgeScheduledStep>>;
+  Builds: Array<Maybe<LaForgeBuild>>;
+  Repositories: Array<Maybe<LaForgeRepository>>;
+  ServerTasks: Array<Maybe<LaForgeServerTask>>;
 };
 
 export type LaForgeFileDelete = {
   __typename?: 'FileDelete';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
+  hclId: Scalars['String'];
   path: Scalars['String'];
   tags: Array<Maybe<LaForgeTagMap>>;
-  FileDeleteToEnvironment: LaForgeEnvironment;
+  Environment: LaForgeEnvironment;
 };
 
 export type LaForgeFileDownload = {
   __typename?: 'FileDownload';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
+  hclId: Scalars['String'];
   sourceType: Scalars['String'];
   source: Scalars['String'];
   destination: Scalars['String'];
@@ -246,30 +295,32 @@ export type LaForgeFileDownload = {
   md5: Scalars['String'];
   absPath: Scalars['String'];
   tags: Array<Maybe<LaForgeTagMap>>;
-  FileDownloadToEnvironment: LaForgeEnvironment;
+  Environment: LaForgeEnvironment;
 };
 
 export type LaForgeFileExtract = {
   __typename?: 'FileExtract';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
+  hclId: Scalars['String'];
   source: Scalars['String'];
   destination: Scalars['String'];
   type: Scalars['String'];
   tags: Array<Maybe<LaForgeTagMap>>;
-  FileExtractToEnvironment: LaForgeEnvironment;
+  Environment: LaForgeEnvironment;
 };
 
 export type LaForgeFinding = {
   __typename?: 'Finding';
+  id: Scalars['ID'];
   name: Scalars['String'];
   description: Scalars['String'];
   severity: LaForgeFindingSeverity;
   difficulty: LaForgeFindingDifficulty;
   tags: Array<Maybe<LaForgeTagMap>>;
-  FindingToUser: Array<Maybe<LaForgeUser>>;
-  FindingToScript: LaForgeScript;
-  FindingToEnvironment: LaForgeEnvironment;
+  Users: Array<Maybe<LaForgeUser>>;
+  Host?: Maybe<LaForgeHost>;
+  Script?: Maybe<LaForgeScript>;
+  Environment?: Maybe<LaForgeEnvironment>;
 };
 
 export enum LaForgeFindingDifficulty {
@@ -289,40 +340,77 @@ export enum LaForgeFindingSeverity {
   NullSeverity = 'NullSeverity'
 }
 
+export type LaForgeGinFileMiddleware = {
+  __typename?: 'GinFileMiddleware';
+  id: Scalars['ID'];
+  urlId: Scalars['String'];
+  filePath: Scalars['String'];
+  accessed: Scalars['Boolean'];
+  ProvisionedHost?: Maybe<LaForgeProvisionedHost>;
+  ProvisioningStep?: Maybe<LaForgeProvisioningStep>;
+  ProvisioningScheduledStep?: Maybe<LaForgeProvisioningScheduledStep>;
+};
+
 export type LaForgeHost = {
   __typename?: 'Host';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
+  hclId: Scalars['String'];
   hostname: Scalars['String'];
   description: Scalars['String'];
   OS: Scalars['String'];
-  last_octet: Scalars['Int'];
-  instance_size: Scalars['String'];
-  allow_mac_changes: Scalars['Boolean'];
-  exposed_tcp_ports: Array<Maybe<Scalars['String']>>;
-  exposed_udp_ports: Array<Maybe<Scalars['String']>>;
-  override_password: Scalars['String'];
+  lastOctet: Scalars['Int'];
+  instanceSize: Scalars['String'];
+  allowMacChanges: Scalars['Boolean'];
+  exposedTcpPorts: Array<Maybe<Scalars['String']>>;
+  exposedUdpPorts: Array<Maybe<Scalars['String']>>;
+  overridePassword: Scalars['String'];
   vars?: Maybe<Array<Maybe<LaForgeVarsMap>>>;
-  user_groups: Array<Maybe<Scalars['String']>>;
-  provision_steps: Array<Maybe<Scalars['String']>>;
+  userGroups: Array<Maybe<Scalars['String']>>;
+  provisionSteps: Array<Maybe<Scalars['String']>>;
   tags: Array<Maybe<LaForgeTagMap>>;
-  HostToDisk: LaForgeDisk;
-  HostToEnvironment: LaForgeEnvironment;
+  Disk: LaForgeDisk;
+  Users: Array<Maybe<LaForgeUser>>;
+  Environment: LaForgeEnvironment;
+  IncludedNetworks: Array<Maybe<LaForgeIncludedNetwork>>;
+  DependOnHostDependencies: Array<Maybe<LaForgeHostDependency>>;
+  RequiredByHostDependencies: Array<Maybe<LaForgeHostDependency>>;
+};
+
+export type LaForgeHostDependency = {
+  __typename?: 'HostDependency';
+  id: Scalars['ID'];
+  hostId: Scalars['String'];
+  networkId: Scalars['String'];
+  RequiredBy?: Maybe<LaForgeHost>;
+  DependOnHost?: Maybe<LaForgeHost>;
+  DependOnNetwork?: Maybe<LaForgeNetwork>;
+  Environment?: Maybe<LaForgeEnvironment>;
 };
 
 export type LaForgeIdentity = {
   __typename?: 'Identity';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
-  first_name: Scalars['String'];
-  last_name: Scalars['String'];
+  hclid: Scalars['String'];
+  firstName: Scalars['String'];
+  lastName: Scalars['String'];
   email: Scalars['String'];
   password: Scalars['String'];
   description: Scalars['String'];
-  avatar_file: Scalars['String'];
+  avatarFile: Scalars['String'];
   vars: Array<Maybe<LaForgeVarsMap>>;
   tags: Array<Maybe<LaForgeTagMap>>;
-  IdentityToEnvironment: LaForgeEnvironment;
+  Environment: LaForgeEnvironment;
+};
+
+export type LaForgeIncludedNetwork = {
+  __typename?: 'IncludedNetwork';
+  id: Scalars['ID'];
+  name: Scalars['String'];
+  includedHosts: Array<Maybe<Scalars['String']>>;
+  Tags: Array<Maybe<LaForgeTag>>;
+  Hosts: Array<Maybe<LaForgeHost>>;
+  Network?: Maybe<LaForgeNetwork>;
+  Environments: Array<Maybe<LaForgeEnvironment>>;
 };
 
 export type LaForgeLaForgePageInfo = {
@@ -469,30 +557,32 @@ export type LaForgeMutationModifyAdminPasswordArgs = {
 export type LaForgeNetwork = {
   __typename?: 'Network';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
+  hclId: Scalars['String'];
   name: Scalars['String'];
   cidr: Scalars['String'];
-  vdi_visible: Scalars['Boolean'];
+  vdiVisible: Scalars['Boolean'];
   vars?: Maybe<Array<Maybe<LaForgeVarsMap>>>;
   tags: Array<Maybe<LaForgeTagMap>>;
-  NetworkToEnvironment: LaForgeEnvironment;
+  Environment: LaForgeEnvironment;
+  HostDependencies: Array<Maybe<LaForgeHostDependency>>;
+  IncludedNetworks: Array<Maybe<LaForgeIncludedNetwork>>;
 };
 
 export type LaForgePlan = {
   __typename?: 'Plan';
   id: Scalars['ID'];
-  step_number: Scalars['Int'];
+  stepNumber: Scalars['Int'];
   type: LaForgePlanType;
-  build_id: Scalars['String'];
-  NextPlan: Array<Maybe<LaForgePlan>>;
-  PrevPlan: Array<Maybe<LaForgePlan>>;
-  PlanToBuild: LaForgeBuild;
-  PlanToTeam: LaForgeTeam;
-  PlanToProvisionedNetwork: LaForgeProvisionedNetwork;
-  PlanToProvisionedHost: LaForgeProvisionedHost;
-  PlanToProvisioningStep: LaForgeProvisioningStep;
-  PlanToStatus: LaForgeStatus;
-  PlanToPlanDiffs: Array<Maybe<LaForgePlanDiff>>;
+  NextPlans: Array<Maybe<LaForgePlan>>;
+  PrevPlans: Array<Maybe<LaForgePlan>>;
+  Build?: Maybe<LaForgeBuild>;
+  Team?: Maybe<LaForgeTeam>;
+  ProvisionedNetwork?: Maybe<LaForgeProvisionedNetwork>;
+  ProvisionedHost?: Maybe<LaForgeProvisionedHost>;
+  ProvisioningStep?: Maybe<LaForgeProvisioningStep>;
+  ProvisioningScheduledStep?: Maybe<LaForgeProvisioningScheduledStep>;
+  Status: LaForgeStatus;
+  PlanDiffs: Array<Maybe<LaForgePlanDiff>>;
 };
 
 export type LaForgePlanCounts = {
@@ -516,9 +606,9 @@ export type LaForgePlanDiff = {
   __typename?: 'PlanDiff';
   id: Scalars['ID'];
   revision: Scalars['Int'];
-  new_state: LaForgeProvisionStatus;
-  PlanDiffToBuildCommit: LaForgeBuildCommit;
-  PlanDiffToPlan: LaForgePlan;
+  newState: LaForgeProvisionStatus;
+  BuildCommit: LaForgeBuildCommit;
+  Plan: LaForgePlan;
 };
 
 export enum LaForgePlanType {
@@ -566,42 +656,88 @@ export enum LaForgeProvisionStatusFor {
 export type LaForgeProvisionedHost = {
   __typename?: 'ProvisionedHost';
   id: Scalars['ID'];
-  subnet_ip: Scalars['String'];
-  ProvisionedHostToStatus: LaForgeStatus;
-  ProvisionedHostToProvisionedNetwork: LaForgeProvisionedNetwork;
-  ProvisionedHostToHost: LaForgeHost;
-  ProvisionedHostToProvisioningStep: Array<Maybe<LaForgeProvisioningStep>>;
-  ProvisionedHostToAgentStatus?: Maybe<LaForgeAgentStatus>;
-  ProvisionedHostToPlan: LaForgePlan;
+  subnetIp: Scalars['String'];
+  addonType?: Maybe<LaForgeProvisionedHostAddonType>;
+  vars?: Maybe<Array<Maybe<LaForgeVarsMap>>>;
+  Status: LaForgeStatus;
+  ProvisionedNetwork: LaForgeProvisionedNetwork;
+  Host: LaForgeHost;
+  EndStepPlan?: Maybe<LaForgePlan>;
+  Build: LaForgeBuild;
+  ProvisioningSteps: Array<Maybe<LaForgeProvisioningStep>>;
+  ProvisioningScheduledSteps: Array<Maybe<LaForgeProvisioningScheduledStep>>;
+  AgentStatus?: Maybe<LaForgeAgentStatus>;
+  AgentTasks: Array<Maybe<LaForgeAgentTask>>;
+  Plan: LaForgePlan;
+  GinFileMiddleware?: Maybe<LaForgeGinFileMiddleware>;
 };
+
+export enum LaForgeProvisionedHostAddonType {
+  Dns = 'DNS'
+}
 
 export type LaForgeProvisionedNetwork = {
   __typename?: 'ProvisionedNetwork';
   id: Scalars['ID'];
   name: Scalars['String'];
   cidr: Scalars['String'];
-  ProvisionedNetworkToStatus: LaForgeStatus;
-  ProvisionedNetworkToNetwork: LaForgeNetwork;
-  ProvisionedNetworkToBuild: LaForgeBuild;
-  ProvisionedNetworkToTeam: LaForgeTeam;
-  ProvisionedNetworkToProvisionedHost: Array<Maybe<LaForgeProvisionedHost>>;
-  ProvisionedNetworkToPlan: LaForgePlan;
+  vars?: Maybe<Array<Maybe<LaForgeVarsMap>>>;
+  Status?: Maybe<LaForgeStatus>;
+  Network?: Maybe<LaForgeNetwork>;
+  Build?: Maybe<LaForgeBuild>;
+  Team?: Maybe<LaForgeTeam>;
+  ProvisionedHosts: Array<Maybe<LaForgeProvisionedHost>>;
+  Plan?: Maybe<LaForgePlan>;
 };
+
+export type LaForgeProvisioningScheduledStep = {
+  __typename?: 'ProvisioningScheduledStep';
+  id: Scalars['ID'];
+  type: LaForgeProvisioningScheduledStepType;
+  runTime: Scalars['Time'];
+  Status?: Maybe<LaForgeStatus>;
+  ScheduledStep: LaForgeScheduledStep;
+  ProvisionedHost: LaForgeProvisionedHost;
+  Script?: Maybe<LaForgeScript>;
+  Command?: Maybe<LaForgeCommand>;
+  DNSRecord?: Maybe<LaForgeDnsRecord>;
+  FileDelete?: Maybe<LaForgeFileDelete>;
+  FileDownload?: Maybe<LaForgeFileDownload>;
+  FileExtract?: Maybe<LaForgeFileExtract>;
+  Ansible?: Maybe<LaForgeAnsible>;
+  AgentTasks: Array<Maybe<LaForgeAgentTask>>;
+  Plan?: Maybe<LaForgePlan>;
+  GinFileMiddleware?: Maybe<LaForgeGinFileMiddleware>;
+};
+
+export enum LaForgeProvisioningScheduledStepType {
+  Ansible = 'Ansible',
+  Script = 'Script',
+  Command = 'Command',
+  DnsRecord = 'DNSRecord',
+  FileDelete = 'FileDelete',
+  FileDownload = 'FileDownload',
+  FileExtract = 'FileExtract',
+  Undefined = 'Undefined'
+}
 
 export type LaForgeProvisioningStep = {
   __typename?: 'ProvisioningStep';
   id: Scalars['ID'];
   type: LaForgeProvisioningStepType;
-  step_number: Scalars['Int'];
-  ProvisioningStepToStatus: LaForgeStatus;
-  ProvisioningStepToProvisionedHost: LaForgeProvisionedHost;
-  ProvisioningStepToScript?: Maybe<LaForgeScript>;
-  ProvisioningStepToCommand?: Maybe<LaForgeCommand>;
-  ProvisioningStepToDNSRecord?: Maybe<LaForgeDnsRecord>;
-  ProvisioningStepToFileDelete?: Maybe<LaForgeFileDelete>;
-  ProvisioningStepToFileDownload?: Maybe<LaForgeFileDownload>;
-  ProvisioningStepToFileExtract?: Maybe<LaForgeFileExtract>;
-  ProvisioningStepToPlan?: Maybe<LaForgePlan>;
+  stepNumber: Scalars['Int'];
+  Status?: Maybe<LaForgeStatus>;
+  ProvisionedHost: LaForgeProvisionedHost;
+  Script?: Maybe<LaForgeScript>;
+  Command?: Maybe<LaForgeCommand>;
+  DNSRecord?: Maybe<LaForgeDnsRecord>;
+  FileDelete?: Maybe<LaForgeFileDelete>;
+  FileDownload?: Maybe<LaForgeFileDownload>;
+  FileExtract?: Maybe<LaForgeFileExtract>;
+  Ansible?: Maybe<LaForgeAnsible>;
+  Plan?: Maybe<LaForgePlan>;
+  AgentTasks: Array<Maybe<LaForgeAgentTask>>;
+  GinFileMiddleware?: Maybe<LaForgeGinFileMiddleware>;
 };
 
 export enum LaForgeProvisioningStepType {
@@ -731,20 +867,21 @@ export type LaForgeRepoCommit = {
   hash: Scalars['String'];
   author: Scalars['String'];
   committer: Scalars['String'];
-  pgp_signature: Scalars['String'];
+  pgpSignature: Scalars['String'];
   message: Scalars['String'];
-  tree_hash: Scalars['String'];
-  parent_hashes: Array<Maybe<Scalars['String']>>;
-  RepoCommitToRepository: LaForgeRepository;
+  treeHash: Scalars['String'];
+  parentHashes: Array<Maybe<Scalars['String']>>;
+  Repository: LaForgeRepository;
 };
 
 export type LaForgeRepository = {
   __typename?: 'Repository';
   id: Scalars['ID'];
-  repo_url: Scalars['String'];
-  branch_name: Scalars['String'];
-  environment_filepath: Scalars['String'];
-  RepositoryToRepoCommit: Array<Maybe<LaForgeRepoCommit>>;
+  repoUrl: Scalars['String'];
+  branchName: Scalars['String'];
+  environmentFilepath: Scalars['String'];
+  Environments: Array<Maybe<LaForgeEnvironment>>;
+  RepoCommits: Array<Maybe<LaForgeRepoCommit>>;
 };
 
 export enum LaForgeRoleLevel {
@@ -753,40 +890,60 @@ export enum LaForgeRoleLevel {
   Undefined = 'UNDEFINED'
 }
 
+export type LaForgeScheduledStep = {
+  __typename?: 'ScheduledStep';
+  id: Scalars['ID'];
+  hclId: Scalars['String'];
+  name: Scalars['String'];
+  description: Scalars['String'];
+  step: Scalars['String'];
+  type: LaForgeScheduledStepType;
+  schedule?: Maybe<Scalars['String']>;
+  runAt?: Maybe<Scalars['Int']>;
+  Environment?: Maybe<LaForgeEnvironment>;
+};
+
+export enum LaForgeScheduledStepType {
+  Cron = 'CRON',
+  Runonce = 'RUNONCE'
+}
+
 export type LaForgeScript = {
   __typename?: 'Script';
   id: Scalars['ID'];
-  hcl_id: Scalars['String'];
+  hclId: Scalars['String'];
   name: Scalars['String'];
   language: Scalars['String'];
   description: Scalars['String'];
   source: Scalars['String'];
-  source_type: Scalars['String'];
+  sourceType: Scalars['String'];
   cooldown: Scalars['Int'];
   timeout: Scalars['Int'];
-  ignore_errors: Scalars['Boolean'];
+  ignoreErrors: Scalars['Boolean'];
   args: Array<Maybe<Scalars['String']>>;
   disabled: Scalars['Boolean'];
   vars?: Maybe<Array<Maybe<LaForgeVarsMap>>>;
   absPath: Scalars['String'];
   tags?: Maybe<Array<Maybe<LaForgeTagMap>>>;
-  scriptToFinding: Array<Maybe<LaForgeFinding>>;
-  ScriptToEnvironment: LaForgeEnvironment;
+  Users: Array<Maybe<LaForgeUser>>;
+  Findings: Array<Maybe<LaForgeFinding>>;
+  Environment: LaForgeEnvironment;
 };
 
 export type LaForgeServerTask = {
   __typename?: 'ServerTask';
   id: Scalars['ID'];
   type: LaForgeServerTaskType;
-  start_time?: Maybe<Scalars['Time']>;
-  end_time?: Maybe<Scalars['Time']>;
+  startTime?: Maybe<Scalars['Time']>;
+  endTime?: Maybe<Scalars['Time']>;
   errors?: Maybe<Array<Maybe<Scalars['String']>>>;
-  log_file_path?: Maybe<Scalars['String']>;
-  ServerTaskToAuthUser: LaForgeAuthUser;
-  ServerTaskToStatus: LaForgeStatus;
-  ServerTaskToEnvironment?: Maybe<LaForgeEnvironment>;
-  ServerTaskToBuild?: Maybe<LaForgeBuild>;
-  ServerTaskToBuildCommit?: Maybe<LaForgeBuildCommit>;
+  logFilePath?: Maybe<Scalars['String']>;
+  AuthUser: LaForgeAuthUser;
+  Status: LaForgeStatus;
+  Environment?: Maybe<LaForgeEnvironment>;
+  Build?: Maybe<LaForgeBuild>;
+  BuildCommit?: Maybe<LaForgeBuildCommit>;
+  GinFileMiddleware: Array<Maybe<LaForgeGinFileMiddleware>>;
 };
 
 export enum LaForgeServerTaskType {
@@ -802,12 +959,21 @@ export type LaForgeStatus = {
   __typename?: 'Status';
   id: Scalars['ID'];
   state: LaForgeProvisionStatus;
-  status_for: LaForgeProvisionStatusFor;
-  started_at: Scalars['String'];
-  ended_at: Scalars['String'];
+  statusFor: LaForgeProvisionStatusFor;
+  startedAt: Scalars['String'];
+  endedAt: Scalars['String'];
   failed: Scalars['Boolean'];
   completed: Scalars['Boolean'];
   error?: Maybe<Scalars['String']>;
+  Build?: Maybe<LaForgeBuild>;
+  ProvisionedNetwork?: Maybe<LaForgeProvisionedNetwork>;
+  ProvisionedHost?: Maybe<LaForgeProvisionedHost>;
+  ProvisioningStep?: Maybe<LaForgeProvisioningStep>;
+  Team?: Maybe<LaForgeTeam>;
+  Plan?: Maybe<LaForgePlan>;
+  ServerTask?: Maybe<LaForgeServerTask>;
+  AdhocPlan?: Maybe<LaForgeAdhocPlan>;
+  ProvisioningScheduledStep?: Maybe<LaForgeProvisioningScheduledStep>;
 };
 
 export type LaForgeStatusBatch = {
@@ -831,22 +997,33 @@ export type LaForgeSubscriptionStreamServerTaskLogArgs = {
   taskID: Scalars['String'];
 };
 
+export type LaForgeTag = {
+  __typename?: 'Tag';
+  id: Scalars['ID'];
+  uuid: Scalars['ID'];
+  name: Scalars['String'];
+  description: Array<Maybe<LaForgeTagMap>>;
+};
+
 export type LaForgeTeam = {
   __typename?: 'Team';
   id: Scalars['ID'];
-  team_number: Scalars['Int'];
-  TeamToBuild: LaForgeBuild;
-  TeamToStatus: LaForgeStatus;
-  TeamToProvisionedNetwork: Array<Maybe<LaForgeProvisionedNetwork>>;
-  TeamToPlan: LaForgePlan;
+  teamNumber: Scalars['Int'];
+  Build: LaForgeBuild;
+  Status?: Maybe<LaForgeStatus>;
+  ProvisionedNetworks: Array<Maybe<LaForgeProvisionedNetwork>>;
+  Plan: LaForgePlan;
 };
 
 export type LaForgeUser = {
   __typename?: 'User';
   id: Scalars['ID'];
+  hclId: Scalars['ID'];
   name: Scalars['String'];
   uuid: Scalars['String'];
   email: Scalars['String'];
+  Tag: Array<Maybe<LaForgeTag>>;
+  Environments: Array<Maybe<LaForgeEnvironment>>;
 };
 
 export type LaForgeConfigMap = {
@@ -941,61 +1118,63 @@ export type LaForgeGetBuildTreeQueryVariables = Exact<{
 export type LaForgeGetBuildTreeQuery = { __typename?: 'Query' } & {
   build?: Maybe<
     { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
-        buildToEnvironment: { __typename?: 'Environment' } & Pick<
+        Environment: { __typename?: 'Environment' } & Pick<
           LaForgeEnvironment,
-          'id' | 'name' | 'description' | 'team_count' | 'admin_cidrs' | 'exposed_vdi_ports'
+          'id' | 'name' | 'description' | 'teamCount' | 'adminCidrs' | 'exposedVdiPorts'
         >;
-        BuildToRepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'committer'> & {
-            RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
+        RepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'committer'> & {
+            Repository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repoUrl'>;
           };
-        buildToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
-        buildToTeam: Array<
+        Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
+        Teams: Array<
           Maybe<
-            { __typename?: 'Team' } & Pick<LaForgeTeam, 'id' | 'team_number'> & {
-                TeamToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
-                TeamToPlan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
-                    PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
-                  };
-                TeamToProvisionedNetwork: Array<
+            { __typename?: 'Team' } & Pick<LaForgeTeam, 'id' | 'teamNumber'> & {
+                Status?: Maybe<{ __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>>;
+                Plan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & { Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'> };
+                ProvisionedNetworks: Array<
                   Maybe<
                     { __typename?: 'ProvisionedNetwork' } & Pick<LaForgeProvisionedNetwork, 'id' | 'name' | 'cidr'> & {
-                        ProvisionedNetworkToNetwork: { __typename?: 'Network' } & Pick<LaForgeNetwork, 'id' | 'vdi_visible'> & {
-                            vars?: Maybe<Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>>;
-                            tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
-                          };
-                        ProvisionedNetworkToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
-                        ProvisionedNetworkToPlan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
-                            PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
-                          };
-                        ProvisionedNetworkToProvisionedHost: Array<
+                        Network?: Maybe<
+                          { __typename?: 'Network' } & Pick<LaForgeNetwork, 'id' | 'vdiVisible'> & {
+                              vars?: Maybe<Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>>;
+                              tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
+                            }
+                        >;
+                        Status?: Maybe<{ __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>>;
+                        Plan?: Maybe<
+                          { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
+                              Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
+                            }
+                        >;
+                        ProvisionedHosts: Array<
                           Maybe<
-                            { __typename?: 'ProvisionedHost' } & Pick<LaForgeProvisionedHost, 'id' | 'subnet_ip'> & {
-                                ProvisionedHostToHost: { __typename?: 'Host' } & Pick<
+                            { __typename?: 'ProvisionedHost' } & Pick<LaForgeProvisionedHost, 'id' | 'subnetIp'> & {
+                                Host: { __typename?: 'Host' } & Pick<
                                   LaForgeHost,
                                   | 'id'
                                   | 'hostname'
                                   | 'description'
                                   | 'OS'
-                                  | 'allow_mac_changes'
-                                  | 'exposed_tcp_ports'
-                                  | 'exposed_udp_ports'
-                                  | 'user_groups'
-                                  | 'override_password'
+                                  | 'allowMacChanges'
+                                  | 'exposedTcpPorts'
+                                  | 'exposedUdpPorts'
+                                  | 'userGroups'
+                                  | 'overridePassword'
                                 > & {
                                     vars?: Maybe<Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>>;
                                     tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
                                   };
-                                ProvisionedHostToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
-                                ProvisionedHostToPlan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
-                                    PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
+                                Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
+                                Plan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
+                                    Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
                                   };
-                                ProvisionedHostToProvisioningStep: Array<
+                                ProvisioningSteps: Array<
                                   Maybe<
-                                    { __typename?: 'ProvisioningStep' } & Pick<LaForgeProvisioningStep, 'id' | 'type' | 'step_number'> & {
-                                        ProvisioningStepToScript?: Maybe<
+                                    { __typename?: 'ProvisioningStep' } & Pick<LaForgeProvisioningStep, 'id' | 'type' | 'stepNumber'> & {
+                                        Script?: Maybe<
                                           { __typename?: 'Script' } & Pick<
                                             LaForgeScript,
-                                            'id' | 'name' | 'language' | 'description' | 'source' | 'source_type' | 'disabled' | 'args'
+                                            'id' | 'name' | 'language' | 'description' | 'source' | 'sourceType' | 'disabled' | 'args'
                                           > & {
                                               vars?: Maybe<
                                                 Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>
@@ -1003,7 +1182,7 @@ export type LaForgeGetBuildTreeQuery = { __typename?: 'Query' } & {
                                               tags?: Maybe<Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>>;
                                             }
                                         >;
-                                        ProvisioningStepToCommand?: Maybe<
+                                        Command?: Maybe<
                                           { __typename?: 'Command' } & Pick<
                                             LaForgeCommand,
                                             'id' | 'name' | 'description' | 'program' | 'args' | 'disabled'
@@ -1014,7 +1193,7 @@ export type LaForgeGetBuildTreeQuery = { __typename?: 'Query' } & {
                                               tags?: Maybe<Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>>;
                                             }
                                         >;
-                                        ProvisioningStepToDNSRecord?: Maybe<
+                                        DNSRecord?: Maybe<
                                           { __typename?: 'DNSRecord' } & Pick<
                                             LaForgeDnsRecord,
                                             'id' | 'name' | 'values' | 'type' | 'zone' | 'disabled'
@@ -1023,33 +1202,33 @@ export type LaForgeGetBuildTreeQuery = { __typename?: 'Query' } & {
                                               tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
                                             }
                                         >;
-                                        ProvisioningStepToFileDownload?: Maybe<
+                                        FileDownload?: Maybe<
                                           { __typename?: 'FileDownload' } & Pick<
                                             LaForgeFileDownload,
                                             'id' | 'source' | 'sourceType' | 'destination' | 'disabled'
                                           > & { tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>> }
                                         >;
-                                        ProvisioningStepToFileDelete?: Maybe<
+                                        FileDelete?: Maybe<
                                           { __typename?: 'FileDelete' } & Pick<LaForgeFileDelete, 'id' | 'path'> & {
                                               tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
                                             }
                                         >;
-                                        ProvisioningStepToFileExtract?: Maybe<
+                                        FileExtract?: Maybe<
                                           { __typename?: 'FileExtract' } & Pick<
                                             LaForgeFileExtract,
                                             'id' | 'source' | 'destination' | 'type'
                                           > & { tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>> }
                                         >;
-                                        ProvisioningStepToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
-                                        ProvisioningStepToPlan?: Maybe<
+                                        Status?: Maybe<{ __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>>;
+                                        Plan?: Maybe<
                                           { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
-                                              PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
+                                              Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
                                             }
                                         >;
                                       }
                                   >
                                 >;
-                                ProvisionedHostToAgentStatus?: Maybe<{ __typename?: 'AgentStatus' } & Pick<LaForgeAgentStatus, 'clientId'>>;
+                                AgentStatus?: Maybe<{ __typename?: 'AgentStatus' } & Pick<LaForgeAgentStatus, 'clientId'>>;
                               }
                           >
                         >;
@@ -1059,7 +1238,7 @@ export type LaForgeGetBuildTreeQuery = { __typename?: 'Query' } & {
               }
           >
         >;
-        BuildToServerTasks: Array<Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id'>>>;
+        ServerTasks: Array<Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id'>>>;
       }
   >;
 };
@@ -1070,7 +1249,7 @@ export type LaForgeGetBuildPlansQueryVariables = Exact<{
 
 export type LaForgeGetBuildPlansQuery = { __typename?: 'Query' } & {
   build?: Maybe<
-    { __typename?: 'Build' } & Pick<LaForgeBuild, 'id'> & { buildToPlan: Array<Maybe<{ __typename?: 'Plan' } & LaForgePlanFieldsFragment>> }
+    { __typename?: 'Build' } & Pick<LaForgeBuild, 'id'> & { Plans: Array<Maybe<{ __typename?: 'Plan' } & LaForgePlanFieldsFragment>> }
   >;
 };
 
@@ -1081,23 +1260,21 @@ export type LaForgeGetBuildStatusesQueryVariables = Exact<{
 export type LaForgeGetBuildStatusesQuery = { __typename?: 'Query' } & {
   build?: Maybe<
     { __typename?: 'Build' } & Pick<LaForgeBuild, 'id'> & {
-        buildToPlan: Array<
-          Maybe<
-            { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & { PlanToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment }
-          >
+        Plans: Array<
+          Maybe<{ __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & { Status: { __typename?: 'Status' } & LaForgeStatusFieldsFragment }>
         >;
-        buildToTeam: Array<
+        Teams: Array<
           Maybe<
             { __typename?: 'Team' } & Pick<LaForgeTeam, 'id'> & {
-                TeamToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
-                TeamToProvisionedNetwork: Array<
+                Status?: Maybe<{ __typename?: 'Status' } & LaForgeStatusFieldsFragment>;
+                ProvisionedNetworks: Array<
                   Maybe<
                     { __typename?: 'ProvisionedNetwork' } & Pick<LaForgeProvisionedNetwork, 'id'> & {
-                        ProvisionedNetworkToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
-                        ProvisionedNetworkToProvisionedHost: Array<
+                        Status?: Maybe<{ __typename?: 'Status' } & LaForgeStatusFieldsFragment>;
+                        ProvisionedHosts: Array<
                           Maybe<
                             { __typename?: 'ProvisionedHost' } & Pick<LaForgeProvisionedHost, 'id'> & {
-                                ProvisionedHostToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
+                                Status: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
                               }
                           >
                         >;
@@ -1118,7 +1295,7 @@ export type LaForgeGetBuildCommitsQueryVariables = Exact<{
 export type LaForgeGetBuildCommitsQuery = { __typename?: 'Query' } & {
   build?: Maybe<
     { __typename?: 'Build' } & Pick<LaForgeBuild, 'id'> & {
-        BuildToBuildCommits: Array<Maybe<{ __typename?: 'BuildCommit' } & LaForgeBuildCommitFieldsFragment>>;
+        BuildCommits: Array<Maybe<{ __typename?: 'BuildCommit' } & LaForgeBuildCommitFieldsFragment>>;
       }
   >;
 };
@@ -1160,37 +1337,39 @@ export type LaForgeGetBuildCommitQueryVariables = Exact<{
 export type LaForgeGetBuildCommitQuery = { __typename?: 'Query' } & {
   getBuildCommit?: Maybe<
     { __typename?: 'BuildCommit' } & Pick<LaForgeBuildCommit, 'id' | 'revision' | 'state' | 'type'> & {
-        BuildCommitToBuild: { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
-            BuildToRepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'author'> & {
-                RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
+        Build: { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
+            RepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'author'> & {
+                Repository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repoUrl'>;
               };
-            buildToEnvironment: { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name'>;
-            buildToTeam: Array<
+            Environment: { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name'>;
+            Teams: Array<
               Maybe<
-                { __typename?: 'Team' } & Pick<LaForgeTeam, 'id' | 'team_number'> & {
-                    TeamToPlan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
-                        PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+                { __typename?: 'Team' } & Pick<LaForgeTeam, 'id' | 'teamNumber'> & {
+                    Plan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
+                        Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
                       };
-                    TeamToProvisionedNetwork: Array<
+                    ProvisionedNetworks: Array<
                       Maybe<
                         { __typename?: 'ProvisionedNetwork' } & Pick<LaForgeProvisionedNetwork, 'id' | 'name' | 'cidr'> & {
-                            ProvisionedNetworkToPlan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
-                                PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
-                              };
-                            ProvisionedNetworkToNetwork: { __typename?: 'Network' } & Pick<LaForgeNetwork, 'id' | 'vdi_visible'>;
-                            ProvisionedNetworkToProvisionedHost: Array<
+                            Plan?: Maybe<
+                              { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
+                                  Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+                                }
+                            >;
+                            Network?: Maybe<{ __typename?: 'Network' } & Pick<LaForgeNetwork, 'id' | 'vdiVisible'>>;
+                            ProvisionedHosts: Array<
                               Maybe<
-                                { __typename?: 'ProvisionedHost' } & Pick<LaForgeProvisionedHost, 'id' | 'subnet_ip'> & {
-                                    ProvisionedHostToPlan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
-                                        PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+                                { __typename?: 'ProvisionedHost' } & Pick<LaForgeProvisionedHost, 'id' | 'subnetIp'> & {
+                                    Plan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
+                                        Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
                                       };
-                                    ProvisionedHostToHost: { __typename?: 'Host' } & Pick<LaForgeHost, 'id' | 'hostname'>;
-                                    ProvisionedHostToProvisioningStep: Array<
+                                    Host: { __typename?: 'Host' } & Pick<LaForgeHost, 'id' | 'hostname'>;
+                                    ProvisioningSteps: Array<
                                       Maybe<
-                                        { __typename?: 'ProvisioningStep' } & Pick<LaForgeProvisioningStep, 'id' | 'step_number'> & {
-                                            ProvisioningStepToPlan?: Maybe<
+                                        { __typename?: 'ProvisioningStep' } & Pick<LaForgeProvisioningStep, 'id' | 'stepNumber'> & {
+                                            Plan?: Maybe<
                                               { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
-                                                  PlanToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+                                                  Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
                                                 }
                                             >;
                                           }
@@ -1206,10 +1385,10 @@ export type LaForgeGetBuildCommitQuery = { __typename?: 'Query' } & {
               >
             >;
           };
-        BuildCommitToPlanDiffs: Array<
+        PlanDiffs: Array<
           Maybe<
-            { __typename?: 'PlanDiff' } & Pick<LaForgePlanDiff, 'id' | 'new_state'> & {
-                PlanDiffToPlan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'>;
+            { __typename?: 'PlanDiff' } & Pick<LaForgePlanDiff, 'id' | 'newState'> & {
+                Plan: { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'>;
               }
           >
         >;
@@ -1225,52 +1404,54 @@ export type LaForgeGetEnvironmentQuery = { __typename?: 'Query' } & {
   environment?: Maybe<
     { __typename?: 'Environment' } & Pick<
       LaForgeEnvironment,
-      'id' | 'competition_id' | 'name' | 'description' | 'builder' | 'team_count' | 'revision' | 'admin_cidrs' | 'exposed_vdi_ports'
+      'id' | 'competitionId' | 'name' | 'description' | 'builder' | 'teamCount' | 'revision' | 'adminCidrs' | 'exposedVdiPorts'
     > & {
         tags?: Maybe<Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>>;
         config?: Maybe<Array<Maybe<{ __typename?: 'configMap' } & Pick<LaForgeConfigMap, 'key' | 'value'>>>>;
-        EnvironmentToUser: Array<Maybe<{ __typename?: 'User' } & Pick<LaForgeUser, 'id' | 'name' | 'uuid' | 'email'>>>;
-        EnvironmentToRepository: Array<Maybe<{ __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url' | 'branch_name'>>>;
-        EnvironmentToBuild: Array<
+        Users: Array<Maybe<{ __typename?: 'User' } & Pick<LaForgeUser, 'id' | 'name' | 'uuid' | 'email'>>>;
+        Repositories: Array<Maybe<{ __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repoUrl' | 'branchName'>>>;
+        Builds: Array<
           Maybe<
             { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
-                buildToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
-                buildToTeam: Array<
+                Status: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
+                Teams: Array<
                   Maybe<
-                    { __typename?: 'Team' } & Pick<LaForgeTeam, 'id' | 'team_number'> & {
-                        TeamToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
-                        TeamToProvisionedNetwork: Array<
+                    { __typename?: 'Team' } & Pick<LaForgeTeam, 'id' | 'teamNumber'> & {
+                        Status?: Maybe<{ __typename?: 'Status' } & LaForgeStatusFieldsFragment>;
+                        ProvisionedNetworks: Array<
                           Maybe<
                             { __typename?: 'ProvisionedNetwork' } & Pick<LaForgeProvisionedNetwork, 'id' | 'name' | 'cidr'> & {
-                                ProvisionedNetworkToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
-                                ProvisionedNetworkToNetwork: { __typename?: 'Network' } & Pick<LaForgeNetwork, 'id' | 'vdi_visible'> & {
-                                    vars?: Maybe<Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>>;
-                                    tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
-                                  };
-                                ProvisionedNetworkToProvisionedHost: Array<
+                                Status?: Maybe<{ __typename?: 'Status' } & LaForgeStatusFieldsFragment>;
+                                Network?: Maybe<
+                                  { __typename?: 'Network' } & Pick<LaForgeNetwork, 'id' | 'vdiVisible'> & {
+                                      vars?: Maybe<Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>>;
+                                      tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
+                                    }
+                                >;
+                                ProvisionedHosts: Array<
                                   Maybe<
-                                    { __typename?: 'ProvisionedHost' } & Pick<LaForgeProvisionedHost, 'id' | 'subnet_ip'> & {
-                                        ProvisionedHostToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
-                                        ProvisionedHostToHost: { __typename?: 'Host' } & Pick<
+                                    { __typename?: 'ProvisionedHost' } & Pick<LaForgeProvisionedHost, 'id' | 'subnetIp'> & {
+                                        Status: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
+                                        Host: { __typename?: 'Host' } & Pick<
                                           LaForgeHost,
                                           | 'id'
                                           | 'hostname'
                                           | 'description'
                                           | 'OS'
-                                          | 'allow_mac_changes'
-                                          | 'exposed_tcp_ports'
-                                          | 'exposed_udp_ports'
-                                          | 'user_groups'
-                                          | 'override_password'
+                                          | 'allowMacChanges'
+                                          | 'exposedTcpPorts'
+                                          | 'exposedUdpPorts'
+                                          | 'userGroups'
+                                          | 'overridePassword'
                                         > & {
                                             vars?: Maybe<Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>>;
                                             tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
                                           };
-                                        ProvisionedHostToProvisioningStep: Array<
+                                        ProvisioningSteps: Array<
                                           Maybe<
                                             { __typename?: 'ProvisioningStep' } & Pick<LaForgeProvisioningStep, 'id' | 'type'> & {
-                                                ProvisioningStepToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
-                                                ProvisioningStepToScript?: Maybe<
+                                                Status?: Maybe<{ __typename?: 'Status' } & LaForgeStatusFieldsFragment>;
+                                                Script?: Maybe<
                                                   { __typename?: 'Script' } & Pick<
                                                     LaForgeScript,
                                                     | 'id'
@@ -1278,7 +1459,7 @@ export type LaForgeGetEnvironmentQuery = { __typename?: 'Query' } & {
                                                     | 'language'
                                                     | 'description'
                                                     | 'source'
-                                                    | 'source_type'
+                                                    | 'sourceType'
                                                     | 'disabled'
                                                     | 'args'
                                                   > & {
@@ -1290,7 +1471,7 @@ export type LaForgeGetEnvironmentQuery = { __typename?: 'Query' } & {
                                                       >;
                                                     }
                                                 >;
-                                                ProvisioningStepToCommand?: Maybe<
+                                                Command?: Maybe<
                                                   { __typename?: 'Command' } & Pick<
                                                     LaForgeCommand,
                                                     'id' | 'name' | 'description' | 'program' | 'args' | 'disabled'
@@ -1303,7 +1484,7 @@ export type LaForgeGetEnvironmentQuery = { __typename?: 'Query' } & {
                                                       >;
                                                     }
                                                 >;
-                                                ProvisioningStepToDNSRecord?: Maybe<
+                                                DNSRecord?: Maybe<
                                                   { __typename?: 'DNSRecord' } & Pick<
                                                     LaForgeDnsRecord,
                                                     'id' | 'name' | 'values' | 'type' | 'zone' | 'disabled'
@@ -1314,7 +1495,7 @@ export type LaForgeGetEnvironmentQuery = { __typename?: 'Query' } & {
                                                       tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
                                                     }
                                                 >;
-                                                ProvisioningStepToFileDownload?: Maybe<
+                                                FileDownload?: Maybe<
                                                   { __typename?: 'FileDownload' } & Pick<
                                                     LaForgeFileDownload,
                                                     'id' | 'source' | 'sourceType' | 'destination' | 'disabled'
@@ -1322,12 +1503,12 @@ export type LaForgeGetEnvironmentQuery = { __typename?: 'Query' } & {
                                                       tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
                                                     }
                                                 >;
-                                                ProvisioningStepToFileDelete?: Maybe<
+                                                FileDelete?: Maybe<
                                                   { __typename?: 'FileDelete' } & Pick<LaForgeFileDelete, 'id' | 'path'> & {
                                                       tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
                                                     }
                                                 >;
-                                                ProvisioningStepToFileExtract?: Maybe<
+                                                FileExtract?: Maybe<
                                                   { __typename?: 'FileExtract' } & Pick<
                                                     LaForgeFileExtract,
                                                     'id' | 'source' | 'destination' | 'type'
@@ -1360,8 +1541,8 @@ export type LaForgeGetEnvironmentsQuery = { __typename?: 'Query' } & {
   environments?: Maybe<
     Array<
       Maybe<
-        { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name' | 'competition_id' | 'revision'> & {
-            EnvironmentToBuild: Array<Maybe<{ __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'>>>;
+        { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name' | 'competitionId' | 'revision'> & {
+            Builds: Array<Maybe<{ __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'>>>;
           }
       >
     >
@@ -1374,19 +1555,19 @@ export type LaForgeListEnvironmentsQuery = { __typename?: 'Query' } & {
   environments?: Maybe<
     Array<
       Maybe<
-        { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name' | 'team_count'> & {
-            EnvironmentToRepository: Array<
+        { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name' | 'teamCount'> & {
+            Repositories: Array<
               Maybe<
-                { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'> & {
-                    RepositoryToRepoCommit: Array<
+                { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repoUrl' | 'branchName' | 'environmentFilepath'> & {
+                    RepoCommits: Array<
                       Maybe<{ __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'revision' | 'author' | 'hash'>>
                     >;
                   }
               >
             >;
-            EnvironmentToNetwork: Array<Maybe<{ __typename?: 'Network' } & Pick<LaForgeNetwork, 'id'>>>;
-            EnvironmentToHost: Array<Maybe<{ __typename?: 'Host' } & Pick<LaForgeHost, 'id'>>>;
-            EnvironmentToServerTask: Array<Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id'>>>;
+            Networks: Array<Maybe<{ __typename?: 'Network' } & Pick<LaForgeNetwork, 'id'>>>;
+            Hosts: Array<Maybe<{ __typename?: 'Host' } & Pick<LaForgeHost, 'id'>>>;
+            ServerTasks: Array<Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id'>>>;
           }
       >
     >
@@ -1401,15 +1582,15 @@ export type LaForgeGetEnvironmentInfoQuery = { __typename?: 'Query' } & {
   environment?: Maybe<
     { __typename?: 'Environment' } & Pick<
       LaForgeEnvironment,
-      'id' | 'competition_id' | 'name' | 'description' | 'builder' | 'team_count' | 'revision' | 'admin_cidrs' | 'exposed_vdi_ports'
+      'id' | 'competitionId' | 'name' | 'description' | 'builder' | 'teamCount' | 'revision' | 'adminCidrs' | 'exposedVdiPorts'
     > & {
         tags?: Maybe<Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>>;
         config?: Maybe<Array<Maybe<{ __typename?: 'configMap' } & Pick<LaForgeConfigMap, 'key' | 'value'>>>>;
-        EnvironmentToUser: Array<Maybe<{ __typename?: 'User' } & Pick<LaForgeUser, 'id' | 'name' | 'uuid' | 'email'>>>;
-        EnvironmentToBuild: Array<
+        Users: Array<Maybe<{ __typename?: 'User' } & Pick<LaForgeUser, 'id' | 'name' | 'uuid' | 'email'>>>;
+        Builds: Array<
           Maybe<
             { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
-                buildToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
+                Status: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
               }
           >
         >;
@@ -1419,7 +1600,7 @@ export type LaForgeGetEnvironmentInfoQuery = { __typename?: 'Query' } & {
 
 export type LaForgeStatusFieldsFragment = { __typename?: 'Status' } & Pick<
   LaForgeStatus,
-  'id' | 'state' | 'started_at' | 'ended_at' | 'failed' | 'completed' | 'error'
+  'id' | 'state' | 'startedAt' | 'endedAt' | 'failed' | 'completed' | 'error'
 >;
 
 export type LaForgeAgentStatusFieldsFragment = { __typename?: 'AgentStatus' } & Pick<
@@ -1440,42 +1621,42 @@ export type LaForgeAgentStatusFieldsFragment = { __typename?: 'AgentStatus' } & 
   | 'timestamp'
 >;
 
-export type LaForgePlanFieldsFragment = { __typename?: 'Plan' } & Pick<LaForgePlan, 'id' | 'step_number' | 'type'> & {
-    PlanToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
-    PlanToPlanDiffs: Array<Maybe<{ __typename?: 'PlanDiff' } & LaForgePlanDiffFieldsFragment>>;
+export type LaForgePlanFieldsFragment = { __typename?: 'Plan' } & Pick<LaForgePlan, 'id' | 'stepNumber' | 'type'> & {
+    Status: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
+    PlanDiffs: Array<Maybe<{ __typename?: 'PlanDiff' } & LaForgePlanDiffFieldsFragment>>;
   };
 
-export type LaForgePlanDiffFieldsFragment = { __typename?: 'PlanDiff' } & Pick<LaForgePlanDiff, 'id' | 'revision' | 'new_state'>;
+export type LaForgePlanDiffFieldsFragment = { __typename?: 'PlanDiff' } & Pick<LaForgePlanDiff, 'id' | 'revision' | 'newState'>;
 
 export type LaForgeBuildCommitFieldsFragment = { __typename?: 'BuildCommit' } & Pick<
   LaForgeBuildCommit,
   'id' | 'revision' | 'state' | 'type'
 > & {
-    BuildCommitToBuild: { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
-        BuildToRepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'author'> & {
-            RepoCommitToRepository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repo_url'>;
+    Build: { __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'> & {
+        RepoCommit: { __typename?: 'RepoCommit' } & Pick<LaForgeRepoCommit, 'id' | 'hash' | 'author'> & {
+            Repository: { __typename?: 'Repository' } & Pick<LaForgeRepository, 'id' | 'repoUrl'>;
           };
-        buildToStatus: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
-        buildToEnvironment: { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id'>;
+        Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+        Environment: { __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id'>;
       };
-    BuildCommitToServerTask: Array<Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id' | 'start_time' | 'end_time'>>>;
+    ServerTasks: Array<Maybe<{ __typename?: 'ServerTask' } & Pick<LaForgeServerTask, 'id' | 'startTime' | 'endTime'>>>;
   };
 
 export type LaForgeAuthUserFieldsFragment = { __typename?: 'AuthUser' } & Pick<
   LaForgeAuthUser,
-  'id' | 'username' | 'role' | 'provider' | 'first_name' | 'last_name' | 'email' | 'phone' | 'company' | 'occupation' | 'publicKey'
+  'id' | 'username' | 'role' | 'provider' | 'firstName' | 'lastName' | 'email' | 'phone' | 'company' | 'occupation' | 'publicKey'
 >;
 
 export type LaForgeAgentTaskFieldsFragment = { __typename?: 'AgentTask' } & Pick<
   LaForgeAgentTask,
-  'id' | 'state' | 'command' | 'args' | 'number' | 'output' | 'error_message'
+  'id' | 'state' | 'command' | 'args' | 'number' | 'output' | 'errorMessage'
 >;
 
 export type LaForgePageInfoFieldsFragment = { __typename?: 'LaForgePageInfo' } & Pick<LaForgeLaForgePageInfo, 'total' | 'nextOffset'>;
 
 export type LaForgeUserListFieldsFragment = { __typename?: 'AuthUser' } & Pick<
   LaForgeAuthUser,
-  'id' | 'first_name' | 'last_name' | 'username' | 'provider' | 'role' | 'email' | 'phone' | 'company' | 'occupation'
+  'id' | 'firstName' | 'lastName' | 'username' | 'provider' | 'role' | 'email' | 'phone' | 'company' | 'occupation'
 >;
 
 export type LaForgeRebuildMutationVariables = Exact<{
@@ -1629,7 +1810,7 @@ export type LaForgeSubscribeUpdatedBuildSubscriptionVariables = Exact<{ [key: st
 
 export type LaForgeSubscribeUpdatedBuildSubscription = { __typename?: 'Subscription' } & {
   updatedBuild: { __typename?: 'Build' } & Pick<LaForgeBuild, 'id'> & {
-      BuildToLatestBuildCommit?: Maybe<{ __typename?: 'BuildCommit' } & Pick<LaForgeBuildCommit, 'id'>>;
+      LatestBuildCommit?: Maybe<{ __typename?: 'BuildCommit' } & Pick<LaForgeBuildCommit, 'id'>>;
     };
 };
 
@@ -1647,11 +1828,11 @@ export type LaForgeSubscribeUpdatedAgentTaskSubscription = { __typename?: 'Subsc
 
 export type LaForgeServerTaskFieldsFragment = { __typename?: 'ServerTask' } & Pick<
   LaForgeServerTask,
-  'id' | 'type' | 'start_time' | 'end_time' | 'errors' | 'log_file_path'
+  'id' | 'type' | 'startTime' | 'endTime' | 'errors' | 'logFilePath'
 > & {
-    ServerTaskToStatus: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
-    ServerTaskToEnvironment?: Maybe<{ __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name'>>;
-    ServerTaskToBuild?: Maybe<{ __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'>>;
+    Status: { __typename?: 'Status' } & LaForgeStatusFieldsFragment;
+    Environment?: Maybe<{ __typename?: 'Environment' } & Pick<LaForgeEnvironment, 'id' | 'name'>>;
+    Build?: Maybe<{ __typename?: 'Build' } & Pick<LaForgeBuild, 'id' | 'revision'>>;
   };
 
 export type LaForgeGetCurrentUserTasksQueryVariables = Exact<{ [key: string]: never }>;
@@ -1702,8 +1883,8 @@ export const StatusFieldsFragmentDoc = gql`
   fragment StatusFields on Status {
     id
     state
-    started_at
-    ended_at
+    startedAt
+    endedAt
     failed
     completed
     error
@@ -1713,18 +1894,18 @@ export const PlanDiffFieldsFragmentDoc = gql`
   fragment PlanDiffFields on PlanDiff {
     id
     revision
-    new_state
+    newState
   }
 `;
 export const PlanFieldsFragmentDoc = gql`
   fragment PlanFields on Plan {
     id
-    step_number
+    stepNumber
     type
-    PlanToStatus {
+    Status {
       ...StatusFields
     }
-    PlanToPlanDiffs {
+    PlanDiffs {
       ...PlanDiffFields
     }
   }
@@ -1735,30 +1916,30 @@ export const BuildCommitFieldsFragmentDoc = gql`
   fragment BuildCommitFields on BuildCommit {
     id
     revision
-    BuildCommitToBuild {
+    Build {
       id
       revision
-      BuildToRepoCommit {
+      RepoCommit {
         id
         hash
         author
-        RepoCommitToRepository {
+        Repository {
           id
-          repo_url
+          repoUrl
         }
       }
-      buildToStatus {
+      Status {
         id
         state
       }
-      buildToEnvironment {
+      Environment {
         id
       }
     }
-    BuildCommitToServerTask {
+    ServerTasks {
       id
-      start_time
-      end_time
+      startTime
+      endTime
     }
     state
     type
@@ -1770,8 +1951,8 @@ export const AuthUserFieldsFragmentDoc = gql`
     username
     role
     provider
-    first_name
-    last_name
+    firstName
+    lastName
     email
     phone
     company
@@ -1787,7 +1968,7 @@ export const AgentTaskFieldsFragmentDoc = gql`
     args
     number
     output
-    error_message
+    errorMessage
   }
 `;
 export const PageInfoFieldsFragmentDoc = gql`
@@ -1799,8 +1980,8 @@ export const PageInfoFieldsFragmentDoc = gql`
 export const UserListFieldsFragmentDoc = gql`
   fragment UserListFields on AuthUser {
     id
-    first_name
-    last_name
+    firstName
+    lastName
     username
     provider
     role
@@ -1814,18 +1995,18 @@ export const ServerTaskFieldsFragmentDoc = gql`
   fragment ServerTaskFields on ServerTask {
     id
     type
-    start_time
-    end_time
+    startTime
+    endTime
     errors
-    log_file_path
-    ServerTaskToStatus {
+    logFilePath
+    Status {
       ...StatusFields
     }
-    ServerTaskToEnvironment {
+    Environment {
       id
       name
     }
-    ServerTaskToBuild {
+    Build {
       id
       revision
     }
@@ -1990,45 +2171,45 @@ export const GetBuildTreeDocument = gql`
     build(buildUUID: $buildId) {
       id
       revision
-      buildToEnvironment {
+      Environment {
         id
         name
         description
-        team_count
-        admin_cidrs
-        exposed_vdi_ports
+        teamCount
+        adminCidrs
+        exposedVdiPorts
       }
-      BuildToRepoCommit {
+      RepoCommit {
         id
         hash
         committer
-        RepoCommitToRepository {
+        Repository {
           id
-          repo_url
+          repoUrl
         }
       }
-      buildToStatus {
+      Status {
         id
       }
-      buildToTeam {
+      Teams {
         id
-        team_number
-        TeamToStatus {
+        teamNumber
+        Status {
           id
         }
-        TeamToPlan {
+        Plan {
           id
-          PlanToStatus {
+          Status {
             id
           }
         }
-        TeamToProvisionedNetwork {
+        ProvisionedNetworks {
           id
           name
           cidr
-          ProvisionedNetworkToNetwork {
+          Network {
             id
-            vdi_visible
+            vdiVisible
             vars {
               key
               value
@@ -2038,28 +2219,28 @@ export const GetBuildTreeDocument = gql`
               value
             }
           }
-          ProvisionedNetworkToStatus {
+          Status {
             id
           }
-          ProvisionedNetworkToPlan {
+          Plan {
             id
-            PlanToStatus {
+            Status {
               id
             }
           }
-          ProvisionedNetworkToProvisionedHost {
+          ProvisionedHosts {
             id
-            subnet_ip
-            ProvisionedHostToHost {
+            subnetIp
+            Host {
               id
               hostname
               description
               OS
-              allow_mac_changes
-              exposed_tcp_ports
-              exposed_udp_ports
-              user_groups
-              override_password
+              allowMacChanges
+              exposedTcpPorts
+              exposedUdpPorts
+              userGroups
+              overridePassword
               vars {
                 key
                 value
@@ -2069,26 +2250,26 @@ export const GetBuildTreeDocument = gql`
                 value
               }
             }
-            ProvisionedHostToStatus {
+            Status {
               id
             }
-            ProvisionedHostToPlan {
+            Plan {
               id
-              PlanToStatus {
+              Status {
                 id
               }
             }
-            ProvisionedHostToProvisioningStep {
+            ProvisioningSteps {
               id
               type
-              step_number
-              ProvisioningStepToScript {
+              stepNumber
+              Script {
                 id
                 name
                 language
                 description
                 source
-                source_type
+                sourceType
                 disabled
                 args
                 vars {
@@ -2100,7 +2281,7 @@ export const GetBuildTreeDocument = gql`
                   value
                 }
               }
-              ProvisioningStepToCommand {
+              Command {
                 id
                 name
                 description
@@ -2116,7 +2297,7 @@ export const GetBuildTreeDocument = gql`
                   value
                 }
               }
-              ProvisioningStepToDNSRecord {
+              DNSRecord {
                 id
                 name
                 values
@@ -2132,7 +2313,7 @@ export const GetBuildTreeDocument = gql`
                   value
                 }
               }
-              ProvisioningStepToFileDownload {
+              FileDownload {
                 id
                 source
                 sourceType
@@ -2143,7 +2324,7 @@ export const GetBuildTreeDocument = gql`
                   value
                 }
               }
-              ProvisioningStepToFileDelete {
+              FileDelete {
                 id
                 path
                 tags {
@@ -2151,7 +2332,7 @@ export const GetBuildTreeDocument = gql`
                   value
                 }
               }
-              ProvisioningStepToFileExtract {
+              FileExtract {
                 id
                 source
                 destination
@@ -2161,23 +2342,23 @@ export const GetBuildTreeDocument = gql`
                   value
                 }
               }
-              ProvisioningStepToStatus {
+              Status {
                 id
               }
-              ProvisioningStepToPlan {
+              Plan {
                 id
-                PlanToStatus {
+                Status {
                   id
                 }
               }
             }
-            ProvisionedHostToAgentStatus {
+            AgentStatus {
               clientId
             }
           }
         }
       }
-      BuildToServerTasks {
+      ServerTasks {
         id
       }
     }
@@ -2198,7 +2379,7 @@ export const GetBuildPlansDocument = gql`
   query GetBuildPlans($buildId: String!) {
     build(buildUUID: $buildId) {
       id
-      buildToPlan {
+      Plans {
         ...PlanFields
       }
     }
@@ -2220,25 +2401,25 @@ export const GetBuildStatusesDocument = gql`
   query GetBuildStatuses($buildUUID: String!) {
     build(buildUUID: $buildUUID) {
       id
-      buildToPlan {
+      Plans {
         id
-        PlanToStatus {
+        Status {
           ...StatusFields
         }
       }
-      buildToTeam {
+      Teams {
         id
-        TeamToStatus {
+        Status {
           ...StatusFields
         }
-        TeamToProvisionedNetwork {
+        ProvisionedNetworks {
           id
-          ProvisionedNetworkToStatus {
+          Status {
             ...StatusFields
           }
-          ProvisionedNetworkToProvisionedHost {
+          ProvisionedHosts {
             id
-            ProvisionedHostToStatus {
+            Status {
               ...StatusFields
             }
           }
@@ -2263,7 +2444,7 @@ export const GetBuildCommitsDocument = gql`
   query GetBuildCommits($buildId: String!) {
     build(buildUUID: $buildId) {
       id
-      BuildToBuildCommits {
+      BuildCommits {
         ...BuildCommitFields
       }
     }
@@ -2336,67 +2517,67 @@ export const GetBuildCommitDocument = gql`
       revision
       state
       type
-      BuildCommitToBuild {
+      Build {
         id
         revision
-        BuildToRepoCommit {
+        RepoCommit {
           id
           hash
           author
-          RepoCommitToRepository {
+          Repository {
             id
-            repo_url
+            repoUrl
           }
         }
-        buildToEnvironment {
+        Environment {
           id
           name
         }
-        buildToTeam {
+        Teams {
           id
-          TeamToPlan {
+          Plan {
             id
-            PlanToStatus {
+            Status {
               id
               state
             }
           }
-          team_number
-          TeamToProvisionedNetwork {
+          teamNumber
+          ProvisionedNetworks {
             id
-            ProvisionedNetworkToPlan {
+            Plan {
               id
-              PlanToStatus {
+              Status {
                 id
                 state
               }
             }
             name
             cidr
-            ProvisionedNetworkToNetwork {
+            Network {
               id
-              vdi_visible
+              vdiVisible
             }
-            ProvisionedNetworkToProvisionedHost {
+            ProvisionedHosts {
               id
-              ProvisionedHostToPlan {
+              Plan {
                 id
-                PlanToStatus {
+                Status {
                   id
                   state
                 }
               }
-              subnet_ip
-              ProvisionedHostToHost {
+              subnetIp
+              Host {
                 id
                 hostname
               }
-              ProvisionedHostToProvisioningStep {
+              ProvisioningSteps {
                 id
-                step_number
-                ProvisioningStepToPlan {
+                stepNumber
+                Plan {
                   id
-                  PlanToStatus {
+                  Status {
                     id
                     state
                   }
@@ -2406,10 +2587,10 @@ export const GetBuildCommitDocument = gql`
           }
         }
       }
-      BuildCommitToPlanDiffs {
+      PlanDiffs {
         id
-        new_state
-        PlanDiffToPlan {
+        newState
+        Plan {
           id
         }
       }
@@ -2431,14 +2612,14 @@ export const GetEnvironmentDocument = gql`
   query GetEnvironment($envId: String!) {
     environment(envUUID: $envId) {
       id
-      competition_id
+      competitionId
       name
       description
       builder
-      team_count
+      teamCount
       revision
-      admin_cidrs
-      exposed_vdi_ports
+      adminCidrs
+      exposedVdiPorts
       tags {
         key
         value
@@ -2447,39 +2628,39 @@ export const GetEnvironmentDocument = gql`
         key
         value
       }
-      EnvironmentToUser {
+      Users {
         id
         name
         uuid
         email
       }
-      EnvironmentToRepository {
+      Repositories {
         id
-        repo_url
-        branch_name
+        repoUrl
+        branchName
       }
-      EnvironmentToBuild {
+      Builds {
         id
         revision
-        buildToStatus {
+        Status {
           ...StatusFields
         }
-        buildToTeam {
+        Teams {
           id
-          team_number
-          TeamToStatus {
+          teamNumber
+          Status {
             ...StatusFields
           }
-          TeamToProvisionedNetwork {
+          ProvisionedNetworks {
             id
             name
             cidr
-            ProvisionedNetworkToStatus {
+            Status {
               ...StatusFields
             }
-            ProvisionedNetworkToNetwork {
+            Network {
               id
-              vdi_visible
+              vdiVisible
               vars {
                 key
                 value
@@ -2489,22 +2670,22 @@ export const GetEnvironmentDocument = gql`
                 value
               }
             }
-            ProvisionedNetworkToProvisionedHost {
+            ProvisionedHosts {
               id
-              subnet_ip
-              ProvisionedHostToStatus {
+              subnetIp
+              Status {
                 ...StatusFields
               }
-              ProvisionedHostToHost {
+              Host {
                 id
                 hostname
                 description
                 OS
-                allow_mac_changes
-                exposed_tcp_ports
-                exposed_udp_ports
-                user_groups
-                override_password
+                allowMacChanges
+                exposedTcpPorts
+                exposedUdpPorts
+                userGroups
+                overridePassword
                 vars {
                   key
                   value
@@ -2514,19 +2695,19 @@ export const GetEnvironmentDocument = gql`
                   value
                 }
               }
-              ProvisionedHostToProvisioningStep {
+              ProvisioningSteps {
                 id
                 type
-                ProvisioningStepToStatus {
+                Status {
                   ...StatusFields
                 }
-                ProvisioningStepToScript {
+                Script {
                   id
                   name
                   language
                   description
                   source
-                  source_type
+                  sourceType
                   disabled
                   args
                   vars {
@@ -2538,7 +2719,7 @@ export const GetEnvironmentDocument = gql`
                     value
                   }
                 }
-                ProvisioningStepToCommand {
+                Command {
                   id
                   name
                   description
@@ -2554,7 +2735,7 @@ export const GetEnvironmentDocument = gql`
                     value
                   }
                 }
-                ProvisioningStepToDNSRecord {
+                DNSRecord {
                   id
                   name
                   values
@@ -2570,7 +2751,7 @@ export const GetEnvironmentDocument = gql`
                     value
                   }
                 }
-                ProvisioningStepToFileDownload {
+                FileDownload {
                   id
                   source
                   sourceType
@@ -2581,7 +2762,7 @@ export const GetEnvironmentDocument = gql`
                     value
                   }
                 }
-                ProvisioningStepToFileDelete {
+                FileDelete {
                   id
                   path
                   tags {
@@ -2589,7 +2770,7 @@ export const GetEnvironmentDocument = gql`
                     value
                   }
                 }
-                ProvisioningStepToFileExtract {
+                FileExtract {
                   id
                   source
                   destination
@@ -2624,9 +2805,9 @@ export const GetEnvironmentsDocument = gql`
     environments {
       id
       name
-      competition_id
+      competitionId
       revision
-      EnvironmentToBuild {
+      Builds {
         id
         revision
       }
@@ -2649,24 +2830,26 @@ export const ListEnvironmentsDocument = gql`
     environments {
       id
       name
-      EnvironmentToRepository {
+      Repositories {
         id
-        repo_url
-        RepositoryToRepoCommit {
+        repoUrl
+        branchName
+        environmentFilepath
+        RepoCommits {
           id
           revision
           author
           hash
         }
       }
-      team_count
-      EnvironmentToNetwork {
+      teamCount
+      Networks {
         id
       }
-      EnvironmentToHost {
+      Hosts {
         id
       }
-      EnvironmentToServerTask {
+      ServerTasks {
         id
       }
     }
@@ -2687,14 +2870,14 @@ export const GetEnvironmentInfoDocument = gql`
   query GetEnvironmentInfo($envId: String!) {
     environment(envUUID: $envId) {
       id
-      competition_id
+      competitionId
       name
       description
       builder
-      team_count
+      teamCount
       revision
-      admin_cidrs
-      exposed_vdi_ports
+      adminCidrs
+      exposedVdiPorts
       tags {
         key
         value
@@ -2703,16 +2886,16 @@ export const GetEnvironmentInfoDocument = gql`
         key
         value
       }
-      EnvironmentToUser {
+      Users {
         id
         name
         uuid
         email
       }
-      EnvironmentToBuild {
+      Builds {
         id
         revision
-        buildToStatus {
+        Status {
           ...StatusFields
         }
       }
@@ -3101,7 +3284,7 @@ export const SubscribeUpdatedBuildDocument = gql`
   subscription SubscribeUpdatedBuild {
     updatedBuild {
       id
-      BuildToLatestBuildCommit {
+      LatestBuildCommit {
         id
       }
     }
