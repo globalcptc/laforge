@@ -1139,6 +1139,7 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 
 				// Set the run time to next cron time
 				entProvisioningScheduledStep, err := entProvisioningScheduledStepCreate.
+					SetScheduledStep(entScheduledStep).
 					SetProvisionedHost(entProvisionedHost).
 					SetStatus(entStatus).
 					SetRunTime(runTime).
@@ -1178,6 +1179,7 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 			// Set the run time to 0, this way it wil be automatically
 			// triggered by the scheduler upon provisioning completion
 			entProvisioningScheduledStep, err := entProvisioningScheduledStepCreate.
+				SetScheduledStep(entScheduledStep).
 				SetProvisionedHost(entProvisionedHost).
 				SetStatus(entStatus).
 				SetRunTime(time.Unix(0, 0)).
