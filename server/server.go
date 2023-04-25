@@ -31,6 +31,7 @@ import (
 	"github.com/gen0cide/laforge/grpc/server"
 	"github.com/gen0cide/laforge/grpc/server/static"
 	"github.com/gen0cide/laforge/logging"
+	"github.com/gen0cide/laforge/scheduler"
 	"github.com/gen0cide/laforge/server/utils"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -146,15 +147,6 @@ func createDefaultAdminUser(client *ent.Client, ctx context.Context, laforgeConf
 			Save(ctx)
 	}
 	return nil
-}
-
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
-	}
-	return false
 }
 
 // tempServerTaskHandler Ahh
@@ -366,6 +358,8 @@ func main() {
 			}
 		}
 	}()
+
+	go scheduler.SchedulerWatchdog(ctx, client, rdb, laforgeConfig)
 
 	auth.InitGoth(laforgeConfig)
 
