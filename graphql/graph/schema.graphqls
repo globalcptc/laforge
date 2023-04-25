@@ -809,7 +809,7 @@ type Query {
   currentUser: AuthUser @hasRole(roles: [ADMIN, USER])
   getUserList: [AuthUser] @hasRole(roles: [ADMIN])
   getCurrentUserTasks: [ServerTask] @hasRole(roles: [ADMIN, USER])
-  getAgentTasks(proStepUUID: String!): [AgentTask]
+  getAgentTasks(proStepUUID: String, proSchedStepUUID: String): [AgentTask]
     @hasRole(roles: [ADMIN, USER])
   listAgentStatuses(buildUUID: String!): [AgentStatus]
     @hasRole(roles: [ADMIN, USER])

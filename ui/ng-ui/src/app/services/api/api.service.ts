@@ -52,7 +52,8 @@ import {
   LaForgeCancelBuildGQL,
   LaForgeCancelBuildCommitMutation,
   LaForgeNukeBackendGQL,
-  LaForgeNukeBackendMutation
+  LaForgeNukeBackendMutation,
+  LaForgeGetProvisionedHostGQL
 } from '@graphql';
 
 @Injectable({
@@ -88,7 +89,8 @@ export class ApiService {
     private getServerTasksGQL: LaForgeGetServerTasksGQL,
     private getPlanStatusCounts: LaForgeGetPlanStatusCountsGQL,
     private cancelBuildGQL: LaForgeCancelBuildGQL,
-    private nukeBackendGQL: LaForgeNukeBackendGQL
+    private nukeBackendGQL: LaForgeNukeBackendGQL,
+    private getProvisionedHostGQL: LaForgeGetProvisionedHostGQL
   ) {}
 
   /**

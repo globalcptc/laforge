@@ -76,6 +76,24 @@ query GetBuildCommit($buildCommitUUID: String!) {
                 }
               }
             }
+            ProvisioningScheduledSteps {
+              id
+              type
+              runTime
+              ScheduledStep {
+                id
+                name
+                type
+                step
+              }
+              Plan {
+                id
+                Status {
+                  id
+                  state
+                }
+              }
+            }
           }
         }
       }

@@ -1,5 +1,6 @@
-import { ChangeDetectorRef, Component, Inject, OnInit, OnDestroy } from '@angular/core';
-import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { ChangeDetectorRef, Component, Inject } from '@angular/core';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
+
 import {
   LaForgeSubscribeUpdatedStatusSubscription,
   LaForgeSubscribeUpdatedAgentStatusSubscription,
@@ -9,12 +10,14 @@ import {
 import { EnvironmentService } from '@services/environment/environment.service';
 import { ApiService } from 'src/app/services/api/api.service';
 
+import { ScheduledStepsModalComponent } from '@components/scheduled-steps-modal/scheduled-steps-modal.component';
+
 @Component({
   selector: 'app-host-modal',
   templateUrl: './host-modal.component.html',
   styleUrls: ['./host-modal.component.scss']
 })
-class HostModalComponent implements OnInit, OnDestroy {
+class HostModalComponent {
   varsColumns: string[] = ['key', 'value'];
   tagsColumns: string[] = ['name', 'description'];
   // planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
@@ -34,28 +37,22 @@ class HostModalComponent implements OnInit, OnDestroy {
     },
     private api: ApiService,
     private envService: EnvironmentService,
-    private cdRef: ChangeDetectorRef
+    private cdRef: ChangeDetectorRef,
+    private dialog: MatDialog
   ) {}
-
-  ngOnInit(): void {
-    // this.envService.statusUpdate.asObservable().subscribe(() => {
-    //   this.checkPlanStatus();
-    //   this.checkProvisionedHostStatus();
-    //   this.cdRef.detectChanges();
-    // });
-    // this.envService.agentStatusUpdate.asObservable().subscribe(() => {
-    //   this.checkAgentStatus();
-    //   this.cdRef.detectChanges();
-    // });
-  }
-
-  ngOnDestroy() {
-    // this.envService.statusUpdate.unsubscribe();
-    // this.envService.agentStatusUpdate.unsubscribe();
-  }
 
   onClose(): void {
     this.dialogRef.close();
+  }
+
+  openSchedule(): void {
+    this.dialog.open(ScheduledStepsModalComponent, {
+      width: '50%',
+      height: '80%',
+      data: {
+        provisionedHostId: this.data.provisionedHost.id
+      }
+    });
   }
 
   checkPlanStatus(): void {

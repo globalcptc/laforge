@@ -48,6 +48,15 @@
         [style]="'expanded'"
         [mode]="mode"
       ></app-step>
+      <!-- <app-step
+        *ngFor="let scheduledStep of provisionedHost.ProvisioningScheduledSteps | sortBy: 'asc':'stepNumber'; let i = index"
+        [stepNumber]="provisionedHost.ProvisioningSteps.length + i + 1"
+        [provisioningScheduledStep]="scheduledStep"
+        [planDiffs]="planDiffs"
+        [showDetail]="false"
+        [style]="'expanded'"
+        [mode]="mode"
+      ></app-step> -->
     </div>
   </div>
 </div>

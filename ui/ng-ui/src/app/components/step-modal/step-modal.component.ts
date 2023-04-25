@@ -1,30 +1,37 @@
-import { ChangeDetectorRef, Component, Inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import {
   LaForgeGetAgentTasksQuery,
+  LaForgeProvisioningScheduledStep,
   LaForgeProvisioningStep,
   LaForgeProvisioningStepType,
   LaForgeProvisionStatus,
   LaForgeStatus
 } from '@graphql';
 import { EnvironmentService } from '@services/environment/environment.service';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subscription } from 'rxjs';
 
 import { LaForgeGetAgentTasksGQL } from '../../../generated/graphql';
 
 @Component({
-  selector: 'app-network-modal',
+  selector: 'app-step-modal',
   templateUrl: './step-modal.component.html',
   styleUrls: ['./step-modal.component.scss']
 })
-export class StepModalComponent implements OnInit {
+export class StepModalComponent implements OnInit, OnDestroy {
   taskColumns: string[] = ['args', 'state'];
   failedChildren = false;
   agentTasks: BehaviorSubject<LaForgeGetAgentTasksQuery['getAgentTasks']>;
+  subscription: Subscription;
 
   constructor(
     public dialogRef: MatDialogRef<StepModalComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { provisioningStep: LaForgeProvisioningStep; planStatus: LaForgeStatus },
+    @Inject(MAT_DIALOG_DATA)
+    public data: {
+      provisioningStep: LaForgeProvisioningStep | undefined;
+      provisioningScheduledStep: LaForgeProvisioningScheduledStep | undefined;
+      planStatus: LaForgeStatus;
+    },
     private getAgentTasks: LaForgeGetAgentTasksGQL,
     private cdRef: ChangeDetectorRef,
     private envService: EnvironmentService
@@ -33,12 +40,17 @@ export class StepModalComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.getAgentTasks
-      .fetch({
-        proStepId: this.data.provisioningStep.id
-      })
-      .toPromise()
-      .then(({ data, error, errors }) => {
+    this.subscription = this.getAgentTasks
+      .watch(
+        {
+          proStepId: this.data.provisioningStep?.id ?? undefined,
+          proSchedStepId: this.data.provisioningScheduledStep?.id ?? undefined
+        },
+        {
+          pollInterval: 5000
+        }
+      )
+      .valueChanges.subscribe(({ data, error, errors }) => {
         if (error) {
           return this.agentTasks.error(error);
         } else if (errors) {
@@ -51,6 +63,10 @@ export class StepModalComponent implements OnInit {
         }
         this.agentTasks.next(tasks.sort((a, b) => a.number - b.number));
       }, this.agentTasks.error);
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
   }
 
   onClose(): void {
@@ -124,16 +140,17 @@ export class StepModalComponent implements OnInit {
   }
 
   getText(): string {
-    switch (this.data.provisioningStep.type) {
+    const step = this.data.provisioningStep || this.data.provisioningScheduledStep;
+    switch (step.type) {
       case LaForgeProvisioningStepType.Script:
-        return `${this.data.provisioningStep.Script.source} ${this.data.provisioningStep.Script.args.join(' ')}`;
+        return `${step.Script.source} ${step.Script.args.join(' ')}`;
       case LaForgeProvisioningStepType.Command:
-        return `${this.data.provisioningStep.Command.program} ${this.data.provisioningStep.Command.args.join(' ')}`;
+        return `${step.Command.program} ${step.Command.args.join(' ')}`;
       case LaForgeProvisioningStepType.DnsRecord:
         return 'DNSRecord';
       case LaForgeProvisioningStepType.FileDownload:
         // eslint-disable-next-line max-len
-        return `${this.data.provisioningStep.FileDownload.source} -> ${this.data.provisioningStep.FileDownload.destination}`;
+        return `${step.FileDownload.source} -> ${step.FileDownload.destination}`;
       case LaForgeProvisioningStepType.FileDelete:
         return 'FileDelete';
       case LaForgeProvisioningStepType.FileExtract:

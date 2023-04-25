@@ -7,6 +7,10 @@
     <h4 class="host-name m-0">{{ data.provisionedHost.Host.hostname }}</h4>
   </div>
   <div class="flex-fill d-flex align-items-center justify-content-end">
+    <button mat-icon-button color="primary" aria-label="Show Scheduled Steps" (click)="openSchedule()">
+      <!-- <mat-icon>undo</mat-icon> -->
+      <i class="fa fa-clock"></i>
+    </button>
     <button mat-icon-button color="basic" aria-label="Close" (click)="onClose()">
       <!-- <mat-icon>undo</mat-icon> -->
       <i class="fa fa-times"></i>
@@ -168,6 +172,13 @@
       [showDetail]="false"
       [style]="'compact'"
     ></app-step>
+    <!-- <app-step
+      *ngFor="let scheduledStep of data.provisionedHost.ProvisioningScheduledSteps | sortBy: 'asc':'runTime'; let i = index"
+      [stepNumber]="i + 1"
+      [provisioningScheduledStep]="scheduledStep"
+      [showDetail]="false"
+      [style]="'compact'"
+    ></app-step> -->
     <!-- <i class="fas fa-2x fa-sync fa-spin" *ngIf="data.provisionedHost.ProvisioningStep == null"></i> -->
   </div>
 </div>

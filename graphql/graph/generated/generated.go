@@ -585,7 +585,7 @@ type ComplexityRoot struct {
 		CurrentUser         func(childComplexity int) int
 		Environment         func(childComplexity int, envUUID string) int
 		Environments        func(childComplexity int) int
-		GetAgentTasks       func(childComplexity int, proStepUUID string) int
+		GetAgentTasks       func(childComplexity int, proStepUUID *string, proSchedStepUUID *string) int
 		GetAllAgentStatus   func(childComplexity int, buildUUID string, count int, offset int) int
 		GetAllPlanStatus    func(childComplexity int, buildUUID string, count int, offset int) int
 		GetBuildCommit      func(childComplexity int, buildCommitUUID string) int
@@ -963,7 +963,7 @@ type QueryResolver interface {
 	CurrentUser(ctx context.Context) (*ent.AuthUser, error)
 	GetUserList(ctx context.Context) ([]*ent.AuthUser, error)
 	GetCurrentUserTasks(ctx context.Context) ([]*ent.ServerTask, error)
-	GetAgentTasks(ctx context.Context, proStepUUID string) ([]*ent.AgentTask, error)
+	GetAgentTasks(ctx context.Context, proStepUUID *string, proSchedStepUUID *string) ([]*ent.AgentTask, error)
 	ListAgentStatuses(ctx context.Context, buildUUID string) ([]*ent.AgentStatus, error)
 	ListBuildStatuses(ctx context.Context, buildUUID string) ([]*ent.Status, error)
 	GetAllAgentStatus(ctx context.Context, buildUUID string, count int, offset int) (*model.AgentStatusBatch, error)
@@ -3858,7 +3858,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.GetAgentTasks(childComplexity, args["proStepUUID"].(string)), true
+		return e.complexity.Query.GetAgentTasks(childComplexity, args["proStepUUID"].(*string), args["proSchedStepUUID"].(*string)), true
 
 	case "Query.getAllAgentStatus":
 		if e.complexity.Query.GetAllAgentStatus == nil {
@@ -5801,7 +5801,7 @@ type Query {
   currentUser: AuthUser @hasRole(roles: [ADMIN, USER])
   getUserList: [AuthUser] @hasRole(roles: [ADMIN])
   getCurrentUserTasks: [ServerTask] @hasRole(roles: [ADMIN, USER])
-  getAgentTasks(proStepUUID: String!): [AgentTask]
+  getAgentTasks(proStepUUID: String, proSchedStepUUID: String): [AgentTask]
     @hasRole(roles: [ADMIN, USER])
   listAgentStatuses(buildUUID: String!): [AgentStatus]
     @hasRole(roles: [ADMIN, USER])
@@ -6568,15 +6568,24 @@ func (ec *executionContext) field_Query_environment_args(ctx context.Context, ra
 func (ec *executionContext) field_Query_getAgentTasks_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
+	var arg0 *string
 	if tmp, ok := rawArgs["proStepUUID"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("proStepUUID"))
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		arg0, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["proStepUUID"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["proSchedStepUUID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("proSchedStepUUID"))
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["proSchedStepUUID"] = arg1
 	return args, nil
 }
 
@@ -30528,7 +30537,7 @@ func (ec *executionContext) _Query_getAgentTasks(ctx context.Context, field grap
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().GetAgentTasks(rctx, fc.Args["proStepUUID"].(string))
+			return ec.resolvers.Query().GetAgentTasks(rctx, fc.Args["proStepUUID"].(*string), fc.Args["proSchedStepUUID"].(*string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			roles, err := ec.unmarshalNRoleLevel2ᚕgithubᚗcomᚋgen0cideᚋlaforgeᚋgraphqlᚋgraphᚋmodelᚐRoleLevelᚄ(ctx, []interface{}{"ADMIN", "USER"})

@@ -23,6 +23,7 @@ import (
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/gen0cide/laforge/ent/servertask"
@@ -1490,20 +1491,36 @@ func (r *queryResolver) GetCurrentUserTasks(ctx context.Context) ([]*ent.ServerT
 	return r.client.AuthUser.Query().QueryServerTasks().All(ctx)
 }
 
-func (r *queryResolver) GetAgentTasks(ctx context.Context, proStepUUID string) ([]*ent.AgentTask, error) {
-	uuid, err := uuid.Parse(proStepUUID)
-	if err != nil {
-		return nil, err
+func (r *queryResolver) GetAgentTasks(ctx context.Context, proStepUUID *string, proSchedStepUUID *string) ([]*ent.AgentTask, error) {
+	var stepUuid uuid.UUID
+	var err error
+	if proStepUUID != nil {
+		stepUuid, err = uuid.Parse(*proStepUUID)
+		if err != nil {
+			return nil, err
+		}
+	} else if proSchedStepUUID != nil {
+		stepUuid, err = uuid.Parse(*proSchedStepUUID)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("either proStepUUID or proSchedStepUUID must be supplied")
 	}
 
-	entProStep, err := r.client.ProvisioningStep.Query().Where(provisioningstep.IDEQ(uuid)).Only(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	agentTasks, err := entProStep.QueryAgentTasks().All(ctx)
-	if err != nil {
-		return nil, err
+	var agentTasks []*ent.AgentTask
+	if proStepUUID != nil {
+		agentTasks, err = r.client.ProvisioningStep.Query().Where(provisioningstep.IDEQ(stepUuid)).QueryAgentTasks().All(ctx)
+		if err != nil {
+			return nil, err
+		}
+	} else if proSchedStepUUID != nil {
+		agentTasks, err = r.client.ProvisioningScheduledStep.Query().Where(provisioningscheduledstep.IDEQ(stepUuid)).QueryAgentTasks().All(ctx)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("either proStepUUID or proSchedStepUUID must be supplied")
 	}
 
 	return agentTasks, err
