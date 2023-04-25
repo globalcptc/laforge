@@ -476,8 +476,16 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		WithDependOnNetwork().
 		All(ctx)
 
-	currentBuild := pNetwork.QueryBuild().WithEnvironment().OnlyX(ctx)
-	currentTeam := pNetwork.QueryTeam().OnlyX(ctx)
+	currentBuild, err := pNetwork.QueryBuild().WithEnvironment().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("failed to query build from provisioned network: %v", err)
+		return nil, err
+	}
+	currentTeam, err := pNetwork.QueryTeam().Only(ctx)
+	if err != nil {
+		logger.Log.Errorf("failed to query team from provisioned network: %v", err)
+		return nil, err
+	}
 
 	for _, entHostDependency := range entHostDependencies {
 		entDependsOnHost, err := client.ProvisionedHost.Query().Where(
@@ -687,13 +695,20 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 	}
 
 	for _, scheduledStepHclId := range entHost.ScheduledSteps {
-		entScheduledStep, err := client.ScheduledStep.Query().Where(scheduledstep.HclIDEQ(scheduledStepHclId)).Only(ctx)
+		entScheduledStep, err := client.ScheduledStep.Query().
+			Where(
+				scheduledstep.And(
+					scheduledstep.HclIDEQ(scheduledStepHclId),
+					scheduledstep.HasEnvironmentWith(environment.IDEQ(currentBuild.Edges.Environment.ID)),
+				),
+			).
+			Only(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query scheduled step from host: %v", err)
 		}
 		err = createProvisioningScheduledStep(ctx, client, logger, entScheduledStep, entProvisionedHost, endPlanNode)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create ")
+			return nil, fmt.Errorf("failed to create provisioning scheduled step")
 		}
 	}
 
