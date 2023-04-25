@@ -860,12 +860,12 @@ func (ph *ProvisionedHost) ProvisioningScheduledSteps(ctx context.Context) ([]*P
 	return result, err
 }
 
-func (ph *ProvisionedHost) AgentStatus(ctx context.Context) (*AgentStatus, error) {
-	result, err := ph.Edges.AgentStatusOrErr()
+func (ph *ProvisionedHost) AgentStatuses(ctx context.Context) ([]*AgentStatus, error) {
+	result, err := ph.Edges.AgentStatusesOrErr()
 	if IsNotLoaded(err) {
-		result, err = ph.QueryAgentStatus().Only(ctx)
+		result, err = ph.QueryAgentStatuses().All(ctx)
 	}
-	return result, MaskNotFound(err)
+	return result, err
 }
 
 func (ph *ProvisionedHost) AgentTasks(ctx context.Context) ([]*AgentTask, error) {

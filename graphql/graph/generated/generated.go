@@ -25350,7 +25350,7 @@ func (ec *executionContext) _ProvisionedHost_AgentStatus(ctx context.Context, fi
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.AgentStatus(ctx)
+		return obj.AgentStatuses(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)

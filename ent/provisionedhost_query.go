@@ -42,7 +42,7 @@ type ProvisionedHostQuery struct {
 	withBuild                      *BuildQuery
 	withProvisioningSteps          *ProvisioningStepQuery
 	withProvisioningScheduledSteps *ProvisioningScheduledStepQuery
-	withAgentStatus                *AgentStatusQuery
+	withAgentStatuses              *AgentStatusQuery
 	withAgentTasks                 *AgentTaskQuery
 	withPlan                       *PlanQuery
 	withGinFileMiddleware          *GinFileMiddlewareQuery
@@ -237,8 +237,8 @@ func (phq *ProvisionedHostQuery) QueryProvisioningScheduledSteps() *Provisioning
 	return query
 }
 
-// QueryAgentStatus chains the current query on the "AgentStatus" edge.
-func (phq *ProvisionedHostQuery) QueryAgentStatus() *AgentStatusQuery {
+// QueryAgentStatuses chains the current query on the "AgentStatuses" edge.
+func (phq *ProvisionedHostQuery) QueryAgentStatuses() *AgentStatusQuery {
 	query := &AgentStatusQuery{config: phq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := phq.prepareQuery(ctx); err != nil {
@@ -251,7 +251,7 @@ func (phq *ProvisionedHostQuery) QueryAgentStatus() *AgentStatusQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionedhost.Table, provisionedhost.FieldID, selector),
 			sqlgraph.To(agentstatus.Table, agentstatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisionedhost.AgentStatusTable, provisionedhost.AgentStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionedhost.AgentStatusesTable, provisionedhost.AgentStatusesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(phq.driver.Dialect(), step)
 		return fromU, nil
@@ -513,7 +513,7 @@ func (phq *ProvisionedHostQuery) Clone() *ProvisionedHostQuery {
 		withBuild:                      phq.withBuild.Clone(),
 		withProvisioningSteps:          phq.withProvisioningSteps.Clone(),
 		withProvisioningScheduledSteps: phq.withProvisioningScheduledSteps.Clone(),
-		withAgentStatus:                phq.withAgentStatus.Clone(),
+		withAgentStatuses:              phq.withAgentStatuses.Clone(),
 		withAgentTasks:                 phq.withAgentTasks.Clone(),
 		withPlan:                       phq.withPlan.Clone(),
 		withGinFileMiddleware:          phq.withGinFileMiddleware.Clone(),
@@ -601,14 +601,14 @@ func (phq *ProvisionedHostQuery) WithProvisioningScheduledSteps(opts ...func(*Pr
 	return phq
 }
 
-// WithAgentStatus tells the query-builder to eager-load the nodes that are connected to
-// the "AgentStatus" edge. The optional arguments are used to configure the query builder of the edge.
-func (phq *ProvisionedHostQuery) WithAgentStatus(opts ...func(*AgentStatusQuery)) *ProvisionedHostQuery {
+// WithAgentStatuses tells the query-builder to eager-load the nodes that are connected to
+// the "AgentStatuses" edge. The optional arguments are used to configure the query builder of the edge.
+func (phq *ProvisionedHostQuery) WithAgentStatuses(opts ...func(*AgentStatusQuery)) *ProvisionedHostQuery {
 	query := &AgentStatusQuery{config: phq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	phq.withAgentStatus = query
+	phq.withAgentStatuses = query
 	return phq
 }
 
@@ -722,13 +722,13 @@ func (phq *ProvisionedHostQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			phq.withBuild != nil,
 			phq.withProvisioningSteps != nil,
 			phq.withProvisioningScheduledSteps != nil,
-			phq.withAgentStatus != nil,
+			phq.withAgentStatuses != nil,
 			phq.withAgentTasks != nil,
 			phq.withPlan != nil,
 			phq.withGinFileMiddleware != nil,
 		}
 	)
-	if phq.withProvisionedNetwork != nil || phq.withHost != nil || phq.withEndStepPlan != nil || phq.withBuild != nil || phq.withAgentStatus != nil || phq.withPlan != nil || phq.withGinFileMiddleware != nil {
+	if phq.withProvisionedNetwork != nil || phq.withHost != nil || phq.withEndStepPlan != nil || phq.withBuild != nil || phq.withPlan != nil || phq.withGinFileMiddleware != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -800,9 +800,10 @@ func (phq *ProvisionedHostQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			return nil, err
 		}
 	}
-	if query := phq.withAgentStatus; query != nil {
-		if err := phq.loadAgentStatus(ctx, query, nodes, nil,
-			func(n *ProvisionedHost, e *AgentStatus) { n.Edges.AgentStatus = e }); err != nil {
+	if query := phq.withAgentStatuses; query != nil {
+		if err := phq.loadAgentStatuses(ctx, query, nodes,
+			func(n *ProvisionedHost) { n.Edges.AgentStatuses = []*AgentStatus{} },
+			func(n *ProvisionedHost, e *AgentStatus) { n.Edges.AgentStatuses = append(n.Edges.AgentStatuses, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1034,32 +1035,34 @@ func (phq *ProvisionedHostQuery) loadProvisioningScheduledSteps(ctx context.Cont
 	}
 	return nil
 }
-func (phq *ProvisionedHostQuery) loadAgentStatus(ctx context.Context, query *AgentStatusQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *AgentStatus)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*ProvisionedHost)
+func (phq *ProvisionedHostQuery) loadAgentStatuses(ctx context.Context, query *AgentStatusQuery, nodes []*ProvisionedHost, init func(*ProvisionedHost), assign func(*ProvisionedHost, *AgentStatus)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*ProvisionedHost)
 	for i := range nodes {
-		if nodes[i].agent_status_provisioned_host == nil {
-			continue
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
 		}
-		fk := *nodes[i].agent_status_provisioned_host
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.Where(agentstatus.IDIn(ids...))
+	query.withFKs = true
+	query.Where(predicate.AgentStatus(func(s *sql.Selector) {
+		s.Where(sql.InValues(provisionedhost.AgentStatusesColumn, fks...))
+	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
+		fk := n.agent_status_provisioned_host
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "agent_status_provisioned_host" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_status_provisioned_host" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_status_provisioned_host" returned %v for node %v`, *fk, n.ID)
 		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
+		assign(node, n)
 	}
 	return nil
 }

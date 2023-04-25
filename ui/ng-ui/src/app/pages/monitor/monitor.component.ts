@@ -1,11 +1,10 @@
 import { ChangeDetectorRef, Component, OnDestroy, AfterViewInit } from '@angular/core';
 import { MatSelectChange } from '@angular/material/select';
-import { LaForgeGetBuildTreeQuery, LaForgeGetEnvironmentInfoQuery } from '@graphql';
+import { LaForgeGetAgentStatusQuery, LaForgeGetBuildTreeQuery, LaForgeGetEnvironmentInfoQuery } from '@graphql';
 import { QueryRef } from 'apollo-angular';
 import { EmptyObject } from 'apollo-angular/types';
 import { Observable, Subscription } from 'rxjs';
 import { SubheaderService } from 'src/app/_metronic/partials/layout/subheader/_services/subheader.service';
-import { AgentStatusQueryResult } from 'src/app/models/api.model';
 import { ApiService } from 'src/app/services/api/api.service';
 import { EnvironmentService } from 'src/app/services/environment/environment.service';
 import { environment } from 'src/environments/environment';
@@ -26,7 +25,7 @@ export class MonitorComponent implements AfterViewInit, OnDestroy {
   pollingInterval = 60;
   loading = false;
   intervalOptions = [10, 30, 60, 120];
-  agentStatusQuery: QueryRef<AgentStatusQueryResult, EmptyObject>;
+  agentStatusQuery: QueryRef<LaForgeGetAgentStatusQuery, EmptyObject>;
   agentStatusSubscription: Subscription;
   apolloError: any = {};
 

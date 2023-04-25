@@ -507,7 +507,7 @@ func (asu *AgentStatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if asu.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   agentstatus.ProvisionedHostTable,
 			Columns: []string{agentstatus.ProvisionedHostColumn},
@@ -523,7 +523,7 @@ func (asu *AgentStatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if nodes := asu.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   agentstatus.ProvisionedHostTable,
 			Columns: []string{agentstatus.ProvisionedHostColumn},
@@ -1135,7 +1135,7 @@ func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStat
 	}
 	if asuo.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   agentstatus.ProvisionedHostTable,
 			Columns: []string{agentstatus.ProvisionedHostColumn},
@@ -1151,7 +1151,7 @@ func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStat
 	}
 	if nodes := asuo.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   agentstatus.ProvisionedHostTable,
 			Columns: []string{agentstatus.ProvisionedHostColumn},

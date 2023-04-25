@@ -23453,8 +23453,9 @@ type ProvisionedHostMutation struct {
 	_ProvisioningScheduledSteps        map[uuid.UUID]struct{}
 	removed_ProvisioningScheduledSteps map[uuid.UUID]struct{}
 	cleared_ProvisioningScheduledSteps bool
-	_AgentStatus                       *uuid.UUID
-	cleared_AgentStatus                bool
+	_AgentStatuses                     map[uuid.UUID]struct{}
+	removed_AgentStatuses              map[uuid.UUID]struct{}
+	cleared_AgentStatuses              bool
 	_AgentTasks                        map[uuid.UUID]struct{}
 	removed_AgentTasks                 map[uuid.UUID]struct{}
 	cleared_AgentTasks                 bool
@@ -23995,43 +23996,58 @@ func (m *ProvisionedHostMutation) ResetProvisioningScheduledSteps() {
 	m.removed_ProvisioningScheduledSteps = nil
 }
 
-// SetAgentStatusID sets the "AgentStatus" edge to the AgentStatus entity by id.
-func (m *ProvisionedHostMutation) SetAgentStatusID(id uuid.UUID) {
-	m._AgentStatus = &id
+// AddAgentStatuseIDs adds the "AgentStatuses" edge to the AgentStatus entity by ids.
+func (m *ProvisionedHostMutation) AddAgentStatuseIDs(ids ...uuid.UUID) {
+	if m._AgentStatuses == nil {
+		m._AgentStatuses = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m._AgentStatuses[ids[i]] = struct{}{}
+	}
 }
 
-// ClearAgentStatus clears the "AgentStatus" edge to the AgentStatus entity.
-func (m *ProvisionedHostMutation) ClearAgentStatus() {
-	m.cleared_AgentStatus = true
+// ClearAgentStatuses clears the "AgentStatuses" edge to the AgentStatus entity.
+func (m *ProvisionedHostMutation) ClearAgentStatuses() {
+	m.cleared_AgentStatuses = true
 }
 
-// AgentStatusCleared reports if the "AgentStatus" edge to the AgentStatus entity was cleared.
-func (m *ProvisionedHostMutation) AgentStatusCleared() bool {
-	return m.cleared_AgentStatus
+// AgentStatusesCleared reports if the "AgentStatuses" edge to the AgentStatus entity was cleared.
+func (m *ProvisionedHostMutation) AgentStatusesCleared() bool {
+	return m.cleared_AgentStatuses
 }
 
-// AgentStatusID returns the "AgentStatus" edge ID in the mutation.
-func (m *ProvisionedHostMutation) AgentStatusID() (id uuid.UUID, exists bool) {
-	if m._AgentStatus != nil {
-		return *m._AgentStatus, true
+// RemoveAgentStatuseIDs removes the "AgentStatuses" edge to the AgentStatus entity by IDs.
+func (m *ProvisionedHostMutation) RemoveAgentStatuseIDs(ids ...uuid.UUID) {
+	if m.removed_AgentStatuses == nil {
+		m.removed_AgentStatuses = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m._AgentStatuses, ids[i])
+		m.removed_AgentStatuses[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAgentStatuses returns the removed IDs of the "AgentStatuses" edge to the AgentStatus entity.
+func (m *ProvisionedHostMutation) RemovedAgentStatusesIDs() (ids []uuid.UUID) {
+	for id := range m.removed_AgentStatuses {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// AgentStatusIDs returns the "AgentStatus" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AgentStatusID instead. It exists only for internal usage by the builders.
-func (m *ProvisionedHostMutation) AgentStatusIDs() (ids []uuid.UUID) {
-	if id := m._AgentStatus; id != nil {
-		ids = append(ids, *id)
+// AgentStatusesIDs returns the "AgentStatuses" edge IDs in the mutation.
+func (m *ProvisionedHostMutation) AgentStatusesIDs() (ids []uuid.UUID) {
+	for id := range m._AgentStatuses {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetAgentStatus resets all changes to the "AgentStatus" edge.
-func (m *ProvisionedHostMutation) ResetAgentStatus() {
-	m._AgentStatus = nil
-	m.cleared_AgentStatus = false
+// ResetAgentStatuses resets all changes to the "AgentStatuses" edge.
+func (m *ProvisionedHostMutation) ResetAgentStatuses() {
+	m._AgentStatuses = nil
+	m.cleared_AgentStatuses = false
+	m.removed_AgentStatuses = nil
 }
 
 // AddAgentTaskIDs adds the "AgentTasks" edge to the AgentTask entity by ids.
@@ -24349,8 +24365,8 @@ func (m *ProvisionedHostMutation) AddedEdges() []string {
 	if m._ProvisioningScheduledSteps != nil {
 		edges = append(edges, provisionedhost.EdgeProvisioningScheduledSteps)
 	}
-	if m._AgentStatus != nil {
-		edges = append(edges, provisionedhost.EdgeAgentStatus)
+	if m._AgentStatuses != nil {
+		edges = append(edges, provisionedhost.EdgeAgentStatuses)
 	}
 	if m._AgentTasks != nil {
 		edges = append(edges, provisionedhost.EdgeAgentTasks)
@@ -24400,10 +24416,12 @@ func (m *ProvisionedHostMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case provisionedhost.EdgeAgentStatus:
-		if id := m._AgentStatus; id != nil {
-			return []ent.Value{*id}
+	case provisionedhost.EdgeAgentStatuses:
+		ids := make([]ent.Value, 0, len(m._AgentStatuses))
+		for id := range m._AgentStatuses {
+			ids = append(ids, id)
 		}
+		return ids
 	case provisionedhost.EdgeAgentTasks:
 		ids := make([]ent.Value, 0, len(m._AgentTasks))
 		for id := range m._AgentTasks {
@@ -24431,6 +24449,9 @@ func (m *ProvisionedHostMutation) RemovedEdges() []string {
 	if m.removed_ProvisioningScheduledSteps != nil {
 		edges = append(edges, provisionedhost.EdgeProvisioningScheduledSteps)
 	}
+	if m.removed_AgentStatuses != nil {
+		edges = append(edges, provisionedhost.EdgeAgentStatuses)
+	}
 	if m.removed_AgentTasks != nil {
 		edges = append(edges, provisionedhost.EdgeAgentTasks)
 	}
@@ -24450,6 +24471,12 @@ func (m *ProvisionedHostMutation) RemovedIDs(name string) []ent.Value {
 	case provisionedhost.EdgeProvisioningScheduledSteps:
 		ids := make([]ent.Value, 0, len(m.removed_ProvisioningScheduledSteps))
 		for id := range m.removed_ProvisioningScheduledSteps {
+			ids = append(ids, id)
+		}
+		return ids
+	case provisionedhost.EdgeAgentStatuses:
+		ids := make([]ent.Value, 0, len(m.removed_AgentStatuses))
+		for id := range m.removed_AgentStatuses {
 			ids = append(ids, id)
 		}
 		return ids
@@ -24487,8 +24514,8 @@ func (m *ProvisionedHostMutation) ClearedEdges() []string {
 	if m.cleared_ProvisioningScheduledSteps {
 		edges = append(edges, provisionedhost.EdgeProvisioningScheduledSteps)
 	}
-	if m.cleared_AgentStatus {
-		edges = append(edges, provisionedhost.EdgeAgentStatus)
+	if m.cleared_AgentStatuses {
+		edges = append(edges, provisionedhost.EdgeAgentStatuses)
 	}
 	if m.cleared_AgentTasks {
 		edges = append(edges, provisionedhost.EdgeAgentTasks)
@@ -24520,8 +24547,8 @@ func (m *ProvisionedHostMutation) EdgeCleared(name string) bool {
 		return m.cleared_ProvisioningSteps
 	case provisionedhost.EdgeProvisioningScheduledSteps:
 		return m.cleared_ProvisioningScheduledSteps
-	case provisionedhost.EdgeAgentStatus:
-		return m.cleared_AgentStatus
+	case provisionedhost.EdgeAgentStatuses:
+		return m.cleared_AgentStatuses
 	case provisionedhost.EdgeAgentTasks:
 		return m.cleared_AgentTasks
 	case provisionedhost.EdgePlan:
@@ -24550,9 +24577,6 @@ func (m *ProvisionedHostMutation) ClearEdge(name string) error {
 		return nil
 	case provisionedhost.EdgeBuild:
 		m.ClearBuild()
-		return nil
-	case provisionedhost.EdgeAgentStatus:
-		m.ClearAgentStatus()
 		return nil
 	case provisionedhost.EdgePlan:
 		m.ClearPlan()
@@ -24589,8 +24613,8 @@ func (m *ProvisionedHostMutation) ResetEdge(name string) error {
 	case provisionedhost.EdgeProvisioningScheduledSteps:
 		m.ResetProvisioningScheduledSteps()
 		return nil
-	case provisionedhost.EdgeAgentStatus:
-		m.ResetAgentStatus()
+	case provisionedhost.EdgeAgentStatuses:
+		m.ResetAgentStatuses()
 		return nil
 	case provisionedhost.EdgeAgentTasks:
 		m.ResetAgentTasks()

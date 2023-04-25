@@ -3,6 +3,7 @@
 # https://gqlgen.com/getting-started/
 
 scalar Time
+scalar Map
 
 type varsMap {
   key: String!
@@ -737,6 +738,52 @@ type PlanCounts {
   cancelled: Int!
 }
 
+type ServerConfig {
+  ConfigFile: String!
+  Debug: Boolean
+  LogFolder: String!
+  GinMode: String!
+  Builders: Map!
+  Database: DatabaseConfig
+  Auth: AuthConfig
+  UI: UIConfig
+  Agent: AgentConfig
+  Graphql: GraphqlConfig
+}
+
+type BuilderConfig {
+  Builder: String!
+  ConfigFile: String!
+}
+
+type DatabaseConfig {
+  PostgresUri: String!
+  AdminUser: String!
+  # AdminPass <-- hidden
+}
+
+type AuthConfig {
+  GithubId: String!
+  # GithubSecret <-- hidden
+  CookieTimeout: Int!
+}
+
+type UIConfig {
+  HttpsEnabled: Boolean!
+  AllowedOrigins: [String]!
+}
+
+type AgentConfig {
+  GrpcServerUri: String!
+  ApiDownloadUrl: String!
+}
+
+type GraphqlConfig {
+  Hostname: String!
+  RedisServerUri: String!
+  # RedisPassword <-- hidden
+}
+
 # TODO: Can use on INPUT_FIELD_DEFINITION if wanna have auth on a per variable level
 directive @hasRole(roles: [RoleLevel!]!) on FIELD_DEFINITION
 
@@ -779,6 +826,7 @@ type Query {
   viewServerTaskLogs(taskID: String!): String! @hasRole(roles: [ADMIN, USER])
   viewAgentTask(taskID: String!): AgentTask! @hasRole(roles: [ADMIN, USER])
   serverTasks(taskUUIDs: [String]!): [ServerTask] @hasRole(roles: [ADMIN, USER])
+  serverConfig: ServerConfig @hasRole(roles: [ADMIN])
 }
 
 type Mutation {

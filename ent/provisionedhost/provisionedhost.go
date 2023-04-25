@@ -35,8 +35,8 @@ const (
 	EdgeProvisioningSteps = "ProvisioningSteps"
 	// EdgeProvisioningScheduledSteps holds the string denoting the provisioningscheduledsteps edge name in mutations.
 	EdgeProvisioningScheduledSteps = "ProvisioningScheduledSteps"
-	// EdgeAgentStatus holds the string denoting the agentstatus edge name in mutations.
-	EdgeAgentStatus = "AgentStatus"
+	// EdgeAgentStatuses holds the string denoting the agentstatuses edge name in mutations.
+	EdgeAgentStatuses = "AgentStatuses"
 	// EdgeAgentTasks holds the string denoting the agenttasks edge name in mutations.
 	EdgeAgentTasks = "AgentTasks"
 	// EdgePlan holds the string denoting the plan edge name in mutations.
@@ -94,13 +94,13 @@ const (
 	ProvisioningScheduledStepsInverseTable = "provisioning_scheduled_steps"
 	// ProvisioningScheduledStepsColumn is the table column denoting the ProvisioningScheduledSteps relation/edge.
 	ProvisioningScheduledStepsColumn = "provisioning_scheduled_step_provisioned_host"
-	// AgentStatusTable is the table that holds the AgentStatus relation/edge.
-	AgentStatusTable = "provisioned_hosts"
-	// AgentStatusInverseTable is the table name for the AgentStatus entity.
+	// AgentStatusesTable is the table that holds the AgentStatuses relation/edge.
+	AgentStatusesTable = "agent_status"
+	// AgentStatusesInverseTable is the table name for the AgentStatus entity.
 	// It exists in this package in order to avoid circular dependency with the "agentstatus" package.
-	AgentStatusInverseTable = "agent_status"
-	// AgentStatusColumn is the table column denoting the AgentStatus relation/edge.
-	AgentStatusColumn = "agent_status_provisioned_host"
+	AgentStatusesInverseTable = "agent_status"
+	// AgentStatusesColumn is the table column denoting the AgentStatuses relation/edge.
+	AgentStatusesColumn = "agent_status_provisioned_host"
 	// AgentTasksTable is the table that holds the AgentTasks relation/edge.
 	AgentTasksTable = "agent_tasks"
 	// AgentTasksInverseTable is the table name for the AgentTask entity.
@@ -135,7 +135,6 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provisioned_hosts"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"agent_status_provisioned_host",
 	"gin_file_middleware_provisioned_host",
 	"plan_provisioned_host",
 	"provisioned_host_provisioned_network",

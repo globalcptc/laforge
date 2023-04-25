@@ -2705,9 +2705,9 @@ func (ph *ProvisionedHost) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[7] = &Edge{
 		Type: "AgentStatus",
-		Name: "AgentStatus",
+		Name: "AgentStatuses",
 	}
-	err = ph.QueryAgentStatus().
+	err = ph.QueryAgentStatuses().
 		Select(agentstatus.FieldID).
 		Scan(ctx, &node.Edges[7].IDs)
 	if err != nil {

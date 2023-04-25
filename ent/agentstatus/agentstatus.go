@@ -48,7 +48,7 @@ const (
 	// Table holds the table name of the agentstatus in the database.
 	Table = "agent_status"
 	// ProvisionedHostTable is the table that holds the ProvisionedHost relation/edge.
-	ProvisionedHostTable = "provisioned_hosts"
+	ProvisionedHostTable = "agent_status"
 	// ProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
 	ProvisionedHostInverseTable = "provisioned_hosts"
@@ -92,6 +92,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "agent_status"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
+	"agent_status_provisioned_host",
 	"agent_status_provisioned_network",
 	"agent_status_build",
 }
