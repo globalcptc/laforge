@@ -459,18 +459,25 @@ func deleteRoutine(client *ent.Client, logger *logging.Logger, builder *builder.
 	case plan.TypeStartScheduledStep:
 		step, deleteErr := entPlan.QueryProvisioningScheduledStep().Only(ctx)
 		if deleteErr != nil {
+			logger.Log.Errorf("failed to query provisioning scheduled step from plan: %v", err)
 			break
 		}
 		ginFileMiddleware, deleteErr := step.QueryGinFileMiddleware().Only(ctx)
 		if deleteErr != nil {
+			logger.Log.Errorf("failed to query gin file middleware from provisioning scheduled step: %v", err)
 			break
 		}
 		deleteErr = ginFileMiddleware.Update().SetAccessed(false).Exec(ctx)
 		// deleteErr = client.GinFileMiddleware.DeleteOne(ginFileMiddleware).Exec(ctx)
 		if deleteErr != nil {
+			logger.Log.Errorf("failed to update gin file middleware: %v", err)
 			break
 		}
 		deleteErr = provisionedStatus.Update().SetState(status.StateDELETED).Exec(ctx)
+		if deleteErr != nil {
+			logger.Log.Errorf("failed to update provisioned scheduled step status state: %v", err)
+			break
+		}
 		rdb.Publish(ctx, "updatedStatus", provisionedStatus.ID.String())
 	default:
 		break

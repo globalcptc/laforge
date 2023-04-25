@@ -11,12 +11,15 @@ import (
 
 	"github.com/gen0cide/laforge/ent"
 	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/gen0cide/laforge/planner"
 	"github.com/gen0cide/laforge/server/utils"
 	"github.com/go-redis/redis/v8"
+	"github.com/gorhill/cronexpr"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,12 +33,14 @@ func SchedulerWatchdog(ctx context.Context, client *ent.Client, rdb *redis.Clien
 	//   1) haven't been run (status is AWAITING)
 	//   2) don't have a run_time of 0 (these are waiting on other things)
 	//   3) have a run_time in the past
+	//   4) have a provisioned host that is active (COMPLETE status)
 	ticker := time.NewTicker(time.Second)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			schedulerLogger.Log.Debug("querying for un-run scheduled steps")
 			provisioningScheduledStepsToExecute, err := GetStepsToExecute(ctx, client)
 			if err != nil {
 				schedulerLogger.Log.Errorf("failed to query provisioning scheduled steps to execute: %v", err)
@@ -77,6 +82,11 @@ func GetStepsToExecute(ctx context.Context, client *ent.Client) ([]*ent.Provisio
 			),
 			provisioningscheduledstep.RunTimeNEQ(time.Unix(0, 0)), // Has a non-zero run time
 			provisioningscheduledstep.RunTimeLTE(time.Now()),      // Should be run now or in the past
+			provisioningscheduledstep.HasProvisionedHostWith(
+				provisionedhost.HasStatusWith(
+					status.StateEQ(status.StateCOMPLETE),
+				),
+			), // Has a provisioned host in an acitve state
 		),
 	).All(ctx)
 	if err != nil {
@@ -86,6 +96,22 @@ func GetStepsToExecute(ctx context.Context, client *ent.Client) ([]*ent.Provisio
 }
 
 func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Client, logger *logging.Logger, laforgeConfig *utils.ServerConfig, entProvisioningScheduledStep *ent.ProvisioningScheduledStep) {
+	entScheduledStep, err := entProvisioningScheduledStep.ScheduledStep(ctx)
+	if err != nil {
+		logger.Log.Errorf("failed to query scheduled step from ent scheduled step: %v", err)
+		return
+	}
+	entPlan, err := entProvisioningScheduledStep.Plan(ctx)
+	if err != nil {
+		logger.Log.Errorf("failed to query plan from provisioning scheduled step: %v", err)
+		return
+	}
+	planStatus, err := entPlan.Status(ctx)
+	if err != nil {
+		logger.Log.Error("failed to query status from plan: %v", err)
+		return
+	}
+	
 	entStatus, err := entProvisioningScheduledStep.Status(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed to query provisioned scheduled step status: %v", err)
@@ -97,6 +123,13 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 		return
 	}
 	rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
+	err = planStatus.Update().SetState(status.StateINPROGRESS).Exec(ctx)
+	if err != nil {
+		logger.Log.Errorf("failed to update plan status: %v", err)
+		return
+	}
+	rdb.Publish(ctx, "updatedStatus", planStatus.ID.String())
+	logger.Log.Debugf("executing %s scheduled step \"%s\" to run \"%s\"", entProvisioningScheduledStep.Type, entScheduledStep.HclID, entScheduledStep.Step)
 
 	entProvisionedHost, err := entProvisioningScheduledStep.ProvisionedHost(ctx)
 	if err != nil {
@@ -388,9 +421,78 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 
 		time.Sleep(time.Second)
 	}
+
+	entCompetition, err := entProvisionedHost.QueryBuild().QueryCompetition().Only(ctx)
+	if err == nil {
+		// Schedule the next step iteration if it's being scheduled on-the-fly (CRON step and competition doesn't have well-defined schedule)
+		if entScheduledStep.Type == scheduledstep.TypeCRON && (entCompetition.StartTime == 0 || entCompetition.StopTime == 0) {
+			entPlan, err := entProvisioningScheduledStep.Plan(ctx)
+			if err != nil {
+				logger.Log.Errorf("failed to query plan from provisioning scheduled step: %v", err)
+				return
+			}
+			entBuild, err := entProvisionedHost.Build(ctx)
+			if err != nil {
+				logger.Log.Errorf("failed to query build from provisioned host: %v", err)
+				return
+			}
+
+			// Create a status object for this step
+			entStatus, err := client.Status.Create().SetState(status.StateAWAITING).SetStatusFor(status.StatusForProvisioningScheduledStep).Save(ctx)
+			if err != nil {
+				logger.Log.Errorf("failed to create status for provisioning scheduled step: %v", err)
+				return
+			}
+
+			// Create a starting query that sets the type and edge to relevant step
+			nextProvisioningScheduledStepCreate, err := planner.GenerateProvisioningScheduledStepByType(ctx, client, entScheduledStep)
+			if err != nil {
+				logger.Log.Errorf("failed to generate provisioning scheduled step by type: %v", err)
+				return
+			}
+
+			scheduleExpr, err := cronexpr.Parse(entScheduledStep.Schedule)
+			if err != nil {
+				logger.Log.Errorf("failed to parse scheduled step cron schedule \"%s\": %v", entScheduledStep.Schedule, err)
+				return
+			}
+			runTime := scheduleExpr.Next(time.Now())
+
+			// Set the run time based on the cron schedule
+			nextProvisioningScheduledStep, err := nextProvisioningScheduledStepCreate.
+				SetScheduledStep(entScheduledStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetStatus(entStatus).
+				SetRunTime(runTime).
+				Save(ctx)
+			if err != nil {
+				logger.Log.Errorf("failed to create provisioning scheduled step: %v", err)
+				return
+			}
+
+			err = planner.RenderFiles(ctx, client, logger, nextProvisioningScheduledStep)
+			if err != nil {
+				logger.Log.Errorf("failed to render files for provisioning scheduled step: %v", err)
+				return
+			}
+			err = planner.CreateStepPlan(ctx, client, logger, entProvisionedHost, entPlan, entBuild, nextProvisioningScheduledStep)
+			if err != nil {
+				logger.Log.Errorf("failed to create provisioning scheduled step plan: %v", err)
+				return
+			}
+		}
+	} else {
+		logger.Log.Errorf("failed to query competition through build from provisioned host: %v", err)
+	}
+
 	err = entStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Exec(ctx)
 	if err != nil {
 		logger.Log.Errorf("error while trying to set entProvisioningScheduledStep.Status.State to COMPLETED: %v", err)
+		return
+	}
+	err = planStatus.Update().SetCompleted(true).SetState(status.StateCOMPLETE).Exec(ctx)
+	if err != nil {
+		logger.Log.Errorf("error while trying to set entProvisioningScheduledStep.Plan.Status.State to COMPLETED: %v", err)
 		return
 	}
 	rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())

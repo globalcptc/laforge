@@ -443,7 +443,7 @@ func (r *mutationResolver) CreateBuild(ctx context.Context, envUUID string, rend
 	if err != nil {
 		return nil, fmt.Errorf("failed querying Environment: %v", err)
 	}
-	planner.RenderFiles = renderFiles
+	planner.ShouldRenderFiles = renderFiles
 	if renderFiles {
 		planner.RenderFilesTaskStatus, planner.RenderFilesTask, err = utils.CreateServerTask(ctx, r.client, r.rdb, currentUser, servertask.TypeRENDERFILES)
 	} else {

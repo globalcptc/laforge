@@ -49,7 +49,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var RenderFiles = false
+var ShouldRenderFiles = false
 var RenderFilesTask *ent.ServerTask = nil
 var RenderFilesTaskStatus *ent.Status = nil
 
@@ -107,7 +107,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		return nil, fmt.Errorf("error assigning environment to create build server task: %v", err)
 	}
 	rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
-	if RenderFiles {
+	if ShouldRenderFiles {
 		RenderFilesTask, err = client.ServerTask.UpdateOne(RenderFilesTask).SetEnvironment(entEnvironment).Save(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error assigning environment to render files server task: %v", err)
@@ -167,7 +167,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		return nil, fmt.Errorf("error assigning environment to create build server task: %v", err)
 	}
 	rdb.Publish(ctx, "updatedServerTask", serverTask.ID.String())
-	if RenderFiles {
+	if ShouldRenderFiles {
 		RenderFilesTask, err = client.ServerTask.UpdateOne(RenderFilesTask).SetBuild(entBuild).Save(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error linking build to render files server task: %v", err)
@@ -620,7 +620,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		logger.Log.Errorf("Unable to Resolve Absolute File Path. Err: %v", err)
 		return nil, err
 	}
-	if RenderFiles {
+	if ShouldRenderFiles {
 		err = grpc.BuildAgent(logger, fmt.Sprint(entProvisionedHost.ID), laforgeConfig.Agent.GrpcServerUri, binaryName, isWindowsHost)
 		if err != nil {
 			return nil, err
@@ -671,7 +671,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 			logger.Log.Errorf("Failed to Create Provisioning Step for Script %v. Err: %v", userDataScriptID, err)
 			return nil, err
 		}
-		err = renderFiles(ctx, client, logger, entUserDataProvisioningStep)
+		err = RenderFiles(ctx, client, logger, entUserDataProvisioningStep)
 		if err != nil {
 			return nil, fmt.Errorf("failed to render files for provisioning step: %v", err)
 		}
@@ -772,11 +772,11 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			}).Errorf("Failed to Create Provisioning Step for Script %v. Err: %v", hclID, err)
 			return nil, err
 		}
-		err = renderFiles(ctx, client, logger, entProvisioningStep)
+		err = RenderFiles(ctx, client, logger, entProvisioningStep)
 		if err != nil {
 			return entProvisioningStep, fmt.Errorf("failed to render files for provisioning step: %v", err)
 		}
-		err = createStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
+		err = CreateStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
 		if err != nil {
 			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
 		}
@@ -822,7 +822,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			}).Errorf("Failed to Create Provisioning Step for Command %v. Err: %v", hclID, err)
 			return nil, err
 		}
-		err = createStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
+		err = CreateStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
 		if err != nil {
 			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
 		}
@@ -868,11 +868,11 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			}).Errorf("Failed to Create Provisioning Step for FileDownload %v. Err: %v", hclID, err)
 			return nil, err
 		}
-		err = renderFiles(ctx, client, logger, entProvisioningStep)
+		err = RenderFiles(ctx, client, logger, entProvisioningStep)
 		if err != nil {
 			return entProvisioningStep, fmt.Errorf("failed to render files for provisioning step: %v", err)
 		}
-		err = createStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
+		err = CreateStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
 		if err != nil {
 			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
 		}
@@ -918,7 +918,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			}).Errorf("Failed to Create Provisioning Step for FileExtract %v. Err: %v", hclID, err)
 			return nil, err
 		}
-		err = createStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
+		err = CreateStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
 		if err != nil {
 			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
 		}
@@ -963,7 +963,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			}).Errorf("Failed to Create Provisioning Step for FileDelete %v. Err: %v", hclID, err)
 			return nil, err
 		}
-		err = createStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
+		err = CreateStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
 		if err != nil {
 			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
 		}
@@ -1008,7 +1008,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			}).Errorf("Failed to Create Provisioning Step for FileDelete %v. Err: %v", hclID, err)
 			return nil, err
 		}
-		err = createStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
+		err = CreateStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
 		if err != nil {
 			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
 		}
@@ -1054,11 +1054,11 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			}).Errorf("Failed to Create Provisioning Step for Ansible %v. Err: %v", hclID, err)
 			return nil, err
 		}
-		err = renderFiles(ctx, client, logger, entProvisioningStep)
+		err = RenderFiles(ctx, client, logger, entProvisioningStep)
 		if err != nil {
 			return entProvisioningStep, fmt.Errorf("failed to render files for provisioning step: %v", err)
 		}
-		err = createStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
+		err = CreateStepPlan(ctx, client, logger, pHost, prevPlan, currentBuild, entProvisioningStep)
 		if err != nil {
 			return entProvisioningStep, fmt.Errorf("failed to create step plan: %v", err)
 		}
@@ -1132,7 +1132,7 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 				}
 
 				// Create a starting query that sets the type and edge to relevant step
-				entProvisioningScheduledStepCreate, err := generateProvisioningScheduledStepByType(ctx, client, entScheduledStep)
+				entProvisioningScheduledStepCreate, err := GenerateProvisioningScheduledStepByType(ctx, client, entScheduledStep)
 				if err != nil {
 					return fmt.Errorf("failed to generate provisioning scheduled step by type: %v", err)
 				}
@@ -1148,11 +1148,11 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 					return fmt.Errorf("failed to create provisioning scheduled step: %v", err)
 				}
 
-				err = renderFiles(ctx, client, logger, entProvisioningScheduledStep)
+				err = RenderFiles(ctx, client, logger, entProvisioningScheduledStep)
 				if err != nil {
 					return fmt.Errorf("failed to render files for provisioning scheduled step: %v", err)
 				}
-				err = createStepPlan(ctx, client, logger, entProvisionedHost, prevPlan, entBuild, entProvisioningScheduledStep)
+				err = CreateStepPlan(ctx, client, logger, entProvisionedHost, prevPlan, entBuild, entProvisioningScheduledStep)
 				if err != nil {
 					return fmt.Errorf("failed to create provisioning scheduled step plan: %v", err)
 				}
@@ -1171,7 +1171,7 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 			}
 
 			// Create a starting query that sets the type and edge to relevant step
-			entProvisioningScheduledStepCreate, err := generateProvisioningScheduledStepByType(ctx, client, entScheduledStep)
+			entProvisioningScheduledStepCreate, err := GenerateProvisioningScheduledStepByType(ctx, client, entScheduledStep)
 			if err != nil {
 				return fmt.Errorf("failed to generate provisioning scheduled step by type: %v", err)
 			}
@@ -1188,11 +1188,11 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 				return fmt.Errorf("failed to create provisioning scheduled step: %v", err)
 			}
 
-			err = renderFiles(ctx, client, logger, entProvisioningScheduledStep)
+			err = RenderFiles(ctx, client, logger, entProvisioningScheduledStep)
 			if err != nil {
 				return fmt.Errorf("failed to render files for provisioning scheduled step: %v", err)
 			}
-			err = createStepPlan(ctx, client, logger, entProvisionedHost, prevPlan, entBuild, entProvisioningScheduledStep)
+			err = CreateStepPlan(ctx, client, logger, entProvisionedHost, prevPlan, entBuild, entProvisioningScheduledStep)
 			if err != nil {
 				return fmt.Errorf("failed to create provisioning scheduled step plan: %v", err)
 			}
@@ -1212,7 +1212,7 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 		}
 
 		// Create a starting query that sets the type and edge to relevant step
-		entProvisioningScheduledStepCreate, err := generateProvisioningScheduledStepByType(ctx, client, entScheduledStep)
+		entProvisioningScheduledStepCreate, err := GenerateProvisioningScheduledStepByType(ctx, client, entScheduledStep)
 		if err != nil {
 			return fmt.Errorf("failed to generate provisioning scheduled step by type: %v", err)
 		}
@@ -1228,11 +1228,11 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 			return fmt.Errorf("failed to create provisioning scheduled step: %v", err)
 		}
 
-		err = renderFiles(ctx, client, logger, entProvisioningScheduledStep)
+		err = RenderFiles(ctx, client, logger, entProvisioningScheduledStep)
 		if err != nil {
 			return fmt.Errorf("failed to render files for provisioning scheduled step: %v", err)
 		}
-		err = createStepPlan(ctx, client, logger, entProvisionedHost, prevPlan, entBuild, entProvisioningScheduledStep)
+		err = CreateStepPlan(ctx, client, logger, entProvisionedHost, prevPlan, entBuild, entProvisioningScheduledStep)
 		if err != nil {
 			return fmt.Errorf("failed to create provisioning scheduled step plan: %v", err)
 		}
@@ -1241,7 +1241,7 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 	return fmt.Errorf("failed to create provisioning scheduled step: unknown scheduled step type")
 }
 
-func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Client, entScheduledStep *ent.ScheduledStep) (*ent.ProvisioningScheduledStepCreate, error) {
+func GenerateProvisioningScheduledStepByType(ctx context.Context, client *ent.Client, entScheduledStep *ent.ScheduledStep) (*ent.ProvisioningScheduledStepCreate, error) {
 	entEnvironment, err := entScheduledStep.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query environment from scheduled step: %v", err)
@@ -1368,9 +1368,9 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 	return nil, fmt.Errorf("unknown scheduled step type")
 }
 
-func renderFiles(ctx context.Context, client *ent.Client, logger *logging.Logger, entStep interface{}) error {
+func RenderFiles(ctx context.Context, client *ent.Client, logger *logging.Logger, entStep interface{}) error {
 	// Check if we're supposed to render the script from a template
-	if RenderFiles {
+	if ShouldRenderFiles {
 		var entProvisioningStep *ent.ProvisioningStep
 		var entProvisioningScheduledStep *ent.ProvisioningScheduledStep
 		var ok bool
@@ -1435,7 +1435,7 @@ func renderFiles(ctx context.Context, client *ent.Client, logger *logging.Logger
 	return nil
 }
 
-func createStepPlan(ctx context.Context, client *ent.Client, logger *logging.Logger, pHost *ent.ProvisionedHost, prevPlan *ent.Plan, entBuild *ent.Build, entStep interface{}) error {
+func CreateStepPlan(ctx context.Context, client *ent.Client, logger *logging.Logger, pHost *ent.ProvisionedHost, prevPlan *ent.Plan, entBuild *ent.Build, entStep interface{}) error {
 	var entProvisioningStep *ent.ProvisioningStep
 	var entProvisioningScheduledStep *ent.ProvisioningScheduledStep
 	var ok bool
