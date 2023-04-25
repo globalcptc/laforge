@@ -12,6 +12,7 @@ export type Scalars = {
   Boolean: boolean;
   Int: number;
   Float: number;
+  Map: any;
   Time: any;
 };
 
@@ -39,6 +40,12 @@ export enum LaForgeAgentCommand {
   Changeperms = 'CHANGEPERMS',
   Appendfile = 'APPENDFILE'
 }
+
+export type LaForgeAgentConfig = {
+  __typename?: 'AgentConfig';
+  GrpcServerUri: Scalars['String'];
+  ApiDownloadUrl: Scalars['String'];
+};
 
 export type LaForgeAgentStatus = {
   __typename?: 'AgentStatus';
@@ -109,6 +116,12 @@ export enum LaForgeAnsibleMethod {
   Local = 'LOCAL'
 }
 
+export type LaForgeAuthConfig = {
+  __typename?: 'AuthConfig';
+  GithubId: Scalars['String'];
+  CookieTimeout: Scalars['Int'];
+};
+
 export type LaForgeAuthUser = {
   __typename?: 'AuthUser';
   id: Scalars['ID'];
@@ -171,6 +184,12 @@ export enum LaForgeBuildCommitType {
   Delete = 'DELETE'
 }
 
+export type LaForgeBuilderConfig = {
+  __typename?: 'BuilderConfig';
+  Builder: Scalars['String'];
+  ConfigFile: Scalars['String'];
+};
+
 export type LaForgeCommand = {
   __typename?: 'Command';
   id: Scalars['ID'];
@@ -228,6 +247,12 @@ export type LaForgeDnsRecord = {
   disabled: Scalars['Boolean'];
   tags: Array<Maybe<LaForgeTagMap>>;
   Environment: LaForgeEnvironment;
+};
+
+export type LaForgeDatabaseConfig = {
+  __typename?: 'DatabaseConfig';
+  PostgresUri: Scalars['String'];
+  AdminUser: Scalars['String'];
 };
 
 export type LaForgeDisk = {
@@ -349,6 +374,12 @@ export type LaForgeGinFileMiddleware = {
   ProvisionedHost?: Maybe<LaForgeProvisionedHost>;
   ProvisioningStep?: Maybe<LaForgeProvisioningStep>;
   ProvisioningScheduledStep?: Maybe<LaForgeProvisioningScheduledStep>;
+};
+
+export type LaForgeGraphqlConfig = {
+  __typename?: 'GraphqlConfig';
+  Hostname: Scalars['String'];
+  RedisServerUri: Scalars['String'];
 };
 
 export type LaForgeHost = {
@@ -666,7 +697,7 @@ export type LaForgeProvisionedHost = {
   Build: LaForgeBuild;
   ProvisioningSteps: Array<Maybe<LaForgeProvisioningStep>>;
   ProvisioningScheduledSteps: Array<Maybe<LaForgeProvisioningScheduledStep>>;
-  AgentStatus?: Maybe<LaForgeAgentStatus>;
+  AgentStatuses: Array<Maybe<LaForgeAgentStatus>>;
   AgentTasks: Array<Maybe<LaForgeAgentTask>>;
   Plan: LaForgePlan;
   GinFileMiddleware?: Maybe<LaForgeGinFileMiddleware>;
@@ -778,6 +809,7 @@ export type LaForgeQuery = {
   viewServerTaskLogs: Scalars['String'];
   viewAgentTask: LaForgeAgentTask;
   serverTasks?: Maybe<Array<Maybe<LaForgeServerTask>>>;
+  serverConfig?: Maybe<LaForgeServerConfig>;
 };
 
 export type LaForgeQueryEnvironmentArgs = {
@@ -930,6 +962,20 @@ export type LaForgeScript = {
   Environment: LaForgeEnvironment;
 };
 
+export type LaForgeServerConfig = {
+  __typename?: 'ServerConfig';
+  ConfigFile: Scalars['String'];
+  Debug?: Maybe<Scalars['Boolean']>;
+  LogFolder: Scalars['String'];
+  GinMode: Scalars['String'];
+  Builders: Scalars['Map'];
+  Database?: Maybe<LaForgeDatabaseConfig>;
+  Auth?: Maybe<LaForgeAuthConfig>;
+  UI?: Maybe<LaForgeUiConfig>;
+  Agent?: Maybe<LaForgeAgentConfig>;
+  Graphql?: Maybe<LaForgeGraphqlConfig>;
+};
+
 export type LaForgeServerTask = {
   __typename?: 'ServerTask';
   id: Scalars['ID'];
@@ -1013,6 +1059,12 @@ export type LaForgeTeam = {
   Status?: Maybe<LaForgeStatus>;
   ProvisionedNetworks: Array<Maybe<LaForgeProvisionedNetwork>>;
   Plan: LaForgePlan;
+};
+
+export type LaForgeUiConfig = {
+  __typename?: 'UIConfig';
+  HttpsEnabled: Scalars['Boolean'];
+  AllowedOrigins: Array<Maybe<Scalars['String']>>;
 };
 
 export type LaForgeUser = {
@@ -1228,7 +1280,7 @@ export type LaForgeGetBuildTreeQuery = { __typename?: 'Query' } & {
                                       }
                                   >
                                 >;
-                                AgentStatus?: Maybe<{ __typename?: 'AgentStatus' } & Pick<LaForgeAgentStatus, 'clientId'>>;
+                                AgentStatuses: Array<Maybe<{ __typename?: 'AgentStatus' } & Pick<LaForgeAgentStatus, 'clientId'>>>;
                               }
                           >
                         >;
@@ -2352,7 +2404,7 @@ export const GetBuildTreeDocument = gql`
                 }
               }
             }
-            AgentStatus {
+            AgentStatuses {
               clientId
             }
           }

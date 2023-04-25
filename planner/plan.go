@@ -708,7 +708,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		}
 		err = createProvisioningScheduledStep(ctx, client, logger, entScheduledStep, entProvisionedHost, endPlanNode)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create provisioning scheduled step")
+			return nil, fmt.Errorf("failed to create provisioning scheduled step: %v", err)
 		}
 	}
 
