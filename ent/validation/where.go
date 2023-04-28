@@ -178,13 +178,6 @@ func ServiceName(v string) predicate.Validation {
 	})
 }
 
-// ServiceStatus applies equality check predicate on the "service_status" field. It's identical to ServiceStatusEQ.
-func ServiceStatus(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldServiceStatus), v))
-	})
-}
-
 // ProcessName applies equality check predicate on the "process_name" field. It's identical to ProcessNameEQ.
 func ProcessName(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
@@ -1616,21 +1609,21 @@ func ServiceNameContainsFold(v string) predicate.Validation {
 }
 
 // ServiceStatusEQ applies the EQ predicate on the "service_status" field.
-func ServiceStatusEQ(v string) predicate.Validation {
+func ServiceStatusEQ(v ServiceStatus) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldServiceStatus), v))
 	})
 }
 
 // ServiceStatusNEQ applies the NEQ predicate on the "service_status" field.
-func ServiceStatusNEQ(v string) predicate.Validation {
+func ServiceStatusNEQ(v ServiceStatus) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldServiceStatus), v))
 	})
 }
 
 // ServiceStatusIn applies the In predicate on the "service_status" field.
-func ServiceStatusIn(vs ...string) predicate.Validation {
+func ServiceStatusIn(vs ...ServiceStatus) predicate.Validation {
 	v := make([]interface{}, len(vs))
 	for i := range v {
 		v[i] = vs[i]
@@ -1641,76 +1634,13 @@ func ServiceStatusIn(vs ...string) predicate.Validation {
 }
 
 // ServiceStatusNotIn applies the NotIn predicate on the "service_status" field.
-func ServiceStatusNotIn(vs ...string) predicate.Validation {
+func ServiceStatusNotIn(vs ...ServiceStatus) predicate.Validation {
 	v := make([]interface{}, len(vs))
 	for i := range v {
 		v[i] = vs[i]
 	}
 	return predicate.Validation(func(s *sql.Selector) {
 		s.Where(sql.NotIn(s.C(FieldServiceStatus), v...))
-	})
-}
-
-// ServiceStatusGT applies the GT predicate on the "service_status" field.
-func ServiceStatusGT(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldServiceStatus), v))
-	})
-}
-
-// ServiceStatusGTE applies the GTE predicate on the "service_status" field.
-func ServiceStatusGTE(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldServiceStatus), v))
-	})
-}
-
-// ServiceStatusLT applies the LT predicate on the "service_status" field.
-func ServiceStatusLT(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldServiceStatus), v))
-	})
-}
-
-// ServiceStatusLTE applies the LTE predicate on the "service_status" field.
-func ServiceStatusLTE(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldServiceStatus), v))
-	})
-}
-
-// ServiceStatusContains applies the Contains predicate on the "service_status" field.
-func ServiceStatusContains(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldServiceStatus), v))
-	})
-}
-
-// ServiceStatusHasPrefix applies the HasPrefix predicate on the "service_status" field.
-func ServiceStatusHasPrefix(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldServiceStatus), v))
-	})
-}
-
-// ServiceStatusHasSuffix applies the HasSuffix predicate on the "service_status" field.
-func ServiceStatusHasSuffix(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldServiceStatus), v))
-	})
-}
-
-// ServiceStatusEqualFold applies the EqualFold predicate on the "service_status" field.
-func ServiceStatusEqualFold(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldServiceStatus), v))
-	})
-}
-
-// ServiceStatusContainsFold applies the ContainsFold predicate on the "service_status" field.
-func ServiceStatusContainsFold(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldServiceStatus), v))
 	})
 }
 

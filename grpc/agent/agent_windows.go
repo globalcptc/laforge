@@ -258,17 +258,8 @@ func HostProcessRunning(process_name string) (bool, error) { // running (boolean
 	return false, nil
 }
 
-// Adapted from https://stackoverflow.com/questions/48263281/how-to-find-sshd-service-status-in-golang
-func HostServiceState(service_name string) (string, error) {
-	// returned status is one of the following:
-	// active | inactive | enabled | disabled | static | masked | alias | linked
-	// https://www.cyberciti.biz/faq/systemd-systemctl-view-status-of-a-service-on-linux/ lists all possibilities and meanings
-	cmd := exec.Command("systemctl", "check", "sshd") // ASSUMPTION: the computer uses systemd
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", err
-	}
-	return string(out), nil
+func HostServiceState(service_name string, service_status string) (bool, error) {
+	return false, nil
 }
 
 func NetTCPOpen(ip string, port int) (bool, error) { // exists (boolean)
@@ -290,7 +281,7 @@ func NetTCPOpen(ip string, port int) (bool, error) { // exists (boolean)
 	}
 }
 
-func NetUDPOpen(ip string, port int) (bool, error) { // exists (boolean)
+func NetUDPOpen(ip string, port int, open_socket_payload string) (bool, error) { // exists (boolean)
 	conn, err := net.DialTimeout("udp", net.JoinHostPort(ip, strconv.Itoa(port)), 10*time.Second)
 	// we don't really know if a udp connection is alive or not, so
 	if err != nil {

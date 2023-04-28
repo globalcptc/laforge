@@ -36439,7 +36439,7 @@ type ValidationMutation struct {
 	file_path                       *string
 	search_string                   *string
 	service_name                    *string
-	service_status                  *string
+	service_status                  *validation.ServiceStatus
 	process_name                    *string
 	clearedFields                   map[string]struct{}
 	_ValidationToAgentTask          *uuid.UUID
@@ -37192,12 +37192,12 @@ func (m *ValidationMutation) ResetServiceName() {
 }
 
 // SetServiceStatus sets the "service_status" field.
-func (m *ValidationMutation) SetServiceStatus(s string) {
-	m.service_status = &s
+func (m *ValidationMutation) SetServiceStatus(vs validation.ServiceStatus) {
+	m.service_status = &vs
 }
 
 // ServiceStatus returns the value of the "service_status" field in the mutation.
-func (m *ValidationMutation) ServiceStatus() (r string, exists bool) {
+func (m *ValidationMutation) ServiceStatus() (r validation.ServiceStatus, exists bool) {
 	v := m.service_status
 	if v == nil {
 		return
@@ -37208,7 +37208,7 @@ func (m *ValidationMutation) ServiceStatus() (r string, exists bool) {
 // OldServiceStatus returns the old "service_status" field's value of the Validation entity.
 // If the Validation object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ValidationMutation) OldServiceStatus(ctx context.Context) (v string, err error) {
+func (m *ValidationMutation) OldServiceStatus(ctx context.Context) (v validation.ServiceStatus, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldServiceStatus is only allowed on UpdateOne operations")
 	}
@@ -37709,7 +37709,7 @@ func (m *ValidationMutation) SetField(name string, value ent.Value) error {
 		m.SetServiceName(v)
 		return nil
 	case validation.FieldServiceStatus:
-		v, ok := value.(string)
+		v, ok := value.(validation.ServiceStatus)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}

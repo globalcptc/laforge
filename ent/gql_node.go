@@ -4236,7 +4236,7 @@ func (v *Validation) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Fields[17] = &Field{
-		Type:  "string",
+		Type:  "validation.ServiceStatus",
 		Name:  "service_status",
 		Value: string(buf),
 	}

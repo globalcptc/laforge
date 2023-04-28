@@ -234,7 +234,7 @@ func (s *Server) InformTaskStatus(ctx context.Context, in *pb.TaskStatusRequest)
 					Exec(ctx)
 			}
 		case "host-service-state":
-			if validation_output != validation_edge.ServiceStatus {
+			if validation_output != validation_edge.ServiceStatus.String() {
 				err = validation_edge.Update().
 					SetState("FAILED").
 					SetErrorMessage(validation_edge.ErrorMessage).

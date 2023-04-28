@@ -157,8 +157,8 @@ func (vu *ValidationUpdate) SetServiceName(s string) *ValidationUpdate {
 }
 
 // SetServiceStatus sets the "service_status" field.
-func (vu *ValidationUpdate) SetServiceStatus(s string) *ValidationUpdate {
-	vu.mutation.SetServiceStatus(s)
+func (vu *ValidationUpdate) SetServiceStatus(vs validation.ServiceStatus) *ValidationUpdate {
+	vu.mutation.SetServiceStatus(vs)
 	return vu
 }
 
@@ -342,6 +342,11 @@ func (vu *ValidationUpdate) check() error {
 			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Validation.state": %w`, err)}
 		}
 	}
+	if v, ok := vu.mutation.ServiceStatus(); ok {
+		if err := validation.ServiceStatusValidator(v); err != nil {
+			return &ValidationError{Name: "service_status", err: fmt.Errorf(`ent: validator failed for field "Validation.service_status": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -491,7 +496,7 @@ func (vu *ValidationUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := vu.mutation.ServiceStatus(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
+			Type:   field.TypeEnum,
 			Value:  value,
 			Column: validation.FieldServiceStatus,
 		})
@@ -791,8 +796,8 @@ func (vuo *ValidationUpdateOne) SetServiceName(s string) *ValidationUpdateOne {
 }
 
 // SetServiceStatus sets the "service_status" field.
-func (vuo *ValidationUpdateOne) SetServiceStatus(s string) *ValidationUpdateOne {
-	vuo.mutation.SetServiceStatus(s)
+func (vuo *ValidationUpdateOne) SetServiceStatus(vs validation.ServiceStatus) *ValidationUpdateOne {
+	vuo.mutation.SetServiceStatus(vs)
 	return vuo
 }
 
@@ -989,6 +994,11 @@ func (vuo *ValidationUpdateOne) check() error {
 			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Validation.state": %w`, err)}
 		}
 	}
+	if v, ok := vuo.mutation.ServiceStatus(); ok {
+		if err := validation.ServiceStatusValidator(v); err != nil {
+			return &ValidationError{Name: "service_status", err: fmt.Errorf(`ent: validator failed for field "Validation.service_status": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -1155,7 +1165,7 @@ func (vuo *ValidationUpdateOne) sqlSave(ctx context.Context) (_node *Validation,
 	}
 	if value, ok := vuo.mutation.ServiceStatus(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
+			Type:   field.TypeEnum,
 			Value:  value,
 			Column: validation.FieldServiceStatus,
 		})

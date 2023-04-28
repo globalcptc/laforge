@@ -63,7 +63,18 @@ func (Validation) Fields() []ent.Field {
 		field.String("file_path").StructTag(`hcl:"file_path,optional"`),
 		field.String("search_string").StructTag(`hcl:"search_string,optional"`),
 		field.String("service_name").StructTag(`hcl:"service_name,optional"`),
-		field.String("service_status").StructTag(`hcl:"service_status,optional"`),
+		field.Enum("service_status").
+			Values(
+				"active",
+				"inactive",
+				"enabled",
+				"disabled",
+				"static",
+				"masked",
+				"alias",
+				"linked",
+			).
+			StructTag(`hcl:"service_status,optional"`),
 		field.String("process_name").StructTag(`hcl:"process_name,optional"`),
 	}
 }

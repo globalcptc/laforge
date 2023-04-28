@@ -142,8 +142,8 @@ func (vc *ValidationCreate) SetServiceName(s string) *ValidationCreate {
 }
 
 // SetServiceStatus sets the "service_status" field.
-func (vc *ValidationCreate) SetServiceStatus(s string) *ValidationCreate {
-	vc.mutation.SetServiceStatus(s)
+func (vc *ValidationCreate) SetServiceStatus(vs validation.ServiceStatus) *ValidationCreate {
+	vc.mutation.SetServiceStatus(vs)
 	return vc
 }
 
@@ -373,6 +373,11 @@ func (vc *ValidationCreate) check() error {
 	if _, ok := vc.mutation.ServiceStatus(); !ok {
 		return &ValidationError{Name: "service_status", err: errors.New(`ent: missing required field "Validation.service_status"`)}
 	}
+	if v, ok := vc.mutation.ServiceStatus(); ok {
+		if err := validation.ServiceStatusValidator(v); err != nil {
+			return &ValidationError{Name: "service_status", err: fmt.Errorf(`ent: validator failed for field "Validation.service_status": %w`, err)}
+		}
+	}
 	if _, ok := vc.mutation.ProcessName(); !ok {
 		return &ValidationError{Name: "process_name", err: errors.New(`ent: missing required field "Validation.process_name"`)}
 	}
@@ -550,7 +555,7 @@ func (vc *ValidationCreate) createSpec() (*Validation, *sqlgraph.CreateSpec) {
 	}
 	if value, ok := vc.mutation.ServiceStatus(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
+			Type:   field.TypeEnum,
 			Value:  value,
 			Column: validation.FieldServiceStatus,
 		})

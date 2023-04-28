@@ -1376,7 +1376,7 @@ var (
 		{Name: "file_path", Type: field.TypeString},
 		{Name: "search_string", Type: field.TypeString},
 		{Name: "service_name", Type: field.TypeString},
-		{Name: "service_status", Type: field.TypeString},
+		{Name: "service_status", Type: field.TypeEnum, Enums: []string{"active", "inactive", "enabled", "disabled", "static", "masked", "alias", "linked"}},
 		{Name: "process_name", Type: field.TypeString},
 		{Name: "agent_task_agent_task_to_validation", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}

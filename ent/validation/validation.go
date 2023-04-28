@@ -204,6 +204,35 @@ func StateValidator(s State) error {
 	}
 }
 
+// ServiceStatus defines the type for the "service_status" enum field.
+type ServiceStatus string
+
+// ServiceStatus values.
+const (
+	ServiceStatusActive   ServiceStatus = "active"
+	ServiceStatusInactive ServiceStatus = "inactive"
+	ServiceStatusEnabled  ServiceStatus = "enabled"
+	ServiceStatusDisabled ServiceStatus = "disabled"
+	ServiceStatusStatic   ServiceStatus = "static"
+	ServiceStatusMasked   ServiceStatus = "masked"
+	ServiceStatusAlias    ServiceStatus = "alias"
+	ServiceStatusLinked   ServiceStatus = "linked"
+)
+
+func (ss ServiceStatus) String() string {
+	return string(ss)
+}
+
+// ServiceStatusValidator is a validator for the "service_status" field enum values. It is called by the builders before save.
+func ServiceStatusValidator(ss ServiceStatus) error {
+	switch ss {
+	case ServiceStatusActive, ServiceStatusInactive, ServiceStatusEnabled, ServiceStatusDisabled, ServiceStatusStatic, ServiceStatusMasked, ServiceStatusAlias, ServiceStatusLinked:
+		return nil
+	default:
+		return fmt.Errorf("validation: invalid enum value for service_status field: %q", ss)
+	}
+}
+
 // MarshalGQL implements graphql.Marshaler interface.
 func (vt ValidationType) MarshalGQL(w io.Writer) {
 	io.WriteString(w, strconv.Quote(vt.String()))
@@ -236,6 +265,24 @@ func (s *State) UnmarshalGQL(val interface{}) error {
 	*s = State(str)
 	if err := StateValidator(*s); err != nil {
 		return fmt.Errorf("%s is not a valid State", str)
+	}
+	return nil
+}
+
+// MarshalGQL implements graphql.Marshaler interface.
+func (ss ServiceStatus) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(ss.String()))
+}
+
+// UnmarshalGQL implements graphql.Unmarshaler interface.
+func (ss *ServiceStatus) UnmarshalGQL(val interface{}) error {
+	str, ok := val.(string)
+	if !ok {
+		return fmt.Errorf("enum %T must be a string", val)
+	}
+	*ss = ServiceStatus(str)
+	if err := ServiceStatusValidator(*ss); err != nil {
+		return fmt.Errorf("%s is not a valid ServiceStatus", str)
 	}
 	return nil
 }

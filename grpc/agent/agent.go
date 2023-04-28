@@ -341,8 +341,9 @@ func RequestTask(c pb.LaforgeClient) {
 				RequestTaskStatusRequest(strconv.FormatBool(running), err, r.Id, c)
 			case "host-service-state":
 				servicename := taskArgs[1]
-				status, err := HostServiceState(servicename)
-				RequestTaskStatusRequest(strconv.FormatBool(status == "running"), err, r.Id, c)
+				servicestatus := taskArgs[2]
+				status, err := HostServiceState(servicename, servicestatus)
+				RequestTaskStatusRequest(strconv.FormatBool(status), err, r.Id, c)
 			case "net-icmp":
 				ip := taskArgs[1]
 				replied, err := NetICMP(ip)

@@ -53,7 +53,7 @@ type Validation struct {
 	// ServiceName holds the value of the "service_name" field.
 	ServiceName string `json:"service_name,omitempty" hcl:"service_name,optional"`
 	// ServiceStatus holds the value of the "service_status" field.
-	ServiceStatus string `json:"service_status,omitempty" hcl:"service_status,optional"`
+	ServiceStatus validation.ServiceStatus `json:"service_status,omitempty" hcl:"service_status,optional"`
 	// ProcessName holds the value of the "process_name" field.
 	ProcessName string `json:"process_name,omitempty" hcl:"process_name,optional"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -260,7 +260,7 @@ func (v *Validation) assignValues(columns []string, values []interface{}) error 
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field service_status", values[i])
 			} else if value.Valid {
-				v.ServiceStatus = value.String
+				v.ServiceStatus = validation.ServiceStatus(value.String)
 			}
 		case validation.FieldProcessName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -353,7 +353,7 @@ func (v *Validation) String() string {
 	builder.WriteString(", service_name=")
 	builder.WriteString(v.ServiceName)
 	builder.WriteString(", service_status=")
-	builder.WriteString(v.ServiceStatus)
+	builder.WriteString(fmt.Sprintf("%v", v.ServiceStatus))
 	builder.WriteString(", process_name=")
 	builder.WriteString(v.ProcessName)
 	builder.WriteByte(')')

@@ -1331,7 +1331,7 @@ func createValidation(client *ent.Client, logger *logging.Logger, ctx context.Co
 	case "host-service-state":
 		_, err = client.AgentTask.Create().
 			SetCommand(agenttask.CommandVALIDATOR).
-			SetArgs("host-service-state" + "💔" + entValidation.ServiceName).
+			SetArgs("host-service-state" + "💔" + entValidation.ServiceName + "💔" + entValidation.ServiceStatus.String()).
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
 			SetAgentTaskToProvisionedHost(entProvisionedHost).
