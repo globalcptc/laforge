@@ -133,45 +133,6 @@ func SystemExecuteCommand(command string, args ...string) (string, error) {
 	cmd := exec.Command(command, args...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
-	// retryCount := 5
-	// for i := 0; i < retryCount; i++ {
-	// 	// Get the data
-	// 	cmd := exec.Command(command, args...)
-	// 	stdout, err := cmd.StdoutPipe()
-	// 	if err != nil {
-	// 		fmt.Printf("error piping stdout: %v", err)
-	// 		continue
-	// 	}
-	// 	stderr, err := cmd.StderrPipe()
-	// 	if err != nil {
-	// 		fmt.Printf("error piping stderr: %v", err)
-	// 		continue
-	// 	}
-	// 	err = cmd.Run()
-	// 	// out, err := cmd.CombinedOutput()
-	// 	if err == nil {
-	// 		// output = string(out)
-	// 		combinedOutput := io.MultiReader(stdout, stderr)
-	// 		var buff []byte
-	// 		_, err = combinedOutput.Read(buff)
-	// 		if err != nil {
-	// 			fmt.Printf("error reading combined output: %v", err)
-	// 			continue
-	// 		}
-	// 		output = string(buff)
-	// 		break
-	// 	}
-	// 	time.Sleep(1 * time.Minute)
-	// }
-	// if err != nil {
-	// 	return output, err
-	// }
-	// _, err = cmd.Output()
-	// if err != nil {
-	// 	return err
-	// }
-	// return string(output)
-	// return output, nil
 }
 
 // SystemExecuteAnsible Runs Ansible Playbook
@@ -521,20 +482,3 @@ func HostFirewallPort(port int) (bool, error) {
 	}
 	return false, nil
 }
-
-// func main() {
-// 	fmt.Println(NetHttpContentRegex("https://curtisf.dev"))
-// 	fmt.Println(FileExists("/home/piero/most-coding-stuff/laforge/test_file")) // change to dir, won't get tripped up
-// 	fmt.Println(FileHash("/home/piero/most-coding-stuff/laforge/test_file.txt"))
-// 	fmt.Println(UserGroupMember("piero", "wew"))
-// 	fmt.Println(HostPortOpen(8080))
-// 	fmt.Println(HostFirewallPort(9876))
-// 	fmt.Println(HostProcessRunning("nginx"))
-// 	fmt.Println(HostServiceState("nginx"))
-// 	fmt.Println(LinuxAPTInstalled("wget"))
-// 	fmt.Println(NetTCPOpen("127.0.0.1", 80)) // test with nginx for ease
-// 	fmt.Println(NetICMP("192.168.1.255"))
-// 	fmt.Println(FileContentString("/home/piero/most-coding-stuff/laforge/test_file.txt", "hi"))
-// 	fmt.Println(FilePermission("/home/piero/most-coding-stuff/laforge/test_file.txt"))
-// 	fmt.Println(NetUDPOpen("127.0.0.1", 3000, ""))
-// }

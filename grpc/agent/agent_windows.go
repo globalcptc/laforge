@@ -143,21 +143,6 @@ func GetNetBanner(portnum int64) (bool, error) { // exists (boolean)
 	return true, nil
 }
 
-// https://pkg.go.dev/golang.org/x/sys/windows/registry
-/*func Registry(path string) (string, error) {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer k.Close()
-
-	s, _, err := k.GetStringValue("SystemRoot")
-	if err != nil {
-		log.Fatal(err)
-	}
-	return s, nil
-}*/
-
 func NetHttpContentRegex(full_url string) (string, error) { // content hash (string)
 	net_resp, err := http.Get(full_url)
 	if err != nil {
@@ -334,21 +319,6 @@ func FilePermission(filepath string) (string, error) { // permissions (in the fo
 	return info.Mode().String(), nil
 }
 
-// func HostPortOpen(port string){
-// 	l, err := net.Listen("tcp", ":" + port)
-// 	if err != nil {
-// 		fmt.Println("Can't listen to port: %s\n", err)
-// 	}
-
-// 	err = l.Close()
-// 	if err != nil {
-// 		fmt.Println("Can't stop listening on port: %s\n", err)
-// 	}
-
-// 	fmt.Println(l)
-// 	// return l, err
-// }
-
 // https://go.dev/src/os/user/lookup_windows.go
 // https://cs.opensource.google/go/go/+/refs/tags/go1.17.7:src/os/user/lookup.go
 func UserGroupMember(user_name string, group_name string) (bool, error) { // is in the group or not (boolean)
@@ -424,22 +394,3 @@ func HostFirewallPort(port int) (bool, error) {
 func LinuxAPTInstalled(package_name string) (bool, error) {
 	return false, nil
 }
-
-// func main() {
-// fmt.Println("windows")
-// fmt.Println(HostPortOpen(8080))
-// fmt.Println(NetHttpContentHash("https://curtisf.dev/", "c76fdd9a87b2a3c653968b12973c2498"))
-// fmt.Println(FileHash("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
-// fmt.Println(FileContentRegex("C:\\Users\\Nkdileo\\Documents\\TestFile.txt"))
-// fmt.Println(DirectoryExists("C:\\Users\\Nkdileo\\Documents"))
-// fmt.Println(UserGroupMember("The Power", "Administrators"))
-// fmt.Println(HostProcessRunning("grewgegregegegegegegrergre"))
-// fmt.Println(HostProcessRunning("Discord"))
-// fmt.Println(NetUDPOpen("10.247.63.254", 8080))
-// fmt.Println(NetTCPOpen("10.247.63.254", 22))
-// fmt.Println(NetICMP("192.168.1.1"))
-// fmt.Println(FileContentString("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go", "5646548932"))
-// fmt.Println(UserExists("piero"))
-// fmt.Println(FilePermission("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go"))
-// fmt.Println(FileExists("C:\\Users\\The Power\\Documents\\2021Fall\\CMSC451\\LaForge\\laforge\\grpc\\agent\\agent_windows.go"))
-// }
