@@ -89,23 +89,23 @@ func (drc *DNSRecordCreate) SetNillableID(u *uuid.UUID) *DNSRecordCreate {
 	return drc
 }
 
-// SetDNSRecordToEnvironmentID sets the "DNSRecordToEnvironment" edge to the Environment entity by ID.
-func (drc *DNSRecordCreate) SetDNSRecordToEnvironmentID(id uuid.UUID) *DNSRecordCreate {
-	drc.mutation.SetDNSRecordToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (drc *DNSRecordCreate) SetEnvironmentID(id uuid.UUID) *DNSRecordCreate {
+	drc.mutation.SetEnvironmentID(id)
 	return drc
 }
 
-// SetNillableDNSRecordToEnvironmentID sets the "DNSRecordToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (drc *DNSRecordCreate) SetNillableDNSRecordToEnvironmentID(id *uuid.UUID) *DNSRecordCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (drc *DNSRecordCreate) SetNillableEnvironmentID(id *uuid.UUID) *DNSRecordCreate {
 	if id != nil {
-		drc = drc.SetDNSRecordToEnvironmentID(*id)
+		drc = drc.SetEnvironmentID(*id)
 	}
 	return drc
 }
 
-// SetDNSRecordToEnvironment sets the "DNSRecordToEnvironment" edge to the Environment entity.
-func (drc *DNSRecordCreate) SetDNSRecordToEnvironment(e *Environment) *DNSRecordCreate {
-	return drc.SetDNSRecordToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (drc *DNSRecordCreate) SetEnvironment(e *Environment) *DNSRecordCreate {
+	return drc.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the DNSRecordMutation object of the builder.
@@ -328,12 +328,12 @@ func (drc *DNSRecordCreate) createSpec() (*DNSRecord, *sqlgraph.CreateSpec) {
 		})
 		_node.Validations = value
 	}
-	if nodes := drc.mutation.DNSRecordToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := drc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   dnsrecord.DNSRecordToEnvironmentTable,
-			Columns: []string{dnsrecord.DNSRecordToEnvironmentColumn},
+			Table:   dnsrecord.EnvironmentTable,
+			Columns: []string{dnsrecord.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -345,7 +345,7 @@ func (drc *DNSRecordCreate) createSpec() (*DNSRecord, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.environment_environment_to_dns_record = &nodes[0]
+		_node.environment_dns_records = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

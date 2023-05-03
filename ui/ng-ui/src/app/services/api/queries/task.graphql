@@ -1,18 +1,18 @@
 fragment ServerTaskFields on ServerTask {
   id
   type
-  start_time
-  end_time
+  startTime
+  endTime
   errors
-  log_file_path
-  ServerTaskToStatus {
+  logFilePath
+  Status {
     ...StatusFields
   }
-  ServerTaskToEnvironment {
+  Environment {
     id
     name
   }
-  ServerTaskToBuild {
+  Build {
     id
     revision
   }

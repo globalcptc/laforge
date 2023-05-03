@@ -19,26 +19,26 @@ const (
 	FieldRevision = "revision"
 	// FieldNewState holds the string denoting the new_state field in the database.
 	FieldNewState = "new_state"
-	// EdgePlanDiffToBuildCommit holds the string denoting the plandifftobuildcommit edge name in mutations.
-	EdgePlanDiffToBuildCommit = "PlanDiffToBuildCommit"
-	// EdgePlanDiffToPlan holds the string denoting the plandifftoplan edge name in mutations.
-	EdgePlanDiffToPlan = "PlanDiffToPlan"
+	// EdgeBuildCommit holds the string denoting the buildcommit edge name in mutations.
+	EdgeBuildCommit = "BuildCommit"
+	// EdgePlan holds the string denoting the plan edge name in mutations.
+	EdgePlan = "Plan"
 	// Table holds the table name of the plandiff in the database.
 	Table = "plan_diffs"
-	// PlanDiffToBuildCommitTable is the table that holds the PlanDiffToBuildCommit relation/edge.
-	PlanDiffToBuildCommitTable = "plan_diffs"
-	// PlanDiffToBuildCommitInverseTable is the table name for the BuildCommit entity.
+	// BuildCommitTable is the table that holds the BuildCommit relation/edge.
+	BuildCommitTable = "plan_diffs"
+	// BuildCommitInverseTable is the table name for the BuildCommit entity.
 	// It exists in this package in order to avoid circular dependency with the "buildcommit" package.
-	PlanDiffToBuildCommitInverseTable = "build_commits"
-	// PlanDiffToBuildCommitColumn is the table column denoting the PlanDiffToBuildCommit relation/edge.
-	PlanDiffToBuildCommitColumn = "plan_diff_plan_diff_to_build_commit"
-	// PlanDiffToPlanTable is the table that holds the PlanDiffToPlan relation/edge.
-	PlanDiffToPlanTable = "plan_diffs"
-	// PlanDiffToPlanInverseTable is the table name for the Plan entity.
+	BuildCommitInverseTable = "build_commits"
+	// BuildCommitColumn is the table column denoting the BuildCommit relation/edge.
+	BuildCommitColumn = "plan_diff_build_commit"
+	// PlanTable is the table that holds the Plan relation/edge.
+	PlanTable = "plan_diffs"
+	// PlanInverseTable is the table name for the Plan entity.
 	// It exists in this package in order to avoid circular dependency with the "plan" package.
-	PlanDiffToPlanInverseTable = "plans"
-	// PlanDiffToPlanColumn is the table column denoting the PlanDiffToPlan relation/edge.
-	PlanDiffToPlanColumn = "plan_diff_plan_diff_to_plan"
+	PlanInverseTable = "plans"
+	// PlanColumn is the table column denoting the Plan relation/edge.
+	PlanColumn = "plan_diff_plan"
 )
 
 // Columns holds all SQL columns for plandiff fields.
@@ -51,8 +51,8 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "plan_diffs"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"plan_diff_plan_diff_to_build_commit",
-	"plan_diff_plan_diff_to_plan",
+	"plan_diff_build_commit",
+	"plan_diff_plan",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

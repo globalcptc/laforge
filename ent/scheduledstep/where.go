@@ -745,25 +745,25 @@ func RunAtNotNil() predicate.ScheduledStep {
 	})
 }
 
-// HasScheduledStepToEnvironment applies the HasEdge predicate on the "ScheduledStepToEnvironment" edge.
-func HasScheduledStepToEnvironment() predicate.ScheduledStep {
+// HasEnvironment applies the HasEdge predicate on the "Environment" edge.
+func HasEnvironment() predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ScheduledStepToEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ScheduledStepToEnvironmentTable, ScheduledStepToEnvironmentColumn),
+			sqlgraph.To(EnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasScheduledStepToEnvironmentWith applies the HasEdge predicate on the "ScheduledStepToEnvironment" edge with a given conditions (other predicates).
-func HasScheduledStepToEnvironmentWith(preds ...predicate.Environment) predicate.ScheduledStep {
+// HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
+func HasEnvironmentWith(preds ...predicate.Environment) predicate.ScheduledStep {
 	return predicate.ScheduledStep(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ScheduledStepToEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ScheduledStepToEnvironmentTable, ScheduledStepToEnvironmentColumn),
+			sqlgraph.To(EnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

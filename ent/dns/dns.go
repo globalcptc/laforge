@@ -23,22 +23,22 @@ const (
 	FieldNtpServers = "ntp_servers"
 	// FieldConfig holds the string denoting the config field in the database.
 	FieldConfig = "config"
-	// EdgeDNSToEnvironment holds the string denoting the dnstoenvironment edge name in mutations.
-	EdgeDNSToEnvironment = "DNSToEnvironment"
-	// EdgeDNSToCompetition holds the string denoting the dnstocompetition edge name in mutations.
-	EdgeDNSToCompetition = "DNSToCompetition"
+	// EdgeEnvironments holds the string denoting the environments edge name in mutations.
+	EdgeEnvironments = "Environments"
+	// EdgeCompetitions holds the string denoting the competitions edge name in mutations.
+	EdgeCompetitions = "Competitions"
 	// Table holds the table name of the dns in the database.
 	Table = "dn_ss"
-	// DNSToEnvironmentTable is the table that holds the DNSToEnvironment relation/edge. The primary key declared below.
-	DNSToEnvironmentTable = "environment_EnvironmentToDNS"
-	// DNSToEnvironmentInverseTable is the table name for the Environment entity.
+	// EnvironmentsTable is the table that holds the Environments relation/edge. The primary key declared below.
+	EnvironmentsTable = "environment_DNS"
+	// EnvironmentsInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	DNSToEnvironmentInverseTable = "environments"
-	// DNSToCompetitionTable is the table that holds the DNSToCompetition relation/edge. The primary key declared below.
-	DNSToCompetitionTable = "competition_CompetitionToDNS"
-	// DNSToCompetitionInverseTable is the table name for the Competition entity.
+	EnvironmentsInverseTable = "environments"
+	// CompetitionsTable is the table that holds the Competitions relation/edge. The primary key declared below.
+	CompetitionsTable = "competition_DNS"
+	// CompetitionsInverseTable is the table name for the Competition entity.
 	// It exists in this package in order to avoid circular dependency with the "competition" package.
-	DNSToCompetitionInverseTable = "competitions"
+	CompetitionsInverseTable = "competitions"
 )
 
 // Columns holds all SQL columns for dns fields.
@@ -53,12 +53,12 @@ var Columns = []string{
 }
 
 var (
-	// DNSToEnvironmentPrimaryKey and DNSToEnvironmentColumn2 are the table columns denoting the
-	// primary key for the DNSToEnvironment relation (M2M).
-	DNSToEnvironmentPrimaryKey = []string{"environment_id", "dns_id"}
-	// DNSToCompetitionPrimaryKey and DNSToCompetitionColumn2 are the table columns denoting the
-	// primary key for the DNSToCompetition relation (M2M).
-	DNSToCompetitionPrimaryKey = []string{"competition_id", "dns_id"}
+	// EnvironmentsPrimaryKey and EnvironmentsColumn2 are the table columns denoting the
+	// primary key for the Environments relation (M2M).
+	EnvironmentsPrimaryKey = []string{"environment_id", "dns_id"}
+	// CompetitionsPrimaryKey and CompetitionsColumn2 are the table columns denoting the
+	// primary key for the Competitions relation (M2M).
+	CompetitionsPrimaryKey = []string{"competition_id", "dns_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).

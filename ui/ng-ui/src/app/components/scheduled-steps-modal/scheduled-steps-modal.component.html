@@ -1,0 +1,42 @@
+<div class="host-dialog-header d-flex align-items-center justify-content-between">
+  <ng-container *ngIf="provisionedHost | async as _provisionedHost">
+    <div class="flex-fill host-status-icon d-flex align-items-center justify-content-start" [ngClass]="'text-' + getStatusColor()">
+      <i class="fas fa-2x" [ngClass]="'fa-' + getStatusIcon()"></i>
+      <h4 class="m-0">
+        &nbsp;{{ isAgentStale() ? (!_provisionedHost.AgentStatuses[0] ? 'No Connection' : 'Connection Lost') : 'Connected' }}
+      </h4>
+    </div>
+    <div class="flex-fill d-flex align-items-center justify-content-center">
+      <h4 class="host-name m-0">{{ _provisionedHost.Host.hostname }}</h4>
+    </div>
+  </ng-container>
+  <ng-container *ngIf="!(provisionedHost | async) as _provisionedHost">
+    <div class="flex-fill host-status-icon d-flex align-items-center justify-content-start" [ngClass]="'text-' + getStatusColor()">
+      <i class="fas fa-2x fa-spinner fa-spin"></i>
+    </div>
+    <div class="flex-fill d-flex align-items-center justify-content-center">
+      <i class="fas fa-2x fa-spinner fa-spin"></i>
+    </div>
+  </ng-container>
+  <div class="flex-fill d-flex align-items-center justify-content-end">
+    <button mat-icon-button color="basic" aria-label="Close" (click)="onClose()">
+      <!-- <mat-icon>undo</mat-icon> -->
+      <i class="fa fa-times"></i>
+    </button>
+  </div>
+</div>
+<hr />
+<div class="row">
+  <div class="col-12" *ngIf="provisionedHost | async as _provisionedHost">
+    <p class="detail-title"><b>Steps</b></p>
+    <p *ngIf="_provisionedHost.ProvisioningScheduledSteps.length === 0">No Scheduled Steps</p>
+    <app-step
+      *ngFor="let scheduledStep of _provisionedHost.ProvisioningScheduledSteps | sortBy: 'desc':'runTime'; let i = index"
+      [stepNumber]="i + 1"
+      [provisioningScheduledStep]="scheduledStep"
+      [showDetail]="false"
+      [style]="'compact'"
+    ></app-step>
+    <!-- <i class="fas fa-2x fa-sync fa-spin" *ngIf="data.provisionedHost.ProvisioningStep == null"></i> -->
+  </div>
+</div>

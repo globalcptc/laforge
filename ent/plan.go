@@ -27,187 +27,185 @@ type Plan struct {
 	StepNumber int `json:"step_number,omitempty"`
 	// Type holds the value of the "type" field.
 	Type plan.Type `json:"type,omitempty"`
-	// BuildID holds the value of the "build_id" field.
-	BuildID string `json:"build_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PlanQuery when eager-loading is set.
 	Edges PlanEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// PrevPlan holds the value of the PrevPlan edge.
-	HCLPrevPlan []*Plan `json:"PrevPlan,omitempty"`
-	// NextPlan holds the value of the NextPlan edge.
-	HCLNextPlan []*Plan `json:"NextPlan,omitempty"`
-	// PlanToBuild holds the value of the PlanToBuild edge.
-	HCLPlanToBuild *Build `json:"PlanToBuild,omitempty"`
-	// PlanToTeam holds the value of the PlanToTeam edge.
-	HCLPlanToTeam *Team `json:"PlanToTeam,omitempty"`
-	// PlanToProvisionedNetwork holds the value of the PlanToProvisionedNetwork edge.
-	HCLPlanToProvisionedNetwork *ProvisionedNetwork `json:"PlanToProvisionedNetwork,omitempty"`
-	// PlanToProvisionedHost holds the value of the PlanToProvisionedHost edge.
-	HCLPlanToProvisionedHost *ProvisionedHost `json:"PlanToProvisionedHost,omitempty"`
-	// PlanToProvisioningStep holds the value of the PlanToProvisioningStep edge.
-	HCLPlanToProvisioningStep *ProvisioningStep `json:"PlanToProvisioningStep,omitempty"`
-	// PlanToProvisioningScheduledStep holds the value of the PlanToProvisioningScheduledStep edge.
-	HCLPlanToProvisioningScheduledStep *ProvisioningScheduledStep `json:"PlanToProvisioningScheduledStep,omitempty"`
-	// PlanToStatus holds the value of the PlanToStatus edge.
-	HCLPlanToStatus *Status `json:"PlanToStatus,omitempty"`
-	// PlanToPlanDiffs holds the value of the PlanToPlanDiffs edge.
-	HCLPlanToPlanDiffs []*PlanDiff `json:"PlanToPlanDiffs,omitempty"`
+	// PrevPlans holds the value of the PrevPlans edge.
+	HCLPrevPlans []*Plan `json:"PrevPlans,omitempty"`
+	// NextPlans holds the value of the NextPlans edge.
+	HCLNextPlans []*Plan `json:"NextPlans,omitempty"`
+	// Build holds the value of the Build edge.
+	HCLBuild *Build `json:"Build,omitempty"`
+	// Team holds the value of the Team edge.
+	HCLTeam *Team `json:"Team,omitempty"`
+	// ProvisionedNetwork holds the value of the ProvisionedNetwork edge.
+	HCLProvisionedNetwork *ProvisionedNetwork `json:"ProvisionedNetwork,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	HCLProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// ProvisioningStep holds the value of the ProvisioningStep edge.
+	HCLProvisioningStep *ProvisioningStep `json:"ProvisioningStep,omitempty"`
+	// ProvisioningScheduledStep holds the value of the ProvisioningScheduledStep edge.
+	HCLProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
+	// Status holds the value of the Status edge.
+	HCLStatus *Status `json:"Status,omitempty"`
+	// PlanDiffs holds the value of the PlanDiffs edge.
+	HCLPlanDiffs []*PlanDiff `json:"PlanDiffs,omitempty"`
 	//
-	plan_plan_to_build *uuid.UUID
+	plan_build *uuid.UUID
 }
 
 // PlanEdges holds the relations/edges for other nodes in the graph.
 type PlanEdges struct {
-	// PrevPlan holds the value of the PrevPlan edge.
-	PrevPlan []*Plan `json:"PrevPlan,omitempty"`
-	// NextPlan holds the value of the NextPlan edge.
-	NextPlan []*Plan `json:"NextPlan,omitempty"`
-	// PlanToBuild holds the value of the PlanToBuild edge.
-	PlanToBuild *Build `json:"PlanToBuild,omitempty"`
-	// PlanToTeam holds the value of the PlanToTeam edge.
-	PlanToTeam *Team `json:"PlanToTeam,omitempty"`
-	// PlanToProvisionedNetwork holds the value of the PlanToProvisionedNetwork edge.
-	PlanToProvisionedNetwork *ProvisionedNetwork `json:"PlanToProvisionedNetwork,omitempty"`
-	// PlanToProvisionedHost holds the value of the PlanToProvisionedHost edge.
-	PlanToProvisionedHost *ProvisionedHost `json:"PlanToProvisionedHost,omitempty"`
-	// PlanToProvisioningStep holds the value of the PlanToProvisioningStep edge.
-	PlanToProvisioningStep *ProvisioningStep `json:"PlanToProvisioningStep,omitempty"`
-	// PlanToProvisioningScheduledStep holds the value of the PlanToProvisioningScheduledStep edge.
-	PlanToProvisioningScheduledStep *ProvisioningScheduledStep `json:"PlanToProvisioningScheduledStep,omitempty"`
-	// PlanToStatus holds the value of the PlanToStatus edge.
-	PlanToStatus *Status `json:"PlanToStatus,omitempty"`
-	// PlanToPlanDiffs holds the value of the PlanToPlanDiffs edge.
-	PlanToPlanDiffs []*PlanDiff `json:"PlanToPlanDiffs,omitempty"`
+	// PrevPlans holds the value of the PrevPlans edge.
+	PrevPlans []*Plan `json:"PrevPlans,omitempty"`
+	// NextPlans holds the value of the NextPlans edge.
+	NextPlans []*Plan `json:"NextPlans,omitempty"`
+	// Build holds the value of the Build edge.
+	Build *Build `json:"Build,omitempty"`
+	// Team holds the value of the Team edge.
+	Team *Team `json:"Team,omitempty"`
+	// ProvisionedNetwork holds the value of the ProvisionedNetwork edge.
+	ProvisionedNetwork *ProvisionedNetwork `json:"ProvisionedNetwork,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	ProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// ProvisioningStep holds the value of the ProvisioningStep edge.
+	ProvisioningStep *ProvisioningStep `json:"ProvisioningStep,omitempty"`
+	// ProvisioningScheduledStep holds the value of the ProvisioningScheduledStep edge.
+	ProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
+	// Status holds the value of the Status edge.
+	Status *Status `json:"Status,omitempty"`
+	// PlanDiffs holds the value of the PlanDiffs edge.
+	PlanDiffs []*PlanDiff `json:"PlanDiffs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [10]bool
 }
 
-// PrevPlanOrErr returns the PrevPlan value or an error if the edge
+// PrevPlansOrErr returns the PrevPlans value or an error if the edge
 // was not loaded in eager-loading.
-func (e PlanEdges) PrevPlanOrErr() ([]*Plan, error) {
+func (e PlanEdges) PrevPlansOrErr() ([]*Plan, error) {
 	if e.loadedTypes[0] {
-		return e.PrevPlan, nil
+		return e.PrevPlans, nil
 	}
-	return nil, &NotLoadedError{edge: "PrevPlan"}
+	return nil, &NotLoadedError{edge: "PrevPlans"}
 }
 
-// NextPlanOrErr returns the NextPlan value or an error if the edge
+// NextPlansOrErr returns the NextPlans value or an error if the edge
 // was not loaded in eager-loading.
-func (e PlanEdges) NextPlanOrErr() ([]*Plan, error) {
+func (e PlanEdges) NextPlansOrErr() ([]*Plan, error) {
 	if e.loadedTypes[1] {
-		return e.NextPlan, nil
+		return e.NextPlans, nil
 	}
-	return nil, &NotLoadedError{edge: "NextPlan"}
+	return nil, &NotLoadedError{edge: "NextPlans"}
 }
 
-// PlanToBuildOrErr returns the PlanToBuild value or an error if the edge
+// BuildOrErr returns the Build value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e PlanEdges) PlanToBuildOrErr() (*Build, error) {
+func (e PlanEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[2] {
-		if e.PlanToBuild == nil {
-			// The edge PlanToBuild was loaded in eager-loading,
+		if e.Build == nil {
+			// The edge Build was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
-		return e.PlanToBuild, nil
+		return e.Build, nil
 	}
-	return nil, &NotLoadedError{edge: "PlanToBuild"}
+	return nil, &NotLoadedError{edge: "Build"}
 }
 
-// PlanToTeamOrErr returns the PlanToTeam value or an error if the edge
+// TeamOrErr returns the Team value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e PlanEdges) PlanToTeamOrErr() (*Team, error) {
+func (e PlanEdges) TeamOrErr() (*Team, error) {
 	if e.loadedTypes[3] {
-		if e.PlanToTeam == nil {
-			// The edge PlanToTeam was loaded in eager-loading,
+		if e.Team == nil {
+			// The edge Team was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: team.Label}
 		}
-		return e.PlanToTeam, nil
+		return e.Team, nil
 	}
-	return nil, &NotLoadedError{edge: "PlanToTeam"}
+	return nil, &NotLoadedError{edge: "Team"}
 }
 
-// PlanToProvisionedNetworkOrErr returns the PlanToProvisionedNetwork value or an error if the edge
+// ProvisionedNetworkOrErr returns the ProvisionedNetwork value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e PlanEdges) PlanToProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
+func (e PlanEdges) ProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
 	if e.loadedTypes[4] {
-		if e.PlanToProvisionedNetwork == nil {
-			// The edge PlanToProvisionedNetwork was loaded in eager-loading,
+		if e.ProvisionedNetwork == nil {
+			// The edge ProvisionedNetwork was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisionednetwork.Label}
 		}
-		return e.PlanToProvisionedNetwork, nil
+		return e.ProvisionedNetwork, nil
 	}
-	return nil, &NotLoadedError{edge: "PlanToProvisionedNetwork"}
+	return nil, &NotLoadedError{edge: "ProvisionedNetwork"}
 }
 
-// PlanToProvisionedHostOrErr returns the PlanToProvisionedHost value or an error if the edge
+// ProvisionedHostOrErr returns the ProvisionedHost value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e PlanEdges) PlanToProvisionedHostOrErr() (*ProvisionedHost, error) {
+func (e PlanEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[5] {
-		if e.PlanToProvisionedHost == nil {
-			// The edge PlanToProvisionedHost was loaded in eager-loading,
+		if e.ProvisionedHost == nil {
+			// The edge ProvisionedHost was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
-		return e.PlanToProvisionedHost, nil
+		return e.ProvisionedHost, nil
 	}
-	return nil, &NotLoadedError{edge: "PlanToProvisionedHost"}
+	return nil, &NotLoadedError{edge: "ProvisionedHost"}
 }
 
-// PlanToProvisioningStepOrErr returns the PlanToProvisioningStep value or an error if the edge
+// ProvisioningStepOrErr returns the ProvisioningStep value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e PlanEdges) PlanToProvisioningStepOrErr() (*ProvisioningStep, error) {
+func (e PlanEdges) ProvisioningStepOrErr() (*ProvisioningStep, error) {
 	if e.loadedTypes[6] {
-		if e.PlanToProvisioningStep == nil {
-			// The edge PlanToProvisioningStep was loaded in eager-loading,
+		if e.ProvisioningStep == nil {
+			// The edge ProvisioningStep was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisioningstep.Label}
 		}
-		return e.PlanToProvisioningStep, nil
+		return e.ProvisioningStep, nil
 	}
-	return nil, &NotLoadedError{edge: "PlanToProvisioningStep"}
+	return nil, &NotLoadedError{edge: "ProvisioningStep"}
 }
 
-// PlanToProvisioningScheduledStepOrErr returns the PlanToProvisioningScheduledStep value or an error if the edge
+// ProvisioningScheduledStepOrErr returns the ProvisioningScheduledStep value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e PlanEdges) PlanToProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
+func (e PlanEdges) ProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
 	if e.loadedTypes[7] {
-		if e.PlanToProvisioningScheduledStep == nil {
-			// The edge PlanToProvisioningScheduledStep was loaded in eager-loading,
+		if e.ProvisioningScheduledStep == nil {
+			// The edge ProvisioningScheduledStep was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisioningscheduledstep.Label}
 		}
-		return e.PlanToProvisioningScheduledStep, nil
+		return e.ProvisioningScheduledStep, nil
 	}
-	return nil, &NotLoadedError{edge: "PlanToProvisioningScheduledStep"}
+	return nil, &NotLoadedError{edge: "ProvisioningScheduledStep"}
 }
 
-// PlanToStatusOrErr returns the PlanToStatus value or an error if the edge
+// StatusOrErr returns the Status value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e PlanEdges) PlanToStatusOrErr() (*Status, error) {
+func (e PlanEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[8] {
-		if e.PlanToStatus == nil {
-			// The edge PlanToStatus was loaded in eager-loading,
+		if e.Status == nil {
+			// The edge Status was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
-		return e.PlanToStatus, nil
+		return e.Status, nil
 	}
-	return nil, &NotLoadedError{edge: "PlanToStatus"}
+	return nil, &NotLoadedError{edge: "Status"}
 }
 
-// PlanToPlanDiffsOrErr returns the PlanToPlanDiffs value or an error if the edge
+// PlanDiffsOrErr returns the PlanDiffs value or an error if the edge
 // was not loaded in eager-loading.
-func (e PlanEdges) PlanToPlanDiffsOrErr() ([]*PlanDiff, error) {
+func (e PlanEdges) PlanDiffsOrErr() ([]*PlanDiff, error) {
 	if e.loadedTypes[9] {
-		return e.PlanToPlanDiffs, nil
+		return e.PlanDiffs, nil
 	}
-	return nil, &NotLoadedError{edge: "PlanToPlanDiffs"}
+	return nil, &NotLoadedError{edge: "PlanDiffs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -217,11 +215,11 @@ func (*Plan) scanValues(columns []string) ([]interface{}, error) {
 		switch columns[i] {
 		case plan.FieldStepNumber:
 			values[i] = new(sql.NullInt64)
-		case plan.FieldType, plan.FieldBuildID:
+		case plan.FieldType:
 			values[i] = new(sql.NullString)
 		case plan.FieldID:
 			values[i] = new(uuid.UUID)
-		case plan.ForeignKeys[0]: // plan_plan_to_build
+		case plan.ForeignKeys[0]: // plan_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Plan", columns[i])
@@ -256,72 +254,66 @@ func (pl *Plan) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				pl.Type = plan.Type(value.String)
 			}
-		case plan.FieldBuildID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field build_id", values[i])
-			} else if value.Valid {
-				pl.BuildID = value.String
-			}
 		case plan.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field plan_plan_to_build", values[i])
+				return fmt.Errorf("unexpected type %T for field plan_build", values[i])
 			} else if value.Valid {
-				pl.plan_plan_to_build = new(uuid.UUID)
-				*pl.plan_plan_to_build = *value.S.(*uuid.UUID)
+				pl.plan_build = new(uuid.UUID)
+				*pl.plan_build = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryPrevPlan queries the "PrevPlan" edge of the Plan entity.
-func (pl *Plan) QueryPrevPlan() *PlanQuery {
-	return (&PlanClient{config: pl.config}).QueryPrevPlan(pl)
+// QueryPrevPlans queries the "PrevPlans" edge of the Plan entity.
+func (pl *Plan) QueryPrevPlans() *PlanQuery {
+	return (&PlanClient{config: pl.config}).QueryPrevPlans(pl)
 }
 
-// QueryNextPlan queries the "NextPlan" edge of the Plan entity.
-func (pl *Plan) QueryNextPlan() *PlanQuery {
-	return (&PlanClient{config: pl.config}).QueryNextPlan(pl)
+// QueryNextPlans queries the "NextPlans" edge of the Plan entity.
+func (pl *Plan) QueryNextPlans() *PlanQuery {
+	return (&PlanClient{config: pl.config}).QueryNextPlans(pl)
 }
 
-// QueryPlanToBuild queries the "PlanToBuild" edge of the Plan entity.
-func (pl *Plan) QueryPlanToBuild() *BuildQuery {
-	return (&PlanClient{config: pl.config}).QueryPlanToBuild(pl)
+// QueryBuild queries the "Build" edge of the Plan entity.
+func (pl *Plan) QueryBuild() *BuildQuery {
+	return (&PlanClient{config: pl.config}).QueryBuild(pl)
 }
 
-// QueryPlanToTeam queries the "PlanToTeam" edge of the Plan entity.
-func (pl *Plan) QueryPlanToTeam() *TeamQuery {
-	return (&PlanClient{config: pl.config}).QueryPlanToTeam(pl)
+// QueryTeam queries the "Team" edge of the Plan entity.
+func (pl *Plan) QueryTeam() *TeamQuery {
+	return (&PlanClient{config: pl.config}).QueryTeam(pl)
 }
 
-// QueryPlanToProvisionedNetwork queries the "PlanToProvisionedNetwork" edge of the Plan entity.
-func (pl *Plan) QueryPlanToProvisionedNetwork() *ProvisionedNetworkQuery {
-	return (&PlanClient{config: pl.config}).QueryPlanToProvisionedNetwork(pl)
+// QueryProvisionedNetwork queries the "ProvisionedNetwork" edge of the Plan entity.
+func (pl *Plan) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
+	return (&PlanClient{config: pl.config}).QueryProvisionedNetwork(pl)
 }
 
-// QueryPlanToProvisionedHost queries the "PlanToProvisionedHost" edge of the Plan entity.
-func (pl *Plan) QueryPlanToProvisionedHost() *ProvisionedHostQuery {
-	return (&PlanClient{config: pl.config}).QueryPlanToProvisionedHost(pl)
+// QueryProvisionedHost queries the "ProvisionedHost" edge of the Plan entity.
+func (pl *Plan) QueryProvisionedHost() *ProvisionedHostQuery {
+	return (&PlanClient{config: pl.config}).QueryProvisionedHost(pl)
 }
 
-// QueryPlanToProvisioningStep queries the "PlanToProvisioningStep" edge of the Plan entity.
-func (pl *Plan) QueryPlanToProvisioningStep() *ProvisioningStepQuery {
-	return (&PlanClient{config: pl.config}).QueryPlanToProvisioningStep(pl)
+// QueryProvisioningStep queries the "ProvisioningStep" edge of the Plan entity.
+func (pl *Plan) QueryProvisioningStep() *ProvisioningStepQuery {
+	return (&PlanClient{config: pl.config}).QueryProvisioningStep(pl)
 }
 
-// QueryPlanToProvisioningScheduledStep queries the "PlanToProvisioningScheduledStep" edge of the Plan entity.
-func (pl *Plan) QueryPlanToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
-	return (&PlanClient{config: pl.config}).QueryPlanToProvisioningScheduledStep(pl)
+// QueryProvisioningScheduledStep queries the "ProvisioningScheduledStep" edge of the Plan entity.
+func (pl *Plan) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+	return (&PlanClient{config: pl.config}).QueryProvisioningScheduledStep(pl)
 }
 
-// QueryPlanToStatus queries the "PlanToStatus" edge of the Plan entity.
-func (pl *Plan) QueryPlanToStatus() *StatusQuery {
-	return (&PlanClient{config: pl.config}).QueryPlanToStatus(pl)
+// QueryStatus queries the "Status" edge of the Plan entity.
+func (pl *Plan) QueryStatus() *StatusQuery {
+	return (&PlanClient{config: pl.config}).QueryStatus(pl)
 }
 
-// QueryPlanToPlanDiffs queries the "PlanToPlanDiffs" edge of the Plan entity.
-func (pl *Plan) QueryPlanToPlanDiffs() *PlanDiffQuery {
-	return (&PlanClient{config: pl.config}).QueryPlanToPlanDiffs(pl)
+// QueryPlanDiffs queries the "PlanDiffs" edge of the Plan entity.
+func (pl *Plan) QueryPlanDiffs() *PlanDiffQuery {
+	return (&PlanClient{config: pl.config}).QueryPlanDiffs(pl)
 }
 
 // Update returns a builder for updating this Plan.
@@ -351,8 +343,6 @@ func (pl *Plan) String() string {
 	builder.WriteString(fmt.Sprintf("%v", pl.StepNumber))
 	builder.WriteString(", type=")
 	builder.WriteString(fmt.Sprintf("%v", pl.Type))
-	builder.WriteString(", build_id=")
-	builder.WriteString(pl.BuildID)
 	builder.WriteByte(')')
 	return builder.String()
 }

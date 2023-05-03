@@ -24,19 +24,19 @@ import (
 // HostQuery is the builder for querying Host entities.
 type HostQuery struct {
 	config
-	limit                            *int
-	offset                           *int
-	unique                           *bool
-	order                            []OrderFunc
-	fields                           []string
-	predicates                       []predicate.Host
-	withHostToDisk                   *DiskQuery
-	withHostToUser                   *UserQuery
-	withHostToEnvironment            *EnvironmentQuery
-	withHostToIncludedNetwork        *IncludedNetworkQuery
-	withDependOnHostToHostDependency *HostDependencyQuery
-	withDependByHostToHostDependency *HostDependencyQuery
-	withFKs                          bool
+	limit                          *int
+	offset                         *int
+	unique                         *bool
+	order                          []OrderFunc
+	fields                         []string
+	predicates                     []predicate.Host
+	withDisk                       *DiskQuery
+	withUsers                      *UserQuery
+	withEnvironment                *EnvironmentQuery
+	withIncludedNetworks           *IncludedNetworkQuery
+	withDependOnHostDependencies   *HostDependencyQuery
+	withRequiredByHostDependencies *HostDependencyQuery
+	withFKs                        bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -73,8 +73,8 @@ func (hq *HostQuery) Order(o ...OrderFunc) *HostQuery {
 	return hq
 }
 
-// QueryHostToDisk chains the current query on the "HostToDisk" edge.
-func (hq *HostQuery) QueryHostToDisk() *DiskQuery {
+// QueryDisk chains the current query on the "Disk" edge.
+func (hq *HostQuery) QueryDisk() *DiskQuery {
 	query := &DiskQuery{config: hq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
@@ -87,7 +87,7 @@ func (hq *HostQuery) QueryHostToDisk() *DiskQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(host.Table, host.FieldID, selector),
 			sqlgraph.To(disk.Table, disk.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, host.HostToDiskTable, host.HostToDiskColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, host.DiskTable, host.DiskColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(hq.driver.Dialect(), step)
 		return fromU, nil
@@ -95,8 +95,8 @@ func (hq *HostQuery) QueryHostToDisk() *DiskQuery {
 	return query
 }
 
-// QueryHostToUser chains the current query on the "HostToUser" edge.
-func (hq *HostQuery) QueryHostToUser() *UserQuery {
+// QueryUsers chains the current query on the "Users" edge.
+func (hq *HostQuery) QueryUsers() *UserQuery {
 	query := &UserQuery{config: hq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
@@ -109,7 +109,7 @@ func (hq *HostQuery) QueryHostToUser() *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(host.Table, host.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, host.HostToUserTable, host.HostToUserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, host.UsersTable, host.UsersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(hq.driver.Dialect(), step)
 		return fromU, nil
@@ -117,8 +117,8 @@ func (hq *HostQuery) QueryHostToUser() *UserQuery {
 	return query
 }
 
-// QueryHostToEnvironment chains the current query on the "HostToEnvironment" edge.
-func (hq *HostQuery) QueryHostToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (hq *HostQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: hq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
@@ -131,7 +131,7 @@ func (hq *HostQuery) QueryHostToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(host.Table, host.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, host.HostToEnvironmentTable, host.HostToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, host.EnvironmentTable, host.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(hq.driver.Dialect(), step)
 		return fromU, nil
@@ -139,8 +139,8 @@ func (hq *HostQuery) QueryHostToEnvironment() *EnvironmentQuery {
 	return query
 }
 
-// QueryHostToIncludedNetwork chains the current query on the "HostToIncludedNetwork" edge.
-func (hq *HostQuery) QueryHostToIncludedNetwork() *IncludedNetworkQuery {
+// QueryIncludedNetworks chains the current query on the "IncludedNetworks" edge.
+func (hq *HostQuery) QueryIncludedNetworks() *IncludedNetworkQuery {
 	query := &IncludedNetworkQuery{config: hq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
@@ -153,7 +153,7 @@ func (hq *HostQuery) QueryHostToIncludedNetwork() *IncludedNetworkQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(host.Table, host.FieldID, selector),
 			sqlgraph.To(includednetwork.Table, includednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, host.HostToIncludedNetworkTable, host.HostToIncludedNetworkPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, true, host.IncludedNetworksTable, host.IncludedNetworksPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(hq.driver.Dialect(), step)
 		return fromU, nil
@@ -161,8 +161,8 @@ func (hq *HostQuery) QueryHostToIncludedNetwork() *IncludedNetworkQuery {
 	return query
 }
 
-// QueryDependOnHostToHostDependency chains the current query on the "DependOnHostToHostDependency" edge.
-func (hq *HostQuery) QueryDependOnHostToHostDependency() *HostDependencyQuery {
+// QueryDependOnHostDependencies chains the current query on the "DependOnHostDependencies" edge.
+func (hq *HostQuery) QueryDependOnHostDependencies() *HostDependencyQuery {
 	query := &HostDependencyQuery{config: hq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
@@ -175,7 +175,7 @@ func (hq *HostQuery) QueryDependOnHostToHostDependency() *HostDependencyQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(host.Table, host.FieldID, selector),
 			sqlgraph.To(hostdependency.Table, hostdependency.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, host.DependOnHostToHostDependencyTable, host.DependOnHostToHostDependencyColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, host.DependOnHostDependenciesTable, host.DependOnHostDependenciesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(hq.driver.Dialect(), step)
 		return fromU, nil
@@ -183,8 +183,8 @@ func (hq *HostQuery) QueryDependOnHostToHostDependency() *HostDependencyQuery {
 	return query
 }
 
-// QueryDependByHostToHostDependency chains the current query on the "DependByHostToHostDependency" edge.
-func (hq *HostQuery) QueryDependByHostToHostDependency() *HostDependencyQuery {
+// QueryRequiredByHostDependencies chains the current query on the "RequiredByHostDependencies" edge.
+func (hq *HostQuery) QueryRequiredByHostDependencies() *HostDependencyQuery {
 	query := &HostDependencyQuery{config: hq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
@@ -197,7 +197,7 @@ func (hq *HostQuery) QueryDependByHostToHostDependency() *HostDependencyQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(host.Table, host.FieldID, selector),
 			sqlgraph.To(hostdependency.Table, hostdependency.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, host.DependByHostToHostDependencyTable, host.DependByHostToHostDependencyColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, host.RequiredByHostDependenciesTable, host.RequiredByHostDependenciesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(hq.driver.Dialect(), step)
 		return fromU, nil
@@ -381,17 +381,17 @@ func (hq *HostQuery) Clone() *HostQuery {
 		return nil
 	}
 	return &HostQuery{
-		config:                           hq.config,
-		limit:                            hq.limit,
-		offset:                           hq.offset,
-		order:                            append([]OrderFunc{}, hq.order...),
-		predicates:                       append([]predicate.Host{}, hq.predicates...),
-		withHostToDisk:                   hq.withHostToDisk.Clone(),
-		withHostToUser:                   hq.withHostToUser.Clone(),
-		withHostToEnvironment:            hq.withHostToEnvironment.Clone(),
-		withHostToIncludedNetwork:        hq.withHostToIncludedNetwork.Clone(),
-		withDependOnHostToHostDependency: hq.withDependOnHostToHostDependency.Clone(),
-		withDependByHostToHostDependency: hq.withDependByHostToHostDependency.Clone(),
+		config:                         hq.config,
+		limit:                          hq.limit,
+		offset:                         hq.offset,
+		order:                          append([]OrderFunc{}, hq.order...),
+		predicates:                     append([]predicate.Host{}, hq.predicates...),
+		withDisk:                       hq.withDisk.Clone(),
+		withUsers:                      hq.withUsers.Clone(),
+		withEnvironment:                hq.withEnvironment.Clone(),
+		withIncludedNetworks:           hq.withIncludedNetworks.Clone(),
+		withDependOnHostDependencies:   hq.withDependOnHostDependencies.Clone(),
+		withRequiredByHostDependencies: hq.withRequiredByHostDependencies.Clone(),
 		// clone intermediate query.
 		sql:    hq.sql.Clone(),
 		path:   hq.path,
@@ -399,69 +399,69 @@ func (hq *HostQuery) Clone() *HostQuery {
 	}
 }
 
-// WithHostToDisk tells the query-builder to eager-load the nodes that are connected to
-// the "HostToDisk" edge. The optional arguments are used to configure the query builder of the edge.
-func (hq *HostQuery) WithHostToDisk(opts ...func(*DiskQuery)) *HostQuery {
+// WithDisk tells the query-builder to eager-load the nodes that are connected to
+// the "Disk" edge. The optional arguments are used to configure the query builder of the edge.
+func (hq *HostQuery) WithDisk(opts ...func(*DiskQuery)) *HostQuery {
 	query := &DiskQuery{config: hq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	hq.withHostToDisk = query
+	hq.withDisk = query
 	return hq
 }
 
-// WithHostToUser tells the query-builder to eager-load the nodes that are connected to
-// the "HostToUser" edge. The optional arguments are used to configure the query builder of the edge.
-func (hq *HostQuery) WithHostToUser(opts ...func(*UserQuery)) *HostQuery {
+// WithUsers tells the query-builder to eager-load the nodes that are connected to
+// the "Users" edge. The optional arguments are used to configure the query builder of the edge.
+func (hq *HostQuery) WithUsers(opts ...func(*UserQuery)) *HostQuery {
 	query := &UserQuery{config: hq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	hq.withHostToUser = query
+	hq.withUsers = query
 	return hq
 }
 
-// WithHostToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "HostToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (hq *HostQuery) WithHostToEnvironment(opts ...func(*EnvironmentQuery)) *HostQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (hq *HostQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *HostQuery {
 	query := &EnvironmentQuery{config: hq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	hq.withHostToEnvironment = query
+	hq.withEnvironment = query
 	return hq
 }
 
-// WithHostToIncludedNetwork tells the query-builder to eager-load the nodes that are connected to
-// the "HostToIncludedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
-func (hq *HostQuery) WithHostToIncludedNetwork(opts ...func(*IncludedNetworkQuery)) *HostQuery {
+// WithIncludedNetworks tells the query-builder to eager-load the nodes that are connected to
+// the "IncludedNetworks" edge. The optional arguments are used to configure the query builder of the edge.
+func (hq *HostQuery) WithIncludedNetworks(opts ...func(*IncludedNetworkQuery)) *HostQuery {
 	query := &IncludedNetworkQuery{config: hq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	hq.withHostToIncludedNetwork = query
+	hq.withIncludedNetworks = query
 	return hq
 }
 
-// WithDependOnHostToHostDependency tells the query-builder to eager-load the nodes that are connected to
-// the "DependOnHostToHostDependency" edge. The optional arguments are used to configure the query builder of the edge.
-func (hq *HostQuery) WithDependOnHostToHostDependency(opts ...func(*HostDependencyQuery)) *HostQuery {
+// WithDependOnHostDependencies tells the query-builder to eager-load the nodes that are connected to
+// the "DependOnHostDependencies" edge. The optional arguments are used to configure the query builder of the edge.
+func (hq *HostQuery) WithDependOnHostDependencies(opts ...func(*HostDependencyQuery)) *HostQuery {
 	query := &HostDependencyQuery{config: hq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	hq.withDependOnHostToHostDependency = query
+	hq.withDependOnHostDependencies = query
 	return hq
 }
 
-// WithDependByHostToHostDependency tells the query-builder to eager-load the nodes that are connected to
-// the "DependByHostToHostDependency" edge. The optional arguments are used to configure the query builder of the edge.
-func (hq *HostQuery) WithDependByHostToHostDependency(opts ...func(*HostDependencyQuery)) *HostQuery {
+// WithRequiredByHostDependencies tells the query-builder to eager-load the nodes that are connected to
+// the "RequiredByHostDependencies" edge. The optional arguments are used to configure the query builder of the edge.
+func (hq *HostQuery) WithRequiredByHostDependencies(opts ...func(*HostDependencyQuery)) *HostQuery {
 	query := &HostDependencyQuery{config: hq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	hq.withDependByHostToHostDependency = query
+	hq.withRequiredByHostDependencies = query
 	return hq
 }
 
@@ -479,7 +479,6 @@ func (hq *HostQuery) WithDependByHostToHostDependency(opts ...func(*HostDependen
 //		GroupBy(host.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (hq *HostQuery) GroupBy(field string, fields ...string) *HostGroupBy {
 	grbuild := &HostGroupBy{config: hq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -506,7 +505,6 @@ func (hq *HostQuery) GroupBy(field string, fields ...string) *HostGroupBy {
 //	client.Host.Query().
 //		Select(host.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (hq *HostQuery) Select(fields ...string) *HostSelect {
 	hq.fields = append(hq.fields, fields...)
 	selbuild := &HostSelect{HostQuery: hq}
@@ -537,15 +535,15 @@ func (hq *HostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Host, e
 		withFKs     = hq.withFKs
 		_spec       = hq.querySpec()
 		loadedTypes = [6]bool{
-			hq.withHostToDisk != nil,
-			hq.withHostToUser != nil,
-			hq.withHostToEnvironment != nil,
-			hq.withHostToIncludedNetwork != nil,
-			hq.withDependOnHostToHostDependency != nil,
-			hq.withDependByHostToHostDependency != nil,
+			hq.withDisk != nil,
+			hq.withUsers != nil,
+			hq.withEnvironment != nil,
+			hq.withIncludedNetworks != nil,
+			hq.withDependOnHostDependencies != nil,
+			hq.withRequiredByHostDependencies != nil,
 		}
 	)
-	if hq.withHostToEnvironment != nil {
+	if hq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -569,48 +567,46 @@ func (hq *HostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Host, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := hq.withHostToDisk; query != nil {
-		if err := hq.loadHostToDisk(ctx, query, nodes, nil,
-			func(n *Host, e *Disk) { n.Edges.HostToDisk = e }); err != nil {
+	if query := hq.withDisk; query != nil {
+		if err := hq.loadDisk(ctx, query, nodes, nil,
+			func(n *Host, e *Disk) { n.Edges.Disk = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := hq.withHostToUser; query != nil {
-		if err := hq.loadHostToUser(ctx, query, nodes,
-			func(n *Host) { n.Edges.HostToUser = []*User{} },
-			func(n *Host, e *User) { n.Edges.HostToUser = append(n.Edges.HostToUser, e) }); err != nil {
+	if query := hq.withUsers; query != nil {
+		if err := hq.loadUsers(ctx, query, nodes,
+			func(n *Host) { n.Edges.Users = []*User{} },
+			func(n *Host, e *User) { n.Edges.Users = append(n.Edges.Users, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := hq.withHostToEnvironment; query != nil {
-		if err := hq.loadHostToEnvironment(ctx, query, nodes, nil,
-			func(n *Host, e *Environment) { n.Edges.HostToEnvironment = e }); err != nil {
+	if query := hq.withEnvironment; query != nil {
+		if err := hq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *Host, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := hq.withHostToIncludedNetwork; query != nil {
-		if err := hq.loadHostToIncludedNetwork(ctx, query, nodes,
-			func(n *Host) { n.Edges.HostToIncludedNetwork = []*IncludedNetwork{} },
-			func(n *Host, e *IncludedNetwork) {
-				n.Edges.HostToIncludedNetwork = append(n.Edges.HostToIncludedNetwork, e)
+	if query := hq.withIncludedNetworks; query != nil {
+		if err := hq.loadIncludedNetworks(ctx, query, nodes,
+			func(n *Host) { n.Edges.IncludedNetworks = []*IncludedNetwork{} },
+			func(n *Host, e *IncludedNetwork) { n.Edges.IncludedNetworks = append(n.Edges.IncludedNetworks, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := hq.withDependOnHostDependencies; query != nil {
+		if err := hq.loadDependOnHostDependencies(ctx, query, nodes,
+			func(n *Host) { n.Edges.DependOnHostDependencies = []*HostDependency{} },
+			func(n *Host, e *HostDependency) {
+				n.Edges.DependOnHostDependencies = append(n.Edges.DependOnHostDependencies, e)
 			}); err != nil {
 			return nil, err
 		}
 	}
-	if query := hq.withDependOnHostToHostDependency; query != nil {
-		if err := hq.loadDependOnHostToHostDependency(ctx, query, nodes,
-			func(n *Host) { n.Edges.DependOnHostToHostDependency = []*HostDependency{} },
+	if query := hq.withRequiredByHostDependencies; query != nil {
+		if err := hq.loadRequiredByHostDependencies(ctx, query, nodes,
+			func(n *Host) { n.Edges.RequiredByHostDependencies = []*HostDependency{} },
 			func(n *Host, e *HostDependency) {
-				n.Edges.DependOnHostToHostDependency = append(n.Edges.DependOnHostToHostDependency, e)
-			}); err != nil {
-			return nil, err
-		}
-	}
-	if query := hq.withDependByHostToHostDependency; query != nil {
-		if err := hq.loadDependByHostToHostDependency(ctx, query, nodes,
-			func(n *Host) { n.Edges.DependByHostToHostDependency = []*HostDependency{} },
-			func(n *Host, e *HostDependency) {
-				n.Edges.DependByHostToHostDependency = append(n.Edges.DependByHostToHostDependency, e)
+				n.Edges.RequiredByHostDependencies = append(n.Edges.RequiredByHostDependencies, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -618,7 +614,7 @@ func (hq *HostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Host, e
 	return nodes, nil
 }
 
-func (hq *HostQuery) loadHostToDisk(ctx context.Context, query *DiskQuery, nodes []*Host, init func(*Host), assign func(*Host, *Disk)) error {
+func (hq *HostQuery) loadDisk(ctx context.Context, query *DiskQuery, nodes []*Host, init func(*Host), assign func(*Host, *Disk)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Host)
 	for i := range nodes {
@@ -627,26 +623,26 @@ func (hq *HostQuery) loadHostToDisk(ctx context.Context, query *DiskQuery, nodes
 	}
 	query.withFKs = true
 	query.Where(predicate.Disk(func(s *sql.Selector) {
-		s.Where(sql.InValues(host.HostToDiskColumn, fks...))
+		s.Where(sql.InValues(host.DiskColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.host_host_to_disk
+		fk := n.host_disk
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "host_host_to_disk" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "host_disk" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_host_to_disk" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "host_disk" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (hq *HostQuery) loadHostToUser(ctx context.Context, query *UserQuery, nodes []*Host, init func(*Host), assign func(*Host, *User)) error {
+func (hq *HostQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*Host, init func(*Host), assign func(*Host, *User)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Host)
 	for i := range nodes {
@@ -658,33 +654,33 @@ func (hq *HostQuery) loadHostToUser(ctx context.Context, query *UserQuery, nodes
 	}
 	query.withFKs = true
 	query.Where(predicate.User(func(s *sql.Selector) {
-		s.Where(sql.InValues(host.HostToUserColumn, fks...))
+		s.Where(sql.InValues(host.UsersColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.host_host_to_user
+		fk := n.host_users
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "host_host_to_user" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "host_users" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_host_to_user" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "host_users" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (hq *HostQuery) loadHostToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Host, init func(*Host), assign func(*Host, *Environment)) error {
+func (hq *HostQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Host, init func(*Host), assign func(*Host, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Host)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_host == nil {
+		if nodes[i].environment_hosts == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_host
+		fk := *nodes[i].environment_hosts
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -698,7 +694,7 @@ func (hq *HostQuery) loadHostToEnvironment(ctx context.Context, query *Environme
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_host" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_hosts" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -706,7 +702,7 @@ func (hq *HostQuery) loadHostToEnvironment(ctx context.Context, query *Environme
 	}
 	return nil
 }
-func (hq *HostQuery) loadHostToIncludedNetwork(ctx context.Context, query *IncludedNetworkQuery, nodes []*Host, init func(*Host), assign func(*Host, *IncludedNetwork)) error {
+func (hq *HostQuery) loadIncludedNetworks(ctx context.Context, query *IncludedNetworkQuery, nodes []*Host, init func(*Host), assign func(*Host, *IncludedNetwork)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*Host)
 	nids := make(map[uuid.UUID]map[*Host]struct{})
@@ -718,11 +714,11 @@ func (hq *HostQuery) loadHostToIncludedNetwork(ctx context.Context, query *Inclu
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(host.HostToIncludedNetworkTable)
-		s.Join(joinT).On(s.C(includednetwork.FieldID), joinT.C(host.HostToIncludedNetworkPrimaryKey[0]))
-		s.Where(sql.InValues(joinT.C(host.HostToIncludedNetworkPrimaryKey[1]), edgeIDs...))
+		joinT := sql.Table(host.IncludedNetworksTable)
+		s.Join(joinT).On(s.C(includednetwork.FieldID), joinT.C(host.IncludedNetworksPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(host.IncludedNetworksPrimaryKey[1]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(host.HostToIncludedNetworkPrimaryKey[1]))
+		s.Select(joinT.C(host.IncludedNetworksPrimaryKey[1]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -756,7 +752,7 @@ func (hq *HostQuery) loadHostToIncludedNetwork(ctx context.Context, query *Inclu
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "HostToIncludedNetwork" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "IncludedNetworks" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
@@ -764,7 +760,7 @@ func (hq *HostQuery) loadHostToIncludedNetwork(ctx context.Context, query *Inclu
 	}
 	return nil
 }
-func (hq *HostQuery) loadDependOnHostToHostDependency(ctx context.Context, query *HostDependencyQuery, nodes []*Host, init func(*Host), assign func(*Host, *HostDependency)) error {
+func (hq *HostQuery) loadDependOnHostDependencies(ctx context.Context, query *HostDependencyQuery, nodes []*Host, init func(*Host), assign func(*Host, *HostDependency)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Host)
 	for i := range nodes {
@@ -776,26 +772,26 @@ func (hq *HostQuery) loadDependOnHostToHostDependency(ctx context.Context, query
 	}
 	query.withFKs = true
 	query.Where(predicate.HostDependency(func(s *sql.Selector) {
-		s.Where(sql.InValues(host.DependOnHostToHostDependencyColumn, fks...))
+		s.Where(sql.InValues(host.DependOnHostDependenciesColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.host_dependency_host_dependency_to_depend_on_host
+		fk := n.host_dependency_depend_on_host
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "host_dependency_host_dependency_to_depend_on_host" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "host_dependency_depend_on_host" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_dependency_host_dependency_to_depend_on_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "host_dependency_depend_on_host" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (hq *HostQuery) loadDependByHostToHostDependency(ctx context.Context, query *HostDependencyQuery, nodes []*Host, init func(*Host), assign func(*Host, *HostDependency)) error {
+func (hq *HostQuery) loadRequiredByHostDependencies(ctx context.Context, query *HostDependencyQuery, nodes []*Host, init func(*Host), assign func(*Host, *HostDependency)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Host)
 	for i := range nodes {
@@ -807,20 +803,20 @@ func (hq *HostQuery) loadDependByHostToHostDependency(ctx context.Context, query
 	}
 	query.withFKs = true
 	query.Where(predicate.HostDependency(func(s *sql.Selector) {
-		s.Where(sql.InValues(host.DependByHostToHostDependencyColumn, fks...))
+		s.Where(sql.InValues(host.RequiredByHostDependenciesColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.host_dependency_host_dependency_to_depend_by_host
+		fk := n.host_dependency_required_by
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "host_dependency_host_dependency_to_depend_by_host" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "host_dependency_required_by" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_dependency_host_dependency_to_depend_by_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "host_dependency_required_by" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

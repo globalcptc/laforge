@@ -221,7 +221,7 @@ export class EnvironmentService {
       if (!this.buildTree.getValue()) return reject(new Error("Can't load Plans as Build Tree hasn't been loaded."));
       this.api.pullBuildPlans(this.buildTree.getValue().id).then(
         (build) => {
-          for (const plan of build.buildToPlan) {
+          for (const plan of build.Plans) {
             this.planMap[plan.id] = {
               ...plan
             };

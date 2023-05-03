@@ -47,15 +47,15 @@ func (tc *TokenCreate) SetNillableID(u *uuid.UUID) *TokenCreate {
 	return tc
 }
 
-// SetTokenToAuthUserID sets the "TokenToAuthUser" edge to the AuthUser entity by ID.
-func (tc *TokenCreate) SetTokenToAuthUserID(id uuid.UUID) *TokenCreate {
-	tc.mutation.SetTokenToAuthUserID(id)
+// SetAuthUserID sets the "AuthUser" edge to the AuthUser entity by ID.
+func (tc *TokenCreate) SetAuthUserID(id uuid.UUID) *TokenCreate {
+	tc.mutation.SetAuthUserID(id)
 	return tc
 }
 
-// SetTokenToAuthUser sets the "TokenToAuthUser" edge to the AuthUser entity.
-func (tc *TokenCreate) SetTokenToAuthUser(a *AuthUser) *TokenCreate {
-	return tc.SetTokenToAuthUserID(a.ID)
+// SetAuthUser sets the "AuthUser" edge to the AuthUser entity.
+func (tc *TokenCreate) SetAuthUser(a *AuthUser) *TokenCreate {
+	return tc.SetAuthUserID(a.ID)
 }
 
 // Mutation returns the TokenMutation object of the builder.
@@ -149,8 +149,8 @@ func (tc *TokenCreate) check() error {
 	if _, ok := tc.mutation.ExpireAt(); !ok {
 		return &ValidationError{Name: "expire_at", err: errors.New(`ent: missing required field "Token.expire_at"`)}
 	}
-	if _, ok := tc.mutation.TokenToAuthUserID(); !ok {
-		return &ValidationError{Name: "TokenToAuthUser", err: errors.New(`ent: missing required edge "Token.TokenToAuthUser"`)}
+	if _, ok := tc.mutation.AuthUserID(); !ok {
+		return &ValidationError{Name: "AuthUser", err: errors.New(`ent: missing required edge "Token.AuthUser"`)}
 	}
 	return nil
 }
@@ -204,12 +204,12 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 		})
 		_node.ExpireAt = value
 	}
-	if nodes := tc.mutation.TokenToAuthUserIDs(); len(nodes) > 0 {
+	if nodes := tc.mutation.AuthUserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   token.TokenToAuthUserTable,
-			Columns: []string{token.TokenToAuthUserColumn},
+			Table:   token.AuthUserTable,
+			Columns: []string{token.AuthUserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -221,7 +221,7 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.auth_user_auth_user_to_token = &nodes[0]
+		_node.auth_user_tokens = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

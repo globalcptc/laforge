@@ -23,17 +23,17 @@ import (
 // FindingQuery is the builder for querying Finding entities.
 type FindingQuery struct {
 	config
-	limit                    *int
-	offset                   *int
-	unique                   *bool
-	order                    []OrderFunc
-	fields                   []string
-	predicates               []predicate.Finding
-	withFindingToUser        *UserQuery
-	withFindingToHost        *HostQuery
-	withFindingToScript      *ScriptQuery
-	withFindingToEnvironment *EnvironmentQuery
-	withFKs                  bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.Finding
+	withUsers       *UserQuery
+	withHost        *HostQuery
+	withScript      *ScriptQuery
+	withEnvironment *EnvironmentQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -70,8 +70,8 @@ func (fq *FindingQuery) Order(o ...OrderFunc) *FindingQuery {
 	return fq
 }
 
-// QueryFindingToUser chains the current query on the "FindingToUser" edge.
-func (fq *FindingQuery) QueryFindingToUser() *UserQuery {
+// QueryUsers chains the current query on the "Users" edge.
+func (fq *FindingQuery) QueryUsers() *UserQuery {
 	query := &UserQuery{config: fq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := fq.prepareQuery(ctx); err != nil {
@@ -84,7 +84,7 @@ func (fq *FindingQuery) QueryFindingToUser() *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(finding.Table, finding.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, finding.FindingToUserTable, finding.FindingToUserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, finding.UsersTable, finding.UsersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(fq.driver.Dialect(), step)
 		return fromU, nil
@@ -92,8 +92,8 @@ func (fq *FindingQuery) QueryFindingToUser() *UserQuery {
 	return query
 }
 
-// QueryFindingToHost chains the current query on the "FindingToHost" edge.
-func (fq *FindingQuery) QueryFindingToHost() *HostQuery {
+// QueryHost chains the current query on the "Host" edge.
+func (fq *FindingQuery) QueryHost() *HostQuery {
 	query := &HostQuery{config: fq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := fq.prepareQuery(ctx); err != nil {
@@ -106,7 +106,7 @@ func (fq *FindingQuery) QueryFindingToHost() *HostQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(finding.Table, finding.FieldID, selector),
 			sqlgraph.To(host.Table, host.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, finding.FindingToHostTable, finding.FindingToHostColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, finding.HostTable, finding.HostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(fq.driver.Dialect(), step)
 		return fromU, nil
@@ -114,8 +114,8 @@ func (fq *FindingQuery) QueryFindingToHost() *HostQuery {
 	return query
 }
 
-// QueryFindingToScript chains the current query on the "FindingToScript" edge.
-func (fq *FindingQuery) QueryFindingToScript() *ScriptQuery {
+// QueryScript chains the current query on the "Script" edge.
+func (fq *FindingQuery) QueryScript() *ScriptQuery {
 	query := &ScriptQuery{config: fq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := fq.prepareQuery(ctx); err != nil {
@@ -128,7 +128,7 @@ func (fq *FindingQuery) QueryFindingToScript() *ScriptQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(finding.Table, finding.FieldID, selector),
 			sqlgraph.To(script.Table, script.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, finding.FindingToScriptTable, finding.FindingToScriptColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, finding.ScriptTable, finding.ScriptColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(fq.driver.Dialect(), step)
 		return fromU, nil
@@ -136,8 +136,8 @@ func (fq *FindingQuery) QueryFindingToScript() *ScriptQuery {
 	return query
 }
 
-// QueryFindingToEnvironment chains the current query on the "FindingToEnvironment" edge.
-func (fq *FindingQuery) QueryFindingToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (fq *FindingQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: fq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := fq.prepareQuery(ctx); err != nil {
@@ -150,7 +150,7 @@ func (fq *FindingQuery) QueryFindingToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(finding.Table, finding.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, finding.FindingToEnvironmentTable, finding.FindingToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, finding.EnvironmentTable, finding.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(fq.driver.Dialect(), step)
 		return fromU, nil
@@ -334,15 +334,15 @@ func (fq *FindingQuery) Clone() *FindingQuery {
 		return nil
 	}
 	return &FindingQuery{
-		config:                   fq.config,
-		limit:                    fq.limit,
-		offset:                   fq.offset,
-		order:                    append([]OrderFunc{}, fq.order...),
-		predicates:               append([]predicate.Finding{}, fq.predicates...),
-		withFindingToUser:        fq.withFindingToUser.Clone(),
-		withFindingToHost:        fq.withFindingToHost.Clone(),
-		withFindingToScript:      fq.withFindingToScript.Clone(),
-		withFindingToEnvironment: fq.withFindingToEnvironment.Clone(),
+		config:          fq.config,
+		limit:           fq.limit,
+		offset:          fq.offset,
+		order:           append([]OrderFunc{}, fq.order...),
+		predicates:      append([]predicate.Finding{}, fq.predicates...),
+		withUsers:       fq.withUsers.Clone(),
+		withHost:        fq.withHost.Clone(),
+		withScript:      fq.withScript.Clone(),
+		withEnvironment: fq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    fq.sql.Clone(),
 		path:   fq.path,
@@ -350,47 +350,47 @@ func (fq *FindingQuery) Clone() *FindingQuery {
 	}
 }
 
-// WithFindingToUser tells the query-builder to eager-load the nodes that are connected to
-// the "FindingToUser" edge. The optional arguments are used to configure the query builder of the edge.
-func (fq *FindingQuery) WithFindingToUser(opts ...func(*UserQuery)) *FindingQuery {
+// WithUsers tells the query-builder to eager-load the nodes that are connected to
+// the "Users" edge. The optional arguments are used to configure the query builder of the edge.
+func (fq *FindingQuery) WithUsers(opts ...func(*UserQuery)) *FindingQuery {
 	query := &UserQuery{config: fq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	fq.withFindingToUser = query
+	fq.withUsers = query
 	return fq
 }
 
-// WithFindingToHost tells the query-builder to eager-load the nodes that are connected to
-// the "FindingToHost" edge. The optional arguments are used to configure the query builder of the edge.
-func (fq *FindingQuery) WithFindingToHost(opts ...func(*HostQuery)) *FindingQuery {
+// WithHost tells the query-builder to eager-load the nodes that are connected to
+// the "Host" edge. The optional arguments are used to configure the query builder of the edge.
+func (fq *FindingQuery) WithHost(opts ...func(*HostQuery)) *FindingQuery {
 	query := &HostQuery{config: fq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	fq.withFindingToHost = query
+	fq.withHost = query
 	return fq
 }
 
-// WithFindingToScript tells the query-builder to eager-load the nodes that are connected to
-// the "FindingToScript" edge. The optional arguments are used to configure the query builder of the edge.
-func (fq *FindingQuery) WithFindingToScript(opts ...func(*ScriptQuery)) *FindingQuery {
+// WithScript tells the query-builder to eager-load the nodes that are connected to
+// the "Script" edge. The optional arguments are used to configure the query builder of the edge.
+func (fq *FindingQuery) WithScript(opts ...func(*ScriptQuery)) *FindingQuery {
 	query := &ScriptQuery{config: fq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	fq.withFindingToScript = query
+	fq.withScript = query
 	return fq
 }
 
-// WithFindingToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "FindingToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (fq *FindingQuery) WithFindingToEnvironment(opts ...func(*EnvironmentQuery)) *FindingQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (fq *FindingQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *FindingQuery {
 	query := &EnvironmentQuery{config: fq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	fq.withFindingToEnvironment = query
+	fq.withEnvironment = query
 	return fq
 }
 
@@ -408,7 +408,6 @@ func (fq *FindingQuery) WithFindingToEnvironment(opts ...func(*EnvironmentQuery)
 //		GroupBy(finding.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (fq *FindingQuery) GroupBy(field string, fields ...string) *FindingGroupBy {
 	grbuild := &FindingGroupBy{config: fq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -435,7 +434,6 @@ func (fq *FindingQuery) GroupBy(field string, fields ...string) *FindingGroupBy 
 //	client.Finding.Query().
 //		Select(finding.FieldName).
 //		Scan(ctx, &v)
-//
 func (fq *FindingQuery) Select(fields ...string) *FindingSelect {
 	fq.fields = append(fq.fields, fields...)
 	selbuild := &FindingSelect{FindingQuery: fq}
@@ -466,13 +464,13 @@ func (fq *FindingQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Find
 		withFKs     = fq.withFKs
 		_spec       = fq.querySpec()
 		loadedTypes = [4]bool{
-			fq.withFindingToUser != nil,
-			fq.withFindingToHost != nil,
-			fq.withFindingToScript != nil,
-			fq.withFindingToEnvironment != nil,
+			fq.withUsers != nil,
+			fq.withHost != nil,
+			fq.withScript != nil,
+			fq.withEnvironment != nil,
 		}
 	)
-	if fq.withFindingToHost != nil || fq.withFindingToScript != nil || fq.withFindingToEnvironment != nil {
+	if fq.withHost != nil || fq.withScript != nil || fq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -496,35 +494,35 @@ func (fq *FindingQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Find
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := fq.withFindingToUser; query != nil {
-		if err := fq.loadFindingToUser(ctx, query, nodes,
-			func(n *Finding) { n.Edges.FindingToUser = []*User{} },
-			func(n *Finding, e *User) { n.Edges.FindingToUser = append(n.Edges.FindingToUser, e) }); err != nil {
+	if query := fq.withUsers; query != nil {
+		if err := fq.loadUsers(ctx, query, nodes,
+			func(n *Finding) { n.Edges.Users = []*User{} },
+			func(n *Finding, e *User) { n.Edges.Users = append(n.Edges.Users, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := fq.withFindingToHost; query != nil {
-		if err := fq.loadFindingToHost(ctx, query, nodes, nil,
-			func(n *Finding, e *Host) { n.Edges.FindingToHost = e }); err != nil {
+	if query := fq.withHost; query != nil {
+		if err := fq.loadHost(ctx, query, nodes, nil,
+			func(n *Finding, e *Host) { n.Edges.Host = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := fq.withFindingToScript; query != nil {
-		if err := fq.loadFindingToScript(ctx, query, nodes, nil,
-			func(n *Finding, e *Script) { n.Edges.FindingToScript = e }); err != nil {
+	if query := fq.withScript; query != nil {
+		if err := fq.loadScript(ctx, query, nodes, nil,
+			func(n *Finding, e *Script) { n.Edges.Script = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := fq.withFindingToEnvironment; query != nil {
-		if err := fq.loadFindingToEnvironment(ctx, query, nodes, nil,
-			func(n *Finding, e *Environment) { n.Edges.FindingToEnvironment = e }); err != nil {
+	if query := fq.withEnvironment; query != nil {
+		if err := fq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *Finding, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (fq *FindingQuery) loadFindingToUser(ctx context.Context, query *UserQuery, nodes []*Finding, init func(*Finding), assign func(*Finding, *User)) error {
+func (fq *FindingQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*Finding, init func(*Finding), assign func(*Finding, *User)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Finding)
 	for i := range nodes {
@@ -536,33 +534,33 @@ func (fq *FindingQuery) loadFindingToUser(ctx context.Context, query *UserQuery,
 	}
 	query.withFKs = true
 	query.Where(predicate.User(func(s *sql.Selector) {
-		s.Where(sql.InValues(finding.FindingToUserColumn, fks...))
+		s.Where(sql.InValues(finding.UsersColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.finding_finding_to_user
+		fk := n.finding_users
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "finding_finding_to_user" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "finding_users" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "finding_finding_to_user" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "finding_users" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (fq *FindingQuery) loadFindingToHost(ctx context.Context, query *HostQuery, nodes []*Finding, init func(*Finding), assign func(*Finding, *Host)) error {
+func (fq *FindingQuery) loadHost(ctx context.Context, query *HostQuery, nodes []*Finding, init func(*Finding), assign func(*Finding, *Host)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Finding)
 	for i := range nodes {
-		if nodes[i].finding_finding_to_host == nil {
+		if nodes[i].finding_host == nil {
 			continue
 		}
-		fk := *nodes[i].finding_finding_to_host
+		fk := *nodes[i].finding_host
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -576,7 +574,7 @@ func (fq *FindingQuery) loadFindingToHost(ctx context.Context, query *HostQuery,
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "finding_finding_to_host" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "finding_host" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -584,14 +582,14 @@ func (fq *FindingQuery) loadFindingToHost(ctx context.Context, query *HostQuery,
 	}
 	return nil
 }
-func (fq *FindingQuery) loadFindingToScript(ctx context.Context, query *ScriptQuery, nodes []*Finding, init func(*Finding), assign func(*Finding, *Script)) error {
+func (fq *FindingQuery) loadScript(ctx context.Context, query *ScriptQuery, nodes []*Finding, init func(*Finding), assign func(*Finding, *Script)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Finding)
 	for i := range nodes {
-		if nodes[i].script_script_to_finding == nil {
+		if nodes[i].script_findings == nil {
 			continue
 		}
-		fk := *nodes[i].script_script_to_finding
+		fk := *nodes[i].script_findings
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -605,7 +603,7 @@ func (fq *FindingQuery) loadFindingToScript(ctx context.Context, query *ScriptQu
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "script_script_to_finding" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "script_findings" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -613,14 +611,14 @@ func (fq *FindingQuery) loadFindingToScript(ctx context.Context, query *ScriptQu
 	}
 	return nil
 }
-func (fq *FindingQuery) loadFindingToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Finding, init func(*Finding), assign func(*Finding, *Environment)) error {
+func (fq *FindingQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Finding, init func(*Finding), assign func(*Finding, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Finding)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_finding == nil {
+		if nodes[i].environment_findings == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_finding
+		fk := *nodes[i].environment_findings
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -634,7 +632,7 @@ func (fq *FindingQuery) loadFindingToEnvironment(ctx context.Context, query *Env
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_finding" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_findings" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

@@ -422,25 +422,25 @@ func LogFilePathContainsFold(v string) predicate.ServerTask {
 	})
 }
 
-// HasServerTaskToAuthUser applies the HasEdge predicate on the "ServerTaskToAuthUser" edge.
-func HasServerTaskToAuthUser() predicate.ServerTask {
+// HasAuthUser applies the HasEdge predicate on the "AuthUser" edge.
+func HasAuthUser() predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToAuthUserTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, ServerTaskToAuthUserTable, ServerTaskToAuthUserColumn),
+			sqlgraph.To(AuthUserTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, AuthUserTable, AuthUserColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasServerTaskToAuthUserWith applies the HasEdge predicate on the "ServerTaskToAuthUser" edge with a given conditions (other predicates).
-func HasServerTaskToAuthUserWith(preds ...predicate.AuthUser) predicate.ServerTask {
+// HasAuthUserWith applies the HasEdge predicate on the "AuthUser" edge with a given conditions (other predicates).
+func HasAuthUserWith(preds ...predicate.AuthUser) predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToAuthUserInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, ServerTaskToAuthUserTable, ServerTaskToAuthUserColumn),
+			sqlgraph.To(AuthUserInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, AuthUserTable, AuthUserColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -450,25 +450,25 @@ func HasServerTaskToAuthUserWith(preds ...predicate.AuthUser) predicate.ServerTa
 	})
 }
 
-// HasServerTaskToStatus applies the HasEdge predicate on the "ServerTaskToStatus" edge.
-func HasServerTaskToStatus() predicate.ServerTask {
+// HasStatus applies the HasEdge predicate on the "Status" edge.
+func HasStatus() predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToStatusTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ServerTaskToStatusTable, ServerTaskToStatusColumn),
+			sqlgraph.To(StatusTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasServerTaskToStatusWith applies the HasEdge predicate on the "ServerTaskToStatus" edge with a given conditions (other predicates).
-func HasServerTaskToStatusWith(preds ...predicate.Status) predicate.ServerTask {
+// HasStatusWith applies the HasEdge predicate on the "Status" edge with a given conditions (other predicates).
+func HasStatusWith(preds ...predicate.Status) predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToStatusInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ServerTaskToStatusTable, ServerTaskToStatusColumn),
+			sqlgraph.To(StatusInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -478,25 +478,25 @@ func HasServerTaskToStatusWith(preds ...predicate.Status) predicate.ServerTask {
 	})
 }
 
-// HasServerTaskToEnvironment applies the HasEdge predicate on the "ServerTaskToEnvironment" edge.
-func HasServerTaskToEnvironment() predicate.ServerTask {
+// HasEnvironment applies the HasEdge predicate on the "Environment" edge.
+func HasEnvironment() predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, ServerTaskToEnvironmentTable, ServerTaskToEnvironmentColumn),
+			sqlgraph.To(EnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasServerTaskToEnvironmentWith applies the HasEdge predicate on the "ServerTaskToEnvironment" edge with a given conditions (other predicates).
-func HasServerTaskToEnvironmentWith(preds ...predicate.Environment) predicate.ServerTask {
+// HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
+func HasEnvironmentWith(preds ...predicate.Environment) predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, ServerTaskToEnvironmentTable, ServerTaskToEnvironmentColumn),
+			sqlgraph.To(EnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -506,25 +506,25 @@ func HasServerTaskToEnvironmentWith(preds ...predicate.Environment) predicate.Se
 	})
 }
 
-// HasServerTaskToBuild applies the HasEdge predicate on the "ServerTaskToBuild" edge.
-func HasServerTaskToBuild() predicate.ServerTask {
+// HasBuild applies the HasEdge predicate on the "Build" edge.
+func HasBuild() predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToBuildTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, ServerTaskToBuildTable, ServerTaskToBuildColumn),
+			sqlgraph.To(BuildTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasServerTaskToBuildWith applies the HasEdge predicate on the "ServerTaskToBuild" edge with a given conditions (other predicates).
-func HasServerTaskToBuildWith(preds ...predicate.Build) predicate.ServerTask {
+// HasBuildWith applies the HasEdge predicate on the "Build" edge with a given conditions (other predicates).
+func HasBuildWith(preds ...predicate.Build) predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToBuildInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, ServerTaskToBuildTable, ServerTaskToBuildColumn),
+			sqlgraph.To(BuildInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -534,25 +534,25 @@ func HasServerTaskToBuildWith(preds ...predicate.Build) predicate.ServerTask {
 	})
 }
 
-// HasServerTaskToBuildCommit applies the HasEdge predicate on the "ServerTaskToBuildCommit" edge.
-func HasServerTaskToBuildCommit() predicate.ServerTask {
+// HasBuildCommit applies the HasEdge predicate on the "BuildCommit" edge.
+func HasBuildCommit() predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToBuildCommitTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, ServerTaskToBuildCommitTable, ServerTaskToBuildCommitColumn),
+			sqlgraph.To(BuildCommitTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, BuildCommitTable, BuildCommitColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasServerTaskToBuildCommitWith applies the HasEdge predicate on the "ServerTaskToBuildCommit" edge with a given conditions (other predicates).
-func HasServerTaskToBuildCommitWith(preds ...predicate.BuildCommit) predicate.ServerTask {
+// HasBuildCommitWith applies the HasEdge predicate on the "BuildCommit" edge with a given conditions (other predicates).
+func HasBuildCommitWith(preds ...predicate.BuildCommit) predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToBuildCommitInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, ServerTaskToBuildCommitTable, ServerTaskToBuildCommitColumn),
+			sqlgraph.To(BuildCommitInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, BuildCommitTable, BuildCommitColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -562,25 +562,25 @@ func HasServerTaskToBuildCommitWith(preds ...predicate.BuildCommit) predicate.Se
 	})
 }
 
-// HasServerTaskToGinFileMiddleware applies the HasEdge predicate on the "ServerTaskToGinFileMiddleware" edge.
-func HasServerTaskToGinFileMiddleware() predicate.ServerTask {
+// HasGinFileMiddleware applies the HasEdge predicate on the "GinFileMiddleware" edge.
+func HasGinFileMiddleware() predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToGinFileMiddlewareTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ServerTaskToGinFileMiddlewareTable, ServerTaskToGinFileMiddlewareColumn),
+			sqlgraph.To(GinFileMiddlewareTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, GinFileMiddlewareTable, GinFileMiddlewareColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasServerTaskToGinFileMiddlewareWith applies the HasEdge predicate on the "ServerTaskToGinFileMiddleware" edge with a given conditions (other predicates).
-func HasServerTaskToGinFileMiddlewareWith(preds ...predicate.GinFileMiddleware) predicate.ServerTask {
+// HasGinFileMiddlewareWith applies the HasEdge predicate on the "GinFileMiddleware" edge with a given conditions (other predicates).
+func HasGinFileMiddlewareWith(preds ...predicate.GinFileMiddleware) predicate.ServerTask {
 	return predicate.ServerTask(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskToGinFileMiddlewareInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ServerTaskToGinFileMiddlewareTable, ServerTaskToGinFileMiddlewareColumn),
+			sqlgraph.To(GinFileMiddlewareInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, GinFileMiddlewareTable, GinFileMiddlewareColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

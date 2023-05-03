@@ -7,8 +7,6 @@ import { SubheaderService } from '../_services/subheader.service';
 import { PlanService } from '@services/plan/plan.service';
 import { MatSelectChange } from '@angular/material/select';
 import { EnvironmentService } from 'src/app/services/environment/environment.service';
-import { Build, Environment } from 'src/app/models/environment.model';
-import { ID } from 'src/app/models/common.model';
 import { LaForgeGetBuildTreeQuery, LaForgeGetEnvironmentGQL, LaForgeGetEnvironmentInfoQuery, LaForgeGetEnvironmentsQuery } from '@graphql';
 
 interface Branch {
@@ -86,12 +84,12 @@ export class SubheaderComponent implements OnInit {
 
   compareEnvDropdown(
     option: {
-      env: ID;
-      build: ID;
+      env: string;
+      build: string;
     },
     value: {
-      env: ID;
-      build: ID;
+      env: string;
+      build: string;
     }
   ) {
     return option.env === value.env && option.build === value.build;

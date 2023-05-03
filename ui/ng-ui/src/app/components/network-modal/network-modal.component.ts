@@ -2,7 +2,6 @@ import { Component, Inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { LaForgeGetBuildTreeQuery, LaForgeProvisionStatus, LaForgeSubscribeUpdatedStatusSubscription } from '@graphql';
 import { EnvironmentService } from '@services/environment/environment.service';
-import { ProvisionStatus } from 'src/app/models/common.model';
 
 @Component({
   selector: 'app-network-modal',
@@ -18,7 +17,7 @@ export class NetworkModalComponent {
     public dialogRef: MatDialogRef<NetworkModalComponent>,
     @Inject(MAT_DIALOG_DATA)
     public data: {
-      provisionedNetwork: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0];
+      provisionedNetwork: LaForgeGetBuildTreeQuery['build']['Teams'][0]['ProvisionedNetworks'][0];
       planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
     },
     private envService: EnvironmentService
@@ -32,18 +31,15 @@ export class NetworkModalComponent {
     let numWithAgentData = 0;
     let numWithCompletedSteps = 0;
     let totalHosts = 0;
-    for (const host of this.data.provisionedNetwork.ProvisionedNetworkToProvisionedHost) {
+    for (const host of this.data.provisionedNetwork.ProvisionedHosts) {
       totalHosts++;
-      if (host.ProvisionedHostToAgentStatus?.clientId) numWithAgentData++;
+      if (host.AgentStatuses[0]?.clientId) numWithAgentData++;
       let totalSteps = 0;
       let totalCompletedSteps = 0;
-      for (const step of host.ProvisionedHostToProvisioningStep) {
-        if (step.step_number === 0) continue;
+      for (const step of host.ProvisioningSteps) {
+        if (step.stepNumber === 0) continue;
         totalSteps++;
-        if (
-          step.ProvisioningStepToStatus.id &&
-          this.envService.getStatus(step.ProvisioningStepToPlan.PlanToStatus.id)?.state === LaForgeProvisionStatus.Complete
-        )
+        if (step.Status.id && this.envService.getStatus(step.Plan.Status.id)?.state === LaForgeProvisionStatus.Complete)
           totalCompletedSteps++;
       }
       if (totalSteps === totalCompletedSteps) numWithCompletedSteps++;
@@ -51,21 +47,21 @@ export class NetworkModalComponent {
     return numWithAgentData === totalHosts && numWithCompletedSteps === totalHosts;
   }
 
-  getStatus(): ProvisionStatus {
+  getStatus(): LaForgeProvisionStatus {
     let numWithAgentData = 0;
     let totalAgents = 0;
-    for (const host of this.data.provisionedNetwork.ProvisionedNetworkToProvisionedHost) {
+    for (const host of this.data.provisionedNetwork.ProvisionedHosts) {
       totalAgents++;
-      if (host.ProvisionedHostToAgentStatus?.clientId) numWithAgentData++;
+      if (host.AgentStatuses[0]?.clientId) numWithAgentData++;
     }
     if (numWithAgentData === totalAgents) {
       this.failedChildren = false;
-      return ProvisionStatus.COMPLETE;
+      return LaForgeProvisionStatus.Complete;
     } else if (numWithAgentData === 0) {
-      return ProvisionStatus.FAILED;
+      return LaForgeProvisionStatus.Failed;
     } else {
       this.failedChildren = true;
-      return ProvisionStatus.INPROGRESS;
+      return LaForgeProvisionStatus.Inprogress;
     }
   }
 

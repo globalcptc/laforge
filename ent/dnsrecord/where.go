@@ -525,25 +525,25 @@ func DisabledNEQ(v bool) predicate.DNSRecord {
 	})
 }
 
-// HasDNSRecordToEnvironment applies the HasEdge predicate on the "DNSRecordToEnvironment" edge.
-func HasDNSRecordToEnvironment() predicate.DNSRecord {
+// HasEnvironment applies the HasEdge predicate on the "Environment" edge.
+func HasEnvironment() predicate.DNSRecord {
 	return predicate.DNSRecord(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DNSRecordToEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, DNSRecordToEnvironmentTable, DNSRecordToEnvironmentColumn),
+			sqlgraph.To(EnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasDNSRecordToEnvironmentWith applies the HasEdge predicate on the "DNSRecordToEnvironment" edge with a given conditions (other predicates).
-func HasDNSRecordToEnvironmentWith(preds ...predicate.Environment) predicate.DNSRecord {
+// HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
+func HasEnvironmentWith(preds ...predicate.Environment) predicate.DNSRecord {
 	return predicate.DNSRecord(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DNSRecordToEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, DNSRecordToEnvironmentTable, DNSRecordToEnvironmentColumn),
+			sqlgraph.To(EnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

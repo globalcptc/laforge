@@ -885,25 +885,25 @@ func IsTxtNEQ(v bool) predicate.FileDownload {
 	})
 }
 
-// HasFileDownloadToEnvironment applies the HasEdge predicate on the "FileDownloadToEnvironment" edge.
-func HasFileDownloadToEnvironment() predicate.FileDownload {
+// HasEnvironment applies the HasEdge predicate on the "Environment" edge.
+func HasEnvironment() predicate.FileDownload {
 	return predicate.FileDownload(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileDownloadToEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, FileDownloadToEnvironmentTable, FileDownloadToEnvironmentColumn),
+			sqlgraph.To(EnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasFileDownloadToEnvironmentWith applies the HasEdge predicate on the "FileDownloadToEnvironment" edge with a given conditions (other predicates).
-func HasFileDownloadToEnvironmentWith(preds ...predicate.Environment) predicate.FileDownload {
+// HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
+func HasEnvironmentWith(preds ...predicate.Environment) predicate.FileDownload {
 	return predicate.FileDownload(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileDownloadToEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, FileDownloadToEnvironmentTable, FileDownloadToEnvironmentColumn),
+			sqlgraph.To(EnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

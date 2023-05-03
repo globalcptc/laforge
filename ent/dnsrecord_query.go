@@ -19,14 +19,14 @@ import (
 // DNSRecordQuery is the builder for querying DNSRecord entities.
 type DNSRecordQuery struct {
 	config
-	limit                      *int
-	offset                     *int
-	unique                     *bool
-	order                      []OrderFunc
-	fields                     []string
-	predicates                 []predicate.DNSRecord
-	withDNSRecordToEnvironment *EnvironmentQuery
-	withFKs                    bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.DNSRecord
+	withEnvironment *EnvironmentQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,8 +63,8 @@ func (drq *DNSRecordQuery) Order(o ...OrderFunc) *DNSRecordQuery {
 	return drq
 }
 
-// QueryDNSRecordToEnvironment chains the current query on the "DNSRecordToEnvironment" edge.
-func (drq *DNSRecordQuery) QueryDNSRecordToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (drq *DNSRecordQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: drq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := drq.prepareQuery(ctx); err != nil {
@@ -77,7 +77,7 @@ func (drq *DNSRecordQuery) QueryDNSRecordToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(dnsrecord.Table, dnsrecord.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, dnsrecord.DNSRecordToEnvironmentTable, dnsrecord.DNSRecordToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, dnsrecord.EnvironmentTable, dnsrecord.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(drq.driver.Dialect(), step)
 		return fromU, nil
@@ -261,12 +261,12 @@ func (drq *DNSRecordQuery) Clone() *DNSRecordQuery {
 		return nil
 	}
 	return &DNSRecordQuery{
-		config:                     drq.config,
-		limit:                      drq.limit,
-		offset:                     drq.offset,
-		order:                      append([]OrderFunc{}, drq.order...),
-		predicates:                 append([]predicate.DNSRecord{}, drq.predicates...),
-		withDNSRecordToEnvironment: drq.withDNSRecordToEnvironment.Clone(),
+		config:          drq.config,
+		limit:           drq.limit,
+		offset:          drq.offset,
+		order:           append([]OrderFunc{}, drq.order...),
+		predicates:      append([]predicate.DNSRecord{}, drq.predicates...),
+		withEnvironment: drq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    drq.sql.Clone(),
 		path:   drq.path,
@@ -274,14 +274,14 @@ func (drq *DNSRecordQuery) Clone() *DNSRecordQuery {
 	}
 }
 
-// WithDNSRecordToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "DNSRecordToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (drq *DNSRecordQuery) WithDNSRecordToEnvironment(opts ...func(*EnvironmentQuery)) *DNSRecordQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (drq *DNSRecordQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *DNSRecordQuery {
 	query := &EnvironmentQuery{config: drq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	drq.withDNSRecordToEnvironment = query
+	drq.withEnvironment = query
 	return drq
 }
 
@@ -299,7 +299,6 @@ func (drq *DNSRecordQuery) WithDNSRecordToEnvironment(opts ...func(*EnvironmentQ
 //		GroupBy(dnsrecord.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (drq *DNSRecordQuery) GroupBy(field string, fields ...string) *DNSRecordGroupBy {
 	grbuild := &DNSRecordGroupBy{config: drq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (drq *DNSRecordQuery) GroupBy(field string, fields ...string) *DNSRecordGro
 //	client.DNSRecord.Query().
 //		Select(dnsrecord.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (drq *DNSRecordQuery) Select(fields ...string) *DNSRecordSelect {
 	drq.fields = append(drq.fields, fields...)
 	selbuild := &DNSRecordSelect{DNSRecordQuery: drq}
@@ -357,10 +355,10 @@ func (drq *DNSRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*D
 		withFKs     = drq.withFKs
 		_spec       = drq.querySpec()
 		loadedTypes = [1]bool{
-			drq.withDNSRecordToEnvironment != nil,
+			drq.withEnvironment != nil,
 		}
 	)
-	if drq.withDNSRecordToEnvironment != nil {
+	if drq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -384,23 +382,23 @@ func (drq *DNSRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*D
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := drq.withDNSRecordToEnvironment; query != nil {
-		if err := drq.loadDNSRecordToEnvironment(ctx, query, nodes, nil,
-			func(n *DNSRecord, e *Environment) { n.Edges.DNSRecordToEnvironment = e }); err != nil {
+	if query := drq.withEnvironment; query != nil {
+		if err := drq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *DNSRecord, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (drq *DNSRecordQuery) loadDNSRecordToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*DNSRecord, init func(*DNSRecord), assign func(*DNSRecord, *Environment)) error {
+func (drq *DNSRecordQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*DNSRecord, init func(*DNSRecord), assign func(*DNSRecord, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*DNSRecord)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_dns_record == nil {
+		if nodes[i].environment_dns_records == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_dns_record
+		fk := *nodes[i].environment_dns_records
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -414,7 +412,7 @@ func (drq *DNSRecordQuery) loadDNSRecordToEnvironment(ctx context.Context, query
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_dns_record" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_dns_records" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

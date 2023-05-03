@@ -9,9 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/environment"
-	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
@@ -167,53 +165,23 @@ func (vc *ValidationCreate) SetNillableID(u *uuid.UUID) *ValidationCreate {
 	return vc
 }
 
-// SetValidationToAgentTaskID sets the "ValidationToAgentTask" edge to the AgentTask entity by ID.
-func (vc *ValidationCreate) SetValidationToAgentTaskID(id uuid.UUID) *ValidationCreate {
-	vc.mutation.SetValidationToAgentTaskID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (vc *ValidationCreate) SetEnvironmentID(id uuid.UUID) *ValidationCreate {
+	vc.mutation.SetEnvironmentID(id)
 	return vc
 }
 
-// SetNillableValidationToAgentTaskID sets the "ValidationToAgentTask" edge to the AgentTask entity by ID if the given value is not nil.
-func (vc *ValidationCreate) SetNillableValidationToAgentTaskID(id *uuid.UUID) *ValidationCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (vc *ValidationCreate) SetNillableEnvironmentID(id *uuid.UUID) *ValidationCreate {
 	if id != nil {
-		vc = vc.SetValidationToAgentTaskID(*id)
+		vc = vc.SetEnvironmentID(*id)
 	}
 	return vc
 }
 
-// SetValidationToAgentTask sets the "ValidationToAgentTask" edge to the AgentTask entity.
-func (vc *ValidationCreate) SetValidationToAgentTask(a *AgentTask) *ValidationCreate {
-	return vc.SetValidationToAgentTaskID(a.ID)
-}
-
-// AddValidationToScriptIDs adds the "ValidationToScript" edge to the Script entity by IDs.
-func (vc *ValidationCreate) AddValidationToScriptIDs(ids ...uuid.UUID) *ValidationCreate {
-	vc.mutation.AddValidationToScriptIDs(ids...)
-	return vc
-}
-
-// AddValidationToScript adds the "ValidationToScript" edges to the Script entity.
-func (vc *ValidationCreate) AddValidationToScript(s ...*Script) *ValidationCreate {
-	ids := make([]uuid.UUID, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
-	}
-	return vc.AddValidationToScriptIDs(ids...)
-}
-
-// AddValidationToEnvironmentIDs adds the "ValidationToEnvironment" edge to the Environment entity by IDs.
-func (vc *ValidationCreate) AddValidationToEnvironmentIDs(ids ...uuid.UUID) *ValidationCreate {
-	vc.mutation.AddValidationToEnvironmentIDs(ids...)
-	return vc
-}
-
-// AddValidationToEnvironment adds the "ValidationToEnvironment" edges to the Environment entity.
-func (vc *ValidationCreate) AddValidationToEnvironment(e ...*Environment) *ValidationCreate {
-	ids := make([]uuid.UUID, len(e))
-	for i := range e {
-		ids[i] = e[i].ID
-	}
-	return vc.AddValidationToEnvironmentIDs(ids...)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (vc *ValidationCreate) SetEnvironment(e *Environment) *ValidationCreate {
+	return vc.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the ValidationMutation object of the builder.
@@ -569,51 +537,12 @@ func (vc *ValidationCreate) createSpec() (*Validation, *sqlgraph.CreateSpec) {
 		})
 		_node.ProcessName = value
 	}
-	if nodes := vc.mutation.ValidationToAgentTaskIDs(); len(nodes) > 0 {
+	if nodes := vc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   validation.ValidationToAgentTaskTable,
-			Columns: []string{validation.ValidationToAgentTaskColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agenttask.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.agent_task_agent_task_to_validation = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := vc.mutation.ValidationToScriptIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   validation.ValidationToScriptTable,
-			Columns: []string{validation.ValidationToScriptColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := vc.mutation.ValidationToEnvironmentIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   validation.ValidationToEnvironmentTable,
-			Columns: validation.ValidationToEnvironmentPrimaryKey,
+			Table:   validation.EnvironmentTable,
+			Columns: []string{validation.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -625,6 +554,7 @@ func (vc *ValidationCreate) createSpec() (*Validation, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.environment_validations = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

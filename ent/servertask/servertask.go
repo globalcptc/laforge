@@ -25,62 +25,62 @@ const (
 	FieldErrors = "errors"
 	// FieldLogFilePath holds the string denoting the log_file_path field in the database.
 	FieldLogFilePath = "log_file_path"
-	// EdgeServerTaskToAuthUser holds the string denoting the servertasktoauthuser edge name in mutations.
-	EdgeServerTaskToAuthUser = "ServerTaskToAuthUser"
-	// EdgeServerTaskToStatus holds the string denoting the servertasktostatus edge name in mutations.
-	EdgeServerTaskToStatus = "ServerTaskToStatus"
-	// EdgeServerTaskToEnvironment holds the string denoting the servertasktoenvironment edge name in mutations.
-	EdgeServerTaskToEnvironment = "ServerTaskToEnvironment"
-	// EdgeServerTaskToBuild holds the string denoting the servertasktobuild edge name in mutations.
-	EdgeServerTaskToBuild = "ServerTaskToBuild"
-	// EdgeServerTaskToBuildCommit holds the string denoting the servertasktobuildcommit edge name in mutations.
-	EdgeServerTaskToBuildCommit = "ServerTaskToBuildCommit"
-	// EdgeServerTaskToGinFileMiddleware holds the string denoting the servertasktoginfilemiddleware edge name in mutations.
-	EdgeServerTaskToGinFileMiddleware = "ServerTaskToGinFileMiddleware"
+	// EdgeAuthUser holds the string denoting the authuser edge name in mutations.
+	EdgeAuthUser = "AuthUser"
+	// EdgeStatus holds the string denoting the status edge name in mutations.
+	EdgeStatus = "Status"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
+	// EdgeBuild holds the string denoting the build edge name in mutations.
+	EdgeBuild = "Build"
+	// EdgeBuildCommit holds the string denoting the buildcommit edge name in mutations.
+	EdgeBuildCommit = "BuildCommit"
+	// EdgeGinFileMiddleware holds the string denoting the ginfilemiddleware edge name in mutations.
+	EdgeGinFileMiddleware = "GinFileMiddleware"
 	// Table holds the table name of the servertask in the database.
 	Table = "server_tasks"
-	// ServerTaskToAuthUserTable is the table that holds the ServerTaskToAuthUser relation/edge.
-	ServerTaskToAuthUserTable = "server_tasks"
-	// ServerTaskToAuthUserInverseTable is the table name for the AuthUser entity.
+	// AuthUserTable is the table that holds the AuthUser relation/edge.
+	AuthUserTable = "server_tasks"
+	// AuthUserInverseTable is the table name for the AuthUser entity.
 	// It exists in this package in order to avoid circular dependency with the "authuser" package.
-	ServerTaskToAuthUserInverseTable = "auth_users"
-	// ServerTaskToAuthUserColumn is the table column denoting the ServerTaskToAuthUser relation/edge.
-	ServerTaskToAuthUserColumn = "server_task_server_task_to_auth_user"
-	// ServerTaskToStatusTable is the table that holds the ServerTaskToStatus relation/edge.
-	ServerTaskToStatusTable = "status"
-	// ServerTaskToStatusInverseTable is the table name for the Status entity.
+	AuthUserInverseTable = "auth_users"
+	// AuthUserColumn is the table column denoting the AuthUser relation/edge.
+	AuthUserColumn = "server_task_auth_user"
+	// StatusTable is the table that holds the Status relation/edge.
+	StatusTable = "status"
+	// StatusInverseTable is the table name for the Status entity.
 	// It exists in this package in order to avoid circular dependency with the "status" package.
-	ServerTaskToStatusInverseTable = "status"
-	// ServerTaskToStatusColumn is the table column denoting the ServerTaskToStatus relation/edge.
-	ServerTaskToStatusColumn = "server_task_server_task_to_status"
-	// ServerTaskToEnvironmentTable is the table that holds the ServerTaskToEnvironment relation/edge.
-	ServerTaskToEnvironmentTable = "server_tasks"
-	// ServerTaskToEnvironmentInverseTable is the table name for the Environment entity.
+	StatusInverseTable = "status"
+	// StatusColumn is the table column denoting the Status relation/edge.
+	StatusColumn = "server_task_status"
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "server_tasks"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	ServerTaskToEnvironmentInverseTable = "environments"
-	// ServerTaskToEnvironmentColumn is the table column denoting the ServerTaskToEnvironment relation/edge.
-	ServerTaskToEnvironmentColumn = "server_task_server_task_to_environment"
-	// ServerTaskToBuildTable is the table that holds the ServerTaskToBuild relation/edge.
-	ServerTaskToBuildTable = "server_tasks"
-	// ServerTaskToBuildInverseTable is the table name for the Build entity.
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "server_task_environment"
+	// BuildTable is the table that holds the Build relation/edge.
+	BuildTable = "server_tasks"
+	// BuildInverseTable is the table name for the Build entity.
 	// It exists in this package in order to avoid circular dependency with the "build" package.
-	ServerTaskToBuildInverseTable = "builds"
-	// ServerTaskToBuildColumn is the table column denoting the ServerTaskToBuild relation/edge.
-	ServerTaskToBuildColumn = "server_task_server_task_to_build"
-	// ServerTaskToBuildCommitTable is the table that holds the ServerTaskToBuildCommit relation/edge.
-	ServerTaskToBuildCommitTable = "server_tasks"
-	// ServerTaskToBuildCommitInverseTable is the table name for the BuildCommit entity.
+	BuildInverseTable = "builds"
+	// BuildColumn is the table column denoting the Build relation/edge.
+	BuildColumn = "server_task_build"
+	// BuildCommitTable is the table that holds the BuildCommit relation/edge.
+	BuildCommitTable = "server_tasks"
+	// BuildCommitInverseTable is the table name for the BuildCommit entity.
 	// It exists in this package in order to avoid circular dependency with the "buildcommit" package.
-	ServerTaskToBuildCommitInverseTable = "build_commits"
-	// ServerTaskToBuildCommitColumn is the table column denoting the ServerTaskToBuildCommit relation/edge.
-	ServerTaskToBuildCommitColumn = "server_task_server_task_to_build_commit"
-	// ServerTaskToGinFileMiddlewareTable is the table that holds the ServerTaskToGinFileMiddleware relation/edge.
-	ServerTaskToGinFileMiddlewareTable = "gin_file_middlewares"
-	// ServerTaskToGinFileMiddlewareInverseTable is the table name for the GinFileMiddleware entity.
+	BuildCommitInverseTable = "build_commits"
+	// BuildCommitColumn is the table column denoting the BuildCommit relation/edge.
+	BuildCommitColumn = "server_task_build_commit"
+	// GinFileMiddlewareTable is the table that holds the GinFileMiddleware relation/edge.
+	GinFileMiddlewareTable = "gin_file_middlewares"
+	// GinFileMiddlewareInverseTable is the table name for the GinFileMiddleware entity.
 	// It exists in this package in order to avoid circular dependency with the "ginfilemiddleware" package.
-	ServerTaskToGinFileMiddlewareInverseTable = "gin_file_middlewares"
-	// ServerTaskToGinFileMiddlewareColumn is the table column denoting the ServerTaskToGinFileMiddleware relation/edge.
-	ServerTaskToGinFileMiddlewareColumn = "server_task_server_task_to_gin_file_middleware"
+	GinFileMiddlewareInverseTable = "gin_file_middlewares"
+	// GinFileMiddlewareColumn is the table column denoting the GinFileMiddleware relation/edge.
+	GinFileMiddlewareColumn = "server_task_gin_file_middleware"
 )
 
 // Columns holds all SQL columns for servertask fields.
@@ -96,10 +96,10 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "server_tasks"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"server_task_server_task_to_auth_user",
-	"server_task_server_task_to_environment",
-	"server_task_server_task_to_build",
-	"server_task_server_task_to_build_commit",
+	"server_task_auth_user",
+	"server_task_environment",
+	"server_task_build",
+	"server_task_build_commit",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

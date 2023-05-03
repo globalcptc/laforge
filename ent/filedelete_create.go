@@ -59,23 +59,23 @@ func (fdc *FileDeleteCreate) SetNillableID(u *uuid.UUID) *FileDeleteCreate {
 	return fdc
 }
 
-// SetFileDeleteToEnvironmentID sets the "FileDeleteToEnvironment" edge to the Environment entity by ID.
-func (fdc *FileDeleteCreate) SetFileDeleteToEnvironmentID(id uuid.UUID) *FileDeleteCreate {
-	fdc.mutation.SetFileDeleteToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (fdc *FileDeleteCreate) SetEnvironmentID(id uuid.UUID) *FileDeleteCreate {
+	fdc.mutation.SetEnvironmentID(id)
 	return fdc
 }
 
-// SetNillableFileDeleteToEnvironmentID sets the "FileDeleteToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (fdc *FileDeleteCreate) SetNillableFileDeleteToEnvironmentID(id *uuid.UUID) *FileDeleteCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (fdc *FileDeleteCreate) SetNillableEnvironmentID(id *uuid.UUID) *FileDeleteCreate {
 	if id != nil {
-		fdc = fdc.SetFileDeleteToEnvironmentID(*id)
+		fdc = fdc.SetEnvironmentID(*id)
 	}
 	return fdc
 }
 
-// SetFileDeleteToEnvironment sets the "FileDeleteToEnvironment" edge to the Environment entity.
-func (fdc *FileDeleteCreate) SetFileDeleteToEnvironment(e *Environment) *FileDeleteCreate {
-	return fdc.SetFileDeleteToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (fdc *FileDeleteCreate) SetEnvironment(e *Environment) *FileDeleteCreate {
+	return fdc.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the FileDeleteMutation object of the builder.
@@ -243,12 +243,12 @@ func (fdc *FileDeleteCreate) createSpec() (*FileDelete, *sqlgraph.CreateSpec) {
 		})
 		_node.Validations = value
 	}
-	if nodes := fdc.mutation.FileDeleteToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := fdc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   filedelete.FileDeleteToEnvironmentTable,
-			Columns: []string{filedelete.FileDeleteToEnvironmentColumn},
+			Table:   filedelete.EnvironmentTable,
+			Columns: []string{filedelete.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -260,7 +260,7 @@ func (fdc *FileDeleteCreate) createSpec() (*FileDelete, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.environment_environment_to_file_delete = &nodes[0]
+		_node.environment_file_deletes = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

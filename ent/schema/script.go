@@ -54,16 +54,15 @@ func (Script) Fields() []ent.Field {
 // Edges of the Script.
 func (Script) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("ScriptToUser", User.Type).
+		edge.To("Users", User.Type).
 			StructTag(`hcl:"maintainer,block"`),
-		edge.To("ScriptToFinding", Finding.Type).
+		edge.To("Findings", Finding.Type).
 			StructTag(`hcl:"finding,block"`).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.From("ScriptToEnvironment", Environment.Type).
-			Ref("EnvironmentToScript").
+		edge.From("Environment", Environment.Type).
+			Ref("Scripts").
 			Unique(),
-		edge.To("ScriptToValidation", Validation.Type).StructTag(`hcl:"validation,block"`).Unique(),
 	}
 }

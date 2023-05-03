@@ -54,235 +54,231 @@ func (pssu *ProvisioningScheduledStepUpdate) SetRunTime(t time.Time) *Provisioni
 	return pssu
 }
 
-// SetProvisioningScheduledStepToStatusID sets the "ProvisioningScheduledStepToStatus" edge to the Status entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToStatusID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToStatusID(id)
+// SetStatusID sets the "Status" edge to the Status entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetStatusID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetStatusID(id)
 	return pssu
 }
 
-// SetNillableProvisioningScheduledStepToStatusID sets the "ProvisioningScheduledStepToStatus" edge to the Status entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableProvisioningScheduledStepToStatusID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
+// SetNillableStatusID sets the "Status" edge to the Status entity by ID if the given value is not nil.
+func (pssu *ProvisioningScheduledStepUpdate) SetNillableStatusID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
 	if id != nil {
-		pssu = pssu.SetProvisioningScheduledStepToStatusID(*id)
+		pssu = pssu.SetStatusID(*id)
 	}
 	return pssu
 }
 
-// SetProvisioningScheduledStepToStatus sets the "ProvisioningScheduledStepToStatus" edge to the Status entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToStatus(s *Status) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToStatusID(s.ID)
+// SetStatus sets the "Status" edge to the Status entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetStatus(s *Status) *ProvisioningScheduledStepUpdate {
+	return pssu.SetStatusID(s.ID)
 }
 
-// SetProvisioningScheduledStepToScheduledStepID sets the "ProvisioningScheduledStepToScheduledStep" edge to the ScheduledStep entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToScheduledStepID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToScheduledStepID(id)
+// SetScheduledStepID sets the "ScheduledStep" edge to the ScheduledStep entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetScheduledStepID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetScheduledStepID(id)
 	return pssu
 }
 
-// SetProvisioningScheduledStepToScheduledStep sets the "ProvisioningScheduledStepToScheduledStep" edge to the ScheduledStep entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToScheduledStep(s *ScheduledStep) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToScheduledStepID(s.ID)
+// SetScheduledStep sets the "ScheduledStep" edge to the ScheduledStep entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetScheduledStep(s *ScheduledStep) *ProvisioningScheduledStepUpdate {
+	return pssu.SetScheduledStepID(s.ID)
 }
 
-// SetProvisioningScheduledStepToProvisionedHostID sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToProvisionedHostID(id)
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetProvisionedHostID(id)
 	return pssu
 }
 
-// SetProvisioningScheduledStepToProvisionedHost sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToProvisionedHostID(p.ID)
+// SetProvisionedHost sets the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepUpdate {
+	return pssu.SetProvisionedHostID(p.ID)
 }
 
-// SetProvisioningScheduledStepToScriptID sets the "ProvisioningScheduledStepToScript" edge to the Script entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToScriptID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToScriptID(id)
+// SetScriptID sets the "Script" edge to the Script entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetScriptID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetScriptID(id)
 	return pssu
 }
 
-// SetNillableProvisioningScheduledStepToScriptID sets the "ProvisioningScheduledStepToScript" edge to the Script entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableProvisioningScheduledStepToScriptID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
+// SetNillableScriptID sets the "Script" edge to the Script entity by ID if the given value is not nil.
+func (pssu *ProvisioningScheduledStepUpdate) SetNillableScriptID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
 	if id != nil {
-		pssu = pssu.SetProvisioningScheduledStepToScriptID(*id)
+		pssu = pssu.SetScriptID(*id)
 	}
 	return pssu
 }
 
-// SetProvisioningScheduledStepToScript sets the "ProvisioningScheduledStepToScript" edge to the Script entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToScript(s *Script) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToScriptID(s.ID)
+// SetScript sets the "Script" edge to the Script entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetScript(s *Script) *ProvisioningScheduledStepUpdate {
+	return pssu.SetScriptID(s.ID)
 }
 
-// SetProvisioningScheduledStepToCommandID sets the "ProvisioningScheduledStepToCommand" edge to the Command entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToCommandID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToCommandID(id)
+// SetCommandID sets the "Command" edge to the Command entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetCommandID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetCommandID(id)
 	return pssu
 }
 
-// SetNillableProvisioningScheduledStepToCommandID sets the "ProvisioningScheduledStepToCommand" edge to the Command entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableProvisioningScheduledStepToCommandID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
+// SetNillableCommandID sets the "Command" edge to the Command entity by ID if the given value is not nil.
+func (pssu *ProvisioningScheduledStepUpdate) SetNillableCommandID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
 	if id != nil {
-		pssu = pssu.SetProvisioningScheduledStepToCommandID(*id)
+		pssu = pssu.SetCommandID(*id)
 	}
 	return pssu
 }
 
-// SetProvisioningScheduledStepToCommand sets the "ProvisioningScheduledStepToCommand" edge to the Command entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToCommand(c *Command) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToCommandID(c.ID)
+// SetCommand sets the "Command" edge to the Command entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetCommand(c *Command) *ProvisioningScheduledStepUpdate {
+	return pssu.SetCommandID(c.ID)
 }
 
-// SetProvisioningScheduledStepToDNSRecordID sets the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToDNSRecordID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToDNSRecordID(id)
+// SetDNSRecordID sets the "DNSRecord" edge to the DNSRecord entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetDNSRecordID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetDNSRecordID(id)
 	return pssu
 }
 
-// SetNillableProvisioningScheduledStepToDNSRecordID sets the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableProvisioningScheduledStepToDNSRecordID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
+// SetNillableDNSRecordID sets the "DNSRecord" edge to the DNSRecord entity by ID if the given value is not nil.
+func (pssu *ProvisioningScheduledStepUpdate) SetNillableDNSRecordID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
 	if id != nil {
-		pssu = pssu.SetProvisioningScheduledStepToDNSRecordID(*id)
+		pssu = pssu.SetDNSRecordID(*id)
 	}
 	return pssu
 }
 
-// SetProvisioningScheduledStepToDNSRecord sets the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToDNSRecord(d *DNSRecord) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToDNSRecordID(d.ID)
+// SetDNSRecord sets the "DNSRecord" edge to the DNSRecord entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetDNSRecord(d *DNSRecord) *ProvisioningScheduledStepUpdate {
+	return pssu.SetDNSRecordID(d.ID)
 }
 
-// SetProvisioningScheduledStepToFileDeleteID sets the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToFileDeleteID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToFileDeleteID(id)
+// SetFileDeleteID sets the "FileDelete" edge to the FileDelete entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetFileDeleteID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetFileDeleteID(id)
 	return pssu
 }
 
-// SetNillableProvisioningScheduledStepToFileDeleteID sets the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableProvisioningScheduledStepToFileDeleteID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
+// SetNillableFileDeleteID sets the "FileDelete" edge to the FileDelete entity by ID if the given value is not nil.
+func (pssu *ProvisioningScheduledStepUpdate) SetNillableFileDeleteID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
 	if id != nil {
-		pssu = pssu.SetProvisioningScheduledStepToFileDeleteID(*id)
+		pssu = pssu.SetFileDeleteID(*id)
 	}
 	return pssu
 }
 
-// SetProvisioningScheduledStepToFileDelete sets the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToFileDelete(f *FileDelete) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToFileDeleteID(f.ID)
+// SetFileDelete sets the "FileDelete" edge to the FileDelete entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetFileDelete(f *FileDelete) *ProvisioningScheduledStepUpdate {
+	return pssu.SetFileDeleteID(f.ID)
 }
 
-// SetProvisioningScheduledStepToFileDownloadID sets the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToFileDownloadID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToFileDownloadID(id)
+// SetFileDownloadID sets the "FileDownload" edge to the FileDownload entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetFileDownloadID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetFileDownloadID(id)
 	return pssu
 }
 
-// SetNillableProvisioningScheduledStepToFileDownloadID sets the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableProvisioningScheduledStepToFileDownloadID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
+// SetNillableFileDownloadID sets the "FileDownload" edge to the FileDownload entity by ID if the given value is not nil.
+func (pssu *ProvisioningScheduledStepUpdate) SetNillableFileDownloadID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
 	if id != nil {
-		pssu = pssu.SetProvisioningScheduledStepToFileDownloadID(*id)
+		pssu = pssu.SetFileDownloadID(*id)
 	}
 	return pssu
 }
 
-// SetProvisioningScheduledStepToFileDownload sets the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToFileDownload(f *FileDownload) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToFileDownloadID(f.ID)
+// SetFileDownload sets the "FileDownload" edge to the FileDownload entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetFileDownload(f *FileDownload) *ProvisioningScheduledStepUpdate {
+	return pssu.SetFileDownloadID(f.ID)
 }
 
-// SetProvisioningScheduledStepToFileExtractID sets the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToFileExtractID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToFileExtractID(id)
+// SetFileExtractID sets the "FileExtract" edge to the FileExtract entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetFileExtractID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetFileExtractID(id)
 	return pssu
 }
 
-// SetNillableProvisioningScheduledStepToFileExtractID sets the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableProvisioningScheduledStepToFileExtractID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
+// SetNillableFileExtractID sets the "FileExtract" edge to the FileExtract entity by ID if the given value is not nil.
+func (pssu *ProvisioningScheduledStepUpdate) SetNillableFileExtractID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
 	if id != nil {
-		pssu = pssu.SetProvisioningScheduledStepToFileExtractID(*id)
+		pssu = pssu.SetFileExtractID(*id)
 	}
 	return pssu
 }
 
-// SetProvisioningScheduledStepToFileExtract sets the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToFileExtract(f *FileExtract) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToFileExtractID(f.ID)
+// SetFileExtract sets the "FileExtract" edge to the FileExtract entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetFileExtract(f *FileExtract) *ProvisioningScheduledStepUpdate {
+	return pssu.SetFileExtractID(f.ID)
 }
 
-// SetProvisioningScheduledStepToAnsibleID sets the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToAnsibleID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToAnsibleID(id)
+// SetAnsibleID sets the "Ansible" edge to the Ansible entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetAnsibleID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetAnsibleID(id)
 	return pssu
 }
 
-// SetNillableProvisioningScheduledStepToAnsibleID sets the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableProvisioningScheduledStepToAnsibleID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
+// SetNillableAnsibleID sets the "Ansible" edge to the Ansible entity by ID if the given value is not nil.
+func (pssu *ProvisioningScheduledStepUpdate) SetNillableAnsibleID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
 	if id != nil {
-		pssu = pssu.SetProvisioningScheduledStepToAnsibleID(*id)
+		pssu = pssu.SetAnsibleID(*id)
 	}
 	return pssu
 }
 
-// SetProvisioningScheduledStepToAnsible sets the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToAnsible(a *Ansible) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToAnsibleID(a.ID)
+// SetAnsible sets the "Ansible" edge to the Ansible entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetAnsible(a *Ansible) *ProvisioningScheduledStepUpdate {
+	return pssu.SetAnsibleID(a.ID)
 }
 
-// SetProvisioningScheduledStepToAgentTaskID sets the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToAgentTaskID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToAgentTaskID(id)
+// AddAgentTaskIDs adds the "AgentTasks" edge to the AgentTask entity by IDs.
+func (pssu *ProvisioningScheduledStepUpdate) AddAgentTaskIDs(ids ...uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.AddAgentTaskIDs(ids...)
 	return pssu
 }
 
-// SetNillableProvisioningScheduledStepToAgentTaskID sets the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableProvisioningScheduledStepToAgentTaskID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
+// AddAgentTasks adds the "AgentTasks" edges to the AgentTask entity.
+func (pssu *ProvisioningScheduledStepUpdate) AddAgentTasks(a ...*AgentTask) *ProvisioningScheduledStepUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return pssu.AddAgentTaskIDs(ids...)
+}
+
+// SetPlanID sets the "Plan" edge to the Plan entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetPlanID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetPlanID(id)
+	return pssu
+}
+
+// SetNillablePlanID sets the "Plan" edge to the Plan entity by ID if the given value is not nil.
+func (pssu *ProvisioningScheduledStepUpdate) SetNillablePlanID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
 	if id != nil {
-		pssu = pssu.SetProvisioningScheduledStepToAgentTaskID(*id)
+		pssu = pssu.SetPlanID(*id)
 	}
 	return pssu
 }
 
-// SetProvisioningScheduledStepToAgentTask sets the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToAgentTask(a *AgentTask) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToAgentTaskID(a.ID)
+// SetPlan sets the "Plan" edge to the Plan entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetPlan(p *Plan) *ProvisioningScheduledStepUpdate {
+	return pssu.SetPlanID(p.ID)
 }
 
-// SetProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningStepToPlanID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningStepToPlanID(id)
+// SetGinFileMiddlewareID sets the "GinFileMiddleware" edge to the GinFileMiddleware entity by ID.
+func (pssu *ProvisioningScheduledStepUpdate) SetGinFileMiddlewareID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.SetGinFileMiddlewareID(id)
 	return pssu
 }
 
-// SetNillableProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableProvisioningStepToPlanID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
+// SetNillableGinFileMiddlewareID sets the "GinFileMiddleware" edge to the GinFileMiddleware entity by ID if the given value is not nil.
+func (pssu *ProvisioningScheduledStepUpdate) SetNillableGinFileMiddlewareID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
 	if id != nil {
-		pssu = pssu.SetProvisioningStepToPlanID(*id)
+		pssu = pssu.SetGinFileMiddlewareID(*id)
 	}
 	return pssu
 }
 
-// SetProvisioningStepToPlan sets the "ProvisioningStepToPlan" edge to the Plan entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningStepToPlan(p *Plan) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningStepToPlanID(p.ID)
-}
-
-// SetProvisioningScheduledStepToGinFileMiddlewareID sets the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity by ID.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToGinFileMiddlewareID(id uuid.UUID) *ProvisioningScheduledStepUpdate {
-	pssu.mutation.SetProvisioningScheduledStepToGinFileMiddlewareID(id)
-	return pssu
-}
-
-// SetNillableProvisioningScheduledStepToGinFileMiddlewareID sets the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity by ID if the given value is not nil.
-func (pssu *ProvisioningScheduledStepUpdate) SetNillableProvisioningScheduledStepToGinFileMiddlewareID(id *uuid.UUID) *ProvisioningScheduledStepUpdate {
-	if id != nil {
-		pssu = pssu.SetProvisioningScheduledStepToGinFileMiddlewareID(*id)
-	}
-	return pssu
-}
-
-// SetProvisioningScheduledStepToGinFileMiddleware sets the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity.
-func (pssu *ProvisioningScheduledStepUpdate) SetProvisioningScheduledStepToGinFileMiddleware(g *GinFileMiddleware) *ProvisioningScheduledStepUpdate {
-	return pssu.SetProvisioningScheduledStepToGinFileMiddlewareID(g.ID)
+// SetGinFileMiddleware sets the "GinFileMiddleware" edge to the GinFileMiddleware entity.
+func (pssu *ProvisioningScheduledStepUpdate) SetGinFileMiddleware(g *GinFileMiddleware) *ProvisioningScheduledStepUpdate {
+	return pssu.SetGinFileMiddlewareID(g.ID)
 }
 
 // Mutation returns the ProvisioningScheduledStepMutation object of the builder.
@@ -290,81 +286,96 @@ func (pssu *ProvisioningScheduledStepUpdate) Mutation() *ProvisioningScheduledSt
 	return pssu.mutation
 }
 
-// ClearProvisioningScheduledStepToStatus clears the "ProvisioningScheduledStepToStatus" edge to the Status entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToStatus() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToStatus()
+// ClearStatus clears the "Status" edge to the Status entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearStatus() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearStatus()
 	return pssu
 }
 
-// ClearProvisioningScheduledStepToScheduledStep clears the "ProvisioningScheduledStepToScheduledStep" edge to the ScheduledStep entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToScheduledStep() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToScheduledStep()
+// ClearScheduledStep clears the "ScheduledStep" edge to the ScheduledStep entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearScheduledStep() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearScheduledStep()
 	return pssu
 }
 
-// ClearProvisioningScheduledStepToProvisionedHost clears the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToProvisionedHost() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToProvisionedHost()
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearProvisionedHost() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearProvisionedHost()
 	return pssu
 }
 
-// ClearProvisioningScheduledStepToScript clears the "ProvisioningScheduledStepToScript" edge to the Script entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToScript() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToScript()
+// ClearScript clears the "Script" edge to the Script entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearScript() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearScript()
 	return pssu
 }
 
-// ClearProvisioningScheduledStepToCommand clears the "ProvisioningScheduledStepToCommand" edge to the Command entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToCommand() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToCommand()
+// ClearCommand clears the "Command" edge to the Command entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearCommand() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearCommand()
 	return pssu
 }
 
-// ClearProvisioningScheduledStepToDNSRecord clears the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToDNSRecord() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToDNSRecord()
+// ClearDNSRecord clears the "DNSRecord" edge to the DNSRecord entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearDNSRecord() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearDNSRecord()
 	return pssu
 }
 
-// ClearProvisioningScheduledStepToFileDelete clears the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToFileDelete() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToFileDelete()
+// ClearFileDelete clears the "FileDelete" edge to the FileDelete entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearFileDelete() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearFileDelete()
 	return pssu
 }
 
-// ClearProvisioningScheduledStepToFileDownload clears the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToFileDownload() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToFileDownload()
+// ClearFileDownload clears the "FileDownload" edge to the FileDownload entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearFileDownload() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearFileDownload()
 	return pssu
 }
 
-// ClearProvisioningScheduledStepToFileExtract clears the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToFileExtract() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToFileExtract()
+// ClearFileExtract clears the "FileExtract" edge to the FileExtract entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearFileExtract() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearFileExtract()
 	return pssu
 }
 
-// ClearProvisioningScheduledStepToAnsible clears the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToAnsible() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToAnsible()
+// ClearAnsible clears the "Ansible" edge to the Ansible entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearAnsible() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearAnsible()
 	return pssu
 }
 
-// ClearProvisioningScheduledStepToAgentTask clears the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToAgentTask() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToAgentTask()
+// ClearAgentTasks clears all "AgentTasks" edges to the AgentTask entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearAgentTasks() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearAgentTasks()
 	return pssu
 }
 
-// ClearProvisioningStepToPlan clears the "ProvisioningStepToPlan" edge to the Plan entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningStepToPlan() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningStepToPlan()
+// RemoveAgentTaskIDs removes the "AgentTasks" edge to AgentTask entities by IDs.
+func (pssu *ProvisioningScheduledStepUpdate) RemoveAgentTaskIDs(ids ...uuid.UUID) *ProvisioningScheduledStepUpdate {
+	pssu.mutation.RemoveAgentTaskIDs(ids...)
 	return pssu
 }
 
-// ClearProvisioningScheduledStepToGinFileMiddleware clears the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity.
-func (pssu *ProvisioningScheduledStepUpdate) ClearProvisioningScheduledStepToGinFileMiddleware() *ProvisioningScheduledStepUpdate {
-	pssu.mutation.ClearProvisioningScheduledStepToGinFileMiddleware()
+// RemoveAgentTasks removes "AgentTasks" edges to AgentTask entities.
+func (pssu *ProvisioningScheduledStepUpdate) RemoveAgentTasks(a ...*AgentTask) *ProvisioningScheduledStepUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return pssu.RemoveAgentTaskIDs(ids...)
+}
+
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearPlan() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearPlan()
+	return pssu
+}
+
+// ClearGinFileMiddleware clears the "GinFileMiddleware" edge to the GinFileMiddleware entity.
+func (pssu *ProvisioningScheduledStepUpdate) ClearGinFileMiddleware() *ProvisioningScheduledStepUpdate {
+	pssu.mutation.ClearGinFileMiddleware()
 	return pssu
 }
 
@@ -435,11 +446,11 @@ func (pssu *ProvisioningScheduledStepUpdate) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ProvisioningScheduledStep.type": %w`, err)}
 		}
 	}
-	if _, ok := pssu.mutation.ProvisioningScheduledStepToScheduledStepID(); pssu.mutation.ProvisioningScheduledStepToScheduledStepCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisioningScheduledStepToScheduledStep"`)
+	if _, ok := pssu.mutation.ScheduledStepID(); pssu.mutation.ScheduledStepCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ScheduledStep"`)
 	}
-	if _, ok := pssu.mutation.ProvisioningScheduledStepToProvisionedHostID(); pssu.mutation.ProvisioningScheduledStepToProvisionedHostCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisioningScheduledStepToProvisionedHost"`)
+	if _, ok := pssu.mutation.ProvisionedHostID(); pssu.mutation.ProvisionedHostCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisionedHost"`)
 	}
 	return nil
 }
@@ -476,12 +487,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 			Column: provisioningscheduledstep.FieldRunTime,
 		})
 	}
-	if pssu.mutation.ProvisioningScheduledStepToStatusCleared() {
+	if pssu.mutation.StatusCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToStatusTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToStatusColumn},
+			Table:   provisioningscheduledstep.StatusTable,
+			Columns: []string{provisioningscheduledstep.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -492,12 +503,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToStatusIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.StatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToStatusTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToStatusColumn},
+			Table:   provisioningscheduledstep.StatusTable,
+			Columns: []string{provisioningscheduledstep.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -511,12 +522,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduledStepToScheduledStepCleared() {
+	if pssu.mutation.ScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepColumn},
+			Table:   provisioningscheduledstep.ScheduledStepTable,
+			Columns: []string{provisioningscheduledstep.ScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -527,12 +538,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToScheduledStepIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.ScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepColumn},
+			Table:   provisioningscheduledstep.ScheduledStepTable,
+			Columns: []string{provisioningscheduledstep.ScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -546,12 +557,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduledStepToProvisionedHostCleared() {
+	if pssu.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn},
+			Table:   provisioningscheduledstep.ProvisionedHostTable,
+			Columns: []string{provisioningscheduledstep.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -562,12 +573,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn},
+			Table:   provisioningscheduledstep.ProvisionedHostTable,
+			Columns: []string{provisioningscheduledstep.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -581,12 +592,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduledStepToScriptCleared() {
+	if pssu.mutation.ScriptCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToScriptTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToScriptColumn},
+			Table:   provisioningscheduledstep.ScriptTable,
+			Columns: []string{provisioningscheduledstep.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -597,12 +608,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToScriptIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.ScriptIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToScriptTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToScriptColumn},
+			Table:   provisioningscheduledstep.ScriptTable,
+			Columns: []string{provisioningscheduledstep.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -616,12 +627,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduledStepToCommandCleared() {
+	if pssu.mutation.CommandCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToCommandTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToCommandColumn},
+			Table:   provisioningscheduledstep.CommandTable,
+			Columns: []string{provisioningscheduledstep.CommandColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -632,12 +643,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToCommandIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.CommandIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToCommandTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToCommandColumn},
+			Table:   provisioningscheduledstep.CommandTable,
+			Columns: []string{provisioningscheduledstep.CommandColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -651,12 +662,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduledStepToDNSRecordCleared() {
+	if pssu.mutation.DNSRecordCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordColumn},
+			Table:   provisioningscheduledstep.DNSRecordTable,
+			Columns: []string{provisioningscheduledstep.DNSRecordColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -667,12 +678,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToDNSRecordIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.DNSRecordIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordColumn},
+			Table:   provisioningscheduledstep.DNSRecordTable,
+			Columns: []string{provisioningscheduledstep.DNSRecordColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -686,12 +697,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduledStepToFileDeleteCleared() {
+	if pssu.mutation.FileDeleteCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteColumn},
+			Table:   provisioningscheduledstep.FileDeleteTable,
+			Columns: []string{provisioningscheduledstep.FileDeleteColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -702,12 +713,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToFileDeleteIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.FileDeleteIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteColumn},
+			Table:   provisioningscheduledstep.FileDeleteTable,
+			Columns: []string{provisioningscheduledstep.FileDeleteColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -721,12 +732,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduledStepToFileDownloadCleared() {
+	if pssu.mutation.FileDownloadCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadColumn},
+			Table:   provisioningscheduledstep.FileDownloadTable,
+			Columns: []string{provisioningscheduledstep.FileDownloadColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -737,12 +748,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToFileDownloadIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.FileDownloadIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadColumn},
+			Table:   provisioningscheduledstep.FileDownloadTable,
+			Columns: []string{provisioningscheduledstep.FileDownloadColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -756,12 +767,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduledStepToFileExtractCleared() {
+	if pssu.mutation.FileExtractCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileExtractTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileExtractColumn},
+			Table:   provisioningscheduledstep.FileExtractTable,
+			Columns: []string{provisioningscheduledstep.FileExtractColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -772,12 +783,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToFileExtractIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.FileExtractIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileExtractTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileExtractColumn},
+			Table:   provisioningscheduledstep.FileExtractTable,
+			Columns: []string{provisioningscheduledstep.FileExtractColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -791,12 +802,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduledStepToAnsibleCleared() {
+	if pssu.mutation.AnsibleCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToAnsibleTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToAnsibleColumn},
+			Table:   provisioningscheduledstep.AnsibleTable,
+			Columns: []string{provisioningscheduledstep.AnsibleColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -807,12 +818,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToAnsibleIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.AnsibleIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToAnsibleTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToAnsibleColumn},
+			Table:   provisioningscheduledstep.AnsibleTable,
+			Columns: []string{provisioningscheduledstep.AnsibleColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -826,12 +837,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduledStepToAgentTaskCleared() {
+	if pssu.mutation.AgentTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskColumn},
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -842,12 +853,31 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToAgentTaskIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.RemovedAgentTasksIDs(); len(nodes) > 0 && !pssu.mutation.AgentTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskColumn},
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agenttask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pssu.mutation.AgentTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -861,12 +891,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningStepToPlanCleared() {
+	if pssu.mutation.PlanCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningStepToPlanTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningStepToPlanColumn},
+			Table:   provisioningscheduledstep.PlanTable,
+			Columns: []string{provisioningscheduledstep.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -877,12 +907,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningStepToPlanIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.PlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningStepToPlanTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningStepToPlanColumn},
+			Table:   provisioningscheduledstep.PlanTable,
+			Columns: []string{provisioningscheduledstep.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -896,12 +926,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssu.mutation.ProvisioningScheduledStepToGinFileMiddlewareCleared() {
+	if pssu.mutation.GinFileMiddlewareCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareColumn},
+			Table:   provisioningscheduledstep.GinFileMiddlewareTable,
+			Columns: []string{provisioningscheduledstep.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -912,12 +942,12 @@ func (pssu *ProvisioningScheduledStepUpdate) sqlSave(ctx context.Context) (n int
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssu.mutation.ProvisioningScheduledStepToGinFileMiddlewareIDs(); len(nodes) > 0 {
+	if nodes := pssu.mutation.GinFileMiddlewareIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareColumn},
+			Table:   provisioningscheduledstep.GinFileMiddlewareTable,
+			Columns: []string{provisioningscheduledstep.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -962,235 +992,231 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) SetRunTime(t time.Time) *Provis
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToStatusID sets the "ProvisioningScheduledStepToStatus" edge to the Status entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToStatusID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToStatusID(id)
+// SetStatusID sets the "Status" edge to the Status entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetStatusID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetStatusID(id)
 	return pssuo
 }
 
-// SetNillableProvisioningScheduledStepToStatusID sets the "ProvisioningScheduledStepToStatus" edge to the Status entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableProvisioningScheduledStepToStatusID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+// SetNillableStatusID sets the "Status" edge to the Status entity by ID if the given value is not nil.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableStatusID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
 	if id != nil {
-		pssuo = pssuo.SetProvisioningScheduledStepToStatusID(*id)
+		pssuo = pssuo.SetStatusID(*id)
 	}
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToStatus sets the "ProvisioningScheduledStepToStatus" edge to the Status entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToStatus(s *Status) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToStatusID(s.ID)
+// SetStatus sets the "Status" edge to the Status entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetStatus(s *Status) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetStatusID(s.ID)
 }
 
-// SetProvisioningScheduledStepToScheduledStepID sets the "ProvisioningScheduledStepToScheduledStep" edge to the ScheduledStep entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToScheduledStepID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToScheduledStepID(id)
+// SetScheduledStepID sets the "ScheduledStep" edge to the ScheduledStep entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetScheduledStepID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetScheduledStepID(id)
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToScheduledStep sets the "ProvisioningScheduledStepToScheduledStep" edge to the ScheduledStep entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToScheduledStep(s *ScheduledStep) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToScheduledStepID(s.ID)
+// SetScheduledStep sets the "ScheduledStep" edge to the ScheduledStep entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetScheduledStep(s *ScheduledStep) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetScheduledStepID(s.ID)
 }
 
-// SetProvisioningScheduledStepToProvisionedHostID sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToProvisionedHostID(id)
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisionedHostID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetProvisionedHostID(id)
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToProvisionedHost sets the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToProvisionedHostID(p.ID)
+// SetProvisionedHost sets the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisionedHost(p *ProvisionedHost) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetProvisionedHostID(p.ID)
 }
 
-// SetProvisioningScheduledStepToScriptID sets the "ProvisioningScheduledStepToScript" edge to the Script entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToScriptID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToScriptID(id)
+// SetScriptID sets the "Script" edge to the Script entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetScriptID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetScriptID(id)
 	return pssuo
 }
 
-// SetNillableProvisioningScheduledStepToScriptID sets the "ProvisioningScheduledStepToScript" edge to the Script entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableProvisioningScheduledStepToScriptID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+// SetNillableScriptID sets the "Script" edge to the Script entity by ID if the given value is not nil.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableScriptID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
 	if id != nil {
-		pssuo = pssuo.SetProvisioningScheduledStepToScriptID(*id)
+		pssuo = pssuo.SetScriptID(*id)
 	}
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToScript sets the "ProvisioningScheduledStepToScript" edge to the Script entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToScript(s *Script) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToScriptID(s.ID)
+// SetScript sets the "Script" edge to the Script entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetScript(s *Script) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetScriptID(s.ID)
 }
 
-// SetProvisioningScheduledStepToCommandID sets the "ProvisioningScheduledStepToCommand" edge to the Command entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToCommandID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToCommandID(id)
+// SetCommandID sets the "Command" edge to the Command entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetCommandID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetCommandID(id)
 	return pssuo
 }
 
-// SetNillableProvisioningScheduledStepToCommandID sets the "ProvisioningScheduledStepToCommand" edge to the Command entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableProvisioningScheduledStepToCommandID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+// SetNillableCommandID sets the "Command" edge to the Command entity by ID if the given value is not nil.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableCommandID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
 	if id != nil {
-		pssuo = pssuo.SetProvisioningScheduledStepToCommandID(*id)
+		pssuo = pssuo.SetCommandID(*id)
 	}
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToCommand sets the "ProvisioningScheduledStepToCommand" edge to the Command entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToCommand(c *Command) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToCommandID(c.ID)
+// SetCommand sets the "Command" edge to the Command entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetCommand(c *Command) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetCommandID(c.ID)
 }
 
-// SetProvisioningScheduledStepToDNSRecordID sets the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToDNSRecordID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToDNSRecordID(id)
+// SetDNSRecordID sets the "DNSRecord" edge to the DNSRecord entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetDNSRecordID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetDNSRecordID(id)
 	return pssuo
 }
 
-// SetNillableProvisioningScheduledStepToDNSRecordID sets the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableProvisioningScheduledStepToDNSRecordID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+// SetNillableDNSRecordID sets the "DNSRecord" edge to the DNSRecord entity by ID if the given value is not nil.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableDNSRecordID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
 	if id != nil {
-		pssuo = pssuo.SetProvisioningScheduledStepToDNSRecordID(*id)
+		pssuo = pssuo.SetDNSRecordID(*id)
 	}
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToDNSRecord sets the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToDNSRecord(d *DNSRecord) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToDNSRecordID(d.ID)
+// SetDNSRecord sets the "DNSRecord" edge to the DNSRecord entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetDNSRecord(d *DNSRecord) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetDNSRecordID(d.ID)
 }
 
-// SetProvisioningScheduledStepToFileDeleteID sets the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToFileDeleteID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToFileDeleteID(id)
+// SetFileDeleteID sets the "FileDelete" edge to the FileDelete entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetFileDeleteID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetFileDeleteID(id)
 	return pssuo
 }
 
-// SetNillableProvisioningScheduledStepToFileDeleteID sets the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableProvisioningScheduledStepToFileDeleteID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+// SetNillableFileDeleteID sets the "FileDelete" edge to the FileDelete entity by ID if the given value is not nil.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableFileDeleteID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
 	if id != nil {
-		pssuo = pssuo.SetProvisioningScheduledStepToFileDeleteID(*id)
+		pssuo = pssuo.SetFileDeleteID(*id)
 	}
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToFileDelete sets the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToFileDelete(f *FileDelete) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToFileDeleteID(f.ID)
+// SetFileDelete sets the "FileDelete" edge to the FileDelete entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetFileDelete(f *FileDelete) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetFileDeleteID(f.ID)
 }
 
-// SetProvisioningScheduledStepToFileDownloadID sets the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToFileDownloadID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToFileDownloadID(id)
+// SetFileDownloadID sets the "FileDownload" edge to the FileDownload entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetFileDownloadID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetFileDownloadID(id)
 	return pssuo
 }
 
-// SetNillableProvisioningScheduledStepToFileDownloadID sets the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableProvisioningScheduledStepToFileDownloadID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+// SetNillableFileDownloadID sets the "FileDownload" edge to the FileDownload entity by ID if the given value is not nil.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableFileDownloadID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
 	if id != nil {
-		pssuo = pssuo.SetProvisioningScheduledStepToFileDownloadID(*id)
+		pssuo = pssuo.SetFileDownloadID(*id)
 	}
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToFileDownload sets the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToFileDownload(f *FileDownload) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToFileDownloadID(f.ID)
+// SetFileDownload sets the "FileDownload" edge to the FileDownload entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetFileDownload(f *FileDownload) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetFileDownloadID(f.ID)
 }
 
-// SetProvisioningScheduledStepToFileExtractID sets the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToFileExtractID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToFileExtractID(id)
+// SetFileExtractID sets the "FileExtract" edge to the FileExtract entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetFileExtractID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetFileExtractID(id)
 	return pssuo
 }
 
-// SetNillableProvisioningScheduledStepToFileExtractID sets the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableProvisioningScheduledStepToFileExtractID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+// SetNillableFileExtractID sets the "FileExtract" edge to the FileExtract entity by ID if the given value is not nil.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableFileExtractID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
 	if id != nil {
-		pssuo = pssuo.SetProvisioningScheduledStepToFileExtractID(*id)
+		pssuo = pssuo.SetFileExtractID(*id)
 	}
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToFileExtract sets the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToFileExtract(f *FileExtract) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToFileExtractID(f.ID)
+// SetFileExtract sets the "FileExtract" edge to the FileExtract entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetFileExtract(f *FileExtract) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetFileExtractID(f.ID)
 }
 
-// SetProvisioningScheduledStepToAnsibleID sets the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToAnsibleID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToAnsibleID(id)
+// SetAnsibleID sets the "Ansible" edge to the Ansible entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetAnsibleID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetAnsibleID(id)
 	return pssuo
 }
 
-// SetNillableProvisioningScheduledStepToAnsibleID sets the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableProvisioningScheduledStepToAnsibleID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+// SetNillableAnsibleID sets the "Ansible" edge to the Ansible entity by ID if the given value is not nil.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableAnsibleID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
 	if id != nil {
-		pssuo = pssuo.SetProvisioningScheduledStepToAnsibleID(*id)
+		pssuo = pssuo.SetAnsibleID(*id)
 	}
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToAnsible sets the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToAnsible(a *Ansible) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToAnsibleID(a.ID)
+// SetAnsible sets the "Ansible" edge to the Ansible entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetAnsible(a *Ansible) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetAnsibleID(a.ID)
 }
 
-// SetProvisioningScheduledStepToAgentTaskID sets the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToAgentTaskID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToAgentTaskID(id)
+// AddAgentTaskIDs adds the "AgentTasks" edge to the AgentTask entity by IDs.
+func (pssuo *ProvisioningScheduledStepUpdateOne) AddAgentTaskIDs(ids ...uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.AddAgentTaskIDs(ids...)
 	return pssuo
 }
 
-// SetNillableProvisioningScheduledStepToAgentTaskID sets the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableProvisioningScheduledStepToAgentTaskID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+// AddAgentTasks adds the "AgentTasks" edges to the AgentTask entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) AddAgentTasks(a ...*AgentTask) *ProvisioningScheduledStepUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return pssuo.AddAgentTaskIDs(ids...)
+}
+
+// SetPlanID sets the "Plan" edge to the Plan entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetPlanID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetPlanID(id)
+	return pssuo
+}
+
+// SetNillablePlanID sets the "Plan" edge to the Plan entity by ID if the given value is not nil.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillablePlanID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
 	if id != nil {
-		pssuo = pssuo.SetProvisioningScheduledStepToAgentTaskID(*id)
+		pssuo = pssuo.SetPlanID(*id)
 	}
 	return pssuo
 }
 
-// SetProvisioningScheduledStepToAgentTask sets the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToAgentTask(a *AgentTask) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToAgentTaskID(a.ID)
+// SetPlan sets the "Plan" edge to the Plan entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetPlan(p *Plan) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetPlanID(p.ID)
 }
 
-// SetProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningStepToPlanID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningStepToPlanID(id)
+// SetGinFileMiddlewareID sets the "GinFileMiddleware" edge to the GinFileMiddleware entity by ID.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetGinFileMiddlewareID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.SetGinFileMiddlewareID(id)
 	return pssuo
 }
 
-// SetNillableProvisioningStepToPlanID sets the "ProvisioningStepToPlan" edge to the Plan entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableProvisioningStepToPlanID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+// SetNillableGinFileMiddlewareID sets the "GinFileMiddleware" edge to the GinFileMiddleware entity by ID if the given value is not nil.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableGinFileMiddlewareID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
 	if id != nil {
-		pssuo = pssuo.SetProvisioningStepToPlanID(*id)
+		pssuo = pssuo.SetGinFileMiddlewareID(*id)
 	}
 	return pssuo
 }
 
-// SetProvisioningStepToPlan sets the "ProvisioningStepToPlan" edge to the Plan entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningStepToPlan(p *Plan) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningStepToPlanID(p.ID)
-}
-
-// SetProvisioningScheduledStepToGinFileMiddlewareID sets the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity by ID.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToGinFileMiddlewareID(id uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.SetProvisioningScheduledStepToGinFileMiddlewareID(id)
-	return pssuo
-}
-
-// SetNillableProvisioningScheduledStepToGinFileMiddlewareID sets the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity by ID if the given value is not nil.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetNillableProvisioningScheduledStepToGinFileMiddlewareID(id *uuid.UUID) *ProvisioningScheduledStepUpdateOne {
-	if id != nil {
-		pssuo = pssuo.SetProvisioningScheduledStepToGinFileMiddlewareID(*id)
-	}
-	return pssuo
-}
-
-// SetProvisioningScheduledStepToGinFileMiddleware sets the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) SetProvisioningScheduledStepToGinFileMiddleware(g *GinFileMiddleware) *ProvisioningScheduledStepUpdateOne {
-	return pssuo.SetProvisioningScheduledStepToGinFileMiddlewareID(g.ID)
+// SetGinFileMiddleware sets the "GinFileMiddleware" edge to the GinFileMiddleware entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) SetGinFileMiddleware(g *GinFileMiddleware) *ProvisioningScheduledStepUpdateOne {
+	return pssuo.SetGinFileMiddlewareID(g.ID)
 }
 
 // Mutation returns the ProvisioningScheduledStepMutation object of the builder.
@@ -1198,81 +1224,96 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) Mutation() *ProvisioningSchedul
 	return pssuo.mutation
 }
 
-// ClearProvisioningScheduledStepToStatus clears the "ProvisioningScheduledStepToStatus" edge to the Status entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToStatus() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToStatus()
+// ClearStatus clears the "Status" edge to the Status entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearStatus() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearStatus()
 	return pssuo
 }
 
-// ClearProvisioningScheduledStepToScheduledStep clears the "ProvisioningScheduledStepToScheduledStep" edge to the ScheduledStep entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToScheduledStep() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToScheduledStep()
+// ClearScheduledStep clears the "ScheduledStep" edge to the ScheduledStep entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearScheduledStep() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearScheduledStep()
 	return pssuo
 }
 
-// ClearProvisioningScheduledStepToProvisionedHost clears the "ProvisioningScheduledStepToProvisionedHost" edge to the ProvisionedHost entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToProvisionedHost() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToProvisionedHost()
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisionedHost() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearProvisionedHost()
 	return pssuo
 }
 
-// ClearProvisioningScheduledStepToScript clears the "ProvisioningScheduledStepToScript" edge to the Script entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToScript() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToScript()
+// ClearScript clears the "Script" edge to the Script entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearScript() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearScript()
 	return pssuo
 }
 
-// ClearProvisioningScheduledStepToCommand clears the "ProvisioningScheduledStepToCommand" edge to the Command entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToCommand() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToCommand()
+// ClearCommand clears the "Command" edge to the Command entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearCommand() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearCommand()
 	return pssuo
 }
 
-// ClearProvisioningScheduledStepToDNSRecord clears the "ProvisioningScheduledStepToDNSRecord" edge to the DNSRecord entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToDNSRecord() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToDNSRecord()
+// ClearDNSRecord clears the "DNSRecord" edge to the DNSRecord entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearDNSRecord() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearDNSRecord()
 	return pssuo
 }
 
-// ClearProvisioningScheduledStepToFileDelete clears the "ProvisioningScheduledStepToFileDelete" edge to the FileDelete entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToFileDelete() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToFileDelete()
+// ClearFileDelete clears the "FileDelete" edge to the FileDelete entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearFileDelete() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearFileDelete()
 	return pssuo
 }
 
-// ClearProvisioningScheduledStepToFileDownload clears the "ProvisioningScheduledStepToFileDownload" edge to the FileDownload entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToFileDownload() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToFileDownload()
+// ClearFileDownload clears the "FileDownload" edge to the FileDownload entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearFileDownload() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearFileDownload()
 	return pssuo
 }
 
-// ClearProvisioningScheduledStepToFileExtract clears the "ProvisioningScheduledStepToFileExtract" edge to the FileExtract entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToFileExtract() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToFileExtract()
+// ClearFileExtract clears the "FileExtract" edge to the FileExtract entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearFileExtract() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearFileExtract()
 	return pssuo
 }
 
-// ClearProvisioningScheduledStepToAnsible clears the "ProvisioningScheduledStepToAnsible" edge to the Ansible entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToAnsible() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToAnsible()
+// ClearAnsible clears the "Ansible" edge to the Ansible entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearAnsible() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearAnsible()
 	return pssuo
 }
 
-// ClearProvisioningScheduledStepToAgentTask clears the "ProvisioningScheduledStepToAgentTask" edge to the AgentTask entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToAgentTask() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToAgentTask()
+// ClearAgentTasks clears all "AgentTasks" edges to the AgentTask entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearAgentTasks() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearAgentTasks()
 	return pssuo
 }
 
-// ClearProvisioningStepToPlan clears the "ProvisioningStepToPlan" edge to the Plan entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningStepToPlan() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningStepToPlan()
+// RemoveAgentTaskIDs removes the "AgentTasks" edge to AgentTask entities by IDs.
+func (pssuo *ProvisioningScheduledStepUpdateOne) RemoveAgentTaskIDs(ids ...uuid.UUID) *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.RemoveAgentTaskIDs(ids...)
 	return pssuo
 }
 
-// ClearProvisioningScheduledStepToGinFileMiddleware clears the "ProvisioningScheduledStepToGinFileMiddleware" edge to the GinFileMiddleware entity.
-func (pssuo *ProvisioningScheduledStepUpdateOne) ClearProvisioningScheduledStepToGinFileMiddleware() *ProvisioningScheduledStepUpdateOne {
-	pssuo.mutation.ClearProvisioningScheduledStepToGinFileMiddleware()
+// RemoveAgentTasks removes "AgentTasks" edges to AgentTask entities.
+func (pssuo *ProvisioningScheduledStepUpdateOne) RemoveAgentTasks(a ...*AgentTask) *ProvisioningScheduledStepUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return pssuo.RemoveAgentTaskIDs(ids...)
+}
+
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearPlan() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearPlan()
+	return pssuo
+}
+
+// ClearGinFileMiddleware clears the "GinFileMiddleware" edge to the GinFileMiddleware entity.
+func (pssuo *ProvisioningScheduledStepUpdateOne) ClearGinFileMiddleware() *ProvisioningScheduledStepUpdateOne {
+	pssuo.mutation.ClearGinFileMiddleware()
 	return pssuo
 }
 
@@ -1356,11 +1397,11 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ProvisioningScheduledStep.type": %w`, err)}
 		}
 	}
-	if _, ok := pssuo.mutation.ProvisioningScheduledStepToScheduledStepID(); pssuo.mutation.ProvisioningScheduledStepToScheduledStepCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisioningScheduledStepToScheduledStep"`)
+	if _, ok := pssuo.mutation.ScheduledStepID(); pssuo.mutation.ScheduledStepCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ScheduledStep"`)
 	}
-	if _, ok := pssuo.mutation.ProvisioningScheduledStepToProvisionedHostID(); pssuo.mutation.ProvisioningScheduledStepToProvisionedHostCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisioningScheduledStepToProvisionedHost"`)
+	if _, ok := pssuo.mutation.ProvisionedHostID(); pssuo.mutation.ProvisionedHostCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ProvisioningScheduledStep.ProvisionedHost"`)
 	}
 	return nil
 }
@@ -1414,12 +1455,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 			Column: provisioningscheduledstep.FieldRunTime,
 		})
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToStatusCleared() {
+	if pssuo.mutation.StatusCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToStatusTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToStatusColumn},
+			Table:   provisioningscheduledstep.StatusTable,
+			Columns: []string{provisioningscheduledstep.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1430,12 +1471,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToStatusIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.StatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToStatusTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToStatusColumn},
+			Table:   provisioningscheduledstep.StatusTable,
+			Columns: []string{provisioningscheduledstep.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1449,12 +1490,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToScheduledStepCleared() {
+	if pssuo.mutation.ScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepColumn},
+			Table:   provisioningscheduledstep.ScheduledStepTable,
+			Columns: []string{provisioningscheduledstep.ScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1465,12 +1506,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToScheduledStepIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.ScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToScheduledStepColumn},
+			Table:   provisioningscheduledstep.ScheduledStepTable,
+			Columns: []string{provisioningscheduledstep.ScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1484,12 +1525,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToProvisionedHostCleared() {
+	if pssuo.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn},
+			Table:   provisioningscheduledstep.ProvisionedHostTable,
+			Columns: []string{provisioningscheduledstep.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1500,12 +1541,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToProvisionedHostColumn},
+			Table:   provisioningscheduledstep.ProvisionedHostTable,
+			Columns: []string{provisioningscheduledstep.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1519,12 +1560,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToScriptCleared() {
+	if pssuo.mutation.ScriptCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToScriptTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToScriptColumn},
+			Table:   provisioningscheduledstep.ScriptTable,
+			Columns: []string{provisioningscheduledstep.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1535,12 +1576,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToScriptIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.ScriptIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToScriptTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToScriptColumn},
+			Table:   provisioningscheduledstep.ScriptTable,
+			Columns: []string{provisioningscheduledstep.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1554,12 +1595,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToCommandCleared() {
+	if pssuo.mutation.CommandCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToCommandTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToCommandColumn},
+			Table:   provisioningscheduledstep.CommandTable,
+			Columns: []string{provisioningscheduledstep.CommandColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1570,12 +1611,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToCommandIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.CommandIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToCommandTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToCommandColumn},
+			Table:   provisioningscheduledstep.CommandTable,
+			Columns: []string{provisioningscheduledstep.CommandColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1589,12 +1630,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToDNSRecordCleared() {
+	if pssuo.mutation.DNSRecordCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordColumn},
+			Table:   provisioningscheduledstep.DNSRecordTable,
+			Columns: []string{provisioningscheduledstep.DNSRecordColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1605,12 +1646,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToDNSRecordIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.DNSRecordIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToDNSRecordColumn},
+			Table:   provisioningscheduledstep.DNSRecordTable,
+			Columns: []string{provisioningscheduledstep.DNSRecordColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1624,12 +1665,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToFileDeleteCleared() {
+	if pssuo.mutation.FileDeleteCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteColumn},
+			Table:   provisioningscheduledstep.FileDeleteTable,
+			Columns: []string{provisioningscheduledstep.FileDeleteColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1640,12 +1681,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToFileDeleteIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.FileDeleteIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileDeleteColumn},
+			Table:   provisioningscheduledstep.FileDeleteTable,
+			Columns: []string{provisioningscheduledstep.FileDeleteColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1659,12 +1700,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToFileDownloadCleared() {
+	if pssuo.mutation.FileDownloadCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadColumn},
+			Table:   provisioningscheduledstep.FileDownloadTable,
+			Columns: []string{provisioningscheduledstep.FileDownloadColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1675,12 +1716,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToFileDownloadIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.FileDownloadIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileDownloadColumn},
+			Table:   provisioningscheduledstep.FileDownloadTable,
+			Columns: []string{provisioningscheduledstep.FileDownloadColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1694,12 +1735,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToFileExtractCleared() {
+	if pssuo.mutation.FileExtractCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileExtractTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileExtractColumn},
+			Table:   provisioningscheduledstep.FileExtractTable,
+			Columns: []string{provisioningscheduledstep.FileExtractColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1710,12 +1751,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToFileExtractIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.FileExtractIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToFileExtractTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToFileExtractColumn},
+			Table:   provisioningscheduledstep.FileExtractTable,
+			Columns: []string{provisioningscheduledstep.FileExtractColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1729,12 +1770,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToAnsibleCleared() {
+	if pssuo.mutation.AnsibleCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToAnsibleTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToAnsibleColumn},
+			Table:   provisioningscheduledstep.AnsibleTable,
+			Columns: []string{provisioningscheduledstep.AnsibleColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1745,12 +1786,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToAnsibleIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.AnsibleIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToAnsibleTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToAnsibleColumn},
+			Table:   provisioningscheduledstep.AnsibleTable,
+			Columns: []string{provisioningscheduledstep.AnsibleColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1764,12 +1805,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToAgentTaskCleared() {
+	if pssuo.mutation.AgentTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskColumn},
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1780,12 +1821,31 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToAgentTaskIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.RemovedAgentTasksIDs(); len(nodes) > 0 && !pssuo.mutation.AgentTasksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToAgentTaskColumn},
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: agenttask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pssuo.mutation.AgentTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   provisioningscheduledstep.AgentTasksTable,
+			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1799,12 +1859,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningStepToPlanCleared() {
+	if pssuo.mutation.PlanCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningStepToPlanTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningStepToPlanColumn},
+			Table:   provisioningscheduledstep.PlanTable,
+			Columns: []string{provisioningscheduledstep.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1815,12 +1875,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningStepToPlanIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.PlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningStepToPlanTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningStepToPlanColumn},
+			Table:   provisioningscheduledstep.PlanTable,
+			Columns: []string{provisioningscheduledstep.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1834,12 +1894,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pssuo.mutation.ProvisioningScheduledStepToGinFileMiddlewareCleared() {
+	if pssuo.mutation.GinFileMiddlewareCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareColumn},
+			Table:   provisioningscheduledstep.GinFileMiddlewareTable,
+			Columns: []string{provisioningscheduledstep.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1850,12 +1910,12 @@ func (pssuo *ProvisioningScheduledStepUpdateOne) sqlSave(ctx context.Context) (_
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pssuo.mutation.ProvisioningScheduledStepToGinFileMiddlewareIDs(); len(nodes) > 0 {
+	if nodes := pssuo.mutation.GinFileMiddlewareIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareTable,
-			Columns: []string{provisioningscheduledstep.ProvisioningScheduledStepToGinFileMiddlewareColumn},
+			Table:   provisioningscheduledstep.GinFileMiddlewareTable,
+			Columns: []string{provisioningscheduledstep.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

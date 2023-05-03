@@ -52,18 +52,18 @@ package main
 // 		log.Fatalf("error while creating vCenter/NSX-T builder: %v", err)
 // 	}
 
-// 	build, err := env.QueryEnvironmentToBuild().Order(ent.Desc(build.FieldRevision)).First(ctx)
+// 	build, err := env.QueryBuilds().Order(ent.Desc(build.FieldRevision)).First(ctx)
 // 	if err != nil {
 // 		log.Fatalf("error querying build from env: %v", err)
 // 	}
-// 	teams, err := build.QueryBuildToTeam().All(ctx)
+// 	teams, err := build.QueryTeams().All(ctx)
 // 	if err != nil {
 // 		log.Fatalf("error querying teams from build: %v", err)
 // 	}
 
 // 	for _, team := range teams {
 // 		fmt.Printf("Networks for Team %d\n", team.TeamNumber)
-// 		pnets, err := team.QueryTeamToProvisionedNetwork().All(ctx)
+// 		pnets, err := team.QueryProvisionedNetwork().All(ctx)
 // 		if err != nil {
 // 			log.Fatalf("error while querying provisioned netowrks from team: %v", err)
 // 		}

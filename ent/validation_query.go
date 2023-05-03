@@ -4,17 +4,14 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/predicate"
-	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
@@ -22,16 +19,14 @@ import (
 // ValidationQuery is the builder for querying Validation entities.
 type ValidationQuery struct {
 	config
-	limit                       *int
-	offset                      *int
-	unique                      *bool
-	order                       []OrderFunc
-	fields                      []string
-	predicates                  []predicate.Validation
-	withValidationToAgentTask   *AgentTaskQuery
-	withValidationToScript      *ScriptQuery
-	withValidationToEnvironment *EnvironmentQuery
-	withFKs                     bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.Validation
+	withEnvironment *EnvironmentQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -68,52 +63,8 @@ func (vq *ValidationQuery) Order(o ...OrderFunc) *ValidationQuery {
 	return vq
 }
 
-// QueryValidationToAgentTask chains the current query on the "ValidationToAgentTask" edge.
-func (vq *ValidationQuery) QueryValidationToAgentTask() *AgentTaskQuery {
-	query := &AgentTaskQuery{config: vq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := vq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := vq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(validation.Table, validation.FieldID, selector),
-			sqlgraph.To(agenttask.Table, agenttask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, validation.ValidationToAgentTaskTable, validation.ValidationToAgentTaskColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(vq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryValidationToScript chains the current query on the "ValidationToScript" edge.
-func (vq *ValidationQuery) QueryValidationToScript() *ScriptQuery {
-	query := &ScriptQuery{config: vq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := vq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := vq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(validation.Table, validation.FieldID, selector),
-			sqlgraph.To(script.Table, script.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, validation.ValidationToScriptTable, validation.ValidationToScriptColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(vq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryValidationToEnvironment chains the current query on the "ValidationToEnvironment" edge.
-func (vq *ValidationQuery) QueryValidationToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (vq *ValidationQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: vq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := vq.prepareQuery(ctx); err != nil {
@@ -126,7 +77,7 @@ func (vq *ValidationQuery) QueryValidationToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(validation.Table, validation.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, validation.ValidationToEnvironmentTable, validation.ValidationToEnvironmentPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, validation.EnvironmentTable, validation.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(vq.driver.Dialect(), step)
 		return fromU, nil
@@ -310,14 +261,12 @@ func (vq *ValidationQuery) Clone() *ValidationQuery {
 		return nil
 	}
 	return &ValidationQuery{
-		config:                      vq.config,
-		limit:                       vq.limit,
-		offset:                      vq.offset,
-		order:                       append([]OrderFunc{}, vq.order...),
-		predicates:                  append([]predicate.Validation{}, vq.predicates...),
-		withValidationToAgentTask:   vq.withValidationToAgentTask.Clone(),
-		withValidationToScript:      vq.withValidationToScript.Clone(),
-		withValidationToEnvironment: vq.withValidationToEnvironment.Clone(),
+		config:          vq.config,
+		limit:           vq.limit,
+		offset:          vq.offset,
+		order:           append([]OrderFunc{}, vq.order...),
+		predicates:      append([]predicate.Validation{}, vq.predicates...),
+		withEnvironment: vq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    vq.sql.Clone(),
 		path:   vq.path,
@@ -325,36 +274,14 @@ func (vq *ValidationQuery) Clone() *ValidationQuery {
 	}
 }
 
-// WithValidationToAgentTask tells the query-builder to eager-load the nodes that are connected to
-// the "ValidationToAgentTask" edge. The optional arguments are used to configure the query builder of the edge.
-func (vq *ValidationQuery) WithValidationToAgentTask(opts ...func(*AgentTaskQuery)) *ValidationQuery {
-	query := &AgentTaskQuery{config: vq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	vq.withValidationToAgentTask = query
-	return vq
-}
-
-// WithValidationToScript tells the query-builder to eager-load the nodes that are connected to
-// the "ValidationToScript" edge. The optional arguments are used to configure the query builder of the edge.
-func (vq *ValidationQuery) WithValidationToScript(opts ...func(*ScriptQuery)) *ValidationQuery {
-	query := &ScriptQuery{config: vq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	vq.withValidationToScript = query
-	return vq
-}
-
-// WithValidationToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "ValidationToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (vq *ValidationQuery) WithValidationToEnvironment(opts ...func(*EnvironmentQuery)) *ValidationQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (vq *ValidationQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *ValidationQuery {
 	query := &EnvironmentQuery{config: vq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	vq.withValidationToEnvironment = query
+	vq.withEnvironment = query
 	return vq
 }
 
@@ -372,7 +299,6 @@ func (vq *ValidationQuery) WithValidationToEnvironment(opts ...func(*Environment
 //		GroupBy(validation.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (vq *ValidationQuery) GroupBy(field string, fields ...string) *ValidationGroupBy {
 	grbuild := &ValidationGroupBy{config: vq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -399,7 +325,6 @@ func (vq *ValidationQuery) GroupBy(field string, fields ...string) *ValidationGr
 //	client.Validation.Query().
 //		Select(validation.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (vq *ValidationQuery) Select(fields ...string) *ValidationSelect {
 	vq.fields = append(vq.fields, fields...)
 	selbuild := &ValidationSelect{ValidationQuery: vq}
@@ -429,13 +354,11 @@ func (vq *ValidationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*V
 		nodes       = []*Validation{}
 		withFKs     = vq.withFKs
 		_spec       = vq.querySpec()
-		loadedTypes = [3]bool{
-			vq.withValidationToAgentTask != nil,
-			vq.withValidationToScript != nil,
-			vq.withValidationToEnvironment != nil,
+		loadedTypes = [1]bool{
+			vq.withEnvironment != nil,
 		}
 	)
-	if vq.withValidationToAgentTask != nil {
+	if vq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -459,45 +382,29 @@ func (vq *ValidationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*V
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := vq.withValidationToAgentTask; query != nil {
-		if err := vq.loadValidationToAgentTask(ctx, query, nodes, nil,
-			func(n *Validation, e *AgentTask) { n.Edges.ValidationToAgentTask = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := vq.withValidationToScript; query != nil {
-		if err := vq.loadValidationToScript(ctx, query, nodes,
-			func(n *Validation) { n.Edges.ValidationToScript = []*Script{} },
-			func(n *Validation, e *Script) { n.Edges.ValidationToScript = append(n.Edges.ValidationToScript, e) }); err != nil {
-			return nil, err
-		}
-	}
-	if query := vq.withValidationToEnvironment; query != nil {
-		if err := vq.loadValidationToEnvironment(ctx, query, nodes,
-			func(n *Validation) { n.Edges.ValidationToEnvironment = []*Environment{} },
-			func(n *Validation, e *Environment) {
-				n.Edges.ValidationToEnvironment = append(n.Edges.ValidationToEnvironment, e)
-			}); err != nil {
+	if query := vq.withEnvironment; query != nil {
+		if err := vq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *Validation, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (vq *ValidationQuery) loadValidationToAgentTask(ctx context.Context, query *AgentTaskQuery, nodes []*Validation, init func(*Validation), assign func(*Validation, *AgentTask)) error {
+func (vq *ValidationQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Validation, init func(*Validation), assign func(*Validation, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Validation)
 	for i := range nodes {
-		if nodes[i].agent_task_agent_task_to_validation == nil {
+		if nodes[i].environment_validations == nil {
 			continue
 		}
-		fk := *nodes[i].agent_task_agent_task_to_validation
+		fk := *nodes[i].environment_validations
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.Where(agenttask.IDIn(ids...))
+	query.Where(environment.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -505,99 +412,10 @@ func (vq *ValidationQuery) loadValidationToAgentTask(ctx context.Context, query 
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_validation" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_validations" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
-func (vq *ValidationQuery) loadValidationToScript(ctx context.Context, query *ScriptQuery, nodes []*Validation, init func(*Validation), assign func(*Validation, *Script)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*Validation)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	query.withFKs = true
-	query.Where(predicate.Script(func(s *sql.Selector) {
-		s.Where(sql.InValues(validation.ValidationToScriptColumn, fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.script_script_to_validation
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "script_script_to_validation" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "script_script_to_validation" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
-}
-func (vq *ValidationQuery) loadValidationToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Validation, init func(*Validation), assign func(*Validation, *Environment)) error {
-	edgeIDs := make([]driver.Value, len(nodes))
-	byID := make(map[uuid.UUID]*Validation)
-	nids := make(map[uuid.UUID]map[*Validation]struct{})
-	for i, node := range nodes {
-		edgeIDs[i] = node.ID
-		byID[node.ID] = node
-		if init != nil {
-			init(node)
-		}
-	}
-	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(validation.ValidationToEnvironmentTable)
-		s.Join(joinT).On(s.C(environment.FieldID), joinT.C(validation.ValidationToEnvironmentPrimaryKey[0]))
-		s.Where(sql.InValues(joinT.C(validation.ValidationToEnvironmentPrimaryKey[1]), edgeIDs...))
-		columns := s.SelectedColumns()
-		s.Select(joinT.C(validation.ValidationToEnvironmentPrimaryKey[1]))
-		s.AppendSelect(columns...)
-		s.SetDistinct(false)
-	})
-	if err := query.prepareQuery(ctx); err != nil {
-		return err
-	}
-	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
-		assign := spec.Assign
-		values := spec.ScanValues
-		spec.ScanValues = func(columns []string) ([]interface{}, error) {
-			values, err := values(columns[1:])
-			if err != nil {
-				return nil, err
-			}
-			return append([]interface{}{new(uuid.UUID)}, values...), nil
-		}
-		spec.Assign = func(columns []string, values []interface{}) error {
-			outValue := *values[0].(*uuid.UUID)
-			inValue := *values[1].(*uuid.UUID)
-			if nids[inValue] == nil {
-				nids[inValue] = map[*Validation]struct{}{byID[outValue]: struct{}{}}
-				return assign(columns[1:], values[1:])
-			}
-			nids[inValue][byID[outValue]] = struct{}{}
-			return nil
-		}
-	})
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected "ValidationToEnvironment" node returned %v`, n.ID)
-		}
-		for kn := range nodes {
-			assign(kn, n)
 		}
 	}
 	return nil

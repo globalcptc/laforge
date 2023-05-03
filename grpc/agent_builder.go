@@ -56,7 +56,7 @@ func main() {
 	}
 
 	for _, ph := range phs {
-		host, err := ph.QueryProvisionedHostToHost().Only(ctx)
+		host, err := ph.QueryHost().Only(ctx)
 		if err != nil {
 			logrus.Errorf("Failed to Query Host: %v", err)
 		}
@@ -73,18 +73,18 @@ func main() {
 			}
 		}
 
-		pn, err := ph.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+		pn, err := ph.QueryProvisionedNetwork().Only(ctx)
 		if err != nil {
 			logrus.Errorf("Failed to Query Provisioned Network: %v", err)
 		}
 		networkName := pn.Name
 
-		team, err := pn.QueryProvisionedNetworkToTeam().Only(ctx)
+		team, err := pn.QueryTeam().Only(ctx)
 		if err != nil {
 			logrus.Errorf("Failed to Query Team: %v", err)
 		}
 		teamName := team.TeamNumber
-		env, err := team.QueryTeamToBuild().QueryBuildToEnvironment().Only(ctx)
+		env, err := team.QueryBuild().QueryEnvironment().Only(ctx)
 		if err != nil {
 			logrus.Errorf("Failed to Query Enviroment: %v", err)
 		}

@@ -33,15 +33,15 @@ func (Finding) Fields() []ent.Field {
 // Edges of the Finding.
 func (Finding) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("FindingToUser", User.Type).
+		edge.To("Users", User.Type).
 			StructTag(`hcl:"maintainer,block"`),
-		edge.To("FindingToHost", Host.Type).
+		edge.To("Host", Host.Type).
 			Unique(),
-		edge.From("FindingToScript", Script.Type).
-			Ref("ScriptToFinding").
+		edge.From("Script", Script.Type).
+			Ref("Findings").
 			Unique(),
-		edge.From("FindingToEnvironment", Environment.Type).
-			Ref("EnvironmentToFinding").
+		edge.From("Environment", Environment.Type).
+			Ref("Findings").
 			Unique(),
 	}
 }

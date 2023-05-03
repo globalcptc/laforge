@@ -8,9 +8,9 @@
     <div class="env-header d-flex align-items-center justify-content-between">
       <div class="env-info w-50">
         <mat-card-title>
-          {{ _build.buildToEnvironment.name }}
+          {{ _build.Environment.name }}
         </mat-card-title>
-        <mat-card-subtitle>{{ _build.buildToEnvironment.description }}</mat-card-subtitle>
+        <mat-card-subtitle>{{ _build.Environment.description }}</mat-card-subtitle>
       </div>
       <div class="controls">
         <button mat-icon-button color="primary" aria-label="View the build progress" title="Build Progress" (click)="viewBuildProgress()">
@@ -51,18 +51,18 @@
         </button>
       </div>
     </div>
-    <mat-table [dataSource]="[_build.buildToEnvironment]" class="bg-gray-100">
+    <mat-table [dataSource]="[_build.Environment]" class="bg-gray-100">
       <ng-container matColumnDef="TeamCount">
         <mat-header-cell *matHeaderCellDef># Teams</mat-header-cell>
-        <mat-cell *matCellDef="let env">{{ env.team_count }}</mat-cell>
+        <mat-cell *matCellDef="let env">{{ env.teamCount }}</mat-cell>
       </ng-container>
       <ng-container matColumnDef="AdminCIDRs">
         <mat-header-cell *matHeaderCellDef>Admin CIDRs</mat-header-cell>
-        <mat-cell *matCellDef="let env">{{ env.admin_cidrs.join(', ') }}</mat-cell>
+        <mat-cell *matCellDef="let env">{{ env.adminCidrs.join(', ') }}</mat-cell>
       </ng-container>
       <ng-container matColumnDef="ExposedVDIPorts">
         <mat-header-cell *matHeaderCellDef>Exposed VDI Ports</mat-header-cell>
-        <mat-cell *matCellDef="let env">{{ env.exposed_vdi_ports.join(', ') }}</mat-cell>
+        <mat-cell *matCellDef="let env">{{ env.exposedVdiPorts.join(', ') }}</mat-cell>
       </ng-container>
       <!-- <ng-container matColumnDef="maintainer">
         <mat-header-cell *matHeaderCellDef> Maintainer </mat-header-cell>
@@ -74,7 +74,7 @@
   </mat-card-header>
   <mat-card-content>
     <app-team
-      *ngFor="let team of _build.buildToTeam | sortBy: 'asc':'team_number'"
+      *ngFor="let team of _build.Teams | sortBy: 'asc':'teamNumber'"
       [team]="team"
       [selectable]="selectionMode | async"
       [mode]="'manage'"

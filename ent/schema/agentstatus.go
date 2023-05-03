@@ -37,11 +37,11 @@ func (AgentStatus) Fields() []ent.Field {
 // Edges of the AgentStatus.
 func (AgentStatus) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("AgentStatusToProvisionedHost", ProvisionedHost.Type).
+		edge.To("ProvisionedHost", ProvisionedHost.Type).
 			Unique(),
-		edge.To("AgentStatusToProvisionedNetwork", ProvisionedNetwork.Type).
+		edge.To("ProvisionedNetwork", ProvisionedNetwork.Type).
 			Unique(),
-		edge.To("AgentStatusToBuild", Build.Type).
+		edge.To("Build", Build.Type).
 			Unique(),
 	}
 }

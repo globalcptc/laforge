@@ -30,25 +30,25 @@ import (
 // BuildQuery is the builder for querying Build entities.
 type BuildQuery struct {
 	config
-	limit                         *int
-	offset                        *int
-	unique                        *bool
-	order                         []OrderFunc
-	fields                        []string
-	predicates                    []predicate.Build
-	withBuildToStatus             *StatusQuery
-	withBuildToEnvironment        *EnvironmentQuery
-	withBuildToCompetition        *CompetitionQuery
-	withBuildToLatestBuildCommit  *BuildCommitQuery
-	withBuildToRepoCommit         *RepoCommitQuery
-	withBuildToProvisionedNetwork *ProvisionedNetworkQuery
-	withBuildToTeam               *TeamQuery
-	withBuildToPlan               *PlanQuery
-	withBuildToBuildCommits       *BuildCommitQuery
-	withBuildToAdhocPlans         *AdhocPlanQuery
-	withBuildToAgentStatuses      *AgentStatusQuery
-	withBuildToServerTasks        *ServerTaskQuery
-	withFKs                       bool
+	limit                   *int
+	offset                  *int
+	unique                  *bool
+	order                   []OrderFunc
+	fields                  []string
+	predicates              []predicate.Build
+	withStatus              *StatusQuery
+	withEnvironment         *EnvironmentQuery
+	withCompetition         *CompetitionQuery
+	withLatestBuildCommit   *BuildCommitQuery
+	withRepoCommit          *RepoCommitQuery
+	withProvisionedNetworks *ProvisionedNetworkQuery
+	withTeams               *TeamQuery
+	withPlans               *PlanQuery
+	withBuildCommits        *BuildCommitQuery
+	withAdhocPlans          *AdhocPlanQuery
+	withAgentStatuses       *AgentStatusQuery
+	withServerTasks         *ServerTaskQuery
+	withFKs                 bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -85,8 +85,8 @@ func (bq *BuildQuery) Order(o ...OrderFunc) *BuildQuery {
 	return bq
 }
 
-// QueryBuildToStatus chains the current query on the "BuildToStatus" edge.
-func (bq *BuildQuery) QueryBuildToStatus() *StatusQuery {
+// QueryStatus chains the current query on the "Status" edge.
+func (bq *BuildQuery) QueryStatus() *StatusQuery {
 	query := &StatusQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -99,7 +99,7 @@ func (bq *BuildQuery) QueryBuildToStatus() *StatusQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, build.BuildToStatusTable, build.BuildToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, build.StatusTable, build.StatusColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -107,8 +107,8 @@ func (bq *BuildQuery) QueryBuildToStatus() *StatusQuery {
 	return query
 }
 
-// QueryBuildToEnvironment chains the current query on the "BuildToEnvironment" edge.
-func (bq *BuildQuery) QueryBuildToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (bq *BuildQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -121,7 +121,7 @@ func (bq *BuildQuery) QueryBuildToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, build.BuildToEnvironmentTable, build.BuildToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, build.EnvironmentTable, build.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -129,8 +129,8 @@ func (bq *BuildQuery) QueryBuildToEnvironment() *EnvironmentQuery {
 	return query
 }
 
-// QueryBuildToCompetition chains the current query on the "BuildToCompetition" edge.
-func (bq *BuildQuery) QueryBuildToCompetition() *CompetitionQuery {
+// QueryCompetition chains the current query on the "Competition" edge.
+func (bq *BuildQuery) QueryCompetition() *CompetitionQuery {
 	query := &CompetitionQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -143,7 +143,7 @@ func (bq *BuildQuery) QueryBuildToCompetition() *CompetitionQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(competition.Table, competition.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, build.BuildToCompetitionTable, build.BuildToCompetitionColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, build.CompetitionTable, build.CompetitionColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -151,8 +151,8 @@ func (bq *BuildQuery) QueryBuildToCompetition() *CompetitionQuery {
 	return query
 }
 
-// QueryBuildToLatestBuildCommit chains the current query on the "BuildToLatestBuildCommit" edge.
-func (bq *BuildQuery) QueryBuildToLatestBuildCommit() *BuildCommitQuery {
+// QueryLatestBuildCommit chains the current query on the "LatestBuildCommit" edge.
+func (bq *BuildQuery) QueryLatestBuildCommit() *BuildCommitQuery {
 	query := &BuildCommitQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -165,7 +165,7 @@ func (bq *BuildQuery) QueryBuildToLatestBuildCommit() *BuildCommitQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, build.BuildToLatestBuildCommitTable, build.BuildToLatestBuildCommitColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, build.LatestBuildCommitTable, build.LatestBuildCommitColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -173,8 +173,8 @@ func (bq *BuildQuery) QueryBuildToLatestBuildCommit() *BuildCommitQuery {
 	return query
 }
 
-// QueryBuildToRepoCommit chains the current query on the "BuildToRepoCommit" edge.
-func (bq *BuildQuery) QueryBuildToRepoCommit() *RepoCommitQuery {
+// QueryRepoCommit chains the current query on the "RepoCommit" edge.
+func (bq *BuildQuery) QueryRepoCommit() *RepoCommitQuery {
 	query := &RepoCommitQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -187,7 +187,7 @@ func (bq *BuildQuery) QueryBuildToRepoCommit() *RepoCommitQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(repocommit.Table, repocommit.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, build.BuildToRepoCommitTable, build.BuildToRepoCommitColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, build.RepoCommitTable, build.RepoCommitColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -195,8 +195,8 @@ func (bq *BuildQuery) QueryBuildToRepoCommit() *RepoCommitQuery {
 	return query
 }
 
-// QueryBuildToProvisionedNetwork chains the current query on the "BuildToProvisionedNetwork" edge.
-func (bq *BuildQuery) QueryBuildToProvisionedNetwork() *ProvisionedNetworkQuery {
+// QueryProvisionedNetworks chains the current query on the "ProvisionedNetworks" edge.
+func (bq *BuildQuery) QueryProvisionedNetworks() *ProvisionedNetworkQuery {
 	query := &ProvisionedNetworkQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -209,7 +209,7 @@ func (bq *BuildQuery) QueryBuildToProvisionedNetwork() *ProvisionedNetworkQuery 
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(provisionednetwork.Table, provisionednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToProvisionedNetworkTable, build.BuildToProvisionedNetworkColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.ProvisionedNetworksTable, build.ProvisionedNetworksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -217,8 +217,8 @@ func (bq *BuildQuery) QueryBuildToProvisionedNetwork() *ProvisionedNetworkQuery 
 	return query
 }
 
-// QueryBuildToTeam chains the current query on the "BuildToTeam" edge.
-func (bq *BuildQuery) QueryBuildToTeam() *TeamQuery {
+// QueryTeams chains the current query on the "Teams" edge.
+func (bq *BuildQuery) QueryTeams() *TeamQuery {
 	query := &TeamQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -231,7 +231,7 @@ func (bq *BuildQuery) QueryBuildToTeam() *TeamQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(team.Table, team.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToTeamTable, build.BuildToTeamColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.TeamsTable, build.TeamsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -239,8 +239,8 @@ func (bq *BuildQuery) QueryBuildToTeam() *TeamQuery {
 	return query
 }
 
-// QueryBuildToPlan chains the current query on the "BuildToPlan" edge.
-func (bq *BuildQuery) QueryBuildToPlan() *PlanQuery {
+// QueryPlans chains the current query on the "Plans" edge.
+func (bq *BuildQuery) QueryPlans() *PlanQuery {
 	query := &PlanQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -253,7 +253,7 @@ func (bq *BuildQuery) QueryBuildToPlan() *PlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToPlanTable, build.BuildToPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.PlansTable, build.PlansColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -261,8 +261,8 @@ func (bq *BuildQuery) QueryBuildToPlan() *PlanQuery {
 	return query
 }
 
-// QueryBuildToBuildCommits chains the current query on the "BuildToBuildCommits" edge.
-func (bq *BuildQuery) QueryBuildToBuildCommits() *BuildCommitQuery {
+// QueryBuildCommits chains the current query on the "BuildCommits" edge.
+func (bq *BuildQuery) QueryBuildCommits() *BuildCommitQuery {
 	query := &BuildCommitQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -275,7 +275,7 @@ func (bq *BuildQuery) QueryBuildToBuildCommits() *BuildCommitQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToBuildCommitsTable, build.BuildToBuildCommitsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildCommitsTable, build.BuildCommitsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -283,8 +283,8 @@ func (bq *BuildQuery) QueryBuildToBuildCommits() *BuildCommitQuery {
 	return query
 }
 
-// QueryBuildToAdhocPlans chains the current query on the "BuildToAdhocPlans" edge.
-func (bq *BuildQuery) QueryBuildToAdhocPlans() *AdhocPlanQuery {
+// QueryAdhocPlans chains the current query on the "AdhocPlans" edge.
+func (bq *BuildQuery) QueryAdhocPlans() *AdhocPlanQuery {
 	query := &AdhocPlanQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -297,7 +297,7 @@ func (bq *BuildQuery) QueryBuildToAdhocPlans() *AdhocPlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToAdhocPlansTable, build.BuildToAdhocPlansColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.AdhocPlansTable, build.AdhocPlansColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -305,8 +305,8 @@ func (bq *BuildQuery) QueryBuildToAdhocPlans() *AdhocPlanQuery {
 	return query
 }
 
-// QueryBuildToAgentStatuses chains the current query on the "BuildToAgentStatuses" edge.
-func (bq *BuildQuery) QueryBuildToAgentStatuses() *AgentStatusQuery {
+// QueryAgentStatuses chains the current query on the "AgentStatuses" edge.
+func (bq *BuildQuery) QueryAgentStatuses() *AgentStatusQuery {
 	query := &AgentStatusQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -319,7 +319,7 @@ func (bq *BuildQuery) QueryBuildToAgentStatuses() *AgentStatusQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(agentstatus.Table, agentstatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToAgentStatusesTable, build.BuildToAgentStatusesColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.AgentStatusesTable, build.AgentStatusesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -327,8 +327,8 @@ func (bq *BuildQuery) QueryBuildToAgentStatuses() *AgentStatusQuery {
 	return query
 }
 
-// QueryBuildToServerTasks chains the current query on the "BuildToServerTasks" edge.
-func (bq *BuildQuery) QueryBuildToServerTasks() *ServerTaskQuery {
+// QueryServerTasks chains the current query on the "ServerTasks" edge.
+func (bq *BuildQuery) QueryServerTasks() *ServerTaskQuery {
 	query := &ServerTaskQuery{config: bq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := bq.prepareQuery(ctx); err != nil {
@@ -341,7 +341,7 @@ func (bq *BuildQuery) QueryBuildToServerTasks() *ServerTaskQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(build.Table, build.FieldID, selector),
 			sqlgraph.To(servertask.Table, servertask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, build.BuildToServerTasksTable, build.BuildToServerTasksColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, build.ServerTasksTable, build.ServerTasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
 		return fromU, nil
@@ -525,23 +525,23 @@ func (bq *BuildQuery) Clone() *BuildQuery {
 		return nil
 	}
 	return &BuildQuery{
-		config:                        bq.config,
-		limit:                         bq.limit,
-		offset:                        bq.offset,
-		order:                         append([]OrderFunc{}, bq.order...),
-		predicates:                    append([]predicate.Build{}, bq.predicates...),
-		withBuildToStatus:             bq.withBuildToStatus.Clone(),
-		withBuildToEnvironment:        bq.withBuildToEnvironment.Clone(),
-		withBuildToCompetition:        bq.withBuildToCompetition.Clone(),
-		withBuildToLatestBuildCommit:  bq.withBuildToLatestBuildCommit.Clone(),
-		withBuildToRepoCommit:         bq.withBuildToRepoCommit.Clone(),
-		withBuildToProvisionedNetwork: bq.withBuildToProvisionedNetwork.Clone(),
-		withBuildToTeam:               bq.withBuildToTeam.Clone(),
-		withBuildToPlan:               bq.withBuildToPlan.Clone(),
-		withBuildToBuildCommits:       bq.withBuildToBuildCommits.Clone(),
-		withBuildToAdhocPlans:         bq.withBuildToAdhocPlans.Clone(),
-		withBuildToAgentStatuses:      bq.withBuildToAgentStatuses.Clone(),
-		withBuildToServerTasks:        bq.withBuildToServerTasks.Clone(),
+		config:                  bq.config,
+		limit:                   bq.limit,
+		offset:                  bq.offset,
+		order:                   append([]OrderFunc{}, bq.order...),
+		predicates:              append([]predicate.Build{}, bq.predicates...),
+		withStatus:              bq.withStatus.Clone(),
+		withEnvironment:         bq.withEnvironment.Clone(),
+		withCompetition:         bq.withCompetition.Clone(),
+		withLatestBuildCommit:   bq.withLatestBuildCommit.Clone(),
+		withRepoCommit:          bq.withRepoCommit.Clone(),
+		withProvisionedNetworks: bq.withProvisionedNetworks.Clone(),
+		withTeams:               bq.withTeams.Clone(),
+		withPlans:               bq.withPlans.Clone(),
+		withBuildCommits:        bq.withBuildCommits.Clone(),
+		withAdhocPlans:          bq.withAdhocPlans.Clone(),
+		withAgentStatuses:       bq.withAgentStatuses.Clone(),
+		withServerTasks:         bq.withServerTasks.Clone(),
 		// clone intermediate query.
 		sql:    bq.sql.Clone(),
 		path:   bq.path,
@@ -549,135 +549,135 @@ func (bq *BuildQuery) Clone() *BuildQuery {
 	}
 }
 
-// WithBuildToStatus tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToStatus" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToStatus(opts ...func(*StatusQuery)) *BuildQuery {
+// WithStatus tells the query-builder to eager-load the nodes that are connected to
+// the "Status" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithStatus(opts ...func(*StatusQuery)) *BuildQuery {
 	query := &StatusQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToStatus = query
+	bq.withStatus = query
 	return bq
 }
 
-// WithBuildToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToEnvironment(opts ...func(*EnvironmentQuery)) *BuildQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *BuildQuery {
 	query := &EnvironmentQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToEnvironment = query
+	bq.withEnvironment = query
 	return bq
 }
 
-// WithBuildToCompetition tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToCompetition" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToCompetition(opts ...func(*CompetitionQuery)) *BuildQuery {
+// WithCompetition tells the query-builder to eager-load the nodes that are connected to
+// the "Competition" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithCompetition(opts ...func(*CompetitionQuery)) *BuildQuery {
 	query := &CompetitionQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToCompetition = query
+	bq.withCompetition = query
 	return bq
 }
 
-// WithBuildToLatestBuildCommit tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToLatestBuildCommit" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToLatestBuildCommit(opts ...func(*BuildCommitQuery)) *BuildQuery {
+// WithLatestBuildCommit tells the query-builder to eager-load the nodes that are connected to
+// the "LatestBuildCommit" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithLatestBuildCommit(opts ...func(*BuildCommitQuery)) *BuildQuery {
 	query := &BuildCommitQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToLatestBuildCommit = query
+	bq.withLatestBuildCommit = query
 	return bq
 }
 
-// WithBuildToRepoCommit tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToRepoCommit" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToRepoCommit(opts ...func(*RepoCommitQuery)) *BuildQuery {
+// WithRepoCommit tells the query-builder to eager-load the nodes that are connected to
+// the "RepoCommit" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithRepoCommit(opts ...func(*RepoCommitQuery)) *BuildQuery {
 	query := &RepoCommitQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToRepoCommit = query
+	bq.withRepoCommit = query
 	return bq
 }
 
-// WithBuildToProvisionedNetwork tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToProvisionedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToProvisionedNetwork(opts ...func(*ProvisionedNetworkQuery)) *BuildQuery {
+// WithProvisionedNetworks tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedNetworks" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithProvisionedNetworks(opts ...func(*ProvisionedNetworkQuery)) *BuildQuery {
 	query := &ProvisionedNetworkQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToProvisionedNetwork = query
+	bq.withProvisionedNetworks = query
 	return bq
 }
 
-// WithBuildToTeam tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToTeam" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToTeam(opts ...func(*TeamQuery)) *BuildQuery {
+// WithTeams tells the query-builder to eager-load the nodes that are connected to
+// the "Teams" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithTeams(opts ...func(*TeamQuery)) *BuildQuery {
 	query := &TeamQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToTeam = query
+	bq.withTeams = query
 	return bq
 }
 
-// WithBuildToPlan tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToPlan(opts ...func(*PlanQuery)) *BuildQuery {
+// WithPlans tells the query-builder to eager-load the nodes that are connected to
+// the "Plans" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithPlans(opts ...func(*PlanQuery)) *BuildQuery {
 	query := &PlanQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToPlan = query
+	bq.withPlans = query
 	return bq
 }
 
-// WithBuildToBuildCommits tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToBuildCommits" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToBuildCommits(opts ...func(*BuildCommitQuery)) *BuildQuery {
+// WithBuildCommits tells the query-builder to eager-load the nodes that are connected to
+// the "BuildCommits" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithBuildCommits(opts ...func(*BuildCommitQuery)) *BuildQuery {
 	query := &BuildCommitQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToBuildCommits = query
+	bq.withBuildCommits = query
 	return bq
 }
 
-// WithBuildToAdhocPlans tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToAdhocPlans" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToAdhocPlans(opts ...func(*AdhocPlanQuery)) *BuildQuery {
+// WithAdhocPlans tells the query-builder to eager-load the nodes that are connected to
+// the "AdhocPlans" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithAdhocPlans(opts ...func(*AdhocPlanQuery)) *BuildQuery {
 	query := &AdhocPlanQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToAdhocPlans = query
+	bq.withAdhocPlans = query
 	return bq
 }
 
-// WithBuildToAgentStatuses tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToAgentStatuses" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToAgentStatuses(opts ...func(*AgentStatusQuery)) *BuildQuery {
+// WithAgentStatuses tells the query-builder to eager-load the nodes that are connected to
+// the "AgentStatuses" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithAgentStatuses(opts ...func(*AgentStatusQuery)) *BuildQuery {
 	query := &AgentStatusQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToAgentStatuses = query
+	bq.withAgentStatuses = query
 	return bq
 }
 
-// WithBuildToServerTasks tells the query-builder to eager-load the nodes that are connected to
-// the "BuildToServerTasks" edge. The optional arguments are used to configure the query builder of the edge.
-func (bq *BuildQuery) WithBuildToServerTasks(opts ...func(*ServerTaskQuery)) *BuildQuery {
+// WithServerTasks tells the query-builder to eager-load the nodes that are connected to
+// the "ServerTasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BuildQuery) WithServerTasks(opts ...func(*ServerTaskQuery)) *BuildQuery {
 	query := &ServerTaskQuery{config: bq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	bq.withBuildToServerTasks = query
+	bq.withServerTasks = query
 	return bq
 }
 
@@ -695,7 +695,6 @@ func (bq *BuildQuery) WithBuildToServerTasks(opts ...func(*ServerTaskQuery)) *Bu
 //		GroupBy(build.FieldRevision).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (bq *BuildQuery) GroupBy(field string, fields ...string) *BuildGroupBy {
 	grbuild := &BuildGroupBy{config: bq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -722,7 +721,6 @@ func (bq *BuildQuery) GroupBy(field string, fields ...string) *BuildGroupBy {
 //	client.Build.Query().
 //		Select(build.FieldRevision).
 //		Scan(ctx, &v)
-//
 func (bq *BuildQuery) Select(fields ...string) *BuildSelect {
 	bq.fields = append(bq.fields, fields...)
 	selbuild := &BuildSelect{BuildQuery: bq}
@@ -753,21 +751,21 @@ func (bq *BuildQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Build,
 		withFKs     = bq.withFKs
 		_spec       = bq.querySpec()
 		loadedTypes = [12]bool{
-			bq.withBuildToStatus != nil,
-			bq.withBuildToEnvironment != nil,
-			bq.withBuildToCompetition != nil,
-			bq.withBuildToLatestBuildCommit != nil,
-			bq.withBuildToRepoCommit != nil,
-			bq.withBuildToProvisionedNetwork != nil,
-			bq.withBuildToTeam != nil,
-			bq.withBuildToPlan != nil,
-			bq.withBuildToBuildCommits != nil,
-			bq.withBuildToAdhocPlans != nil,
-			bq.withBuildToAgentStatuses != nil,
-			bq.withBuildToServerTasks != nil,
+			bq.withStatus != nil,
+			bq.withEnvironment != nil,
+			bq.withCompetition != nil,
+			bq.withLatestBuildCommit != nil,
+			bq.withRepoCommit != nil,
+			bq.withProvisionedNetworks != nil,
+			bq.withTeams != nil,
+			bq.withPlans != nil,
+			bq.withBuildCommits != nil,
+			bq.withAdhocPlans != nil,
+			bq.withAgentStatuses != nil,
+			bq.withServerTasks != nil,
 		}
 	)
-	if bq.withBuildToEnvironment != nil || bq.withBuildToCompetition != nil || bq.withBuildToLatestBuildCommit != nil || bq.withBuildToRepoCommit != nil {
+	if bq.withEnvironment != nil || bq.withCompetition != nil || bq.withLatestBuildCommit != nil || bq.withRepoCommit != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -791,91 +789,91 @@ func (bq *BuildQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Build,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := bq.withBuildToStatus; query != nil {
-		if err := bq.loadBuildToStatus(ctx, query, nodes, nil,
-			func(n *Build, e *Status) { n.Edges.BuildToStatus = e }); err != nil {
+	if query := bq.withStatus; query != nil {
+		if err := bq.loadStatus(ctx, query, nodes, nil,
+			func(n *Build, e *Status) { n.Edges.Status = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := bq.withBuildToEnvironment; query != nil {
-		if err := bq.loadBuildToEnvironment(ctx, query, nodes, nil,
-			func(n *Build, e *Environment) { n.Edges.BuildToEnvironment = e }); err != nil {
+	if query := bq.withEnvironment; query != nil {
+		if err := bq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *Build, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := bq.withBuildToCompetition; query != nil {
-		if err := bq.loadBuildToCompetition(ctx, query, nodes, nil,
-			func(n *Build, e *Competition) { n.Edges.BuildToCompetition = e }); err != nil {
+	if query := bq.withCompetition; query != nil {
+		if err := bq.loadCompetition(ctx, query, nodes, nil,
+			func(n *Build, e *Competition) { n.Edges.Competition = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := bq.withBuildToLatestBuildCommit; query != nil {
-		if err := bq.loadBuildToLatestBuildCommit(ctx, query, nodes, nil,
-			func(n *Build, e *BuildCommit) { n.Edges.BuildToLatestBuildCommit = e }); err != nil {
+	if query := bq.withLatestBuildCommit; query != nil {
+		if err := bq.loadLatestBuildCommit(ctx, query, nodes, nil,
+			func(n *Build, e *BuildCommit) { n.Edges.LatestBuildCommit = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := bq.withBuildToRepoCommit; query != nil {
-		if err := bq.loadBuildToRepoCommit(ctx, query, nodes, nil,
-			func(n *Build, e *RepoCommit) { n.Edges.BuildToRepoCommit = e }); err != nil {
+	if query := bq.withRepoCommit; query != nil {
+		if err := bq.loadRepoCommit(ctx, query, nodes, nil,
+			func(n *Build, e *RepoCommit) { n.Edges.RepoCommit = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := bq.withBuildToProvisionedNetwork; query != nil {
-		if err := bq.loadBuildToProvisionedNetwork(ctx, query, nodes,
-			func(n *Build) { n.Edges.BuildToProvisionedNetwork = []*ProvisionedNetwork{} },
+	if query := bq.withProvisionedNetworks; query != nil {
+		if err := bq.loadProvisionedNetworks(ctx, query, nodes,
+			func(n *Build) { n.Edges.ProvisionedNetworks = []*ProvisionedNetwork{} },
 			func(n *Build, e *ProvisionedNetwork) {
-				n.Edges.BuildToProvisionedNetwork = append(n.Edges.BuildToProvisionedNetwork, e)
+				n.Edges.ProvisionedNetworks = append(n.Edges.ProvisionedNetworks, e)
 			}); err != nil {
 			return nil, err
 		}
 	}
-	if query := bq.withBuildToTeam; query != nil {
-		if err := bq.loadBuildToTeam(ctx, query, nodes,
-			func(n *Build) { n.Edges.BuildToTeam = []*Team{} },
-			func(n *Build, e *Team) { n.Edges.BuildToTeam = append(n.Edges.BuildToTeam, e) }); err != nil {
+	if query := bq.withTeams; query != nil {
+		if err := bq.loadTeams(ctx, query, nodes,
+			func(n *Build) { n.Edges.Teams = []*Team{} },
+			func(n *Build, e *Team) { n.Edges.Teams = append(n.Edges.Teams, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := bq.withBuildToPlan; query != nil {
-		if err := bq.loadBuildToPlan(ctx, query, nodes,
-			func(n *Build) { n.Edges.BuildToPlan = []*Plan{} },
-			func(n *Build, e *Plan) { n.Edges.BuildToPlan = append(n.Edges.BuildToPlan, e) }); err != nil {
+	if query := bq.withPlans; query != nil {
+		if err := bq.loadPlans(ctx, query, nodes,
+			func(n *Build) { n.Edges.Plans = []*Plan{} },
+			func(n *Build, e *Plan) { n.Edges.Plans = append(n.Edges.Plans, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := bq.withBuildToBuildCommits; query != nil {
-		if err := bq.loadBuildToBuildCommits(ctx, query, nodes,
-			func(n *Build) { n.Edges.BuildToBuildCommits = []*BuildCommit{} },
-			func(n *Build, e *BuildCommit) { n.Edges.BuildToBuildCommits = append(n.Edges.BuildToBuildCommits, e) }); err != nil {
+	if query := bq.withBuildCommits; query != nil {
+		if err := bq.loadBuildCommits(ctx, query, nodes,
+			func(n *Build) { n.Edges.BuildCommits = []*BuildCommit{} },
+			func(n *Build, e *BuildCommit) { n.Edges.BuildCommits = append(n.Edges.BuildCommits, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := bq.withBuildToAdhocPlans; query != nil {
-		if err := bq.loadBuildToAdhocPlans(ctx, query, nodes,
-			func(n *Build) { n.Edges.BuildToAdhocPlans = []*AdhocPlan{} },
-			func(n *Build, e *AdhocPlan) { n.Edges.BuildToAdhocPlans = append(n.Edges.BuildToAdhocPlans, e) }); err != nil {
+	if query := bq.withAdhocPlans; query != nil {
+		if err := bq.loadAdhocPlans(ctx, query, nodes,
+			func(n *Build) { n.Edges.AdhocPlans = []*AdhocPlan{} },
+			func(n *Build, e *AdhocPlan) { n.Edges.AdhocPlans = append(n.Edges.AdhocPlans, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := bq.withBuildToAgentStatuses; query != nil {
-		if err := bq.loadBuildToAgentStatuses(ctx, query, nodes,
-			func(n *Build) { n.Edges.BuildToAgentStatuses = []*AgentStatus{} },
-			func(n *Build, e *AgentStatus) { n.Edges.BuildToAgentStatuses = append(n.Edges.BuildToAgentStatuses, e) }); err != nil {
+	if query := bq.withAgentStatuses; query != nil {
+		if err := bq.loadAgentStatuses(ctx, query, nodes,
+			func(n *Build) { n.Edges.AgentStatuses = []*AgentStatus{} },
+			func(n *Build, e *AgentStatus) { n.Edges.AgentStatuses = append(n.Edges.AgentStatuses, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := bq.withBuildToServerTasks; query != nil {
-		if err := bq.loadBuildToServerTasks(ctx, query, nodes,
-			func(n *Build) { n.Edges.BuildToServerTasks = []*ServerTask{} },
-			func(n *Build, e *ServerTask) { n.Edges.BuildToServerTasks = append(n.Edges.BuildToServerTasks, e) }); err != nil {
+	if query := bq.withServerTasks; query != nil {
+		if err := bq.loadServerTasks(ctx, query, nodes,
+			func(n *Build) { n.Edges.ServerTasks = []*ServerTask{} },
+			func(n *Build, e *ServerTask) { n.Edges.ServerTasks = append(n.Edges.ServerTasks, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (bq *BuildQuery) loadBuildToStatus(ctx context.Context, query *StatusQuery, nodes []*Build, init func(*Build), assign func(*Build, *Status)) error {
+func (bq *BuildQuery) loadStatus(ctx context.Context, query *StatusQuery, nodes []*Build, init func(*Build), assign func(*Build, *Status)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Build)
 	for i := range nodes {
@@ -884,33 +882,33 @@ func (bq *BuildQuery) loadBuildToStatus(ctx context.Context, query *StatusQuery,
 	}
 	query.withFKs = true
 	query.Where(predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.InValues(build.BuildToStatusColumn, fks...))
+		s.Where(sql.InValues(build.StatusColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.build_build_to_status
+		fk := n.build_status
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "build_build_to_status" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "build_status" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_build_to_status" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_status" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (bq *BuildQuery) loadBuildToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Build, init func(*Build), assign func(*Build, *Environment)) error {
+func (bq *BuildQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Build, init func(*Build), assign func(*Build, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Build)
 	for i := range nodes {
-		if nodes[i].build_build_to_environment == nil {
+		if nodes[i].build_environment == nil {
 			continue
 		}
-		fk := *nodes[i].build_build_to_environment
+		fk := *nodes[i].build_environment
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -924,7 +922,7 @@ func (bq *BuildQuery) loadBuildToEnvironment(ctx context.Context, query *Environ
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_build_to_environment" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_environment" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -932,14 +930,14 @@ func (bq *BuildQuery) loadBuildToEnvironment(ctx context.Context, query *Environ
 	}
 	return nil
 }
-func (bq *BuildQuery) loadBuildToCompetition(ctx context.Context, query *CompetitionQuery, nodes []*Build, init func(*Build), assign func(*Build, *Competition)) error {
+func (bq *BuildQuery) loadCompetition(ctx context.Context, query *CompetitionQuery, nodes []*Build, init func(*Build), assign func(*Build, *Competition)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Build)
 	for i := range nodes {
-		if nodes[i].build_build_to_competition == nil {
+		if nodes[i].build_competition == nil {
 			continue
 		}
-		fk := *nodes[i].build_build_to_competition
+		fk := *nodes[i].build_competition
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -953,7 +951,7 @@ func (bq *BuildQuery) loadBuildToCompetition(ctx context.Context, query *Competi
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_build_to_competition" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_competition" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -961,14 +959,14 @@ func (bq *BuildQuery) loadBuildToCompetition(ctx context.Context, query *Competi
 	}
 	return nil
 }
-func (bq *BuildQuery) loadBuildToLatestBuildCommit(ctx context.Context, query *BuildCommitQuery, nodes []*Build, init func(*Build), assign func(*Build, *BuildCommit)) error {
+func (bq *BuildQuery) loadLatestBuildCommit(ctx context.Context, query *BuildCommitQuery, nodes []*Build, init func(*Build), assign func(*Build, *BuildCommit)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Build)
 	for i := range nodes {
-		if nodes[i].build_build_to_latest_build_commit == nil {
+		if nodes[i].build_latest_build_commit == nil {
 			continue
 		}
-		fk := *nodes[i].build_build_to_latest_build_commit
+		fk := *nodes[i].build_latest_build_commit
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -982,7 +980,7 @@ func (bq *BuildQuery) loadBuildToLatestBuildCommit(ctx context.Context, query *B
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_build_to_latest_build_commit" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_latest_build_commit" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -990,14 +988,14 @@ func (bq *BuildQuery) loadBuildToLatestBuildCommit(ctx context.Context, query *B
 	}
 	return nil
 }
-func (bq *BuildQuery) loadBuildToRepoCommit(ctx context.Context, query *RepoCommitQuery, nodes []*Build, init func(*Build), assign func(*Build, *RepoCommit)) error {
+func (bq *BuildQuery) loadRepoCommit(ctx context.Context, query *RepoCommitQuery, nodes []*Build, init func(*Build), assign func(*Build, *RepoCommit)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Build)
 	for i := range nodes {
-		if nodes[i].build_build_to_repo_commit == nil {
+		if nodes[i].build_repo_commit == nil {
 			continue
 		}
-		fk := *nodes[i].build_build_to_repo_commit
+		fk := *nodes[i].build_repo_commit
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1011,7 +1009,7 @@ func (bq *BuildQuery) loadBuildToRepoCommit(ctx context.Context, query *RepoComm
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_build_to_repo_commit" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_repo_commit" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -1019,7 +1017,7 @@ func (bq *BuildQuery) loadBuildToRepoCommit(ctx context.Context, query *RepoComm
 	}
 	return nil
 }
-func (bq *BuildQuery) loadBuildToProvisionedNetwork(ctx context.Context, query *ProvisionedNetworkQuery, nodes []*Build, init func(*Build), assign func(*Build, *ProvisionedNetwork)) error {
+func (bq *BuildQuery) loadProvisionedNetworks(ctx context.Context, query *ProvisionedNetworkQuery, nodes []*Build, init func(*Build), assign func(*Build, *ProvisionedNetwork)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Build)
 	for i := range nodes {
@@ -1031,26 +1029,26 @@ func (bq *BuildQuery) loadBuildToProvisionedNetwork(ctx context.Context, query *
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisionedNetwork(func(s *sql.Selector) {
-		s.Where(sql.InValues(build.BuildToProvisionedNetworkColumn, fks...))
+		s.Where(sql.InValues(build.ProvisionedNetworksColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioned_network_provisioned_network_to_build
+		fk := n.provisioned_network_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioned_network_provisioned_network_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioned_network_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_network_provisioned_network_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_network_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (bq *BuildQuery) loadBuildToTeam(ctx context.Context, query *TeamQuery, nodes []*Build, init func(*Build), assign func(*Build, *Team)) error {
+func (bq *BuildQuery) loadTeams(ctx context.Context, query *TeamQuery, nodes []*Build, init func(*Build), assign func(*Build, *Team)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Build)
 	for i := range nodes {
@@ -1062,26 +1060,26 @@ func (bq *BuildQuery) loadBuildToTeam(ctx context.Context, query *TeamQuery, nod
 	}
 	query.withFKs = true
 	query.Where(predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.InValues(build.BuildToTeamColumn, fks...))
+		s.Where(sql.InValues(build.TeamsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.team_team_to_build
+		fk := n.team_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "team_team_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "team_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "team_team_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "team_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (bq *BuildQuery) loadBuildToPlan(ctx context.Context, query *PlanQuery, nodes []*Build, init func(*Build), assign func(*Build, *Plan)) error {
+func (bq *BuildQuery) loadPlans(ctx context.Context, query *PlanQuery, nodes []*Build, init func(*Build), assign func(*Build, *Plan)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Build)
 	for i := range nodes {
@@ -1093,26 +1091,26 @@ func (bq *BuildQuery) loadBuildToPlan(ctx context.Context, query *PlanQuery, nod
 	}
 	query.withFKs = true
 	query.Where(predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.InValues(build.BuildToPlanColumn, fks...))
+		s.Where(sql.InValues(build.PlansColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.plan_plan_to_build
+		fk := n.plan_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_plan_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "plan_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (bq *BuildQuery) loadBuildToBuildCommits(ctx context.Context, query *BuildCommitQuery, nodes []*Build, init func(*Build), assign func(*Build, *BuildCommit)) error {
+func (bq *BuildQuery) loadBuildCommits(ctx context.Context, query *BuildCommitQuery, nodes []*Build, init func(*Build), assign func(*Build, *BuildCommit)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Build)
 	for i := range nodes {
@@ -1124,26 +1122,26 @@ func (bq *BuildQuery) loadBuildToBuildCommits(ctx context.Context, query *BuildC
 	}
 	query.withFKs = true
 	query.Where(predicate.BuildCommit(func(s *sql.Selector) {
-		s.Where(sql.InValues(build.BuildToBuildCommitsColumn, fks...))
+		s.Where(sql.InValues(build.BuildCommitsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.build_commit_build_commit_to_build
+		fk := n.build_commit_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "build_commit_build_commit_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "build_commit_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_commit_build_commit_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_commit_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (bq *BuildQuery) loadBuildToAdhocPlans(ctx context.Context, query *AdhocPlanQuery, nodes []*Build, init func(*Build), assign func(*Build, *AdhocPlan)) error {
+func (bq *BuildQuery) loadAdhocPlans(ctx context.Context, query *AdhocPlanQuery, nodes []*Build, init func(*Build), assign func(*Build, *AdhocPlan)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Build)
 	for i := range nodes {
@@ -1155,26 +1153,26 @@ func (bq *BuildQuery) loadBuildToAdhocPlans(ctx context.Context, query *AdhocPla
 	}
 	query.withFKs = true
 	query.Where(predicate.AdhocPlan(func(s *sql.Selector) {
-		s.Where(sql.InValues(build.BuildToAdhocPlansColumn, fks...))
+		s.Where(sql.InValues(build.AdhocPlansColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.adhoc_plan_adhoc_plan_to_build
+		fk := n.adhoc_plan_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "adhoc_plan_adhoc_plan_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "adhoc_plan_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_adhoc_plan_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (bq *BuildQuery) loadBuildToAgentStatuses(ctx context.Context, query *AgentStatusQuery, nodes []*Build, init func(*Build), assign func(*Build, *AgentStatus)) error {
+func (bq *BuildQuery) loadAgentStatuses(ctx context.Context, query *AgentStatusQuery, nodes []*Build, init func(*Build), assign func(*Build, *AgentStatus)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Build)
 	for i := range nodes {
@@ -1186,26 +1184,26 @@ func (bq *BuildQuery) loadBuildToAgentStatuses(ctx context.Context, query *Agent
 	}
 	query.withFKs = true
 	query.Where(predicate.AgentStatus(func(s *sql.Selector) {
-		s.Where(sql.InValues(build.BuildToAgentStatusesColumn, fks...))
+		s.Where(sql.InValues(build.AgentStatusesColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_status_agent_status_to_build
+		fk := n.agent_status_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_status_agent_status_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "agent_status_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_status_agent_status_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_status_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (bq *BuildQuery) loadBuildToServerTasks(ctx context.Context, query *ServerTaskQuery, nodes []*Build, init func(*Build), assign func(*Build, *ServerTask)) error {
+func (bq *BuildQuery) loadServerTasks(ctx context.Context, query *ServerTaskQuery, nodes []*Build, init func(*Build), assign func(*Build, *ServerTask)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Build)
 	for i := range nodes {
@@ -1217,20 +1215,20 @@ func (bq *BuildQuery) loadBuildToServerTasks(ctx context.Context, query *ServerT
 	}
 	query.withFKs = true
 	query.Where(predicate.ServerTask(func(s *sql.Selector) {
-		s.Where(sql.InValues(build.BuildToServerTasksColumn, fks...))
+		s.Where(sql.InValues(build.ServerTasksColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.server_task_server_task_to_build
+		fk := n.server_task_build
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "server_task_server_task_to_build" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "server_task_build" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_build" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_build" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

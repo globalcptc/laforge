@@ -71,23 +71,23 @@ func (fec *FileExtractCreate) SetNillableID(u *uuid.UUID) *FileExtractCreate {
 	return fec
 }
 
-// SetFileExtractToEnvironmentID sets the "FileExtractToEnvironment" edge to the Environment entity by ID.
-func (fec *FileExtractCreate) SetFileExtractToEnvironmentID(id uuid.UUID) *FileExtractCreate {
-	fec.mutation.SetFileExtractToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (fec *FileExtractCreate) SetEnvironmentID(id uuid.UUID) *FileExtractCreate {
+	fec.mutation.SetEnvironmentID(id)
 	return fec
 }
 
-// SetNillableFileExtractToEnvironmentID sets the "FileExtractToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (fec *FileExtractCreate) SetNillableFileExtractToEnvironmentID(id *uuid.UUID) *FileExtractCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (fec *FileExtractCreate) SetNillableEnvironmentID(id *uuid.UUID) *FileExtractCreate {
 	if id != nil {
-		fec = fec.SetFileExtractToEnvironmentID(*id)
+		fec = fec.SetEnvironmentID(*id)
 	}
 	return fec
 }
 
-// SetFileExtractToEnvironment sets the "FileExtractToEnvironment" edge to the Environment entity.
-func (fec *FileExtractCreate) SetFileExtractToEnvironment(e *Environment) *FileExtractCreate {
-	return fec.SetFileExtractToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (fec *FileExtractCreate) SetEnvironment(e *Environment) *FileExtractCreate {
+	return fec.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the FileExtractMutation object of the builder.
@@ -277,12 +277,12 @@ func (fec *FileExtractCreate) createSpec() (*FileExtract, *sqlgraph.CreateSpec) 
 		})
 		_node.Validations = value
 	}
-	if nodes := fec.mutation.FileExtractToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := fec.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   fileextract.FileExtractToEnvironmentTable,
-			Columns: []string{fileextract.FileExtractToEnvironmentColumn},
+			Table:   fileextract.EnvironmentTable,
+			Columns: []string{fileextract.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -294,7 +294,7 @@ func (fec *FileExtractCreate) createSpec() (*FileExtract, *sqlgraph.CreateSpec) 
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.environment_environment_to_file_extract = &nodes[0]
+		_node.environment_file_extracts = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

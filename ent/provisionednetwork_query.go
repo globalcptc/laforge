@@ -25,19 +25,19 @@ import (
 // ProvisionedNetworkQuery is the builder for querying ProvisionedNetwork entities.
 type ProvisionedNetworkQuery struct {
 	config
-	limit                                   *int
-	offset                                  *int
-	unique                                  *bool
-	order                                   []OrderFunc
-	fields                                  []string
-	predicates                              []predicate.ProvisionedNetwork
-	withProvisionedNetworkToStatus          *StatusQuery
-	withProvisionedNetworkToNetwork         *NetworkQuery
-	withProvisionedNetworkToBuild           *BuildQuery
-	withProvisionedNetworkToTeam            *TeamQuery
-	withProvisionedNetworkToProvisionedHost *ProvisionedHostQuery
-	withProvisionedNetworkToPlan            *PlanQuery
-	withFKs                                 bool
+	limit                *int
+	offset               *int
+	unique               *bool
+	order                []OrderFunc
+	fields               []string
+	predicates           []predicate.ProvisionedNetwork
+	withStatus           *StatusQuery
+	withNetwork          *NetworkQuery
+	withBuild            *BuildQuery
+	withTeam             *TeamQuery
+	withProvisionedHosts *ProvisionedHostQuery
+	withPlan             *PlanQuery
+	withFKs              bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -74,8 +74,8 @@ func (pnq *ProvisionedNetworkQuery) Order(o ...OrderFunc) *ProvisionedNetworkQue
 	return pnq
 }
 
-// QueryProvisionedNetworkToStatus chains the current query on the "ProvisionedNetworkToStatus" edge.
-func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToStatus() *StatusQuery {
+// QueryStatus chains the current query on the "Status" edge.
+func (pnq *ProvisionedNetworkQuery) QueryStatus() *StatusQuery {
 	query := &StatusQuery{config: pnq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
@@ -88,7 +88,7 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToStatus() *StatusQue
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, selector),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, provisionednetwork.ProvisionedNetworkToStatusTable, provisionednetwork.ProvisionedNetworkToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, provisionednetwork.StatusTable, provisionednetwork.StatusColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pnq.driver.Dialect(), step)
 		return fromU, nil
@@ -96,8 +96,8 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToStatus() *StatusQue
 	return query
 }
 
-// QueryProvisionedNetworkToNetwork chains the current query on the "ProvisionedNetworkToNetwork" edge.
-func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToNetwork() *NetworkQuery {
+// QueryNetwork chains the current query on the "Network" edge.
+func (pnq *ProvisionedNetworkQuery) QueryNetwork() *NetworkQuery {
 	query := &NetworkQuery{config: pnq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
@@ -110,7 +110,7 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToNetwork() *NetworkQ
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, selector),
 			sqlgraph.To(network.Table, network.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.ProvisionedNetworkToNetworkTable, provisionednetwork.ProvisionedNetworkToNetworkColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.NetworkTable, provisionednetwork.NetworkColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pnq.driver.Dialect(), step)
 		return fromU, nil
@@ -118,8 +118,8 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToNetwork() *NetworkQ
 	return query
 }
 
-// QueryProvisionedNetworkToBuild chains the current query on the "ProvisionedNetworkToBuild" edge.
-func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToBuild() *BuildQuery {
+// QueryBuild chains the current query on the "Build" edge.
+func (pnq *ProvisionedNetworkQuery) QueryBuild() *BuildQuery {
 	query := &BuildQuery{config: pnq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
@@ -132,7 +132,7 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToBuild() *BuildQuery
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, selector),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.ProvisionedNetworkToBuildTable, provisionednetwork.ProvisionedNetworkToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.BuildTable, provisionednetwork.BuildColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pnq.driver.Dialect(), step)
 		return fromU, nil
@@ -140,8 +140,8 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToBuild() *BuildQuery
 	return query
 }
 
-// QueryProvisionedNetworkToTeam chains the current query on the "ProvisionedNetworkToTeam" edge.
-func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToTeam() *TeamQuery {
+// QueryTeam chains the current query on the "Team" edge.
+func (pnq *ProvisionedNetworkQuery) QueryTeam() *TeamQuery {
 	query := &TeamQuery{config: pnq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
@@ -154,7 +154,7 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToTeam() *TeamQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, selector),
 			sqlgraph.To(team.Table, team.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.ProvisionedNetworkToTeamTable, provisionednetwork.ProvisionedNetworkToTeamColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, provisionednetwork.TeamTable, provisionednetwork.TeamColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pnq.driver.Dialect(), step)
 		return fromU, nil
@@ -162,8 +162,8 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToTeam() *TeamQuery {
 	return query
 }
 
-// QueryProvisionedNetworkToProvisionedHost chains the current query on the "ProvisionedNetworkToProvisionedHost" edge.
-func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToProvisionedHost() *ProvisionedHostQuery {
+// QueryProvisionedHosts chains the current query on the "ProvisionedHosts" edge.
+func (pnq *ProvisionedNetworkQuery) QueryProvisionedHosts() *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: pnq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
@@ -176,7 +176,7 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToProvisionedHost() *
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, selector),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, provisionednetwork.ProvisionedNetworkToProvisionedHostTable, provisionednetwork.ProvisionedNetworkToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, provisionednetwork.ProvisionedHostsTable, provisionednetwork.ProvisionedHostsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pnq.driver.Dialect(), step)
 		return fromU, nil
@@ -184,8 +184,8 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToProvisionedHost() *
 	return query
 }
 
-// QueryProvisionedNetworkToPlan chains the current query on the "ProvisionedNetworkToPlan" edge.
-func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToPlan() *PlanQuery {
+// QueryPlan chains the current query on the "Plan" edge.
+func (pnq *ProvisionedNetworkQuery) QueryPlan() *PlanQuery {
 	query := &PlanQuery{config: pnq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
@@ -198,7 +198,7 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedNetworkToPlan() *PlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionednetwork.Table, provisionednetwork.FieldID, selector),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, provisionednetwork.ProvisionedNetworkToPlanTable, provisionednetwork.ProvisionedNetworkToPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, provisionednetwork.PlanTable, provisionednetwork.PlanColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pnq.driver.Dialect(), step)
 		return fromU, nil
@@ -382,17 +382,17 @@ func (pnq *ProvisionedNetworkQuery) Clone() *ProvisionedNetworkQuery {
 		return nil
 	}
 	return &ProvisionedNetworkQuery{
-		config:                                  pnq.config,
-		limit:                                   pnq.limit,
-		offset:                                  pnq.offset,
-		order:                                   append([]OrderFunc{}, pnq.order...),
-		predicates:                              append([]predicate.ProvisionedNetwork{}, pnq.predicates...),
-		withProvisionedNetworkToStatus:          pnq.withProvisionedNetworkToStatus.Clone(),
-		withProvisionedNetworkToNetwork:         pnq.withProvisionedNetworkToNetwork.Clone(),
-		withProvisionedNetworkToBuild:           pnq.withProvisionedNetworkToBuild.Clone(),
-		withProvisionedNetworkToTeam:            pnq.withProvisionedNetworkToTeam.Clone(),
-		withProvisionedNetworkToProvisionedHost: pnq.withProvisionedNetworkToProvisionedHost.Clone(),
-		withProvisionedNetworkToPlan:            pnq.withProvisionedNetworkToPlan.Clone(),
+		config:               pnq.config,
+		limit:                pnq.limit,
+		offset:               pnq.offset,
+		order:                append([]OrderFunc{}, pnq.order...),
+		predicates:           append([]predicate.ProvisionedNetwork{}, pnq.predicates...),
+		withStatus:           pnq.withStatus.Clone(),
+		withNetwork:          pnq.withNetwork.Clone(),
+		withBuild:            pnq.withBuild.Clone(),
+		withTeam:             pnq.withTeam.Clone(),
+		withProvisionedHosts: pnq.withProvisionedHosts.Clone(),
+		withPlan:             pnq.withPlan.Clone(),
 		// clone intermediate query.
 		sql:    pnq.sql.Clone(),
 		path:   pnq.path,
@@ -400,69 +400,69 @@ func (pnq *ProvisionedNetworkQuery) Clone() *ProvisionedNetworkQuery {
 	}
 }
 
-// WithProvisionedNetworkToStatus tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedNetworkToStatus" edge. The optional arguments are used to configure the query builder of the edge.
-func (pnq *ProvisionedNetworkQuery) WithProvisionedNetworkToStatus(opts ...func(*StatusQuery)) *ProvisionedNetworkQuery {
+// WithStatus tells the query-builder to eager-load the nodes that are connected to
+// the "Status" edge. The optional arguments are used to configure the query builder of the edge.
+func (pnq *ProvisionedNetworkQuery) WithStatus(opts ...func(*StatusQuery)) *ProvisionedNetworkQuery {
 	query := &StatusQuery{config: pnq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pnq.withProvisionedNetworkToStatus = query
+	pnq.withStatus = query
 	return pnq
 }
 
-// WithProvisionedNetworkToNetwork tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedNetworkToNetwork" edge. The optional arguments are used to configure the query builder of the edge.
-func (pnq *ProvisionedNetworkQuery) WithProvisionedNetworkToNetwork(opts ...func(*NetworkQuery)) *ProvisionedNetworkQuery {
+// WithNetwork tells the query-builder to eager-load the nodes that are connected to
+// the "Network" edge. The optional arguments are used to configure the query builder of the edge.
+func (pnq *ProvisionedNetworkQuery) WithNetwork(opts ...func(*NetworkQuery)) *ProvisionedNetworkQuery {
 	query := &NetworkQuery{config: pnq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pnq.withProvisionedNetworkToNetwork = query
+	pnq.withNetwork = query
 	return pnq
 }
 
-// WithProvisionedNetworkToBuild tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedNetworkToBuild" edge. The optional arguments are used to configure the query builder of the edge.
-func (pnq *ProvisionedNetworkQuery) WithProvisionedNetworkToBuild(opts ...func(*BuildQuery)) *ProvisionedNetworkQuery {
+// WithBuild tells the query-builder to eager-load the nodes that are connected to
+// the "Build" edge. The optional arguments are used to configure the query builder of the edge.
+func (pnq *ProvisionedNetworkQuery) WithBuild(opts ...func(*BuildQuery)) *ProvisionedNetworkQuery {
 	query := &BuildQuery{config: pnq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pnq.withProvisionedNetworkToBuild = query
+	pnq.withBuild = query
 	return pnq
 }
 
-// WithProvisionedNetworkToTeam tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedNetworkToTeam" edge. The optional arguments are used to configure the query builder of the edge.
-func (pnq *ProvisionedNetworkQuery) WithProvisionedNetworkToTeam(opts ...func(*TeamQuery)) *ProvisionedNetworkQuery {
+// WithTeam tells the query-builder to eager-load the nodes that are connected to
+// the "Team" edge. The optional arguments are used to configure the query builder of the edge.
+func (pnq *ProvisionedNetworkQuery) WithTeam(opts ...func(*TeamQuery)) *ProvisionedNetworkQuery {
 	query := &TeamQuery{config: pnq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pnq.withProvisionedNetworkToTeam = query
+	pnq.withTeam = query
 	return pnq
 }
 
-// WithProvisionedNetworkToProvisionedHost tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedNetworkToProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
-func (pnq *ProvisionedNetworkQuery) WithProvisionedNetworkToProvisionedHost(opts ...func(*ProvisionedHostQuery)) *ProvisionedNetworkQuery {
+// WithProvisionedHosts tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedHosts" edge. The optional arguments are used to configure the query builder of the edge.
+func (pnq *ProvisionedNetworkQuery) WithProvisionedHosts(opts ...func(*ProvisionedHostQuery)) *ProvisionedNetworkQuery {
 	query := &ProvisionedHostQuery{config: pnq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pnq.withProvisionedNetworkToProvisionedHost = query
+	pnq.withProvisionedHosts = query
 	return pnq
 }
 
-// WithProvisionedNetworkToPlan tells the query-builder to eager-load the nodes that are connected to
-// the "ProvisionedNetworkToPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (pnq *ProvisionedNetworkQuery) WithProvisionedNetworkToPlan(opts ...func(*PlanQuery)) *ProvisionedNetworkQuery {
+// WithPlan tells the query-builder to eager-load the nodes that are connected to
+// the "Plan" edge. The optional arguments are used to configure the query builder of the edge.
+func (pnq *ProvisionedNetworkQuery) WithPlan(opts ...func(*PlanQuery)) *ProvisionedNetworkQuery {
 	query := &PlanQuery{config: pnq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	pnq.withProvisionedNetworkToPlan = query
+	pnq.withPlan = query
 	return pnq
 }
 
@@ -480,7 +480,6 @@ func (pnq *ProvisionedNetworkQuery) WithProvisionedNetworkToPlan(opts ...func(*P
 //		GroupBy(provisionednetwork.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (pnq *ProvisionedNetworkQuery) GroupBy(field string, fields ...string) *ProvisionedNetworkGroupBy {
 	grbuild := &ProvisionedNetworkGroupBy{config: pnq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -507,7 +506,6 @@ func (pnq *ProvisionedNetworkQuery) GroupBy(field string, fields ...string) *Pro
 //	client.ProvisionedNetwork.Query().
 //		Select(provisionednetwork.FieldName).
 //		Scan(ctx, &v)
-//
 func (pnq *ProvisionedNetworkQuery) Select(fields ...string) *ProvisionedNetworkSelect {
 	pnq.fields = append(pnq.fields, fields...)
 	selbuild := &ProvisionedNetworkSelect{ProvisionedNetworkQuery: pnq}
@@ -538,15 +536,15 @@ func (pnq *ProvisionedNetworkQuery) sqlAll(ctx context.Context, hooks ...queryHo
 		withFKs     = pnq.withFKs
 		_spec       = pnq.querySpec()
 		loadedTypes = [6]bool{
-			pnq.withProvisionedNetworkToStatus != nil,
-			pnq.withProvisionedNetworkToNetwork != nil,
-			pnq.withProvisionedNetworkToBuild != nil,
-			pnq.withProvisionedNetworkToTeam != nil,
-			pnq.withProvisionedNetworkToProvisionedHost != nil,
-			pnq.withProvisionedNetworkToPlan != nil,
+			pnq.withStatus != nil,
+			pnq.withNetwork != nil,
+			pnq.withBuild != nil,
+			pnq.withTeam != nil,
+			pnq.withProvisionedHosts != nil,
+			pnq.withPlan != nil,
 		}
 	)
-	if pnq.withProvisionedNetworkToNetwork != nil || pnq.withProvisionedNetworkToBuild != nil || pnq.withProvisionedNetworkToTeam != nil || pnq.withProvisionedNetworkToPlan != nil {
+	if pnq.withNetwork != nil || pnq.withBuild != nil || pnq.withTeam != nil || pnq.withPlan != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -570,49 +568,49 @@ func (pnq *ProvisionedNetworkQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := pnq.withProvisionedNetworkToStatus; query != nil {
-		if err := pnq.loadProvisionedNetworkToStatus(ctx, query, nodes, nil,
-			func(n *ProvisionedNetwork, e *Status) { n.Edges.ProvisionedNetworkToStatus = e }); err != nil {
+	if query := pnq.withStatus; query != nil {
+		if err := pnq.loadStatus(ctx, query, nodes, nil,
+			func(n *ProvisionedNetwork, e *Status) { n.Edges.Status = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pnq.withProvisionedNetworkToNetwork; query != nil {
-		if err := pnq.loadProvisionedNetworkToNetwork(ctx, query, nodes, nil,
-			func(n *ProvisionedNetwork, e *Network) { n.Edges.ProvisionedNetworkToNetwork = e }); err != nil {
+	if query := pnq.withNetwork; query != nil {
+		if err := pnq.loadNetwork(ctx, query, nodes, nil,
+			func(n *ProvisionedNetwork, e *Network) { n.Edges.Network = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pnq.withProvisionedNetworkToBuild; query != nil {
-		if err := pnq.loadProvisionedNetworkToBuild(ctx, query, nodes, nil,
-			func(n *ProvisionedNetwork, e *Build) { n.Edges.ProvisionedNetworkToBuild = e }); err != nil {
+	if query := pnq.withBuild; query != nil {
+		if err := pnq.loadBuild(ctx, query, nodes, nil,
+			func(n *ProvisionedNetwork, e *Build) { n.Edges.Build = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pnq.withProvisionedNetworkToTeam; query != nil {
-		if err := pnq.loadProvisionedNetworkToTeam(ctx, query, nodes, nil,
-			func(n *ProvisionedNetwork, e *Team) { n.Edges.ProvisionedNetworkToTeam = e }); err != nil {
+	if query := pnq.withTeam; query != nil {
+		if err := pnq.loadTeam(ctx, query, nodes, nil,
+			func(n *ProvisionedNetwork, e *Team) { n.Edges.Team = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pnq.withProvisionedNetworkToProvisionedHost; query != nil {
-		if err := pnq.loadProvisionedNetworkToProvisionedHost(ctx, query, nodes,
-			func(n *ProvisionedNetwork) { n.Edges.ProvisionedNetworkToProvisionedHost = []*ProvisionedHost{} },
+	if query := pnq.withProvisionedHosts; query != nil {
+		if err := pnq.loadProvisionedHosts(ctx, query, nodes,
+			func(n *ProvisionedNetwork) { n.Edges.ProvisionedHosts = []*ProvisionedHost{} },
 			func(n *ProvisionedNetwork, e *ProvisionedHost) {
-				n.Edges.ProvisionedNetworkToProvisionedHost = append(n.Edges.ProvisionedNetworkToProvisionedHost, e)
+				n.Edges.ProvisionedHosts = append(n.Edges.ProvisionedHosts, e)
 			}); err != nil {
 			return nil, err
 		}
 	}
-	if query := pnq.withProvisionedNetworkToPlan; query != nil {
-		if err := pnq.loadProvisionedNetworkToPlan(ctx, query, nodes, nil,
-			func(n *ProvisionedNetwork, e *Plan) { n.Edges.ProvisionedNetworkToPlan = e }); err != nil {
+	if query := pnq.withPlan; query != nil {
+		if err := pnq.loadPlan(ctx, query, nodes, nil,
+			func(n *ProvisionedNetwork, e *Plan) { n.Edges.Plan = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToStatus(ctx context.Context, query *StatusQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *Status)) error {
+func (pnq *ProvisionedNetworkQuery) loadStatus(ctx context.Context, query *StatusQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *Status)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*ProvisionedNetwork)
 	for i := range nodes {
@@ -621,33 +619,33 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToStatus(ctx context.C
 	}
 	query.withFKs = true
 	query.Where(predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisionednetwork.ProvisionedNetworkToStatusColumn, fks...))
+		s.Where(sql.InValues(provisionednetwork.StatusColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioned_network_provisioned_network_to_status
+		fk := n.provisioned_network_status
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioned_network_provisioned_network_to_status" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioned_network_status" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_network_provisioned_network_to_status" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_network_status" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToNetwork(ctx context.Context, query *NetworkQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *Network)) error {
+func (pnq *ProvisionedNetworkQuery) loadNetwork(ctx context.Context, query *NetworkQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *Network)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionedNetwork)
 	for i := range nodes {
-		if nodes[i].provisioned_network_provisioned_network_to_network == nil {
+		if nodes[i].provisioned_network_network == nil {
 			continue
 		}
-		fk := *nodes[i].provisioned_network_provisioned_network_to_network
+		fk := *nodes[i].provisioned_network_network
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -661,7 +659,7 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToNetwork(ctx context.
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_network_provisioned_network_to_network" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_network_network" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -669,14 +667,14 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToNetwork(ctx context.
 	}
 	return nil
 }
-func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToBuild(ctx context.Context, query *BuildQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *Build)) error {
+func (pnq *ProvisionedNetworkQuery) loadBuild(ctx context.Context, query *BuildQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *Build)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionedNetwork)
 	for i := range nodes {
-		if nodes[i].provisioned_network_provisioned_network_to_build == nil {
+		if nodes[i].provisioned_network_build == nil {
 			continue
 		}
-		fk := *nodes[i].provisioned_network_provisioned_network_to_build
+		fk := *nodes[i].provisioned_network_build
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -690,7 +688,7 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToBuild(ctx context.Co
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_network_provisioned_network_to_build" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_network_build" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -698,14 +696,14 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToBuild(ctx context.Co
 	}
 	return nil
 }
-func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToTeam(ctx context.Context, query *TeamQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *Team)) error {
+func (pnq *ProvisionedNetworkQuery) loadTeam(ctx context.Context, query *TeamQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *Team)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionedNetwork)
 	for i := range nodes {
-		if nodes[i].provisioned_network_provisioned_network_to_team == nil {
+		if nodes[i].provisioned_network_team == nil {
 			continue
 		}
-		fk := *nodes[i].provisioned_network_provisioned_network_to_team
+		fk := *nodes[i].provisioned_network_team
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -719,7 +717,7 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToTeam(ctx context.Con
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_network_provisioned_network_to_team" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_network_team" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -727,7 +725,7 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToTeam(ctx context.Con
 	}
 	return nil
 }
-func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *ProvisionedHost)) error {
+func (pnq *ProvisionedNetworkQuery) loadProvisionedHosts(ctx context.Context, query *ProvisionedHostQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *ProvisionedHost)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*ProvisionedNetwork)
 	for i := range nodes {
@@ -739,33 +737,33 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToProvisionedHost(ctx 
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisionedHost(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisionednetwork.ProvisionedNetworkToProvisionedHostColumn, fks...))
+		s.Where(sql.InValues(provisionednetwork.ProvisionedHostsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioned_host_provisioned_host_to_provisioned_network
+		fk := n.provisioned_host_provisioned_network
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioned_host_provisioned_host_to_provisioned_network" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioned_host_provisioned_network" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_host_to_provisioned_network" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_network" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToPlan(ctx context.Context, query *PlanQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *Plan)) error {
+func (pnq *ProvisionedNetworkQuery) loadPlan(ctx context.Context, query *PlanQuery, nodes []*ProvisionedNetwork, init func(*ProvisionedNetwork), assign func(*ProvisionedNetwork, *Plan)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionedNetwork)
 	for i := range nodes {
-		if nodes[i].plan_plan_to_provisioned_network == nil {
+		if nodes[i].plan_provisioned_network == nil {
 			continue
 		}
-		fk := *nodes[i].plan_plan_to_provisioned_network
+		fk := *nodes[i].plan_provisioned_network
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -779,7 +777,7 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedNetworkToPlan(ctx context.Con
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_provisioned_network" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_provisioned_network" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

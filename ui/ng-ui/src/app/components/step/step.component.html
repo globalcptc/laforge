@@ -5,9 +5,18 @@
     <div class="step-status-icon d-flex align-items-center justify-content-center" [ngClass]="'text-' + getStatusColor()">
       <i class="fas fa-1x" [ngClass]="'fa-' + getStatusIcon()"></i>
     </div>
-    <div class="step-preview mr-1">
-      #{{ provisioningStep.step_number }} {{ getText() }}
-      <!-- <span class="step-stepname">{{ provisionedHost ? provisionedHost.host.hostname : '' }}</span> -->
-    </div>
+    <ng-container *ngIf="provisioningStep">
+      <div class="step-preview mr-1">
+        #{{ provisioningStep.stepNumber }} {{ getText() }}
+        <!-- <span class="step-stepname">{{ provisionedHost ? provisionedHost.host.hostname : '' }}</span> -->
+      </div>
+    </ng-container>
+    <ng-container *ngIf="provisioningScheduledStep">
+      <div class="step-preview mr-1">
+        [{{ provisioningScheduledStep.ScheduledStep.type }}] {{ provisioningScheduledStep.ScheduledStep.step }} @
+        {{ provisioningScheduledStep.runTime | date: 'short' }}
+        <!-- <span class="step-stepname">{{ provisionedHost ? provisionedHost.host.hostname : '' }}</span> -->
+      </div>
+    </ng-container>
   </div>
 </div>

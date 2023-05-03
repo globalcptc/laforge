@@ -106,23 +106,23 @@ func (ssu *ScheduledStepUpdate) ClearRunAt() *ScheduledStepUpdate {
 	return ssu
 }
 
-// SetScheduledStepToEnvironmentID sets the "ScheduledStepToEnvironment" edge to the Environment entity by ID.
-func (ssu *ScheduledStepUpdate) SetScheduledStepToEnvironmentID(id uuid.UUID) *ScheduledStepUpdate {
-	ssu.mutation.SetScheduledStepToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (ssu *ScheduledStepUpdate) SetEnvironmentID(id uuid.UUID) *ScheduledStepUpdate {
+	ssu.mutation.SetEnvironmentID(id)
 	return ssu
 }
 
-// SetNillableScheduledStepToEnvironmentID sets the "ScheduledStepToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (ssu *ScheduledStepUpdate) SetNillableScheduledStepToEnvironmentID(id *uuid.UUID) *ScheduledStepUpdate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (ssu *ScheduledStepUpdate) SetNillableEnvironmentID(id *uuid.UUID) *ScheduledStepUpdate {
 	if id != nil {
-		ssu = ssu.SetScheduledStepToEnvironmentID(*id)
+		ssu = ssu.SetEnvironmentID(*id)
 	}
 	return ssu
 }
 
-// SetScheduledStepToEnvironment sets the "ScheduledStepToEnvironment" edge to the Environment entity.
-func (ssu *ScheduledStepUpdate) SetScheduledStepToEnvironment(e *Environment) *ScheduledStepUpdate {
-	return ssu.SetScheduledStepToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (ssu *ScheduledStepUpdate) SetEnvironment(e *Environment) *ScheduledStepUpdate {
+	return ssu.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the ScheduledStepMutation object of the builder.
@@ -130,9 +130,9 @@ func (ssu *ScheduledStepUpdate) Mutation() *ScheduledStepMutation {
 	return ssu.mutation
 }
 
-// ClearScheduledStepToEnvironment clears the "ScheduledStepToEnvironment" edge to the Environment entity.
-func (ssu *ScheduledStepUpdate) ClearScheduledStepToEnvironment() *ScheduledStepUpdate {
-	ssu.mutation.ClearScheduledStepToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (ssu *ScheduledStepUpdate) ClearEnvironment() *ScheduledStepUpdate {
+	ssu.mutation.ClearEnvironment()
 	return ssu
 }
 
@@ -292,12 +292,12 @@ func (ssu *ScheduledStepUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Column: scheduledstep.FieldRunAt,
 		})
 	}
-	if ssu.mutation.ScheduledStepToEnvironmentCleared() {
+	if ssu.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   scheduledstep.ScheduledStepToEnvironmentTable,
-			Columns: []string{scheduledstep.ScheduledStepToEnvironmentColumn},
+			Table:   scheduledstep.EnvironmentTable,
+			Columns: []string{scheduledstep.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -308,12 +308,12 @@ func (ssu *ScheduledStepUpdate) sqlSave(ctx context.Context) (n int, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ssu.mutation.ScheduledStepToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := ssu.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   scheduledstep.ScheduledStepToEnvironmentTable,
-			Columns: []string{scheduledstep.ScheduledStepToEnvironmentColumn},
+			Table:   scheduledstep.EnvironmentTable,
+			Columns: []string{scheduledstep.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -423,23 +423,23 @@ func (ssuo *ScheduledStepUpdateOne) ClearRunAt() *ScheduledStepUpdateOne {
 	return ssuo
 }
 
-// SetScheduledStepToEnvironmentID sets the "ScheduledStepToEnvironment" edge to the Environment entity by ID.
-func (ssuo *ScheduledStepUpdateOne) SetScheduledStepToEnvironmentID(id uuid.UUID) *ScheduledStepUpdateOne {
-	ssuo.mutation.SetScheduledStepToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (ssuo *ScheduledStepUpdateOne) SetEnvironmentID(id uuid.UUID) *ScheduledStepUpdateOne {
+	ssuo.mutation.SetEnvironmentID(id)
 	return ssuo
 }
 
-// SetNillableScheduledStepToEnvironmentID sets the "ScheduledStepToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (ssuo *ScheduledStepUpdateOne) SetNillableScheduledStepToEnvironmentID(id *uuid.UUID) *ScheduledStepUpdateOne {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (ssuo *ScheduledStepUpdateOne) SetNillableEnvironmentID(id *uuid.UUID) *ScheduledStepUpdateOne {
 	if id != nil {
-		ssuo = ssuo.SetScheduledStepToEnvironmentID(*id)
+		ssuo = ssuo.SetEnvironmentID(*id)
 	}
 	return ssuo
 }
 
-// SetScheduledStepToEnvironment sets the "ScheduledStepToEnvironment" edge to the Environment entity.
-func (ssuo *ScheduledStepUpdateOne) SetScheduledStepToEnvironment(e *Environment) *ScheduledStepUpdateOne {
-	return ssuo.SetScheduledStepToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (ssuo *ScheduledStepUpdateOne) SetEnvironment(e *Environment) *ScheduledStepUpdateOne {
+	return ssuo.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the ScheduledStepMutation object of the builder.
@@ -447,9 +447,9 @@ func (ssuo *ScheduledStepUpdateOne) Mutation() *ScheduledStepMutation {
 	return ssuo.mutation
 }
 
-// ClearScheduledStepToEnvironment clears the "ScheduledStepToEnvironment" edge to the Environment entity.
-func (ssuo *ScheduledStepUpdateOne) ClearScheduledStepToEnvironment() *ScheduledStepUpdateOne {
-	ssuo.mutation.ClearScheduledStepToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (ssuo *ScheduledStepUpdateOne) ClearEnvironment() *ScheduledStepUpdateOne {
+	ssuo.mutation.ClearEnvironment()
 	return ssuo
 }
 
@@ -639,12 +639,12 @@ func (ssuo *ScheduledStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedul
 			Column: scheduledstep.FieldRunAt,
 		})
 	}
-	if ssuo.mutation.ScheduledStepToEnvironmentCleared() {
+	if ssuo.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   scheduledstep.ScheduledStepToEnvironmentTable,
-			Columns: []string{scheduledstep.ScheduledStepToEnvironmentColumn},
+			Table:   scheduledstep.EnvironmentTable,
+			Columns: []string{scheduledstep.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -655,12 +655,12 @@ func (ssuo *ScheduledStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedul
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ssuo.mutation.ScheduledStepToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := ssuo.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   scheduledstep.ScheduledStepToEnvironmentTable,
-			Columns: []string{scheduledstep.ScheduledStepToEnvironmentColumn},
+			Table:   scheduledstep.EnvironmentTable,
+			Columns: []string{scheduledstep.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

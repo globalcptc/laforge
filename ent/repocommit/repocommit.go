@@ -27,17 +27,17 @@ const (
 	FieldTreeHash = "tree_hash"
 	// FieldParentHashes holds the string denoting the parent_hashes field in the database.
 	FieldParentHashes = "parent_hashes"
-	// EdgeRepoCommitToRepository holds the string denoting the repocommittorepository edge name in mutations.
-	EdgeRepoCommitToRepository = "RepoCommitToRepository"
+	// EdgeRepository holds the string denoting the repository edge name in mutations.
+	EdgeRepository = "Repository"
 	// Table holds the table name of the repocommit in the database.
 	Table = "repo_commits"
-	// RepoCommitToRepositoryTable is the table that holds the RepoCommitToRepository relation/edge.
-	RepoCommitToRepositoryTable = "repo_commits"
-	// RepoCommitToRepositoryInverseTable is the table name for the Repository entity.
+	// RepositoryTable is the table that holds the Repository relation/edge.
+	RepositoryTable = "repo_commits"
+	// RepositoryInverseTable is the table name for the Repository entity.
 	// It exists in this package in order to avoid circular dependency with the "repository" package.
-	RepoCommitToRepositoryInverseTable = "repositories"
-	// RepoCommitToRepositoryColumn is the table column denoting the RepoCommitToRepository relation/edge.
-	RepoCommitToRepositoryColumn = "repository_repository_to_repo_commit"
+	RepositoryInverseTable = "repositories"
+	// RepositoryColumn is the table column denoting the Repository relation/edge.
+	RepositoryColumn = "repository_repo_commits"
 )
 
 // Columns holds all SQL columns for repocommit fields.
@@ -56,7 +56,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "repo_commits"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"repository_repository_to_repo_commit",
+	"repository_repo_commits",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

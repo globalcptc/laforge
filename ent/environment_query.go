@@ -40,33 +40,33 @@ import (
 // EnvironmentQuery is the builder for querying Environment entities.
 type EnvironmentQuery struct {
 	config
-	limit                            *int
-	offset                           *int
-	unique                           *bool
-	order                            []OrderFunc
-	fields                           []string
-	predicates                       []predicate.Environment
-	withEnvironmentToUser            *UserQuery
-	withEnvironmentToHost            *HostQuery
-	withEnvironmentToCompetition     *CompetitionQuery
-	withEnvironmentToIdentity        *IdentityQuery
-	withEnvironmentToCommand         *CommandQuery
-	withEnvironmentToScript          *ScriptQuery
-	withEnvironmentToFileDownload    *FileDownloadQuery
-	withEnvironmentToFileDelete      *FileDeleteQuery
-	withEnvironmentToFileExtract     *FileExtractQuery
-	withEnvironmentToIncludedNetwork *IncludedNetworkQuery
-	withEnvironmentToFinding         *FindingQuery
-	withEnvironmentToDNSRecord       *DNSRecordQuery
-	withEnvironmentToDNS             *DNSQuery
-	withEnvironmentToNetwork         *NetworkQuery
-	withEnvironmentToHostDependency  *HostDependencyQuery
-	withEnvironmentToAnsible         *AnsibleQuery
-	withEnvironmentToScheduledStep   *ScheduledStepQuery
-	withEnvironmentToBuild           *BuildQuery
-	withEnvironmentToRepository      *RepositoryQuery
-	withEnvironmentToServerTask      *ServerTaskQuery
-	withEnvironmentToValidation      *ValidationQuery
+	limit                *int
+	offset               *int
+	unique               *bool
+	order                []OrderFunc
+	fields               []string
+	predicates           []predicate.Environment
+	withUsers            *UserQuery
+	withHosts            *HostQuery
+	withCompetitions     *CompetitionQuery
+	withIdentities       *IdentityQuery
+	withCommands         *CommandQuery
+	withScripts          *ScriptQuery
+	withFileDownloads    *FileDownloadQuery
+	withFileDeletes      *FileDeleteQuery
+	withFileExtracts     *FileExtractQuery
+	withIncludedNetworks *IncludedNetworkQuery
+	withFindings         *FindingQuery
+	withDNSRecords       *DNSRecordQuery
+	withDNS              *DNSQuery
+	withNetworks         *NetworkQuery
+	withHostDependencies *HostDependencyQuery
+	withAnsibles         *AnsibleQuery
+	withScheduledSteps   *ScheduledStepQuery
+	withBuilds           *BuildQuery
+	withRepositories     *RepositoryQuery
+	withServerTasks      *ServerTaskQuery
+	withValidations      *ValidationQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -103,8 +103,8 @@ func (eq *EnvironmentQuery) Order(o ...OrderFunc) *EnvironmentQuery {
 	return eq
 }
 
-// QueryEnvironmentToUser chains the current query on the "EnvironmentToUser" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToUser() *UserQuery {
+// QueryUsers chains the current query on the "Users" edge.
+func (eq *EnvironmentQuery) QueryUsers() *UserQuery {
 	query := &UserQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -117,7 +117,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToUser() *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, environment.EnvironmentToUserTable, environment.EnvironmentToUserPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, environment.UsersTable, environment.UsersPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -125,8 +125,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToUser() *UserQuery {
 	return query
 }
 
-// QueryEnvironmentToHost chains the current query on the "EnvironmentToHost" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToHost() *HostQuery {
+// QueryHosts chains the current query on the "Hosts" edge.
+func (eq *EnvironmentQuery) QueryHosts() *HostQuery {
 	query := &HostQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -139,7 +139,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToHost() *HostQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(host.Table, host.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToHostTable, environment.EnvironmentToHostColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.HostsTable, environment.HostsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -147,8 +147,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToHost() *HostQuery {
 	return query
 }
 
-// QueryEnvironmentToCompetition chains the current query on the "EnvironmentToCompetition" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToCompetition() *CompetitionQuery {
+// QueryCompetitions chains the current query on the "Competitions" edge.
+func (eq *EnvironmentQuery) QueryCompetitions() *CompetitionQuery {
 	query := &CompetitionQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -161,7 +161,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToCompetition() *CompetitionQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(competition.Table, competition.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToCompetitionTable, environment.EnvironmentToCompetitionColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.CompetitionsTable, environment.CompetitionsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -169,8 +169,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToCompetition() *CompetitionQuery {
 	return query
 }
 
-// QueryEnvironmentToIdentity chains the current query on the "EnvironmentToIdentity" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToIdentity() *IdentityQuery {
+// QueryIdentities chains the current query on the "Identities" edge.
+func (eq *EnvironmentQuery) QueryIdentities() *IdentityQuery {
 	query := &IdentityQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -183,7 +183,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToIdentity() *IdentityQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(identity.Table, identity.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToIdentityTable, environment.EnvironmentToIdentityColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.IdentitiesTable, environment.IdentitiesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -191,8 +191,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToIdentity() *IdentityQuery {
 	return query
 }
 
-// QueryEnvironmentToCommand chains the current query on the "EnvironmentToCommand" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToCommand() *CommandQuery {
+// QueryCommands chains the current query on the "Commands" edge.
+func (eq *EnvironmentQuery) QueryCommands() *CommandQuery {
 	query := &CommandQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -205,7 +205,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToCommand() *CommandQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(command.Table, command.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToCommandTable, environment.EnvironmentToCommandColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.CommandsTable, environment.CommandsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -213,8 +213,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToCommand() *CommandQuery {
 	return query
 }
 
-// QueryEnvironmentToScript chains the current query on the "EnvironmentToScript" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToScript() *ScriptQuery {
+// QueryScripts chains the current query on the "Scripts" edge.
+func (eq *EnvironmentQuery) QueryScripts() *ScriptQuery {
 	query := &ScriptQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -227,7 +227,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToScript() *ScriptQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(script.Table, script.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToScriptTable, environment.EnvironmentToScriptColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.ScriptsTable, environment.ScriptsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -235,8 +235,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToScript() *ScriptQuery {
 	return query
 }
 
-// QueryEnvironmentToFileDownload chains the current query on the "EnvironmentToFileDownload" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToFileDownload() *FileDownloadQuery {
+// QueryFileDownloads chains the current query on the "FileDownloads" edge.
+func (eq *EnvironmentQuery) QueryFileDownloads() *FileDownloadQuery {
 	query := &FileDownloadQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -249,7 +249,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToFileDownload() *FileDownloadQuery 
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(filedownload.Table, filedownload.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToFileDownloadTable, environment.EnvironmentToFileDownloadColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.FileDownloadsTable, environment.FileDownloadsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -257,8 +257,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToFileDownload() *FileDownloadQuery 
 	return query
 }
 
-// QueryEnvironmentToFileDelete chains the current query on the "EnvironmentToFileDelete" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToFileDelete() *FileDeleteQuery {
+// QueryFileDeletes chains the current query on the "FileDeletes" edge.
+func (eq *EnvironmentQuery) QueryFileDeletes() *FileDeleteQuery {
 	query := &FileDeleteQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -271,7 +271,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToFileDelete() *FileDeleteQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(filedelete.Table, filedelete.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToFileDeleteTable, environment.EnvironmentToFileDeleteColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.FileDeletesTable, environment.FileDeletesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -279,8 +279,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToFileDelete() *FileDeleteQuery {
 	return query
 }
 
-// QueryEnvironmentToFileExtract chains the current query on the "EnvironmentToFileExtract" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToFileExtract() *FileExtractQuery {
+// QueryFileExtracts chains the current query on the "FileExtracts" edge.
+func (eq *EnvironmentQuery) QueryFileExtracts() *FileExtractQuery {
 	query := &FileExtractQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -293,7 +293,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToFileExtract() *FileExtractQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(fileextract.Table, fileextract.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToFileExtractTable, environment.EnvironmentToFileExtractColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.FileExtractsTable, environment.FileExtractsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -301,8 +301,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToFileExtract() *FileExtractQuery {
 	return query
 }
 
-// QueryEnvironmentToIncludedNetwork chains the current query on the "EnvironmentToIncludedNetwork" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToIncludedNetwork() *IncludedNetworkQuery {
+// QueryIncludedNetworks chains the current query on the "IncludedNetworks" edge.
+func (eq *EnvironmentQuery) QueryIncludedNetworks() *IncludedNetworkQuery {
 	query := &IncludedNetworkQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -315,7 +315,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToIncludedNetwork() *IncludedNetwork
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(includednetwork.Table, includednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, environment.EnvironmentToIncludedNetworkTable, environment.EnvironmentToIncludedNetworkPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, environment.IncludedNetworksTable, environment.IncludedNetworksPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -323,8 +323,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToIncludedNetwork() *IncludedNetwork
 	return query
 }
 
-// QueryEnvironmentToFinding chains the current query on the "EnvironmentToFinding" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToFinding() *FindingQuery {
+// QueryFindings chains the current query on the "Findings" edge.
+func (eq *EnvironmentQuery) QueryFindings() *FindingQuery {
 	query := &FindingQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -337,7 +337,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToFinding() *FindingQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(finding.Table, finding.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToFindingTable, environment.EnvironmentToFindingColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.FindingsTable, environment.FindingsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -345,8 +345,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToFinding() *FindingQuery {
 	return query
 }
 
-// QueryEnvironmentToDNSRecord chains the current query on the "EnvironmentToDNSRecord" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToDNSRecord() *DNSRecordQuery {
+// QueryDNSRecords chains the current query on the "DNSRecords" edge.
+func (eq *EnvironmentQuery) QueryDNSRecords() *DNSRecordQuery {
 	query := &DNSRecordQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -359,7 +359,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToDNSRecord() *DNSRecordQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(dnsrecord.Table, dnsrecord.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToDNSRecordTable, environment.EnvironmentToDNSRecordColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.DNSRecordsTable, environment.DNSRecordsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -367,8 +367,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToDNSRecord() *DNSRecordQuery {
 	return query
 }
 
-// QueryEnvironmentToDNS chains the current query on the "EnvironmentToDNS" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToDNS() *DNSQuery {
+// QueryDNS chains the current query on the "DNS" edge.
+func (eq *EnvironmentQuery) QueryDNS() *DNSQuery {
 	query := &DNSQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -381,7 +381,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToDNS() *DNSQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(dns.Table, dns.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, environment.EnvironmentToDNSTable, environment.EnvironmentToDNSPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, environment.DNSTable, environment.DNSPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -389,8 +389,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToDNS() *DNSQuery {
 	return query
 }
 
-// QueryEnvironmentToNetwork chains the current query on the "EnvironmentToNetwork" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToNetwork() *NetworkQuery {
+// QueryNetworks chains the current query on the "Networks" edge.
+func (eq *EnvironmentQuery) QueryNetworks() *NetworkQuery {
 	query := &NetworkQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -403,7 +403,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToNetwork() *NetworkQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(network.Table, network.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToNetworkTable, environment.EnvironmentToNetworkColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.NetworksTable, environment.NetworksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -411,8 +411,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToNetwork() *NetworkQuery {
 	return query
 }
 
-// QueryEnvironmentToHostDependency chains the current query on the "EnvironmentToHostDependency" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToHostDependency() *HostDependencyQuery {
+// QueryHostDependencies chains the current query on the "HostDependencies" edge.
+func (eq *EnvironmentQuery) QueryHostDependencies() *HostDependencyQuery {
 	query := &HostDependencyQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -425,7 +425,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToHostDependency() *HostDependencyQu
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(hostdependency.Table, hostdependency.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToHostDependencyTable, environment.EnvironmentToHostDependencyColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.HostDependenciesTable, environment.HostDependenciesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -433,8 +433,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToHostDependency() *HostDependencyQu
 	return query
 }
 
-// QueryEnvironmentToAnsible chains the current query on the "EnvironmentToAnsible" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToAnsible() *AnsibleQuery {
+// QueryAnsibles chains the current query on the "Ansibles" edge.
+func (eq *EnvironmentQuery) QueryAnsibles() *AnsibleQuery {
 	query := &AnsibleQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -447,7 +447,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToAnsible() *AnsibleQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(ansible.Table, ansible.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToAnsibleTable, environment.EnvironmentToAnsibleColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.AnsiblesTable, environment.AnsiblesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -455,8 +455,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToAnsible() *AnsibleQuery {
 	return query
 }
 
-// QueryEnvironmentToScheduledStep chains the current query on the "EnvironmentToScheduledStep" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToScheduledStep() *ScheduledStepQuery {
+// QueryScheduledSteps chains the current query on the "ScheduledSteps" edge.
+func (eq *EnvironmentQuery) QueryScheduledSteps() *ScheduledStepQuery {
 	query := &ScheduledStepQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -469,7 +469,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToScheduledStep() *ScheduledStepQuer
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(scheduledstep.Table, scheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, environment.EnvironmentToScheduledStepTable, environment.EnvironmentToScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.ScheduledStepsTable, environment.ScheduledStepsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -477,8 +477,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToScheduledStep() *ScheduledStepQuer
 	return query
 }
 
-// QueryEnvironmentToBuild chains the current query on the "EnvironmentToBuild" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToBuild() *BuildQuery {
+// QueryBuilds chains the current query on the "Builds" edge.
+func (eq *EnvironmentQuery) QueryBuilds() *BuildQuery {
 	query := &BuildQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -491,7 +491,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToBuild() *BuildQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, environment.EnvironmentToBuildTable, environment.EnvironmentToBuildColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, environment.BuildsTable, environment.BuildsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -499,8 +499,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToBuild() *BuildQuery {
 	return query
 }
 
-// QueryEnvironmentToRepository chains the current query on the "EnvironmentToRepository" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToRepository() *RepositoryQuery {
+// QueryRepositories chains the current query on the "Repositories" edge.
+func (eq *EnvironmentQuery) QueryRepositories() *RepositoryQuery {
 	query := &RepositoryQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -513,7 +513,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToRepository() *RepositoryQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(repository.Table, repository.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, environment.EnvironmentToRepositoryTable, environment.EnvironmentToRepositoryPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, true, environment.RepositoriesTable, environment.RepositoriesPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -521,8 +521,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToRepository() *RepositoryQuery {
 	return query
 }
 
-// QueryEnvironmentToServerTask chains the current query on the "EnvironmentToServerTask" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToServerTask() *ServerTaskQuery {
+// QueryServerTasks chains the current query on the "ServerTasks" edge.
+func (eq *EnvironmentQuery) QueryServerTasks() *ServerTaskQuery {
 	query := &ServerTaskQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -535,7 +535,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToServerTask() *ServerTaskQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(servertask.Table, servertask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, environment.EnvironmentToServerTaskTable, environment.EnvironmentToServerTaskColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, environment.ServerTasksTable, environment.ServerTasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -543,8 +543,8 @@ func (eq *EnvironmentQuery) QueryEnvironmentToServerTask() *ServerTaskQuery {
 	return query
 }
 
-// QueryEnvironmentToValidation chains the current query on the "EnvironmentToValidation" edge.
-func (eq *EnvironmentQuery) QueryEnvironmentToValidation() *ValidationQuery {
+// QueryValidations chains the current query on the "Validations" edge.
+func (eq *EnvironmentQuery) QueryValidations() *ValidationQuery {
 	query := &ValidationQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -557,7 +557,7 @@ func (eq *EnvironmentQuery) QueryEnvironmentToValidation() *ValidationQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(environment.Table, environment.FieldID, selector),
 			sqlgraph.To(validation.Table, validation.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, environment.EnvironmentToValidationTable, environment.EnvironmentToValidationPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, environment.ValidationsTable, environment.ValidationsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -741,32 +741,32 @@ func (eq *EnvironmentQuery) Clone() *EnvironmentQuery {
 		return nil
 	}
 	return &EnvironmentQuery{
-		config:                           eq.config,
-		limit:                            eq.limit,
-		offset:                           eq.offset,
-		order:                            append([]OrderFunc{}, eq.order...),
-		predicates:                       append([]predicate.Environment{}, eq.predicates...),
-		withEnvironmentToUser:            eq.withEnvironmentToUser.Clone(),
-		withEnvironmentToHost:            eq.withEnvironmentToHost.Clone(),
-		withEnvironmentToCompetition:     eq.withEnvironmentToCompetition.Clone(),
-		withEnvironmentToIdentity:        eq.withEnvironmentToIdentity.Clone(),
-		withEnvironmentToCommand:         eq.withEnvironmentToCommand.Clone(),
-		withEnvironmentToScript:          eq.withEnvironmentToScript.Clone(),
-		withEnvironmentToFileDownload:    eq.withEnvironmentToFileDownload.Clone(),
-		withEnvironmentToFileDelete:      eq.withEnvironmentToFileDelete.Clone(),
-		withEnvironmentToFileExtract:     eq.withEnvironmentToFileExtract.Clone(),
-		withEnvironmentToIncludedNetwork: eq.withEnvironmentToIncludedNetwork.Clone(),
-		withEnvironmentToFinding:         eq.withEnvironmentToFinding.Clone(),
-		withEnvironmentToDNSRecord:       eq.withEnvironmentToDNSRecord.Clone(),
-		withEnvironmentToDNS:             eq.withEnvironmentToDNS.Clone(),
-		withEnvironmentToNetwork:         eq.withEnvironmentToNetwork.Clone(),
-		withEnvironmentToHostDependency:  eq.withEnvironmentToHostDependency.Clone(),
-		withEnvironmentToAnsible:         eq.withEnvironmentToAnsible.Clone(),
-		withEnvironmentToScheduledStep:   eq.withEnvironmentToScheduledStep.Clone(),
-		withEnvironmentToBuild:           eq.withEnvironmentToBuild.Clone(),
-		withEnvironmentToRepository:      eq.withEnvironmentToRepository.Clone(),
-		withEnvironmentToServerTask:      eq.withEnvironmentToServerTask.Clone(),
-		withEnvironmentToValidation:      eq.withEnvironmentToValidation.Clone(),
+		config:               eq.config,
+		limit:                eq.limit,
+		offset:               eq.offset,
+		order:                append([]OrderFunc{}, eq.order...),
+		predicates:           append([]predicate.Environment{}, eq.predicates...),
+		withUsers:            eq.withUsers.Clone(),
+		withHosts:            eq.withHosts.Clone(),
+		withCompetitions:     eq.withCompetitions.Clone(),
+		withIdentities:       eq.withIdentities.Clone(),
+		withCommands:         eq.withCommands.Clone(),
+		withScripts:          eq.withScripts.Clone(),
+		withFileDownloads:    eq.withFileDownloads.Clone(),
+		withFileDeletes:      eq.withFileDeletes.Clone(),
+		withFileExtracts:     eq.withFileExtracts.Clone(),
+		withIncludedNetworks: eq.withIncludedNetworks.Clone(),
+		withFindings:         eq.withFindings.Clone(),
+		withDNSRecords:       eq.withDNSRecords.Clone(),
+		withDNS:              eq.withDNS.Clone(),
+		withNetworks:         eq.withNetworks.Clone(),
+		withHostDependencies: eq.withHostDependencies.Clone(),
+		withAnsibles:         eq.withAnsibles.Clone(),
+		withScheduledSteps:   eq.withScheduledSteps.Clone(),
+		withBuilds:           eq.withBuilds.Clone(),
+		withRepositories:     eq.withRepositories.Clone(),
+		withServerTasks:      eq.withServerTasks.Clone(),
+		withValidations:      eq.withValidations.Clone(),
 		// clone intermediate query.
 		sql:    eq.sql.Clone(),
 		path:   eq.path,
@@ -774,234 +774,234 @@ func (eq *EnvironmentQuery) Clone() *EnvironmentQuery {
 	}
 }
 
-// WithEnvironmentToUser tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToUser" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToUser(opts ...func(*UserQuery)) *EnvironmentQuery {
+// WithUsers tells the query-builder to eager-load the nodes that are connected to
+// the "Users" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithUsers(opts ...func(*UserQuery)) *EnvironmentQuery {
 	query := &UserQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToUser = query
+	eq.withUsers = query
 	return eq
 }
 
-// WithEnvironmentToHost tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToHost" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToHost(opts ...func(*HostQuery)) *EnvironmentQuery {
+// WithHosts tells the query-builder to eager-load the nodes that are connected to
+// the "Hosts" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithHosts(opts ...func(*HostQuery)) *EnvironmentQuery {
 	query := &HostQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToHost = query
+	eq.withHosts = query
 	return eq
 }
 
-// WithEnvironmentToCompetition tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToCompetition" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToCompetition(opts ...func(*CompetitionQuery)) *EnvironmentQuery {
+// WithCompetitions tells the query-builder to eager-load the nodes that are connected to
+// the "Competitions" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithCompetitions(opts ...func(*CompetitionQuery)) *EnvironmentQuery {
 	query := &CompetitionQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToCompetition = query
+	eq.withCompetitions = query
 	return eq
 }
 
-// WithEnvironmentToIdentity tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToIdentity" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToIdentity(opts ...func(*IdentityQuery)) *EnvironmentQuery {
+// WithIdentities tells the query-builder to eager-load the nodes that are connected to
+// the "Identities" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithIdentities(opts ...func(*IdentityQuery)) *EnvironmentQuery {
 	query := &IdentityQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToIdentity = query
+	eq.withIdentities = query
 	return eq
 }
 
-// WithEnvironmentToCommand tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToCommand" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToCommand(opts ...func(*CommandQuery)) *EnvironmentQuery {
+// WithCommands tells the query-builder to eager-load the nodes that are connected to
+// the "Commands" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithCommands(opts ...func(*CommandQuery)) *EnvironmentQuery {
 	query := &CommandQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToCommand = query
+	eq.withCommands = query
 	return eq
 }
 
-// WithEnvironmentToScript tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToScript" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToScript(opts ...func(*ScriptQuery)) *EnvironmentQuery {
+// WithScripts tells the query-builder to eager-load the nodes that are connected to
+// the "Scripts" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithScripts(opts ...func(*ScriptQuery)) *EnvironmentQuery {
 	query := &ScriptQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToScript = query
+	eq.withScripts = query
 	return eq
 }
 
-// WithEnvironmentToFileDownload tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToFileDownload" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToFileDownload(opts ...func(*FileDownloadQuery)) *EnvironmentQuery {
+// WithFileDownloads tells the query-builder to eager-load the nodes that are connected to
+// the "FileDownloads" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithFileDownloads(opts ...func(*FileDownloadQuery)) *EnvironmentQuery {
 	query := &FileDownloadQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToFileDownload = query
+	eq.withFileDownloads = query
 	return eq
 }
 
-// WithEnvironmentToFileDelete tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToFileDelete" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToFileDelete(opts ...func(*FileDeleteQuery)) *EnvironmentQuery {
+// WithFileDeletes tells the query-builder to eager-load the nodes that are connected to
+// the "FileDeletes" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithFileDeletes(opts ...func(*FileDeleteQuery)) *EnvironmentQuery {
 	query := &FileDeleteQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToFileDelete = query
+	eq.withFileDeletes = query
 	return eq
 }
 
-// WithEnvironmentToFileExtract tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToFileExtract" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToFileExtract(opts ...func(*FileExtractQuery)) *EnvironmentQuery {
+// WithFileExtracts tells the query-builder to eager-load the nodes that are connected to
+// the "FileExtracts" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithFileExtracts(opts ...func(*FileExtractQuery)) *EnvironmentQuery {
 	query := &FileExtractQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToFileExtract = query
+	eq.withFileExtracts = query
 	return eq
 }
 
-// WithEnvironmentToIncludedNetwork tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToIncludedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToIncludedNetwork(opts ...func(*IncludedNetworkQuery)) *EnvironmentQuery {
+// WithIncludedNetworks tells the query-builder to eager-load the nodes that are connected to
+// the "IncludedNetworks" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithIncludedNetworks(opts ...func(*IncludedNetworkQuery)) *EnvironmentQuery {
 	query := &IncludedNetworkQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToIncludedNetwork = query
+	eq.withIncludedNetworks = query
 	return eq
 }
 
-// WithEnvironmentToFinding tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToFinding" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToFinding(opts ...func(*FindingQuery)) *EnvironmentQuery {
+// WithFindings tells the query-builder to eager-load the nodes that are connected to
+// the "Findings" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithFindings(opts ...func(*FindingQuery)) *EnvironmentQuery {
 	query := &FindingQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToFinding = query
+	eq.withFindings = query
 	return eq
 }
 
-// WithEnvironmentToDNSRecord tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToDNSRecord" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToDNSRecord(opts ...func(*DNSRecordQuery)) *EnvironmentQuery {
+// WithDNSRecords tells the query-builder to eager-load the nodes that are connected to
+// the "DNSRecords" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithDNSRecords(opts ...func(*DNSRecordQuery)) *EnvironmentQuery {
 	query := &DNSRecordQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToDNSRecord = query
+	eq.withDNSRecords = query
 	return eq
 }
 
-// WithEnvironmentToDNS tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToDNS" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToDNS(opts ...func(*DNSQuery)) *EnvironmentQuery {
+// WithDNS tells the query-builder to eager-load the nodes that are connected to
+// the "DNS" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithDNS(opts ...func(*DNSQuery)) *EnvironmentQuery {
 	query := &DNSQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToDNS = query
+	eq.withDNS = query
 	return eq
 }
 
-// WithEnvironmentToNetwork tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToNetwork" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToNetwork(opts ...func(*NetworkQuery)) *EnvironmentQuery {
+// WithNetworks tells the query-builder to eager-load the nodes that are connected to
+// the "Networks" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithNetworks(opts ...func(*NetworkQuery)) *EnvironmentQuery {
 	query := &NetworkQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToNetwork = query
+	eq.withNetworks = query
 	return eq
 }
 
-// WithEnvironmentToHostDependency tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToHostDependency" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToHostDependency(opts ...func(*HostDependencyQuery)) *EnvironmentQuery {
+// WithHostDependencies tells the query-builder to eager-load the nodes that are connected to
+// the "HostDependencies" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithHostDependencies(opts ...func(*HostDependencyQuery)) *EnvironmentQuery {
 	query := &HostDependencyQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToHostDependency = query
+	eq.withHostDependencies = query
 	return eq
 }
 
-// WithEnvironmentToAnsible tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToAnsible" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToAnsible(opts ...func(*AnsibleQuery)) *EnvironmentQuery {
+// WithAnsibles tells the query-builder to eager-load the nodes that are connected to
+// the "Ansibles" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithAnsibles(opts ...func(*AnsibleQuery)) *EnvironmentQuery {
 	query := &AnsibleQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToAnsible = query
+	eq.withAnsibles = query
 	return eq
 }
 
-// WithEnvironmentToScheduledStep tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToScheduledStep(opts ...func(*ScheduledStepQuery)) *EnvironmentQuery {
+// WithScheduledSteps tells the query-builder to eager-load the nodes that are connected to
+// the "ScheduledSteps" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithScheduledSteps(opts ...func(*ScheduledStepQuery)) *EnvironmentQuery {
 	query := &ScheduledStepQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToScheduledStep = query
+	eq.withScheduledSteps = query
 	return eq
 }
 
-// WithEnvironmentToBuild tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToBuild" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToBuild(opts ...func(*BuildQuery)) *EnvironmentQuery {
+// WithBuilds tells the query-builder to eager-load the nodes that are connected to
+// the "Builds" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithBuilds(opts ...func(*BuildQuery)) *EnvironmentQuery {
 	query := &BuildQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToBuild = query
+	eq.withBuilds = query
 	return eq
 }
 
-// WithEnvironmentToRepository tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToRepository" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToRepository(opts ...func(*RepositoryQuery)) *EnvironmentQuery {
+// WithRepositories tells the query-builder to eager-load the nodes that are connected to
+// the "Repositories" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithRepositories(opts ...func(*RepositoryQuery)) *EnvironmentQuery {
 	query := &RepositoryQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToRepository = query
+	eq.withRepositories = query
 	return eq
 }
 
-// WithEnvironmentToServerTask tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToServerTask" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToServerTask(opts ...func(*ServerTaskQuery)) *EnvironmentQuery {
+// WithServerTasks tells the query-builder to eager-load the nodes that are connected to
+// the "ServerTasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithServerTasks(opts ...func(*ServerTaskQuery)) *EnvironmentQuery {
 	query := &ServerTaskQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToServerTask = query
+	eq.withServerTasks = query
 	return eq
 }
 
-// WithEnvironmentToValidation tells the query-builder to eager-load the nodes that are connected to
-// the "EnvironmentToValidation" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EnvironmentQuery) WithEnvironmentToValidation(opts ...func(*ValidationQuery)) *EnvironmentQuery {
+// WithValidations tells the query-builder to eager-load the nodes that are connected to
+// the "Validations" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EnvironmentQuery) WithValidations(opts ...func(*ValidationQuery)) *EnvironmentQuery {
 	query := &ValidationQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withEnvironmentToValidation = query
+	eq.withValidations = query
 	return eq
 }
 
@@ -1019,7 +1019,6 @@ func (eq *EnvironmentQuery) WithEnvironmentToValidation(opts ...func(*Validation
 //		GroupBy(environment.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (eq *EnvironmentQuery) GroupBy(field string, fields ...string) *EnvironmentGroupBy {
 	grbuild := &EnvironmentGroupBy{config: eq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -1046,7 +1045,6 @@ func (eq *EnvironmentQuery) GroupBy(field string, fields ...string) *Environment
 //	client.Environment.Query().
 //		Select(environment.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (eq *EnvironmentQuery) Select(fields ...string) *EnvironmentSelect {
 	eq.fields = append(eq.fields, fields...)
 	selbuild := &EnvironmentSelect{EnvironmentQuery: eq}
@@ -1076,27 +1074,27 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		nodes       = []*Environment{}
 		_spec       = eq.querySpec()
 		loadedTypes = [21]bool{
-			eq.withEnvironmentToUser != nil,
-			eq.withEnvironmentToHost != nil,
-			eq.withEnvironmentToCompetition != nil,
-			eq.withEnvironmentToIdentity != nil,
-			eq.withEnvironmentToCommand != nil,
-			eq.withEnvironmentToScript != nil,
-			eq.withEnvironmentToFileDownload != nil,
-			eq.withEnvironmentToFileDelete != nil,
-			eq.withEnvironmentToFileExtract != nil,
-			eq.withEnvironmentToIncludedNetwork != nil,
-			eq.withEnvironmentToFinding != nil,
-			eq.withEnvironmentToDNSRecord != nil,
-			eq.withEnvironmentToDNS != nil,
-			eq.withEnvironmentToNetwork != nil,
-			eq.withEnvironmentToHostDependency != nil,
-			eq.withEnvironmentToAnsible != nil,
-			eq.withEnvironmentToScheduledStep != nil,
-			eq.withEnvironmentToBuild != nil,
-			eq.withEnvironmentToRepository != nil,
-			eq.withEnvironmentToServerTask != nil,
-			eq.withEnvironmentToValidation != nil,
+			eq.withUsers != nil,
+			eq.withHosts != nil,
+			eq.withCompetitions != nil,
+			eq.withIdentities != nil,
+			eq.withCommands != nil,
+			eq.withScripts != nil,
+			eq.withFileDownloads != nil,
+			eq.withFileDeletes != nil,
+			eq.withFileExtracts != nil,
+			eq.withIncludedNetworks != nil,
+			eq.withFindings != nil,
+			eq.withDNSRecords != nil,
+			eq.withDNS != nil,
+			eq.withNetworks != nil,
+			eq.withHostDependencies != nil,
+			eq.withAnsibles != nil,
+			eq.withScheduledSteps != nil,
+			eq.withBuilds != nil,
+			eq.withRepositories != nil,
+			eq.withServerTasks != nil,
+			eq.withValidations != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -1117,189 +1115,161 @@ func (eq *EnvironmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := eq.withEnvironmentToUser; query != nil {
-		if err := eq.loadEnvironmentToUser(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToUser = []*User{} },
-			func(n *Environment, e *User) { n.Edges.EnvironmentToUser = append(n.Edges.EnvironmentToUser, e) }); err != nil {
+	if query := eq.withUsers; query != nil {
+		if err := eq.loadUsers(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Users = []*User{} },
+			func(n *Environment, e *User) { n.Edges.Users = append(n.Edges.Users, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToHost; query != nil {
-		if err := eq.loadEnvironmentToHost(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToHost = []*Host{} },
-			func(n *Environment, e *Host) { n.Edges.EnvironmentToHost = append(n.Edges.EnvironmentToHost, e) }); err != nil {
+	if query := eq.withHosts; query != nil {
+		if err := eq.loadHosts(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Hosts = []*Host{} },
+			func(n *Environment, e *Host) { n.Edges.Hosts = append(n.Edges.Hosts, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToCompetition; query != nil {
-		if err := eq.loadEnvironmentToCompetition(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToCompetition = []*Competition{} },
-			func(n *Environment, e *Competition) {
-				n.Edges.EnvironmentToCompetition = append(n.Edges.EnvironmentToCompetition, e)
-			}); err != nil {
+	if query := eq.withCompetitions; query != nil {
+		if err := eq.loadCompetitions(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Competitions = []*Competition{} },
+			func(n *Environment, e *Competition) { n.Edges.Competitions = append(n.Edges.Competitions, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToIdentity; query != nil {
-		if err := eq.loadEnvironmentToIdentity(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToIdentity = []*Identity{} },
-			func(n *Environment, e *Identity) {
-				n.Edges.EnvironmentToIdentity = append(n.Edges.EnvironmentToIdentity, e)
-			}); err != nil {
+	if query := eq.withIdentities; query != nil {
+		if err := eq.loadIdentities(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Identities = []*Identity{} },
+			func(n *Environment, e *Identity) { n.Edges.Identities = append(n.Edges.Identities, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToCommand; query != nil {
-		if err := eq.loadEnvironmentToCommand(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToCommand = []*Command{} },
-			func(n *Environment, e *Command) {
-				n.Edges.EnvironmentToCommand = append(n.Edges.EnvironmentToCommand, e)
-			}); err != nil {
+	if query := eq.withCommands; query != nil {
+		if err := eq.loadCommands(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Commands = []*Command{} },
+			func(n *Environment, e *Command) { n.Edges.Commands = append(n.Edges.Commands, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToScript; query != nil {
-		if err := eq.loadEnvironmentToScript(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToScript = []*Script{} },
-			func(n *Environment, e *Script) { n.Edges.EnvironmentToScript = append(n.Edges.EnvironmentToScript, e) }); err != nil {
+	if query := eq.withScripts; query != nil {
+		if err := eq.loadScripts(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Scripts = []*Script{} },
+			func(n *Environment, e *Script) { n.Edges.Scripts = append(n.Edges.Scripts, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToFileDownload; query != nil {
-		if err := eq.loadEnvironmentToFileDownload(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToFileDownload = []*FileDownload{} },
-			func(n *Environment, e *FileDownload) {
-				n.Edges.EnvironmentToFileDownload = append(n.Edges.EnvironmentToFileDownload, e)
-			}); err != nil {
+	if query := eq.withFileDownloads; query != nil {
+		if err := eq.loadFileDownloads(ctx, query, nodes,
+			func(n *Environment) { n.Edges.FileDownloads = []*FileDownload{} },
+			func(n *Environment, e *FileDownload) { n.Edges.FileDownloads = append(n.Edges.FileDownloads, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToFileDelete; query != nil {
-		if err := eq.loadEnvironmentToFileDelete(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToFileDelete = []*FileDelete{} },
-			func(n *Environment, e *FileDelete) {
-				n.Edges.EnvironmentToFileDelete = append(n.Edges.EnvironmentToFileDelete, e)
-			}); err != nil {
+	if query := eq.withFileDeletes; query != nil {
+		if err := eq.loadFileDeletes(ctx, query, nodes,
+			func(n *Environment) { n.Edges.FileDeletes = []*FileDelete{} },
+			func(n *Environment, e *FileDelete) { n.Edges.FileDeletes = append(n.Edges.FileDeletes, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToFileExtract; query != nil {
-		if err := eq.loadEnvironmentToFileExtract(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToFileExtract = []*FileExtract{} },
-			func(n *Environment, e *FileExtract) {
-				n.Edges.EnvironmentToFileExtract = append(n.Edges.EnvironmentToFileExtract, e)
-			}); err != nil {
+	if query := eq.withFileExtracts; query != nil {
+		if err := eq.loadFileExtracts(ctx, query, nodes,
+			func(n *Environment) { n.Edges.FileExtracts = []*FileExtract{} },
+			func(n *Environment, e *FileExtract) { n.Edges.FileExtracts = append(n.Edges.FileExtracts, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToIncludedNetwork; query != nil {
-		if err := eq.loadEnvironmentToIncludedNetwork(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToIncludedNetwork = []*IncludedNetwork{} },
+	if query := eq.withIncludedNetworks; query != nil {
+		if err := eq.loadIncludedNetworks(ctx, query, nodes,
+			func(n *Environment) { n.Edges.IncludedNetworks = []*IncludedNetwork{} },
 			func(n *Environment, e *IncludedNetwork) {
-				n.Edges.EnvironmentToIncludedNetwork = append(n.Edges.EnvironmentToIncludedNetwork, e)
+				n.Edges.IncludedNetworks = append(n.Edges.IncludedNetworks, e)
 			}); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToFinding; query != nil {
-		if err := eq.loadEnvironmentToFinding(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToFinding = []*Finding{} },
-			func(n *Environment, e *Finding) {
-				n.Edges.EnvironmentToFinding = append(n.Edges.EnvironmentToFinding, e)
-			}); err != nil {
+	if query := eq.withFindings; query != nil {
+		if err := eq.loadFindings(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Findings = []*Finding{} },
+			func(n *Environment, e *Finding) { n.Edges.Findings = append(n.Edges.Findings, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToDNSRecord; query != nil {
-		if err := eq.loadEnvironmentToDNSRecord(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToDNSRecord = []*DNSRecord{} },
-			func(n *Environment, e *DNSRecord) {
-				n.Edges.EnvironmentToDNSRecord = append(n.Edges.EnvironmentToDNSRecord, e)
-			}); err != nil {
+	if query := eq.withDNSRecords; query != nil {
+		if err := eq.loadDNSRecords(ctx, query, nodes,
+			func(n *Environment) { n.Edges.DNSRecords = []*DNSRecord{} },
+			func(n *Environment, e *DNSRecord) { n.Edges.DNSRecords = append(n.Edges.DNSRecords, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToDNS; query != nil {
-		if err := eq.loadEnvironmentToDNS(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToDNS = []*DNS{} },
-			func(n *Environment, e *DNS) { n.Edges.EnvironmentToDNS = append(n.Edges.EnvironmentToDNS, e) }); err != nil {
+	if query := eq.withDNS; query != nil {
+		if err := eq.loadDNS(ctx, query, nodes,
+			func(n *Environment) { n.Edges.DNS = []*DNS{} },
+			func(n *Environment, e *DNS) { n.Edges.DNS = append(n.Edges.DNS, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToNetwork; query != nil {
-		if err := eq.loadEnvironmentToNetwork(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToNetwork = []*Network{} },
-			func(n *Environment, e *Network) {
-				n.Edges.EnvironmentToNetwork = append(n.Edges.EnvironmentToNetwork, e)
-			}); err != nil {
+	if query := eq.withNetworks; query != nil {
+		if err := eq.loadNetworks(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Networks = []*Network{} },
+			func(n *Environment, e *Network) { n.Edges.Networks = append(n.Edges.Networks, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToHostDependency; query != nil {
-		if err := eq.loadEnvironmentToHostDependency(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToHostDependency = []*HostDependency{} },
+	if query := eq.withHostDependencies; query != nil {
+		if err := eq.loadHostDependencies(ctx, query, nodes,
+			func(n *Environment) { n.Edges.HostDependencies = []*HostDependency{} },
 			func(n *Environment, e *HostDependency) {
-				n.Edges.EnvironmentToHostDependency = append(n.Edges.EnvironmentToHostDependency, e)
+				n.Edges.HostDependencies = append(n.Edges.HostDependencies, e)
 			}); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToAnsible; query != nil {
-		if err := eq.loadEnvironmentToAnsible(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToAnsible = []*Ansible{} },
-			func(n *Environment, e *Ansible) {
-				n.Edges.EnvironmentToAnsible = append(n.Edges.EnvironmentToAnsible, e)
-			}); err != nil {
+	if query := eq.withAnsibles; query != nil {
+		if err := eq.loadAnsibles(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Ansibles = []*Ansible{} },
+			func(n *Environment, e *Ansible) { n.Edges.Ansibles = append(n.Edges.Ansibles, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToScheduledStep; query != nil {
-		if err := eq.loadEnvironmentToScheduledStep(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToScheduledStep = []*ScheduledStep{} },
-			func(n *Environment, e *ScheduledStep) {
-				n.Edges.EnvironmentToScheduledStep = append(n.Edges.EnvironmentToScheduledStep, e)
-			}); err != nil {
+	if query := eq.withScheduledSteps; query != nil {
+		if err := eq.loadScheduledSteps(ctx, query, nodes,
+			func(n *Environment) { n.Edges.ScheduledSteps = []*ScheduledStep{} },
+			func(n *Environment, e *ScheduledStep) { n.Edges.ScheduledSteps = append(n.Edges.ScheduledSteps, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToBuild; query != nil {
-		if err := eq.loadEnvironmentToBuild(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToBuild = []*Build{} },
-			func(n *Environment, e *Build) { n.Edges.EnvironmentToBuild = append(n.Edges.EnvironmentToBuild, e) }); err != nil {
+	if query := eq.withBuilds; query != nil {
+		if err := eq.loadBuilds(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Builds = []*Build{} },
+			func(n *Environment, e *Build) { n.Edges.Builds = append(n.Edges.Builds, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToRepository; query != nil {
-		if err := eq.loadEnvironmentToRepository(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToRepository = []*Repository{} },
-			func(n *Environment, e *Repository) {
-				n.Edges.EnvironmentToRepository = append(n.Edges.EnvironmentToRepository, e)
-			}); err != nil {
+	if query := eq.withRepositories; query != nil {
+		if err := eq.loadRepositories(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Repositories = []*Repository{} },
+			func(n *Environment, e *Repository) { n.Edges.Repositories = append(n.Edges.Repositories, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToServerTask; query != nil {
-		if err := eq.loadEnvironmentToServerTask(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToServerTask = []*ServerTask{} },
-			func(n *Environment, e *ServerTask) {
-				n.Edges.EnvironmentToServerTask = append(n.Edges.EnvironmentToServerTask, e)
-			}); err != nil {
+	if query := eq.withServerTasks; query != nil {
+		if err := eq.loadServerTasks(ctx, query, nodes,
+			func(n *Environment) { n.Edges.ServerTasks = []*ServerTask{} },
+			func(n *Environment, e *ServerTask) { n.Edges.ServerTasks = append(n.Edges.ServerTasks, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := eq.withEnvironmentToValidation; query != nil {
-		if err := eq.loadEnvironmentToValidation(ctx, query, nodes,
-			func(n *Environment) { n.Edges.EnvironmentToValidation = []*Validation{} },
-			func(n *Environment, e *Validation) {
-				n.Edges.EnvironmentToValidation = append(n.Edges.EnvironmentToValidation, e)
-			}); err != nil {
+	if query := eq.withValidations; query != nil {
+		if err := eq.loadValidations(ctx, query, nodes,
+			func(n *Environment) { n.Edges.Validations = []*Validation{} },
+			func(n *Environment, e *Validation) { n.Edges.Validations = append(n.Edges.Validations, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (eq *EnvironmentQuery) loadEnvironmentToUser(ctx context.Context, query *UserQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *User)) error {
+func (eq *EnvironmentQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *User)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*Environment)
 	nids := make(map[uuid.UUID]map[*Environment]struct{})
@@ -1311,11 +1281,11 @@ func (eq *EnvironmentQuery) loadEnvironmentToUser(ctx context.Context, query *Us
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(environment.EnvironmentToUserTable)
-		s.Join(joinT).On(s.C(user.FieldID), joinT.C(environment.EnvironmentToUserPrimaryKey[1]))
-		s.Where(sql.InValues(joinT.C(environment.EnvironmentToUserPrimaryKey[0]), edgeIDs...))
+		joinT := sql.Table(environment.UsersTable)
+		s.Join(joinT).On(s.C(user.FieldID), joinT.C(environment.UsersPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(environment.UsersPrimaryKey[0]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(environment.EnvironmentToUserPrimaryKey[0]))
+		s.Select(joinT.C(environment.UsersPrimaryKey[0]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -1349,7 +1319,7 @@ func (eq *EnvironmentQuery) loadEnvironmentToUser(ctx context.Context, query *Us
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "EnvironmentToUser" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "Users" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
@@ -1357,7 +1327,7 @@ func (eq *EnvironmentQuery) loadEnvironmentToUser(ctx context.Context, query *Us
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToHost(ctx context.Context, query *HostQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Host)) error {
+func (eq *EnvironmentQuery) loadHosts(ctx context.Context, query *HostQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Host)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1369,26 +1339,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToHost(ctx context.Context, query *Ho
 	}
 	query.withFKs = true
 	query.Where(predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToHostColumn, fks...))
+		s.Where(sql.InValues(environment.HostsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_host
+		fk := n.environment_hosts
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_host" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_hosts" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_hosts" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToCompetition(ctx context.Context, query *CompetitionQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Competition)) error {
+func (eq *EnvironmentQuery) loadCompetitions(ctx context.Context, query *CompetitionQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Competition)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1400,26 +1370,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToCompetition(ctx context.Context, qu
 	}
 	query.withFKs = true
 	query.Where(predicate.Competition(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToCompetitionColumn, fks...))
+		s.Where(sql.InValues(environment.CompetitionsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_competition
+		fk := n.environment_competitions
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_competition" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_competitions" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_competition" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_competitions" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToIdentity(ctx context.Context, query *IdentityQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Identity)) error {
+func (eq *EnvironmentQuery) loadIdentities(ctx context.Context, query *IdentityQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Identity)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1431,26 +1401,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToIdentity(ctx context.Context, query
 	}
 	query.withFKs = true
 	query.Where(predicate.Identity(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToIdentityColumn, fks...))
+		s.Where(sql.InValues(environment.IdentitiesColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_identity
+		fk := n.environment_identities
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_identity" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_identities" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_identity" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_identities" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToCommand(ctx context.Context, query *CommandQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Command)) error {
+func (eq *EnvironmentQuery) loadCommands(ctx context.Context, query *CommandQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Command)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1462,26 +1432,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToCommand(ctx context.Context, query 
 	}
 	query.withFKs = true
 	query.Where(predicate.Command(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToCommandColumn, fks...))
+		s.Where(sql.InValues(environment.CommandsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_command
+		fk := n.environment_commands
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_command" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_commands" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_command" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_commands" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToScript(ctx context.Context, query *ScriptQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Script)) error {
+func (eq *EnvironmentQuery) loadScripts(ctx context.Context, query *ScriptQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Script)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1493,26 +1463,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToScript(ctx context.Context, query *
 	}
 	query.withFKs = true
 	query.Where(predicate.Script(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToScriptColumn, fks...))
+		s.Where(sql.InValues(environment.ScriptsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_script
+		fk := n.environment_scripts
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_script" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_scripts" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_script" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_scripts" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToFileDownload(ctx context.Context, query *FileDownloadQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *FileDownload)) error {
+func (eq *EnvironmentQuery) loadFileDownloads(ctx context.Context, query *FileDownloadQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *FileDownload)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1524,26 +1494,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToFileDownload(ctx context.Context, q
 	}
 	query.withFKs = true
 	query.Where(predicate.FileDownload(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToFileDownloadColumn, fks...))
+		s.Where(sql.InValues(environment.FileDownloadsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_file_download
+		fk := n.environment_file_downloads
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_file_download" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_file_downloads" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_file_download" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_file_downloads" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToFileDelete(ctx context.Context, query *FileDeleteQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *FileDelete)) error {
+func (eq *EnvironmentQuery) loadFileDeletes(ctx context.Context, query *FileDeleteQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *FileDelete)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1555,26 +1525,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToFileDelete(ctx context.Context, que
 	}
 	query.withFKs = true
 	query.Where(predicate.FileDelete(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToFileDeleteColumn, fks...))
+		s.Where(sql.InValues(environment.FileDeletesColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_file_delete
+		fk := n.environment_file_deletes
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_file_delete" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_file_deletes" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_file_delete" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_file_deletes" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToFileExtract(ctx context.Context, query *FileExtractQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *FileExtract)) error {
+func (eq *EnvironmentQuery) loadFileExtracts(ctx context.Context, query *FileExtractQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *FileExtract)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1586,26 +1556,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToFileExtract(ctx context.Context, qu
 	}
 	query.withFKs = true
 	query.Where(predicate.FileExtract(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToFileExtractColumn, fks...))
+		s.Where(sql.InValues(environment.FileExtractsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_file_extract
+		fk := n.environment_file_extracts
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_file_extract" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_file_extracts" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_file_extract" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_file_extracts" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToIncludedNetwork(ctx context.Context, query *IncludedNetworkQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *IncludedNetwork)) error {
+func (eq *EnvironmentQuery) loadIncludedNetworks(ctx context.Context, query *IncludedNetworkQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *IncludedNetwork)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*Environment)
 	nids := make(map[uuid.UUID]map[*Environment]struct{})
@@ -1617,11 +1587,11 @@ func (eq *EnvironmentQuery) loadEnvironmentToIncludedNetwork(ctx context.Context
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(environment.EnvironmentToIncludedNetworkTable)
-		s.Join(joinT).On(s.C(includednetwork.FieldID), joinT.C(environment.EnvironmentToIncludedNetworkPrimaryKey[1]))
-		s.Where(sql.InValues(joinT.C(environment.EnvironmentToIncludedNetworkPrimaryKey[0]), edgeIDs...))
+		joinT := sql.Table(environment.IncludedNetworksTable)
+		s.Join(joinT).On(s.C(includednetwork.FieldID), joinT.C(environment.IncludedNetworksPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(environment.IncludedNetworksPrimaryKey[0]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(environment.EnvironmentToIncludedNetworkPrimaryKey[0]))
+		s.Select(joinT.C(environment.IncludedNetworksPrimaryKey[0]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -1655,7 +1625,7 @@ func (eq *EnvironmentQuery) loadEnvironmentToIncludedNetwork(ctx context.Context
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "EnvironmentToIncludedNetwork" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "IncludedNetworks" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
@@ -1663,7 +1633,7 @@ func (eq *EnvironmentQuery) loadEnvironmentToIncludedNetwork(ctx context.Context
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToFinding(ctx context.Context, query *FindingQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Finding)) error {
+func (eq *EnvironmentQuery) loadFindings(ctx context.Context, query *FindingQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Finding)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1675,26 +1645,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToFinding(ctx context.Context, query 
 	}
 	query.withFKs = true
 	query.Where(predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToFindingColumn, fks...))
+		s.Where(sql.InValues(environment.FindingsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_finding
+		fk := n.environment_findings
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_finding" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_findings" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_finding" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_findings" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToDNSRecord(ctx context.Context, query *DNSRecordQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *DNSRecord)) error {
+func (eq *EnvironmentQuery) loadDNSRecords(ctx context.Context, query *DNSRecordQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *DNSRecord)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1706,26 +1676,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToDNSRecord(ctx context.Context, quer
 	}
 	query.withFKs = true
 	query.Where(predicate.DNSRecord(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToDNSRecordColumn, fks...))
+		s.Where(sql.InValues(environment.DNSRecordsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_dns_record
+		fk := n.environment_dns_records
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_dns_record" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_dns_records" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_dns_record" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_dns_records" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToDNS(ctx context.Context, query *DNSQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *DNS)) error {
+func (eq *EnvironmentQuery) loadDNS(ctx context.Context, query *DNSQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *DNS)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*Environment)
 	nids := make(map[uuid.UUID]map[*Environment]struct{})
@@ -1737,11 +1707,11 @@ func (eq *EnvironmentQuery) loadEnvironmentToDNS(ctx context.Context, query *DNS
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(environment.EnvironmentToDNSTable)
-		s.Join(joinT).On(s.C(dns.FieldID), joinT.C(environment.EnvironmentToDNSPrimaryKey[1]))
-		s.Where(sql.InValues(joinT.C(environment.EnvironmentToDNSPrimaryKey[0]), edgeIDs...))
+		joinT := sql.Table(environment.DNSTable)
+		s.Join(joinT).On(s.C(dns.FieldID), joinT.C(environment.DNSPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(environment.DNSPrimaryKey[0]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(environment.EnvironmentToDNSPrimaryKey[0]))
+		s.Select(joinT.C(environment.DNSPrimaryKey[0]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -1775,7 +1745,7 @@ func (eq *EnvironmentQuery) loadEnvironmentToDNS(ctx context.Context, query *DNS
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "EnvironmentToDNS" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "DNS" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
@@ -1783,7 +1753,7 @@ func (eq *EnvironmentQuery) loadEnvironmentToDNS(ctx context.Context, query *DNS
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToNetwork(ctx context.Context, query *NetworkQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Network)) error {
+func (eq *EnvironmentQuery) loadNetworks(ctx context.Context, query *NetworkQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Network)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1795,26 +1765,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToNetwork(ctx context.Context, query 
 	}
 	query.withFKs = true
 	query.Where(predicate.Network(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToNetworkColumn, fks...))
+		s.Where(sql.InValues(environment.NetworksColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_network
+		fk := n.environment_networks
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_network" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_networks" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_network" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_networks" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToHostDependency(ctx context.Context, query *HostDependencyQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *HostDependency)) error {
+func (eq *EnvironmentQuery) loadHostDependencies(ctx context.Context, query *HostDependencyQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *HostDependency)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1826,26 +1796,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToHostDependency(ctx context.Context,
 	}
 	query.withFKs = true
 	query.Where(predicate.HostDependency(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToHostDependencyColumn, fks...))
+		s.Where(sql.InValues(environment.HostDependenciesColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_host_dependency
+		fk := n.environment_host_dependencies
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_host_dependency" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_host_dependencies" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_host_dependency" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_host_dependencies" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToAnsible(ctx context.Context, query *AnsibleQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Ansible)) error {
+func (eq *EnvironmentQuery) loadAnsibles(ctx context.Context, query *AnsibleQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Ansible)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1857,26 +1827,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToAnsible(ctx context.Context, query 
 	}
 	query.withFKs = true
 	query.Where(predicate.Ansible(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToAnsibleColumn, fks...))
+		s.Where(sql.InValues(environment.AnsiblesColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_ansible
+		fk := n.environment_ansibles
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_ansible" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_ansibles" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_ansible" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_ansibles" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToScheduledStep(ctx context.Context, query *ScheduledStepQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *ScheduledStep)) error {
+func (eq *EnvironmentQuery) loadScheduledSteps(ctx context.Context, query *ScheduledStepQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *ScheduledStep)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1888,26 +1858,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToScheduledStep(ctx context.Context, 
 	}
 	query.withFKs = true
 	query.Where(predicate.ScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToScheduledStepColumn, fks...))
+		s.Where(sql.InValues(environment.ScheduledStepsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.environment_environment_to_scheduled_step
+		fk := n.environment_scheduled_steps
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "environment_environment_to_scheduled_step" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "environment_scheduled_steps" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_scheduled_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_scheduled_steps" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToBuild(ctx context.Context, query *BuildQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Build)) error {
+func (eq *EnvironmentQuery) loadBuilds(ctx context.Context, query *BuildQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Build)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -1919,26 +1889,26 @@ func (eq *EnvironmentQuery) loadEnvironmentToBuild(ctx context.Context, query *B
 	}
 	query.withFKs = true
 	query.Where(predicate.Build(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToBuildColumn, fks...))
+		s.Where(sql.InValues(environment.BuildsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.build_build_to_environment
+		fk := n.build_environment
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "build_build_to_environment" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "build_environment" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_build_to_environment" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_environment" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToRepository(ctx context.Context, query *RepositoryQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Repository)) error {
+func (eq *EnvironmentQuery) loadRepositories(ctx context.Context, query *RepositoryQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Repository)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*Environment)
 	nids := make(map[uuid.UUID]map[*Environment]struct{})
@@ -1950,11 +1920,11 @@ func (eq *EnvironmentQuery) loadEnvironmentToRepository(ctx context.Context, que
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(environment.EnvironmentToRepositoryTable)
-		s.Join(joinT).On(s.C(repository.FieldID), joinT.C(environment.EnvironmentToRepositoryPrimaryKey[0]))
-		s.Where(sql.InValues(joinT.C(environment.EnvironmentToRepositoryPrimaryKey[1]), edgeIDs...))
+		joinT := sql.Table(environment.RepositoriesTable)
+		s.Join(joinT).On(s.C(repository.FieldID), joinT.C(environment.RepositoriesPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(environment.RepositoriesPrimaryKey[1]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(environment.EnvironmentToRepositoryPrimaryKey[1]))
+		s.Select(joinT.C(environment.RepositoriesPrimaryKey[1]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -1988,7 +1958,7 @@ func (eq *EnvironmentQuery) loadEnvironmentToRepository(ctx context.Context, que
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "EnvironmentToRepository" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "Repositories" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
@@ -1996,7 +1966,7 @@ func (eq *EnvironmentQuery) loadEnvironmentToRepository(ctx context.Context, que
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToServerTask(ctx context.Context, query *ServerTaskQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *ServerTask)) error {
+func (eq *EnvironmentQuery) loadServerTasks(ctx context.Context, query *ServerTaskQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *ServerTask)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Environment)
 	for i := range nodes {
@@ -2008,80 +1978,53 @@ func (eq *EnvironmentQuery) loadEnvironmentToServerTask(ctx context.Context, que
 	}
 	query.withFKs = true
 	query.Where(predicate.ServerTask(func(s *sql.Selector) {
-		s.Where(sql.InValues(environment.EnvironmentToServerTaskColumn, fks...))
+		s.Where(sql.InValues(environment.ServerTasksColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.server_task_server_task_to_environment
+		fk := n.server_task_environment
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "server_task_server_task_to_environment" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "server_task_environment" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_environment" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_environment" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (eq *EnvironmentQuery) loadEnvironmentToValidation(ctx context.Context, query *ValidationQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Validation)) error {
-	edgeIDs := make([]driver.Value, len(nodes))
-	byID := make(map[uuid.UUID]*Environment)
-	nids := make(map[uuid.UUID]map[*Environment]struct{})
-	for i, node := range nodes {
-		edgeIDs[i] = node.ID
-		byID[node.ID] = node
+func (eq *EnvironmentQuery) loadValidations(ctx context.Context, query *ValidationQuery, nodes []*Environment, init func(*Environment), assign func(*Environment, *Validation)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Environment)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
 		if init != nil {
-			init(node)
+			init(nodes[i])
 		}
 	}
-	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(environment.EnvironmentToValidationTable)
-		s.Join(joinT).On(s.C(validation.FieldID), joinT.C(environment.EnvironmentToValidationPrimaryKey[1]))
-		s.Where(sql.InValues(joinT.C(environment.EnvironmentToValidationPrimaryKey[0]), edgeIDs...))
-		columns := s.SelectedColumns()
-		s.Select(joinT.C(environment.EnvironmentToValidationPrimaryKey[0]))
-		s.AppendSelect(columns...)
-		s.SetDistinct(false)
-	})
-	if err := query.prepareQuery(ctx); err != nil {
-		return err
-	}
-	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
-		assign := spec.Assign
-		values := spec.ScanValues
-		spec.ScanValues = func(columns []string) ([]interface{}, error) {
-			values, err := values(columns[1:])
-			if err != nil {
-				return nil, err
-			}
-			return append([]interface{}{new(uuid.UUID)}, values...), nil
-		}
-		spec.Assign = func(columns []string, values []interface{}) error {
-			outValue := *values[0].(*uuid.UUID)
-			inValue := *values[1].(*uuid.UUID)
-			if nids[inValue] == nil {
-				nids[inValue] = map[*Environment]struct{}{byID[outValue]: struct{}{}}
-				return assign(columns[1:], values[1:])
-			}
-			nids[inValue][byID[outValue]] = struct{}{}
-			return nil
-		}
-	})
+	query.withFKs = true
+	query.Where(predicate.Validation(func(s *sql.Selector) {
+		s.Where(sql.InValues(environment.ValidationsColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nids[n.ID]
+		fk := n.environment_validations
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "environment_validations" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected "EnvironmentToValidation" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_validations" returned %v for node %v`, *fk, n.ID)
 		}
-		for kn := range nodes {
-			assign(kn, n)
-		}
+		assign(node, n)
 	}
 	return nil
 }

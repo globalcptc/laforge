@@ -56,83 +56,83 @@ func (Environment) Fields() []ent.Field {
 // Edges of the Environment.
 func (Environment) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("EnvironmentToUser", User.Type).
+		edge.To("Users", User.Type).
 			StructTag(`hcl:"maintainer,block"`).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToHost", Host.Type).
+		edge.To("Hosts", Host.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToCompetition", Competition.Type).
+		edge.To("Competitions", Competition.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToIdentity", Identity.Type).
+		edge.To("Identities", Identity.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToCommand", Command.Type).
+		edge.To("Commands", Command.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToScript", Script.Type).
+		edge.To("Scripts", Script.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToFileDownload", FileDownload.Type).
+		edge.To("FileDownloads", FileDownload.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToFileDelete", FileDelete.Type).
+		edge.To("FileDeletes", FileDelete.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToFileExtract", FileExtract.Type).
+		edge.To("FileExtracts", FileExtract.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToIncludedNetwork", IncludedNetwork.Type).
+		edge.To("IncludedNetworks", IncludedNetwork.Type).
 			StructTag(`hcl:"included_network,block"`).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToFinding", Finding.Type).
+		edge.To("Findings", Finding.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToDNSRecord", DNSRecord.Type).
+		edge.To("DNSRecords", DNSRecord.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToDNS", DNS.Type).
+		edge.To("DNS", DNS.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToNetwork", Network.Type).
+		edge.To("Networks", Network.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToHostDependency", HostDependency.Type).
+		edge.To("HostDependencies", HostDependency.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToAnsible", Ansible.Type).
+		edge.To("Ansibles", Ansible.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("EnvironmentToScheduledStep", ScheduledStep.Type).
+		edge.To("ScheduledSteps", ScheduledStep.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.From("EnvironmentToBuild", Build.Type).
-			Ref("BuildToEnvironment"),
-		edge.From("EnvironmentToRepository", Repository.Type).
-			Ref("RepositoryToEnvironment"),
-		edge.From("EnvironmentToServerTask", ServerTask.Type).
-			Ref("ServerTaskToEnvironment"),
-		edge.To("EnvironmentToValidation", Validation.Type).
+		edge.From("Builds", Build.Type).
+			Ref("Environment"),
+		edge.From("Repositories", Repository.Type).
+			Ref("Environments"),
+		edge.From("ServerTasks", ServerTask.Type).
+			Ref("Environment"),
+		edge.To("Validations", Validation.Type).
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),

@@ -131,7 +131,7 @@ func createProvisioningScheduleStep(ctx context.Context, client *ent.Client, ent
 				return fmt.Errorf("failed to generate provisioning scheduled step by type: %v", err)
 			}
 			err = entProvisionedScheduleStepCreate.
-				SetProvisioningScheduledStepToProvisionedHost(entProvisionedHost).
+				SetProvisionedHost(entProvisionedHost).
 				SetRunTime(runTime).
 				// SetProvisioningScheduleStepToStatus(entStatus)
 				Exec(ctx)
@@ -147,12 +147,12 @@ func createProvisioningScheduleStep(ctx context.Context, client *ent.Client, ent
 			// 	if err != nil {
 			// 		return nil, err
 			// 	}
-			// 	_, err = entTmpUrl.Update().SetGinFileMiddlewareToProvisioningStep(entProvisioningStep).Save(ctx)
+			// 	_, err = entTmpUrl.Update().SetProvisioningStep(entProvisioningStep).Save(ctx)
 			// 	if err != nil {
 			// 		return nil, err
 			// 	}
 			// 	if RenderFilesTask != nil {
-			// 		RenderFilesTask, err = RenderFilesTask.Update().AddServerTaskToGinFileMiddleware(entTmpUrl).Save(ctx)
+			// 		RenderFilesTask, err = RenderFilesTask.Update().AddGinFileMiddleware(entTmpUrl).Save(ctx)
 			// 		if err != nil {
 			// 			return nil, err
 			// 		}
@@ -165,14 +165,14 @@ func createProvisioningScheduleStep(ctx context.Context, client *ent.Client, ent
 }
 
 func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Client, entScheduledStep *ent.ScheduledStep) (*ent.ProvisioningScheduledStepCreate, error) {
-	entEnvironment, err := entScheduledStep.QueryScheduledStepToEnvironment().Only(ctx)
+	entEnvironment, err := entScheduledStep.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query environment from scheduled step: %v", err)
 	}
 	// Check if step is script
 	entScript, err := client.Script.Query().Where(
 		script.And(
-			script.HasScriptToEnvironmentWith(
+			script.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			script.HclIDEQ(entScheduledStep.Step),
@@ -182,14 +182,14 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a script
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeScript).
-			SetProvisioningScheduledStepToScript(entScript), nil
+			SetScript(entScript), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for script based on hcl_id from scheduled step: %v", err)
 	}
 	// Check if step is command
 	entCommand, err := client.Command.Query().Where(
 		command.And(
-			command.HasCommandToEnvironmentWith(
+			command.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			command.HclIDEQ(entScheduledStep.Step),
@@ -199,14 +199,14 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a command
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeCommand).
-			SetProvisioningScheduledStepToCommand(entCommand), nil
+			SetCommand(entCommand), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for command based on hcl_id from scheduled step: %v", err)
 	}
 	// Check if step is file download
 	entFileDownload, err := client.FileDownload.Query().Where(
 		filedownload.And(
-			filedownload.HasFileDownloadToEnvironmentWith(
+			filedownload.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			filedownload.HclIDEQ(entScheduledStep.Step),
@@ -216,14 +216,14 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a file download
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeFileDownload).
-			SetProvisioningScheduledStepToFileDownload(entFileDownload), nil
+			SetFileDownload(entFileDownload), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for file download based on hcl_id from scheduled step: %v", err)
 	}
 	// Check if step is file extract
 	entFileExtract, err := client.FileExtract.Query().Where(
 		fileextract.And(
-			fileextract.HasFileExtractToEnvironmentWith(
+			fileextract.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			fileextract.HclIDEQ(entScheduledStep.Step),
@@ -233,14 +233,14 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a file extract
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeFileExtract).
-			SetProvisioningScheduledStepToFileExtract(entFileExtract), nil
+			SetFileExtract(entFileExtract), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for file extract based on hcl_id from scheduled step: %v", err)
 	}
 	// Check if step is file delete
 	entFileDelete, err := client.FileDelete.Query().Where(
 		filedelete.And(
-			filedelete.HasFileDeleteToEnvironmentWith(
+			filedelete.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			filedelete.HclIDEQ(entScheduledStep.Step),
@@ -250,14 +250,14 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a file delete
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeFileDelete).
-			SetProvisioningScheduledStepToFileDelete(entFileDelete), nil
+			SetFileDelete(entFileDelete), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for file delete based on hcl_id from scheduled step: %v", err)
 	}
 	// Check if step is dns record
 	entDNSRecord, err := client.DNSRecord.Query().Where(
 		dnsrecord.And(
-			dnsrecord.HasDNSRecordToEnvironmentWith(
+			dnsrecord.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			dnsrecord.HclIDEQ(entScheduledStep.Step),
@@ -267,14 +267,14 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a dns record
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeDNSRecord).
-			SetProvisioningScheduledStepToDNSRecord(entDNSRecord), nil
+			SetDNSRecord(entDNSRecord), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for dns record based on hcl_id from scheduled step: %v", err)
 	}
 	// Check if step is ansible
 	entAnsible, err := client.Ansible.Query().Where(
 		ansible.And(
-			ansible.HasAnsibleFromEnvironmentWith(
+			ansible.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
 			ansible.HclIDEQ(entScheduledStep.Step),
@@ -284,7 +284,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 		// Step is a ansible
 		return client.ProvisioningScheduledStep.Create().
 			SetType(provisioningscheduledstep.TypeAnsible).
-			SetProvisioningScheduledStepToAnsible(entAnsible), nil
+			SetAnsible(entAnsible), nil
 	} else if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to query for ansible based on hcl_id from scheduled step: %v", err)
 	}

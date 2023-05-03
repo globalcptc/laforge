@@ -36,43 +36,42 @@ func (ProvisioningScheduledStep) Fields() []ent.Field {
 func (ProvisioningScheduledStep) Edges() []ent.Edge {
 	return []ent.Edge{
 		// Status
-		edge.To("ProvisioningScheduledStepToStatus", Status.Type).
+		edge.To("Status", Status.Type).
 			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
 		// ScheduledStep
-		edge.To("ProvisioningScheduledStepToScheduledStep", ScheduledStep.Type).
+		edge.To("ScheduledStep", ScheduledStep.Type).
 			Unique().
 			Required(),
 		// ProvisionedHost
-		edge.To("ProvisioningScheduledStepToProvisionedHost", ProvisionedHost.Type).
+		edge.To("ProvisionedHost", ProvisionedHost.Type).
 			Required().
 			Unique(),
-		edge.To("ProvisioningScheduledStepToScript", Script.Type).
+		edge.To("Script", Script.Type).
 			Unique(),
-		edge.To("ProvisioningScheduledStepToCommand", Command.Type).
+		edge.To("Command", Command.Type).
 			Unique(),
-		edge.To("ProvisioningScheduledStepToDNSRecord", DNSRecord.Type).
+		edge.To("DNSRecord", DNSRecord.Type).
 			Unique(),
-		edge.To("ProvisioningScheduledStepToFileDelete", FileDelete.Type).
+		edge.To("FileDelete", FileDelete.Type).
 			Unique(),
-		edge.To("ProvisioningScheduledStepToFileDownload", FileDownload.Type).
+		edge.To("FileDownload", FileDownload.Type).
 			Unique(),
-		edge.To("ProvisioningScheduledStepToFileExtract", FileExtract.Type).
+		edge.To("FileExtract", FileExtract.Type).
 			Unique(),
-		edge.To("ProvisioningScheduledStepToAnsible", Ansible.Type).
+		edge.To("Ansible", Ansible.Type).
 			Unique(),
 		// AgentTask
-		edge.From("ProvisioningScheduledStepToAgentTask", AgentTask.Type).
-			Ref("AgentTaskToProvisioningScheduledStep").
-			Unique(),
+		edge.From("AgentTasks", AgentTask.Type).
+			Ref("ProvisioningScheduledStep"),
 		// Plan
-		edge.From("ProvisioningStepToPlan", Plan.Type).
-			Ref("PlanToProvisioningScheduledStep").
+		edge.From("Plan", Plan.Type).
+			Ref("ProvisioningScheduledStep").
 			Unique(),
-		edge.From("ProvisioningScheduledStepToGinFileMiddleware", GinFileMiddleware.Type).
-			Ref("GinFileMiddlewareToProvisioningScheduledStep").
+		edge.From("GinFileMiddleware", GinFileMiddleware.Type).
+			Ref("ProvisioningScheduledStep").
 			Unique(),
 	}
 }

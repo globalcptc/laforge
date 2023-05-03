@@ -41,33 +41,33 @@ type Identity struct {
 	Edges IdentityEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// IdentityToEnvironment holds the value of the IdentityToEnvironment edge.
-	HCLIdentityToEnvironment *Environment `json:"IdentityToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
-	environment_environment_to_identity *uuid.UUID
+	environment_identities *uuid.UUID
 }
 
 // IdentityEdges holds the relations/edges for other nodes in the graph.
 type IdentityEdges struct {
-	// IdentityToEnvironment holds the value of the IdentityToEnvironment edge.
-	IdentityToEnvironment *Environment `json:"IdentityToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// IdentityToEnvironmentOrErr returns the IdentityToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e IdentityEdges) IdentityToEnvironmentOrErr() (*Environment, error) {
+func (e IdentityEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[0] {
-		if e.IdentityToEnvironment == nil {
-			// The edge IdentityToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.IdentityToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "IdentityToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -81,7 +81,7 @@ func (*Identity) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case identity.FieldID:
 			values[i] = new(uuid.UUID)
-		case identity.ForeignKeys[0]: // environment_environment_to_identity
+		case identity.ForeignKeys[0]: // environment_identities
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Identity", columns[i])
@@ -164,19 +164,19 @@ func (i *Identity) assignValues(columns []string, values []interface{}) error {
 			}
 		case identity.ForeignKeys[0]:
 			if value, ok := values[j].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_identity", values[j])
+				return fmt.Errorf("unexpected type %T for field environment_identities", values[j])
 			} else if value.Valid {
-				i.environment_environment_to_identity = new(uuid.UUID)
-				*i.environment_environment_to_identity = *value.S.(*uuid.UUID)
+				i.environment_identities = new(uuid.UUID)
+				*i.environment_identities = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryIdentityToEnvironment queries the "IdentityToEnvironment" edge of the Identity entity.
-func (i *Identity) QueryIdentityToEnvironment() *EnvironmentQuery {
-	return (&IdentityClient{config: i.config}).QueryIdentityToEnvironment(i)
+// QueryEnvironment queries the "Environment" edge of the Identity entity.
+func (i *Identity) QueryEnvironment() *EnvironmentQuery {
+	return (&IdentityClient{config: i.config}).QueryEnvironment(i)
 }
 
 // Update returns a builder for updating this Identity.

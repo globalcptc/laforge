@@ -19,14 +19,14 @@ import (
 // DiskQuery is the builder for querying Disk entities.
 type DiskQuery struct {
 	config
-	limit          *int
-	offset         *int
-	unique         *bool
-	order          []OrderFunc
-	fields         []string
-	predicates     []predicate.Disk
-	withDiskToHost *HostQuery
-	withFKs        bool
+	limit      *int
+	offset     *int
+	unique     *bool
+	order      []OrderFunc
+	fields     []string
+	predicates []predicate.Disk
+	withHost   *HostQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,8 +63,8 @@ func (dq *DiskQuery) Order(o ...OrderFunc) *DiskQuery {
 	return dq
 }
 
-// QueryDiskToHost chains the current query on the "DiskToHost" edge.
-func (dq *DiskQuery) QueryDiskToHost() *HostQuery {
+// QueryHost chains the current query on the "Host" edge.
+func (dq *DiskQuery) QueryHost() *HostQuery {
 	query := &HostQuery{config: dq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := dq.prepareQuery(ctx); err != nil {
@@ -77,7 +77,7 @@ func (dq *DiskQuery) QueryDiskToHost() *HostQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(disk.Table, disk.FieldID, selector),
 			sqlgraph.To(host.Table, host.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, disk.DiskToHostTable, disk.DiskToHostColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, disk.HostTable, disk.HostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(dq.driver.Dialect(), step)
 		return fromU, nil
@@ -261,12 +261,12 @@ func (dq *DiskQuery) Clone() *DiskQuery {
 		return nil
 	}
 	return &DiskQuery{
-		config:         dq.config,
-		limit:          dq.limit,
-		offset:         dq.offset,
-		order:          append([]OrderFunc{}, dq.order...),
-		predicates:     append([]predicate.Disk{}, dq.predicates...),
-		withDiskToHost: dq.withDiskToHost.Clone(),
+		config:     dq.config,
+		limit:      dq.limit,
+		offset:     dq.offset,
+		order:      append([]OrderFunc{}, dq.order...),
+		predicates: append([]predicate.Disk{}, dq.predicates...),
+		withHost:   dq.withHost.Clone(),
 		// clone intermediate query.
 		sql:    dq.sql.Clone(),
 		path:   dq.path,
@@ -274,14 +274,14 @@ func (dq *DiskQuery) Clone() *DiskQuery {
 	}
 }
 
-// WithDiskToHost tells the query-builder to eager-load the nodes that are connected to
-// the "DiskToHost" edge. The optional arguments are used to configure the query builder of the edge.
-func (dq *DiskQuery) WithDiskToHost(opts ...func(*HostQuery)) *DiskQuery {
+// WithHost tells the query-builder to eager-load the nodes that are connected to
+// the "Host" edge. The optional arguments are used to configure the query builder of the edge.
+func (dq *DiskQuery) WithHost(opts ...func(*HostQuery)) *DiskQuery {
 	query := &HostQuery{config: dq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	dq.withDiskToHost = query
+	dq.withHost = query
 	return dq
 }
 
@@ -299,7 +299,6 @@ func (dq *DiskQuery) WithDiskToHost(opts ...func(*HostQuery)) *DiskQuery {
 //		GroupBy(disk.FieldSize).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (dq *DiskQuery) GroupBy(field string, fields ...string) *DiskGroupBy {
 	grbuild := &DiskGroupBy{config: dq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (dq *DiskQuery) GroupBy(field string, fields ...string) *DiskGroupBy {
 //	client.Disk.Query().
 //		Select(disk.FieldSize).
 //		Scan(ctx, &v)
-//
 func (dq *DiskQuery) Select(fields ...string) *DiskSelect {
 	dq.fields = append(dq.fields, fields...)
 	selbuild := &DiskSelect{DiskQuery: dq}
@@ -357,10 +355,10 @@ func (dq *DiskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Disk, e
 		withFKs     = dq.withFKs
 		_spec       = dq.querySpec()
 		loadedTypes = [1]bool{
-			dq.withDiskToHost != nil,
+			dq.withHost != nil,
 		}
 	)
-	if dq.withDiskToHost != nil {
+	if dq.withHost != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -384,23 +382,23 @@ func (dq *DiskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Disk, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := dq.withDiskToHost; query != nil {
-		if err := dq.loadDiskToHost(ctx, query, nodes, nil,
-			func(n *Disk, e *Host) { n.Edges.DiskToHost = e }); err != nil {
+	if query := dq.withHost; query != nil {
+		if err := dq.loadHost(ctx, query, nodes, nil,
+			func(n *Disk, e *Host) { n.Edges.Host = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (dq *DiskQuery) loadDiskToHost(ctx context.Context, query *HostQuery, nodes []*Disk, init func(*Disk), assign func(*Disk, *Host)) error {
+func (dq *DiskQuery) loadHost(ctx context.Context, query *HostQuery, nodes []*Disk, init func(*Disk), assign func(*Disk, *Host)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Disk)
 	for i := range nodes {
-		if nodes[i].host_host_to_disk == nil {
+		if nodes[i].host_disk == nil {
 			continue
 		}
-		fk := *nodes[i].host_host_to_disk
+		fk := *nodes[i].host_disk
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -414,7 +412,7 @@ func (dq *DiskQuery) loadDiskToHost(ctx context.Context, query *HostQuery, nodes
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_host_to_disk" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "host_disk" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

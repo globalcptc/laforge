@@ -53,33 +53,17 @@ const (
 	FieldServiceStatus = "service_status"
 	// FieldProcessName holds the string denoting the process_name field in the database.
 	FieldProcessName = "process_name"
-	// EdgeValidationToAgentTask holds the string denoting the validationtoagenttask edge name in mutations.
-	EdgeValidationToAgentTask = "ValidationToAgentTask"
-	// EdgeValidationToScript holds the string denoting the validationtoscript edge name in mutations.
-	EdgeValidationToScript = "ValidationToScript"
-	// EdgeValidationToEnvironment holds the string denoting the validationtoenvironment edge name in mutations.
-	EdgeValidationToEnvironment = "ValidationToEnvironment"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the validation in the database.
 	Table = "validations"
-	// ValidationToAgentTaskTable is the table that holds the ValidationToAgentTask relation/edge.
-	ValidationToAgentTaskTable = "validations"
-	// ValidationToAgentTaskInverseTable is the table name for the AgentTask entity.
-	// It exists in this package in order to avoid circular dependency with the "agenttask" package.
-	ValidationToAgentTaskInverseTable = "agent_tasks"
-	// ValidationToAgentTaskColumn is the table column denoting the ValidationToAgentTask relation/edge.
-	ValidationToAgentTaskColumn = "agent_task_agent_task_to_validation"
-	// ValidationToScriptTable is the table that holds the ValidationToScript relation/edge.
-	ValidationToScriptTable = "scripts"
-	// ValidationToScriptInverseTable is the table name for the Script entity.
-	// It exists in this package in order to avoid circular dependency with the "script" package.
-	ValidationToScriptInverseTable = "scripts"
-	// ValidationToScriptColumn is the table column denoting the ValidationToScript relation/edge.
-	ValidationToScriptColumn = "script_script_to_validation"
-	// ValidationToEnvironmentTable is the table that holds the ValidationToEnvironment relation/edge. The primary key declared below.
-	ValidationToEnvironmentTable = "environment_EnvironmentToValidation"
-	// ValidationToEnvironmentInverseTable is the table name for the Environment entity.
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "validations"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	ValidationToEnvironmentInverseTable = "environments"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_validations"
 )
 
 // Columns holds all SQL columns for validation fields.
@@ -109,14 +93,8 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "validations"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"agent_task_agent_task_to_validation",
+	"environment_validations",
 }
-
-var (
-	// ValidationToEnvironmentPrimaryKey and ValidationToEnvironmentColumn2 are the table columns denoting the
-	// primary key for the ValidationToEnvironment relation (M2M).
-	ValidationToEnvironmentPrimaryKey = []string{"environment_id", "validation_id"}
-)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {

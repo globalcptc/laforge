@@ -16,9 +16,9 @@ import { RebuildService } from 'src/app/services/rebuild/rebuild.service';
 import { NetworkModalComponent } from '../network-modal/network-modal.component';
 
 // eslint-disable-next-line max-len
-type BuildCommitProvisionedNetwork = LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToBuild']['buildToTeam'][0]['TeamToProvisionedNetwork'][0];
+type BuildCommitProvisionedNetwork = LaForgeGetBuildCommitQuery['getBuildCommit']['Build']['Teams'][0]['ProvisionedNetworks'][0];
 // eslint-disable-next-line max-len
-type BuildTreeProvisionedNetwork = LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0];
+type BuildTreeProvisionedNetwork = LaForgeGetBuildTreeQuery['build']['Teams'][0]['ProvisionedNetworks'][0];
 
 @Component({
   selector: 'app-network',
@@ -32,7 +32,7 @@ export class NetworkComponent implements OnInit, OnDestroy {
   // @Input() status: Status;
   @Input()
   provisionedNetwork: BuildCommitProvisionedNetwork | BuildTreeProvisionedNetwork;
-  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['PlanDiffs'] | undefined;
   // @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
   // @Input() buildAgentStatusMap: LaForgeSubscribeUpdatedAgentStatusSubscription['updatedAgentStatus'][] | undefined;
   @Input() style: 'compact' | 'collapsed' | 'expanded';
@@ -44,7 +44,7 @@ export class NetworkComponent implements OnInit, OnDestroy {
   expandOverride = false;
   shouldHideLoading = false;
   shouldHide: BehaviorSubject<boolean>;
-  latestDiff: LaForgePlanFieldsFragment['PlanToPlanDiffs'][0];
+  latestDiff: LaForgePlanFieldsFragment['PlanDiffs'][0];
   planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
   provisionStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
 
@@ -67,13 +67,11 @@ export class NetworkComponent implements OnInit, OnDestroy {
     if (this.mode === 'plan') {
       if (!this.getPlanDiff()) this.shouldHide.next(true);
     }
-    this.planStatus = this.status.getStatusSubject(this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id);
+    this.planStatus = this.status.getStatusSubject(this.provisionedNetwork.Plan.Status.id);
     const sub1 = this.planStatus.subscribe(() => this.cdRef.markForCheck());
     this.unsubscribe.push(sub1);
     if (this.mode !== 'plan') {
-      this.provisionStatus = this.status.getStatusSubject(
-        (this.provisionedNetwork as BuildTreeProvisionedNetwork).ProvisionedNetworkToStatus.id
-      );
+      this.provisionStatus = this.status.getStatusSubject((this.provisionedNetwork as BuildTreeProvisionedNetwork).Status.id);
       const sub = this.provisionStatus.subscribe(() => this.cdRef.markForCheck());
       this.unsubscribe.push(sub);
     }
@@ -100,12 +98,12 @@ export class NetworkComponent implements OnInit, OnDestroy {
     );
   }
 
-  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
-    return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.provisionedNetwork.ProvisionedNetworkToPlan.id)[0] ?? undefined;
+  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['PlanDiffs'][0] | undefined {
+    return this.planDiffs?.filter((pd) => pd.Plan.id === this.provisionedNetwork.Plan.id)[0] ?? undefined;
   }
 
   getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
-    // return this.buildStatusMap?.filter((s) => s.id === this.provisionedNetwork.ProvisionedNetworkToPlan.PlanToStatus.id)[0] ?? undefined;
+    // return this.buildStatusMap?.filter((s) => s.id === this.provisionedNetwork.Plan.Status.id)[0] ?? undefined;
     return this.planStatus.getValue();
   }
 
@@ -113,7 +111,7 @@ export class NetworkComponent implements OnInit, OnDestroy {
     if (this.mode === 'plan') {
       const planDiff = this.getPlanDiff();
       if (!planDiff) return 'fas fa-spinner fa-spin';
-      switch (planDiff.new_state) {
+      switch (planDiff.newState) {
         case LaForgeProvisionStatus.Torebuild:
           return 'fas fa-sync-alt';
         case LaForgeProvisionStatus.Todelete:
@@ -147,7 +145,7 @@ export class NetworkComponent implements OnInit, OnDestroy {
     if (this.mode === 'plan') {
       const planDiff = this.getPlanDiff();
       if (!planDiff) return 'dark';
-      switch (planDiff.new_state) {
+      switch (planDiff.newState) {
         case LaForgeProvisionStatus.Torebuild:
           return 'warning';
         case LaForgeProvisionStatus.Todelete:
@@ -206,10 +204,10 @@ export class NetworkComponent implements OnInit, OnDestroy {
 
   shouldCollapse(): boolean {
     if (this.mode === 'plan') {
-      // const pnetPlan = this.envService.getPlan(this.provisionedNetwork.ProvisionedNetworkToPlan.id);
+      // const pnetPlan = this.envService.getPlan(this.provisionedNetwork.Plan.id);
       // const latestCommitRevision = this.envService.getBuildTree().getValue()?.BuildToLatestBuildCommit.revision;
-      // if (pnetPlan?.PlanToPlanDiffs.length > 0) {
-      //   const latestDiff = [...pnetPlan.PlanToPlanDiffs].sort((a, b) => b.revision - a.revision)[0];
+      // if (pnetPlan?.PlanDiffs.length > 0) {
+      //   const latestDiff = [...pnetPlan.PlanDiffs].sort((a, b) => b.revision - a.revision)[0];
       //   // collapse if latest diff isn't a part of the latest commit
       //   if (latestCommitRevision && latestCommitRevision === latestDiff.revision) {
       //     this.shouldCollapseLoading = false;

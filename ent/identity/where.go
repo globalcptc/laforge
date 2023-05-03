@@ -822,25 +822,25 @@ func AvatarFileContainsFold(v string) predicate.Identity {
 	})
 }
 
-// HasIdentityToEnvironment applies the HasEdge predicate on the "IdentityToEnvironment" edge.
-func HasIdentityToEnvironment() predicate.Identity {
+// HasEnvironment applies the HasEdge predicate on the "Environment" edge.
+func HasEnvironment() predicate.Identity {
 	return predicate.Identity(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(IdentityToEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, IdentityToEnvironmentTable, IdentityToEnvironmentColumn),
+			sqlgraph.To(EnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasIdentityToEnvironmentWith applies the HasEdge predicate on the "IdentityToEnvironment" edge with a given conditions (other predicates).
-func HasIdentityToEnvironmentWith(preds ...predicate.Environment) predicate.Identity {
+// HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
+func HasEnvironmentWith(preds ...predicate.Environment) predicate.Identity {
 	return predicate.Identity(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(IdentityToEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, IdentityToEnvironmentTable, IdentityToEnvironmentColumn),
+			sqlgraph.To(EnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

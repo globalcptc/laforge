@@ -109,23 +109,23 @@ func (fdu *FileDownloadUpdate) SetValidations(s []string) *FileDownloadUpdate {
 	return fdu
 }
 
-// SetFileDownloadToEnvironmentID sets the "FileDownloadToEnvironment" edge to the Environment entity by ID.
-func (fdu *FileDownloadUpdate) SetFileDownloadToEnvironmentID(id uuid.UUID) *FileDownloadUpdate {
-	fdu.mutation.SetFileDownloadToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (fdu *FileDownloadUpdate) SetEnvironmentID(id uuid.UUID) *FileDownloadUpdate {
+	fdu.mutation.SetEnvironmentID(id)
 	return fdu
 }
 
-// SetNillableFileDownloadToEnvironmentID sets the "FileDownloadToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (fdu *FileDownloadUpdate) SetNillableFileDownloadToEnvironmentID(id *uuid.UUID) *FileDownloadUpdate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (fdu *FileDownloadUpdate) SetNillableEnvironmentID(id *uuid.UUID) *FileDownloadUpdate {
 	if id != nil {
-		fdu = fdu.SetFileDownloadToEnvironmentID(*id)
+		fdu = fdu.SetEnvironmentID(*id)
 	}
 	return fdu
 }
 
-// SetFileDownloadToEnvironment sets the "FileDownloadToEnvironment" edge to the Environment entity.
-func (fdu *FileDownloadUpdate) SetFileDownloadToEnvironment(e *Environment) *FileDownloadUpdate {
-	return fdu.SetFileDownloadToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (fdu *FileDownloadUpdate) SetEnvironment(e *Environment) *FileDownloadUpdate {
+	return fdu.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the FileDownloadMutation object of the builder.
@@ -133,9 +133,9 @@ func (fdu *FileDownloadUpdate) Mutation() *FileDownloadMutation {
 	return fdu.mutation
 }
 
-// ClearFileDownloadToEnvironment clears the "FileDownloadToEnvironment" edge to the Environment entity.
-func (fdu *FileDownloadUpdate) ClearFileDownloadToEnvironment() *FileDownloadUpdate {
-	fdu.mutation.ClearFileDownloadToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (fdu *FileDownloadUpdate) ClearEnvironment() *FileDownloadUpdate {
+	fdu.mutation.ClearEnvironment()
 	return fdu
 }
 
@@ -295,12 +295,12 @@ func (fdu *FileDownloadUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: filedownload.FieldValidations,
 		})
 	}
-	if fdu.mutation.FileDownloadToEnvironmentCleared() {
+	if fdu.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   filedownload.FileDownloadToEnvironmentTable,
-			Columns: []string{filedownload.FileDownloadToEnvironmentColumn},
+			Table:   filedownload.EnvironmentTable,
+			Columns: []string{filedownload.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -311,12 +311,12 @@ func (fdu *FileDownloadUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fdu.mutation.FileDownloadToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := fdu.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   filedownload.FileDownloadToEnvironmentTable,
-			Columns: []string{filedownload.FileDownloadToEnvironmentColumn},
+			Table:   filedownload.EnvironmentTable,
+			Columns: []string{filedownload.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -429,23 +429,23 @@ func (fduo *FileDownloadUpdateOne) SetValidations(s []string) *FileDownloadUpdat
 	return fduo
 }
 
-// SetFileDownloadToEnvironmentID sets the "FileDownloadToEnvironment" edge to the Environment entity by ID.
-func (fduo *FileDownloadUpdateOne) SetFileDownloadToEnvironmentID(id uuid.UUID) *FileDownloadUpdateOne {
-	fduo.mutation.SetFileDownloadToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (fduo *FileDownloadUpdateOne) SetEnvironmentID(id uuid.UUID) *FileDownloadUpdateOne {
+	fduo.mutation.SetEnvironmentID(id)
 	return fduo
 }
 
-// SetNillableFileDownloadToEnvironmentID sets the "FileDownloadToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (fduo *FileDownloadUpdateOne) SetNillableFileDownloadToEnvironmentID(id *uuid.UUID) *FileDownloadUpdateOne {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (fduo *FileDownloadUpdateOne) SetNillableEnvironmentID(id *uuid.UUID) *FileDownloadUpdateOne {
 	if id != nil {
-		fduo = fduo.SetFileDownloadToEnvironmentID(*id)
+		fduo = fduo.SetEnvironmentID(*id)
 	}
 	return fduo
 }
 
-// SetFileDownloadToEnvironment sets the "FileDownloadToEnvironment" edge to the Environment entity.
-func (fduo *FileDownloadUpdateOne) SetFileDownloadToEnvironment(e *Environment) *FileDownloadUpdateOne {
-	return fduo.SetFileDownloadToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (fduo *FileDownloadUpdateOne) SetEnvironment(e *Environment) *FileDownloadUpdateOne {
+	return fduo.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the FileDownloadMutation object of the builder.
@@ -453,9 +453,9 @@ func (fduo *FileDownloadUpdateOne) Mutation() *FileDownloadMutation {
 	return fduo.mutation
 }
 
-// ClearFileDownloadToEnvironment clears the "FileDownloadToEnvironment" edge to the Environment entity.
-func (fduo *FileDownloadUpdateOne) ClearFileDownloadToEnvironment() *FileDownloadUpdateOne {
-	fduo.mutation.ClearFileDownloadToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (fduo *FileDownloadUpdateOne) ClearEnvironment() *FileDownloadUpdateOne {
+	fduo.mutation.ClearEnvironment()
 	return fduo
 }
 
@@ -645,12 +645,12 @@ func (fduo *FileDownloadUpdateOne) sqlSave(ctx context.Context) (_node *FileDown
 			Column: filedownload.FieldValidations,
 		})
 	}
-	if fduo.mutation.FileDownloadToEnvironmentCleared() {
+	if fduo.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   filedownload.FileDownloadToEnvironmentTable,
-			Columns: []string{filedownload.FileDownloadToEnvironmentColumn},
+			Table:   filedownload.EnvironmentTable,
+			Columns: []string{filedownload.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -661,12 +661,12 @@ func (fduo *FileDownloadUpdateOne) sqlSave(ctx context.Context) (_node *FileDown
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fduo.mutation.FileDownloadToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := fduo.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   filedownload.FileDownloadToEnvironmentTable,
-			Columns: []string{filedownload.FileDownloadToEnvironmentColumn},
+			Table:   filedownload.EnvironmentTable,
+			Columns: []string{filedownload.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

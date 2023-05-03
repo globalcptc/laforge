@@ -57,61 +57,61 @@ func (gfmu *GinFileMiddlewareUpdate) SetNillableAccessed(b *bool) *GinFileMiddle
 	return gfmu
 }
 
-// SetGinFileMiddlewareToProvisionedHostID sets the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (gfmu *GinFileMiddlewareUpdate) SetGinFileMiddlewareToProvisionedHostID(id uuid.UUID) *GinFileMiddlewareUpdate {
-	gfmu.mutation.SetGinFileMiddlewareToProvisionedHostID(id)
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (gfmu *GinFileMiddlewareUpdate) SetProvisionedHostID(id uuid.UUID) *GinFileMiddlewareUpdate {
+	gfmu.mutation.SetProvisionedHostID(id)
 	return gfmu
 }
 
-// SetNillableGinFileMiddlewareToProvisionedHostID sets the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
-func (gfmu *GinFileMiddlewareUpdate) SetNillableGinFileMiddlewareToProvisionedHostID(id *uuid.UUID) *GinFileMiddlewareUpdate {
+// SetNillableProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
+func (gfmu *GinFileMiddlewareUpdate) SetNillableProvisionedHostID(id *uuid.UUID) *GinFileMiddlewareUpdate {
 	if id != nil {
-		gfmu = gfmu.SetGinFileMiddlewareToProvisionedHostID(*id)
+		gfmu = gfmu.SetProvisionedHostID(*id)
 	}
 	return gfmu
 }
 
-// SetGinFileMiddlewareToProvisionedHost sets the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity.
-func (gfmu *GinFileMiddlewareUpdate) SetGinFileMiddlewareToProvisionedHost(p *ProvisionedHost) *GinFileMiddlewareUpdate {
-	return gfmu.SetGinFileMiddlewareToProvisionedHostID(p.ID)
+// SetProvisionedHost sets the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (gfmu *GinFileMiddlewareUpdate) SetProvisionedHost(p *ProvisionedHost) *GinFileMiddlewareUpdate {
+	return gfmu.SetProvisionedHostID(p.ID)
 }
 
-// SetGinFileMiddlewareToProvisioningStepID sets the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity by ID.
-func (gfmu *GinFileMiddlewareUpdate) SetGinFileMiddlewareToProvisioningStepID(id uuid.UUID) *GinFileMiddlewareUpdate {
-	gfmu.mutation.SetGinFileMiddlewareToProvisioningStepID(id)
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID.
+func (gfmu *GinFileMiddlewareUpdate) SetProvisioningStepID(id uuid.UUID) *GinFileMiddlewareUpdate {
+	gfmu.mutation.SetProvisioningStepID(id)
 	return gfmu
 }
 
-// SetNillableGinFileMiddlewareToProvisioningStepID sets the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
-func (gfmu *GinFileMiddlewareUpdate) SetNillableGinFileMiddlewareToProvisioningStepID(id *uuid.UUID) *GinFileMiddlewareUpdate {
+// SetNillableProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
+func (gfmu *GinFileMiddlewareUpdate) SetNillableProvisioningStepID(id *uuid.UUID) *GinFileMiddlewareUpdate {
 	if id != nil {
-		gfmu = gfmu.SetGinFileMiddlewareToProvisioningStepID(*id)
+		gfmu = gfmu.SetProvisioningStepID(*id)
 	}
 	return gfmu
 }
 
-// SetGinFileMiddlewareToProvisioningStep sets the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity.
-func (gfmu *GinFileMiddlewareUpdate) SetGinFileMiddlewareToProvisioningStep(p *ProvisioningStep) *GinFileMiddlewareUpdate {
-	return gfmu.SetGinFileMiddlewareToProvisioningStepID(p.ID)
+// SetProvisioningStep sets the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (gfmu *GinFileMiddlewareUpdate) SetProvisioningStep(p *ProvisioningStep) *GinFileMiddlewareUpdate {
+	return gfmu.SetProvisioningStepID(p.ID)
 }
 
-// SetGinFileMiddlewareToProvisioningScheduledStepID sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
-func (gfmu *GinFileMiddlewareUpdate) SetGinFileMiddlewareToProvisioningScheduledStepID(id uuid.UUID) *GinFileMiddlewareUpdate {
-	gfmu.mutation.SetGinFileMiddlewareToProvisioningScheduledStepID(id)
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (gfmu *GinFileMiddlewareUpdate) SetProvisioningScheduledStepID(id uuid.UUID) *GinFileMiddlewareUpdate {
+	gfmu.mutation.SetProvisioningScheduledStepID(id)
 	return gfmu
 }
 
-// SetNillableGinFileMiddlewareToProvisioningScheduledStepID sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
-func (gfmu *GinFileMiddlewareUpdate) SetNillableGinFileMiddlewareToProvisioningScheduledStepID(id *uuid.UUID) *GinFileMiddlewareUpdate {
+// SetNillableProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (gfmu *GinFileMiddlewareUpdate) SetNillableProvisioningScheduledStepID(id *uuid.UUID) *GinFileMiddlewareUpdate {
 	if id != nil {
-		gfmu = gfmu.SetGinFileMiddlewareToProvisioningScheduledStepID(*id)
+		gfmu = gfmu.SetProvisioningScheduledStepID(*id)
 	}
 	return gfmu
 }
 
-// SetGinFileMiddlewareToProvisioningScheduledStep sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (gfmu *GinFileMiddlewareUpdate) SetGinFileMiddlewareToProvisioningScheduledStep(p *ProvisioningScheduledStep) *GinFileMiddlewareUpdate {
-	return gfmu.SetGinFileMiddlewareToProvisioningScheduledStepID(p.ID)
+// SetProvisioningScheduledStep sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (gfmu *GinFileMiddlewareUpdate) SetProvisioningScheduledStep(p *ProvisioningScheduledStep) *GinFileMiddlewareUpdate {
+	return gfmu.SetProvisioningScheduledStepID(p.ID)
 }
 
 // Mutation returns the GinFileMiddlewareMutation object of the builder.
@@ -119,21 +119,21 @@ func (gfmu *GinFileMiddlewareUpdate) Mutation() *GinFileMiddlewareMutation {
 	return gfmu.mutation
 }
 
-// ClearGinFileMiddlewareToProvisionedHost clears the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity.
-func (gfmu *GinFileMiddlewareUpdate) ClearGinFileMiddlewareToProvisionedHost() *GinFileMiddlewareUpdate {
-	gfmu.mutation.ClearGinFileMiddlewareToProvisionedHost()
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (gfmu *GinFileMiddlewareUpdate) ClearProvisionedHost() *GinFileMiddlewareUpdate {
+	gfmu.mutation.ClearProvisionedHost()
 	return gfmu
 }
 
-// ClearGinFileMiddlewareToProvisioningStep clears the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity.
-func (gfmu *GinFileMiddlewareUpdate) ClearGinFileMiddlewareToProvisioningStep() *GinFileMiddlewareUpdate {
-	gfmu.mutation.ClearGinFileMiddlewareToProvisioningStep()
+// ClearProvisioningStep clears the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (gfmu *GinFileMiddlewareUpdate) ClearProvisioningStep() *GinFileMiddlewareUpdate {
+	gfmu.mutation.ClearProvisioningStep()
 	return gfmu
 }
 
-// ClearGinFileMiddlewareToProvisioningScheduledStep clears the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (gfmu *GinFileMiddlewareUpdate) ClearGinFileMiddlewareToProvisioningScheduledStep() *GinFileMiddlewareUpdate {
-	gfmu.mutation.ClearGinFileMiddlewareToProvisioningScheduledStep()
+// ClearProvisioningScheduledStep clears the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (gfmu *GinFileMiddlewareUpdate) ClearProvisioningScheduledStep() *GinFileMiddlewareUpdate {
+	gfmu.mutation.ClearProvisioningScheduledStep()
 	return gfmu
 }
 
@@ -230,12 +230,12 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 			Column: ginfilemiddleware.FieldAccessed,
 		})
 	}
-	if gfmu.mutation.GinFileMiddlewareToProvisionedHostCleared() {
+	if gfmu.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisionedHostTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisionedHostColumn},
+			Table:   ginfilemiddleware.ProvisionedHostTable,
+			Columns: []string{ginfilemiddleware.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -246,12 +246,12 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := gfmu.mutation.GinFileMiddlewareToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := gfmu.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisionedHostTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisionedHostColumn},
+			Table:   ginfilemiddleware.ProvisionedHostTable,
+			Columns: []string{ginfilemiddleware.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -265,12 +265,12 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if gfmu.mutation.GinFileMiddlewareToProvisioningStepCleared() {
+	if gfmu.mutation.ProvisioningStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisioningStepTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisioningStepColumn},
+			Table:   ginfilemiddleware.ProvisioningStepTable,
+			Columns: []string{ginfilemiddleware.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -281,12 +281,12 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := gfmu.mutation.GinFileMiddlewareToProvisioningStepIDs(); len(nodes) > 0 {
+	if nodes := gfmu.mutation.ProvisioningStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisioningStepTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisioningStepColumn},
+			Table:   ginfilemiddleware.ProvisioningStepTable,
+			Columns: []string{ginfilemiddleware.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -300,12 +300,12 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if gfmu.mutation.GinFileMiddlewareToProvisioningScheduledStepCleared() {
+	if gfmu.mutation.ProvisioningScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepColumn},
+			Table:   ginfilemiddleware.ProvisioningScheduledStepTable,
+			Columns: []string{ginfilemiddleware.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -316,12 +316,12 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := gfmu.mutation.GinFileMiddlewareToProvisioningScheduledStepIDs(); len(nodes) > 0 {
+	if nodes := gfmu.mutation.ProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepColumn},
+			Table:   ginfilemiddleware.ProvisioningScheduledStepTable,
+			Columns: []string{ginfilemiddleware.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -380,61 +380,61 @@ func (gfmuo *GinFileMiddlewareUpdateOne) SetNillableAccessed(b *bool) *GinFileMi
 	return gfmuo
 }
 
-// SetGinFileMiddlewareToProvisionedHostID sets the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (gfmuo *GinFileMiddlewareUpdateOne) SetGinFileMiddlewareToProvisionedHostID(id uuid.UUID) *GinFileMiddlewareUpdateOne {
-	gfmuo.mutation.SetGinFileMiddlewareToProvisionedHostID(id)
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (gfmuo *GinFileMiddlewareUpdateOne) SetProvisionedHostID(id uuid.UUID) *GinFileMiddlewareUpdateOne {
+	gfmuo.mutation.SetProvisionedHostID(id)
 	return gfmuo
 }
 
-// SetNillableGinFileMiddlewareToProvisionedHostID sets the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
-func (gfmuo *GinFileMiddlewareUpdateOne) SetNillableGinFileMiddlewareToProvisionedHostID(id *uuid.UUID) *GinFileMiddlewareUpdateOne {
+// SetNillableProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
+func (gfmuo *GinFileMiddlewareUpdateOne) SetNillableProvisionedHostID(id *uuid.UUID) *GinFileMiddlewareUpdateOne {
 	if id != nil {
-		gfmuo = gfmuo.SetGinFileMiddlewareToProvisionedHostID(*id)
+		gfmuo = gfmuo.SetProvisionedHostID(*id)
 	}
 	return gfmuo
 }
 
-// SetGinFileMiddlewareToProvisionedHost sets the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity.
-func (gfmuo *GinFileMiddlewareUpdateOne) SetGinFileMiddlewareToProvisionedHost(p *ProvisionedHost) *GinFileMiddlewareUpdateOne {
-	return gfmuo.SetGinFileMiddlewareToProvisionedHostID(p.ID)
+// SetProvisionedHost sets the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (gfmuo *GinFileMiddlewareUpdateOne) SetProvisionedHost(p *ProvisionedHost) *GinFileMiddlewareUpdateOne {
+	return gfmuo.SetProvisionedHostID(p.ID)
 }
 
-// SetGinFileMiddlewareToProvisioningStepID sets the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity by ID.
-func (gfmuo *GinFileMiddlewareUpdateOne) SetGinFileMiddlewareToProvisioningStepID(id uuid.UUID) *GinFileMiddlewareUpdateOne {
-	gfmuo.mutation.SetGinFileMiddlewareToProvisioningStepID(id)
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID.
+func (gfmuo *GinFileMiddlewareUpdateOne) SetProvisioningStepID(id uuid.UUID) *GinFileMiddlewareUpdateOne {
+	gfmuo.mutation.SetProvisioningStepID(id)
 	return gfmuo
 }
 
-// SetNillableGinFileMiddlewareToProvisioningStepID sets the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
-func (gfmuo *GinFileMiddlewareUpdateOne) SetNillableGinFileMiddlewareToProvisioningStepID(id *uuid.UUID) *GinFileMiddlewareUpdateOne {
+// SetNillableProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
+func (gfmuo *GinFileMiddlewareUpdateOne) SetNillableProvisioningStepID(id *uuid.UUID) *GinFileMiddlewareUpdateOne {
 	if id != nil {
-		gfmuo = gfmuo.SetGinFileMiddlewareToProvisioningStepID(*id)
+		gfmuo = gfmuo.SetProvisioningStepID(*id)
 	}
 	return gfmuo
 }
 
-// SetGinFileMiddlewareToProvisioningStep sets the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity.
-func (gfmuo *GinFileMiddlewareUpdateOne) SetGinFileMiddlewareToProvisioningStep(p *ProvisioningStep) *GinFileMiddlewareUpdateOne {
-	return gfmuo.SetGinFileMiddlewareToProvisioningStepID(p.ID)
+// SetProvisioningStep sets the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (gfmuo *GinFileMiddlewareUpdateOne) SetProvisioningStep(p *ProvisioningStep) *GinFileMiddlewareUpdateOne {
+	return gfmuo.SetProvisioningStepID(p.ID)
 }
 
-// SetGinFileMiddlewareToProvisioningScheduledStepID sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
-func (gfmuo *GinFileMiddlewareUpdateOne) SetGinFileMiddlewareToProvisioningScheduledStepID(id uuid.UUID) *GinFileMiddlewareUpdateOne {
-	gfmuo.mutation.SetGinFileMiddlewareToProvisioningScheduledStepID(id)
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (gfmuo *GinFileMiddlewareUpdateOne) SetProvisioningScheduledStepID(id uuid.UUID) *GinFileMiddlewareUpdateOne {
+	gfmuo.mutation.SetProvisioningScheduledStepID(id)
 	return gfmuo
 }
 
-// SetNillableGinFileMiddlewareToProvisioningScheduledStepID sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
-func (gfmuo *GinFileMiddlewareUpdateOne) SetNillableGinFileMiddlewareToProvisioningScheduledStepID(id *uuid.UUID) *GinFileMiddlewareUpdateOne {
+// SetNillableProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (gfmuo *GinFileMiddlewareUpdateOne) SetNillableProvisioningScheduledStepID(id *uuid.UUID) *GinFileMiddlewareUpdateOne {
 	if id != nil {
-		gfmuo = gfmuo.SetGinFileMiddlewareToProvisioningScheduledStepID(*id)
+		gfmuo = gfmuo.SetProvisioningScheduledStepID(*id)
 	}
 	return gfmuo
 }
 
-// SetGinFileMiddlewareToProvisioningScheduledStep sets the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (gfmuo *GinFileMiddlewareUpdateOne) SetGinFileMiddlewareToProvisioningScheduledStep(p *ProvisioningScheduledStep) *GinFileMiddlewareUpdateOne {
-	return gfmuo.SetGinFileMiddlewareToProvisioningScheduledStepID(p.ID)
+// SetProvisioningScheduledStep sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (gfmuo *GinFileMiddlewareUpdateOne) SetProvisioningScheduledStep(p *ProvisioningScheduledStep) *GinFileMiddlewareUpdateOne {
+	return gfmuo.SetProvisioningScheduledStepID(p.ID)
 }
 
 // Mutation returns the GinFileMiddlewareMutation object of the builder.
@@ -442,21 +442,21 @@ func (gfmuo *GinFileMiddlewareUpdateOne) Mutation() *GinFileMiddlewareMutation {
 	return gfmuo.mutation
 }
 
-// ClearGinFileMiddlewareToProvisionedHost clears the "GinFileMiddlewareToProvisionedHost" edge to the ProvisionedHost entity.
-func (gfmuo *GinFileMiddlewareUpdateOne) ClearGinFileMiddlewareToProvisionedHost() *GinFileMiddlewareUpdateOne {
-	gfmuo.mutation.ClearGinFileMiddlewareToProvisionedHost()
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (gfmuo *GinFileMiddlewareUpdateOne) ClearProvisionedHost() *GinFileMiddlewareUpdateOne {
+	gfmuo.mutation.ClearProvisionedHost()
 	return gfmuo
 }
 
-// ClearGinFileMiddlewareToProvisioningStep clears the "GinFileMiddlewareToProvisioningStep" edge to the ProvisioningStep entity.
-func (gfmuo *GinFileMiddlewareUpdateOne) ClearGinFileMiddlewareToProvisioningStep() *GinFileMiddlewareUpdateOne {
-	gfmuo.mutation.ClearGinFileMiddlewareToProvisioningStep()
+// ClearProvisioningStep clears the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (gfmuo *GinFileMiddlewareUpdateOne) ClearProvisioningStep() *GinFileMiddlewareUpdateOne {
+	gfmuo.mutation.ClearProvisioningStep()
 	return gfmuo
 }
 
-// ClearGinFileMiddlewareToProvisioningScheduledStep clears the "GinFileMiddlewareToProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
-func (gfmuo *GinFileMiddlewareUpdateOne) ClearGinFileMiddlewareToProvisioningScheduledStep() *GinFileMiddlewareUpdateOne {
-	gfmuo.mutation.ClearGinFileMiddlewareToProvisioningScheduledStep()
+// ClearProvisioningScheduledStep clears the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (gfmuo *GinFileMiddlewareUpdateOne) ClearProvisioningScheduledStep() *GinFileMiddlewareUpdateOne {
+	gfmuo.mutation.ClearProvisioningScheduledStep()
 	return gfmuo
 }
 
@@ -583,12 +583,12 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 			Column: ginfilemiddleware.FieldAccessed,
 		})
 	}
-	if gfmuo.mutation.GinFileMiddlewareToProvisionedHostCleared() {
+	if gfmuo.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisionedHostTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisionedHostColumn},
+			Table:   ginfilemiddleware.ProvisionedHostTable,
+			Columns: []string{ginfilemiddleware.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -599,12 +599,12 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := gfmuo.mutation.GinFileMiddlewareToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := gfmuo.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisionedHostTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisionedHostColumn},
+			Table:   ginfilemiddleware.ProvisionedHostTable,
+			Columns: []string{ginfilemiddleware.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -618,12 +618,12 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if gfmuo.mutation.GinFileMiddlewareToProvisioningStepCleared() {
+	if gfmuo.mutation.ProvisioningStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisioningStepTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisioningStepColumn},
+			Table:   ginfilemiddleware.ProvisioningStepTable,
+			Columns: []string{ginfilemiddleware.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -634,12 +634,12 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := gfmuo.mutation.GinFileMiddlewareToProvisioningStepIDs(); len(nodes) > 0 {
+	if nodes := gfmuo.mutation.ProvisioningStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisioningStepTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisioningStepColumn},
+			Table:   ginfilemiddleware.ProvisioningStepTable,
+			Columns: []string{ginfilemiddleware.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -653,12 +653,12 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if gfmuo.mutation.GinFileMiddlewareToProvisioningScheduledStepCleared() {
+	if gfmuo.mutation.ProvisioningScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepColumn},
+			Table:   ginfilemiddleware.ProvisioningScheduledStepTable,
+			Columns: []string{ginfilemiddleware.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -669,12 +669,12 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := gfmuo.mutation.GinFileMiddlewareToProvisioningScheduledStepIDs(); len(nodes) > 0 {
+	if nodes := gfmuo.mutation.ProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepTable,
-			Columns: []string{ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepColumn},
+			Table:   ginfilemiddleware.ProvisioningScheduledStepTable,
+			Columns: []string{ginfilemiddleware.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

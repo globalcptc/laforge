@@ -1,0 +1,233 @@
+query GetProvisionedHost($id: String!) {
+  provisionedHost(proHostUUID: $id) {
+    id
+    subnetIp
+    Host {
+      id
+      hostname
+      description
+      OS
+      allowMacChanges
+      exposedTcpPorts
+      exposedUdpPorts
+      userGroups
+      overridePassword
+      vars {
+        key
+        value
+      }
+      tags {
+        key
+        value
+      }
+    }
+    Status {
+      id
+    }
+    Plan {
+      id
+      Status {
+        id
+      }
+    }
+    ProvisioningSteps {
+      id
+      type
+      stepNumber
+      Script {
+        id
+        name
+        language
+        description
+        source
+        sourceType
+        disabled
+        args
+        vars {
+          key
+          value
+        }
+        tags {
+          key
+          value
+        }
+      }
+      Command {
+        id
+        name
+        description
+        program
+        args
+        disabled
+        vars {
+          key
+          value
+        }
+        tags {
+          key
+          value
+        }
+      }
+      DNSRecord {
+        id
+        name
+        values
+        type
+        zone
+        disabled
+        vars {
+          key
+          value
+        }
+        tags {
+          key
+          value
+        }
+      }
+      FileDownload {
+        id
+        source
+        sourceType
+        destination
+        disabled
+        tags {
+          key
+          value
+        }
+      }
+      FileDelete {
+        id
+        path
+        tags {
+          key
+          value
+        }
+      }
+      FileExtract {
+        id
+        source
+        destination
+        type
+        tags {
+          key
+          value
+        }
+      }
+      Status {
+        id
+      }
+      Plan {
+        id
+        Status {
+          id
+        }
+      }
+    }
+    ProvisioningScheduledSteps {
+      id
+      type
+      runTime
+      ScheduledStep {
+        id
+        name
+        description
+        step
+        type
+        schedule
+        runAt
+      }
+      Script {
+        id
+        name
+        language
+        description
+        source
+        sourceType
+        disabled
+        args
+        vars {
+          key
+          value
+        }
+        tags {
+          key
+          value
+        }
+      }
+      Command {
+        id
+        name
+        description
+        program
+        args
+        disabled
+        vars {
+          key
+          value
+        }
+        tags {
+          key
+          value
+        }
+      }
+      DNSRecord {
+        id
+        name
+        values
+        type
+        zone
+        disabled
+        vars {
+          key
+          value
+        }
+        tags {
+          key
+          value
+        }
+      }
+      FileDownload {
+        id
+        source
+        sourceType
+        destination
+        disabled
+        tags {
+          key
+          value
+        }
+      }
+      FileDelete {
+        id
+        path
+        tags {
+          key
+          value
+        }
+      }
+      FileExtract {
+        id
+        source
+        destination
+        type
+        tags {
+          key
+          value
+        }
+      }
+      Status {
+        id
+      }
+      Plan {
+        id
+        Status {
+          id
+        }
+      }
+    }
+    AgentStatuses {
+      clientId
+      timestamp
+    }
+  }
+}

@@ -32,6 +32,11 @@
     align-items: center;
     justify-content: flex-start;
 
+    .name {
+      display: flex;
+      align-items: center;
+    }
+
     .commit-hash a {
       text-decoration: underline;
     }
@@ -54,7 +59,7 @@
       }
 
       div.controls {
-        min-width: 24rem;
+        // min-width: 15rem;
 
         .btn i {
           padding: 0;

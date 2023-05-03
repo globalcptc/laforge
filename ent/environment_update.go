@@ -129,319 +129,319 @@ func (eu *EnvironmentUpdate) SetTags(m map[string]string) *EnvironmentUpdate {
 	return eu
 }
 
-// AddEnvironmentToUserIDs adds the "EnvironmentToUser" edge to the User entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToUserIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToUserIDs(ids...)
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (eu *EnvironmentUpdate) AddUserIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddUserIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToUser adds the "EnvironmentToUser" edges to the User entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToUser(u ...*User) *EnvironmentUpdate {
+// AddUsers adds the "Users" edges to the User entity.
+func (eu *EnvironmentUpdate) AddUsers(u ...*User) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return eu.AddEnvironmentToUserIDs(ids...)
+	return eu.AddUserIDs(ids...)
 }
 
-// AddEnvironmentToHostIDs adds the "EnvironmentToHost" edge to the Host entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToHostIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToHostIDs(ids...)
+// AddHostIDs adds the "Hosts" edge to the Host entity by IDs.
+func (eu *EnvironmentUpdate) AddHostIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddHostIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToHost adds the "EnvironmentToHost" edges to the Host entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToHost(h ...*Host) *EnvironmentUpdate {
+// AddHosts adds the "Hosts" edges to the Host entity.
+func (eu *EnvironmentUpdate) AddHosts(h ...*Host) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return eu.AddEnvironmentToHostIDs(ids...)
+	return eu.AddHostIDs(ids...)
 }
 
-// AddEnvironmentToCompetitionIDs adds the "EnvironmentToCompetition" edge to the Competition entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToCompetitionIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToCompetitionIDs(ids...)
+// AddCompetitionIDs adds the "Competitions" edge to the Competition entity by IDs.
+func (eu *EnvironmentUpdate) AddCompetitionIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddCompetitionIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToCompetition adds the "EnvironmentToCompetition" edges to the Competition entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToCompetition(c ...*Competition) *EnvironmentUpdate {
+// AddCompetitions adds the "Competitions" edges to the Competition entity.
+func (eu *EnvironmentUpdate) AddCompetitions(c ...*Competition) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(c))
 	for i := range c {
 		ids[i] = c[i].ID
 	}
-	return eu.AddEnvironmentToCompetitionIDs(ids...)
+	return eu.AddCompetitionIDs(ids...)
 }
 
-// AddEnvironmentToIdentityIDs adds the "EnvironmentToIdentity" edge to the Identity entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToIdentityIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToIdentityIDs(ids...)
+// AddIdentityIDs adds the "Identities" edge to the Identity entity by IDs.
+func (eu *EnvironmentUpdate) AddIdentityIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddIdentityIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToIdentity adds the "EnvironmentToIdentity" edges to the Identity entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToIdentity(i ...*Identity) *EnvironmentUpdate {
+// AddIdentities adds the "Identities" edges to the Identity entity.
+func (eu *EnvironmentUpdate) AddIdentities(i ...*Identity) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return eu.AddEnvironmentToIdentityIDs(ids...)
+	return eu.AddIdentityIDs(ids...)
 }
 
-// AddEnvironmentToCommandIDs adds the "EnvironmentToCommand" edge to the Command entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToCommandIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToCommandIDs(ids...)
+// AddCommandIDs adds the "Commands" edge to the Command entity by IDs.
+func (eu *EnvironmentUpdate) AddCommandIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddCommandIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToCommand adds the "EnvironmentToCommand" edges to the Command entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToCommand(c ...*Command) *EnvironmentUpdate {
+// AddCommands adds the "Commands" edges to the Command entity.
+func (eu *EnvironmentUpdate) AddCommands(c ...*Command) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(c))
 	for i := range c {
 		ids[i] = c[i].ID
 	}
-	return eu.AddEnvironmentToCommandIDs(ids...)
+	return eu.AddCommandIDs(ids...)
 }
 
-// AddEnvironmentToScriptIDs adds the "EnvironmentToScript" edge to the Script entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToScriptIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToScriptIDs(ids...)
+// AddScriptIDs adds the "Scripts" edge to the Script entity by IDs.
+func (eu *EnvironmentUpdate) AddScriptIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddScriptIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToScript adds the "EnvironmentToScript" edges to the Script entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToScript(s ...*Script) *EnvironmentUpdate {
+// AddScripts adds the "Scripts" edges to the Script entity.
+func (eu *EnvironmentUpdate) AddScripts(s ...*Script) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return eu.AddEnvironmentToScriptIDs(ids...)
+	return eu.AddScriptIDs(ids...)
 }
 
-// AddEnvironmentToFileDownloadIDs adds the "EnvironmentToFileDownload" edge to the FileDownload entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToFileDownloadIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToFileDownloadIDs(ids...)
+// AddFileDownloadIDs adds the "FileDownloads" edge to the FileDownload entity by IDs.
+func (eu *EnvironmentUpdate) AddFileDownloadIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddFileDownloadIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToFileDownload adds the "EnvironmentToFileDownload" edges to the FileDownload entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToFileDownload(f ...*FileDownload) *EnvironmentUpdate {
+// AddFileDownloads adds the "FileDownloads" edges to the FileDownload entity.
+func (eu *EnvironmentUpdate) AddFileDownloads(f ...*FileDownload) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return eu.AddEnvironmentToFileDownloadIDs(ids...)
+	return eu.AddFileDownloadIDs(ids...)
 }
 
-// AddEnvironmentToFileDeleteIDs adds the "EnvironmentToFileDelete" edge to the FileDelete entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToFileDeleteIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToFileDeleteIDs(ids...)
+// AddFileDeleteIDs adds the "FileDeletes" edge to the FileDelete entity by IDs.
+func (eu *EnvironmentUpdate) AddFileDeleteIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddFileDeleteIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToFileDelete adds the "EnvironmentToFileDelete" edges to the FileDelete entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToFileDelete(f ...*FileDelete) *EnvironmentUpdate {
+// AddFileDeletes adds the "FileDeletes" edges to the FileDelete entity.
+func (eu *EnvironmentUpdate) AddFileDeletes(f ...*FileDelete) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return eu.AddEnvironmentToFileDeleteIDs(ids...)
+	return eu.AddFileDeleteIDs(ids...)
 }
 
-// AddEnvironmentToFileExtractIDs adds the "EnvironmentToFileExtract" edge to the FileExtract entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToFileExtractIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToFileExtractIDs(ids...)
+// AddFileExtractIDs adds the "FileExtracts" edge to the FileExtract entity by IDs.
+func (eu *EnvironmentUpdate) AddFileExtractIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddFileExtractIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToFileExtract adds the "EnvironmentToFileExtract" edges to the FileExtract entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToFileExtract(f ...*FileExtract) *EnvironmentUpdate {
+// AddFileExtracts adds the "FileExtracts" edges to the FileExtract entity.
+func (eu *EnvironmentUpdate) AddFileExtracts(f ...*FileExtract) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return eu.AddEnvironmentToFileExtractIDs(ids...)
+	return eu.AddFileExtractIDs(ids...)
 }
 
-// AddEnvironmentToIncludedNetworkIDs adds the "EnvironmentToIncludedNetwork" edge to the IncludedNetwork entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToIncludedNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToIncludedNetworkIDs(ids...)
+// AddIncludedNetworkIDs adds the "IncludedNetworks" edge to the IncludedNetwork entity by IDs.
+func (eu *EnvironmentUpdate) AddIncludedNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddIncludedNetworkIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToIncludedNetwork adds the "EnvironmentToIncludedNetwork" edges to the IncludedNetwork entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToIncludedNetwork(i ...*IncludedNetwork) *EnvironmentUpdate {
+// AddIncludedNetworks adds the "IncludedNetworks" edges to the IncludedNetwork entity.
+func (eu *EnvironmentUpdate) AddIncludedNetworks(i ...*IncludedNetwork) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return eu.AddEnvironmentToIncludedNetworkIDs(ids...)
+	return eu.AddIncludedNetworkIDs(ids...)
 }
 
-// AddEnvironmentToFindingIDs adds the "EnvironmentToFinding" edge to the Finding entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToFindingIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToFindingIDs(ids...)
+// AddFindingIDs adds the "Findings" edge to the Finding entity by IDs.
+func (eu *EnvironmentUpdate) AddFindingIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddFindingIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToFinding adds the "EnvironmentToFinding" edges to the Finding entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToFinding(f ...*Finding) *EnvironmentUpdate {
+// AddFindings adds the "Findings" edges to the Finding entity.
+func (eu *EnvironmentUpdate) AddFindings(f ...*Finding) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return eu.AddEnvironmentToFindingIDs(ids...)
+	return eu.AddFindingIDs(ids...)
 }
 
-// AddEnvironmentToDNSRecordIDs adds the "EnvironmentToDNSRecord" edge to the DNSRecord entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToDNSRecordIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToDNSRecordIDs(ids...)
+// AddDNSRecordIDs adds the "DNSRecords" edge to the DNSRecord entity by IDs.
+func (eu *EnvironmentUpdate) AddDNSRecordIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddDNSRecordIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToDNSRecord adds the "EnvironmentToDNSRecord" edges to the DNSRecord entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToDNSRecord(d ...*DNSRecord) *EnvironmentUpdate {
+// AddDNSRecords adds the "DNSRecords" edges to the DNSRecord entity.
+func (eu *EnvironmentUpdate) AddDNSRecords(d ...*DNSRecord) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
-	return eu.AddEnvironmentToDNSRecordIDs(ids...)
+	return eu.AddDNSRecordIDs(ids...)
 }
 
-// AddEnvironmentToDNSIDs adds the "EnvironmentToDNS" edge to the DNS entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToDNSIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToDNSIDs(ids...)
+// AddDNSIDs adds the "DNS" edge to the DNS entity by IDs.
+func (eu *EnvironmentUpdate) AddDNSIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddDNSIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToDNS adds the "EnvironmentToDNS" edges to the DNS entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToDNS(d ...*DNS) *EnvironmentUpdate {
+// AddDNS adds the "DNS" edges to the DNS entity.
+func (eu *EnvironmentUpdate) AddDNS(d ...*DNS) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
-	return eu.AddEnvironmentToDNSIDs(ids...)
+	return eu.AddDNSIDs(ids...)
 }
 
-// AddEnvironmentToNetworkIDs adds the "EnvironmentToNetwork" edge to the Network entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToNetworkIDs(ids...)
+// AddNetworkIDs adds the "Networks" edge to the Network entity by IDs.
+func (eu *EnvironmentUpdate) AddNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddNetworkIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToNetwork adds the "EnvironmentToNetwork" edges to the Network entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToNetwork(n ...*Network) *EnvironmentUpdate {
+// AddNetworks adds the "Networks" edges to the Network entity.
+func (eu *EnvironmentUpdate) AddNetworks(n ...*Network) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(n))
 	for i := range n {
 		ids[i] = n[i].ID
 	}
-	return eu.AddEnvironmentToNetworkIDs(ids...)
+	return eu.AddNetworkIDs(ids...)
 }
 
-// AddEnvironmentToHostDependencyIDs adds the "EnvironmentToHostDependency" edge to the HostDependency entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToHostDependencyIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToHostDependencyIDs(ids...)
+// AddHostDependencyIDs adds the "HostDependencies" edge to the HostDependency entity by IDs.
+func (eu *EnvironmentUpdate) AddHostDependencyIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddHostDependencyIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToHostDependency adds the "EnvironmentToHostDependency" edges to the HostDependency entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToHostDependency(h ...*HostDependency) *EnvironmentUpdate {
+// AddHostDependencies adds the "HostDependencies" edges to the HostDependency entity.
+func (eu *EnvironmentUpdate) AddHostDependencies(h ...*HostDependency) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return eu.AddEnvironmentToHostDependencyIDs(ids...)
+	return eu.AddHostDependencyIDs(ids...)
 }
 
-// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToAnsibleIDs(ids...)
+// AddAnsibleIDs adds the "Ansibles" edge to the Ansible entity by IDs.
+func (eu *EnvironmentUpdate) AddAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddAnsibleIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToAnsible adds the "EnvironmentToAnsible" edges to the Ansible entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdate {
+// AddAnsibles adds the "Ansibles" edges to the Ansible entity.
+func (eu *EnvironmentUpdate) AddAnsibles(a ...*Ansible) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return eu.AddEnvironmentToAnsibleIDs(ids...)
+	return eu.AddAnsibleIDs(ids...)
 }
 
-// AddEnvironmentToScheduledStepIDs adds the "EnvironmentToScheduledStep" edge to the ScheduledStep entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToScheduledStepIDs(ids...)
+// AddScheduledStepIDs adds the "ScheduledSteps" edge to the ScheduledStep entity by IDs.
+func (eu *EnvironmentUpdate) AddScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddScheduledStepIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToScheduledStep adds the "EnvironmentToScheduledStep" edges to the ScheduledStep entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToScheduledStep(s ...*ScheduledStep) *EnvironmentUpdate {
+// AddScheduledSteps adds the "ScheduledSteps" edges to the ScheduledStep entity.
+func (eu *EnvironmentUpdate) AddScheduledSteps(s ...*ScheduledStep) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return eu.AddEnvironmentToScheduledStepIDs(ids...)
+	return eu.AddScheduledStepIDs(ids...)
 }
 
-// AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToBuildIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToBuildIDs(ids...)
+// AddBuildIDs adds the "Builds" edge to the Build entity by IDs.
+func (eu *EnvironmentUpdate) AddBuildIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddBuildIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToBuild adds the "EnvironmentToBuild" edges to the Build entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToBuild(b ...*Build) *EnvironmentUpdate {
+// AddBuilds adds the "Builds" edges to the Build entity.
+func (eu *EnvironmentUpdate) AddBuilds(b ...*Build) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(b))
 	for i := range b {
 		ids[i] = b[i].ID
 	}
-	return eu.AddEnvironmentToBuildIDs(ids...)
+	return eu.AddBuildIDs(ids...)
 }
 
-// AddEnvironmentToRepositoryIDs adds the "EnvironmentToRepository" edge to the Repository entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToRepositoryIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToRepositoryIDs(ids...)
+// AddRepositoryIDs adds the "Repositories" edge to the Repository entity by IDs.
+func (eu *EnvironmentUpdate) AddRepositoryIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddRepositoryIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToRepository adds the "EnvironmentToRepository" edges to the Repository entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToRepository(r ...*Repository) *EnvironmentUpdate {
+// AddRepositories adds the "Repositories" edges to the Repository entity.
+func (eu *EnvironmentUpdate) AddRepositories(r ...*Repository) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(r))
 	for i := range r {
 		ids[i] = r[i].ID
 	}
-	return eu.AddEnvironmentToRepositoryIDs(ids...)
+	return eu.AddRepositoryIDs(ids...)
 }
 
-// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToServerTaskIDs(ids...)
+// AddServerTaskIDs adds the "ServerTasks" edge to the ServerTask entity by IDs.
+func (eu *EnvironmentUpdate) AddServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddServerTaskIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToServerTask adds the "EnvironmentToServerTask" edges to the ServerTask entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdate {
+// AddServerTasks adds the "ServerTasks" edges to the ServerTask entity.
+func (eu *EnvironmentUpdate) AddServerTasks(s ...*ServerTask) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return eu.AddEnvironmentToServerTaskIDs(ids...)
+	return eu.AddServerTaskIDs(ids...)
 }
 
-// AddEnvironmentToValidationIDs adds the "EnvironmentToValidation" edge to the Validation entity by IDs.
-func (eu *EnvironmentUpdate) AddEnvironmentToValidationIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.AddEnvironmentToValidationIDs(ids...)
+// AddValidationIDs adds the "Validations" edge to the Validation entity by IDs.
+func (eu *EnvironmentUpdate) AddValidationIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.AddValidationIDs(ids...)
 	return eu
 }
 
-// AddEnvironmentToValidation adds the "EnvironmentToValidation" edges to the Validation entity.
-func (eu *EnvironmentUpdate) AddEnvironmentToValidation(v ...*Validation) *EnvironmentUpdate {
+// AddValidations adds the "Validations" edges to the Validation entity.
+func (eu *EnvironmentUpdate) AddValidations(v ...*Validation) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return eu.AddEnvironmentToValidationIDs(ids...)
+	return eu.AddValidationIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -449,445 +449,445 @@ func (eu *EnvironmentUpdate) Mutation() *EnvironmentMutation {
 	return eu.mutation
 }
 
-// ClearEnvironmentToUser clears all "EnvironmentToUser" edges to the User entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToUser() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToUser()
+// ClearUsers clears all "Users" edges to the User entity.
+func (eu *EnvironmentUpdate) ClearUsers() *EnvironmentUpdate {
+	eu.mutation.ClearUsers()
 	return eu
 }
 
-// RemoveEnvironmentToUserIDs removes the "EnvironmentToUser" edge to User entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToUserIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToUserIDs(ids...)
+// RemoveUserIDs removes the "Users" edge to User entities by IDs.
+func (eu *EnvironmentUpdate) RemoveUserIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveUserIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToUser removes "EnvironmentToUser" edges to User entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToUser(u ...*User) *EnvironmentUpdate {
+// RemoveUsers removes "Users" edges to User entities.
+func (eu *EnvironmentUpdate) RemoveUsers(u ...*User) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return eu.RemoveEnvironmentToUserIDs(ids...)
+	return eu.RemoveUserIDs(ids...)
 }
 
-// ClearEnvironmentToHost clears all "EnvironmentToHost" edges to the Host entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToHost() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToHost()
+// ClearHosts clears all "Hosts" edges to the Host entity.
+func (eu *EnvironmentUpdate) ClearHosts() *EnvironmentUpdate {
+	eu.mutation.ClearHosts()
 	return eu
 }
 
-// RemoveEnvironmentToHostIDs removes the "EnvironmentToHost" edge to Host entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToHostIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToHostIDs(ids...)
+// RemoveHostIDs removes the "Hosts" edge to Host entities by IDs.
+func (eu *EnvironmentUpdate) RemoveHostIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveHostIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToHost removes "EnvironmentToHost" edges to Host entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToHost(h ...*Host) *EnvironmentUpdate {
+// RemoveHosts removes "Hosts" edges to Host entities.
+func (eu *EnvironmentUpdate) RemoveHosts(h ...*Host) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return eu.RemoveEnvironmentToHostIDs(ids...)
+	return eu.RemoveHostIDs(ids...)
 }
 
-// ClearEnvironmentToCompetition clears all "EnvironmentToCompetition" edges to the Competition entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToCompetition() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToCompetition()
+// ClearCompetitions clears all "Competitions" edges to the Competition entity.
+func (eu *EnvironmentUpdate) ClearCompetitions() *EnvironmentUpdate {
+	eu.mutation.ClearCompetitions()
 	return eu
 }
 
-// RemoveEnvironmentToCompetitionIDs removes the "EnvironmentToCompetition" edge to Competition entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToCompetitionIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToCompetitionIDs(ids...)
+// RemoveCompetitionIDs removes the "Competitions" edge to Competition entities by IDs.
+func (eu *EnvironmentUpdate) RemoveCompetitionIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveCompetitionIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToCompetition removes "EnvironmentToCompetition" edges to Competition entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToCompetition(c ...*Competition) *EnvironmentUpdate {
+// RemoveCompetitions removes "Competitions" edges to Competition entities.
+func (eu *EnvironmentUpdate) RemoveCompetitions(c ...*Competition) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(c))
 	for i := range c {
 		ids[i] = c[i].ID
 	}
-	return eu.RemoveEnvironmentToCompetitionIDs(ids...)
+	return eu.RemoveCompetitionIDs(ids...)
 }
 
-// ClearEnvironmentToIdentity clears all "EnvironmentToIdentity" edges to the Identity entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToIdentity() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToIdentity()
+// ClearIdentities clears all "Identities" edges to the Identity entity.
+func (eu *EnvironmentUpdate) ClearIdentities() *EnvironmentUpdate {
+	eu.mutation.ClearIdentities()
 	return eu
 }
 
-// RemoveEnvironmentToIdentityIDs removes the "EnvironmentToIdentity" edge to Identity entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToIdentityIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToIdentityIDs(ids...)
+// RemoveIdentityIDs removes the "Identities" edge to Identity entities by IDs.
+func (eu *EnvironmentUpdate) RemoveIdentityIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveIdentityIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToIdentity removes "EnvironmentToIdentity" edges to Identity entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToIdentity(i ...*Identity) *EnvironmentUpdate {
+// RemoveIdentities removes "Identities" edges to Identity entities.
+func (eu *EnvironmentUpdate) RemoveIdentities(i ...*Identity) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return eu.RemoveEnvironmentToIdentityIDs(ids...)
+	return eu.RemoveIdentityIDs(ids...)
 }
 
-// ClearEnvironmentToCommand clears all "EnvironmentToCommand" edges to the Command entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToCommand() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToCommand()
+// ClearCommands clears all "Commands" edges to the Command entity.
+func (eu *EnvironmentUpdate) ClearCommands() *EnvironmentUpdate {
+	eu.mutation.ClearCommands()
 	return eu
 }
 
-// RemoveEnvironmentToCommandIDs removes the "EnvironmentToCommand" edge to Command entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToCommandIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToCommandIDs(ids...)
+// RemoveCommandIDs removes the "Commands" edge to Command entities by IDs.
+func (eu *EnvironmentUpdate) RemoveCommandIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveCommandIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToCommand removes "EnvironmentToCommand" edges to Command entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToCommand(c ...*Command) *EnvironmentUpdate {
+// RemoveCommands removes "Commands" edges to Command entities.
+func (eu *EnvironmentUpdate) RemoveCommands(c ...*Command) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(c))
 	for i := range c {
 		ids[i] = c[i].ID
 	}
-	return eu.RemoveEnvironmentToCommandIDs(ids...)
+	return eu.RemoveCommandIDs(ids...)
 }
 
-// ClearEnvironmentToScript clears all "EnvironmentToScript" edges to the Script entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToScript() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToScript()
+// ClearScripts clears all "Scripts" edges to the Script entity.
+func (eu *EnvironmentUpdate) ClearScripts() *EnvironmentUpdate {
+	eu.mutation.ClearScripts()
 	return eu
 }
 
-// RemoveEnvironmentToScriptIDs removes the "EnvironmentToScript" edge to Script entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToScriptIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToScriptIDs(ids...)
+// RemoveScriptIDs removes the "Scripts" edge to Script entities by IDs.
+func (eu *EnvironmentUpdate) RemoveScriptIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveScriptIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToScript removes "EnvironmentToScript" edges to Script entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToScript(s ...*Script) *EnvironmentUpdate {
+// RemoveScripts removes "Scripts" edges to Script entities.
+func (eu *EnvironmentUpdate) RemoveScripts(s ...*Script) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return eu.RemoveEnvironmentToScriptIDs(ids...)
+	return eu.RemoveScriptIDs(ids...)
 }
 
-// ClearEnvironmentToFileDownload clears all "EnvironmentToFileDownload" edges to the FileDownload entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToFileDownload() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToFileDownload()
+// ClearFileDownloads clears all "FileDownloads" edges to the FileDownload entity.
+func (eu *EnvironmentUpdate) ClearFileDownloads() *EnvironmentUpdate {
+	eu.mutation.ClearFileDownloads()
 	return eu
 }
 
-// RemoveEnvironmentToFileDownloadIDs removes the "EnvironmentToFileDownload" edge to FileDownload entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToFileDownloadIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToFileDownloadIDs(ids...)
+// RemoveFileDownloadIDs removes the "FileDownloads" edge to FileDownload entities by IDs.
+func (eu *EnvironmentUpdate) RemoveFileDownloadIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveFileDownloadIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToFileDownload removes "EnvironmentToFileDownload" edges to FileDownload entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToFileDownload(f ...*FileDownload) *EnvironmentUpdate {
+// RemoveFileDownloads removes "FileDownloads" edges to FileDownload entities.
+func (eu *EnvironmentUpdate) RemoveFileDownloads(f ...*FileDownload) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return eu.RemoveEnvironmentToFileDownloadIDs(ids...)
+	return eu.RemoveFileDownloadIDs(ids...)
 }
 
-// ClearEnvironmentToFileDelete clears all "EnvironmentToFileDelete" edges to the FileDelete entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToFileDelete() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToFileDelete()
+// ClearFileDeletes clears all "FileDeletes" edges to the FileDelete entity.
+func (eu *EnvironmentUpdate) ClearFileDeletes() *EnvironmentUpdate {
+	eu.mutation.ClearFileDeletes()
 	return eu
 }
 
-// RemoveEnvironmentToFileDeleteIDs removes the "EnvironmentToFileDelete" edge to FileDelete entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToFileDeleteIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToFileDeleteIDs(ids...)
+// RemoveFileDeleteIDs removes the "FileDeletes" edge to FileDelete entities by IDs.
+func (eu *EnvironmentUpdate) RemoveFileDeleteIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveFileDeleteIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToFileDelete removes "EnvironmentToFileDelete" edges to FileDelete entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToFileDelete(f ...*FileDelete) *EnvironmentUpdate {
+// RemoveFileDeletes removes "FileDeletes" edges to FileDelete entities.
+func (eu *EnvironmentUpdate) RemoveFileDeletes(f ...*FileDelete) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return eu.RemoveEnvironmentToFileDeleteIDs(ids...)
+	return eu.RemoveFileDeleteIDs(ids...)
 }
 
-// ClearEnvironmentToFileExtract clears all "EnvironmentToFileExtract" edges to the FileExtract entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToFileExtract() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToFileExtract()
+// ClearFileExtracts clears all "FileExtracts" edges to the FileExtract entity.
+func (eu *EnvironmentUpdate) ClearFileExtracts() *EnvironmentUpdate {
+	eu.mutation.ClearFileExtracts()
 	return eu
 }
 
-// RemoveEnvironmentToFileExtractIDs removes the "EnvironmentToFileExtract" edge to FileExtract entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToFileExtractIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToFileExtractIDs(ids...)
+// RemoveFileExtractIDs removes the "FileExtracts" edge to FileExtract entities by IDs.
+func (eu *EnvironmentUpdate) RemoveFileExtractIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveFileExtractIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToFileExtract removes "EnvironmentToFileExtract" edges to FileExtract entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToFileExtract(f ...*FileExtract) *EnvironmentUpdate {
+// RemoveFileExtracts removes "FileExtracts" edges to FileExtract entities.
+func (eu *EnvironmentUpdate) RemoveFileExtracts(f ...*FileExtract) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return eu.RemoveEnvironmentToFileExtractIDs(ids...)
+	return eu.RemoveFileExtractIDs(ids...)
 }
 
-// ClearEnvironmentToIncludedNetwork clears all "EnvironmentToIncludedNetwork" edges to the IncludedNetwork entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToIncludedNetwork() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToIncludedNetwork()
+// ClearIncludedNetworks clears all "IncludedNetworks" edges to the IncludedNetwork entity.
+func (eu *EnvironmentUpdate) ClearIncludedNetworks() *EnvironmentUpdate {
+	eu.mutation.ClearIncludedNetworks()
 	return eu
 }
 
-// RemoveEnvironmentToIncludedNetworkIDs removes the "EnvironmentToIncludedNetwork" edge to IncludedNetwork entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToIncludedNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToIncludedNetworkIDs(ids...)
+// RemoveIncludedNetworkIDs removes the "IncludedNetworks" edge to IncludedNetwork entities by IDs.
+func (eu *EnvironmentUpdate) RemoveIncludedNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveIncludedNetworkIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToIncludedNetwork removes "EnvironmentToIncludedNetwork" edges to IncludedNetwork entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToIncludedNetwork(i ...*IncludedNetwork) *EnvironmentUpdate {
+// RemoveIncludedNetworks removes "IncludedNetworks" edges to IncludedNetwork entities.
+func (eu *EnvironmentUpdate) RemoveIncludedNetworks(i ...*IncludedNetwork) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return eu.RemoveEnvironmentToIncludedNetworkIDs(ids...)
+	return eu.RemoveIncludedNetworkIDs(ids...)
 }
 
-// ClearEnvironmentToFinding clears all "EnvironmentToFinding" edges to the Finding entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToFinding() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToFinding()
+// ClearFindings clears all "Findings" edges to the Finding entity.
+func (eu *EnvironmentUpdate) ClearFindings() *EnvironmentUpdate {
+	eu.mutation.ClearFindings()
 	return eu
 }
 
-// RemoveEnvironmentToFindingIDs removes the "EnvironmentToFinding" edge to Finding entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToFindingIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToFindingIDs(ids...)
+// RemoveFindingIDs removes the "Findings" edge to Finding entities by IDs.
+func (eu *EnvironmentUpdate) RemoveFindingIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveFindingIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToFinding removes "EnvironmentToFinding" edges to Finding entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToFinding(f ...*Finding) *EnvironmentUpdate {
+// RemoveFindings removes "Findings" edges to Finding entities.
+func (eu *EnvironmentUpdate) RemoveFindings(f ...*Finding) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return eu.RemoveEnvironmentToFindingIDs(ids...)
+	return eu.RemoveFindingIDs(ids...)
 }
 
-// ClearEnvironmentToDNSRecord clears all "EnvironmentToDNSRecord" edges to the DNSRecord entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToDNSRecord() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToDNSRecord()
+// ClearDNSRecords clears all "DNSRecords" edges to the DNSRecord entity.
+func (eu *EnvironmentUpdate) ClearDNSRecords() *EnvironmentUpdate {
+	eu.mutation.ClearDNSRecords()
 	return eu
 }
 
-// RemoveEnvironmentToDNSRecordIDs removes the "EnvironmentToDNSRecord" edge to DNSRecord entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToDNSRecordIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToDNSRecordIDs(ids...)
+// RemoveDNSRecordIDs removes the "DNSRecords" edge to DNSRecord entities by IDs.
+func (eu *EnvironmentUpdate) RemoveDNSRecordIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveDNSRecordIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToDNSRecord removes "EnvironmentToDNSRecord" edges to DNSRecord entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToDNSRecord(d ...*DNSRecord) *EnvironmentUpdate {
+// RemoveDNSRecords removes "DNSRecords" edges to DNSRecord entities.
+func (eu *EnvironmentUpdate) RemoveDNSRecords(d ...*DNSRecord) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
-	return eu.RemoveEnvironmentToDNSRecordIDs(ids...)
+	return eu.RemoveDNSRecordIDs(ids...)
 }
 
-// ClearEnvironmentToDNS clears all "EnvironmentToDNS" edges to the DNS entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToDNS() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToDNS()
+// ClearDNS clears all "DNS" edges to the DNS entity.
+func (eu *EnvironmentUpdate) ClearDNS() *EnvironmentUpdate {
+	eu.mutation.ClearDNS()
 	return eu
 }
 
-// RemoveEnvironmentToDNSIDs removes the "EnvironmentToDNS" edge to DNS entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToDNSIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToDNSIDs(ids...)
+// RemoveDNSIDs removes the "DNS" edge to DNS entities by IDs.
+func (eu *EnvironmentUpdate) RemoveDNSIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveDNSIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToDNS removes "EnvironmentToDNS" edges to DNS entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToDNS(d ...*DNS) *EnvironmentUpdate {
+// RemoveDNS removes "DNS" edges to DNS entities.
+func (eu *EnvironmentUpdate) RemoveDNS(d ...*DNS) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
-	return eu.RemoveEnvironmentToDNSIDs(ids...)
+	return eu.RemoveDNSIDs(ids...)
 }
 
-// ClearEnvironmentToNetwork clears all "EnvironmentToNetwork" edges to the Network entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToNetwork() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToNetwork()
+// ClearNetworks clears all "Networks" edges to the Network entity.
+func (eu *EnvironmentUpdate) ClearNetworks() *EnvironmentUpdate {
+	eu.mutation.ClearNetworks()
 	return eu
 }
 
-// RemoveEnvironmentToNetworkIDs removes the "EnvironmentToNetwork" edge to Network entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToNetworkIDs(ids...)
+// RemoveNetworkIDs removes the "Networks" edge to Network entities by IDs.
+func (eu *EnvironmentUpdate) RemoveNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveNetworkIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToNetwork removes "EnvironmentToNetwork" edges to Network entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToNetwork(n ...*Network) *EnvironmentUpdate {
+// RemoveNetworks removes "Networks" edges to Network entities.
+func (eu *EnvironmentUpdate) RemoveNetworks(n ...*Network) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(n))
 	for i := range n {
 		ids[i] = n[i].ID
 	}
-	return eu.RemoveEnvironmentToNetworkIDs(ids...)
+	return eu.RemoveNetworkIDs(ids...)
 }
 
-// ClearEnvironmentToHostDependency clears all "EnvironmentToHostDependency" edges to the HostDependency entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToHostDependency() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToHostDependency()
+// ClearHostDependencies clears all "HostDependencies" edges to the HostDependency entity.
+func (eu *EnvironmentUpdate) ClearHostDependencies() *EnvironmentUpdate {
+	eu.mutation.ClearHostDependencies()
 	return eu
 }
 
-// RemoveEnvironmentToHostDependencyIDs removes the "EnvironmentToHostDependency" edge to HostDependency entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToHostDependencyIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToHostDependencyIDs(ids...)
+// RemoveHostDependencyIDs removes the "HostDependencies" edge to HostDependency entities by IDs.
+func (eu *EnvironmentUpdate) RemoveHostDependencyIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveHostDependencyIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToHostDependency removes "EnvironmentToHostDependency" edges to HostDependency entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToHostDependency(h ...*HostDependency) *EnvironmentUpdate {
+// RemoveHostDependencies removes "HostDependencies" edges to HostDependency entities.
+func (eu *EnvironmentUpdate) RemoveHostDependencies(h ...*HostDependency) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return eu.RemoveEnvironmentToHostDependencyIDs(ids...)
+	return eu.RemoveHostDependencyIDs(ids...)
 }
 
-// ClearEnvironmentToAnsible clears all "EnvironmentToAnsible" edges to the Ansible entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToAnsible() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToAnsible()
+// ClearAnsibles clears all "Ansibles" edges to the Ansible entity.
+func (eu *EnvironmentUpdate) ClearAnsibles() *EnvironmentUpdate {
+	eu.mutation.ClearAnsibles()
 	return eu
 }
 
-// RemoveEnvironmentToAnsibleIDs removes the "EnvironmentToAnsible" edge to Ansible entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToAnsibleIDs(ids...)
+// RemoveAnsibleIDs removes the "Ansibles" edge to Ansible entities by IDs.
+func (eu *EnvironmentUpdate) RemoveAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveAnsibleIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToAnsible removes "EnvironmentToAnsible" edges to Ansible entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdate {
+// RemoveAnsibles removes "Ansibles" edges to Ansible entities.
+func (eu *EnvironmentUpdate) RemoveAnsibles(a ...*Ansible) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return eu.RemoveEnvironmentToAnsibleIDs(ids...)
+	return eu.RemoveAnsibleIDs(ids...)
 }
 
-// ClearEnvironmentToScheduledStep clears all "EnvironmentToScheduledStep" edges to the ScheduledStep entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToScheduledStep() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToScheduledStep()
+// ClearScheduledSteps clears all "ScheduledSteps" edges to the ScheduledStep entity.
+func (eu *EnvironmentUpdate) ClearScheduledSteps() *EnvironmentUpdate {
+	eu.mutation.ClearScheduledSteps()
 	return eu
 }
 
-// RemoveEnvironmentToScheduledStepIDs removes the "EnvironmentToScheduledStep" edge to ScheduledStep entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToScheduledStepIDs(ids...)
+// RemoveScheduledStepIDs removes the "ScheduledSteps" edge to ScheduledStep entities by IDs.
+func (eu *EnvironmentUpdate) RemoveScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveScheduledStepIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToScheduledStep removes "EnvironmentToScheduledStep" edges to ScheduledStep entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToScheduledStep(s ...*ScheduledStep) *EnvironmentUpdate {
+// RemoveScheduledSteps removes "ScheduledSteps" edges to ScheduledStep entities.
+func (eu *EnvironmentUpdate) RemoveScheduledSteps(s ...*ScheduledStep) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return eu.RemoveEnvironmentToScheduledStepIDs(ids...)
+	return eu.RemoveScheduledStepIDs(ids...)
 }
 
-// ClearEnvironmentToBuild clears all "EnvironmentToBuild" edges to the Build entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToBuild() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToBuild()
+// ClearBuilds clears all "Builds" edges to the Build entity.
+func (eu *EnvironmentUpdate) ClearBuilds() *EnvironmentUpdate {
+	eu.mutation.ClearBuilds()
 	return eu
 }
 
-// RemoveEnvironmentToBuildIDs removes the "EnvironmentToBuild" edge to Build entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToBuildIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToBuildIDs(ids...)
+// RemoveBuildIDs removes the "Builds" edge to Build entities by IDs.
+func (eu *EnvironmentUpdate) RemoveBuildIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveBuildIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToBuild removes "EnvironmentToBuild" edges to Build entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToBuild(b ...*Build) *EnvironmentUpdate {
+// RemoveBuilds removes "Builds" edges to Build entities.
+func (eu *EnvironmentUpdate) RemoveBuilds(b ...*Build) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(b))
 	for i := range b {
 		ids[i] = b[i].ID
 	}
-	return eu.RemoveEnvironmentToBuildIDs(ids...)
+	return eu.RemoveBuildIDs(ids...)
 }
 
-// ClearEnvironmentToRepository clears all "EnvironmentToRepository" edges to the Repository entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToRepository() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToRepository()
+// ClearRepositories clears all "Repositories" edges to the Repository entity.
+func (eu *EnvironmentUpdate) ClearRepositories() *EnvironmentUpdate {
+	eu.mutation.ClearRepositories()
 	return eu
 }
 
-// RemoveEnvironmentToRepositoryIDs removes the "EnvironmentToRepository" edge to Repository entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToRepositoryIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToRepositoryIDs(ids...)
+// RemoveRepositoryIDs removes the "Repositories" edge to Repository entities by IDs.
+func (eu *EnvironmentUpdate) RemoveRepositoryIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveRepositoryIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToRepository removes "EnvironmentToRepository" edges to Repository entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToRepository(r ...*Repository) *EnvironmentUpdate {
+// RemoveRepositories removes "Repositories" edges to Repository entities.
+func (eu *EnvironmentUpdate) RemoveRepositories(r ...*Repository) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(r))
 	for i := range r {
 		ids[i] = r[i].ID
 	}
-	return eu.RemoveEnvironmentToRepositoryIDs(ids...)
+	return eu.RemoveRepositoryIDs(ids...)
 }
 
-// ClearEnvironmentToServerTask clears all "EnvironmentToServerTask" edges to the ServerTask entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToServerTask() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToServerTask()
+// ClearServerTasks clears all "ServerTasks" edges to the ServerTask entity.
+func (eu *EnvironmentUpdate) ClearServerTasks() *EnvironmentUpdate {
+	eu.mutation.ClearServerTasks()
 	return eu
 }
 
-// RemoveEnvironmentToServerTaskIDs removes the "EnvironmentToServerTask" edge to ServerTask entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToServerTaskIDs(ids...)
+// RemoveServerTaskIDs removes the "ServerTasks" edge to ServerTask entities by IDs.
+func (eu *EnvironmentUpdate) RemoveServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveServerTaskIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToServerTask removes "EnvironmentToServerTask" edges to ServerTask entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdate {
+// RemoveServerTasks removes "ServerTasks" edges to ServerTask entities.
+func (eu *EnvironmentUpdate) RemoveServerTasks(s ...*ServerTask) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return eu.RemoveEnvironmentToServerTaskIDs(ids...)
+	return eu.RemoveServerTaskIDs(ids...)
 }
 
-// ClearEnvironmentToValidation clears all "EnvironmentToValidation" edges to the Validation entity.
-func (eu *EnvironmentUpdate) ClearEnvironmentToValidation() *EnvironmentUpdate {
-	eu.mutation.ClearEnvironmentToValidation()
+// ClearValidations clears all "Validations" edges to the Validation entity.
+func (eu *EnvironmentUpdate) ClearValidations() *EnvironmentUpdate {
+	eu.mutation.ClearValidations()
 	return eu
 }
 
-// RemoveEnvironmentToValidationIDs removes the "EnvironmentToValidation" edge to Validation entities by IDs.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToValidationIDs(ids ...uuid.UUID) *EnvironmentUpdate {
-	eu.mutation.RemoveEnvironmentToValidationIDs(ids...)
+// RemoveValidationIDs removes the "Validations" edge to Validation entities by IDs.
+func (eu *EnvironmentUpdate) RemoveValidationIDs(ids ...uuid.UUID) *EnvironmentUpdate {
+	eu.mutation.RemoveValidationIDs(ids...)
 	return eu
 }
 
-// RemoveEnvironmentToValidation removes "EnvironmentToValidation" edges to Validation entities.
-func (eu *EnvironmentUpdate) RemoveEnvironmentToValidation(v ...*Validation) *EnvironmentUpdate {
+// RemoveValidations removes "Validations" edges to Validation entities.
+func (eu *EnvironmentUpdate) RemoveValidations(v ...*Validation) *EnvironmentUpdate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return eu.RemoveEnvironmentToValidationIDs(ids...)
+	return eu.RemoveValidationIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1053,12 +1053,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: environment.FieldTags,
 		})
 	}
-	if eu.mutation.EnvironmentToUserCleared() {
+	if eu.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToUserTable,
-			Columns: environment.EnvironmentToUserPrimaryKey,
+			Table:   environment.UsersTable,
+			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1069,31 +1069,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToUserIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToUserCleared() {
+	if nodes := eu.mutation.RemovedUsersIDs(); len(nodes) > 0 && !eu.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToUserTable,
-			Columns: environment.EnvironmentToUserPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToUserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToUserTable,
-			Columns: environment.EnvironmentToUserPrimaryKey,
+			Table:   environment.UsersTable,
+			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1105,14 +1086,33 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.UsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   environment.UsersTable,
+			Columns: environment.UsersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if eu.mutation.EnvironmentToHostCleared() {
+	if eu.mutation.HostsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostTable,
-			Columns: []string{environment.EnvironmentToHostColumn},
+			Table:   environment.HostsTable,
+			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1123,12 +1123,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToHostIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToHostCleared() {
+	if nodes := eu.mutation.RemovedHostsIDs(); len(nodes) > 0 && !eu.mutation.HostsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostTable,
-			Columns: []string{environment.EnvironmentToHostColumn},
+			Table:   environment.HostsTable,
+			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1142,12 +1142,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.EnvironmentToHostIDs(); len(nodes) > 0 {
+	if nodes := eu.mutation.HostsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostTable,
-			Columns: []string{environment.EnvironmentToHostColumn},
+			Table:   environment.HostsTable,
+			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1161,12 +1161,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if eu.mutation.EnvironmentToCompetitionCleared() {
+	if eu.mutation.CompetitionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToCompetitionTable,
-			Columns: []string{environment.EnvironmentToCompetitionColumn},
+			Table:   environment.CompetitionsTable,
+			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1177,31 +1177,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToCompetitionIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToCompetitionCleared() {
+	if nodes := eu.mutation.RemovedCompetitionsIDs(); len(nodes) > 0 && !eu.mutation.CompetitionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToCompetitionTable,
-			Columns: []string{environment.EnvironmentToCompetitionColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: competition.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToCompetitionIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToCompetitionTable,
-			Columns: []string{environment.EnvironmentToCompetitionColumn},
+			Table:   environment.CompetitionsTable,
+			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1213,14 +1194,33 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if eu.mutation.EnvironmentToIdentityCleared() {
+	if nodes := eu.mutation.CompetitionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIdentityTable,
-			Columns: []string{environment.EnvironmentToIdentityColumn},
+			Table:   environment.CompetitionsTable,
+			Columns: []string{environment.CompetitionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: competition.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.IdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.IdentitiesTable,
+			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1231,12 +1231,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToIdentityIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToIdentityCleared() {
+	if nodes := eu.mutation.RemovedIdentitiesIDs(); len(nodes) > 0 && !eu.mutation.IdentitiesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIdentityTable,
-			Columns: []string{environment.EnvironmentToIdentityColumn},
+			Table:   environment.IdentitiesTable,
+			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1250,12 +1250,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.EnvironmentToIdentityIDs(); len(nodes) > 0 {
+	if nodes := eu.mutation.IdentitiesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIdentityTable,
-			Columns: []string{environment.EnvironmentToIdentityColumn},
+			Table:   environment.IdentitiesTable,
+			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1269,12 +1269,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if eu.mutation.EnvironmentToCommandCleared() {
+	if eu.mutation.CommandsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToCommandTable,
-			Columns: []string{environment.EnvironmentToCommandColumn},
+			Table:   environment.CommandsTable,
+			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1285,31 +1285,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToCommandIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToCommandCleared() {
+	if nodes := eu.mutation.RemovedCommandsIDs(); len(nodes) > 0 && !eu.mutation.CommandsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToCommandTable,
-			Columns: []string{environment.EnvironmentToCommandColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: command.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToCommandIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToCommandTable,
-			Columns: []string{environment.EnvironmentToCommandColumn},
+			Table:   environment.CommandsTable,
+			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1321,14 +1302,33 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if eu.mutation.EnvironmentToScriptCleared() {
+	if nodes := eu.mutation.CommandsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScriptTable,
-			Columns: []string{environment.EnvironmentToScriptColumn},
+			Table:   environment.CommandsTable,
+			Columns: []string{environment.CommandsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: command.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.ScriptsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.ScriptsTable,
+			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1339,12 +1339,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToScriptIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToScriptCleared() {
+	if nodes := eu.mutation.RemovedScriptsIDs(); len(nodes) > 0 && !eu.mutation.ScriptsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScriptTable,
-			Columns: []string{environment.EnvironmentToScriptColumn},
+			Table:   environment.ScriptsTable,
+			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1358,12 +1358,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.EnvironmentToScriptIDs(); len(nodes) > 0 {
+	if nodes := eu.mutation.ScriptsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScriptTable,
-			Columns: []string{environment.EnvironmentToScriptColumn},
+			Table:   environment.ScriptsTable,
+			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1377,12 +1377,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if eu.mutation.EnvironmentToFileDownloadCleared() {
+	if eu.mutation.FileDownloadsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDownloadTable,
-			Columns: []string{environment.EnvironmentToFileDownloadColumn},
+			Table:   environment.FileDownloadsTable,
+			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1393,31 +1393,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToFileDownloadIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToFileDownloadCleared() {
+	if nodes := eu.mutation.RemovedFileDownloadsIDs(); len(nodes) > 0 && !eu.mutation.FileDownloadsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDownloadTable,
-			Columns: []string{environment.EnvironmentToFileDownloadColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedownload.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToFileDownloadIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToFileDownloadTable,
-			Columns: []string{environment.EnvironmentToFileDownloadColumn},
+			Table:   environment.FileDownloadsTable,
+			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1429,14 +1410,33 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if eu.mutation.EnvironmentToFileDeleteCleared() {
+	if nodes := eu.mutation.FileDownloadsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDeleteTable,
-			Columns: []string{environment.EnvironmentToFileDeleteColumn},
+			Table:   environment.FileDownloadsTable,
+			Columns: []string{environment.FileDownloadsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: filedownload.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.FileDeletesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.FileDeletesTable,
+			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1447,12 +1447,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToFileDeleteIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToFileDeleteCleared() {
+	if nodes := eu.mutation.RemovedFileDeletesIDs(); len(nodes) > 0 && !eu.mutation.FileDeletesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDeleteTable,
-			Columns: []string{environment.EnvironmentToFileDeleteColumn},
+			Table:   environment.FileDeletesTable,
+			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1466,12 +1466,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.EnvironmentToFileDeleteIDs(); len(nodes) > 0 {
+	if nodes := eu.mutation.FileDeletesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDeleteTable,
-			Columns: []string{environment.EnvironmentToFileDeleteColumn},
+			Table:   environment.FileDeletesTable,
+			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1485,12 +1485,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if eu.mutation.EnvironmentToFileExtractCleared() {
+	if eu.mutation.FileExtractsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileExtractTable,
-			Columns: []string{environment.EnvironmentToFileExtractColumn},
+			Table:   environment.FileExtractsTable,
+			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1501,31 +1501,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToFileExtractIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToFileExtractCleared() {
+	if nodes := eu.mutation.RemovedFileExtractsIDs(); len(nodes) > 0 && !eu.mutation.FileExtractsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileExtractTable,
-			Columns: []string{environment.EnvironmentToFileExtractColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: fileextract.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToFileExtractIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToFileExtractTable,
-			Columns: []string{environment.EnvironmentToFileExtractColumn},
+			Table:   environment.FileExtractsTable,
+			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1537,14 +1518,33 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.FileExtractsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.FileExtractsTable,
+			Columns: []string{environment.FileExtractsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: fileextract.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if eu.mutation.EnvironmentToIncludedNetworkCleared() {
+	if eu.mutation.IncludedNetworksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIncludedNetworkTable,
-			Columns: environment.EnvironmentToIncludedNetworkPrimaryKey,
+			Table:   environment.IncludedNetworksTable,
+			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1555,12 +1555,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToIncludedNetworkIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToIncludedNetworkCleared() {
+	if nodes := eu.mutation.RemovedIncludedNetworksIDs(); len(nodes) > 0 && !eu.mutation.IncludedNetworksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIncludedNetworkTable,
-			Columns: environment.EnvironmentToIncludedNetworkPrimaryKey,
+			Table:   environment.IncludedNetworksTable,
+			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1574,12 +1574,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.EnvironmentToIncludedNetworkIDs(); len(nodes) > 0 {
+	if nodes := eu.mutation.IncludedNetworksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIncludedNetworkTable,
-			Columns: environment.EnvironmentToIncludedNetworkPrimaryKey,
+			Table:   environment.IncludedNetworksTable,
+			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1593,12 +1593,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if eu.mutation.EnvironmentToFindingCleared() {
+	if eu.mutation.FindingsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFindingTable,
-			Columns: []string{environment.EnvironmentToFindingColumn},
+			Table:   environment.FindingsTable,
+			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1609,31 +1609,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToFindingIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToFindingCleared() {
+	if nodes := eu.mutation.RemovedFindingsIDs(); len(nodes) > 0 && !eu.mutation.FindingsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFindingTable,
-			Columns: []string{environment.EnvironmentToFindingColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: finding.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToFindingIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToFindingTable,
-			Columns: []string{environment.EnvironmentToFindingColumn},
+			Table:   environment.FindingsTable,
+			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1645,14 +1626,33 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if eu.mutation.EnvironmentToDNSRecordCleared() {
+	if nodes := eu.mutation.FindingsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSRecordTable,
-			Columns: []string{environment.EnvironmentToDNSRecordColumn},
+			Table:   environment.FindingsTable,
+			Columns: []string{environment.FindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: finding.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.DNSRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.DNSRecordsTable,
+			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1663,12 +1663,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToDNSRecordIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToDNSRecordCleared() {
+	if nodes := eu.mutation.RemovedDNSRecordsIDs(); len(nodes) > 0 && !eu.mutation.DNSRecordsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSRecordTable,
-			Columns: []string{environment.EnvironmentToDNSRecordColumn},
+			Table:   environment.DNSRecordsTable,
+			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1682,12 +1682,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.EnvironmentToDNSRecordIDs(); len(nodes) > 0 {
+	if nodes := eu.mutation.DNSRecordsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSRecordTable,
-			Columns: []string{environment.EnvironmentToDNSRecordColumn},
+			Table:   environment.DNSRecordsTable,
+			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1701,12 +1701,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if eu.mutation.EnvironmentToDNSCleared() {
+	if eu.mutation.DNSCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSTable,
-			Columns: environment.EnvironmentToDNSPrimaryKey,
+			Table:   environment.DNSTable,
+			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1717,31 +1717,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToDNSIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToDNSCleared() {
+	if nodes := eu.mutation.RemovedDNSIDs(); len(nodes) > 0 && !eu.mutation.DNSCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSTable,
-			Columns: environment.EnvironmentToDNSPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dns.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToDNSIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToDNSTable,
-			Columns: environment.EnvironmentToDNSPrimaryKey,
+			Table:   environment.DNSTable,
+			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1753,14 +1734,33 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.DNSIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   environment.DNSTable,
+			Columns: environment.DNSPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: dns.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if eu.mutation.EnvironmentToNetworkCleared() {
+	if eu.mutation.NetworksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToNetworkTable,
-			Columns: []string{environment.EnvironmentToNetworkColumn},
+			Table:   environment.NetworksTable,
+			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1771,12 +1771,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToNetworkIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToNetworkCleared() {
+	if nodes := eu.mutation.RemovedNetworksIDs(); len(nodes) > 0 && !eu.mutation.NetworksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToNetworkTable,
-			Columns: []string{environment.EnvironmentToNetworkColumn},
+			Table:   environment.NetworksTable,
+			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1790,12 +1790,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.EnvironmentToNetworkIDs(); len(nodes) > 0 {
+	if nodes := eu.mutation.NetworksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToNetworkTable,
-			Columns: []string{environment.EnvironmentToNetworkColumn},
+			Table:   environment.NetworksTable,
+			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1809,12 +1809,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if eu.mutation.EnvironmentToHostDependencyCleared() {
+	if eu.mutation.HostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostDependencyTable,
-			Columns: []string{environment.EnvironmentToHostDependencyColumn},
+			Table:   environment.HostDependenciesTable,
+			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1825,31 +1825,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToHostDependencyIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToHostDependencyCleared() {
+	if nodes := eu.mutation.RemovedHostDependenciesIDs(); len(nodes) > 0 && !eu.mutation.HostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostDependencyTable,
-			Columns: []string{environment.EnvironmentToHostDependencyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToHostDependencyIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToHostDependencyTable,
-			Columns: []string{environment.EnvironmentToHostDependencyColumn},
+			Table:   environment.HostDependenciesTable,
+			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1861,14 +1842,33 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if eu.mutation.EnvironmentToAnsibleCleared() {
+	if nodes := eu.mutation.HostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToAnsibleTable,
-			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Table:   environment.HostDependenciesTable,
+			Columns: []string{environment.HostDependenciesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: hostdependency.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.AnsiblesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.AnsiblesTable,
+			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1879,12 +1879,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToAnsibleIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToAnsibleCleared() {
+	if nodes := eu.mutation.RemovedAnsiblesIDs(); len(nodes) > 0 && !eu.mutation.AnsiblesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToAnsibleTable,
-			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Table:   environment.AnsiblesTable,
+			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1898,12 +1898,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.EnvironmentToAnsibleIDs(); len(nodes) > 0 {
+	if nodes := eu.mutation.AnsiblesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToAnsibleTable,
-			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Table:   environment.AnsiblesTable,
+			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1917,12 +1917,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if eu.mutation.EnvironmentToScheduledStepCleared() {
+	if eu.mutation.ScheduledStepsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScheduledStepTable,
-			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Table:   environment.ScheduledStepsTable,
+			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1933,31 +1933,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToScheduledStepIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToScheduledStepCleared() {
+	if nodes := eu.mutation.RemovedScheduledStepsIDs(); len(nodes) > 0 && !eu.mutation.ScheduledStepsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScheduledStepTable,
-			Columns: []string{environment.EnvironmentToScheduledStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: scheduledstep.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToScheduledStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToScheduledStepTable,
-			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Table:   environment.ScheduledStepsTable,
+			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1969,176 +1950,195 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if eu.mutation.EnvironmentToBuildCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToBuildTable,
-			Columns: []string{environment.EnvironmentToBuildColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
-			},
-		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToBuildIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToBuildCleared() {
+	if nodes := eu.mutation.ScheduledStepsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToBuildTable,
-			Columns: []string{environment.EnvironmentToBuildColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToBuildIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToBuildTable,
-			Columns: []string{environment.EnvironmentToBuildColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if eu.mutation.EnvironmentToRepositoryCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToRepositoryTable,
-			Columns: environment.EnvironmentToRepositoryPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.RemovedEnvironmentToRepositoryIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToRepositoryCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToRepositoryTable,
-			Columns: environment.EnvironmentToRepositoryPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToRepositoryIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToRepositoryTable,
-			Columns: environment.EnvironmentToRepositoryPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if eu.mutation.EnvironmentToServerTaskCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToServerTaskTable,
-			Columns: []string{environment.EnvironmentToServerTaskColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.RemovedEnvironmentToServerTaskIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToServerTaskCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToServerTaskTable,
-			Columns: []string{environment.EnvironmentToServerTaskColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.EnvironmentToServerTaskIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToServerTaskTable,
-			Columns: []string{environment.EnvironmentToServerTaskColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if eu.mutation.EnvironmentToValidationCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToValidationTable,
-			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Table:   environment.ScheduledStepsTable,
+			Columns: []string{environment.ScheduledStepsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: scheduledstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.BuildsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.BuildsTable,
+			Columns: []string{environment.BuildsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: build.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedBuildsIDs(); len(nodes) > 0 && !eu.mutation.BuildsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.BuildsTable,
+			Columns: []string{environment.BuildsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: build.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.BuildsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.BuildsTable,
+			Columns: []string{environment.BuildsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: build.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.RepositoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   environment.RepositoriesTable,
+			Columns: environment.RepositoriesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repository.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedRepositoriesIDs(); len(nodes) > 0 && !eu.mutation.RepositoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   environment.RepositoriesTable,
+			Columns: environment.RepositoriesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repository.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RepositoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   environment.RepositoriesTable,
+			Columns: environment.RepositoriesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repository.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.ServerTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.ServerTasksTable,
+			Columns: []string{environment.ServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedServerTasksIDs(); len(nodes) > 0 && !eu.mutation.ServerTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.ServerTasksTable,
+			Columns: []string{environment.ServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.ServerTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.ServerTasksTable,
+			Columns: []string{environment.ServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.ValidationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.ValidationsTable,
+			Columns: []string{environment.ValidationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -2149,12 +2149,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedEnvironmentToValidationIDs(); len(nodes) > 0 && !eu.mutation.EnvironmentToValidationCleared() {
+	if nodes := eu.mutation.RemovedValidationsIDs(); len(nodes) > 0 && !eu.mutation.ValidationsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToValidationTable,
-			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Table:   environment.ValidationsTable,
+			Columns: []string{environment.ValidationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -2168,12 +2168,12 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.EnvironmentToValidationIDs(); len(nodes) > 0 {
+	if nodes := eu.mutation.ValidationsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToValidationTable,
-			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Table:   environment.ValidationsTable,
+			Columns: []string{environment.ValidationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -2286,319 +2286,319 @@ func (euo *EnvironmentUpdateOne) SetTags(m map[string]string) *EnvironmentUpdate
 	return euo
 }
 
-// AddEnvironmentToUserIDs adds the "EnvironmentToUser" edge to the User entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToUserIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToUserIDs(ids...)
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (euo *EnvironmentUpdateOne) AddUserIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddUserIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToUser adds the "EnvironmentToUser" edges to the User entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToUser(u ...*User) *EnvironmentUpdateOne {
+// AddUsers adds the "Users" edges to the User entity.
+func (euo *EnvironmentUpdateOne) AddUsers(u ...*User) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return euo.AddEnvironmentToUserIDs(ids...)
+	return euo.AddUserIDs(ids...)
 }
 
-// AddEnvironmentToHostIDs adds the "EnvironmentToHost" edge to the Host entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToHostIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToHostIDs(ids...)
+// AddHostIDs adds the "Hosts" edge to the Host entity by IDs.
+func (euo *EnvironmentUpdateOne) AddHostIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddHostIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToHost adds the "EnvironmentToHost" edges to the Host entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToHost(h ...*Host) *EnvironmentUpdateOne {
+// AddHosts adds the "Hosts" edges to the Host entity.
+func (euo *EnvironmentUpdateOne) AddHosts(h ...*Host) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return euo.AddEnvironmentToHostIDs(ids...)
+	return euo.AddHostIDs(ids...)
 }
 
-// AddEnvironmentToCompetitionIDs adds the "EnvironmentToCompetition" edge to the Competition entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToCompetitionIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToCompetitionIDs(ids...)
+// AddCompetitionIDs adds the "Competitions" edge to the Competition entity by IDs.
+func (euo *EnvironmentUpdateOne) AddCompetitionIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddCompetitionIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToCompetition adds the "EnvironmentToCompetition" edges to the Competition entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToCompetition(c ...*Competition) *EnvironmentUpdateOne {
+// AddCompetitions adds the "Competitions" edges to the Competition entity.
+func (euo *EnvironmentUpdateOne) AddCompetitions(c ...*Competition) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(c))
 	for i := range c {
 		ids[i] = c[i].ID
 	}
-	return euo.AddEnvironmentToCompetitionIDs(ids...)
+	return euo.AddCompetitionIDs(ids...)
 }
 
-// AddEnvironmentToIdentityIDs adds the "EnvironmentToIdentity" edge to the Identity entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToIdentityIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToIdentityIDs(ids...)
+// AddIdentityIDs adds the "Identities" edge to the Identity entity by IDs.
+func (euo *EnvironmentUpdateOne) AddIdentityIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddIdentityIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToIdentity adds the "EnvironmentToIdentity" edges to the Identity entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToIdentity(i ...*Identity) *EnvironmentUpdateOne {
+// AddIdentities adds the "Identities" edges to the Identity entity.
+func (euo *EnvironmentUpdateOne) AddIdentities(i ...*Identity) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return euo.AddEnvironmentToIdentityIDs(ids...)
+	return euo.AddIdentityIDs(ids...)
 }
 
-// AddEnvironmentToCommandIDs adds the "EnvironmentToCommand" edge to the Command entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToCommandIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToCommandIDs(ids...)
+// AddCommandIDs adds the "Commands" edge to the Command entity by IDs.
+func (euo *EnvironmentUpdateOne) AddCommandIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddCommandIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToCommand adds the "EnvironmentToCommand" edges to the Command entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToCommand(c ...*Command) *EnvironmentUpdateOne {
+// AddCommands adds the "Commands" edges to the Command entity.
+func (euo *EnvironmentUpdateOne) AddCommands(c ...*Command) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(c))
 	for i := range c {
 		ids[i] = c[i].ID
 	}
-	return euo.AddEnvironmentToCommandIDs(ids...)
+	return euo.AddCommandIDs(ids...)
 }
 
-// AddEnvironmentToScriptIDs adds the "EnvironmentToScript" edge to the Script entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToScriptIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToScriptIDs(ids...)
+// AddScriptIDs adds the "Scripts" edge to the Script entity by IDs.
+func (euo *EnvironmentUpdateOne) AddScriptIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddScriptIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToScript adds the "EnvironmentToScript" edges to the Script entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToScript(s ...*Script) *EnvironmentUpdateOne {
+// AddScripts adds the "Scripts" edges to the Script entity.
+func (euo *EnvironmentUpdateOne) AddScripts(s ...*Script) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return euo.AddEnvironmentToScriptIDs(ids...)
+	return euo.AddScriptIDs(ids...)
 }
 
-// AddEnvironmentToFileDownloadIDs adds the "EnvironmentToFileDownload" edge to the FileDownload entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToFileDownloadIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToFileDownloadIDs(ids...)
+// AddFileDownloadIDs adds the "FileDownloads" edge to the FileDownload entity by IDs.
+func (euo *EnvironmentUpdateOne) AddFileDownloadIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddFileDownloadIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToFileDownload adds the "EnvironmentToFileDownload" edges to the FileDownload entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToFileDownload(f ...*FileDownload) *EnvironmentUpdateOne {
+// AddFileDownloads adds the "FileDownloads" edges to the FileDownload entity.
+func (euo *EnvironmentUpdateOne) AddFileDownloads(f ...*FileDownload) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return euo.AddEnvironmentToFileDownloadIDs(ids...)
+	return euo.AddFileDownloadIDs(ids...)
 }
 
-// AddEnvironmentToFileDeleteIDs adds the "EnvironmentToFileDelete" edge to the FileDelete entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToFileDeleteIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToFileDeleteIDs(ids...)
+// AddFileDeleteIDs adds the "FileDeletes" edge to the FileDelete entity by IDs.
+func (euo *EnvironmentUpdateOne) AddFileDeleteIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddFileDeleteIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToFileDelete adds the "EnvironmentToFileDelete" edges to the FileDelete entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToFileDelete(f ...*FileDelete) *EnvironmentUpdateOne {
+// AddFileDeletes adds the "FileDeletes" edges to the FileDelete entity.
+func (euo *EnvironmentUpdateOne) AddFileDeletes(f ...*FileDelete) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return euo.AddEnvironmentToFileDeleteIDs(ids...)
+	return euo.AddFileDeleteIDs(ids...)
 }
 
-// AddEnvironmentToFileExtractIDs adds the "EnvironmentToFileExtract" edge to the FileExtract entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToFileExtractIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToFileExtractIDs(ids...)
+// AddFileExtractIDs adds the "FileExtracts" edge to the FileExtract entity by IDs.
+func (euo *EnvironmentUpdateOne) AddFileExtractIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddFileExtractIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToFileExtract adds the "EnvironmentToFileExtract" edges to the FileExtract entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToFileExtract(f ...*FileExtract) *EnvironmentUpdateOne {
+// AddFileExtracts adds the "FileExtracts" edges to the FileExtract entity.
+func (euo *EnvironmentUpdateOne) AddFileExtracts(f ...*FileExtract) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return euo.AddEnvironmentToFileExtractIDs(ids...)
+	return euo.AddFileExtractIDs(ids...)
 }
 
-// AddEnvironmentToIncludedNetworkIDs adds the "EnvironmentToIncludedNetwork" edge to the IncludedNetwork entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToIncludedNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToIncludedNetworkIDs(ids...)
+// AddIncludedNetworkIDs adds the "IncludedNetworks" edge to the IncludedNetwork entity by IDs.
+func (euo *EnvironmentUpdateOne) AddIncludedNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddIncludedNetworkIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToIncludedNetwork adds the "EnvironmentToIncludedNetwork" edges to the IncludedNetwork entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToIncludedNetwork(i ...*IncludedNetwork) *EnvironmentUpdateOne {
+// AddIncludedNetworks adds the "IncludedNetworks" edges to the IncludedNetwork entity.
+func (euo *EnvironmentUpdateOne) AddIncludedNetworks(i ...*IncludedNetwork) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return euo.AddEnvironmentToIncludedNetworkIDs(ids...)
+	return euo.AddIncludedNetworkIDs(ids...)
 }
 
-// AddEnvironmentToFindingIDs adds the "EnvironmentToFinding" edge to the Finding entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToFindingIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToFindingIDs(ids...)
+// AddFindingIDs adds the "Findings" edge to the Finding entity by IDs.
+func (euo *EnvironmentUpdateOne) AddFindingIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddFindingIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToFinding adds the "EnvironmentToFinding" edges to the Finding entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToFinding(f ...*Finding) *EnvironmentUpdateOne {
+// AddFindings adds the "Findings" edges to the Finding entity.
+func (euo *EnvironmentUpdateOne) AddFindings(f ...*Finding) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return euo.AddEnvironmentToFindingIDs(ids...)
+	return euo.AddFindingIDs(ids...)
 }
 
-// AddEnvironmentToDNSRecordIDs adds the "EnvironmentToDNSRecord" edge to the DNSRecord entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToDNSRecordIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToDNSRecordIDs(ids...)
+// AddDNSRecordIDs adds the "DNSRecords" edge to the DNSRecord entity by IDs.
+func (euo *EnvironmentUpdateOne) AddDNSRecordIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddDNSRecordIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToDNSRecord adds the "EnvironmentToDNSRecord" edges to the DNSRecord entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToDNSRecord(d ...*DNSRecord) *EnvironmentUpdateOne {
+// AddDNSRecords adds the "DNSRecords" edges to the DNSRecord entity.
+func (euo *EnvironmentUpdateOne) AddDNSRecords(d ...*DNSRecord) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
-	return euo.AddEnvironmentToDNSRecordIDs(ids...)
+	return euo.AddDNSRecordIDs(ids...)
 }
 
-// AddEnvironmentToDNSIDs adds the "EnvironmentToDNS" edge to the DNS entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToDNSIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToDNSIDs(ids...)
+// AddDNSIDs adds the "DNS" edge to the DNS entity by IDs.
+func (euo *EnvironmentUpdateOne) AddDNSIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddDNSIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToDNS adds the "EnvironmentToDNS" edges to the DNS entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToDNS(d ...*DNS) *EnvironmentUpdateOne {
+// AddDNS adds the "DNS" edges to the DNS entity.
+func (euo *EnvironmentUpdateOne) AddDNS(d ...*DNS) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
-	return euo.AddEnvironmentToDNSIDs(ids...)
+	return euo.AddDNSIDs(ids...)
 }
 
-// AddEnvironmentToNetworkIDs adds the "EnvironmentToNetwork" edge to the Network entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToNetworkIDs(ids...)
+// AddNetworkIDs adds the "Networks" edge to the Network entity by IDs.
+func (euo *EnvironmentUpdateOne) AddNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddNetworkIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToNetwork adds the "EnvironmentToNetwork" edges to the Network entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToNetwork(n ...*Network) *EnvironmentUpdateOne {
+// AddNetworks adds the "Networks" edges to the Network entity.
+func (euo *EnvironmentUpdateOne) AddNetworks(n ...*Network) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(n))
 	for i := range n {
 		ids[i] = n[i].ID
 	}
-	return euo.AddEnvironmentToNetworkIDs(ids...)
+	return euo.AddNetworkIDs(ids...)
 }
 
-// AddEnvironmentToHostDependencyIDs adds the "EnvironmentToHostDependency" edge to the HostDependency entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToHostDependencyIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToHostDependencyIDs(ids...)
+// AddHostDependencyIDs adds the "HostDependencies" edge to the HostDependency entity by IDs.
+func (euo *EnvironmentUpdateOne) AddHostDependencyIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddHostDependencyIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToHostDependency adds the "EnvironmentToHostDependency" edges to the HostDependency entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToHostDependency(h ...*HostDependency) *EnvironmentUpdateOne {
+// AddHostDependencies adds the "HostDependencies" edges to the HostDependency entity.
+func (euo *EnvironmentUpdateOne) AddHostDependencies(h ...*HostDependency) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return euo.AddEnvironmentToHostDependencyIDs(ids...)
+	return euo.AddHostDependencyIDs(ids...)
 }
 
-// AddEnvironmentToAnsibleIDs adds the "EnvironmentToAnsible" edge to the Ansible entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToAnsibleIDs(ids...)
+// AddAnsibleIDs adds the "Ansibles" edge to the Ansible entity by IDs.
+func (euo *EnvironmentUpdateOne) AddAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddAnsibleIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToAnsible adds the "EnvironmentToAnsible" edges to the Ansible entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdateOne {
+// AddAnsibles adds the "Ansibles" edges to the Ansible entity.
+func (euo *EnvironmentUpdateOne) AddAnsibles(a ...*Ansible) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return euo.AddEnvironmentToAnsibleIDs(ids...)
+	return euo.AddAnsibleIDs(ids...)
 }
 
-// AddEnvironmentToScheduledStepIDs adds the "EnvironmentToScheduledStep" edge to the ScheduledStep entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToScheduledStepIDs(ids...)
+// AddScheduledStepIDs adds the "ScheduledSteps" edge to the ScheduledStep entity by IDs.
+func (euo *EnvironmentUpdateOne) AddScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddScheduledStepIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToScheduledStep adds the "EnvironmentToScheduledStep" edges to the ScheduledStep entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToScheduledStep(s ...*ScheduledStep) *EnvironmentUpdateOne {
+// AddScheduledSteps adds the "ScheduledSteps" edges to the ScheduledStep entity.
+func (euo *EnvironmentUpdateOne) AddScheduledSteps(s ...*ScheduledStep) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return euo.AddEnvironmentToScheduledStepIDs(ids...)
+	return euo.AddScheduledStepIDs(ids...)
 }
 
-// AddEnvironmentToBuildIDs adds the "EnvironmentToBuild" edge to the Build entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToBuildIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToBuildIDs(ids...)
+// AddBuildIDs adds the "Builds" edge to the Build entity by IDs.
+func (euo *EnvironmentUpdateOne) AddBuildIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddBuildIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToBuild adds the "EnvironmentToBuild" edges to the Build entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToBuild(b ...*Build) *EnvironmentUpdateOne {
+// AddBuilds adds the "Builds" edges to the Build entity.
+func (euo *EnvironmentUpdateOne) AddBuilds(b ...*Build) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(b))
 	for i := range b {
 		ids[i] = b[i].ID
 	}
-	return euo.AddEnvironmentToBuildIDs(ids...)
+	return euo.AddBuildIDs(ids...)
 }
 
-// AddEnvironmentToRepositoryIDs adds the "EnvironmentToRepository" edge to the Repository entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToRepositoryIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToRepositoryIDs(ids...)
+// AddRepositoryIDs adds the "Repositories" edge to the Repository entity by IDs.
+func (euo *EnvironmentUpdateOne) AddRepositoryIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddRepositoryIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToRepository adds the "EnvironmentToRepository" edges to the Repository entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToRepository(r ...*Repository) *EnvironmentUpdateOne {
+// AddRepositories adds the "Repositories" edges to the Repository entity.
+func (euo *EnvironmentUpdateOne) AddRepositories(r ...*Repository) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(r))
 	for i := range r {
 		ids[i] = r[i].ID
 	}
-	return euo.AddEnvironmentToRepositoryIDs(ids...)
+	return euo.AddRepositoryIDs(ids...)
 }
 
-// AddEnvironmentToServerTaskIDs adds the "EnvironmentToServerTask" edge to the ServerTask entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToServerTaskIDs(ids...)
+// AddServerTaskIDs adds the "ServerTasks" edge to the ServerTask entity by IDs.
+func (euo *EnvironmentUpdateOne) AddServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddServerTaskIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToServerTask adds the "EnvironmentToServerTask" edges to the ServerTask entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdateOne {
+// AddServerTasks adds the "ServerTasks" edges to the ServerTask entity.
+func (euo *EnvironmentUpdateOne) AddServerTasks(s ...*ServerTask) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return euo.AddEnvironmentToServerTaskIDs(ids...)
+	return euo.AddServerTaskIDs(ids...)
 }
 
-// AddEnvironmentToValidationIDs adds the "EnvironmentToValidation" edge to the Validation entity by IDs.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToValidationIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.AddEnvironmentToValidationIDs(ids...)
+// AddValidationIDs adds the "Validations" edge to the Validation entity by IDs.
+func (euo *EnvironmentUpdateOne) AddValidationIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.AddValidationIDs(ids...)
 	return euo
 }
 
-// AddEnvironmentToValidation adds the "EnvironmentToValidation" edges to the Validation entity.
-func (euo *EnvironmentUpdateOne) AddEnvironmentToValidation(v ...*Validation) *EnvironmentUpdateOne {
+// AddValidations adds the "Validations" edges to the Validation entity.
+func (euo *EnvironmentUpdateOne) AddValidations(v ...*Validation) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return euo.AddEnvironmentToValidationIDs(ids...)
+	return euo.AddValidationIDs(ids...)
 }
 
 // Mutation returns the EnvironmentMutation object of the builder.
@@ -2606,445 +2606,445 @@ func (euo *EnvironmentUpdateOne) Mutation() *EnvironmentMutation {
 	return euo.mutation
 }
 
-// ClearEnvironmentToUser clears all "EnvironmentToUser" edges to the User entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToUser() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToUser()
+// ClearUsers clears all "Users" edges to the User entity.
+func (euo *EnvironmentUpdateOne) ClearUsers() *EnvironmentUpdateOne {
+	euo.mutation.ClearUsers()
 	return euo
 }
 
-// RemoveEnvironmentToUserIDs removes the "EnvironmentToUser" edge to User entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToUserIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToUserIDs(ids...)
+// RemoveUserIDs removes the "Users" edge to User entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveUserIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveUserIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToUser removes "EnvironmentToUser" edges to User entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToUser(u ...*User) *EnvironmentUpdateOne {
+// RemoveUsers removes "Users" edges to User entities.
+func (euo *EnvironmentUpdateOne) RemoveUsers(u ...*User) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return euo.RemoveEnvironmentToUserIDs(ids...)
+	return euo.RemoveUserIDs(ids...)
 }
 
-// ClearEnvironmentToHost clears all "EnvironmentToHost" edges to the Host entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToHost() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToHost()
+// ClearHosts clears all "Hosts" edges to the Host entity.
+func (euo *EnvironmentUpdateOne) ClearHosts() *EnvironmentUpdateOne {
+	euo.mutation.ClearHosts()
 	return euo
 }
 
-// RemoveEnvironmentToHostIDs removes the "EnvironmentToHost" edge to Host entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToHostIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToHostIDs(ids...)
+// RemoveHostIDs removes the "Hosts" edge to Host entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveHostIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveHostIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToHost removes "EnvironmentToHost" edges to Host entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToHost(h ...*Host) *EnvironmentUpdateOne {
+// RemoveHosts removes "Hosts" edges to Host entities.
+func (euo *EnvironmentUpdateOne) RemoveHosts(h ...*Host) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return euo.RemoveEnvironmentToHostIDs(ids...)
+	return euo.RemoveHostIDs(ids...)
 }
 
-// ClearEnvironmentToCompetition clears all "EnvironmentToCompetition" edges to the Competition entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToCompetition() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToCompetition()
+// ClearCompetitions clears all "Competitions" edges to the Competition entity.
+func (euo *EnvironmentUpdateOne) ClearCompetitions() *EnvironmentUpdateOne {
+	euo.mutation.ClearCompetitions()
 	return euo
 }
 
-// RemoveEnvironmentToCompetitionIDs removes the "EnvironmentToCompetition" edge to Competition entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToCompetitionIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToCompetitionIDs(ids...)
+// RemoveCompetitionIDs removes the "Competitions" edge to Competition entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveCompetitionIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveCompetitionIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToCompetition removes "EnvironmentToCompetition" edges to Competition entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToCompetition(c ...*Competition) *EnvironmentUpdateOne {
+// RemoveCompetitions removes "Competitions" edges to Competition entities.
+func (euo *EnvironmentUpdateOne) RemoveCompetitions(c ...*Competition) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(c))
 	for i := range c {
 		ids[i] = c[i].ID
 	}
-	return euo.RemoveEnvironmentToCompetitionIDs(ids...)
+	return euo.RemoveCompetitionIDs(ids...)
 }
 
-// ClearEnvironmentToIdentity clears all "EnvironmentToIdentity" edges to the Identity entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToIdentity() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToIdentity()
+// ClearIdentities clears all "Identities" edges to the Identity entity.
+func (euo *EnvironmentUpdateOne) ClearIdentities() *EnvironmentUpdateOne {
+	euo.mutation.ClearIdentities()
 	return euo
 }
 
-// RemoveEnvironmentToIdentityIDs removes the "EnvironmentToIdentity" edge to Identity entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToIdentityIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToIdentityIDs(ids...)
+// RemoveIdentityIDs removes the "Identities" edge to Identity entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveIdentityIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveIdentityIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToIdentity removes "EnvironmentToIdentity" edges to Identity entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToIdentity(i ...*Identity) *EnvironmentUpdateOne {
+// RemoveIdentities removes "Identities" edges to Identity entities.
+func (euo *EnvironmentUpdateOne) RemoveIdentities(i ...*Identity) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return euo.RemoveEnvironmentToIdentityIDs(ids...)
+	return euo.RemoveIdentityIDs(ids...)
 }
 
-// ClearEnvironmentToCommand clears all "EnvironmentToCommand" edges to the Command entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToCommand() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToCommand()
+// ClearCommands clears all "Commands" edges to the Command entity.
+func (euo *EnvironmentUpdateOne) ClearCommands() *EnvironmentUpdateOne {
+	euo.mutation.ClearCommands()
 	return euo
 }
 
-// RemoveEnvironmentToCommandIDs removes the "EnvironmentToCommand" edge to Command entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToCommandIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToCommandIDs(ids...)
+// RemoveCommandIDs removes the "Commands" edge to Command entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveCommandIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveCommandIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToCommand removes "EnvironmentToCommand" edges to Command entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToCommand(c ...*Command) *EnvironmentUpdateOne {
+// RemoveCommands removes "Commands" edges to Command entities.
+func (euo *EnvironmentUpdateOne) RemoveCommands(c ...*Command) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(c))
 	for i := range c {
 		ids[i] = c[i].ID
 	}
-	return euo.RemoveEnvironmentToCommandIDs(ids...)
+	return euo.RemoveCommandIDs(ids...)
 }
 
-// ClearEnvironmentToScript clears all "EnvironmentToScript" edges to the Script entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToScript() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToScript()
+// ClearScripts clears all "Scripts" edges to the Script entity.
+func (euo *EnvironmentUpdateOne) ClearScripts() *EnvironmentUpdateOne {
+	euo.mutation.ClearScripts()
 	return euo
 }
 
-// RemoveEnvironmentToScriptIDs removes the "EnvironmentToScript" edge to Script entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToScriptIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToScriptIDs(ids...)
+// RemoveScriptIDs removes the "Scripts" edge to Script entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveScriptIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveScriptIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToScript removes "EnvironmentToScript" edges to Script entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToScript(s ...*Script) *EnvironmentUpdateOne {
+// RemoveScripts removes "Scripts" edges to Script entities.
+func (euo *EnvironmentUpdateOne) RemoveScripts(s ...*Script) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return euo.RemoveEnvironmentToScriptIDs(ids...)
+	return euo.RemoveScriptIDs(ids...)
 }
 
-// ClearEnvironmentToFileDownload clears all "EnvironmentToFileDownload" edges to the FileDownload entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToFileDownload() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToFileDownload()
+// ClearFileDownloads clears all "FileDownloads" edges to the FileDownload entity.
+func (euo *EnvironmentUpdateOne) ClearFileDownloads() *EnvironmentUpdateOne {
+	euo.mutation.ClearFileDownloads()
 	return euo
 }
 
-// RemoveEnvironmentToFileDownloadIDs removes the "EnvironmentToFileDownload" edge to FileDownload entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToFileDownloadIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToFileDownloadIDs(ids...)
+// RemoveFileDownloadIDs removes the "FileDownloads" edge to FileDownload entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveFileDownloadIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveFileDownloadIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToFileDownload removes "EnvironmentToFileDownload" edges to FileDownload entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToFileDownload(f ...*FileDownload) *EnvironmentUpdateOne {
+// RemoveFileDownloads removes "FileDownloads" edges to FileDownload entities.
+func (euo *EnvironmentUpdateOne) RemoveFileDownloads(f ...*FileDownload) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return euo.RemoveEnvironmentToFileDownloadIDs(ids...)
+	return euo.RemoveFileDownloadIDs(ids...)
 }
 
-// ClearEnvironmentToFileDelete clears all "EnvironmentToFileDelete" edges to the FileDelete entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToFileDelete() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToFileDelete()
+// ClearFileDeletes clears all "FileDeletes" edges to the FileDelete entity.
+func (euo *EnvironmentUpdateOne) ClearFileDeletes() *EnvironmentUpdateOne {
+	euo.mutation.ClearFileDeletes()
 	return euo
 }
 
-// RemoveEnvironmentToFileDeleteIDs removes the "EnvironmentToFileDelete" edge to FileDelete entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToFileDeleteIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToFileDeleteIDs(ids...)
+// RemoveFileDeleteIDs removes the "FileDeletes" edge to FileDelete entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveFileDeleteIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveFileDeleteIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToFileDelete removes "EnvironmentToFileDelete" edges to FileDelete entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToFileDelete(f ...*FileDelete) *EnvironmentUpdateOne {
+// RemoveFileDeletes removes "FileDeletes" edges to FileDelete entities.
+func (euo *EnvironmentUpdateOne) RemoveFileDeletes(f ...*FileDelete) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return euo.RemoveEnvironmentToFileDeleteIDs(ids...)
+	return euo.RemoveFileDeleteIDs(ids...)
 }
 
-// ClearEnvironmentToFileExtract clears all "EnvironmentToFileExtract" edges to the FileExtract entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToFileExtract() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToFileExtract()
+// ClearFileExtracts clears all "FileExtracts" edges to the FileExtract entity.
+func (euo *EnvironmentUpdateOne) ClearFileExtracts() *EnvironmentUpdateOne {
+	euo.mutation.ClearFileExtracts()
 	return euo
 }
 
-// RemoveEnvironmentToFileExtractIDs removes the "EnvironmentToFileExtract" edge to FileExtract entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToFileExtractIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToFileExtractIDs(ids...)
+// RemoveFileExtractIDs removes the "FileExtracts" edge to FileExtract entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveFileExtractIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveFileExtractIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToFileExtract removes "EnvironmentToFileExtract" edges to FileExtract entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToFileExtract(f ...*FileExtract) *EnvironmentUpdateOne {
+// RemoveFileExtracts removes "FileExtracts" edges to FileExtract entities.
+func (euo *EnvironmentUpdateOne) RemoveFileExtracts(f ...*FileExtract) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return euo.RemoveEnvironmentToFileExtractIDs(ids...)
+	return euo.RemoveFileExtractIDs(ids...)
 }
 
-// ClearEnvironmentToIncludedNetwork clears all "EnvironmentToIncludedNetwork" edges to the IncludedNetwork entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToIncludedNetwork() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToIncludedNetwork()
+// ClearIncludedNetworks clears all "IncludedNetworks" edges to the IncludedNetwork entity.
+func (euo *EnvironmentUpdateOne) ClearIncludedNetworks() *EnvironmentUpdateOne {
+	euo.mutation.ClearIncludedNetworks()
 	return euo
 }
 
-// RemoveEnvironmentToIncludedNetworkIDs removes the "EnvironmentToIncludedNetwork" edge to IncludedNetwork entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToIncludedNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToIncludedNetworkIDs(ids...)
+// RemoveIncludedNetworkIDs removes the "IncludedNetworks" edge to IncludedNetwork entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveIncludedNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveIncludedNetworkIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToIncludedNetwork removes "EnvironmentToIncludedNetwork" edges to IncludedNetwork entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToIncludedNetwork(i ...*IncludedNetwork) *EnvironmentUpdateOne {
+// RemoveIncludedNetworks removes "IncludedNetworks" edges to IncludedNetwork entities.
+func (euo *EnvironmentUpdateOne) RemoveIncludedNetworks(i ...*IncludedNetwork) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(i))
 	for j := range i {
 		ids[j] = i[j].ID
 	}
-	return euo.RemoveEnvironmentToIncludedNetworkIDs(ids...)
+	return euo.RemoveIncludedNetworkIDs(ids...)
 }
 
-// ClearEnvironmentToFinding clears all "EnvironmentToFinding" edges to the Finding entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToFinding() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToFinding()
+// ClearFindings clears all "Findings" edges to the Finding entity.
+func (euo *EnvironmentUpdateOne) ClearFindings() *EnvironmentUpdateOne {
+	euo.mutation.ClearFindings()
 	return euo
 }
 
-// RemoveEnvironmentToFindingIDs removes the "EnvironmentToFinding" edge to Finding entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToFindingIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToFindingIDs(ids...)
+// RemoveFindingIDs removes the "Findings" edge to Finding entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveFindingIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveFindingIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToFinding removes "EnvironmentToFinding" edges to Finding entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToFinding(f ...*Finding) *EnvironmentUpdateOne {
+// RemoveFindings removes "Findings" edges to Finding entities.
+func (euo *EnvironmentUpdateOne) RemoveFindings(f ...*Finding) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return euo.RemoveEnvironmentToFindingIDs(ids...)
+	return euo.RemoveFindingIDs(ids...)
 }
 
-// ClearEnvironmentToDNSRecord clears all "EnvironmentToDNSRecord" edges to the DNSRecord entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToDNSRecord() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToDNSRecord()
+// ClearDNSRecords clears all "DNSRecords" edges to the DNSRecord entity.
+func (euo *EnvironmentUpdateOne) ClearDNSRecords() *EnvironmentUpdateOne {
+	euo.mutation.ClearDNSRecords()
 	return euo
 }
 
-// RemoveEnvironmentToDNSRecordIDs removes the "EnvironmentToDNSRecord" edge to DNSRecord entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToDNSRecordIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToDNSRecordIDs(ids...)
+// RemoveDNSRecordIDs removes the "DNSRecords" edge to DNSRecord entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveDNSRecordIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveDNSRecordIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToDNSRecord removes "EnvironmentToDNSRecord" edges to DNSRecord entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToDNSRecord(d ...*DNSRecord) *EnvironmentUpdateOne {
+// RemoveDNSRecords removes "DNSRecords" edges to DNSRecord entities.
+func (euo *EnvironmentUpdateOne) RemoveDNSRecords(d ...*DNSRecord) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
-	return euo.RemoveEnvironmentToDNSRecordIDs(ids...)
+	return euo.RemoveDNSRecordIDs(ids...)
 }
 
-// ClearEnvironmentToDNS clears all "EnvironmentToDNS" edges to the DNS entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToDNS() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToDNS()
+// ClearDNS clears all "DNS" edges to the DNS entity.
+func (euo *EnvironmentUpdateOne) ClearDNS() *EnvironmentUpdateOne {
+	euo.mutation.ClearDNS()
 	return euo
 }
 
-// RemoveEnvironmentToDNSIDs removes the "EnvironmentToDNS" edge to DNS entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToDNSIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToDNSIDs(ids...)
+// RemoveDNSIDs removes the "DNS" edge to DNS entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveDNSIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveDNSIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToDNS removes "EnvironmentToDNS" edges to DNS entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToDNS(d ...*DNS) *EnvironmentUpdateOne {
+// RemoveDNS removes "DNS" edges to DNS entities.
+func (euo *EnvironmentUpdateOne) RemoveDNS(d ...*DNS) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
-	return euo.RemoveEnvironmentToDNSIDs(ids...)
+	return euo.RemoveDNSIDs(ids...)
 }
 
-// ClearEnvironmentToNetwork clears all "EnvironmentToNetwork" edges to the Network entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToNetwork() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToNetwork()
+// ClearNetworks clears all "Networks" edges to the Network entity.
+func (euo *EnvironmentUpdateOne) ClearNetworks() *EnvironmentUpdateOne {
+	euo.mutation.ClearNetworks()
 	return euo
 }
 
-// RemoveEnvironmentToNetworkIDs removes the "EnvironmentToNetwork" edge to Network entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToNetworkIDs(ids...)
+// RemoveNetworkIDs removes the "Networks" edge to Network entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveNetworkIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveNetworkIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToNetwork removes "EnvironmentToNetwork" edges to Network entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToNetwork(n ...*Network) *EnvironmentUpdateOne {
+// RemoveNetworks removes "Networks" edges to Network entities.
+func (euo *EnvironmentUpdateOne) RemoveNetworks(n ...*Network) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(n))
 	for i := range n {
 		ids[i] = n[i].ID
 	}
-	return euo.RemoveEnvironmentToNetworkIDs(ids...)
+	return euo.RemoveNetworkIDs(ids...)
 }
 
-// ClearEnvironmentToHostDependency clears all "EnvironmentToHostDependency" edges to the HostDependency entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToHostDependency() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToHostDependency()
+// ClearHostDependencies clears all "HostDependencies" edges to the HostDependency entity.
+func (euo *EnvironmentUpdateOne) ClearHostDependencies() *EnvironmentUpdateOne {
+	euo.mutation.ClearHostDependencies()
 	return euo
 }
 
-// RemoveEnvironmentToHostDependencyIDs removes the "EnvironmentToHostDependency" edge to HostDependency entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToHostDependencyIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToHostDependencyIDs(ids...)
+// RemoveHostDependencyIDs removes the "HostDependencies" edge to HostDependency entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveHostDependencyIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveHostDependencyIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToHostDependency removes "EnvironmentToHostDependency" edges to HostDependency entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToHostDependency(h ...*HostDependency) *EnvironmentUpdateOne {
+// RemoveHostDependencies removes "HostDependencies" edges to HostDependency entities.
+func (euo *EnvironmentUpdateOne) RemoveHostDependencies(h ...*HostDependency) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(h))
 	for i := range h {
 		ids[i] = h[i].ID
 	}
-	return euo.RemoveEnvironmentToHostDependencyIDs(ids...)
+	return euo.RemoveHostDependencyIDs(ids...)
 }
 
-// ClearEnvironmentToAnsible clears all "EnvironmentToAnsible" edges to the Ansible entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToAnsible() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToAnsible()
+// ClearAnsibles clears all "Ansibles" edges to the Ansible entity.
+func (euo *EnvironmentUpdateOne) ClearAnsibles() *EnvironmentUpdateOne {
+	euo.mutation.ClearAnsibles()
 	return euo
 }
 
-// RemoveEnvironmentToAnsibleIDs removes the "EnvironmentToAnsible" edge to Ansible entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToAnsibleIDs(ids...)
+// RemoveAnsibleIDs removes the "Ansibles" edge to Ansible entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveAnsibleIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveAnsibleIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToAnsible removes "EnvironmentToAnsible" edges to Ansible entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToAnsible(a ...*Ansible) *EnvironmentUpdateOne {
+// RemoveAnsibles removes "Ansibles" edges to Ansible entities.
+func (euo *EnvironmentUpdateOne) RemoveAnsibles(a ...*Ansible) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return euo.RemoveEnvironmentToAnsibleIDs(ids...)
+	return euo.RemoveAnsibleIDs(ids...)
 }
 
-// ClearEnvironmentToScheduledStep clears all "EnvironmentToScheduledStep" edges to the ScheduledStep entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToScheduledStep() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToScheduledStep()
+// ClearScheduledSteps clears all "ScheduledSteps" edges to the ScheduledStep entity.
+func (euo *EnvironmentUpdateOne) ClearScheduledSteps() *EnvironmentUpdateOne {
+	euo.mutation.ClearScheduledSteps()
 	return euo
 }
 
-// RemoveEnvironmentToScheduledStepIDs removes the "EnvironmentToScheduledStep" edge to ScheduledStep entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToScheduledStepIDs(ids...)
+// RemoveScheduledStepIDs removes the "ScheduledSteps" edge to ScheduledStep entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveScheduledStepIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveScheduledStepIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToScheduledStep removes "EnvironmentToScheduledStep" edges to ScheduledStep entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToScheduledStep(s ...*ScheduledStep) *EnvironmentUpdateOne {
+// RemoveScheduledSteps removes "ScheduledSteps" edges to ScheduledStep entities.
+func (euo *EnvironmentUpdateOne) RemoveScheduledSteps(s ...*ScheduledStep) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return euo.RemoveEnvironmentToScheduledStepIDs(ids...)
+	return euo.RemoveScheduledStepIDs(ids...)
 }
 
-// ClearEnvironmentToBuild clears all "EnvironmentToBuild" edges to the Build entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToBuild() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToBuild()
+// ClearBuilds clears all "Builds" edges to the Build entity.
+func (euo *EnvironmentUpdateOne) ClearBuilds() *EnvironmentUpdateOne {
+	euo.mutation.ClearBuilds()
 	return euo
 }
 
-// RemoveEnvironmentToBuildIDs removes the "EnvironmentToBuild" edge to Build entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToBuildIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToBuildIDs(ids...)
+// RemoveBuildIDs removes the "Builds" edge to Build entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveBuildIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveBuildIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToBuild removes "EnvironmentToBuild" edges to Build entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToBuild(b ...*Build) *EnvironmentUpdateOne {
+// RemoveBuilds removes "Builds" edges to Build entities.
+func (euo *EnvironmentUpdateOne) RemoveBuilds(b ...*Build) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(b))
 	for i := range b {
 		ids[i] = b[i].ID
 	}
-	return euo.RemoveEnvironmentToBuildIDs(ids...)
+	return euo.RemoveBuildIDs(ids...)
 }
 
-// ClearEnvironmentToRepository clears all "EnvironmentToRepository" edges to the Repository entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToRepository() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToRepository()
+// ClearRepositories clears all "Repositories" edges to the Repository entity.
+func (euo *EnvironmentUpdateOne) ClearRepositories() *EnvironmentUpdateOne {
+	euo.mutation.ClearRepositories()
 	return euo
 }
 
-// RemoveEnvironmentToRepositoryIDs removes the "EnvironmentToRepository" edge to Repository entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToRepositoryIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToRepositoryIDs(ids...)
+// RemoveRepositoryIDs removes the "Repositories" edge to Repository entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveRepositoryIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveRepositoryIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToRepository removes "EnvironmentToRepository" edges to Repository entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToRepository(r ...*Repository) *EnvironmentUpdateOne {
+// RemoveRepositories removes "Repositories" edges to Repository entities.
+func (euo *EnvironmentUpdateOne) RemoveRepositories(r ...*Repository) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(r))
 	for i := range r {
 		ids[i] = r[i].ID
 	}
-	return euo.RemoveEnvironmentToRepositoryIDs(ids...)
+	return euo.RemoveRepositoryIDs(ids...)
 }
 
-// ClearEnvironmentToServerTask clears all "EnvironmentToServerTask" edges to the ServerTask entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToServerTask() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToServerTask()
+// ClearServerTasks clears all "ServerTasks" edges to the ServerTask entity.
+func (euo *EnvironmentUpdateOne) ClearServerTasks() *EnvironmentUpdateOne {
+	euo.mutation.ClearServerTasks()
 	return euo
 }
 
-// RemoveEnvironmentToServerTaskIDs removes the "EnvironmentToServerTask" edge to ServerTask entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToServerTaskIDs(ids...)
+// RemoveServerTaskIDs removes the "ServerTasks" edge to ServerTask entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveServerTaskIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveServerTaskIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToServerTask removes "EnvironmentToServerTask" edges to ServerTask entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToServerTask(s ...*ServerTask) *EnvironmentUpdateOne {
+// RemoveServerTasks removes "ServerTasks" edges to ServerTask entities.
+func (euo *EnvironmentUpdateOne) RemoveServerTasks(s ...*ServerTask) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return euo.RemoveEnvironmentToServerTaskIDs(ids...)
+	return euo.RemoveServerTaskIDs(ids...)
 }
 
-// ClearEnvironmentToValidation clears all "EnvironmentToValidation" edges to the Validation entity.
-func (euo *EnvironmentUpdateOne) ClearEnvironmentToValidation() *EnvironmentUpdateOne {
-	euo.mutation.ClearEnvironmentToValidation()
+// ClearValidations clears all "Validations" edges to the Validation entity.
+func (euo *EnvironmentUpdateOne) ClearValidations() *EnvironmentUpdateOne {
+	euo.mutation.ClearValidations()
 	return euo
 }
 
-// RemoveEnvironmentToValidationIDs removes the "EnvironmentToValidation" edge to Validation entities by IDs.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToValidationIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
-	euo.mutation.RemoveEnvironmentToValidationIDs(ids...)
+// RemoveValidationIDs removes the "Validations" edge to Validation entities by IDs.
+func (euo *EnvironmentUpdateOne) RemoveValidationIDs(ids ...uuid.UUID) *EnvironmentUpdateOne {
+	euo.mutation.RemoveValidationIDs(ids...)
 	return euo
 }
 
-// RemoveEnvironmentToValidation removes "EnvironmentToValidation" edges to Validation entities.
-func (euo *EnvironmentUpdateOne) RemoveEnvironmentToValidation(v ...*Validation) *EnvironmentUpdateOne {
+// RemoveValidations removes "Validations" edges to Validation entities.
+func (euo *EnvironmentUpdateOne) RemoveValidations(v ...*Validation) *EnvironmentUpdateOne {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return euo.RemoveEnvironmentToValidationIDs(ids...)
+	return euo.RemoveValidationIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -3240,12 +3240,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Column: environment.FieldTags,
 		})
 	}
-	if euo.mutation.EnvironmentToUserCleared() {
+	if euo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToUserTable,
-			Columns: environment.EnvironmentToUserPrimaryKey,
+			Table:   environment.UsersTable,
+			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3256,31 +3256,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToUserIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToUserCleared() {
+	if nodes := euo.mutation.RemovedUsersIDs(); len(nodes) > 0 && !euo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToUserTable,
-			Columns: environment.EnvironmentToUserPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToUserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToUserTable,
-			Columns: environment.EnvironmentToUserPrimaryKey,
+			Table:   environment.UsersTable,
+			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3292,14 +3273,33 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.UsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   environment.UsersTable,
+			Columns: environment.UsersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if euo.mutation.EnvironmentToHostCleared() {
+	if euo.mutation.HostsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostTable,
-			Columns: []string{environment.EnvironmentToHostColumn},
+			Table:   environment.HostsTable,
+			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3310,12 +3310,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToHostIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToHostCleared() {
+	if nodes := euo.mutation.RemovedHostsIDs(); len(nodes) > 0 && !euo.mutation.HostsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostTable,
-			Columns: []string{environment.EnvironmentToHostColumn},
+			Table:   environment.HostsTable,
+			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3329,12 +3329,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.EnvironmentToHostIDs(); len(nodes) > 0 {
+	if nodes := euo.mutation.HostsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostTable,
-			Columns: []string{environment.EnvironmentToHostColumn},
+			Table:   environment.HostsTable,
+			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3348,12 +3348,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if euo.mutation.EnvironmentToCompetitionCleared() {
+	if euo.mutation.CompetitionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToCompetitionTable,
-			Columns: []string{environment.EnvironmentToCompetitionColumn},
+			Table:   environment.CompetitionsTable,
+			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3364,31 +3364,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToCompetitionIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToCompetitionCleared() {
+	if nodes := euo.mutation.RemovedCompetitionsIDs(); len(nodes) > 0 && !euo.mutation.CompetitionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToCompetitionTable,
-			Columns: []string{environment.EnvironmentToCompetitionColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: competition.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToCompetitionIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToCompetitionTable,
-			Columns: []string{environment.EnvironmentToCompetitionColumn},
+			Table:   environment.CompetitionsTable,
+			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3400,14 +3381,33 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if euo.mutation.EnvironmentToIdentityCleared() {
+	if nodes := euo.mutation.CompetitionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIdentityTable,
-			Columns: []string{environment.EnvironmentToIdentityColumn},
+			Table:   environment.CompetitionsTable,
+			Columns: []string{environment.CompetitionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: competition.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.IdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.IdentitiesTable,
+			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3418,12 +3418,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToIdentityIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToIdentityCleared() {
+	if nodes := euo.mutation.RemovedIdentitiesIDs(); len(nodes) > 0 && !euo.mutation.IdentitiesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIdentityTable,
-			Columns: []string{environment.EnvironmentToIdentityColumn},
+			Table:   environment.IdentitiesTable,
+			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3437,12 +3437,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.EnvironmentToIdentityIDs(); len(nodes) > 0 {
+	if nodes := euo.mutation.IdentitiesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIdentityTable,
-			Columns: []string{environment.EnvironmentToIdentityColumn},
+			Table:   environment.IdentitiesTable,
+			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3456,12 +3456,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if euo.mutation.EnvironmentToCommandCleared() {
+	if euo.mutation.CommandsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToCommandTable,
-			Columns: []string{environment.EnvironmentToCommandColumn},
+			Table:   environment.CommandsTable,
+			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3472,31 +3472,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToCommandIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToCommandCleared() {
+	if nodes := euo.mutation.RemovedCommandsIDs(); len(nodes) > 0 && !euo.mutation.CommandsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToCommandTable,
-			Columns: []string{environment.EnvironmentToCommandColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: command.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToCommandIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToCommandTable,
-			Columns: []string{environment.EnvironmentToCommandColumn},
+			Table:   environment.CommandsTable,
+			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3508,14 +3489,33 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if euo.mutation.EnvironmentToScriptCleared() {
+	if nodes := euo.mutation.CommandsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScriptTable,
-			Columns: []string{environment.EnvironmentToScriptColumn},
+			Table:   environment.CommandsTable,
+			Columns: []string{environment.CommandsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: command.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.ScriptsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.ScriptsTable,
+			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3526,12 +3526,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToScriptIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToScriptCleared() {
+	if nodes := euo.mutation.RemovedScriptsIDs(); len(nodes) > 0 && !euo.mutation.ScriptsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScriptTable,
-			Columns: []string{environment.EnvironmentToScriptColumn},
+			Table:   environment.ScriptsTable,
+			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3545,12 +3545,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.EnvironmentToScriptIDs(); len(nodes) > 0 {
+	if nodes := euo.mutation.ScriptsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScriptTable,
-			Columns: []string{environment.EnvironmentToScriptColumn},
+			Table:   environment.ScriptsTable,
+			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3564,12 +3564,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if euo.mutation.EnvironmentToFileDownloadCleared() {
+	if euo.mutation.FileDownloadsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDownloadTable,
-			Columns: []string{environment.EnvironmentToFileDownloadColumn},
+			Table:   environment.FileDownloadsTable,
+			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3580,31 +3580,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToFileDownloadIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToFileDownloadCleared() {
+	if nodes := euo.mutation.RemovedFileDownloadsIDs(); len(nodes) > 0 && !euo.mutation.FileDownloadsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDownloadTable,
-			Columns: []string{environment.EnvironmentToFileDownloadColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedownload.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToFileDownloadIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToFileDownloadTable,
-			Columns: []string{environment.EnvironmentToFileDownloadColumn},
+			Table:   environment.FileDownloadsTable,
+			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3616,14 +3597,33 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if euo.mutation.EnvironmentToFileDeleteCleared() {
+	if nodes := euo.mutation.FileDownloadsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDeleteTable,
-			Columns: []string{environment.EnvironmentToFileDeleteColumn},
+			Table:   environment.FileDownloadsTable,
+			Columns: []string{environment.FileDownloadsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: filedownload.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.FileDeletesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.FileDeletesTable,
+			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3634,12 +3634,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToFileDeleteIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToFileDeleteCleared() {
+	if nodes := euo.mutation.RemovedFileDeletesIDs(); len(nodes) > 0 && !euo.mutation.FileDeletesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDeleteTable,
-			Columns: []string{environment.EnvironmentToFileDeleteColumn},
+			Table:   environment.FileDeletesTable,
+			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3653,12 +3653,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.EnvironmentToFileDeleteIDs(); len(nodes) > 0 {
+	if nodes := euo.mutation.FileDeletesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileDeleteTable,
-			Columns: []string{environment.EnvironmentToFileDeleteColumn},
+			Table:   environment.FileDeletesTable,
+			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3672,12 +3672,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if euo.mutation.EnvironmentToFileExtractCleared() {
+	if euo.mutation.FileExtractsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileExtractTable,
-			Columns: []string{environment.EnvironmentToFileExtractColumn},
+			Table:   environment.FileExtractsTable,
+			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3688,31 +3688,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToFileExtractIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToFileExtractCleared() {
+	if nodes := euo.mutation.RemovedFileExtractsIDs(); len(nodes) > 0 && !euo.mutation.FileExtractsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFileExtractTable,
-			Columns: []string{environment.EnvironmentToFileExtractColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: fileextract.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToFileExtractIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToFileExtractTable,
-			Columns: []string{environment.EnvironmentToFileExtractColumn},
+			Table:   environment.FileExtractsTable,
+			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3724,14 +3705,33 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.FileExtractsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.FileExtractsTable,
+			Columns: []string{environment.FileExtractsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: fileextract.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if euo.mutation.EnvironmentToIncludedNetworkCleared() {
+	if euo.mutation.IncludedNetworksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIncludedNetworkTable,
-			Columns: environment.EnvironmentToIncludedNetworkPrimaryKey,
+			Table:   environment.IncludedNetworksTable,
+			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3742,12 +3742,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToIncludedNetworkIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToIncludedNetworkCleared() {
+	if nodes := euo.mutation.RemovedIncludedNetworksIDs(); len(nodes) > 0 && !euo.mutation.IncludedNetworksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIncludedNetworkTable,
-			Columns: environment.EnvironmentToIncludedNetworkPrimaryKey,
+			Table:   environment.IncludedNetworksTable,
+			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3761,12 +3761,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.EnvironmentToIncludedNetworkIDs(); len(nodes) > 0 {
+	if nodes := euo.mutation.IncludedNetworksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToIncludedNetworkTable,
-			Columns: environment.EnvironmentToIncludedNetworkPrimaryKey,
+			Table:   environment.IncludedNetworksTable,
+			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3780,12 +3780,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if euo.mutation.EnvironmentToFindingCleared() {
+	if euo.mutation.FindingsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFindingTable,
-			Columns: []string{environment.EnvironmentToFindingColumn},
+			Table:   environment.FindingsTable,
+			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3796,31 +3796,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToFindingIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToFindingCleared() {
+	if nodes := euo.mutation.RemovedFindingsIDs(); len(nodes) > 0 && !euo.mutation.FindingsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToFindingTable,
-			Columns: []string{environment.EnvironmentToFindingColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: finding.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToFindingIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToFindingTable,
-			Columns: []string{environment.EnvironmentToFindingColumn},
+			Table:   environment.FindingsTable,
+			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3832,14 +3813,33 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if euo.mutation.EnvironmentToDNSRecordCleared() {
+	if nodes := euo.mutation.FindingsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSRecordTable,
-			Columns: []string{environment.EnvironmentToDNSRecordColumn},
+			Table:   environment.FindingsTable,
+			Columns: []string{environment.FindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: finding.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.DNSRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.DNSRecordsTable,
+			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3850,12 +3850,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToDNSRecordIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToDNSRecordCleared() {
+	if nodes := euo.mutation.RemovedDNSRecordsIDs(); len(nodes) > 0 && !euo.mutation.DNSRecordsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSRecordTable,
-			Columns: []string{environment.EnvironmentToDNSRecordColumn},
+			Table:   environment.DNSRecordsTable,
+			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3869,12 +3869,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.EnvironmentToDNSRecordIDs(); len(nodes) > 0 {
+	if nodes := euo.mutation.DNSRecordsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSRecordTable,
-			Columns: []string{environment.EnvironmentToDNSRecordColumn},
+			Table:   environment.DNSRecordsTable,
+			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3888,12 +3888,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if euo.mutation.EnvironmentToDNSCleared() {
+	if euo.mutation.DNSCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSTable,
-			Columns: environment.EnvironmentToDNSPrimaryKey,
+			Table:   environment.DNSTable,
+			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3904,31 +3904,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToDNSIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToDNSCleared() {
+	if nodes := euo.mutation.RemovedDNSIDs(); len(nodes) > 0 && !euo.mutation.DNSCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToDNSTable,
-			Columns: environment.EnvironmentToDNSPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dns.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToDNSIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToDNSTable,
-			Columns: environment.EnvironmentToDNSPrimaryKey,
+			Table:   environment.DNSTable,
+			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3940,14 +3921,33 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.DNSIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   environment.DNSTable,
+			Columns: environment.DNSPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: dns.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if euo.mutation.EnvironmentToNetworkCleared() {
+	if euo.mutation.NetworksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToNetworkTable,
-			Columns: []string{environment.EnvironmentToNetworkColumn},
+			Table:   environment.NetworksTable,
+			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3958,12 +3958,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToNetworkIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToNetworkCleared() {
+	if nodes := euo.mutation.RemovedNetworksIDs(); len(nodes) > 0 && !euo.mutation.NetworksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToNetworkTable,
-			Columns: []string{environment.EnvironmentToNetworkColumn},
+			Table:   environment.NetworksTable,
+			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3977,12 +3977,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.EnvironmentToNetworkIDs(); len(nodes) > 0 {
+	if nodes := euo.mutation.NetworksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToNetworkTable,
-			Columns: []string{environment.EnvironmentToNetworkColumn},
+			Table:   environment.NetworksTable,
+			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -3996,12 +3996,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if euo.mutation.EnvironmentToHostDependencyCleared() {
+	if euo.mutation.HostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostDependencyTable,
-			Columns: []string{environment.EnvironmentToHostDependencyColumn},
+			Table:   environment.HostDependenciesTable,
+			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -4012,31 +4012,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToHostDependencyIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToHostDependencyCleared() {
+	if nodes := euo.mutation.RemovedHostDependenciesIDs(); len(nodes) > 0 && !euo.mutation.HostDependenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToHostDependencyTable,
-			Columns: []string{environment.EnvironmentToHostDependencyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToHostDependencyIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToHostDependencyTable,
-			Columns: []string{environment.EnvironmentToHostDependencyColumn},
+			Table:   environment.HostDependenciesTable,
+			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -4048,14 +4029,33 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if euo.mutation.EnvironmentToAnsibleCleared() {
+	if nodes := euo.mutation.HostDependenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToAnsibleTable,
-			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Table:   environment.HostDependenciesTable,
+			Columns: []string{environment.HostDependenciesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: hostdependency.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.AnsiblesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.AnsiblesTable,
+			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -4066,12 +4066,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToAnsibleIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToAnsibleCleared() {
+	if nodes := euo.mutation.RemovedAnsiblesIDs(); len(nodes) > 0 && !euo.mutation.AnsiblesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToAnsibleTable,
-			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Table:   environment.AnsiblesTable,
+			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -4085,12 +4085,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.EnvironmentToAnsibleIDs(); len(nodes) > 0 {
+	if nodes := euo.mutation.AnsiblesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToAnsibleTable,
-			Columns: []string{environment.EnvironmentToAnsibleColumn},
+			Table:   environment.AnsiblesTable,
+			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -4104,12 +4104,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if euo.mutation.EnvironmentToScheduledStepCleared() {
+	if euo.mutation.ScheduledStepsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScheduledStepTable,
-			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Table:   environment.ScheduledStepsTable,
+			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -4120,31 +4120,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToScheduledStepIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToScheduledStepCleared() {
+	if nodes := euo.mutation.RemovedScheduledStepsIDs(); len(nodes) > 0 && !euo.mutation.ScheduledStepsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToScheduledStepTable,
-			Columns: []string{environment.EnvironmentToScheduledStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: scheduledstep.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToScheduledStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   environment.EnvironmentToScheduledStepTable,
-			Columns: []string{environment.EnvironmentToScheduledStepColumn},
+			Table:   environment.ScheduledStepsTable,
+			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -4156,176 +4137,195 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if euo.mutation.EnvironmentToBuildCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToBuildTable,
-			Columns: []string{environment.EnvironmentToBuildColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
-			},
-		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToBuildIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToBuildCleared() {
+	if nodes := euo.mutation.ScheduledStepsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToBuildTable,
-			Columns: []string{environment.EnvironmentToBuildColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToBuildIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToBuildTable,
-			Columns: []string{environment.EnvironmentToBuildColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if euo.mutation.EnvironmentToRepositoryCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToRepositoryTable,
-			Columns: environment.EnvironmentToRepositoryPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.RemovedEnvironmentToRepositoryIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToRepositoryCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToRepositoryTable,
-			Columns: environment.EnvironmentToRepositoryPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToRepositoryIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToRepositoryTable,
-			Columns: environment.EnvironmentToRepositoryPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if euo.mutation.EnvironmentToServerTaskCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToServerTaskTable,
-			Columns: []string{environment.EnvironmentToServerTaskColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.RemovedEnvironmentToServerTaskIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToServerTaskCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToServerTaskTable,
-			Columns: []string{environment.EnvironmentToServerTaskColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.EnvironmentToServerTaskIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   environment.EnvironmentToServerTaskTable,
-			Columns: []string{environment.EnvironmentToServerTaskColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if euo.mutation.EnvironmentToValidationCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToValidationTable,
-			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Table:   environment.ScheduledStepsTable,
+			Columns: []string{environment.ScheduledStepsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: scheduledstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.BuildsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.BuildsTable,
+			Columns: []string{environment.BuildsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: build.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedBuildsIDs(); len(nodes) > 0 && !euo.mutation.BuildsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.BuildsTable,
+			Columns: []string{environment.BuildsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: build.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.BuildsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.BuildsTable,
+			Columns: []string{environment.BuildsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: build.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.RepositoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   environment.RepositoriesTable,
+			Columns: environment.RepositoriesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repository.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedRepositoriesIDs(); len(nodes) > 0 && !euo.mutation.RepositoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   environment.RepositoriesTable,
+			Columns: environment.RepositoriesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repository.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RepositoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   environment.RepositoriesTable,
+			Columns: environment.RepositoriesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: repository.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.ServerTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.ServerTasksTable,
+			Columns: []string{environment.ServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedServerTasksIDs(); len(nodes) > 0 && !euo.mutation.ServerTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.ServerTasksTable,
+			Columns: []string{environment.ServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.ServerTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   environment.ServerTasksTable,
+			Columns: []string{environment.ServerTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: servertask.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.ValidationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   environment.ValidationsTable,
+			Columns: []string{environment.ValidationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -4336,12 +4336,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedEnvironmentToValidationIDs(); len(nodes) > 0 && !euo.mutation.EnvironmentToValidationCleared() {
+	if nodes := euo.mutation.RemovedValidationsIDs(); len(nodes) > 0 && !euo.mutation.ValidationsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToValidationTable,
-			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Table:   environment.ValidationsTable,
+			Columns: []string{environment.ValidationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -4355,12 +4355,12 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.EnvironmentToValidationIDs(); len(nodes) > 0 {
+	if nodes := euo.mutation.ValidationsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   environment.EnvironmentToValidationTable,
-			Columns: environment.EnvironmentToValidationPrimaryKey,
+			Table:   environment.ValidationsTable,
+			Columns: []string{environment.ValidationsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

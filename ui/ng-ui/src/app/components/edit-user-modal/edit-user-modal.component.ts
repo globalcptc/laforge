@@ -36,8 +36,8 @@ export class EditUserModalComponent implements OnInit {
 
   ngOnInit(): void {
     this.username.setValue(this.data.user?.username ?? '');
-    this.firstName.setValue(this.data.user?.first_name ?? '');
-    this.lastName.setValue(this.data.user?.last_name ?? '');
+    this.firstName.setValue(this.data.user?.firstName ?? '');
+    this.lastName.setValue(this.data.user?.lastName ?? '');
     this.email.setValue(this.data.user?.email ?? '');
     this.phone.setValue(this.data.user?.phone ?? '');
     this.company.setValue(this.data.user?.company ?? '');

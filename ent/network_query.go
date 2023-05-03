@@ -22,16 +22,16 @@ import (
 // NetworkQuery is the builder for querying Network entities.
 type NetworkQuery struct {
 	config
-	limit                        *int
-	offset                       *int
-	unique                       *bool
-	order                        []OrderFunc
-	fields                       []string
-	predicates                   []predicate.Network
-	withNetworkToEnvironment     *EnvironmentQuery
-	withNetworkToHostDependency  *HostDependencyQuery
-	withNetworkToIncludedNetwork *IncludedNetworkQuery
-	withFKs                      bool
+	limit                *int
+	offset               *int
+	unique               *bool
+	order                []OrderFunc
+	fields               []string
+	predicates           []predicate.Network
+	withEnvironment      *EnvironmentQuery
+	withHostDependencies *HostDependencyQuery
+	withIncludedNetworks *IncludedNetworkQuery
+	withFKs              bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -68,8 +68,8 @@ func (nq *NetworkQuery) Order(o ...OrderFunc) *NetworkQuery {
 	return nq
 }
 
-// QueryNetworkToEnvironment chains the current query on the "NetworkToEnvironment" edge.
-func (nq *NetworkQuery) QueryNetworkToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (nq *NetworkQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: nq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := nq.prepareQuery(ctx); err != nil {
@@ -82,7 +82,7 @@ func (nq *NetworkQuery) QueryNetworkToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(network.Table, network.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, network.NetworkToEnvironmentTable, network.NetworkToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, network.EnvironmentTable, network.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(nq.driver.Dialect(), step)
 		return fromU, nil
@@ -90,8 +90,8 @@ func (nq *NetworkQuery) QueryNetworkToEnvironment() *EnvironmentQuery {
 	return query
 }
 
-// QueryNetworkToHostDependency chains the current query on the "NetworkToHostDependency" edge.
-func (nq *NetworkQuery) QueryNetworkToHostDependency() *HostDependencyQuery {
+// QueryHostDependencies chains the current query on the "HostDependencies" edge.
+func (nq *NetworkQuery) QueryHostDependencies() *HostDependencyQuery {
 	query := &HostDependencyQuery{config: nq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := nq.prepareQuery(ctx); err != nil {
@@ -104,7 +104,7 @@ func (nq *NetworkQuery) QueryNetworkToHostDependency() *HostDependencyQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(network.Table, network.FieldID, selector),
 			sqlgraph.To(hostdependency.Table, hostdependency.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, network.NetworkToHostDependencyTable, network.NetworkToHostDependencyColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, network.HostDependenciesTable, network.HostDependenciesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(nq.driver.Dialect(), step)
 		return fromU, nil
@@ -112,8 +112,8 @@ func (nq *NetworkQuery) QueryNetworkToHostDependency() *HostDependencyQuery {
 	return query
 }
 
-// QueryNetworkToIncludedNetwork chains the current query on the "NetworkToIncludedNetwork" edge.
-func (nq *NetworkQuery) QueryNetworkToIncludedNetwork() *IncludedNetworkQuery {
+// QueryIncludedNetworks chains the current query on the "IncludedNetworks" edge.
+func (nq *NetworkQuery) QueryIncludedNetworks() *IncludedNetworkQuery {
 	query := &IncludedNetworkQuery{config: nq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := nq.prepareQuery(ctx); err != nil {
@@ -126,7 +126,7 @@ func (nq *NetworkQuery) QueryNetworkToIncludedNetwork() *IncludedNetworkQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(network.Table, network.FieldID, selector),
 			sqlgraph.To(includednetwork.Table, includednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, network.NetworkToIncludedNetworkTable, network.NetworkToIncludedNetworkColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, network.IncludedNetworksTable, network.IncludedNetworksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(nq.driver.Dialect(), step)
 		return fromU, nil
@@ -310,14 +310,14 @@ func (nq *NetworkQuery) Clone() *NetworkQuery {
 		return nil
 	}
 	return &NetworkQuery{
-		config:                       nq.config,
-		limit:                        nq.limit,
-		offset:                       nq.offset,
-		order:                        append([]OrderFunc{}, nq.order...),
-		predicates:                   append([]predicate.Network{}, nq.predicates...),
-		withNetworkToEnvironment:     nq.withNetworkToEnvironment.Clone(),
-		withNetworkToHostDependency:  nq.withNetworkToHostDependency.Clone(),
-		withNetworkToIncludedNetwork: nq.withNetworkToIncludedNetwork.Clone(),
+		config:               nq.config,
+		limit:                nq.limit,
+		offset:               nq.offset,
+		order:                append([]OrderFunc{}, nq.order...),
+		predicates:           append([]predicate.Network{}, nq.predicates...),
+		withEnvironment:      nq.withEnvironment.Clone(),
+		withHostDependencies: nq.withHostDependencies.Clone(),
+		withIncludedNetworks: nq.withIncludedNetworks.Clone(),
 		// clone intermediate query.
 		sql:    nq.sql.Clone(),
 		path:   nq.path,
@@ -325,36 +325,36 @@ func (nq *NetworkQuery) Clone() *NetworkQuery {
 	}
 }
 
-// WithNetworkToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "NetworkToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (nq *NetworkQuery) WithNetworkToEnvironment(opts ...func(*EnvironmentQuery)) *NetworkQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (nq *NetworkQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *NetworkQuery {
 	query := &EnvironmentQuery{config: nq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	nq.withNetworkToEnvironment = query
+	nq.withEnvironment = query
 	return nq
 }
 
-// WithNetworkToHostDependency tells the query-builder to eager-load the nodes that are connected to
-// the "NetworkToHostDependency" edge. The optional arguments are used to configure the query builder of the edge.
-func (nq *NetworkQuery) WithNetworkToHostDependency(opts ...func(*HostDependencyQuery)) *NetworkQuery {
+// WithHostDependencies tells the query-builder to eager-load the nodes that are connected to
+// the "HostDependencies" edge. The optional arguments are used to configure the query builder of the edge.
+func (nq *NetworkQuery) WithHostDependencies(opts ...func(*HostDependencyQuery)) *NetworkQuery {
 	query := &HostDependencyQuery{config: nq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	nq.withNetworkToHostDependency = query
+	nq.withHostDependencies = query
 	return nq
 }
 
-// WithNetworkToIncludedNetwork tells the query-builder to eager-load the nodes that are connected to
-// the "NetworkToIncludedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
-func (nq *NetworkQuery) WithNetworkToIncludedNetwork(opts ...func(*IncludedNetworkQuery)) *NetworkQuery {
+// WithIncludedNetworks tells the query-builder to eager-load the nodes that are connected to
+// the "IncludedNetworks" edge. The optional arguments are used to configure the query builder of the edge.
+func (nq *NetworkQuery) WithIncludedNetworks(opts ...func(*IncludedNetworkQuery)) *NetworkQuery {
 	query := &IncludedNetworkQuery{config: nq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	nq.withNetworkToIncludedNetwork = query
+	nq.withIncludedNetworks = query
 	return nq
 }
 
@@ -372,7 +372,6 @@ func (nq *NetworkQuery) WithNetworkToIncludedNetwork(opts ...func(*IncludedNetwo
 //		GroupBy(network.FieldHclID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (nq *NetworkQuery) GroupBy(field string, fields ...string) *NetworkGroupBy {
 	grbuild := &NetworkGroupBy{config: nq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -399,7 +398,6 @@ func (nq *NetworkQuery) GroupBy(field string, fields ...string) *NetworkGroupBy 
 //	client.Network.Query().
 //		Select(network.FieldHclID).
 //		Scan(ctx, &v)
-//
 func (nq *NetworkQuery) Select(fields ...string) *NetworkSelect {
 	nq.fields = append(nq.fields, fields...)
 	selbuild := &NetworkSelect{NetworkQuery: nq}
@@ -430,12 +428,12 @@ func (nq *NetworkQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Netw
 		withFKs     = nq.withFKs
 		_spec       = nq.querySpec()
 		loadedTypes = [3]bool{
-			nq.withNetworkToEnvironment != nil,
-			nq.withNetworkToHostDependency != nil,
-			nq.withNetworkToIncludedNetwork != nil,
+			nq.withEnvironment != nil,
+			nq.withHostDependencies != nil,
+			nq.withIncludedNetworks != nil,
 		}
 	)
-	if nq.withNetworkToEnvironment != nil {
+	if nq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -459,41 +457,37 @@ func (nq *NetworkQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Netw
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := nq.withNetworkToEnvironment; query != nil {
-		if err := nq.loadNetworkToEnvironment(ctx, query, nodes, nil,
-			func(n *Network, e *Environment) { n.Edges.NetworkToEnvironment = e }); err != nil {
+	if query := nq.withEnvironment; query != nil {
+		if err := nq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *Network, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := nq.withNetworkToHostDependency; query != nil {
-		if err := nq.loadNetworkToHostDependency(ctx, query, nodes,
-			func(n *Network) { n.Edges.NetworkToHostDependency = []*HostDependency{} },
-			func(n *Network, e *HostDependency) {
-				n.Edges.NetworkToHostDependency = append(n.Edges.NetworkToHostDependency, e)
-			}); err != nil {
+	if query := nq.withHostDependencies; query != nil {
+		if err := nq.loadHostDependencies(ctx, query, nodes,
+			func(n *Network) { n.Edges.HostDependencies = []*HostDependency{} },
+			func(n *Network, e *HostDependency) { n.Edges.HostDependencies = append(n.Edges.HostDependencies, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := nq.withNetworkToIncludedNetwork; query != nil {
-		if err := nq.loadNetworkToIncludedNetwork(ctx, query, nodes,
-			func(n *Network) { n.Edges.NetworkToIncludedNetwork = []*IncludedNetwork{} },
-			func(n *Network, e *IncludedNetwork) {
-				n.Edges.NetworkToIncludedNetwork = append(n.Edges.NetworkToIncludedNetwork, e)
-			}); err != nil {
+	if query := nq.withIncludedNetworks; query != nil {
+		if err := nq.loadIncludedNetworks(ctx, query, nodes,
+			func(n *Network) { n.Edges.IncludedNetworks = []*IncludedNetwork{} },
+			func(n *Network, e *IncludedNetwork) { n.Edges.IncludedNetworks = append(n.Edges.IncludedNetworks, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (nq *NetworkQuery) loadNetworkToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Network, init func(*Network), assign func(*Network, *Environment)) error {
+func (nq *NetworkQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Network, init func(*Network), assign func(*Network, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Network)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_network == nil {
+		if nodes[i].environment_networks == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_network
+		fk := *nodes[i].environment_networks
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -507,7 +501,7 @@ func (nq *NetworkQuery) loadNetworkToEnvironment(ctx context.Context, query *Env
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_network" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_networks" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -515,7 +509,7 @@ func (nq *NetworkQuery) loadNetworkToEnvironment(ctx context.Context, query *Env
 	}
 	return nil
 }
-func (nq *NetworkQuery) loadNetworkToHostDependency(ctx context.Context, query *HostDependencyQuery, nodes []*Network, init func(*Network), assign func(*Network, *HostDependency)) error {
+func (nq *NetworkQuery) loadHostDependencies(ctx context.Context, query *HostDependencyQuery, nodes []*Network, init func(*Network), assign func(*Network, *HostDependency)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Network)
 	for i := range nodes {
@@ -527,26 +521,26 @@ func (nq *NetworkQuery) loadNetworkToHostDependency(ctx context.Context, query *
 	}
 	query.withFKs = true
 	query.Where(predicate.HostDependency(func(s *sql.Selector) {
-		s.Where(sql.InValues(network.NetworkToHostDependencyColumn, fks...))
+		s.Where(sql.InValues(network.HostDependenciesColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.host_dependency_host_dependency_to_network
+		fk := n.host_dependency_depend_on_network
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "host_dependency_host_dependency_to_network" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "host_dependency_depend_on_network" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_dependency_host_dependency_to_network" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "host_dependency_depend_on_network" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (nq *NetworkQuery) loadNetworkToIncludedNetwork(ctx context.Context, query *IncludedNetworkQuery, nodes []*Network, init func(*Network), assign func(*Network, *IncludedNetwork)) error {
+func (nq *NetworkQuery) loadIncludedNetworks(ctx context.Context, query *IncludedNetworkQuery, nodes []*Network, init func(*Network), assign func(*Network, *IncludedNetwork)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Network)
 	for i := range nodes {
@@ -558,20 +552,20 @@ func (nq *NetworkQuery) loadNetworkToIncludedNetwork(ctx context.Context, query 
 	}
 	query.withFKs = true
 	query.Where(predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.InValues(network.NetworkToIncludedNetworkColumn, fks...))
+		s.Where(sql.InValues(network.IncludedNetworksColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.included_network_included_network_to_network
+		fk := n.included_network_network
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "included_network_included_network_to_network" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "included_network_network" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "included_network_included_network_to_network" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "included_network_network" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

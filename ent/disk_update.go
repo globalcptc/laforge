@@ -42,23 +42,23 @@ func (du *DiskUpdate) AddSize(i int) *DiskUpdate {
 	return du
 }
 
-// SetDiskToHostID sets the "DiskToHost" edge to the Host entity by ID.
-func (du *DiskUpdate) SetDiskToHostID(id uuid.UUID) *DiskUpdate {
-	du.mutation.SetDiskToHostID(id)
+// SetHostID sets the "Host" edge to the Host entity by ID.
+func (du *DiskUpdate) SetHostID(id uuid.UUID) *DiskUpdate {
+	du.mutation.SetHostID(id)
 	return du
 }
 
-// SetNillableDiskToHostID sets the "DiskToHost" edge to the Host entity by ID if the given value is not nil.
-func (du *DiskUpdate) SetNillableDiskToHostID(id *uuid.UUID) *DiskUpdate {
+// SetNillableHostID sets the "Host" edge to the Host entity by ID if the given value is not nil.
+func (du *DiskUpdate) SetNillableHostID(id *uuid.UUID) *DiskUpdate {
 	if id != nil {
-		du = du.SetDiskToHostID(*id)
+		du = du.SetHostID(*id)
 	}
 	return du
 }
 
-// SetDiskToHost sets the "DiskToHost" edge to the Host entity.
-func (du *DiskUpdate) SetDiskToHost(h *Host) *DiskUpdate {
-	return du.SetDiskToHostID(h.ID)
+// SetHost sets the "Host" edge to the Host entity.
+func (du *DiskUpdate) SetHost(h *Host) *DiskUpdate {
+	return du.SetHostID(h.ID)
 }
 
 // Mutation returns the DiskMutation object of the builder.
@@ -66,9 +66,9 @@ func (du *DiskUpdate) Mutation() *DiskMutation {
 	return du.mutation
 }
 
-// ClearDiskToHost clears the "DiskToHost" edge to the Host entity.
-func (du *DiskUpdate) ClearDiskToHost() *DiskUpdate {
-	du.mutation.ClearDiskToHost()
+// ClearHost clears the "Host" edge to the Host entity.
+func (du *DiskUpdate) ClearHost() *DiskUpdate {
+	du.mutation.ClearHost()
 	return du
 }
 
@@ -174,12 +174,12 @@ func (du *DiskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: disk.FieldSize,
 		})
 	}
-	if du.mutation.DiskToHostCleared() {
+	if du.mutation.HostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   disk.DiskToHostTable,
-			Columns: []string{disk.DiskToHostColumn},
+			Table:   disk.HostTable,
+			Columns: []string{disk.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -190,12 +190,12 @@ func (du *DiskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := du.mutation.DiskToHostIDs(); len(nodes) > 0 {
+	if nodes := du.mutation.HostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   disk.DiskToHostTable,
-			Columns: []string{disk.DiskToHostColumn},
+			Table:   disk.HostTable,
+			Columns: []string{disk.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -241,23 +241,23 @@ func (duo *DiskUpdateOne) AddSize(i int) *DiskUpdateOne {
 	return duo
 }
 
-// SetDiskToHostID sets the "DiskToHost" edge to the Host entity by ID.
-func (duo *DiskUpdateOne) SetDiskToHostID(id uuid.UUID) *DiskUpdateOne {
-	duo.mutation.SetDiskToHostID(id)
+// SetHostID sets the "Host" edge to the Host entity by ID.
+func (duo *DiskUpdateOne) SetHostID(id uuid.UUID) *DiskUpdateOne {
+	duo.mutation.SetHostID(id)
 	return duo
 }
 
-// SetNillableDiskToHostID sets the "DiskToHost" edge to the Host entity by ID if the given value is not nil.
-func (duo *DiskUpdateOne) SetNillableDiskToHostID(id *uuid.UUID) *DiskUpdateOne {
+// SetNillableHostID sets the "Host" edge to the Host entity by ID if the given value is not nil.
+func (duo *DiskUpdateOne) SetNillableHostID(id *uuid.UUID) *DiskUpdateOne {
 	if id != nil {
-		duo = duo.SetDiskToHostID(*id)
+		duo = duo.SetHostID(*id)
 	}
 	return duo
 }
 
-// SetDiskToHost sets the "DiskToHost" edge to the Host entity.
-func (duo *DiskUpdateOne) SetDiskToHost(h *Host) *DiskUpdateOne {
-	return duo.SetDiskToHostID(h.ID)
+// SetHost sets the "Host" edge to the Host entity.
+func (duo *DiskUpdateOne) SetHost(h *Host) *DiskUpdateOne {
+	return duo.SetHostID(h.ID)
 }
 
 // Mutation returns the DiskMutation object of the builder.
@@ -265,9 +265,9 @@ func (duo *DiskUpdateOne) Mutation() *DiskMutation {
 	return duo.mutation
 }
 
-// ClearDiskToHost clears the "DiskToHost" edge to the Host entity.
-func (duo *DiskUpdateOne) ClearDiskToHost() *DiskUpdateOne {
-	duo.mutation.ClearDiskToHost()
+// ClearHost clears the "Host" edge to the Host entity.
+func (duo *DiskUpdateOne) ClearHost() *DiskUpdateOne {
+	duo.mutation.ClearHost()
 	return duo
 }
 
@@ -403,12 +403,12 @@ func (duo *DiskUpdateOne) sqlSave(ctx context.Context) (_node *Disk, err error) 
 			Column: disk.FieldSize,
 		})
 	}
-	if duo.mutation.DiskToHostCleared() {
+	if duo.mutation.HostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   disk.DiskToHostTable,
-			Columns: []string{disk.DiskToHostColumn},
+			Table:   disk.HostTable,
+			Columns: []string{disk.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -419,12 +419,12 @@ func (duo *DiskUpdateOne) sqlSave(ctx context.Context) (_node *Disk, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := duo.mutation.DiskToHostIDs(); len(nodes) > 0 {
+	if nodes := duo.mutation.HostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   disk.DiskToHostTable,
-			Columns: []string{disk.DiskToHostColumn},
+			Table:   disk.HostTable,
+			Columns: []string{disk.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

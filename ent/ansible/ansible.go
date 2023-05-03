@@ -35,26 +35,26 @@ const (
 	FieldTags = "tags"
 	// FieldValidations holds the string denoting the validations field in the database.
 	FieldValidations = "validations"
-	// EdgeAnsibleToUser holds the string denoting the ansibletouser edge name in mutations.
-	EdgeAnsibleToUser = "AnsibleToUser"
-	// EdgeAnsibleFromEnvironment holds the string denoting the ansiblefromenvironment edge name in mutations.
-	EdgeAnsibleFromEnvironment = "AnsibleFromEnvironment"
+	// EdgeUsers holds the string denoting the users edge name in mutations.
+	EdgeUsers = "Users"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the ansible in the database.
 	Table = "ansibles"
-	// AnsibleToUserTable is the table that holds the AnsibleToUser relation/edge.
-	AnsibleToUserTable = "users"
-	// AnsibleToUserInverseTable is the table name for the User entity.
+	// UsersTable is the table that holds the Users relation/edge.
+	UsersTable = "users"
+	// UsersInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	AnsibleToUserInverseTable = "users"
-	// AnsibleToUserColumn is the table column denoting the AnsibleToUser relation/edge.
-	AnsibleToUserColumn = "ansible_ansible_to_user"
-	// AnsibleFromEnvironmentTable is the table that holds the AnsibleFromEnvironment relation/edge.
-	AnsibleFromEnvironmentTable = "ansibles"
-	// AnsibleFromEnvironmentInverseTable is the table name for the Environment entity.
+	UsersInverseTable = "users"
+	// UsersColumn is the table column denoting the Users relation/edge.
+	UsersColumn = "ansible_users"
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "ansibles"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	AnsibleFromEnvironmentInverseTable = "environments"
-	// AnsibleFromEnvironmentColumn is the table column denoting the AnsibleFromEnvironment relation/edge.
-	AnsibleFromEnvironmentColumn = "environment_environment_to_ansible"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_ansibles"
 )
 
 // Columns holds all SQL columns for ansible fields.
@@ -75,7 +75,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "ansibles"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_ansible",
+	"environment_ansibles",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -103,7 +103,7 @@ type Method string
 
 // Method values.
 const (
-	MethodLocal Method = "local"
+	MethodLOCAL Method = "LOCAL"
 )
 
 func (m Method) String() string {
@@ -113,7 +113,7 @@ func (m Method) String() string {
 // MethodValidator is a validator for the "method" field enum values. It is called by the builders before save.
 func MethodValidator(m Method) error {
 	switch m {
-	case MethodLocal:
+	case MethodLOCAL:
 		return nil
 	default:
 		return fmt.Errorf("ansible: invalid enum value for method field: %q", m)

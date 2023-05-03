@@ -89,23 +89,23 @@ func (ic *IdentityCreate) SetNillableID(u *uuid.UUID) *IdentityCreate {
 	return ic
 }
 
-// SetIdentityToEnvironmentID sets the "IdentityToEnvironment" edge to the Environment entity by ID.
-func (ic *IdentityCreate) SetIdentityToEnvironmentID(id uuid.UUID) *IdentityCreate {
-	ic.mutation.SetIdentityToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (ic *IdentityCreate) SetEnvironmentID(id uuid.UUID) *IdentityCreate {
+	ic.mutation.SetEnvironmentID(id)
 	return ic
 }
 
-// SetNillableIdentityToEnvironmentID sets the "IdentityToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (ic *IdentityCreate) SetNillableIdentityToEnvironmentID(id *uuid.UUID) *IdentityCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (ic *IdentityCreate) SetNillableEnvironmentID(id *uuid.UUID) *IdentityCreate {
 	if id != nil {
-		ic = ic.SetIdentityToEnvironmentID(*id)
+		ic = ic.SetEnvironmentID(*id)
 	}
 	return ic
 }
 
-// SetIdentityToEnvironment sets the "IdentityToEnvironment" edge to the Environment entity.
-func (ic *IdentityCreate) SetIdentityToEnvironment(e *Environment) *IdentityCreate {
-	return ic.SetIdentityToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (ic *IdentityCreate) SetEnvironment(e *Environment) *IdentityCreate {
+	return ic.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the IdentityMutation object of the builder.
@@ -328,12 +328,12 @@ func (ic *IdentityCreate) createSpec() (*Identity, *sqlgraph.CreateSpec) {
 		})
 		_node.Tags = value
 	}
-	if nodes := ic.mutation.IdentityToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := ic.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   identity.IdentityToEnvironmentTable,
-			Columns: []string{identity.IdentityToEnvironmentColumn},
+			Table:   identity.EnvironmentTable,
+			Columns: []string{identity.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -345,7 +345,7 @@ func (ic *IdentityCreate) createSpec() (*Identity, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.environment_environment_to_identity = &nodes[0]
+		_node.environment_identities = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

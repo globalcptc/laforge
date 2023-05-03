@@ -29,41 +29,41 @@ type Repository struct {
 	Edges RepositoryEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// RepositoryToEnvironment holds the value of the RepositoryToEnvironment edge.
-	HCLRepositoryToEnvironment []*Environment `json:"RepositoryToEnvironment,omitempty"`
-	// RepositoryToRepoCommit holds the value of the RepositoryToRepoCommit edge.
-	HCLRepositoryToRepoCommit []*RepoCommit `json:"RepositoryToRepoCommit,omitempty"`
+	// Environments holds the value of the Environments edge.
+	HCLEnvironments []*Environment `json:"Environments,omitempty"`
+	// RepoCommits holds the value of the RepoCommits edge.
+	HCLRepoCommits []*RepoCommit `json:"RepoCommits,omitempty"`
 	//
 
 }
 
 // RepositoryEdges holds the relations/edges for other nodes in the graph.
 type RepositoryEdges struct {
-	// RepositoryToEnvironment holds the value of the RepositoryToEnvironment edge.
-	RepositoryToEnvironment []*Environment `json:"RepositoryToEnvironment,omitempty"`
-	// RepositoryToRepoCommit holds the value of the RepositoryToRepoCommit edge.
-	RepositoryToRepoCommit []*RepoCommit `json:"RepositoryToRepoCommit,omitempty"`
+	// Environments holds the value of the Environments edge.
+	Environments []*Environment `json:"Environments,omitempty"`
+	// RepoCommits holds the value of the RepoCommits edge.
+	RepoCommits []*RepoCommit `json:"RepoCommits,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
 }
 
-// RepositoryToEnvironmentOrErr returns the RepositoryToEnvironment value or an error if the edge
+// EnvironmentsOrErr returns the Environments value or an error if the edge
 // was not loaded in eager-loading.
-func (e RepositoryEdges) RepositoryToEnvironmentOrErr() ([]*Environment, error) {
+func (e RepositoryEdges) EnvironmentsOrErr() ([]*Environment, error) {
 	if e.loadedTypes[0] {
-		return e.RepositoryToEnvironment, nil
+		return e.Environments, nil
 	}
-	return nil, &NotLoadedError{edge: "RepositoryToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environments"}
 }
 
-// RepositoryToRepoCommitOrErr returns the RepositoryToRepoCommit value or an error if the edge
+// RepoCommitsOrErr returns the RepoCommits value or an error if the edge
 // was not loaded in eager-loading.
-func (e RepositoryEdges) RepositoryToRepoCommitOrErr() ([]*RepoCommit, error) {
+func (e RepositoryEdges) RepoCommitsOrErr() ([]*RepoCommit, error) {
 	if e.loadedTypes[1] {
-		return e.RepositoryToRepoCommit, nil
+		return e.RepoCommits, nil
 	}
-	return nil, &NotLoadedError{edge: "RepositoryToRepoCommit"}
+	return nil, &NotLoadedError{edge: "RepoCommits"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -125,14 +125,14 @@ func (r *Repository) assignValues(columns []string, values []interface{}) error 
 	return nil
 }
 
-// QueryRepositoryToEnvironment queries the "RepositoryToEnvironment" edge of the Repository entity.
-func (r *Repository) QueryRepositoryToEnvironment() *EnvironmentQuery {
-	return (&RepositoryClient{config: r.config}).QueryRepositoryToEnvironment(r)
+// QueryEnvironments queries the "Environments" edge of the Repository entity.
+func (r *Repository) QueryEnvironments() *EnvironmentQuery {
+	return (&RepositoryClient{config: r.config}).QueryEnvironments(r)
 }
 
-// QueryRepositoryToRepoCommit queries the "RepositoryToRepoCommit" edge of the Repository entity.
-func (r *Repository) QueryRepositoryToRepoCommit() *RepoCommitQuery {
-	return (&RepositoryClient{config: r.config}).QueryRepositoryToRepoCommit(r)
+// QueryRepoCommits queries the "RepoCommits" edge of the Repository entity.
+func (r *Repository) QueryRepoCommits() *RepoCommitQuery {
+	return (&RepositoryClient{config: r.config}).QueryRepoCommits(r)
 }
 
 // Update returns a builder for updating this Repository.

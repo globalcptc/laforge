@@ -70,8 +70,8 @@ export class HomeComponent implements OnInit, OnDestroy {
         return console.error(errors);
       }
       const buildCommitMap = { ...this.buildCommits.getValue() };
-      if (buildCommitMap[updatedCommit.BuildCommitToBuild.buildToEnvironment.id]) {
-        const envBuildCommits = [...buildCommitMap[updatedCommit.BuildCommitToBuild.buildToEnvironment.id]];
+      if (buildCommitMap[updatedCommit.Build.Environment.id]) {
+        const envBuildCommits = [...buildCommitMap[updatedCommit.Build.Environment.id]];
         const index = envBuildCommits.findIndex((bc) => bc.id === updatedCommit.id);
         if (index === -1) {
           envBuildCommits.push(updatedCommit);
@@ -79,13 +79,13 @@ export class HomeComponent implements OnInit, OnDestroy {
             duration: 1000,
             panelClass: ['bg-success', 'text-white']
           });
-          const buildsElement = document.getElementById(`builds-${updatedCommit.BuildCommitToBuild.buildToEnvironment.id}`);
+          const buildsElement = document.getElementById(`builds-${updatedCommit.Build.Environment.id}`);
           if (buildsElement.style.maxHeight !== '0px') buildsElement.style.maxHeight = '0px';
           else buildsElement.style.maxHeight = buildsElement.scrollHeight + 'px';
         } else envBuildCommits.splice(index, 1, updatedCommit);
-        buildCommitMap[updatedCommit.BuildCommitToBuild.buildToEnvironment.id] = envBuildCommits;
+        buildCommitMap[updatedCommit.Build.Environment.id] = envBuildCommits;
       } else {
-        buildCommitMap[updatedCommit.BuildCommitToBuild.buildToEnvironment.id] = [updatedCommit];
+        buildCommitMap[updatedCommit.Build.Environment.id] = [updatedCommit];
       }
       this.buildCommits.next(buildCommitMap);
     });
@@ -97,7 +97,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   getLatestRepoCommit(environment: LaForgeListEnvironmentsQuery['environments'][0]) {
-    return [...environment.EnvironmentToRepository[0].RepositoryToRepoCommit].sort((a, b) => b.revision - a.revision)[0] || undefined;
+    return [...environment.Repositories[0].RepoCommits].sort((a, b) => b.revision - a.revision)[0] || undefined;
   }
 
   getLatestCommitHash(environment: LaForgeListEnvironmentsQuery['environments'][0]): string {
@@ -107,7 +107,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   getLatestCommitLink(environment: LaForgeListEnvironmentsQuery['environments'][0]): string {
     const commitHash = this.getLatestRepoCommit(environment)?.hash ?? null;
     if (!commitHash) return '#';
-    const repoUrl = environment.EnvironmentToRepository[0].repo_url;
+    const repoUrl = environment.Repositories[0].repoUrl;
     const provider = repoUrl.split(':')[0].split('@')[1];
     const repoPath = repoUrl.split(':')[1].replace('.git', '');
     switch (provider) {
@@ -145,8 +145,8 @@ export class HomeComponent implements OnInit, OnDestroy {
       (buildCommits) => {
         const bc = this.buildCommits.value;
         bc[environment.id] = [...buildCommits].sort((a, b) => {
-          const start1 = a.BuildCommitToServerTask ? a.BuildCommitToServerTask[0]?.start_time ?? 0 : 0;
-          const start2 = b.BuildCommitToServerTask ? b.BuildCommitToServerTask[0]?.start_time ?? 0 : 0;
+          const start1 = a.ServerTasks ? a.ServerTasks[0]?.startTime ?? 0 : 0;
+          const start2 = b.ServerTasks ? b.ServerTasks[0]?.startTime ?? 0 : 0;
           return new Date(start2).getTime() - new Date(start1).getTime();
         });
         this.buildCommits.next(bc);
@@ -164,9 +164,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (!buildCommits) return [];
     const buildToBuildCommits: { [key: number]: LaForgeListBuildCommitsQuery['getBuildCommits'] } = {};
     for (const buildCommit of buildCommits) {
-      if (!buildToBuildCommits[buildCommit.BuildCommitToBuild.revision])
-        buildToBuildCommits[buildCommit.BuildCommitToBuild.revision] = [buildCommit];
-      else buildToBuildCommits[buildCommit.BuildCommitToBuild.revision].push(buildCommit);
+      if (!buildToBuildCommits[buildCommit.Build.revision]) buildToBuildCommits[buildCommit.Build.revision] = [buildCommit];
+      else buildToBuildCommits[buildCommit.Build.revision].push(buildCommit);
     }
     const groupedBuildCommits: LaForgeListBuildCommitsQuery['getBuildCommits'][] = [];
     for (const revision of Object.keys(buildToBuildCommits)
@@ -202,12 +201,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   getBuildCommitHash(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): string {
-    return buildCommit.BuildCommitToBuild.BuildToRepoCommit.hash.substring(0, 7);
+    return buildCommit.Build.RepoCommit.hash.substring(0, 7);
   }
 
   getBuildCommitLink(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): string {
-    const commitHash = buildCommit.BuildCommitToBuild.BuildToRepoCommit.hash;
-    const repoUrl = buildCommit.BuildCommitToBuild.BuildToRepoCommit.RepoCommitToRepository.repo_url;
+    const commitHash = buildCommit.Build.RepoCommit.hash;
+    const repoUrl = buildCommit.Build.RepoCommit.Repository.repoUrl;
     const provider = repoUrl.split(':')[0].split('@')[1];
     const repoPath = repoUrl.split(':')[1].replace('.git', '');
     switch (provider) {
@@ -219,7 +218,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   getBuildCommitCommitter(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): string {
-    return buildCommit.BuildCommitToBuild.BuildToRepoCommit.author.replace(/ <.*>/g, '');
+    return buildCommit.Build.RepoCommit.author.replace(/ <.*>/g, '');
   }
 
   getBuildCommitStateColor(state: string): string {
@@ -273,8 +272,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  buildIsManagable(build: LaForgeListBuildCommitsQuery['getBuildCommits'][0]['BuildCommitToBuild']): boolean {
-    if (build.buildToStatus.state === LaForgeProvisionStatus.Planning) return false;
+  buildIsManagable(build: LaForgeListBuildCommitsQuery['getBuildCommits'][0]['Build']): boolean {
+    if (build.Status.state === LaForgeProvisionStatus.Planning) return false;
     return true;
   }
 
@@ -289,7 +288,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   toggleDeleteBuildModal(
-    build: LaForgeListBuildCommitsQuery['getBuildCommits'][0]['BuildCommitToBuild'],
+    build: LaForgeListBuildCommitsQuery['getBuildCommits'][0]['Build'],
     env: LaForgeListEnvironmentsQuery['environments'][0]
   ): void {
     this.dialog.open(DeleteBuildModalComponent, {
@@ -413,11 +412,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   canViewBuildCommitLogs(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): boolean {
-    return buildCommit.BuildCommitToServerTask.length > 0;
+    return buildCommit.ServerTasks.length > 0;
   }
 
   viewEnvironmentLogs(environment: LaForgeListEnvironmentsQuery['environments'][0]): void {
-    const taskUUIDs = environment.EnvironmentToServerTask.map((s) => s.id);
+    const taskUUIDs = environment.ServerTasks.map((s) => s.id);
     this.dialog.open(ViewLogsModalComponent, {
       width: '75%',
       height: '95%',
@@ -428,7 +427,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   viewBuildCommitLogs(buildCommit: LaForgeListBuildCommitsQuery['getBuildCommits'][0]): void {
-    const taskUUIDs = buildCommit.BuildCommitToServerTask.map((s) => s.id);
+    const taskUUIDs = buildCommit.ServerTasks.map((s) => s.id);
     this.dialog.open(ViewLogsModalComponent, {
       width: '75%',
       height: '95%',

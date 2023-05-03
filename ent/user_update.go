@@ -54,34 +54,34 @@ func (uu *UserUpdate) SetHclID(s string) *UserUpdate {
 	return uu
 }
 
-// AddUserToTagIDs adds the "UserToTag" edge to the Tag entity by IDs.
-func (uu *UserUpdate) AddUserToTagIDs(ids ...uuid.UUID) *UserUpdate {
-	uu.mutation.AddUserToTagIDs(ids...)
+// AddTagIDs adds the "Tag" edge to the Tag entity by IDs.
+func (uu *UserUpdate) AddTagIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.AddTagIDs(ids...)
 	return uu
 }
 
-// AddUserToTag adds the "UserToTag" edges to the Tag entity.
-func (uu *UserUpdate) AddUserToTag(t ...*Tag) *UserUpdate {
+// AddTag adds the "Tag" edges to the Tag entity.
+func (uu *UserUpdate) AddTag(t ...*Tag) *UserUpdate {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return uu.AddUserToTagIDs(ids...)
+	return uu.AddTagIDs(ids...)
 }
 
-// AddUserToEnvironmentIDs adds the "UserToEnvironment" edge to the Environment entity by IDs.
-func (uu *UserUpdate) AddUserToEnvironmentIDs(ids ...uuid.UUID) *UserUpdate {
-	uu.mutation.AddUserToEnvironmentIDs(ids...)
+// AddEnvironmentIDs adds the "Environments" edge to the Environment entity by IDs.
+func (uu *UserUpdate) AddEnvironmentIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.AddEnvironmentIDs(ids...)
 	return uu
 }
 
-// AddUserToEnvironment adds the "UserToEnvironment" edges to the Environment entity.
-func (uu *UserUpdate) AddUserToEnvironment(e ...*Environment) *UserUpdate {
+// AddEnvironments adds the "Environments" edges to the Environment entity.
+func (uu *UserUpdate) AddEnvironments(e ...*Environment) *UserUpdate {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return uu.AddUserToEnvironmentIDs(ids...)
+	return uu.AddEnvironmentIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -89,46 +89,46 @@ func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
 }
 
-// ClearUserToTag clears all "UserToTag" edges to the Tag entity.
-func (uu *UserUpdate) ClearUserToTag() *UserUpdate {
-	uu.mutation.ClearUserToTag()
+// ClearTag clears all "Tag" edges to the Tag entity.
+func (uu *UserUpdate) ClearTag() *UserUpdate {
+	uu.mutation.ClearTag()
 	return uu
 }
 
-// RemoveUserToTagIDs removes the "UserToTag" edge to Tag entities by IDs.
-func (uu *UserUpdate) RemoveUserToTagIDs(ids ...uuid.UUID) *UserUpdate {
-	uu.mutation.RemoveUserToTagIDs(ids...)
+// RemoveTagIDs removes the "Tag" edge to Tag entities by IDs.
+func (uu *UserUpdate) RemoveTagIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.RemoveTagIDs(ids...)
 	return uu
 }
 
-// RemoveUserToTag removes "UserToTag" edges to Tag entities.
-func (uu *UserUpdate) RemoveUserToTag(t ...*Tag) *UserUpdate {
+// RemoveTag removes "Tag" edges to Tag entities.
+func (uu *UserUpdate) RemoveTag(t ...*Tag) *UserUpdate {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return uu.RemoveUserToTagIDs(ids...)
+	return uu.RemoveTagIDs(ids...)
 }
 
-// ClearUserToEnvironment clears all "UserToEnvironment" edges to the Environment entity.
-func (uu *UserUpdate) ClearUserToEnvironment() *UserUpdate {
-	uu.mutation.ClearUserToEnvironment()
+// ClearEnvironments clears all "Environments" edges to the Environment entity.
+func (uu *UserUpdate) ClearEnvironments() *UserUpdate {
+	uu.mutation.ClearEnvironments()
 	return uu
 }
 
-// RemoveUserToEnvironmentIDs removes the "UserToEnvironment" edge to Environment entities by IDs.
-func (uu *UserUpdate) RemoveUserToEnvironmentIDs(ids ...uuid.UUID) *UserUpdate {
-	uu.mutation.RemoveUserToEnvironmentIDs(ids...)
+// RemoveEnvironmentIDs removes the "Environments" edge to Environment entities by IDs.
+func (uu *UserUpdate) RemoveEnvironmentIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.RemoveEnvironmentIDs(ids...)
 	return uu
 }
 
-// RemoveUserToEnvironment removes "UserToEnvironment" edges to Environment entities.
-func (uu *UserUpdate) RemoveUserToEnvironment(e ...*Environment) *UserUpdate {
+// RemoveEnvironments removes "Environments" edges to Environment entities.
+func (uu *UserUpdate) RemoveEnvironments(e ...*Environment) *UserUpdate {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return uu.RemoveUserToEnvironmentIDs(ids...)
+	return uu.RemoveEnvironmentIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -231,12 +231,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: user.FieldHclID,
 		})
 	}
-	if uu.mutation.UserToTagCleared() {
+	if uu.mutation.TagCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.UserToTagTable,
-			Columns: []string{user.UserToTagColumn},
+			Table:   user.TagTable,
+			Columns: []string{user.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -247,12 +247,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.RemovedUserToTagIDs(); len(nodes) > 0 && !uu.mutation.UserToTagCleared() {
+	if nodes := uu.mutation.RemovedTagIDs(); len(nodes) > 0 && !uu.mutation.TagCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.UserToTagTable,
-			Columns: []string{user.UserToTagColumn},
+			Table:   user.TagTable,
+			Columns: []string{user.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -266,12 +266,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.UserToTagIDs(); len(nodes) > 0 {
+	if nodes := uu.mutation.TagIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.UserToTagTable,
-			Columns: []string{user.UserToTagColumn},
+			Table:   user.TagTable,
+			Columns: []string{user.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -285,12 +285,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uu.mutation.UserToEnvironmentCleared() {
+	if uu.mutation.EnvironmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.UserToEnvironmentTable,
-			Columns: user.UserToEnvironmentPrimaryKey,
+			Table:   user.EnvironmentsTable,
+			Columns: user.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -301,12 +301,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.RemovedUserToEnvironmentIDs(); len(nodes) > 0 && !uu.mutation.UserToEnvironmentCleared() {
+	if nodes := uu.mutation.RemovedEnvironmentsIDs(); len(nodes) > 0 && !uu.mutation.EnvironmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.UserToEnvironmentTable,
-			Columns: user.UserToEnvironmentPrimaryKey,
+			Table:   user.EnvironmentsTable,
+			Columns: user.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -320,12 +320,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.UserToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := uu.mutation.EnvironmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.UserToEnvironmentTable,
-			Columns: user.UserToEnvironmentPrimaryKey,
+			Table:   user.EnvironmentsTable,
+			Columns: user.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -382,34 +382,34 @@ func (uuo *UserUpdateOne) SetHclID(s string) *UserUpdateOne {
 	return uuo
 }
 
-// AddUserToTagIDs adds the "UserToTag" edge to the Tag entity by IDs.
-func (uuo *UserUpdateOne) AddUserToTagIDs(ids ...uuid.UUID) *UserUpdateOne {
-	uuo.mutation.AddUserToTagIDs(ids...)
+// AddTagIDs adds the "Tag" edge to the Tag entity by IDs.
+func (uuo *UserUpdateOne) AddTagIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.AddTagIDs(ids...)
 	return uuo
 }
 
-// AddUserToTag adds the "UserToTag" edges to the Tag entity.
-func (uuo *UserUpdateOne) AddUserToTag(t ...*Tag) *UserUpdateOne {
+// AddTag adds the "Tag" edges to the Tag entity.
+func (uuo *UserUpdateOne) AddTag(t ...*Tag) *UserUpdateOne {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return uuo.AddUserToTagIDs(ids...)
+	return uuo.AddTagIDs(ids...)
 }
 
-// AddUserToEnvironmentIDs adds the "UserToEnvironment" edge to the Environment entity by IDs.
-func (uuo *UserUpdateOne) AddUserToEnvironmentIDs(ids ...uuid.UUID) *UserUpdateOne {
-	uuo.mutation.AddUserToEnvironmentIDs(ids...)
+// AddEnvironmentIDs adds the "Environments" edge to the Environment entity by IDs.
+func (uuo *UserUpdateOne) AddEnvironmentIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.AddEnvironmentIDs(ids...)
 	return uuo
 }
 
-// AddUserToEnvironment adds the "UserToEnvironment" edges to the Environment entity.
-func (uuo *UserUpdateOne) AddUserToEnvironment(e ...*Environment) *UserUpdateOne {
+// AddEnvironments adds the "Environments" edges to the Environment entity.
+func (uuo *UserUpdateOne) AddEnvironments(e ...*Environment) *UserUpdateOne {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return uuo.AddUserToEnvironmentIDs(ids...)
+	return uuo.AddEnvironmentIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -417,46 +417,46 @@ func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
 }
 
-// ClearUserToTag clears all "UserToTag" edges to the Tag entity.
-func (uuo *UserUpdateOne) ClearUserToTag() *UserUpdateOne {
-	uuo.mutation.ClearUserToTag()
+// ClearTag clears all "Tag" edges to the Tag entity.
+func (uuo *UserUpdateOne) ClearTag() *UserUpdateOne {
+	uuo.mutation.ClearTag()
 	return uuo
 }
 
-// RemoveUserToTagIDs removes the "UserToTag" edge to Tag entities by IDs.
-func (uuo *UserUpdateOne) RemoveUserToTagIDs(ids ...uuid.UUID) *UserUpdateOne {
-	uuo.mutation.RemoveUserToTagIDs(ids...)
+// RemoveTagIDs removes the "Tag" edge to Tag entities by IDs.
+func (uuo *UserUpdateOne) RemoveTagIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.RemoveTagIDs(ids...)
 	return uuo
 }
 
-// RemoveUserToTag removes "UserToTag" edges to Tag entities.
-func (uuo *UserUpdateOne) RemoveUserToTag(t ...*Tag) *UserUpdateOne {
+// RemoveTag removes "Tag" edges to Tag entities.
+func (uuo *UserUpdateOne) RemoveTag(t ...*Tag) *UserUpdateOne {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return uuo.RemoveUserToTagIDs(ids...)
+	return uuo.RemoveTagIDs(ids...)
 }
 
-// ClearUserToEnvironment clears all "UserToEnvironment" edges to the Environment entity.
-func (uuo *UserUpdateOne) ClearUserToEnvironment() *UserUpdateOne {
-	uuo.mutation.ClearUserToEnvironment()
+// ClearEnvironments clears all "Environments" edges to the Environment entity.
+func (uuo *UserUpdateOne) ClearEnvironments() *UserUpdateOne {
+	uuo.mutation.ClearEnvironments()
 	return uuo
 }
 
-// RemoveUserToEnvironmentIDs removes the "UserToEnvironment" edge to Environment entities by IDs.
-func (uuo *UserUpdateOne) RemoveUserToEnvironmentIDs(ids ...uuid.UUID) *UserUpdateOne {
-	uuo.mutation.RemoveUserToEnvironmentIDs(ids...)
+// RemoveEnvironmentIDs removes the "Environments" edge to Environment entities by IDs.
+func (uuo *UserUpdateOne) RemoveEnvironmentIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.RemoveEnvironmentIDs(ids...)
 	return uuo
 }
 
-// RemoveUserToEnvironment removes "UserToEnvironment" edges to Environment entities.
-func (uuo *UserUpdateOne) RemoveUserToEnvironment(e ...*Environment) *UserUpdateOne {
+// RemoveEnvironments removes "Environments" edges to Environment entities.
+func (uuo *UserUpdateOne) RemoveEnvironments(e ...*Environment) *UserUpdateOne {
 	ids := make([]uuid.UUID, len(e))
 	for i := range e {
 		ids[i] = e[i].ID
 	}
-	return uuo.RemoveUserToEnvironmentIDs(ids...)
+	return uuo.RemoveEnvironmentIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -589,12 +589,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Column: user.FieldHclID,
 		})
 	}
-	if uuo.mutation.UserToTagCleared() {
+	if uuo.mutation.TagCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.UserToTagTable,
-			Columns: []string{user.UserToTagColumn},
+			Table:   user.TagTable,
+			Columns: []string{user.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -605,12 +605,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.RemovedUserToTagIDs(); len(nodes) > 0 && !uuo.mutation.UserToTagCleared() {
+	if nodes := uuo.mutation.RemovedTagIDs(); len(nodes) > 0 && !uuo.mutation.TagCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.UserToTagTable,
-			Columns: []string{user.UserToTagColumn},
+			Table:   user.TagTable,
+			Columns: []string{user.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -624,12 +624,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.UserToTagIDs(); len(nodes) > 0 {
+	if nodes := uuo.mutation.TagIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.UserToTagTable,
-			Columns: []string{user.UserToTagColumn},
+			Table:   user.TagTable,
+			Columns: []string{user.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -643,12 +643,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uuo.mutation.UserToEnvironmentCleared() {
+	if uuo.mutation.EnvironmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.UserToEnvironmentTable,
-			Columns: user.UserToEnvironmentPrimaryKey,
+			Table:   user.EnvironmentsTable,
+			Columns: user.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -659,12 +659,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.RemovedUserToEnvironmentIDs(); len(nodes) > 0 && !uuo.mutation.UserToEnvironmentCleared() {
+	if nodes := uuo.mutation.RemovedEnvironmentsIDs(); len(nodes) > 0 && !uuo.mutation.EnvironmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.UserToEnvironmentTable,
-			Columns: user.UserToEnvironmentPrimaryKey,
+			Table:   user.EnvironmentsTable,
+			Columns: user.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -678,12 +678,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.UserToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := uuo.mutation.EnvironmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.UserToEnvironmentTable,
-			Columns: user.UserToEnvironmentPrimaryKey,
+			Table:   user.EnvironmentsTable,
+			Columns: user.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

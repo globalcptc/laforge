@@ -1743,81 +1743,25 @@ func ProcessNameContainsFold(v string) predicate.Validation {
 	})
 }
 
-// HasValidationToAgentTask applies the HasEdge predicate on the "ValidationToAgentTask" edge.
-func HasValidationToAgentTask() predicate.Validation {
+// HasEnvironment applies the HasEdge predicate on the "Environment" edge.
+func HasEnvironment() predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ValidationToAgentTaskTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, ValidationToAgentTaskTable, ValidationToAgentTaskColumn),
+			sqlgraph.To(EnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasValidationToAgentTaskWith applies the HasEdge predicate on the "ValidationToAgentTask" edge with a given conditions (other predicates).
-func HasValidationToAgentTaskWith(preds ...predicate.AgentTask) predicate.Validation {
+// HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
+func HasEnvironmentWith(preds ...predicate.Environment) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ValidationToAgentTaskInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, ValidationToAgentTaskTable, ValidationToAgentTaskColumn),
-		)
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasValidationToScript applies the HasEdge predicate on the "ValidationToScript" edge.
-func HasValidationToScript() predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ValidationToScriptTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, ValidationToScriptTable, ValidationToScriptColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasValidationToScriptWith applies the HasEdge predicate on the "ValidationToScript" edge with a given conditions (other predicates).
-func HasValidationToScriptWith(preds ...predicate.Script) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ValidationToScriptInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, ValidationToScriptTable, ValidationToScriptColumn),
-		)
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasValidationToEnvironment applies the HasEdge predicate on the "ValidationToEnvironment" edge.
-func HasValidationToEnvironment() predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ValidationToEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, ValidationToEnvironmentTable, ValidationToEnvironmentPrimaryKey...),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasValidationToEnvironmentWith applies the HasEdge predicate on the "ValidationToEnvironment" edge with a given conditions (other predicates).
-func HasValidationToEnvironmentWith(preds ...predicate.Environment) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ValidationToEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, ValidationToEnvironmentTable, ValidationToEnvironmentPrimaryKey...),
+			sqlgraph.To(EnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

@@ -13,12 +13,15 @@ scheduled "/scheduled/windows/reboot" {
 	name = "Periodic Reboot"
 	description = "Reboot windows every 3 hours"
 
-	step = "/commands/windows/ping"
+	step = "/commands/generic/reboot"
 
-	start_time = 1677216701
-	end_time = 1677217701
-	interval = 3 * 60 * 60 // every 5 minutes
-	repeated = true
+	type = "cron" // cron, unix
+
+	// Cron schedule
+	schedule = "0 */3 * * *" // Every 3 hours
+
+	// Unix time to run at
+	// run_time = 1677296367
 }`)
 
 type DefinedConfigs struct {

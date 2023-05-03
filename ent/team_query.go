@@ -23,17 +23,17 @@ import (
 // TeamQuery is the builder for querying Team entities.
 type TeamQuery struct {
 	config
-	limit                        *int
-	offset                       *int
-	unique                       *bool
-	order                        []OrderFunc
-	fields                       []string
-	predicates                   []predicate.Team
-	withTeamToBuild              *BuildQuery
-	withTeamToStatus             *StatusQuery
-	withTeamToProvisionedNetwork *ProvisionedNetworkQuery
-	withTeamToPlan               *PlanQuery
-	withFKs                      bool
+	limit                   *int
+	offset                  *int
+	unique                  *bool
+	order                   []OrderFunc
+	fields                  []string
+	predicates              []predicate.Team
+	withBuild               *BuildQuery
+	withStatus              *StatusQuery
+	withProvisionedNetworks *ProvisionedNetworkQuery
+	withPlan                *PlanQuery
+	withFKs                 bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -70,8 +70,8 @@ func (tq *TeamQuery) Order(o ...OrderFunc) *TeamQuery {
 	return tq
 }
 
-// QueryTeamToBuild chains the current query on the "TeamToBuild" edge.
-func (tq *TeamQuery) QueryTeamToBuild() *BuildQuery {
+// QueryBuild chains the current query on the "Build" edge.
+func (tq *TeamQuery) QueryBuild() *BuildQuery {
 	query := &BuildQuery{config: tq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := tq.prepareQuery(ctx); err != nil {
@@ -84,7 +84,7 @@ func (tq *TeamQuery) QueryTeamToBuild() *BuildQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(team.Table, team.FieldID, selector),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, team.TeamToBuildTable, team.TeamToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, team.BuildTable, team.BuildColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -92,8 +92,8 @@ func (tq *TeamQuery) QueryTeamToBuild() *BuildQuery {
 	return query
 }
 
-// QueryTeamToStatus chains the current query on the "TeamToStatus" edge.
-func (tq *TeamQuery) QueryTeamToStatus() *StatusQuery {
+// QueryStatus chains the current query on the "Status" edge.
+func (tq *TeamQuery) QueryStatus() *StatusQuery {
 	query := &StatusQuery{config: tq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := tq.prepareQuery(ctx); err != nil {
@@ -106,7 +106,7 @@ func (tq *TeamQuery) QueryTeamToStatus() *StatusQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(team.Table, team.FieldID, selector),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, team.TeamToStatusTable, team.TeamToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, team.StatusTable, team.StatusColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -114,8 +114,8 @@ func (tq *TeamQuery) QueryTeamToStatus() *StatusQuery {
 	return query
 }
 
-// QueryTeamToProvisionedNetwork chains the current query on the "TeamToProvisionedNetwork" edge.
-func (tq *TeamQuery) QueryTeamToProvisionedNetwork() *ProvisionedNetworkQuery {
+// QueryProvisionedNetworks chains the current query on the "ProvisionedNetworks" edge.
+func (tq *TeamQuery) QueryProvisionedNetworks() *ProvisionedNetworkQuery {
 	query := &ProvisionedNetworkQuery{config: tq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := tq.prepareQuery(ctx); err != nil {
@@ -128,7 +128,7 @@ func (tq *TeamQuery) QueryTeamToProvisionedNetwork() *ProvisionedNetworkQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(team.Table, team.FieldID, selector),
 			sqlgraph.To(provisionednetwork.Table, provisionednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, team.TeamToProvisionedNetworkTable, team.TeamToProvisionedNetworkColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, team.ProvisionedNetworksTable, team.ProvisionedNetworksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -136,8 +136,8 @@ func (tq *TeamQuery) QueryTeamToProvisionedNetwork() *ProvisionedNetworkQuery {
 	return query
 }
 
-// QueryTeamToPlan chains the current query on the "TeamToPlan" edge.
-func (tq *TeamQuery) QueryTeamToPlan() *PlanQuery {
+// QueryPlan chains the current query on the "Plan" edge.
+func (tq *TeamQuery) QueryPlan() *PlanQuery {
 	query := &PlanQuery{config: tq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := tq.prepareQuery(ctx); err != nil {
@@ -150,7 +150,7 @@ func (tq *TeamQuery) QueryTeamToPlan() *PlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(team.Table, team.FieldID, selector),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, team.TeamToPlanTable, team.TeamToPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, team.PlanTable, team.PlanColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -334,15 +334,15 @@ func (tq *TeamQuery) Clone() *TeamQuery {
 		return nil
 	}
 	return &TeamQuery{
-		config:                       tq.config,
-		limit:                        tq.limit,
-		offset:                       tq.offset,
-		order:                        append([]OrderFunc{}, tq.order...),
-		predicates:                   append([]predicate.Team{}, tq.predicates...),
-		withTeamToBuild:              tq.withTeamToBuild.Clone(),
-		withTeamToStatus:             tq.withTeamToStatus.Clone(),
-		withTeamToProvisionedNetwork: tq.withTeamToProvisionedNetwork.Clone(),
-		withTeamToPlan:               tq.withTeamToPlan.Clone(),
+		config:                  tq.config,
+		limit:                   tq.limit,
+		offset:                  tq.offset,
+		order:                   append([]OrderFunc{}, tq.order...),
+		predicates:              append([]predicate.Team{}, tq.predicates...),
+		withBuild:               tq.withBuild.Clone(),
+		withStatus:              tq.withStatus.Clone(),
+		withProvisionedNetworks: tq.withProvisionedNetworks.Clone(),
+		withPlan:                tq.withPlan.Clone(),
 		// clone intermediate query.
 		sql:    tq.sql.Clone(),
 		path:   tq.path,
@@ -350,47 +350,47 @@ func (tq *TeamQuery) Clone() *TeamQuery {
 	}
 }
 
-// WithTeamToBuild tells the query-builder to eager-load the nodes that are connected to
-// the "TeamToBuild" edge. The optional arguments are used to configure the query builder of the edge.
-func (tq *TeamQuery) WithTeamToBuild(opts ...func(*BuildQuery)) *TeamQuery {
+// WithBuild tells the query-builder to eager-load the nodes that are connected to
+// the "Build" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TeamQuery) WithBuild(opts ...func(*BuildQuery)) *TeamQuery {
 	query := &BuildQuery{config: tq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	tq.withTeamToBuild = query
+	tq.withBuild = query
 	return tq
 }
 
-// WithTeamToStatus tells the query-builder to eager-load the nodes that are connected to
-// the "TeamToStatus" edge. The optional arguments are used to configure the query builder of the edge.
-func (tq *TeamQuery) WithTeamToStatus(opts ...func(*StatusQuery)) *TeamQuery {
+// WithStatus tells the query-builder to eager-load the nodes that are connected to
+// the "Status" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TeamQuery) WithStatus(opts ...func(*StatusQuery)) *TeamQuery {
 	query := &StatusQuery{config: tq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	tq.withTeamToStatus = query
+	tq.withStatus = query
 	return tq
 }
 
-// WithTeamToProvisionedNetwork tells the query-builder to eager-load the nodes that are connected to
-// the "TeamToProvisionedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
-func (tq *TeamQuery) WithTeamToProvisionedNetwork(opts ...func(*ProvisionedNetworkQuery)) *TeamQuery {
+// WithProvisionedNetworks tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedNetworks" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TeamQuery) WithProvisionedNetworks(opts ...func(*ProvisionedNetworkQuery)) *TeamQuery {
 	query := &ProvisionedNetworkQuery{config: tq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	tq.withTeamToProvisionedNetwork = query
+	tq.withProvisionedNetworks = query
 	return tq
 }
 
-// WithTeamToPlan tells the query-builder to eager-load the nodes that are connected to
-// the "TeamToPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (tq *TeamQuery) WithTeamToPlan(opts ...func(*PlanQuery)) *TeamQuery {
+// WithPlan tells the query-builder to eager-load the nodes that are connected to
+// the "Plan" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TeamQuery) WithPlan(opts ...func(*PlanQuery)) *TeamQuery {
 	query := &PlanQuery{config: tq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	tq.withTeamToPlan = query
+	tq.withPlan = query
 	return tq
 }
 
@@ -408,7 +408,6 @@ func (tq *TeamQuery) WithTeamToPlan(opts ...func(*PlanQuery)) *TeamQuery {
 //		GroupBy(team.FieldTeamNumber).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (tq *TeamQuery) GroupBy(field string, fields ...string) *TeamGroupBy {
 	grbuild := &TeamGroupBy{config: tq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -435,7 +434,6 @@ func (tq *TeamQuery) GroupBy(field string, fields ...string) *TeamGroupBy {
 //	client.Team.Query().
 //		Select(team.FieldTeamNumber).
 //		Scan(ctx, &v)
-//
 func (tq *TeamQuery) Select(fields ...string) *TeamSelect {
 	tq.fields = append(tq.fields, fields...)
 	selbuild := &TeamSelect{TeamQuery: tq}
@@ -466,13 +464,13 @@ func (tq *TeamQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Team, e
 		withFKs     = tq.withFKs
 		_spec       = tq.querySpec()
 		loadedTypes = [4]bool{
-			tq.withTeamToBuild != nil,
-			tq.withTeamToStatus != nil,
-			tq.withTeamToProvisionedNetwork != nil,
-			tq.withTeamToPlan != nil,
+			tq.withBuild != nil,
+			tq.withStatus != nil,
+			tq.withProvisionedNetworks != nil,
+			tq.withPlan != nil,
 		}
 	)
-	if tq.withTeamToBuild != nil || tq.withTeamToPlan != nil {
+	if tq.withBuild != nil || tq.withPlan != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -496,44 +494,44 @@ func (tq *TeamQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Team, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := tq.withTeamToBuild; query != nil {
-		if err := tq.loadTeamToBuild(ctx, query, nodes, nil,
-			func(n *Team, e *Build) { n.Edges.TeamToBuild = e }); err != nil {
+	if query := tq.withBuild; query != nil {
+		if err := tq.loadBuild(ctx, query, nodes, nil,
+			func(n *Team, e *Build) { n.Edges.Build = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := tq.withTeamToStatus; query != nil {
-		if err := tq.loadTeamToStatus(ctx, query, nodes, nil,
-			func(n *Team, e *Status) { n.Edges.TeamToStatus = e }); err != nil {
+	if query := tq.withStatus; query != nil {
+		if err := tq.loadStatus(ctx, query, nodes, nil,
+			func(n *Team, e *Status) { n.Edges.Status = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := tq.withTeamToProvisionedNetwork; query != nil {
-		if err := tq.loadTeamToProvisionedNetwork(ctx, query, nodes,
-			func(n *Team) { n.Edges.TeamToProvisionedNetwork = []*ProvisionedNetwork{} },
+	if query := tq.withProvisionedNetworks; query != nil {
+		if err := tq.loadProvisionedNetworks(ctx, query, nodes,
+			func(n *Team) { n.Edges.ProvisionedNetworks = []*ProvisionedNetwork{} },
 			func(n *Team, e *ProvisionedNetwork) {
-				n.Edges.TeamToProvisionedNetwork = append(n.Edges.TeamToProvisionedNetwork, e)
+				n.Edges.ProvisionedNetworks = append(n.Edges.ProvisionedNetworks, e)
 			}); err != nil {
 			return nil, err
 		}
 	}
-	if query := tq.withTeamToPlan; query != nil {
-		if err := tq.loadTeamToPlan(ctx, query, nodes, nil,
-			func(n *Team, e *Plan) { n.Edges.TeamToPlan = e }); err != nil {
+	if query := tq.withPlan; query != nil {
+		if err := tq.loadPlan(ctx, query, nodes, nil,
+			func(n *Team, e *Plan) { n.Edges.Plan = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (tq *TeamQuery) loadTeamToBuild(ctx context.Context, query *BuildQuery, nodes []*Team, init func(*Team), assign func(*Team, *Build)) error {
+func (tq *TeamQuery) loadBuild(ctx context.Context, query *BuildQuery, nodes []*Team, init func(*Team), assign func(*Team, *Build)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Team)
 	for i := range nodes {
-		if nodes[i].team_team_to_build == nil {
+		if nodes[i].team_build == nil {
 			continue
 		}
-		fk := *nodes[i].team_team_to_build
+		fk := *nodes[i].team_build
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -547,7 +545,7 @@ func (tq *TeamQuery) loadTeamToBuild(ctx context.Context, query *BuildQuery, nod
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "team_team_to_build" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "team_build" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -555,7 +553,7 @@ func (tq *TeamQuery) loadTeamToBuild(ctx context.Context, query *BuildQuery, nod
 	}
 	return nil
 }
-func (tq *TeamQuery) loadTeamToStatus(ctx context.Context, query *StatusQuery, nodes []*Team, init func(*Team), assign func(*Team, *Status)) error {
+func (tq *TeamQuery) loadStatus(ctx context.Context, query *StatusQuery, nodes []*Team, init func(*Team), assign func(*Team, *Status)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Team)
 	for i := range nodes {
@@ -564,26 +562,26 @@ func (tq *TeamQuery) loadTeamToStatus(ctx context.Context, query *StatusQuery, n
 	}
 	query.withFKs = true
 	query.Where(predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.InValues(team.TeamToStatusColumn, fks...))
+		s.Where(sql.InValues(team.StatusColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.team_team_to_status
+		fk := n.team_status
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "team_team_to_status" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "team_status" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "team_team_to_status" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "team_status" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (tq *TeamQuery) loadTeamToProvisionedNetwork(ctx context.Context, query *ProvisionedNetworkQuery, nodes []*Team, init func(*Team), assign func(*Team, *ProvisionedNetwork)) error {
+func (tq *TeamQuery) loadProvisionedNetworks(ctx context.Context, query *ProvisionedNetworkQuery, nodes []*Team, init func(*Team), assign func(*Team, *ProvisionedNetwork)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Team)
 	for i := range nodes {
@@ -595,33 +593,33 @@ func (tq *TeamQuery) loadTeamToProvisionedNetwork(ctx context.Context, query *Pr
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisionedNetwork(func(s *sql.Selector) {
-		s.Where(sql.InValues(team.TeamToProvisionedNetworkColumn, fks...))
+		s.Where(sql.InValues(team.ProvisionedNetworksColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provisioned_network_provisioned_network_to_team
+		fk := n.provisioned_network_team
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provisioned_network_provisioned_network_to_team" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provisioned_network_team" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_network_provisioned_network_to_team" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_network_team" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (tq *TeamQuery) loadTeamToPlan(ctx context.Context, query *PlanQuery, nodes []*Team, init func(*Team), assign func(*Team, *Plan)) error {
+func (tq *TeamQuery) loadPlan(ctx context.Context, query *PlanQuery, nodes []*Team, init func(*Team), assign func(*Team, *Plan)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Team)
 	for i := range nodes {
-		if nodes[i].plan_plan_to_team == nil {
+		if nodes[i].plan_team == nil {
 			continue
 		}
-		fk := *nodes[i].plan_plan_to_team
+		fk := *nodes[i].plan_team
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -635,7 +633,7 @@ func (tq *TeamQuery) loadTeamToPlan(ctx context.Context, query *PlanQuery, nodes
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_team" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_team" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

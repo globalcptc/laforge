@@ -13,7 +13,6 @@ import (
 	"github.com/gen0cide/laforge/ent/finding"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/ent/user"
-	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
 
@@ -128,72 +127,53 @@ func (sc *ScriptCreate) SetNillableID(u *uuid.UUID) *ScriptCreate {
 	return sc
 }
 
-// AddScriptToUserIDs adds the "ScriptToUser" edge to the User entity by IDs.
-func (sc *ScriptCreate) AddScriptToUserIDs(ids ...uuid.UUID) *ScriptCreate {
-	sc.mutation.AddScriptToUserIDs(ids...)
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (sc *ScriptCreate) AddUserIDs(ids ...uuid.UUID) *ScriptCreate {
+	sc.mutation.AddUserIDs(ids...)
 	return sc
 }
 
-// AddScriptToUser adds the "ScriptToUser" edges to the User entity.
-func (sc *ScriptCreate) AddScriptToUser(u ...*User) *ScriptCreate {
+// AddUsers adds the "Users" edges to the User entity.
+func (sc *ScriptCreate) AddUsers(u ...*User) *ScriptCreate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return sc.AddScriptToUserIDs(ids...)
+	return sc.AddUserIDs(ids...)
 }
 
-// AddScriptToFindingIDs adds the "ScriptToFinding" edge to the Finding entity by IDs.
-func (sc *ScriptCreate) AddScriptToFindingIDs(ids ...uuid.UUID) *ScriptCreate {
-	sc.mutation.AddScriptToFindingIDs(ids...)
+// AddFindingIDs adds the "Findings" edge to the Finding entity by IDs.
+func (sc *ScriptCreate) AddFindingIDs(ids ...uuid.UUID) *ScriptCreate {
+	sc.mutation.AddFindingIDs(ids...)
 	return sc
 }
 
-// AddScriptToFinding adds the "ScriptToFinding" edges to the Finding entity.
-func (sc *ScriptCreate) AddScriptToFinding(f ...*Finding) *ScriptCreate {
+// AddFindings adds the "Findings" edges to the Finding entity.
+func (sc *ScriptCreate) AddFindings(f ...*Finding) *ScriptCreate {
 	ids := make([]uuid.UUID, len(f))
 	for i := range f {
 		ids[i] = f[i].ID
 	}
-	return sc.AddScriptToFindingIDs(ids...)
+	return sc.AddFindingIDs(ids...)
 }
 
-// SetScriptToEnvironmentID sets the "ScriptToEnvironment" edge to the Environment entity by ID.
-func (sc *ScriptCreate) SetScriptToEnvironmentID(id uuid.UUID) *ScriptCreate {
-	sc.mutation.SetScriptToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (sc *ScriptCreate) SetEnvironmentID(id uuid.UUID) *ScriptCreate {
+	sc.mutation.SetEnvironmentID(id)
 	return sc
 }
 
-// SetNillableScriptToEnvironmentID sets the "ScriptToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (sc *ScriptCreate) SetNillableScriptToEnvironmentID(id *uuid.UUID) *ScriptCreate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (sc *ScriptCreate) SetNillableEnvironmentID(id *uuid.UUID) *ScriptCreate {
 	if id != nil {
-		sc = sc.SetScriptToEnvironmentID(*id)
+		sc = sc.SetEnvironmentID(*id)
 	}
 	return sc
 }
 
-// SetScriptToEnvironment sets the "ScriptToEnvironment" edge to the Environment entity.
-func (sc *ScriptCreate) SetScriptToEnvironment(e *Environment) *ScriptCreate {
-	return sc.SetScriptToEnvironmentID(e.ID)
-}
-
-// SetScriptToValidationID sets the "ScriptToValidation" edge to the Validation entity by ID.
-func (sc *ScriptCreate) SetScriptToValidationID(id uuid.UUID) *ScriptCreate {
-	sc.mutation.SetScriptToValidationID(id)
-	return sc
-}
-
-// SetNillableScriptToValidationID sets the "ScriptToValidation" edge to the Validation entity by ID if the given value is not nil.
-func (sc *ScriptCreate) SetNillableScriptToValidationID(id *uuid.UUID) *ScriptCreate {
-	if id != nil {
-		sc = sc.SetScriptToValidationID(*id)
-	}
-	return sc
-}
-
-// SetScriptToValidation sets the "ScriptToValidation" edge to the Validation entity.
-func (sc *ScriptCreate) SetScriptToValidation(v *Validation) *ScriptCreate {
-	return sc.SetScriptToValidationID(v.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (sc *ScriptCreate) SetEnvironment(e *Environment) *ScriptCreate {
+	return sc.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the ScriptMutation object of the builder.
@@ -482,12 +462,12 @@ func (sc *ScriptCreate) createSpec() (*Script, *sqlgraph.CreateSpec) {
 		})
 		_node.Validations = value
 	}
-	if nodes := sc.mutation.ScriptToUserIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   script.ScriptToUserTable,
-			Columns: []string{script.ScriptToUserColumn},
+			Table:   script.UsersTable,
+			Columns: []string{script.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -501,12 +481,12 @@ func (sc *ScriptCreate) createSpec() (*Script, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := sc.mutation.ScriptToFindingIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.FindingsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   script.ScriptToFindingTable,
-			Columns: []string{script.ScriptToFindingColumn},
+			Table:   script.FindingsTable,
+			Columns: []string{script.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -520,12 +500,12 @@ func (sc *ScriptCreate) createSpec() (*Script, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := sc.mutation.ScriptToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   script.ScriptToEnvironmentTable,
-			Columns: []string{script.ScriptToEnvironmentColumn},
+			Table:   script.EnvironmentTable,
+			Columns: []string{script.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -537,27 +517,7 @@ func (sc *ScriptCreate) createSpec() (*Script, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.environment_environment_to_script = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := sc.mutation.ScriptToValidationIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   script.ScriptToValidationTable,
-			Columns: []string{script.ScriptToValidationColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: validation.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.script_script_to_validation = &nodes[0]
+		_node.environment_scripts = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

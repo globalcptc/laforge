@@ -61,62 +61,62 @@ func main() {
 	//Build --
 	//Enviroment --
 
-	deletedCount, err := client.Host.Delete().Where(host.Not(host.HasHostToEnvironment())).Exec(ctx)
+	deletedCount, err := client.Host.Delete().Where(host.Not(host.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.Competition.Delete().Where(competition.Not(competition.HasCompetitionToEnvironment())).Exec(ctx)
+	deletedCount, err = client.Competition.Delete().Where(competition.Not(competition.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.Identity.Delete().Where(identity.Not(identity.HasIdentityToEnvironment())).Exec(ctx)
+	deletedCount, err = client.Identity.Delete().Where(identity.Not(identity.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.Command.Delete().Where(command.Not(command.HasCommandToEnvironment())).Exec(ctx)
+	deletedCount, err = client.Command.Delete().Where(command.Not(command.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.Script.Delete().Where(script.Not(script.HasScriptToEnvironment())).Exec(ctx)
+	deletedCount, err = client.Script.Delete().Where(script.Not(script.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.FileDownload.Delete().Where(filedownload.Not(filedownload.HasFileDownloadToEnvironment())).Exec(ctx)
+	deletedCount, err = client.FileDownload.Delete().Where(filedownload.Not(filedownload.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.IncludedNetwork.Delete().Where(includednetwork.Not(includednetwork.HasIncludedNetworkToEnvironment())).Exec(ctx)
+	deletedCount, err = client.IncludedNetwork.Delete().Where(includednetwork.Not(includednetwork.HasEnvironments())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.Finding.Delete().Where(finding.Not(finding.HasFindingToEnvironment())).Exec(ctx)
+	deletedCount, err = client.Finding.Delete().Where(finding.Not(finding.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.DNSRecord.Delete().Where(dnsrecord.Not(dnsrecord.HasDNSRecordToEnvironment())).Exec(ctx)
+	deletedCount, err = client.DNSRecord.Delete().Where(dnsrecord.Not(dnsrecord.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.DNS.Delete().Where(dns.Not(dns.HasDNSToEnvironment())).Exec(ctx)
+	deletedCount, err = client.DNS.Delete().Where(dns.Not(dns.HasEnvironments())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.Network.Delete().Where(network.Not(network.HasNetworkToEnvironment())).Exec(ctx)
+	deletedCount, err = client.Network.Delete().Where(network.Not(network.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
 	println(deletedCount)
-	deletedCount, err = client.HostDependency.Delete().Where(hostdependency.Not(hostdependency.HasHostDependencyToEnvironment())).Exec(ctx)
+	deletedCount, err = client.HostDependency.Delete().Where(hostdependency.Not(hostdependency.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}
@@ -126,15 +126,15 @@ func main() {
 	// if err != nil {
 	// 	log.Fatalf("failed to get env: %v", err)
 	// }
-	// entBuilds, err := entEnvironment.QueryEnvironmentToBuild().All(ctx)
+	// entBuilds, err := entEnvironment.QueryBuilds().All(ctx)
 	// if err != nil {
 	// 	log.Fatalf("failed to get builds: %v", err)
 	// }
 	// for _, entBuild := range entBuilds {
 	// 	amountDeleted, err := client.GinFileMiddleware.Delete().Where(
-	// 		ginfilemiddleware.HasGinFileMiddlewareToProvisionedHostWith(
-	// 			provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
-	// 				provisionednetwork.HasProvisionedNetworkToBuildWith(
+	// 		ginfilemiddleware.HasProvisionedHostWith(
+	// 			provisionedhost.HasProvisionedNetworkWith(
+	// 				provisionednetwork.HasBuildWith(
 	// 					build.IDEQ(entBuild.ID),
 	// 				),
 	// 			),
@@ -145,7 +145,7 @@ func main() {
 	// 	}
 	// 	logrus.Infof("Deleted %v amount of GinMiddleware for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.AgentStatus.Delete().Where(
-	// 		agentstatus.HasAgentStatusToBuildWith(
+	// 		agentstatus.HasAgentBuildWith(
 	// 			build.IDEQ(entBuild.ID),
 	// 		),
 	// 	).Exec(ctx)
@@ -155,8 +155,8 @@ func main() {
 	// 	logrus.Infof("Deleted %v amount of agentstatus for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.AgentTask.Delete().Where(
 	// 		agenttask.HasAgentTaskToProvisionedHostWith(
-	// 			provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
-	// 				provisionednetwork.HasProvisionedNetworkToBuildWith(
+	// 			provisionedhost.HasProvisionedNetworkWith(
+	// 				provisionednetwork.HasBuildWith(
 	// 					build.IDEQ(entBuild.ID),
 	// 				),
 	// 			),
@@ -167,9 +167,9 @@ func main() {
 	// 	}
 	// 	logrus.Infof("Deleted %v amount of agenttask for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.ProvisioningStep.Delete().Where(
-	// 		provisioningstep.HasProvisioningStepToProvisionedHostWith(
-	// 			provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
-	// 				provisionednetwork.HasProvisionedNetworkToBuildWith(
+	// 		provisioningstep.HasProvisionedHostWith(
+	// 			provisionedhost.HasProvisionedNetworkWith(
+	// 				provisionednetwork.HasBuildWith(
 	// 					build.IDEQ(entBuild.ID),
 	// 				),
 	// 			),
@@ -180,8 +180,8 @@ func main() {
 	// 	}
 	// 	logrus.Infof("Deleted %v amount of pstep for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.ProvisionedHost.Delete().Where(
-	// 		provisionedhost.HasProvisionedHostToProvisionedNetworkWith(
-	// 			provisionednetwork.HasProvisionedNetworkToBuildWith(
+	// 		provisionedhost.HasProvisionedNetworkWith(
+	// 			provisionednetwork.HasBuildWith(
 	// 				build.IDEQ(entBuild.ID),
 	// 			),
 	// 		),
@@ -191,12 +191,12 @@ func main() {
 	// 	}
 	// 	logrus.Infof("Deleted %v amount of phost for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.ProvisionedNetwork.Delete().Where(
-	// 		provisionednetwork.HasProvisionedNetworkToBuildWith(
+	// 		provisionednetwork.HasBuildWith(
 	// 			build.IDEQ(entBuild.ID),
 	// 		),
 	// 	).Exec(ctx)
 	// 	amountDeleted, err = client.Team.Delete().Where(
-	// 		team.HasTeamToBuildWith(
+	// 		team.HasBuildWith(
 	// 			build.IDEQ(entBuild.ID),
 	// 		),
 	// 	).Exec(ctx)
@@ -214,7 +214,7 @@ func main() {
 	// 	}
 	// 	logrus.Infof("Deleted %v amount of BuildCommit for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.Plan.Delete().Where(
-	// 		plan.HasPlanToBuildWith(
+	// 		plan.HasBuildWith(
 	// 			build.IDEQ(entBuild.ID),
 	// 		),
 	// 	).Exec(ctx)
@@ -223,7 +223,7 @@ func main() {
 	// 	}
 	// 	logrus.Infof("Deleted %v amount of plan for Build %v for env %v", amountDeleted, entBuild.Revision, entEnvironment.HclID)
 	// 	amountDeleted, err = client.AdhocPlan.Delete().Where(
-	// 		adhocplan.HasAdhocPlanToBuildWith(
+	// 		adhocplan.HasAdhocBuildWith(
 	// 			build.IDEQ(entBuild.ID),
 	// 		),
 	// 	).Exec(ctx)

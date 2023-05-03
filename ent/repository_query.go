@@ -21,14 +21,14 @@ import (
 // RepositoryQuery is the builder for querying Repository entities.
 type RepositoryQuery struct {
 	config
-	limit                       *int
-	offset                      *int
-	unique                      *bool
-	order                       []OrderFunc
-	fields                      []string
-	predicates                  []predicate.Repository
-	withRepositoryToEnvironment *EnvironmentQuery
-	withRepositoryToRepoCommit  *RepoCommitQuery
+	limit            *int
+	offset           *int
+	unique           *bool
+	order            []OrderFunc
+	fields           []string
+	predicates       []predicate.Repository
+	withEnvironments *EnvironmentQuery
+	withRepoCommits  *RepoCommitQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -65,8 +65,8 @@ func (rq *RepositoryQuery) Order(o ...OrderFunc) *RepositoryQuery {
 	return rq
 }
 
-// QueryRepositoryToEnvironment chains the current query on the "RepositoryToEnvironment" edge.
-func (rq *RepositoryQuery) QueryRepositoryToEnvironment() *EnvironmentQuery {
+// QueryEnvironments chains the current query on the "Environments" edge.
+func (rq *RepositoryQuery) QueryEnvironments() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: rq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := rq.prepareQuery(ctx); err != nil {
@@ -79,7 +79,7 @@ func (rq *RepositoryQuery) QueryRepositoryToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(repository.Table, repository.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, repository.RepositoryToEnvironmentTable, repository.RepositoryToEnvironmentPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, repository.EnvironmentsTable, repository.EnvironmentsPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
 		return fromU, nil
@@ -87,8 +87,8 @@ func (rq *RepositoryQuery) QueryRepositoryToEnvironment() *EnvironmentQuery {
 	return query
 }
 
-// QueryRepositoryToRepoCommit chains the current query on the "RepositoryToRepoCommit" edge.
-func (rq *RepositoryQuery) QueryRepositoryToRepoCommit() *RepoCommitQuery {
+// QueryRepoCommits chains the current query on the "RepoCommits" edge.
+func (rq *RepositoryQuery) QueryRepoCommits() *RepoCommitQuery {
 	query := &RepoCommitQuery{config: rq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := rq.prepareQuery(ctx); err != nil {
@@ -101,7 +101,7 @@ func (rq *RepositoryQuery) QueryRepositoryToRepoCommit() *RepoCommitQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(repository.Table, repository.FieldID, selector),
 			sqlgraph.To(repocommit.Table, repocommit.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, repository.RepositoryToRepoCommitTable, repository.RepositoryToRepoCommitColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, repository.RepoCommitsTable, repository.RepoCommitsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
 		return fromU, nil
@@ -285,13 +285,13 @@ func (rq *RepositoryQuery) Clone() *RepositoryQuery {
 		return nil
 	}
 	return &RepositoryQuery{
-		config:                      rq.config,
-		limit:                       rq.limit,
-		offset:                      rq.offset,
-		order:                       append([]OrderFunc{}, rq.order...),
-		predicates:                  append([]predicate.Repository{}, rq.predicates...),
-		withRepositoryToEnvironment: rq.withRepositoryToEnvironment.Clone(),
-		withRepositoryToRepoCommit:  rq.withRepositoryToRepoCommit.Clone(),
+		config:           rq.config,
+		limit:            rq.limit,
+		offset:           rq.offset,
+		order:            append([]OrderFunc{}, rq.order...),
+		predicates:       append([]predicate.Repository{}, rq.predicates...),
+		withEnvironments: rq.withEnvironments.Clone(),
+		withRepoCommits:  rq.withRepoCommits.Clone(),
 		// clone intermediate query.
 		sql:    rq.sql.Clone(),
 		path:   rq.path,
@@ -299,25 +299,25 @@ func (rq *RepositoryQuery) Clone() *RepositoryQuery {
 	}
 }
 
-// WithRepositoryToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "RepositoryToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (rq *RepositoryQuery) WithRepositoryToEnvironment(opts ...func(*EnvironmentQuery)) *RepositoryQuery {
+// WithEnvironments tells the query-builder to eager-load the nodes that are connected to
+// the "Environments" edge. The optional arguments are used to configure the query builder of the edge.
+func (rq *RepositoryQuery) WithEnvironments(opts ...func(*EnvironmentQuery)) *RepositoryQuery {
 	query := &EnvironmentQuery{config: rq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	rq.withRepositoryToEnvironment = query
+	rq.withEnvironments = query
 	return rq
 }
 
-// WithRepositoryToRepoCommit tells the query-builder to eager-load the nodes that are connected to
-// the "RepositoryToRepoCommit" edge. The optional arguments are used to configure the query builder of the edge.
-func (rq *RepositoryQuery) WithRepositoryToRepoCommit(opts ...func(*RepoCommitQuery)) *RepositoryQuery {
+// WithRepoCommits tells the query-builder to eager-load the nodes that are connected to
+// the "RepoCommits" edge. The optional arguments are used to configure the query builder of the edge.
+func (rq *RepositoryQuery) WithRepoCommits(opts ...func(*RepoCommitQuery)) *RepositoryQuery {
 	query := &RepoCommitQuery{config: rq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	rq.withRepositoryToRepoCommit = query
+	rq.withRepoCommits = query
 	return rq
 }
 
@@ -335,7 +335,6 @@ func (rq *RepositoryQuery) WithRepositoryToRepoCommit(opts ...func(*RepoCommitQu
 //		GroupBy(repository.FieldRepoURL).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (rq *RepositoryQuery) GroupBy(field string, fields ...string) *RepositoryGroupBy {
 	grbuild := &RepositoryGroupBy{config: rq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -362,7 +361,6 @@ func (rq *RepositoryQuery) GroupBy(field string, fields ...string) *RepositoryGr
 //	client.Repository.Query().
 //		Select(repository.FieldRepoURL).
 //		Scan(ctx, &v)
-//
 func (rq *RepositoryQuery) Select(fields ...string) *RepositorySelect {
 	rq.fields = append(rq.fields, fields...)
 	selbuild := &RepositorySelect{RepositoryQuery: rq}
@@ -392,8 +390,8 @@ func (rq *RepositoryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*R
 		nodes       = []*Repository{}
 		_spec       = rq.querySpec()
 		loadedTypes = [2]bool{
-			rq.withRepositoryToEnvironment != nil,
-			rq.withRepositoryToRepoCommit != nil,
+			rq.withEnvironments != nil,
+			rq.withRepoCommits != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -414,28 +412,24 @@ func (rq *RepositoryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*R
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := rq.withRepositoryToEnvironment; query != nil {
-		if err := rq.loadRepositoryToEnvironment(ctx, query, nodes,
-			func(n *Repository) { n.Edges.RepositoryToEnvironment = []*Environment{} },
-			func(n *Repository, e *Environment) {
-				n.Edges.RepositoryToEnvironment = append(n.Edges.RepositoryToEnvironment, e)
-			}); err != nil {
+	if query := rq.withEnvironments; query != nil {
+		if err := rq.loadEnvironments(ctx, query, nodes,
+			func(n *Repository) { n.Edges.Environments = []*Environment{} },
+			func(n *Repository, e *Environment) { n.Edges.Environments = append(n.Edges.Environments, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := rq.withRepositoryToRepoCommit; query != nil {
-		if err := rq.loadRepositoryToRepoCommit(ctx, query, nodes,
-			func(n *Repository) { n.Edges.RepositoryToRepoCommit = []*RepoCommit{} },
-			func(n *Repository, e *RepoCommit) {
-				n.Edges.RepositoryToRepoCommit = append(n.Edges.RepositoryToRepoCommit, e)
-			}); err != nil {
+	if query := rq.withRepoCommits; query != nil {
+		if err := rq.loadRepoCommits(ctx, query, nodes,
+			func(n *Repository) { n.Edges.RepoCommits = []*RepoCommit{} },
+			func(n *Repository, e *RepoCommit) { n.Edges.RepoCommits = append(n.Edges.RepoCommits, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (rq *RepositoryQuery) loadRepositoryToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Repository, init func(*Repository), assign func(*Repository, *Environment)) error {
+func (rq *RepositoryQuery) loadEnvironments(ctx context.Context, query *EnvironmentQuery, nodes []*Repository, init func(*Repository), assign func(*Repository, *Environment)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*Repository)
 	nids := make(map[uuid.UUID]map[*Repository]struct{})
@@ -447,11 +441,11 @@ func (rq *RepositoryQuery) loadRepositoryToEnvironment(ctx context.Context, quer
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(repository.RepositoryToEnvironmentTable)
-		s.Join(joinT).On(s.C(environment.FieldID), joinT.C(repository.RepositoryToEnvironmentPrimaryKey[1]))
-		s.Where(sql.InValues(joinT.C(repository.RepositoryToEnvironmentPrimaryKey[0]), edgeIDs...))
+		joinT := sql.Table(repository.EnvironmentsTable)
+		s.Join(joinT).On(s.C(environment.FieldID), joinT.C(repository.EnvironmentsPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(repository.EnvironmentsPrimaryKey[0]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(repository.RepositoryToEnvironmentPrimaryKey[0]))
+		s.Select(joinT.C(repository.EnvironmentsPrimaryKey[0]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -485,7 +479,7 @@ func (rq *RepositoryQuery) loadRepositoryToEnvironment(ctx context.Context, quer
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "RepositoryToEnvironment" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "Environments" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
@@ -493,7 +487,7 @@ func (rq *RepositoryQuery) loadRepositoryToEnvironment(ctx context.Context, quer
 	}
 	return nil
 }
-func (rq *RepositoryQuery) loadRepositoryToRepoCommit(ctx context.Context, query *RepoCommitQuery, nodes []*Repository, init func(*Repository), assign func(*Repository, *RepoCommit)) error {
+func (rq *RepositoryQuery) loadRepoCommits(ctx context.Context, query *RepoCommitQuery, nodes []*Repository, init func(*Repository), assign func(*Repository, *RepoCommit)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Repository)
 	for i := range nodes {
@@ -505,20 +499,20 @@ func (rq *RepositoryQuery) loadRepositoryToRepoCommit(ctx context.Context, query
 	}
 	query.withFKs = true
 	query.Where(predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.InValues(repository.RepositoryToRepoCommitColumn, fks...))
+		s.Where(sql.InValues(repository.RepoCommitsColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.repository_repository_to_repo_commit
+		fk := n.repository_repo_commits
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "repository_repository_to_repo_commit" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "repository_repo_commits" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "repository_repository_to_repo_commit" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "repository_repo_commits" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

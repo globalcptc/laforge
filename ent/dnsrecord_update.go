@@ -83,23 +83,23 @@ func (dru *DNSRecordUpdate) SetValidations(s []string) *DNSRecordUpdate {
 	return dru
 }
 
-// SetDNSRecordToEnvironmentID sets the "DNSRecordToEnvironment" edge to the Environment entity by ID.
-func (dru *DNSRecordUpdate) SetDNSRecordToEnvironmentID(id uuid.UUID) *DNSRecordUpdate {
-	dru.mutation.SetDNSRecordToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (dru *DNSRecordUpdate) SetEnvironmentID(id uuid.UUID) *DNSRecordUpdate {
+	dru.mutation.SetEnvironmentID(id)
 	return dru
 }
 
-// SetNillableDNSRecordToEnvironmentID sets the "DNSRecordToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (dru *DNSRecordUpdate) SetNillableDNSRecordToEnvironmentID(id *uuid.UUID) *DNSRecordUpdate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (dru *DNSRecordUpdate) SetNillableEnvironmentID(id *uuid.UUID) *DNSRecordUpdate {
 	if id != nil {
-		dru = dru.SetDNSRecordToEnvironmentID(*id)
+		dru = dru.SetEnvironmentID(*id)
 	}
 	return dru
 }
 
-// SetDNSRecordToEnvironment sets the "DNSRecordToEnvironment" edge to the Environment entity.
-func (dru *DNSRecordUpdate) SetDNSRecordToEnvironment(e *Environment) *DNSRecordUpdate {
-	return dru.SetDNSRecordToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (dru *DNSRecordUpdate) SetEnvironment(e *Environment) *DNSRecordUpdate {
+	return dru.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the DNSRecordMutation object of the builder.
@@ -107,9 +107,9 @@ func (dru *DNSRecordUpdate) Mutation() *DNSRecordMutation {
 	return dru.mutation
 }
 
-// ClearDNSRecordToEnvironment clears the "DNSRecordToEnvironment" edge to the Environment entity.
-func (dru *DNSRecordUpdate) ClearDNSRecordToEnvironment() *DNSRecordUpdate {
-	dru.mutation.ClearDNSRecordToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (dru *DNSRecordUpdate) ClearEnvironment() *DNSRecordUpdate {
+	dru.mutation.ClearEnvironment()
 	return dru
 }
 
@@ -248,12 +248,12 @@ func (dru *DNSRecordUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: dnsrecord.FieldValidations,
 		})
 	}
-	if dru.mutation.DNSRecordToEnvironmentCleared() {
+	if dru.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   dnsrecord.DNSRecordToEnvironmentTable,
-			Columns: []string{dnsrecord.DNSRecordToEnvironmentColumn},
+			Table:   dnsrecord.EnvironmentTable,
+			Columns: []string{dnsrecord.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -264,12 +264,12 @@ func (dru *DNSRecordUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := dru.mutation.DNSRecordToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := dru.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   dnsrecord.DNSRecordToEnvironmentTable,
-			Columns: []string{dnsrecord.DNSRecordToEnvironmentColumn},
+			Table:   dnsrecord.EnvironmentTable,
+			Columns: []string{dnsrecord.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -356,23 +356,23 @@ func (druo *DNSRecordUpdateOne) SetValidations(s []string) *DNSRecordUpdateOne {
 	return druo
 }
 
-// SetDNSRecordToEnvironmentID sets the "DNSRecordToEnvironment" edge to the Environment entity by ID.
-func (druo *DNSRecordUpdateOne) SetDNSRecordToEnvironmentID(id uuid.UUID) *DNSRecordUpdateOne {
-	druo.mutation.SetDNSRecordToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (druo *DNSRecordUpdateOne) SetEnvironmentID(id uuid.UUID) *DNSRecordUpdateOne {
+	druo.mutation.SetEnvironmentID(id)
 	return druo
 }
 
-// SetNillableDNSRecordToEnvironmentID sets the "DNSRecordToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (druo *DNSRecordUpdateOne) SetNillableDNSRecordToEnvironmentID(id *uuid.UUID) *DNSRecordUpdateOne {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (druo *DNSRecordUpdateOne) SetNillableEnvironmentID(id *uuid.UUID) *DNSRecordUpdateOne {
 	if id != nil {
-		druo = druo.SetDNSRecordToEnvironmentID(*id)
+		druo = druo.SetEnvironmentID(*id)
 	}
 	return druo
 }
 
-// SetDNSRecordToEnvironment sets the "DNSRecordToEnvironment" edge to the Environment entity.
-func (druo *DNSRecordUpdateOne) SetDNSRecordToEnvironment(e *Environment) *DNSRecordUpdateOne {
-	return druo.SetDNSRecordToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (druo *DNSRecordUpdateOne) SetEnvironment(e *Environment) *DNSRecordUpdateOne {
+	return druo.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the DNSRecordMutation object of the builder.
@@ -380,9 +380,9 @@ func (druo *DNSRecordUpdateOne) Mutation() *DNSRecordMutation {
 	return druo.mutation
 }
 
-// ClearDNSRecordToEnvironment clears the "DNSRecordToEnvironment" edge to the Environment entity.
-func (druo *DNSRecordUpdateOne) ClearDNSRecordToEnvironment() *DNSRecordUpdateOne {
-	druo.mutation.ClearDNSRecordToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (druo *DNSRecordUpdateOne) ClearEnvironment() *DNSRecordUpdateOne {
+	druo.mutation.ClearEnvironment()
 	return druo
 }
 
@@ -551,12 +551,12 @@ func (druo *DNSRecordUpdateOne) sqlSave(ctx context.Context) (_node *DNSRecord, 
 			Column: dnsrecord.FieldValidations,
 		})
 	}
-	if druo.mutation.DNSRecordToEnvironmentCleared() {
+	if druo.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   dnsrecord.DNSRecordToEnvironmentTable,
-			Columns: []string{dnsrecord.DNSRecordToEnvironmentColumn},
+			Table:   dnsrecord.EnvironmentTable,
+			Columns: []string{dnsrecord.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -567,12 +567,12 @@ func (druo *DNSRecordUpdateOne) sqlSave(ctx context.Context) (_node *DNSRecord, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := druo.mutation.DNSRecordToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := druo.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   dnsrecord.DNSRecordToEnvironmentTable,
-			Columns: []string{dnsrecord.DNSRecordToEnvironmentColumn},
+			Table:   dnsrecord.EnvironmentTable,
+			Columns: []string{dnsrecord.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

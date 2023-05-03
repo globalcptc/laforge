@@ -25,19 +25,19 @@ import (
 // ServerTaskQuery is the builder for querying ServerTask entities.
 type ServerTaskQuery struct {
 	config
-	limit                             *int
-	offset                            *int
-	unique                            *bool
-	order                             []OrderFunc
-	fields                            []string
-	predicates                        []predicate.ServerTask
-	withServerTaskToAuthUser          *AuthUserQuery
-	withServerTaskToStatus            *StatusQuery
-	withServerTaskToEnvironment       *EnvironmentQuery
-	withServerTaskToBuild             *BuildQuery
-	withServerTaskToBuildCommit       *BuildCommitQuery
-	withServerTaskToGinFileMiddleware *GinFileMiddlewareQuery
-	withFKs                           bool
+	limit                 *int
+	offset                *int
+	unique                *bool
+	order                 []OrderFunc
+	fields                []string
+	predicates            []predicate.ServerTask
+	withAuthUser          *AuthUserQuery
+	withStatus            *StatusQuery
+	withEnvironment       *EnvironmentQuery
+	withBuild             *BuildQuery
+	withBuildCommit       *BuildCommitQuery
+	withGinFileMiddleware *GinFileMiddlewareQuery
+	withFKs               bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -74,8 +74,8 @@ func (stq *ServerTaskQuery) Order(o ...OrderFunc) *ServerTaskQuery {
 	return stq
 }
 
-// QueryServerTaskToAuthUser chains the current query on the "ServerTaskToAuthUser" edge.
-func (stq *ServerTaskQuery) QueryServerTaskToAuthUser() *AuthUserQuery {
+// QueryAuthUser chains the current query on the "AuthUser" edge.
+func (stq *ServerTaskQuery) QueryAuthUser() *AuthUserQuery {
 	query := &AuthUserQuery{config: stq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
@@ -88,7 +88,7 @@ func (stq *ServerTaskQuery) QueryServerTaskToAuthUser() *AuthUserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, selector),
 			sqlgraph.To(authuser.Table, authuser.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToAuthUserTable, servertask.ServerTaskToAuthUserColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.AuthUserTable, servertask.AuthUserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(stq.driver.Dialect(), step)
 		return fromU, nil
@@ -96,8 +96,8 @@ func (stq *ServerTaskQuery) QueryServerTaskToAuthUser() *AuthUserQuery {
 	return query
 }
 
-// QueryServerTaskToStatus chains the current query on the "ServerTaskToStatus" edge.
-func (stq *ServerTaskQuery) QueryServerTaskToStatus() *StatusQuery {
+// QueryStatus chains the current query on the "Status" edge.
+func (stq *ServerTaskQuery) QueryStatus() *StatusQuery {
 	query := &StatusQuery{config: stq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
@@ -110,7 +110,7 @@ func (stq *ServerTaskQuery) QueryServerTaskToStatus() *StatusQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, selector),
 			sqlgraph.To(status.Table, status.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, servertask.ServerTaskToStatusTable, servertask.ServerTaskToStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, servertask.StatusTable, servertask.StatusColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(stq.driver.Dialect(), step)
 		return fromU, nil
@@ -118,8 +118,8 @@ func (stq *ServerTaskQuery) QueryServerTaskToStatus() *StatusQuery {
 	return query
 }
 
-// QueryServerTaskToEnvironment chains the current query on the "ServerTaskToEnvironment" edge.
-func (stq *ServerTaskQuery) QueryServerTaskToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (stq *ServerTaskQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: stq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
@@ -132,7 +132,7 @@ func (stq *ServerTaskQuery) QueryServerTaskToEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToEnvironmentTable, servertask.ServerTaskToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.EnvironmentTable, servertask.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(stq.driver.Dialect(), step)
 		return fromU, nil
@@ -140,8 +140,8 @@ func (stq *ServerTaskQuery) QueryServerTaskToEnvironment() *EnvironmentQuery {
 	return query
 }
 
-// QueryServerTaskToBuild chains the current query on the "ServerTaskToBuild" edge.
-func (stq *ServerTaskQuery) QueryServerTaskToBuild() *BuildQuery {
+// QueryBuild chains the current query on the "Build" edge.
+func (stq *ServerTaskQuery) QueryBuild() *BuildQuery {
 	query := &BuildQuery{config: stq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
@@ -154,7 +154,7 @@ func (stq *ServerTaskQuery) QueryServerTaskToBuild() *BuildQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, selector),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToBuildTable, servertask.ServerTaskToBuildColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.BuildTable, servertask.BuildColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(stq.driver.Dialect(), step)
 		return fromU, nil
@@ -162,8 +162,8 @@ func (stq *ServerTaskQuery) QueryServerTaskToBuild() *BuildQuery {
 	return query
 }
 
-// QueryServerTaskToBuildCommit chains the current query on the "ServerTaskToBuildCommit" edge.
-func (stq *ServerTaskQuery) QueryServerTaskToBuildCommit() *BuildCommitQuery {
+// QueryBuildCommit chains the current query on the "BuildCommit" edge.
+func (stq *ServerTaskQuery) QueryBuildCommit() *BuildCommitQuery {
 	query := &BuildCommitQuery{config: stq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
@@ -176,7 +176,7 @@ func (stq *ServerTaskQuery) QueryServerTaskToBuildCommit() *BuildCommitQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, selector),
 			sqlgraph.To(buildcommit.Table, buildcommit.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, servertask.ServerTaskToBuildCommitTable, servertask.ServerTaskToBuildCommitColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, servertask.BuildCommitTable, servertask.BuildCommitColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(stq.driver.Dialect(), step)
 		return fromU, nil
@@ -184,8 +184,8 @@ func (stq *ServerTaskQuery) QueryServerTaskToBuildCommit() *BuildCommitQuery {
 	return query
 }
 
-// QueryServerTaskToGinFileMiddleware chains the current query on the "ServerTaskToGinFileMiddleware" edge.
-func (stq *ServerTaskQuery) QueryServerTaskToGinFileMiddleware() *GinFileMiddlewareQuery {
+// QueryGinFileMiddleware chains the current query on the "GinFileMiddleware" edge.
+func (stq *ServerTaskQuery) QueryGinFileMiddleware() *GinFileMiddlewareQuery {
 	query := &GinFileMiddlewareQuery{config: stq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
@@ -198,7 +198,7 @@ func (stq *ServerTaskQuery) QueryServerTaskToGinFileMiddleware() *GinFileMiddlew
 		step := sqlgraph.NewStep(
 			sqlgraph.From(servertask.Table, servertask.FieldID, selector),
 			sqlgraph.To(ginfilemiddleware.Table, ginfilemiddleware.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, servertask.ServerTaskToGinFileMiddlewareTable, servertask.ServerTaskToGinFileMiddlewareColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, servertask.GinFileMiddlewareTable, servertask.GinFileMiddlewareColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(stq.driver.Dialect(), step)
 		return fromU, nil
@@ -382,17 +382,17 @@ func (stq *ServerTaskQuery) Clone() *ServerTaskQuery {
 		return nil
 	}
 	return &ServerTaskQuery{
-		config:                            stq.config,
-		limit:                             stq.limit,
-		offset:                            stq.offset,
-		order:                             append([]OrderFunc{}, stq.order...),
-		predicates:                        append([]predicate.ServerTask{}, stq.predicates...),
-		withServerTaskToAuthUser:          stq.withServerTaskToAuthUser.Clone(),
-		withServerTaskToStatus:            stq.withServerTaskToStatus.Clone(),
-		withServerTaskToEnvironment:       stq.withServerTaskToEnvironment.Clone(),
-		withServerTaskToBuild:             stq.withServerTaskToBuild.Clone(),
-		withServerTaskToBuildCommit:       stq.withServerTaskToBuildCommit.Clone(),
-		withServerTaskToGinFileMiddleware: stq.withServerTaskToGinFileMiddleware.Clone(),
+		config:                stq.config,
+		limit:                 stq.limit,
+		offset:                stq.offset,
+		order:                 append([]OrderFunc{}, stq.order...),
+		predicates:            append([]predicate.ServerTask{}, stq.predicates...),
+		withAuthUser:          stq.withAuthUser.Clone(),
+		withStatus:            stq.withStatus.Clone(),
+		withEnvironment:       stq.withEnvironment.Clone(),
+		withBuild:             stq.withBuild.Clone(),
+		withBuildCommit:       stq.withBuildCommit.Clone(),
+		withGinFileMiddleware: stq.withGinFileMiddleware.Clone(),
 		// clone intermediate query.
 		sql:    stq.sql.Clone(),
 		path:   stq.path,
@@ -400,69 +400,69 @@ func (stq *ServerTaskQuery) Clone() *ServerTaskQuery {
 	}
 }
 
-// WithServerTaskToAuthUser tells the query-builder to eager-load the nodes that are connected to
-// the "ServerTaskToAuthUser" edge. The optional arguments are used to configure the query builder of the edge.
-func (stq *ServerTaskQuery) WithServerTaskToAuthUser(opts ...func(*AuthUserQuery)) *ServerTaskQuery {
+// WithAuthUser tells the query-builder to eager-load the nodes that are connected to
+// the "AuthUser" edge. The optional arguments are used to configure the query builder of the edge.
+func (stq *ServerTaskQuery) WithAuthUser(opts ...func(*AuthUserQuery)) *ServerTaskQuery {
 	query := &AuthUserQuery{config: stq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	stq.withServerTaskToAuthUser = query
+	stq.withAuthUser = query
 	return stq
 }
 
-// WithServerTaskToStatus tells the query-builder to eager-load the nodes that are connected to
-// the "ServerTaskToStatus" edge. The optional arguments are used to configure the query builder of the edge.
-func (stq *ServerTaskQuery) WithServerTaskToStatus(opts ...func(*StatusQuery)) *ServerTaskQuery {
+// WithStatus tells the query-builder to eager-load the nodes that are connected to
+// the "Status" edge. The optional arguments are used to configure the query builder of the edge.
+func (stq *ServerTaskQuery) WithStatus(opts ...func(*StatusQuery)) *ServerTaskQuery {
 	query := &StatusQuery{config: stq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	stq.withServerTaskToStatus = query
+	stq.withStatus = query
 	return stq
 }
 
-// WithServerTaskToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "ServerTaskToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (stq *ServerTaskQuery) WithServerTaskToEnvironment(opts ...func(*EnvironmentQuery)) *ServerTaskQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (stq *ServerTaskQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *ServerTaskQuery {
 	query := &EnvironmentQuery{config: stq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	stq.withServerTaskToEnvironment = query
+	stq.withEnvironment = query
 	return stq
 }
 
-// WithServerTaskToBuild tells the query-builder to eager-load the nodes that are connected to
-// the "ServerTaskToBuild" edge. The optional arguments are used to configure the query builder of the edge.
-func (stq *ServerTaskQuery) WithServerTaskToBuild(opts ...func(*BuildQuery)) *ServerTaskQuery {
+// WithBuild tells the query-builder to eager-load the nodes that are connected to
+// the "Build" edge. The optional arguments are used to configure the query builder of the edge.
+func (stq *ServerTaskQuery) WithBuild(opts ...func(*BuildQuery)) *ServerTaskQuery {
 	query := &BuildQuery{config: stq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	stq.withServerTaskToBuild = query
+	stq.withBuild = query
 	return stq
 }
 
-// WithServerTaskToBuildCommit tells the query-builder to eager-load the nodes that are connected to
-// the "ServerTaskToBuildCommit" edge. The optional arguments are used to configure the query builder of the edge.
-func (stq *ServerTaskQuery) WithServerTaskToBuildCommit(opts ...func(*BuildCommitQuery)) *ServerTaskQuery {
+// WithBuildCommit tells the query-builder to eager-load the nodes that are connected to
+// the "BuildCommit" edge. The optional arguments are used to configure the query builder of the edge.
+func (stq *ServerTaskQuery) WithBuildCommit(opts ...func(*BuildCommitQuery)) *ServerTaskQuery {
 	query := &BuildCommitQuery{config: stq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	stq.withServerTaskToBuildCommit = query
+	stq.withBuildCommit = query
 	return stq
 }
 
-// WithServerTaskToGinFileMiddleware tells the query-builder to eager-load the nodes that are connected to
-// the "ServerTaskToGinFileMiddleware" edge. The optional arguments are used to configure the query builder of the edge.
-func (stq *ServerTaskQuery) WithServerTaskToGinFileMiddleware(opts ...func(*GinFileMiddlewareQuery)) *ServerTaskQuery {
+// WithGinFileMiddleware tells the query-builder to eager-load the nodes that are connected to
+// the "GinFileMiddleware" edge. The optional arguments are used to configure the query builder of the edge.
+func (stq *ServerTaskQuery) WithGinFileMiddleware(opts ...func(*GinFileMiddlewareQuery)) *ServerTaskQuery {
 	query := &GinFileMiddlewareQuery{config: stq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	stq.withServerTaskToGinFileMiddleware = query
+	stq.withGinFileMiddleware = query
 	return stq
 }
 
@@ -480,7 +480,6 @@ func (stq *ServerTaskQuery) WithServerTaskToGinFileMiddleware(opts ...func(*GinF
 //		GroupBy(servertask.FieldType).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (stq *ServerTaskQuery) GroupBy(field string, fields ...string) *ServerTaskGroupBy {
 	grbuild := &ServerTaskGroupBy{config: stq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -507,7 +506,6 @@ func (stq *ServerTaskQuery) GroupBy(field string, fields ...string) *ServerTaskG
 //	client.ServerTask.Query().
 //		Select(servertask.FieldType).
 //		Scan(ctx, &v)
-//
 func (stq *ServerTaskQuery) Select(fields ...string) *ServerTaskSelect {
 	stq.fields = append(stq.fields, fields...)
 	selbuild := &ServerTaskSelect{ServerTaskQuery: stq}
@@ -538,15 +536,15 @@ func (stq *ServerTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		withFKs     = stq.withFKs
 		_spec       = stq.querySpec()
 		loadedTypes = [6]bool{
-			stq.withServerTaskToAuthUser != nil,
-			stq.withServerTaskToStatus != nil,
-			stq.withServerTaskToEnvironment != nil,
-			stq.withServerTaskToBuild != nil,
-			stq.withServerTaskToBuildCommit != nil,
-			stq.withServerTaskToGinFileMiddleware != nil,
+			stq.withAuthUser != nil,
+			stq.withStatus != nil,
+			stq.withEnvironment != nil,
+			stq.withBuild != nil,
+			stq.withBuildCommit != nil,
+			stq.withGinFileMiddleware != nil,
 		}
 	)
-	if stq.withServerTaskToAuthUser != nil || stq.withServerTaskToEnvironment != nil || stq.withServerTaskToBuild != nil || stq.withServerTaskToBuildCommit != nil {
+	if stq.withAuthUser != nil || stq.withEnvironment != nil || stq.withBuild != nil || stq.withBuildCommit != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -570,41 +568,41 @@ func (stq *ServerTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := stq.withServerTaskToAuthUser; query != nil {
-		if err := stq.loadServerTaskToAuthUser(ctx, query, nodes, nil,
-			func(n *ServerTask, e *AuthUser) { n.Edges.ServerTaskToAuthUser = e }); err != nil {
+	if query := stq.withAuthUser; query != nil {
+		if err := stq.loadAuthUser(ctx, query, nodes, nil,
+			func(n *ServerTask, e *AuthUser) { n.Edges.AuthUser = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := stq.withServerTaskToStatus; query != nil {
-		if err := stq.loadServerTaskToStatus(ctx, query, nodes, nil,
-			func(n *ServerTask, e *Status) { n.Edges.ServerTaskToStatus = e }); err != nil {
+	if query := stq.withStatus; query != nil {
+		if err := stq.loadStatus(ctx, query, nodes, nil,
+			func(n *ServerTask, e *Status) { n.Edges.Status = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := stq.withServerTaskToEnvironment; query != nil {
-		if err := stq.loadServerTaskToEnvironment(ctx, query, nodes, nil,
-			func(n *ServerTask, e *Environment) { n.Edges.ServerTaskToEnvironment = e }); err != nil {
+	if query := stq.withEnvironment; query != nil {
+		if err := stq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *ServerTask, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := stq.withServerTaskToBuild; query != nil {
-		if err := stq.loadServerTaskToBuild(ctx, query, nodes, nil,
-			func(n *ServerTask, e *Build) { n.Edges.ServerTaskToBuild = e }); err != nil {
+	if query := stq.withBuild; query != nil {
+		if err := stq.loadBuild(ctx, query, nodes, nil,
+			func(n *ServerTask, e *Build) { n.Edges.Build = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := stq.withServerTaskToBuildCommit; query != nil {
-		if err := stq.loadServerTaskToBuildCommit(ctx, query, nodes, nil,
-			func(n *ServerTask, e *BuildCommit) { n.Edges.ServerTaskToBuildCommit = e }); err != nil {
+	if query := stq.withBuildCommit; query != nil {
+		if err := stq.loadBuildCommit(ctx, query, nodes, nil,
+			func(n *ServerTask, e *BuildCommit) { n.Edges.BuildCommit = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := stq.withServerTaskToGinFileMiddleware; query != nil {
-		if err := stq.loadServerTaskToGinFileMiddleware(ctx, query, nodes,
-			func(n *ServerTask) { n.Edges.ServerTaskToGinFileMiddleware = []*GinFileMiddleware{} },
+	if query := stq.withGinFileMiddleware; query != nil {
+		if err := stq.loadGinFileMiddleware(ctx, query, nodes,
+			func(n *ServerTask) { n.Edges.GinFileMiddleware = []*GinFileMiddleware{} },
 			func(n *ServerTask, e *GinFileMiddleware) {
-				n.Edges.ServerTaskToGinFileMiddleware = append(n.Edges.ServerTaskToGinFileMiddleware, e)
+				n.Edges.GinFileMiddleware = append(n.Edges.GinFileMiddleware, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -612,14 +610,14 @@ func (stq *ServerTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	return nodes, nil
 }
 
-func (stq *ServerTaskQuery) loadServerTaskToAuthUser(ctx context.Context, query *AuthUserQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *AuthUser)) error {
+func (stq *ServerTaskQuery) loadAuthUser(ctx context.Context, query *AuthUserQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *AuthUser)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ServerTask)
 	for i := range nodes {
-		if nodes[i].server_task_server_task_to_auth_user == nil {
+		if nodes[i].server_task_auth_user == nil {
 			continue
 		}
-		fk := *nodes[i].server_task_server_task_to_auth_user
+		fk := *nodes[i].server_task_auth_user
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -633,7 +631,7 @@ func (stq *ServerTaskQuery) loadServerTaskToAuthUser(ctx context.Context, query 
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_auth_user" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_auth_user" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -641,7 +639,7 @@ func (stq *ServerTaskQuery) loadServerTaskToAuthUser(ctx context.Context, query 
 	}
 	return nil
 }
-func (stq *ServerTaskQuery) loadServerTaskToStatus(ctx context.Context, query *StatusQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *Status)) error {
+func (stq *ServerTaskQuery) loadStatus(ctx context.Context, query *StatusQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *Status)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*ServerTask)
 	for i := range nodes {
@@ -650,33 +648,33 @@ func (stq *ServerTaskQuery) loadServerTaskToStatus(ctx context.Context, query *S
 	}
 	query.withFKs = true
 	query.Where(predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.InValues(servertask.ServerTaskToStatusColumn, fks...))
+		s.Where(sql.InValues(servertask.StatusColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.server_task_server_task_to_status
+		fk := n.server_task_status
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "server_task_server_task_to_status" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "server_task_status" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_status" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_status" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (stq *ServerTaskQuery) loadServerTaskToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *Environment)) error {
+func (stq *ServerTaskQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ServerTask)
 	for i := range nodes {
-		if nodes[i].server_task_server_task_to_environment == nil {
+		if nodes[i].server_task_environment == nil {
 			continue
 		}
-		fk := *nodes[i].server_task_server_task_to_environment
+		fk := *nodes[i].server_task_environment
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -690,7 +688,7 @@ func (stq *ServerTaskQuery) loadServerTaskToEnvironment(ctx context.Context, que
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_environment" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_environment" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -698,14 +696,14 @@ func (stq *ServerTaskQuery) loadServerTaskToEnvironment(ctx context.Context, que
 	}
 	return nil
 }
-func (stq *ServerTaskQuery) loadServerTaskToBuild(ctx context.Context, query *BuildQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *Build)) error {
+func (stq *ServerTaskQuery) loadBuild(ctx context.Context, query *BuildQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *Build)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ServerTask)
 	for i := range nodes {
-		if nodes[i].server_task_server_task_to_build == nil {
+		if nodes[i].server_task_build == nil {
 			continue
 		}
-		fk := *nodes[i].server_task_server_task_to_build
+		fk := *nodes[i].server_task_build
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -719,7 +717,7 @@ func (stq *ServerTaskQuery) loadServerTaskToBuild(ctx context.Context, query *Bu
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_build" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_build" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -727,14 +725,14 @@ func (stq *ServerTaskQuery) loadServerTaskToBuild(ctx context.Context, query *Bu
 	}
 	return nil
 }
-func (stq *ServerTaskQuery) loadServerTaskToBuildCommit(ctx context.Context, query *BuildCommitQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *BuildCommit)) error {
+func (stq *ServerTaskQuery) loadBuildCommit(ctx context.Context, query *BuildCommitQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *BuildCommit)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ServerTask)
 	for i := range nodes {
-		if nodes[i].server_task_server_task_to_build_commit == nil {
+		if nodes[i].server_task_build_commit == nil {
 			continue
 		}
-		fk := *nodes[i].server_task_server_task_to_build_commit
+		fk := *nodes[i].server_task_build_commit
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -748,7 +746,7 @@ func (stq *ServerTaskQuery) loadServerTaskToBuildCommit(ctx context.Context, que
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_build_commit" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_build_commit" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -756,7 +754,7 @@ func (stq *ServerTaskQuery) loadServerTaskToBuildCommit(ctx context.Context, que
 	}
 	return nil
 }
-func (stq *ServerTaskQuery) loadServerTaskToGinFileMiddleware(ctx context.Context, query *GinFileMiddlewareQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *GinFileMiddleware)) error {
+func (stq *ServerTaskQuery) loadGinFileMiddleware(ctx context.Context, query *GinFileMiddlewareQuery, nodes []*ServerTask, init func(*ServerTask), assign func(*ServerTask, *GinFileMiddleware)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*ServerTask)
 	for i := range nodes {
@@ -768,20 +766,20 @@ func (stq *ServerTaskQuery) loadServerTaskToGinFileMiddleware(ctx context.Contex
 	}
 	query.withFKs = true
 	query.Where(predicate.GinFileMiddleware(func(s *sql.Selector) {
-		s.Where(sql.InValues(servertask.ServerTaskToGinFileMiddlewareColumn, fks...))
+		s.Where(sql.InValues(servertask.GinFileMiddlewareColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.server_task_server_task_to_gin_file_middleware
+		fk := n.server_task_gin_file_middleware
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "server_task_server_task_to_gin_file_middleware" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "server_task_gin_file_middleware" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_gin_file_middleware" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_gin_file_middleware" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

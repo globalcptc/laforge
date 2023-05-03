@@ -47,10 +47,10 @@ func (Command) Fields() []ent.Field {
 // Edges of the Command.
 func (Command) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("CommandToUser", User.Type).
+		edge.To("Users", User.Type).
 			StructTag(`hcl:"maintainer,block"`),
-		edge.From("CommandToEnvironment", Environment.Type).
-			Ref("EnvironmentToCommand").
+		edge.From("Environment", Environment.Type).
+			Ref("Commands").
 			Unique(),
 	}
 }

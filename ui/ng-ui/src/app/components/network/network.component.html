@@ -30,7 +30,7 @@
           <b>{{ provisionedNetwork.name }}</b>
         </span>
         <span class="network-details">
-          <em>{{ provisionedNetwork.cidr }} | VDI: {{ provisionedNetwork.ProvisionedNetworkToNetwork.vdi_visible ? 'true' : 'false' }}</em>
+          <em>{{ provisionedNetwork.cidr }} | VDI: {{ provisionedNetwork.Network.vdiVisible ? 'true' : 'false' }}</em>
         </span>
       </div>
       <div class="toggle-collapse" *ngIf="shouldCollapse()">
@@ -39,7 +39,7 @@
     </div>
     <div class="hosts" *ngIf="expandOverride || (!shouldCollapse() && style === 'expanded') || style === 'compact'">
       <app-host
-        *ngFor="let provHost of provisionedNetwork.ProvisionedNetworkToProvisionedHost | sortBy: 'asc':'ProvisionedHostToHost.hostname'"
+        *ngFor="let provHost of provisionedNetwork.ProvisionedHosts | sortBy: 'asc':'Host.hostname'"
         [provisionedHost]="provHost"
         [planDiffs]="planDiffs"
         [style]="style"

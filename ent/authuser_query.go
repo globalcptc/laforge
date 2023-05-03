@@ -21,14 +21,14 @@ import (
 // AuthUserQuery is the builder for querying AuthUser entities.
 type AuthUserQuery struct {
 	config
-	limit                     *int
-	offset                    *int
-	unique                    *bool
-	order                     []OrderFunc
-	fields                    []string
-	predicates                []predicate.AuthUser
-	withAuthUserToToken       *TokenQuery
-	withAuthUserToServerTasks *ServerTaskQuery
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.AuthUser
+	withTokens      *TokenQuery
+	withServerTasks *ServerTaskQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -65,8 +65,8 @@ func (auq *AuthUserQuery) Order(o ...OrderFunc) *AuthUserQuery {
 	return auq
 }
 
-// QueryAuthUserToToken chains the current query on the "AuthUserToToken" edge.
-func (auq *AuthUserQuery) QueryAuthUserToToken() *TokenQuery {
+// QueryTokens chains the current query on the "Tokens" edge.
+func (auq *AuthUserQuery) QueryTokens() *TokenQuery {
 	query := &TokenQuery{config: auq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := auq.prepareQuery(ctx); err != nil {
@@ -79,7 +79,7 @@ func (auq *AuthUserQuery) QueryAuthUserToToken() *TokenQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(authuser.Table, authuser.FieldID, selector),
 			sqlgraph.To(token.Table, token.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, authuser.AuthUserToTokenTable, authuser.AuthUserToTokenColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, authuser.TokensTable, authuser.TokensColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(auq.driver.Dialect(), step)
 		return fromU, nil
@@ -87,8 +87,8 @@ func (auq *AuthUserQuery) QueryAuthUserToToken() *TokenQuery {
 	return query
 }
 
-// QueryAuthUserToServerTasks chains the current query on the "AuthUserToServerTasks" edge.
-func (auq *AuthUserQuery) QueryAuthUserToServerTasks() *ServerTaskQuery {
+// QueryServerTasks chains the current query on the "ServerTasks" edge.
+func (auq *AuthUserQuery) QueryServerTasks() *ServerTaskQuery {
 	query := &ServerTaskQuery{config: auq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := auq.prepareQuery(ctx); err != nil {
@@ -101,7 +101,7 @@ func (auq *AuthUserQuery) QueryAuthUserToServerTasks() *ServerTaskQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(authuser.Table, authuser.FieldID, selector),
 			sqlgraph.To(servertask.Table, servertask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, authuser.AuthUserToServerTasksTable, authuser.AuthUserToServerTasksColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, authuser.ServerTasksTable, authuser.ServerTasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(auq.driver.Dialect(), step)
 		return fromU, nil
@@ -285,13 +285,13 @@ func (auq *AuthUserQuery) Clone() *AuthUserQuery {
 		return nil
 	}
 	return &AuthUserQuery{
-		config:                    auq.config,
-		limit:                     auq.limit,
-		offset:                    auq.offset,
-		order:                     append([]OrderFunc{}, auq.order...),
-		predicates:                append([]predicate.AuthUser{}, auq.predicates...),
-		withAuthUserToToken:       auq.withAuthUserToToken.Clone(),
-		withAuthUserToServerTasks: auq.withAuthUserToServerTasks.Clone(),
+		config:          auq.config,
+		limit:           auq.limit,
+		offset:          auq.offset,
+		order:           append([]OrderFunc{}, auq.order...),
+		predicates:      append([]predicate.AuthUser{}, auq.predicates...),
+		withTokens:      auq.withTokens.Clone(),
+		withServerTasks: auq.withServerTasks.Clone(),
 		// clone intermediate query.
 		sql:    auq.sql.Clone(),
 		path:   auq.path,
@@ -299,25 +299,25 @@ func (auq *AuthUserQuery) Clone() *AuthUserQuery {
 	}
 }
 
-// WithAuthUserToToken tells the query-builder to eager-load the nodes that are connected to
-// the "AuthUserToToken" edge. The optional arguments are used to configure the query builder of the edge.
-func (auq *AuthUserQuery) WithAuthUserToToken(opts ...func(*TokenQuery)) *AuthUserQuery {
+// WithTokens tells the query-builder to eager-load the nodes that are connected to
+// the "Tokens" edge. The optional arguments are used to configure the query builder of the edge.
+func (auq *AuthUserQuery) WithTokens(opts ...func(*TokenQuery)) *AuthUserQuery {
 	query := &TokenQuery{config: auq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	auq.withAuthUserToToken = query
+	auq.withTokens = query
 	return auq
 }
 
-// WithAuthUserToServerTasks tells the query-builder to eager-load the nodes that are connected to
-// the "AuthUserToServerTasks" edge. The optional arguments are used to configure the query builder of the edge.
-func (auq *AuthUserQuery) WithAuthUserToServerTasks(opts ...func(*ServerTaskQuery)) *AuthUserQuery {
+// WithServerTasks tells the query-builder to eager-load the nodes that are connected to
+// the "ServerTasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (auq *AuthUserQuery) WithServerTasks(opts ...func(*ServerTaskQuery)) *AuthUserQuery {
 	query := &ServerTaskQuery{config: auq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	auq.withAuthUserToServerTasks = query
+	auq.withServerTasks = query
 	return auq
 }
 
@@ -335,7 +335,6 @@ func (auq *AuthUserQuery) WithAuthUserToServerTasks(opts ...func(*ServerTaskQuer
 //		GroupBy(authuser.FieldUsername).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (auq *AuthUserQuery) GroupBy(field string, fields ...string) *AuthUserGroupBy {
 	grbuild := &AuthUserGroupBy{config: auq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -362,7 +361,6 @@ func (auq *AuthUserQuery) GroupBy(field string, fields ...string) *AuthUserGroup
 //	client.AuthUser.Query().
 //		Select(authuser.FieldUsername).
 //		Scan(ctx, &v)
-//
 func (auq *AuthUserQuery) Select(fields ...string) *AuthUserSelect {
 	auq.fields = append(auq.fields, fields...)
 	selbuild := &AuthUserSelect{AuthUserQuery: auq}
@@ -392,8 +390,8 @@ func (auq *AuthUserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Au
 		nodes       = []*AuthUser{}
 		_spec       = auq.querySpec()
 		loadedTypes = [2]bool{
-			auq.withAuthUserToToken != nil,
-			auq.withAuthUserToServerTasks != nil,
+			auq.withTokens != nil,
+			auq.withServerTasks != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -414,26 +412,24 @@ func (auq *AuthUserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Au
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := auq.withAuthUserToToken; query != nil {
-		if err := auq.loadAuthUserToToken(ctx, query, nodes,
-			func(n *AuthUser) { n.Edges.AuthUserToToken = []*Token{} },
-			func(n *AuthUser, e *Token) { n.Edges.AuthUserToToken = append(n.Edges.AuthUserToToken, e) }); err != nil {
+	if query := auq.withTokens; query != nil {
+		if err := auq.loadTokens(ctx, query, nodes,
+			func(n *AuthUser) { n.Edges.Tokens = []*Token{} },
+			func(n *AuthUser, e *Token) { n.Edges.Tokens = append(n.Edges.Tokens, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := auq.withAuthUserToServerTasks; query != nil {
-		if err := auq.loadAuthUserToServerTasks(ctx, query, nodes,
-			func(n *AuthUser) { n.Edges.AuthUserToServerTasks = []*ServerTask{} },
-			func(n *AuthUser, e *ServerTask) {
-				n.Edges.AuthUserToServerTasks = append(n.Edges.AuthUserToServerTasks, e)
-			}); err != nil {
+	if query := auq.withServerTasks; query != nil {
+		if err := auq.loadServerTasks(ctx, query, nodes,
+			func(n *AuthUser) { n.Edges.ServerTasks = []*ServerTask{} },
+			func(n *AuthUser, e *ServerTask) { n.Edges.ServerTasks = append(n.Edges.ServerTasks, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (auq *AuthUserQuery) loadAuthUserToToken(ctx context.Context, query *TokenQuery, nodes []*AuthUser, init func(*AuthUser), assign func(*AuthUser, *Token)) error {
+func (auq *AuthUserQuery) loadTokens(ctx context.Context, query *TokenQuery, nodes []*AuthUser, init func(*AuthUser), assign func(*AuthUser, *Token)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*AuthUser)
 	for i := range nodes {
@@ -445,26 +441,26 @@ func (auq *AuthUserQuery) loadAuthUserToToken(ctx context.Context, query *TokenQ
 	}
 	query.withFKs = true
 	query.Where(predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.InValues(authuser.AuthUserToTokenColumn, fks...))
+		s.Where(sql.InValues(authuser.TokensColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.auth_user_auth_user_to_token
+		fk := n.auth_user_tokens
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "auth_user_auth_user_to_token" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "auth_user_tokens" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "auth_user_auth_user_to_token" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "auth_user_tokens" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (auq *AuthUserQuery) loadAuthUserToServerTasks(ctx context.Context, query *ServerTaskQuery, nodes []*AuthUser, init func(*AuthUser), assign func(*AuthUser, *ServerTask)) error {
+func (auq *AuthUserQuery) loadServerTasks(ctx context.Context, query *ServerTaskQuery, nodes []*AuthUser, init func(*AuthUser), assign func(*AuthUser, *ServerTask)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*AuthUser)
 	for i := range nodes {
@@ -476,20 +472,20 @@ func (auq *AuthUserQuery) loadAuthUserToServerTasks(ctx context.Context, query *
 	}
 	query.withFKs = true
 	query.Where(predicate.ServerTask(func(s *sql.Selector) {
-		s.Where(sql.InValues(authuser.AuthUserToServerTasksColumn, fks...))
+		s.Where(sql.InValues(authuser.ServerTasksColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.server_task_server_task_to_auth_user
+		fk := n.server_task_auth_user
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "server_task_server_task_to_auth_user" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "server_task_auth_user" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_auth_user" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_auth_user" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

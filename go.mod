@@ -24,6 +24,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.0
 	github.com/google/uuid v1.3.0
 	github.com/gophercloud/gophercloud v0.24.0
+	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/gorilla/sessions v1.2.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
@@ -44,17 +45,13 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.0.0-beta.9
 	github.com/vmware/govmomi v0.25.0
 	github.com/zclconf/go-cty v1.12.1
-	golang.org/x/crypto v0.7.0
-	golang.org/x/net v0.8.0
+	golang.org/x/crypto v0.0.0-20220517005047-85d78b3ac167
+	golang.org/x/net v0.6.0
 	golang.org/x/sync v0.1.0
+	golang.org/x/text v0.8.0
 	google.golang.org/grpc v1.42.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/guregu/null.v4 v4.0.0
-)
-
-require (
-	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
-	golang.org/x/text v0.8.0
 )
 
 require (

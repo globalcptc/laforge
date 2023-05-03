@@ -35,199 +35,199 @@ type Build struct {
 	Edges BuildEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// BuildToStatus holds the value of the BuildToStatus edge.
-	HCLBuildToStatus *Status `json:"BuildToStatus,omitempty"`
-	// BuildToEnvironment holds the value of the BuildToEnvironment edge.
-	HCLBuildToEnvironment *Environment `json:"BuildToEnvironment,omitempty"`
-	// BuildToCompetition holds the value of the BuildToCompetition edge.
-	HCLBuildToCompetition *Competition `json:"BuildToCompetition,omitempty"`
-	// BuildToLatestBuildCommit holds the value of the BuildToLatestBuildCommit edge.
-	HCLBuildToLatestBuildCommit *BuildCommit `json:"BuildToLatestBuildCommit,omitempty"`
-	// BuildToRepoCommit holds the value of the BuildToRepoCommit edge.
-	HCLBuildToRepoCommit *RepoCommit `json:"BuildToRepoCommit,omitempty"`
-	// BuildToProvisionedNetwork holds the value of the BuildToProvisionedNetwork edge.
-	HCLBuildToProvisionedNetwork []*ProvisionedNetwork `json:"BuildToProvisionedNetwork,omitempty"`
-	// BuildToTeam holds the value of the BuildToTeam edge.
-	HCLBuildToTeam []*Team `json:"BuildToTeam,omitempty"`
-	// BuildToPlan holds the value of the BuildToPlan edge.
-	HCLBuildToPlan []*Plan `json:"BuildToPlan,omitempty"`
-	// BuildToBuildCommits holds the value of the BuildToBuildCommits edge.
-	HCLBuildToBuildCommits []*BuildCommit `json:"BuildToBuildCommits,omitempty"`
-	// BuildToAdhocPlans holds the value of the BuildToAdhocPlans edge.
-	HCLBuildToAdhocPlans []*AdhocPlan `json:"BuildToAdhocPlans,omitempty"`
-	// BuildToAgentStatuses holds the value of the BuildToAgentStatuses edge.
-	HCLBuildToAgentStatuses []*AgentStatus `json:"BuildToAgentStatuses,omitempty"`
-	// BuildToServerTasks holds the value of the BuildToServerTasks edge.
-	HCLBuildToServerTasks []*ServerTask `json:"BuildToServerTasks,omitempty"`
+	// Status holds the value of the Status edge.
+	HCLStatus *Status `json:"Status,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
+	// Competition holds the value of the Competition edge.
+	HCLCompetition *Competition `json:"Competition,omitempty"`
+	// LatestBuildCommit holds the value of the LatestBuildCommit edge.
+	HCLLatestBuildCommit *BuildCommit `json:"LatestBuildCommit,omitempty"`
+	// RepoCommit holds the value of the RepoCommit edge.
+	HCLRepoCommit *RepoCommit `json:"RepoCommit,omitempty"`
+	// ProvisionedNetworks holds the value of the ProvisionedNetworks edge.
+	HCLProvisionedNetworks []*ProvisionedNetwork `json:"ProvisionedNetworks,omitempty"`
+	// Teams holds the value of the Teams edge.
+	HCLTeams []*Team `json:"Teams,omitempty"`
+	// Plans holds the value of the Plans edge.
+	HCLPlans []*Plan `json:"Plans,omitempty"`
+	// BuildCommits holds the value of the BuildCommits edge.
+	HCLBuildCommits []*BuildCommit `json:"BuildCommits,omitempty"`
+	// AdhocPlans holds the value of the AdhocPlans edge.
+	HCLAdhocPlans []*AdhocPlan `json:"AdhocPlans,omitempty"`
+	// AgentStatuses holds the value of the AgentStatuses edge.
+	HCLAgentStatuses []*AgentStatus `json:"AgentStatuses,omitempty"`
+	// ServerTasks holds the value of the ServerTasks edge.
+	HCLServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
 	//
-	build_build_to_environment         *uuid.UUID
-	build_build_to_competition         *uuid.UUID
-	build_build_to_latest_build_commit *uuid.UUID
-	build_build_to_repo_commit         *uuid.UUID
+	build_environment         *uuid.UUID
+	build_competition         *uuid.UUID
+	build_latest_build_commit *uuid.UUID
+	build_repo_commit         *uuid.UUID
 }
 
 // BuildEdges holds the relations/edges for other nodes in the graph.
 type BuildEdges struct {
-	// BuildToStatus holds the value of the BuildToStatus edge.
-	BuildToStatus *Status `json:"BuildToStatus,omitempty"`
-	// BuildToEnvironment holds the value of the BuildToEnvironment edge.
-	BuildToEnvironment *Environment `json:"BuildToEnvironment,omitempty"`
-	// BuildToCompetition holds the value of the BuildToCompetition edge.
-	BuildToCompetition *Competition `json:"BuildToCompetition,omitempty"`
-	// BuildToLatestBuildCommit holds the value of the BuildToLatestBuildCommit edge.
-	BuildToLatestBuildCommit *BuildCommit `json:"BuildToLatestBuildCommit,omitempty"`
-	// BuildToRepoCommit holds the value of the BuildToRepoCommit edge.
-	BuildToRepoCommit *RepoCommit `json:"BuildToRepoCommit,omitempty"`
-	// BuildToProvisionedNetwork holds the value of the BuildToProvisionedNetwork edge.
-	BuildToProvisionedNetwork []*ProvisionedNetwork `json:"BuildToProvisionedNetwork,omitempty"`
-	// BuildToTeam holds the value of the BuildToTeam edge.
-	BuildToTeam []*Team `json:"BuildToTeam,omitempty"`
-	// BuildToPlan holds the value of the BuildToPlan edge.
-	BuildToPlan []*Plan `json:"BuildToPlan,omitempty"`
-	// BuildToBuildCommits holds the value of the BuildToBuildCommits edge.
-	BuildToBuildCommits []*BuildCommit `json:"BuildToBuildCommits,omitempty"`
-	// BuildToAdhocPlans holds the value of the BuildToAdhocPlans edge.
-	BuildToAdhocPlans []*AdhocPlan `json:"BuildToAdhocPlans,omitempty"`
-	// BuildToAgentStatuses holds the value of the BuildToAgentStatuses edge.
-	BuildToAgentStatuses []*AgentStatus `json:"BuildToAgentStatuses,omitempty"`
-	// BuildToServerTasks holds the value of the BuildToServerTasks edge.
-	BuildToServerTasks []*ServerTask `json:"BuildToServerTasks,omitempty"`
+	// Status holds the value of the Status edge.
+	Status *Status `json:"Status,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
+	// Competition holds the value of the Competition edge.
+	Competition *Competition `json:"Competition,omitempty"`
+	// LatestBuildCommit holds the value of the LatestBuildCommit edge.
+	LatestBuildCommit *BuildCommit `json:"LatestBuildCommit,omitempty"`
+	// RepoCommit holds the value of the RepoCommit edge.
+	RepoCommit *RepoCommit `json:"RepoCommit,omitempty"`
+	// ProvisionedNetworks holds the value of the ProvisionedNetworks edge.
+	ProvisionedNetworks []*ProvisionedNetwork `json:"ProvisionedNetworks,omitempty"`
+	// Teams holds the value of the Teams edge.
+	Teams []*Team `json:"Teams,omitempty"`
+	// Plans holds the value of the Plans edge.
+	Plans []*Plan `json:"Plans,omitempty"`
+	// BuildCommits holds the value of the BuildCommits edge.
+	BuildCommits []*BuildCommit `json:"BuildCommits,omitempty"`
+	// AdhocPlans holds the value of the AdhocPlans edge.
+	AdhocPlans []*AdhocPlan `json:"AdhocPlans,omitempty"`
+	// AgentStatuses holds the value of the AgentStatuses edge.
+	AgentStatuses []*AgentStatus `json:"AgentStatuses,omitempty"`
+	// ServerTasks holds the value of the ServerTasks edge.
+	ServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [12]bool
 }
 
-// BuildToStatusOrErr returns the BuildToStatus value or an error if the edge
+// StatusOrErr returns the Status value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e BuildEdges) BuildToStatusOrErr() (*Status, error) {
+func (e BuildEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[0] {
-		if e.BuildToStatus == nil {
-			// The edge BuildToStatus was loaded in eager-loading,
+		if e.Status == nil {
+			// The edge Status was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
-		return e.BuildToStatus, nil
+		return e.Status, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToStatus"}
+	return nil, &NotLoadedError{edge: "Status"}
 }
 
-// BuildToEnvironmentOrErr returns the BuildToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e BuildEdges) BuildToEnvironmentOrErr() (*Environment, error) {
+func (e BuildEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[1] {
-		if e.BuildToEnvironment == nil {
-			// The edge BuildToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.BuildToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
-// BuildToCompetitionOrErr returns the BuildToCompetition value or an error if the edge
+// CompetitionOrErr returns the Competition value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e BuildEdges) BuildToCompetitionOrErr() (*Competition, error) {
+func (e BuildEdges) CompetitionOrErr() (*Competition, error) {
 	if e.loadedTypes[2] {
-		if e.BuildToCompetition == nil {
-			// The edge BuildToCompetition was loaded in eager-loading,
+		if e.Competition == nil {
+			// The edge Competition was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: competition.Label}
 		}
-		return e.BuildToCompetition, nil
+		return e.Competition, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToCompetition"}
+	return nil, &NotLoadedError{edge: "Competition"}
 }
 
-// BuildToLatestBuildCommitOrErr returns the BuildToLatestBuildCommit value or an error if the edge
+// LatestBuildCommitOrErr returns the LatestBuildCommit value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e BuildEdges) BuildToLatestBuildCommitOrErr() (*BuildCommit, error) {
+func (e BuildEdges) LatestBuildCommitOrErr() (*BuildCommit, error) {
 	if e.loadedTypes[3] {
-		if e.BuildToLatestBuildCommit == nil {
-			// The edge BuildToLatestBuildCommit was loaded in eager-loading,
+		if e.LatestBuildCommit == nil {
+			// The edge LatestBuildCommit was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: buildcommit.Label}
 		}
-		return e.BuildToLatestBuildCommit, nil
+		return e.LatestBuildCommit, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToLatestBuildCommit"}
+	return nil, &NotLoadedError{edge: "LatestBuildCommit"}
 }
 
-// BuildToRepoCommitOrErr returns the BuildToRepoCommit value or an error if the edge
+// RepoCommitOrErr returns the RepoCommit value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e BuildEdges) BuildToRepoCommitOrErr() (*RepoCommit, error) {
+func (e BuildEdges) RepoCommitOrErr() (*RepoCommit, error) {
 	if e.loadedTypes[4] {
-		if e.BuildToRepoCommit == nil {
-			// The edge BuildToRepoCommit was loaded in eager-loading,
+		if e.RepoCommit == nil {
+			// The edge RepoCommit was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: repocommit.Label}
 		}
-		return e.BuildToRepoCommit, nil
+		return e.RepoCommit, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToRepoCommit"}
+	return nil, &NotLoadedError{edge: "RepoCommit"}
 }
 
-// BuildToProvisionedNetworkOrErr returns the BuildToProvisionedNetwork value or an error if the edge
+// ProvisionedNetworksOrErr returns the ProvisionedNetworks value or an error if the edge
 // was not loaded in eager-loading.
-func (e BuildEdges) BuildToProvisionedNetworkOrErr() ([]*ProvisionedNetwork, error) {
+func (e BuildEdges) ProvisionedNetworksOrErr() ([]*ProvisionedNetwork, error) {
 	if e.loadedTypes[5] {
-		return e.BuildToProvisionedNetwork, nil
+		return e.ProvisionedNetworks, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToProvisionedNetwork"}
+	return nil, &NotLoadedError{edge: "ProvisionedNetworks"}
 }
 
-// BuildToTeamOrErr returns the BuildToTeam value or an error if the edge
+// TeamsOrErr returns the Teams value or an error if the edge
 // was not loaded in eager-loading.
-func (e BuildEdges) BuildToTeamOrErr() ([]*Team, error) {
+func (e BuildEdges) TeamsOrErr() ([]*Team, error) {
 	if e.loadedTypes[6] {
-		return e.BuildToTeam, nil
+		return e.Teams, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToTeam"}
+	return nil, &NotLoadedError{edge: "Teams"}
 }
 
-// BuildToPlanOrErr returns the BuildToPlan value or an error if the edge
+// PlansOrErr returns the Plans value or an error if the edge
 // was not loaded in eager-loading.
-func (e BuildEdges) BuildToPlanOrErr() ([]*Plan, error) {
+func (e BuildEdges) PlansOrErr() ([]*Plan, error) {
 	if e.loadedTypes[7] {
-		return e.BuildToPlan, nil
+		return e.Plans, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToPlan"}
+	return nil, &NotLoadedError{edge: "Plans"}
 }
 
-// BuildToBuildCommitsOrErr returns the BuildToBuildCommits value or an error if the edge
+// BuildCommitsOrErr returns the BuildCommits value or an error if the edge
 // was not loaded in eager-loading.
-func (e BuildEdges) BuildToBuildCommitsOrErr() ([]*BuildCommit, error) {
+func (e BuildEdges) BuildCommitsOrErr() ([]*BuildCommit, error) {
 	if e.loadedTypes[8] {
-		return e.BuildToBuildCommits, nil
+		return e.BuildCommits, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToBuildCommits"}
+	return nil, &NotLoadedError{edge: "BuildCommits"}
 }
 
-// BuildToAdhocPlansOrErr returns the BuildToAdhocPlans value or an error if the edge
+// AdhocPlansOrErr returns the AdhocPlans value or an error if the edge
 // was not loaded in eager-loading.
-func (e BuildEdges) BuildToAdhocPlansOrErr() ([]*AdhocPlan, error) {
+func (e BuildEdges) AdhocPlansOrErr() ([]*AdhocPlan, error) {
 	if e.loadedTypes[9] {
-		return e.BuildToAdhocPlans, nil
+		return e.AdhocPlans, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToAdhocPlans"}
+	return nil, &NotLoadedError{edge: "AdhocPlans"}
 }
 
-// BuildToAgentStatusesOrErr returns the BuildToAgentStatuses value or an error if the edge
+// AgentStatusesOrErr returns the AgentStatuses value or an error if the edge
 // was not loaded in eager-loading.
-func (e BuildEdges) BuildToAgentStatusesOrErr() ([]*AgentStatus, error) {
+func (e BuildEdges) AgentStatusesOrErr() ([]*AgentStatus, error) {
 	if e.loadedTypes[10] {
-		return e.BuildToAgentStatuses, nil
+		return e.AgentStatuses, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToAgentStatuses"}
+	return nil, &NotLoadedError{edge: "AgentStatuses"}
 }
 
-// BuildToServerTasksOrErr returns the BuildToServerTasks value or an error if the edge
+// ServerTasksOrErr returns the ServerTasks value or an error if the edge
 // was not loaded in eager-loading.
-func (e BuildEdges) BuildToServerTasksOrErr() ([]*ServerTask, error) {
+func (e BuildEdges) ServerTasksOrErr() ([]*ServerTask, error) {
 	if e.loadedTypes[11] {
-		return e.BuildToServerTasks, nil
+		return e.ServerTasks, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildToServerTasks"}
+	return nil, &NotLoadedError{edge: "ServerTasks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -243,13 +243,13 @@ func (*Build) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullInt64)
 		case build.FieldID:
 			values[i] = new(uuid.UUID)
-		case build.ForeignKeys[0]: // build_build_to_environment
+		case build.ForeignKeys[0]: // build_environment
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case build.ForeignKeys[1]: // build_build_to_competition
+		case build.ForeignKeys[1]: // build_competition
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case build.ForeignKeys[2]: // build_build_to_latest_build_commit
+		case build.ForeignKeys[2]: // build_latest_build_commit
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case build.ForeignKeys[3]: // build_build_to_repo_commit
+		case build.ForeignKeys[3]: // build_repo_commit
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Build", columns[i])
@@ -300,95 +300,95 @@ func (b *Build) assignValues(columns []string, values []interface{}) error {
 			}
 		case build.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field build_build_to_environment", values[i])
+				return fmt.Errorf("unexpected type %T for field build_environment", values[i])
 			} else if value.Valid {
-				b.build_build_to_environment = new(uuid.UUID)
-				*b.build_build_to_environment = *value.S.(*uuid.UUID)
+				b.build_environment = new(uuid.UUID)
+				*b.build_environment = *value.S.(*uuid.UUID)
 			}
 		case build.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field build_build_to_competition", values[i])
+				return fmt.Errorf("unexpected type %T for field build_competition", values[i])
 			} else if value.Valid {
-				b.build_build_to_competition = new(uuid.UUID)
-				*b.build_build_to_competition = *value.S.(*uuid.UUID)
+				b.build_competition = new(uuid.UUID)
+				*b.build_competition = *value.S.(*uuid.UUID)
 			}
 		case build.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field build_build_to_latest_build_commit", values[i])
+				return fmt.Errorf("unexpected type %T for field build_latest_build_commit", values[i])
 			} else if value.Valid {
-				b.build_build_to_latest_build_commit = new(uuid.UUID)
-				*b.build_build_to_latest_build_commit = *value.S.(*uuid.UUID)
+				b.build_latest_build_commit = new(uuid.UUID)
+				*b.build_latest_build_commit = *value.S.(*uuid.UUID)
 			}
 		case build.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field build_build_to_repo_commit", values[i])
+				return fmt.Errorf("unexpected type %T for field build_repo_commit", values[i])
 			} else if value.Valid {
-				b.build_build_to_repo_commit = new(uuid.UUID)
-				*b.build_build_to_repo_commit = *value.S.(*uuid.UUID)
+				b.build_repo_commit = new(uuid.UUID)
+				*b.build_repo_commit = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryBuildToStatus queries the "BuildToStatus" edge of the Build entity.
-func (b *Build) QueryBuildToStatus() *StatusQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToStatus(b)
+// QueryStatus queries the "Status" edge of the Build entity.
+func (b *Build) QueryStatus() *StatusQuery {
+	return (&BuildClient{config: b.config}).QueryStatus(b)
 }
 
-// QueryBuildToEnvironment queries the "BuildToEnvironment" edge of the Build entity.
-func (b *Build) QueryBuildToEnvironment() *EnvironmentQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToEnvironment(b)
+// QueryEnvironment queries the "Environment" edge of the Build entity.
+func (b *Build) QueryEnvironment() *EnvironmentQuery {
+	return (&BuildClient{config: b.config}).QueryEnvironment(b)
 }
 
-// QueryBuildToCompetition queries the "BuildToCompetition" edge of the Build entity.
-func (b *Build) QueryBuildToCompetition() *CompetitionQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToCompetition(b)
+// QueryCompetition queries the "Competition" edge of the Build entity.
+func (b *Build) QueryCompetition() *CompetitionQuery {
+	return (&BuildClient{config: b.config}).QueryCompetition(b)
 }
 
-// QueryBuildToLatestBuildCommit queries the "BuildToLatestBuildCommit" edge of the Build entity.
-func (b *Build) QueryBuildToLatestBuildCommit() *BuildCommitQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToLatestBuildCommit(b)
+// QueryLatestBuildCommit queries the "LatestBuildCommit" edge of the Build entity.
+func (b *Build) QueryLatestBuildCommit() *BuildCommitQuery {
+	return (&BuildClient{config: b.config}).QueryLatestBuildCommit(b)
 }
 
-// QueryBuildToRepoCommit queries the "BuildToRepoCommit" edge of the Build entity.
-func (b *Build) QueryBuildToRepoCommit() *RepoCommitQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToRepoCommit(b)
+// QueryRepoCommit queries the "RepoCommit" edge of the Build entity.
+func (b *Build) QueryRepoCommit() *RepoCommitQuery {
+	return (&BuildClient{config: b.config}).QueryRepoCommit(b)
 }
 
-// QueryBuildToProvisionedNetwork queries the "BuildToProvisionedNetwork" edge of the Build entity.
-func (b *Build) QueryBuildToProvisionedNetwork() *ProvisionedNetworkQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToProvisionedNetwork(b)
+// QueryProvisionedNetworks queries the "ProvisionedNetworks" edge of the Build entity.
+func (b *Build) QueryProvisionedNetworks() *ProvisionedNetworkQuery {
+	return (&BuildClient{config: b.config}).QueryProvisionedNetworks(b)
 }
 
-// QueryBuildToTeam queries the "BuildToTeam" edge of the Build entity.
-func (b *Build) QueryBuildToTeam() *TeamQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToTeam(b)
+// QueryTeams queries the "Teams" edge of the Build entity.
+func (b *Build) QueryTeams() *TeamQuery {
+	return (&BuildClient{config: b.config}).QueryTeams(b)
 }
 
-// QueryBuildToPlan queries the "BuildToPlan" edge of the Build entity.
-func (b *Build) QueryBuildToPlan() *PlanQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToPlan(b)
+// QueryPlans queries the "Plans" edge of the Build entity.
+func (b *Build) QueryPlans() *PlanQuery {
+	return (&BuildClient{config: b.config}).QueryPlans(b)
 }
 
-// QueryBuildToBuildCommits queries the "BuildToBuildCommits" edge of the Build entity.
-func (b *Build) QueryBuildToBuildCommits() *BuildCommitQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToBuildCommits(b)
+// QueryBuildCommits queries the "BuildCommits" edge of the Build entity.
+func (b *Build) QueryBuildCommits() *BuildCommitQuery {
+	return (&BuildClient{config: b.config}).QueryBuildCommits(b)
 }
 
-// QueryBuildToAdhocPlans queries the "BuildToAdhocPlans" edge of the Build entity.
-func (b *Build) QueryBuildToAdhocPlans() *AdhocPlanQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToAdhocPlans(b)
+// QueryAdhocPlans queries the "AdhocPlans" edge of the Build entity.
+func (b *Build) QueryAdhocPlans() *AdhocPlanQuery {
+	return (&BuildClient{config: b.config}).QueryAdhocPlans(b)
 }
 
-// QueryBuildToAgentStatuses queries the "BuildToAgentStatuses" edge of the Build entity.
-func (b *Build) QueryBuildToAgentStatuses() *AgentStatusQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToAgentStatuses(b)
+// QueryAgentStatuses queries the "AgentStatuses" edge of the Build entity.
+func (b *Build) QueryAgentStatuses() *AgentStatusQuery {
+	return (&BuildClient{config: b.config}).QueryAgentStatuses(b)
 }
 
-// QueryBuildToServerTasks queries the "BuildToServerTasks" edge of the Build entity.
-func (b *Build) QueryBuildToServerTasks() *ServerTaskQuery {
-	return (&BuildClient{config: b.config}).QueryBuildToServerTasks(b)
+// QueryServerTasks queries the "ServerTasks" edge of the Build entity.
+func (b *Build) QueryServerTasks() *ServerTaskQuery {
+	return (&BuildClient{config: b.config}).QueryServerTasks(b)
 }
 
 // Update returns a builder for updating this Build.

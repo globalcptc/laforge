@@ -24,18 +24,18 @@ import (
 // AgentTaskQuery is the builder for querying AgentTask entities.
 type AgentTaskQuery struct {
 	config
-	limit                                    *int
-	offset                                   *int
-	unique                                   *bool
-	order                                    []OrderFunc
-	fields                                   []string
-	predicates                               []predicate.AgentTask
-	withAgentTaskToProvisioningStep          *ProvisioningStepQuery
-	withAgentTaskToProvisioningScheduledStep *ProvisioningScheduledStepQuery
-	withAgentTaskToProvisionedHost           *ProvisionedHostQuery
-	withAgentTaskToAdhocPlan                 *AdhocPlanQuery
-	withAgentTaskToValidation                *ValidationQuery
-	withFKs                                  bool
+	limit                         *int
+	offset                        *int
+	unique                        *bool
+	order                         []OrderFunc
+	fields                        []string
+	predicates                    []predicate.AgentTask
+	withProvisioningStep          *ProvisioningStepQuery
+	withProvisioningScheduledStep *ProvisioningScheduledStepQuery
+	withProvisionedHost           *ProvisionedHostQuery
+	withAdhocPlans                *AdhocPlanQuery
+	withValidation                *ValidationQuery
+	withFKs                       bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -72,8 +72,8 @@ func (atq *AgentTaskQuery) Order(o ...OrderFunc) *AgentTaskQuery {
 	return atq
 }
 
-// QueryAgentTaskToProvisioningStep chains the current query on the "AgentTaskToProvisioningStep" edge.
-func (atq *AgentTaskQuery) QueryAgentTaskToProvisioningStep() *ProvisioningStepQuery {
+// QueryProvisioningStep chains the current query on the "ProvisioningStep" edge.
+func (atq *AgentTaskQuery) QueryProvisioningStep() *ProvisioningStepQuery {
 	query := &ProvisioningStepQuery{config: atq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := atq.prepareQuery(ctx); err != nil {
@@ -86,7 +86,7 @@ func (atq *AgentTaskQuery) QueryAgentTaskToProvisioningStep() *ProvisioningStepQ
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
 			sqlgraph.To(provisioningstep.Table, provisioningstep.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.AgentTaskToProvisioningStepTable, agenttask.AgentTaskToProvisioningStepColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.ProvisioningStepTable, agenttask.ProvisioningStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
 		return fromU, nil
@@ -94,8 +94,8 @@ func (atq *AgentTaskQuery) QueryAgentTaskToProvisioningStep() *ProvisioningStepQ
 	return query
 }
 
-// QueryAgentTaskToProvisioningScheduledStep chains the current query on the "AgentTaskToProvisioningScheduledStep" edge.
-func (atq *AgentTaskQuery) QueryAgentTaskToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+// QueryProvisioningScheduledStep chains the current query on the "ProvisioningScheduledStep" edge.
+func (atq *AgentTaskQuery) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
 	query := &ProvisioningScheduledStepQuery{config: atq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := atq.prepareQuery(ctx); err != nil {
@@ -108,7 +108,7 @@ func (atq *AgentTaskQuery) QueryAgentTaskToProvisioningScheduledStep() *Provisio
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
 			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, agenttask.AgentTaskToProvisioningScheduledStepTable, agenttask.AgentTaskToProvisioningScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.ProvisioningScheduledStepTable, agenttask.ProvisioningScheduledStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
 		return fromU, nil
@@ -116,8 +116,8 @@ func (atq *AgentTaskQuery) QueryAgentTaskToProvisioningScheduledStep() *Provisio
 	return query
 }
 
-// QueryAgentTaskToProvisionedHost chains the current query on the "AgentTaskToProvisionedHost" edge.
-func (atq *AgentTaskQuery) QueryAgentTaskToProvisionedHost() *ProvisionedHostQuery {
+// QueryProvisionedHost chains the current query on the "ProvisionedHost" edge.
+func (atq *AgentTaskQuery) QueryProvisionedHost() *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: atq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := atq.prepareQuery(ctx); err != nil {
@@ -130,7 +130,7 @@ func (atq *AgentTaskQuery) QueryAgentTaskToProvisionedHost() *ProvisionedHostQue
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.AgentTaskToProvisionedHostTable, agenttask.AgentTaskToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.ProvisionedHostTable, agenttask.ProvisionedHostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
 		return fromU, nil
@@ -138,8 +138,8 @@ func (atq *AgentTaskQuery) QueryAgentTaskToProvisionedHost() *ProvisionedHostQue
 	return query
 }
 
-// QueryAgentTaskToAdhocPlan chains the current query on the "AgentTaskToAdhocPlan" edge.
-func (atq *AgentTaskQuery) QueryAgentTaskToAdhocPlan() *AdhocPlanQuery {
+// QueryAdhocPlans chains the current query on the "AdhocPlans" edge.
+func (atq *AgentTaskQuery) QueryAdhocPlans() *AdhocPlanQuery {
 	query := &AdhocPlanQuery{config: atq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := atq.prepareQuery(ctx); err != nil {
@@ -152,7 +152,7 @@ func (atq *AgentTaskQuery) QueryAgentTaskToAdhocPlan() *AdhocPlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, agenttask.AgentTaskToAdhocPlanTable, agenttask.AgentTaskToAdhocPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, agenttask.AdhocPlansTable, agenttask.AdhocPlansColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
 		return fromU, nil
@@ -160,8 +160,8 @@ func (atq *AgentTaskQuery) QueryAgentTaskToAdhocPlan() *AdhocPlanQuery {
 	return query
 }
 
-// QueryAgentTaskToValidation chains the current query on the "AgentTaskToValidation" edge.
-func (atq *AgentTaskQuery) QueryAgentTaskToValidation() *ValidationQuery {
+// QueryValidation chains the current query on the "Validation" edge.
+func (atq *AgentTaskQuery) QueryValidation() *ValidationQuery {
 	query := &ValidationQuery{config: atq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := atq.prepareQuery(ctx); err != nil {
@@ -174,7 +174,7 @@ func (atq *AgentTaskQuery) QueryAgentTaskToValidation() *ValidationQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(agenttask.Table, agenttask.FieldID, selector),
 			sqlgraph.To(validation.Table, validation.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, agenttask.AgentTaskToValidationTable, agenttask.AgentTaskToValidationColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, agenttask.ValidationTable, agenttask.ValidationColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
 		return fromU, nil
@@ -358,16 +358,16 @@ func (atq *AgentTaskQuery) Clone() *AgentTaskQuery {
 		return nil
 	}
 	return &AgentTaskQuery{
-		config:                                   atq.config,
-		limit:                                    atq.limit,
-		offset:                                   atq.offset,
-		order:                                    append([]OrderFunc{}, atq.order...),
-		predicates:                               append([]predicate.AgentTask{}, atq.predicates...),
-		withAgentTaskToProvisioningStep:          atq.withAgentTaskToProvisioningStep.Clone(),
-		withAgentTaskToProvisioningScheduledStep: atq.withAgentTaskToProvisioningScheduledStep.Clone(),
-		withAgentTaskToProvisionedHost:           atq.withAgentTaskToProvisionedHost.Clone(),
-		withAgentTaskToAdhocPlan:                 atq.withAgentTaskToAdhocPlan.Clone(),
-		withAgentTaskToValidation:                atq.withAgentTaskToValidation.Clone(),
+		config:                        atq.config,
+		limit:                         atq.limit,
+		offset:                        atq.offset,
+		order:                         append([]OrderFunc{}, atq.order...),
+		predicates:                    append([]predicate.AgentTask{}, atq.predicates...),
+		withProvisioningStep:          atq.withProvisioningStep.Clone(),
+		withProvisioningScheduledStep: atq.withProvisioningScheduledStep.Clone(),
+		withProvisionedHost:           atq.withProvisionedHost.Clone(),
+		withAdhocPlans:                atq.withAdhocPlans.Clone(),
+		withValidation:                atq.withValidation.Clone(),
 		// clone intermediate query.
 		sql:    atq.sql.Clone(),
 		path:   atq.path,
@@ -375,58 +375,58 @@ func (atq *AgentTaskQuery) Clone() *AgentTaskQuery {
 	}
 }
 
-// WithAgentTaskToProvisioningStep tells the query-builder to eager-load the nodes that are connected to
-// the "AgentTaskToProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (atq *AgentTaskQuery) WithAgentTaskToProvisioningStep(opts ...func(*ProvisioningStepQuery)) *AgentTaskQuery {
+// WithProvisioningStep tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *AgentTaskQuery) WithProvisioningStep(opts ...func(*ProvisioningStepQuery)) *AgentTaskQuery {
 	query := &ProvisioningStepQuery{config: atq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	atq.withAgentTaskToProvisioningStep = query
+	atq.withProvisioningStep = query
 	return atq
 }
 
-// WithAgentTaskToProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
-// the "AgentTaskToProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (atq *AgentTaskQuery) WithAgentTaskToProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *AgentTaskQuery {
+// WithProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *AgentTaskQuery) WithProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *AgentTaskQuery {
 	query := &ProvisioningScheduledStepQuery{config: atq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	atq.withAgentTaskToProvisioningScheduledStep = query
+	atq.withProvisioningScheduledStep = query
 	return atq
 }
 
-// WithAgentTaskToProvisionedHost tells the query-builder to eager-load the nodes that are connected to
-// the "AgentTaskToProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
-func (atq *AgentTaskQuery) WithAgentTaskToProvisionedHost(opts ...func(*ProvisionedHostQuery)) *AgentTaskQuery {
+// WithProvisionedHost tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *AgentTaskQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuery)) *AgentTaskQuery {
 	query := &ProvisionedHostQuery{config: atq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	atq.withAgentTaskToProvisionedHost = query
+	atq.withProvisionedHost = query
 	return atq
 }
 
-// WithAgentTaskToAdhocPlan tells the query-builder to eager-load the nodes that are connected to
-// the "AgentTaskToAdhocPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (atq *AgentTaskQuery) WithAgentTaskToAdhocPlan(opts ...func(*AdhocPlanQuery)) *AgentTaskQuery {
+// WithAdhocPlans tells the query-builder to eager-load the nodes that are connected to
+// the "AdhocPlans" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *AgentTaskQuery) WithAdhocPlans(opts ...func(*AdhocPlanQuery)) *AgentTaskQuery {
 	query := &AdhocPlanQuery{config: atq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	atq.withAgentTaskToAdhocPlan = query
+	atq.withAdhocPlans = query
 	return atq
 }
 
-// WithAgentTaskToValidation tells the query-builder to eager-load the nodes that are connected to
-// the "AgentTaskToValidation" edge. The optional arguments are used to configure the query builder of the edge.
-func (atq *AgentTaskQuery) WithAgentTaskToValidation(opts ...func(*ValidationQuery)) *AgentTaskQuery {
+// WithValidation tells the query-builder to eager-load the nodes that are connected to
+// the "Validation" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *AgentTaskQuery) WithValidation(opts ...func(*ValidationQuery)) *AgentTaskQuery {
 	query := &ValidationQuery{config: atq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	atq.withAgentTaskToValidation = query
+	atq.withValidation = query
 	return atq
 }
 
@@ -444,7 +444,6 @@ func (atq *AgentTaskQuery) WithAgentTaskToValidation(opts ...func(*ValidationQue
 //		GroupBy(agenttask.FieldCommand).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (atq *AgentTaskQuery) GroupBy(field string, fields ...string) *AgentTaskGroupBy {
 	grbuild := &AgentTaskGroupBy{config: atq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -471,7 +470,6 @@ func (atq *AgentTaskQuery) GroupBy(field string, fields ...string) *AgentTaskGro
 //	client.AgentTask.Query().
 //		Select(agenttask.FieldCommand).
 //		Scan(ctx, &v)
-//
 func (atq *AgentTaskQuery) Select(fields ...string) *AgentTaskSelect {
 	atq.fields = append(atq.fields, fields...)
 	selbuild := &AgentTaskSelect{AgentTaskQuery: atq}
@@ -502,14 +500,14 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 		withFKs     = atq.withFKs
 		_spec       = atq.querySpec()
 		loadedTypes = [5]bool{
-			atq.withAgentTaskToProvisioningStep != nil,
-			atq.withAgentTaskToProvisioningScheduledStep != nil,
-			atq.withAgentTaskToProvisionedHost != nil,
-			atq.withAgentTaskToAdhocPlan != nil,
-			atq.withAgentTaskToValidation != nil,
+			atq.withProvisioningStep != nil,
+			atq.withProvisioningScheduledStep != nil,
+			atq.withProvisionedHost != nil,
+			atq.withAdhocPlans != nil,
+			atq.withValidation != nil,
 		}
 	)
-	if atq.withAgentTaskToProvisioningStep != nil || atq.withAgentTaskToProvisionedHost != nil {
+	if atq.withProvisioningStep != nil || atq.withProvisioningScheduledStep != nil || atq.withProvisionedHost != nil || atq.withValidation != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -533,50 +531,48 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := atq.withAgentTaskToProvisioningStep; query != nil {
-		if err := atq.loadAgentTaskToProvisioningStep(ctx, query, nodes, nil,
-			func(n *AgentTask, e *ProvisioningStep) { n.Edges.AgentTaskToProvisioningStep = e }); err != nil {
+	if query := atq.withProvisioningStep; query != nil {
+		if err := atq.loadProvisioningStep(ctx, query, nodes, nil,
+			func(n *AgentTask, e *ProvisioningStep) { n.Edges.ProvisioningStep = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := atq.withAgentTaskToProvisioningScheduledStep; query != nil {
-		if err := atq.loadAgentTaskToProvisioningScheduledStep(ctx, query, nodes, nil,
-			func(n *AgentTask, e *ProvisioningScheduledStep) { n.Edges.AgentTaskToProvisioningScheduledStep = e }); err != nil {
+	if query := atq.withProvisioningScheduledStep; query != nil {
+		if err := atq.loadProvisioningScheduledStep(ctx, query, nodes, nil,
+			func(n *AgentTask, e *ProvisioningScheduledStep) { n.Edges.ProvisioningScheduledStep = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := atq.withAgentTaskToProvisionedHost; query != nil {
-		if err := atq.loadAgentTaskToProvisionedHost(ctx, query, nodes, nil,
-			func(n *AgentTask, e *ProvisionedHost) { n.Edges.AgentTaskToProvisionedHost = e }); err != nil {
+	if query := atq.withProvisionedHost; query != nil {
+		if err := atq.loadProvisionedHost(ctx, query, nodes, nil,
+			func(n *AgentTask, e *ProvisionedHost) { n.Edges.ProvisionedHost = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := atq.withAgentTaskToAdhocPlan; query != nil {
-		if err := atq.loadAgentTaskToAdhocPlan(ctx, query, nodes,
-			func(n *AgentTask) { n.Edges.AgentTaskToAdhocPlan = []*AdhocPlan{} },
-			func(n *AgentTask, e *AdhocPlan) {
-				n.Edges.AgentTaskToAdhocPlan = append(n.Edges.AgentTaskToAdhocPlan, e)
-			}); err != nil {
+	if query := atq.withAdhocPlans; query != nil {
+		if err := atq.loadAdhocPlans(ctx, query, nodes,
+			func(n *AgentTask) { n.Edges.AdhocPlans = []*AdhocPlan{} },
+			func(n *AgentTask, e *AdhocPlan) { n.Edges.AdhocPlans = append(n.Edges.AdhocPlans, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := atq.withAgentTaskToValidation; query != nil {
-		if err := atq.loadAgentTaskToValidation(ctx, query, nodes, nil,
-			func(n *AgentTask, e *Validation) { n.Edges.AgentTaskToValidation = e }); err != nil {
+	if query := atq.withValidation; query != nil {
+		if err := atq.loadValidation(ctx, query, nodes, nil,
+			func(n *AgentTask, e *Validation) { n.Edges.Validation = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (atq *AgentTaskQuery) loadAgentTaskToProvisioningStep(ctx context.Context, query *ProvisioningStepQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisioningStep)) error {
+func (atq *AgentTaskQuery) loadProvisioningStep(ctx context.Context, query *ProvisioningStepQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisioningStep)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*AgentTask)
 	for i := range nodes {
-		if nodes[i].agent_task_agent_task_to_provisioning_step == nil {
+		if nodes[i].agent_task_provisioning_step == nil {
 			continue
 		}
-		fk := *nodes[i].agent_task_agent_task_to_provisioning_step
+		fk := *nodes[i].agent_task_provisioning_step
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -590,7 +586,7 @@ func (atq *AgentTaskQuery) loadAgentTaskToProvisioningStep(ctx context.Context, 
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_provisioning_step" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_task_provisioning_step" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -598,42 +594,43 @@ func (atq *AgentTaskQuery) loadAgentTaskToProvisioningStep(ctx context.Context, 
 	}
 	return nil
 }
-func (atq *AgentTaskQuery) loadAgentTaskToProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisioningScheduledStep)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*AgentTask)
+func (atq *AgentTaskQuery) loadProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisioningScheduledStep)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*AgentTask)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
+		if nodes[i].agent_task_provisioning_scheduled_step == nil {
+			continue
+		}
+		fk := *nodes[i].agent_task_provisioning_scheduled_step
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.withFKs = true
-	query.Where(predicate.ProvisioningScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(agenttask.AgentTaskToProvisioningScheduledStepColumn, fks...))
-	}))
+	query.Where(provisioningscheduledstep.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_task_agent_task_to_provisioning_scheduled_step
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_task_agent_task_to_provisioning_scheduled_step" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_provisioning_scheduled_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_task_provisioning_scheduled_step" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }
-func (atq *AgentTaskQuery) loadAgentTaskToProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisionedHost)) error {
+func (atq *AgentTaskQuery) loadProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *ProvisionedHost)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*AgentTask)
 	for i := range nodes {
-		if nodes[i].agent_task_agent_task_to_provisioned_host == nil {
+		if nodes[i].agent_task_provisioned_host == nil {
 			continue
 		}
-		fk := *nodes[i].agent_task_agent_task_to_provisioned_host
+		fk := *nodes[i].agent_task_provisioned_host
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -647,7 +644,7 @@ func (atq *AgentTaskQuery) loadAgentTaskToProvisionedHost(ctx context.Context, q
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_provisioned_host" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_task_provisioned_host" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -655,7 +652,7 @@ func (atq *AgentTaskQuery) loadAgentTaskToProvisionedHost(ctx context.Context, q
 	}
 	return nil
 }
-func (atq *AgentTaskQuery) loadAgentTaskToAdhocPlan(ctx context.Context, query *AdhocPlanQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *AdhocPlan)) error {
+func (atq *AgentTaskQuery) loadAdhocPlans(ctx context.Context, query *AdhocPlanQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *AdhocPlan)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*AgentTask)
 	for i := range nodes {
@@ -667,50 +664,51 @@ func (atq *AgentTaskQuery) loadAgentTaskToAdhocPlan(ctx context.Context, query *
 	}
 	query.withFKs = true
 	query.Where(predicate.AdhocPlan(func(s *sql.Selector) {
-		s.Where(sql.InValues(agenttask.AgentTaskToAdhocPlanColumn, fks...))
+		s.Where(sql.InValues(agenttask.AdhocPlansColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.adhoc_plan_adhoc_plan_to_agent_task
+		fk := n.adhoc_plan_agent_task
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "adhoc_plan_adhoc_plan_to_agent_task" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "adhoc_plan_agent_task" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_adhoc_plan_to_agent_task" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_agent_task" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (atq *AgentTaskQuery) loadAgentTaskToValidation(ctx context.Context, query *ValidationQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *Validation)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*AgentTask)
+func (atq *AgentTaskQuery) loadValidation(ctx context.Context, query *ValidationQuery, nodes []*AgentTask, init func(*AgentTask), assign func(*AgentTask, *Validation)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*AgentTask)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
+		if nodes[i].agent_task_validation == nil {
+			continue
+		}
+		fk := *nodes[i].agent_task_validation
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.withFKs = true
-	query.Where(predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.InValues(agenttask.AgentTaskToValidationColumn, fks...))
-	}))
+	query.Where(validation.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_task_agent_task_to_validation
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_task_agent_task_to_validation" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_task_agent_task_to_validation" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_task_validation" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }

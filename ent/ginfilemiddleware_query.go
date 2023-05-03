@@ -22,16 +22,16 @@ import (
 // GinFileMiddlewareQuery is the builder for querying GinFileMiddleware entities.
 type GinFileMiddlewareQuery struct {
 	config
-	limit                                            *int
-	offset                                           *int
-	unique                                           *bool
-	order                                            []OrderFunc
-	fields                                           []string
-	predicates                                       []predicate.GinFileMiddleware
-	withGinFileMiddlewareToProvisionedHost           *ProvisionedHostQuery
-	withGinFileMiddlewareToProvisioningStep          *ProvisioningStepQuery
-	withGinFileMiddlewareToProvisioningScheduledStep *ProvisioningScheduledStepQuery
-	withFKs                                          bool
+	limit                         *int
+	offset                        *int
+	unique                        *bool
+	order                         []OrderFunc
+	fields                        []string
+	predicates                    []predicate.GinFileMiddleware
+	withProvisionedHost           *ProvisionedHostQuery
+	withProvisioningStep          *ProvisioningStepQuery
+	withProvisioningScheduledStep *ProvisioningScheduledStepQuery
+	withFKs                       bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -68,8 +68,8 @@ func (gfmq *GinFileMiddlewareQuery) Order(o ...OrderFunc) *GinFileMiddlewareQuer
 	return gfmq
 }
 
-// QueryGinFileMiddlewareToProvisionedHost chains the current query on the "GinFileMiddlewareToProvisionedHost" edge.
-func (gfmq *GinFileMiddlewareQuery) QueryGinFileMiddlewareToProvisionedHost() *ProvisionedHostQuery {
+// QueryProvisionedHost chains the current query on the "ProvisionedHost" edge.
+func (gfmq *GinFileMiddlewareQuery) QueryProvisionedHost() *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: gfmq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := gfmq.prepareQuery(ctx); err != nil {
@@ -82,7 +82,7 @@ func (gfmq *GinFileMiddlewareQuery) QueryGinFileMiddlewareToProvisionedHost() *P
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ginfilemiddleware.Table, ginfilemiddleware.FieldID, selector),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.GinFileMiddlewareToProvisionedHostTable, ginfilemiddleware.GinFileMiddlewareToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.ProvisionedHostTable, ginfilemiddleware.ProvisionedHostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(gfmq.driver.Dialect(), step)
 		return fromU, nil
@@ -90,8 +90,8 @@ func (gfmq *GinFileMiddlewareQuery) QueryGinFileMiddlewareToProvisionedHost() *P
 	return query
 }
 
-// QueryGinFileMiddlewareToProvisioningStep chains the current query on the "GinFileMiddlewareToProvisioningStep" edge.
-func (gfmq *GinFileMiddlewareQuery) QueryGinFileMiddlewareToProvisioningStep() *ProvisioningStepQuery {
+// QueryProvisioningStep chains the current query on the "ProvisioningStep" edge.
+func (gfmq *GinFileMiddlewareQuery) QueryProvisioningStep() *ProvisioningStepQuery {
 	query := &ProvisioningStepQuery{config: gfmq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := gfmq.prepareQuery(ctx); err != nil {
@@ -104,7 +104,7 @@ func (gfmq *GinFileMiddlewareQuery) QueryGinFileMiddlewareToProvisioningStep() *
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ginfilemiddleware.Table, ginfilemiddleware.FieldID, selector),
 			sqlgraph.To(provisioningstep.Table, provisioningstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.GinFileMiddlewareToProvisioningStepTable, ginfilemiddleware.GinFileMiddlewareToProvisioningStepColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.ProvisioningStepTable, ginfilemiddleware.ProvisioningStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(gfmq.driver.Dialect(), step)
 		return fromU, nil
@@ -112,8 +112,8 @@ func (gfmq *GinFileMiddlewareQuery) QueryGinFileMiddlewareToProvisioningStep() *
 	return query
 }
 
-// QueryGinFileMiddlewareToProvisioningScheduledStep chains the current query on the "GinFileMiddlewareToProvisioningScheduledStep" edge.
-func (gfmq *GinFileMiddlewareQuery) QueryGinFileMiddlewareToProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+// QueryProvisioningScheduledStep chains the current query on the "ProvisioningScheduledStep" edge.
+func (gfmq *GinFileMiddlewareQuery) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
 	query := &ProvisioningScheduledStepQuery{config: gfmq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := gfmq.prepareQuery(ctx); err != nil {
@@ -126,7 +126,7 @@ func (gfmq *GinFileMiddlewareQuery) QueryGinFileMiddlewareToProvisioningSchedule
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ginfilemiddleware.Table, ginfilemiddleware.FieldID, selector),
 			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepTable, ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, ginfilemiddleware.ProvisioningScheduledStepTable, ginfilemiddleware.ProvisioningScheduledStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(gfmq.driver.Dialect(), step)
 		return fromU, nil
@@ -310,14 +310,14 @@ func (gfmq *GinFileMiddlewareQuery) Clone() *GinFileMiddlewareQuery {
 		return nil
 	}
 	return &GinFileMiddlewareQuery{
-		config:                                  gfmq.config,
-		limit:                                   gfmq.limit,
-		offset:                                  gfmq.offset,
-		order:                                   append([]OrderFunc{}, gfmq.order...),
-		predicates:                              append([]predicate.GinFileMiddleware{}, gfmq.predicates...),
-		withGinFileMiddlewareToProvisionedHost:  gfmq.withGinFileMiddlewareToProvisionedHost.Clone(),
-		withGinFileMiddlewareToProvisioningStep: gfmq.withGinFileMiddlewareToProvisioningStep.Clone(),
-		withGinFileMiddlewareToProvisioningScheduledStep: gfmq.withGinFileMiddlewareToProvisioningScheduledStep.Clone(),
+		config:                        gfmq.config,
+		limit:                         gfmq.limit,
+		offset:                        gfmq.offset,
+		order:                         append([]OrderFunc{}, gfmq.order...),
+		predicates:                    append([]predicate.GinFileMiddleware{}, gfmq.predicates...),
+		withProvisionedHost:           gfmq.withProvisionedHost.Clone(),
+		withProvisioningStep:          gfmq.withProvisioningStep.Clone(),
+		withProvisioningScheduledStep: gfmq.withProvisioningScheduledStep.Clone(),
 		// clone intermediate query.
 		sql:    gfmq.sql.Clone(),
 		path:   gfmq.path,
@@ -325,36 +325,36 @@ func (gfmq *GinFileMiddlewareQuery) Clone() *GinFileMiddlewareQuery {
 	}
 }
 
-// WithGinFileMiddlewareToProvisionedHost tells the query-builder to eager-load the nodes that are connected to
-// the "GinFileMiddlewareToProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
-func (gfmq *GinFileMiddlewareQuery) WithGinFileMiddlewareToProvisionedHost(opts ...func(*ProvisionedHostQuery)) *GinFileMiddlewareQuery {
+// WithProvisionedHost tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
+func (gfmq *GinFileMiddlewareQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuery)) *GinFileMiddlewareQuery {
 	query := &ProvisionedHostQuery{config: gfmq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	gfmq.withGinFileMiddlewareToProvisionedHost = query
+	gfmq.withProvisionedHost = query
 	return gfmq
 }
 
-// WithGinFileMiddlewareToProvisioningStep tells the query-builder to eager-load the nodes that are connected to
-// the "GinFileMiddlewareToProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (gfmq *GinFileMiddlewareQuery) WithGinFileMiddlewareToProvisioningStep(opts ...func(*ProvisioningStepQuery)) *GinFileMiddlewareQuery {
+// WithProvisioningStep tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (gfmq *GinFileMiddlewareQuery) WithProvisioningStep(opts ...func(*ProvisioningStepQuery)) *GinFileMiddlewareQuery {
 	query := &ProvisioningStepQuery{config: gfmq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	gfmq.withGinFileMiddlewareToProvisioningStep = query
+	gfmq.withProvisioningStep = query
 	return gfmq
 }
 
-// WithGinFileMiddlewareToProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
-// the "GinFileMiddlewareToProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (gfmq *GinFileMiddlewareQuery) WithGinFileMiddlewareToProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *GinFileMiddlewareQuery {
+// WithProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (gfmq *GinFileMiddlewareQuery) WithProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *GinFileMiddlewareQuery {
 	query := &ProvisioningScheduledStepQuery{config: gfmq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	gfmq.withGinFileMiddlewareToProvisioningScheduledStep = query
+	gfmq.withProvisioningScheduledStep = query
 	return gfmq
 }
 
@@ -372,7 +372,6 @@ func (gfmq *GinFileMiddlewareQuery) WithGinFileMiddlewareToProvisioningScheduled
 //		GroupBy(ginfilemiddleware.FieldURLID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (gfmq *GinFileMiddlewareQuery) GroupBy(field string, fields ...string) *GinFileMiddlewareGroupBy {
 	grbuild := &GinFileMiddlewareGroupBy{config: gfmq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -399,7 +398,6 @@ func (gfmq *GinFileMiddlewareQuery) GroupBy(field string, fields ...string) *Gin
 //	client.GinFileMiddleware.Query().
 //		Select(ginfilemiddleware.FieldURLID).
 //		Scan(ctx, &v)
-//
 func (gfmq *GinFileMiddlewareQuery) Select(fields ...string) *GinFileMiddlewareSelect {
 	gfmq.fields = append(gfmq.fields, fields...)
 	selbuild := &GinFileMiddlewareSelect{GinFileMiddlewareQuery: gfmq}
@@ -430,9 +428,9 @@ func (gfmq *GinFileMiddlewareQuery) sqlAll(ctx context.Context, hooks ...queryHo
 		withFKs     = gfmq.withFKs
 		_spec       = gfmq.querySpec()
 		loadedTypes = [3]bool{
-			gfmq.withGinFileMiddlewareToProvisionedHost != nil,
-			gfmq.withGinFileMiddlewareToProvisioningStep != nil,
-			gfmq.withGinFileMiddlewareToProvisioningScheduledStep != nil,
+			gfmq.withProvisionedHost != nil,
+			gfmq.withProvisioningStep != nil,
+			gfmq.withProvisioningScheduledStep != nil,
 		}
 	)
 	if withFKs {
@@ -456,30 +454,28 @@ func (gfmq *GinFileMiddlewareQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := gfmq.withGinFileMiddlewareToProvisionedHost; query != nil {
-		if err := gfmq.loadGinFileMiddlewareToProvisionedHost(ctx, query, nodes, nil,
-			func(n *GinFileMiddleware, e *ProvisionedHost) { n.Edges.GinFileMiddlewareToProvisionedHost = e }); err != nil {
+	if query := gfmq.withProvisionedHost; query != nil {
+		if err := gfmq.loadProvisionedHost(ctx, query, nodes, nil,
+			func(n *GinFileMiddleware, e *ProvisionedHost) { n.Edges.ProvisionedHost = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := gfmq.withGinFileMiddlewareToProvisioningStep; query != nil {
-		if err := gfmq.loadGinFileMiddlewareToProvisioningStep(ctx, query, nodes, nil,
-			func(n *GinFileMiddleware, e *ProvisioningStep) { n.Edges.GinFileMiddlewareToProvisioningStep = e }); err != nil {
+	if query := gfmq.withProvisioningStep; query != nil {
+		if err := gfmq.loadProvisioningStep(ctx, query, nodes, nil,
+			func(n *GinFileMiddleware, e *ProvisioningStep) { n.Edges.ProvisioningStep = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := gfmq.withGinFileMiddlewareToProvisioningScheduledStep; query != nil {
-		if err := gfmq.loadGinFileMiddlewareToProvisioningScheduledStep(ctx, query, nodes, nil,
-			func(n *GinFileMiddleware, e *ProvisioningScheduledStep) {
-				n.Edges.GinFileMiddlewareToProvisioningScheduledStep = e
-			}); err != nil {
+	if query := gfmq.withProvisioningScheduledStep; query != nil {
+		if err := gfmq.loadProvisioningScheduledStep(ctx, query, nodes, nil,
+			func(n *GinFileMiddleware, e *ProvisioningScheduledStep) { n.Edges.ProvisioningScheduledStep = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (gfmq *GinFileMiddlewareQuery) loadGinFileMiddlewareToProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*GinFileMiddleware, init func(*GinFileMiddleware), assign func(*GinFileMiddleware, *ProvisionedHost)) error {
+func (gfmq *GinFileMiddlewareQuery) loadProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*GinFileMiddleware, init func(*GinFileMiddleware), assign func(*GinFileMiddleware, *ProvisionedHost)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*GinFileMiddleware)
 	for i := range nodes {
@@ -488,26 +484,26 @@ func (gfmq *GinFileMiddlewareQuery) loadGinFileMiddlewareToProvisionedHost(ctx c
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisionedHost(func(s *sql.Selector) {
-		s.Where(sql.InValues(ginfilemiddleware.GinFileMiddlewareToProvisionedHostColumn, fks...))
+		s.Where(sql.InValues(ginfilemiddleware.ProvisionedHostColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.gin_file_middleware_gin_file_middleware_to_provisioned_host
+		fk := n.gin_file_middleware_provisioned_host
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "gin_file_middleware_gin_file_middleware_to_provisioned_host" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "gin_file_middleware_provisioned_host" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_gin_file_middleware_to_provisioned_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_provisioned_host" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (gfmq *GinFileMiddlewareQuery) loadGinFileMiddlewareToProvisioningStep(ctx context.Context, query *ProvisioningStepQuery, nodes []*GinFileMiddleware, init func(*GinFileMiddleware), assign func(*GinFileMiddleware, *ProvisioningStep)) error {
+func (gfmq *GinFileMiddlewareQuery) loadProvisioningStep(ctx context.Context, query *ProvisioningStepQuery, nodes []*GinFileMiddleware, init func(*GinFileMiddleware), assign func(*GinFileMiddleware, *ProvisioningStep)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*GinFileMiddleware)
 	for i := range nodes {
@@ -516,26 +512,26 @@ func (gfmq *GinFileMiddlewareQuery) loadGinFileMiddlewareToProvisioningStep(ctx 
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisioningStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(ginfilemiddleware.GinFileMiddlewareToProvisioningStepColumn, fks...))
+		s.Where(sql.InValues(ginfilemiddleware.ProvisioningStepColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.gin_file_middleware_gin_file_middleware_to_provisioning_step
+		fk := n.gin_file_middleware_provisioning_step
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "gin_file_middleware_gin_file_middleware_to_provisioning_step" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "gin_file_middleware_provisioning_step" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_gin_file_middleware_to_provisioning_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_provisioning_step" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (gfmq *GinFileMiddlewareQuery) loadGinFileMiddlewareToProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*GinFileMiddleware, init func(*GinFileMiddleware), assign func(*GinFileMiddleware, *ProvisioningScheduledStep)) error {
+func (gfmq *GinFileMiddlewareQuery) loadProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*GinFileMiddleware, init func(*GinFileMiddleware), assign func(*GinFileMiddleware, *ProvisioningScheduledStep)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*GinFileMiddleware)
 	for i := range nodes {
@@ -544,20 +540,20 @@ func (gfmq *GinFileMiddlewareQuery) loadGinFileMiddlewareToProvisioningScheduled
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisioningScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(ginfilemiddleware.GinFileMiddlewareToProvisioningScheduledStepColumn, fks...))
+		s.Where(sql.InValues(ginfilemiddleware.ProvisioningScheduledStepColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step
+		fk := n.gin_file_middleware_provisioning_scheduled_step
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "gin_file_middleware_provisioning_scheduled_step" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_gin_file_middleware_to_provisioning_scheduled_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_provisioning_scheduled_step" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/gen0cide/laforge/ent/agenttask"
+	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
@@ -61,59 +61,33 @@ type Validation struct {
 	Edges ValidationEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// ValidationToAgentTask holds the value of the ValidationToAgentTask edge.
-	HCLValidationToAgentTask *AgentTask `json:"ValidationToAgentTask,omitempty"`
-	// ValidationToScript holds the value of the ValidationToScript edge.
-	HCLValidationToScript []*Script `json:"ValidationToScript,omitempty"`
-	// ValidationToEnvironment holds the value of the ValidationToEnvironment edge.
-	HCLValidationToEnvironment []*Environment `json:"ValidationToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
-	agent_task_agent_task_to_validation *uuid.UUID
+	environment_validations *uuid.UUID
 }
 
 // ValidationEdges holds the relations/edges for other nodes in the graph.
 type ValidationEdges struct {
-	// ValidationToAgentTask holds the value of the ValidationToAgentTask edge.
-	ValidationToAgentTask *AgentTask `json:"ValidationToAgentTask,omitempty"`
-	// ValidationToScript holds the value of the ValidationToScript edge.
-	ValidationToScript []*Script `json:"ValidationToScript,omitempty"`
-	// ValidationToEnvironment holds the value of the ValidationToEnvironment edge.
-	ValidationToEnvironment []*Environment `json:"ValidationToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [1]bool
 }
 
-// ValidationToAgentTaskOrErr returns the ValidationToAgentTask value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ValidationEdges) ValidationToAgentTaskOrErr() (*AgentTask, error) {
+func (e ValidationEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[0] {
-		if e.ValidationToAgentTask == nil {
-			// The edge ValidationToAgentTask was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
-			return nil, &NotFoundError{label: agenttask.Label}
+			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.ValidationToAgentTask, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "ValidationToAgentTask"}
-}
-
-// ValidationToScriptOrErr returns the ValidationToScript value or an error if the edge
-// was not loaded in eager-loading.
-func (e ValidationEdges) ValidationToScriptOrErr() ([]*Script, error) {
-	if e.loadedTypes[1] {
-		return e.ValidationToScript, nil
-	}
-	return nil, &NotLoadedError{edge: "ValidationToScript"}
-}
-
-// ValidationToEnvironmentOrErr returns the ValidationToEnvironment value or an error if the edge
-// was not loaded in eager-loading.
-func (e ValidationEdges) ValidationToEnvironmentOrErr() ([]*Environment, error) {
-	if e.loadedTypes[2] {
-		return e.ValidationToEnvironment, nil
-	}
-	return nil, &NotLoadedError{edge: "ValidationToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -129,7 +103,7 @@ func (*Validation) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case validation.FieldID:
 			values[i] = new(uuid.UUID)
-		case validation.ForeignKeys[0]: // agent_task_agent_task_to_validation
+		case validation.ForeignKeys[0]: // environment_validations
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Validation", columns[i])
@@ -270,29 +244,19 @@ func (v *Validation) assignValues(columns []string, values []interface{}) error 
 			}
 		case validation.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field agent_task_agent_task_to_validation", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_validations", values[i])
 			} else if value.Valid {
-				v.agent_task_agent_task_to_validation = new(uuid.UUID)
-				*v.agent_task_agent_task_to_validation = *value.S.(*uuid.UUID)
+				v.environment_validations = new(uuid.UUID)
+				*v.environment_validations = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryValidationToAgentTask queries the "ValidationToAgentTask" edge of the Validation entity.
-func (v *Validation) QueryValidationToAgentTask() *AgentTaskQuery {
-	return (&ValidationClient{config: v.config}).QueryValidationToAgentTask(v)
-}
-
-// QueryValidationToScript queries the "ValidationToScript" edge of the Validation entity.
-func (v *Validation) QueryValidationToScript() *ScriptQuery {
-	return (&ValidationClient{config: v.config}).QueryValidationToScript(v)
-}
-
-// QueryValidationToEnvironment queries the "ValidationToEnvironment" edge of the Validation entity.
-func (v *Validation) QueryValidationToEnvironment() *EnvironmentQuery {
-	return (&ValidationClient{config: v.config}).QueryValidationToEnvironment(v)
+// QueryEnvironment queries the "Environment" edge of the Validation entity.
+func (v *Validation) QueryEnvironment() *EnvironmentQuery {
+	return (&ValidationClient{config: v.config}).QueryEnvironment(v)
 }
 
 // Update returns a builder for updating this Validation.

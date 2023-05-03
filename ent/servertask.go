@@ -38,121 +38,121 @@ type ServerTask struct {
 	Edges ServerTaskEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// ServerTaskToAuthUser holds the value of the ServerTaskToAuthUser edge.
-	HCLServerTaskToAuthUser *AuthUser `json:"ServerTaskToAuthUser,omitempty"`
-	// ServerTaskToStatus holds the value of the ServerTaskToStatus edge.
-	HCLServerTaskToStatus *Status `json:"ServerTaskToStatus,omitempty"`
-	// ServerTaskToEnvironment holds the value of the ServerTaskToEnvironment edge.
-	HCLServerTaskToEnvironment *Environment `json:"ServerTaskToEnvironment,omitempty"`
-	// ServerTaskToBuild holds the value of the ServerTaskToBuild edge.
-	HCLServerTaskToBuild *Build `json:"ServerTaskToBuild,omitempty"`
-	// ServerTaskToBuildCommit holds the value of the ServerTaskToBuildCommit edge.
-	HCLServerTaskToBuildCommit *BuildCommit `json:"ServerTaskToBuildCommit,omitempty"`
-	// ServerTaskToGinFileMiddleware holds the value of the ServerTaskToGinFileMiddleware edge.
-	HCLServerTaskToGinFileMiddleware []*GinFileMiddleware `json:"ServerTaskToGinFileMiddleware,omitempty"`
+	// AuthUser holds the value of the AuthUser edge.
+	HCLAuthUser *AuthUser `json:"AuthUser,omitempty"`
+	// Status holds the value of the Status edge.
+	HCLStatus *Status `json:"Status,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
+	// Build holds the value of the Build edge.
+	HCLBuild *Build `json:"Build,omitempty"`
+	// BuildCommit holds the value of the BuildCommit edge.
+	HCLBuildCommit *BuildCommit `json:"BuildCommit,omitempty"`
+	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
+	HCLGinFileMiddleware []*GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
 	//
-	server_task_server_task_to_auth_user    *uuid.UUID
-	server_task_server_task_to_environment  *uuid.UUID
-	server_task_server_task_to_build        *uuid.UUID
-	server_task_server_task_to_build_commit *uuid.UUID
+	server_task_auth_user    *uuid.UUID
+	server_task_environment  *uuid.UUID
+	server_task_build        *uuid.UUID
+	server_task_build_commit *uuid.UUID
 }
 
 // ServerTaskEdges holds the relations/edges for other nodes in the graph.
 type ServerTaskEdges struct {
-	// ServerTaskToAuthUser holds the value of the ServerTaskToAuthUser edge.
-	ServerTaskToAuthUser *AuthUser `json:"ServerTaskToAuthUser,omitempty"`
-	// ServerTaskToStatus holds the value of the ServerTaskToStatus edge.
-	ServerTaskToStatus *Status `json:"ServerTaskToStatus,omitempty"`
-	// ServerTaskToEnvironment holds the value of the ServerTaskToEnvironment edge.
-	ServerTaskToEnvironment *Environment `json:"ServerTaskToEnvironment,omitempty"`
-	// ServerTaskToBuild holds the value of the ServerTaskToBuild edge.
-	ServerTaskToBuild *Build `json:"ServerTaskToBuild,omitempty"`
-	// ServerTaskToBuildCommit holds the value of the ServerTaskToBuildCommit edge.
-	ServerTaskToBuildCommit *BuildCommit `json:"ServerTaskToBuildCommit,omitempty"`
-	// ServerTaskToGinFileMiddleware holds the value of the ServerTaskToGinFileMiddleware edge.
-	ServerTaskToGinFileMiddleware []*GinFileMiddleware `json:"ServerTaskToGinFileMiddleware,omitempty"`
+	// AuthUser holds the value of the AuthUser edge.
+	AuthUser *AuthUser `json:"AuthUser,omitempty"`
+	// Status holds the value of the Status edge.
+	Status *Status `json:"Status,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
+	// Build holds the value of the Build edge.
+	Build *Build `json:"Build,omitempty"`
+	// BuildCommit holds the value of the BuildCommit edge.
+	BuildCommit *BuildCommit `json:"BuildCommit,omitempty"`
+	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
+	GinFileMiddleware []*GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [6]bool
 }
 
-// ServerTaskToAuthUserOrErr returns the ServerTaskToAuthUser value or an error if the edge
+// AuthUserOrErr returns the AuthUser value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ServerTaskEdges) ServerTaskToAuthUserOrErr() (*AuthUser, error) {
+func (e ServerTaskEdges) AuthUserOrErr() (*AuthUser, error) {
 	if e.loadedTypes[0] {
-		if e.ServerTaskToAuthUser == nil {
-			// The edge ServerTaskToAuthUser was loaded in eager-loading,
+		if e.AuthUser == nil {
+			// The edge AuthUser was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: authuser.Label}
 		}
-		return e.ServerTaskToAuthUser, nil
+		return e.AuthUser, nil
 	}
-	return nil, &NotLoadedError{edge: "ServerTaskToAuthUser"}
+	return nil, &NotLoadedError{edge: "AuthUser"}
 }
 
-// ServerTaskToStatusOrErr returns the ServerTaskToStatus value or an error if the edge
+// StatusOrErr returns the Status value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ServerTaskEdges) ServerTaskToStatusOrErr() (*Status, error) {
+func (e ServerTaskEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[1] {
-		if e.ServerTaskToStatus == nil {
-			// The edge ServerTaskToStatus was loaded in eager-loading,
+		if e.Status == nil {
+			// The edge Status was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
-		return e.ServerTaskToStatus, nil
+		return e.Status, nil
 	}
-	return nil, &NotLoadedError{edge: "ServerTaskToStatus"}
+	return nil, &NotLoadedError{edge: "Status"}
 }
 
-// ServerTaskToEnvironmentOrErr returns the ServerTaskToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ServerTaskEdges) ServerTaskToEnvironmentOrErr() (*Environment, error) {
+func (e ServerTaskEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[2] {
-		if e.ServerTaskToEnvironment == nil {
-			// The edge ServerTaskToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.ServerTaskToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "ServerTaskToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
-// ServerTaskToBuildOrErr returns the ServerTaskToBuild value or an error if the edge
+// BuildOrErr returns the Build value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ServerTaskEdges) ServerTaskToBuildOrErr() (*Build, error) {
+func (e ServerTaskEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[3] {
-		if e.ServerTaskToBuild == nil {
-			// The edge ServerTaskToBuild was loaded in eager-loading,
+		if e.Build == nil {
+			// The edge Build was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
-		return e.ServerTaskToBuild, nil
+		return e.Build, nil
 	}
-	return nil, &NotLoadedError{edge: "ServerTaskToBuild"}
+	return nil, &NotLoadedError{edge: "Build"}
 }
 
-// ServerTaskToBuildCommitOrErr returns the ServerTaskToBuildCommit value or an error if the edge
+// BuildCommitOrErr returns the BuildCommit value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ServerTaskEdges) ServerTaskToBuildCommitOrErr() (*BuildCommit, error) {
+func (e ServerTaskEdges) BuildCommitOrErr() (*BuildCommit, error) {
 	if e.loadedTypes[4] {
-		if e.ServerTaskToBuildCommit == nil {
-			// The edge ServerTaskToBuildCommit was loaded in eager-loading,
+		if e.BuildCommit == nil {
+			// The edge BuildCommit was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: buildcommit.Label}
 		}
-		return e.ServerTaskToBuildCommit, nil
+		return e.BuildCommit, nil
 	}
-	return nil, &NotLoadedError{edge: "ServerTaskToBuildCommit"}
+	return nil, &NotLoadedError{edge: "BuildCommit"}
 }
 
-// ServerTaskToGinFileMiddlewareOrErr returns the ServerTaskToGinFileMiddleware value or an error if the edge
+// GinFileMiddlewareOrErr returns the GinFileMiddleware value or an error if the edge
 // was not loaded in eager-loading.
-func (e ServerTaskEdges) ServerTaskToGinFileMiddlewareOrErr() ([]*GinFileMiddleware, error) {
+func (e ServerTaskEdges) GinFileMiddlewareOrErr() ([]*GinFileMiddleware, error) {
 	if e.loadedTypes[5] {
-		return e.ServerTaskToGinFileMiddleware, nil
+		return e.GinFileMiddleware, nil
 	}
-	return nil, &NotLoadedError{edge: "ServerTaskToGinFileMiddleware"}
+	return nil, &NotLoadedError{edge: "GinFileMiddleware"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -168,13 +168,13 @@ func (*ServerTask) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullTime)
 		case servertask.FieldID:
 			values[i] = new(uuid.UUID)
-		case servertask.ForeignKeys[0]: // server_task_server_task_to_auth_user
+		case servertask.ForeignKeys[0]: // server_task_auth_user
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case servertask.ForeignKeys[1]: // server_task_server_task_to_environment
+		case servertask.ForeignKeys[1]: // server_task_environment
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case servertask.ForeignKeys[2]: // server_task_server_task_to_build
+		case servertask.ForeignKeys[2]: // server_task_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case servertask.ForeignKeys[3]: // server_task_server_task_to_build_commit
+		case servertask.ForeignKeys[3]: // server_task_build_commit
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type ServerTask", columns[i])
@@ -231,65 +231,65 @@ func (st *ServerTask) assignValues(columns []string, values []interface{}) error
 			}
 		case servertask.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field server_task_server_task_to_auth_user", values[i])
+				return fmt.Errorf("unexpected type %T for field server_task_auth_user", values[i])
 			} else if value.Valid {
-				st.server_task_server_task_to_auth_user = new(uuid.UUID)
-				*st.server_task_server_task_to_auth_user = *value.S.(*uuid.UUID)
+				st.server_task_auth_user = new(uuid.UUID)
+				*st.server_task_auth_user = *value.S.(*uuid.UUID)
 			}
 		case servertask.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field server_task_server_task_to_environment", values[i])
+				return fmt.Errorf("unexpected type %T for field server_task_environment", values[i])
 			} else if value.Valid {
-				st.server_task_server_task_to_environment = new(uuid.UUID)
-				*st.server_task_server_task_to_environment = *value.S.(*uuid.UUID)
+				st.server_task_environment = new(uuid.UUID)
+				*st.server_task_environment = *value.S.(*uuid.UUID)
 			}
 		case servertask.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field server_task_server_task_to_build", values[i])
+				return fmt.Errorf("unexpected type %T for field server_task_build", values[i])
 			} else if value.Valid {
-				st.server_task_server_task_to_build = new(uuid.UUID)
-				*st.server_task_server_task_to_build = *value.S.(*uuid.UUID)
+				st.server_task_build = new(uuid.UUID)
+				*st.server_task_build = *value.S.(*uuid.UUID)
 			}
 		case servertask.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field server_task_server_task_to_build_commit", values[i])
+				return fmt.Errorf("unexpected type %T for field server_task_build_commit", values[i])
 			} else if value.Valid {
-				st.server_task_server_task_to_build_commit = new(uuid.UUID)
-				*st.server_task_server_task_to_build_commit = *value.S.(*uuid.UUID)
+				st.server_task_build_commit = new(uuid.UUID)
+				*st.server_task_build_commit = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryServerTaskToAuthUser queries the "ServerTaskToAuthUser" edge of the ServerTask entity.
-func (st *ServerTask) QueryServerTaskToAuthUser() *AuthUserQuery {
-	return (&ServerTaskClient{config: st.config}).QueryServerTaskToAuthUser(st)
+// QueryAuthUser queries the "AuthUser" edge of the ServerTask entity.
+func (st *ServerTask) QueryAuthUser() *AuthUserQuery {
+	return (&ServerTaskClient{config: st.config}).QueryAuthUser(st)
 }
 
-// QueryServerTaskToStatus queries the "ServerTaskToStatus" edge of the ServerTask entity.
-func (st *ServerTask) QueryServerTaskToStatus() *StatusQuery {
-	return (&ServerTaskClient{config: st.config}).QueryServerTaskToStatus(st)
+// QueryStatus queries the "Status" edge of the ServerTask entity.
+func (st *ServerTask) QueryStatus() *StatusQuery {
+	return (&ServerTaskClient{config: st.config}).QueryStatus(st)
 }
 
-// QueryServerTaskToEnvironment queries the "ServerTaskToEnvironment" edge of the ServerTask entity.
-func (st *ServerTask) QueryServerTaskToEnvironment() *EnvironmentQuery {
-	return (&ServerTaskClient{config: st.config}).QueryServerTaskToEnvironment(st)
+// QueryEnvironment queries the "Environment" edge of the ServerTask entity.
+func (st *ServerTask) QueryEnvironment() *EnvironmentQuery {
+	return (&ServerTaskClient{config: st.config}).QueryEnvironment(st)
 }
 
-// QueryServerTaskToBuild queries the "ServerTaskToBuild" edge of the ServerTask entity.
-func (st *ServerTask) QueryServerTaskToBuild() *BuildQuery {
-	return (&ServerTaskClient{config: st.config}).QueryServerTaskToBuild(st)
+// QueryBuild queries the "Build" edge of the ServerTask entity.
+func (st *ServerTask) QueryBuild() *BuildQuery {
+	return (&ServerTaskClient{config: st.config}).QueryBuild(st)
 }
 
-// QueryServerTaskToBuildCommit queries the "ServerTaskToBuildCommit" edge of the ServerTask entity.
-func (st *ServerTask) QueryServerTaskToBuildCommit() *BuildCommitQuery {
-	return (&ServerTaskClient{config: st.config}).QueryServerTaskToBuildCommit(st)
+// QueryBuildCommit queries the "BuildCommit" edge of the ServerTask entity.
+func (st *ServerTask) QueryBuildCommit() *BuildCommitQuery {
+	return (&ServerTaskClient{config: st.config}).QueryBuildCommit(st)
 }
 
-// QueryServerTaskToGinFileMiddleware queries the "ServerTaskToGinFileMiddleware" edge of the ServerTask entity.
-func (st *ServerTask) QueryServerTaskToGinFileMiddleware() *GinFileMiddlewareQuery {
-	return (&ServerTaskClient{config: st.config}).QueryServerTaskToGinFileMiddleware(st)
+// QueryGinFileMiddleware queries the "GinFileMiddleware" edge of the ServerTask entity.
+func (st *ServerTask) QueryGinFileMiddleware() *GinFileMiddlewareQuery {
+	return (&ServerTaskClient{config: st.config}).QueryGinFileMiddleware(st)
 }
 
 // Update returns a builder for updating this ServerTask.

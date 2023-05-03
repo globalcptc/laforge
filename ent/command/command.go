@@ -35,26 +35,26 @@ const (
 	FieldTags = "tags"
 	// FieldValidations holds the string denoting the validations field in the database.
 	FieldValidations = "validations"
-	// EdgeCommandToUser holds the string denoting the commandtouser edge name in mutations.
-	EdgeCommandToUser = "CommandToUser"
-	// EdgeCommandToEnvironment holds the string denoting the commandtoenvironment edge name in mutations.
-	EdgeCommandToEnvironment = "CommandToEnvironment"
+	// EdgeUsers holds the string denoting the users edge name in mutations.
+	EdgeUsers = "Users"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the command in the database.
 	Table = "commands"
-	// CommandToUserTable is the table that holds the CommandToUser relation/edge.
-	CommandToUserTable = "users"
-	// CommandToUserInverseTable is the table name for the User entity.
+	// UsersTable is the table that holds the Users relation/edge.
+	UsersTable = "users"
+	// UsersInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	CommandToUserInverseTable = "users"
-	// CommandToUserColumn is the table column denoting the CommandToUser relation/edge.
-	CommandToUserColumn = "command_command_to_user"
-	// CommandToEnvironmentTable is the table that holds the CommandToEnvironment relation/edge.
-	CommandToEnvironmentTable = "commands"
-	// CommandToEnvironmentInverseTable is the table name for the Environment entity.
+	UsersInverseTable = "users"
+	// UsersColumn is the table column denoting the Users relation/edge.
+	UsersColumn = "command_users"
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "commands"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	CommandToEnvironmentInverseTable = "environments"
-	// CommandToEnvironmentColumn is the table column denoting the CommandToEnvironment relation/edge.
-	CommandToEnvironmentColumn = "environment_environment_to_command"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_commands"
 )
 
 // Columns holds all SQL columns for command fields.
@@ -77,7 +77,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "commands"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_command",
+	"environment_commands",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

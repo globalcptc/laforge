@@ -19,7 +19,7 @@ subscription SubscribeUpdatedServerTask {
 subscription SubscribeUpdatedBuild {
   updatedBuild {
     id
-    BuildToLatestBuildCommit {
+    LatestBuildCommit {
       id
     }
   }

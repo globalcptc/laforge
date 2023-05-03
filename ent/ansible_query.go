@@ -21,15 +21,15 @@ import (
 // AnsibleQuery is the builder for querying Ansible entities.
 type AnsibleQuery struct {
 	config
-	limit                      *int
-	offset                     *int
-	unique                     *bool
-	order                      []OrderFunc
-	fields                     []string
-	predicates                 []predicate.Ansible
-	withAnsibleToUser          *UserQuery
-	withAnsibleFromEnvironment *EnvironmentQuery
-	withFKs                    bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.Ansible
+	withUsers       *UserQuery
+	withEnvironment *EnvironmentQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -66,8 +66,8 @@ func (aq *AnsibleQuery) Order(o ...OrderFunc) *AnsibleQuery {
 	return aq
 }
 
-// QueryAnsibleToUser chains the current query on the "AnsibleToUser" edge.
-func (aq *AnsibleQuery) QueryAnsibleToUser() *UserQuery {
+// QueryUsers chains the current query on the "Users" edge.
+func (aq *AnsibleQuery) QueryUsers() *UserQuery {
 	query := &UserQuery{config: aq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := aq.prepareQuery(ctx); err != nil {
@@ -80,7 +80,7 @@ func (aq *AnsibleQuery) QueryAnsibleToUser() *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ansible.Table, ansible.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ansible.AnsibleToUserTable, ansible.AnsibleToUserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, ansible.UsersTable, ansible.UsersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
 		return fromU, nil
@@ -88,8 +88,8 @@ func (aq *AnsibleQuery) QueryAnsibleToUser() *UserQuery {
 	return query
 }
 
-// QueryAnsibleFromEnvironment chains the current query on the "AnsibleFromEnvironment" edge.
-func (aq *AnsibleQuery) QueryAnsibleFromEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (aq *AnsibleQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: aq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := aq.prepareQuery(ctx); err != nil {
@@ -102,7 +102,7 @@ func (aq *AnsibleQuery) QueryAnsibleFromEnvironment() *EnvironmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(ansible.Table, ansible.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ansible.AnsibleFromEnvironmentTable, ansible.AnsibleFromEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, ansible.EnvironmentTable, ansible.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
 		return fromU, nil
@@ -286,13 +286,13 @@ func (aq *AnsibleQuery) Clone() *AnsibleQuery {
 		return nil
 	}
 	return &AnsibleQuery{
-		config:                     aq.config,
-		limit:                      aq.limit,
-		offset:                     aq.offset,
-		order:                      append([]OrderFunc{}, aq.order...),
-		predicates:                 append([]predicate.Ansible{}, aq.predicates...),
-		withAnsibleToUser:          aq.withAnsibleToUser.Clone(),
-		withAnsibleFromEnvironment: aq.withAnsibleFromEnvironment.Clone(),
+		config:          aq.config,
+		limit:           aq.limit,
+		offset:          aq.offset,
+		order:           append([]OrderFunc{}, aq.order...),
+		predicates:      append([]predicate.Ansible{}, aq.predicates...),
+		withUsers:       aq.withUsers.Clone(),
+		withEnvironment: aq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    aq.sql.Clone(),
 		path:   aq.path,
@@ -300,25 +300,25 @@ func (aq *AnsibleQuery) Clone() *AnsibleQuery {
 	}
 }
 
-// WithAnsibleToUser tells the query-builder to eager-load the nodes that are connected to
-// the "AnsibleToUser" edge. The optional arguments are used to configure the query builder of the edge.
-func (aq *AnsibleQuery) WithAnsibleToUser(opts ...func(*UserQuery)) *AnsibleQuery {
+// WithUsers tells the query-builder to eager-load the nodes that are connected to
+// the "Users" edge. The optional arguments are used to configure the query builder of the edge.
+func (aq *AnsibleQuery) WithUsers(opts ...func(*UserQuery)) *AnsibleQuery {
 	query := &UserQuery{config: aq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	aq.withAnsibleToUser = query
+	aq.withUsers = query
 	return aq
 }
 
-// WithAnsibleFromEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "AnsibleFromEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (aq *AnsibleQuery) WithAnsibleFromEnvironment(opts ...func(*EnvironmentQuery)) *AnsibleQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (aq *AnsibleQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *AnsibleQuery {
 	query := &EnvironmentQuery{config: aq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	aq.withAnsibleFromEnvironment = query
+	aq.withEnvironment = query
 	return aq
 }
 
@@ -336,7 +336,6 @@ func (aq *AnsibleQuery) WithAnsibleFromEnvironment(opts ...func(*EnvironmentQuer
 //		GroupBy(ansible.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (aq *AnsibleQuery) GroupBy(field string, fields ...string) *AnsibleGroupBy {
 	grbuild := &AnsibleGroupBy{config: aq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -363,7 +362,6 @@ func (aq *AnsibleQuery) GroupBy(field string, fields ...string) *AnsibleGroupBy 
 //	client.Ansible.Query().
 //		Select(ansible.FieldName).
 //		Scan(ctx, &v)
-//
 func (aq *AnsibleQuery) Select(fields ...string) *AnsibleSelect {
 	aq.fields = append(aq.fields, fields...)
 	selbuild := &AnsibleSelect{AnsibleQuery: aq}
@@ -394,11 +392,11 @@ func (aq *AnsibleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ansi
 		withFKs     = aq.withFKs
 		_spec       = aq.querySpec()
 		loadedTypes = [2]bool{
-			aq.withAnsibleToUser != nil,
-			aq.withAnsibleFromEnvironment != nil,
+			aq.withUsers != nil,
+			aq.withEnvironment != nil,
 		}
 	)
-	if aq.withAnsibleFromEnvironment != nil {
+	if aq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -422,23 +420,23 @@ func (aq *AnsibleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ansi
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := aq.withAnsibleToUser; query != nil {
-		if err := aq.loadAnsibleToUser(ctx, query, nodes,
-			func(n *Ansible) { n.Edges.AnsibleToUser = []*User{} },
-			func(n *Ansible, e *User) { n.Edges.AnsibleToUser = append(n.Edges.AnsibleToUser, e) }); err != nil {
+	if query := aq.withUsers; query != nil {
+		if err := aq.loadUsers(ctx, query, nodes,
+			func(n *Ansible) { n.Edges.Users = []*User{} },
+			func(n *Ansible, e *User) { n.Edges.Users = append(n.Edges.Users, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := aq.withAnsibleFromEnvironment; query != nil {
-		if err := aq.loadAnsibleFromEnvironment(ctx, query, nodes, nil,
-			func(n *Ansible, e *Environment) { n.Edges.AnsibleFromEnvironment = e }); err != nil {
+	if query := aq.withEnvironment; query != nil {
+		if err := aq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *Ansible, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (aq *AnsibleQuery) loadAnsibleToUser(ctx context.Context, query *UserQuery, nodes []*Ansible, init func(*Ansible), assign func(*Ansible, *User)) error {
+func (aq *AnsibleQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*Ansible, init func(*Ansible), assign func(*Ansible, *User)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Ansible)
 	for i := range nodes {
@@ -450,33 +448,33 @@ func (aq *AnsibleQuery) loadAnsibleToUser(ctx context.Context, query *UserQuery,
 	}
 	query.withFKs = true
 	query.Where(predicate.User(func(s *sql.Selector) {
-		s.Where(sql.InValues(ansible.AnsibleToUserColumn, fks...))
+		s.Where(sql.InValues(ansible.UsersColumn, fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.ansible_ansible_to_user
+		fk := n.ansible_users
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "ansible_ansible_to_user" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "ansible_users" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "ansible_ansible_to_user" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "ansible_users" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (aq *AnsibleQuery) loadAnsibleFromEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Ansible, init func(*Ansible), assign func(*Ansible, *Environment)) error {
+func (aq *AnsibleQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Ansible, init func(*Ansible), assign func(*Ansible, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Ansible)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_ansible == nil {
+		if nodes[i].environment_ansibles == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_ansible
+		fk := *nodes[i].environment_ansibles
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -490,7 +488,7 @@ func (aq *AnsibleQuery) loadAnsibleFromEnvironment(ctx context.Context, query *E
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_ansible" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_ansibles" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

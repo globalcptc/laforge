@@ -51,8 +51,8 @@ func CreateServerTask(ctx context.Context, client *ent.Client, rdb *redis.Client
 	}
 	serverTask, err = client.ServerTask.Create().
 		SetType(taskType).
-		SetServerTaskToAuthUser(authUser).
-		SetServerTaskToStatus(taskStatus).
+		SetAuthUser(authUser).
+		SetStatus(taskStatus).
 		SetStartTime(time.Now()).
 		SetLogFilePath(path.Join(cwd, "logs", fmt.Sprintf("%s_%s_%s.log", time.Now().Format("20060102-15-04-05"), taskType, authUser.ID))).
 		Save(ctx)
