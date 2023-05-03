@@ -338,13 +338,13 @@ func HostProcessRunning(process_name string) (bool, error) { // running (boolean
 }
 
 // Adapted from https://stackoverflow.com/questions/48263281/how-to-find-sshd-service-status-in-golang
-func HostServiceState(service_name string, service_status) (bool, error) {
+func HostServiceState(service_name string, service_status string) (bool, error) {
 	cmd := exec.Command("systemctl", "check", service_name) // ASSUMPTION: the computer uses systemd
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		return false, err
 	}
-	return string(out == service_status), nil
+	return string(out) == service_status, nil
 }
 
 func LinuxAPTInstalled(package_name string) (bool, error) { // installed
