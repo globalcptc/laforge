@@ -1461,6 +1461,10 @@ func CreateStepPlan(ctx context.Context, client *ent.Client, logger *logging.Log
 		entPlanCreate = entPlanCreate.
 			SetType(plan.TypeStartScheduledStep).
 			SetProvisioningScheduledStep(entProvisioningScheduledStep)
+	} else {
+		err = fmt.Errorf("provisioning step and provisioning scheduled step are nil")
+		logger.Log.WithError(err).Errorf("failed to create step plan")
+		return err
 	}
 	_, err = entPlanCreate.Save(ctx)
 	if err != nil {
