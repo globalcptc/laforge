@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/predicate"
+	"github.com/gen0cide/laforge/ent/user"
 	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
@@ -25,6 +27,7 @@ type ValidationQuery struct {
 	order           []OrderFunc
 	fields          []string
 	predicates      []predicate.Validation
+	withUsers       *UserQuery
 	withEnvironment *EnvironmentQuery
 	withFKs         bool
 	// intermediate query (i.e. traversal path).
@@ -61,6 +64,28 @@ func (vq *ValidationQuery) Unique(unique bool) *ValidationQuery {
 func (vq *ValidationQuery) Order(o ...OrderFunc) *ValidationQuery {
 	vq.order = append(vq.order, o...)
 	return vq
+}
+
+// QueryUsers chains the current query on the "Users" edge.
+func (vq *ValidationQuery) QueryUsers() *UserQuery {
+	query := &UserQuery{config: vq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := vq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := vq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(validation.Table, validation.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, validation.UsersTable, validation.UsersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(vq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // QueryEnvironment chains the current query on the "Environment" edge.
@@ -266,12 +291,24 @@ func (vq *ValidationQuery) Clone() *ValidationQuery {
 		offset:          vq.offset,
 		order:           append([]OrderFunc{}, vq.order...),
 		predicates:      append([]predicate.Validation{}, vq.predicates...),
+		withUsers:       vq.withUsers.Clone(),
 		withEnvironment: vq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    vq.sql.Clone(),
 		path:   vq.path,
 		unique: vq.unique,
 	}
+}
+
+// WithUsers tells the query-builder to eager-load the nodes that are connected to
+// the "Users" edge. The optional arguments are used to configure the query builder of the edge.
+func (vq *ValidationQuery) WithUsers(opts ...func(*UserQuery)) *ValidationQuery {
+	query := &UserQuery{config: vq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	vq.withUsers = query
+	return vq
 }
 
 // WithEnvironment tells the query-builder to eager-load the nodes that are connected to
@@ -354,7 +391,8 @@ func (vq *ValidationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*V
 		nodes       = []*Validation{}
 		withFKs     = vq.withFKs
 		_spec       = vq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
+			vq.withUsers != nil,
 			vq.withEnvironment != nil,
 		}
 	)
@@ -382,6 +420,13 @@ func (vq *ValidationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*V
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := vq.withUsers; query != nil {
+		if err := vq.loadUsers(ctx, query, nodes,
+			func(n *Validation) { n.Edges.Users = []*User{} },
+			func(n *Validation, e *User) { n.Edges.Users = append(n.Edges.Users, e) }); err != nil {
+			return nil, err
+		}
+	}
 	if query := vq.withEnvironment; query != nil {
 		if err := vq.loadEnvironment(ctx, query, nodes, nil,
 			func(n *Validation, e *Environment) { n.Edges.Environment = e }); err != nil {
@@ -391,6 +436,37 @@ func (vq *ValidationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*V
 	return nodes, nil
 }
 
+func (vq *ValidationQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*Validation, init func(*Validation), assign func(*Validation, *User)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Validation)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.User(func(s *sql.Selector) {
+		s.Where(sql.InValues(validation.UsersColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.validation_users
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "validation_users" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "validation_users" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
 func (vq *ValidationQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*Validation, init func(*Validation), assign func(*Validation, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Validation)

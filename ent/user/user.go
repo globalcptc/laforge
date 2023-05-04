@@ -56,6 +56,7 @@ var ForeignKeys = []string{
 	"finding_users",
 	"host_users",
 	"script_users",
+	"validation_users",
 }
 
 var (

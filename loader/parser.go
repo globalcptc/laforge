@@ -209,6 +209,7 @@ func (l *Loader) Bind(log *logging.Logger) (*DefinedConfigs, error) {
 	currLen := len(l.Parser.Files())
 	for {
 		for name, f := range l.Parser.Files() {
+			log.Log.Debugf("parsing HCL file: %s", name)
 			transform.Deep(f.Body, transformer)
 			exists := false
 			for _, i := range filenames {
@@ -331,7 +332,7 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 				continue
 			}
 		}
-		for _, x := range element.Validations {
+		for _, x := range element.DefinedValidations {
 			_, found := combinedConfigs.Environments[x.HclID]
 			if !found {
 				combinedConfigs.Validations[x.HclID] = x
@@ -449,11 +450,13 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			log.Log.Errorf("Error loading in competition into env: %v, Err: %v", cEnviroment.HclID, err)
 			return nil, err
 		}
+		log.Log.Debugf("loaded validations: %v", loadedConfig.Validations)
 		returnedValidations, err := createValidations(txClient, ctx, log, loadedConfig.Validations, cEnviroment.HclID)
 		if err != nil {
 			err = rollback(txClient, err)
 			log.Log.Errorf("Error loading in validations into env: %v, Err: %v", cEnviroment.HclID, err)
 		}
+		log.Log.Debugf("returned validations: %v", returnedValidations)
 		returnedScripts, returnedFindings, err := createScripts(txClient, ctx, log, loadedConfig.Scripts, cEnviroment.HclID)
 		if err != nil {
 			err = rollback(txClient, err)
@@ -937,6 +940,7 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 					SetVars(cScript.Vars).
 					SetTags(cScript.Tags).
 					SetAbsPath(cScript.AbsPath).
+					SetValidations(cScript.Validations).
 					AddFindings(returnedFindings...)
 				bulk = append(bulk, createdQuery)
 				continue
@@ -957,6 +961,7 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 			SetVars(cScript.Vars).
 			SetTags(cScript.Tags).
 			SetAbsPath(cScript.AbsPath).
+			SetValidations(cScript.Validations).
 			ClearFindings().
 			Save(ctx)
 		if err != nil {
@@ -1283,9 +1288,6 @@ func createValidations(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 				createdQuery := txClient.Validation.Create().
 					SetHclID(cValidation.HclID).
 					SetValidationType(cValidation.ValidationType).
-					SetOutput(cValidation.Output).
-					SetState(cValidation.State).
-					SetErrorMessage(cValidation.ErrorMessage).
 					SetHash(cValidation.Hash).
 					SetRegex(cValidation.Regex).
 					SetIP(cValidation.IP).
@@ -1298,18 +1300,17 @@ func createValidations(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 					SetFilePath(cValidation.FilePath).
 					SetSearchString(cValidation.SearchString).
 					SetServiceName(cValidation.ServiceName).
-					SetServiceStatus(cValidation.ServiceStatus).
 					SetProcessName(cValidation.ProcessName)
+				if cValidation.ServiceStatus.String() != "" {
+					createdQuery = createdQuery.SetServiceStatus(cValidation.ServiceStatus)
+				}
 				bulk = append(bulk, createdQuery)
 				continue
 			}
 		}
-		entValidation, err = entValidation.Update().
+		entValidationUpdate := entValidation.Update().
 			SetHclID(cValidation.HclID).
 			SetValidationType(cValidation.ValidationType).
-			SetOutput(cValidation.Output).
-			SetState(cValidation.State).
-			SetErrorMessage(cValidation.ErrorMessage).
 			SetHash(cValidation.Hash).
 			SetRegex(cValidation.Regex).
 			SetIP(cValidation.IP).
@@ -1322,9 +1323,11 @@ func createValidations(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 			SetFilePath(cValidation.FilePath).
 			SetSearchString(cValidation.SearchString).
 			SetServiceName(cValidation.ServiceName).
-			SetServiceStatus(cValidation.ServiceStatus).
-			SetProcessName(cValidation.ProcessName).
-			Save(ctx)
+			SetProcessName(cValidation.ProcessName)
+		if cValidation.ServiceStatus.String() != "" {
+			entValidationUpdate = entValidationUpdate.SetServiceStatus(cValidation.ServiceStatus)
+		}
+		entValidation, err = entValidationUpdate.Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to Update Validation &v. Err: %v", cValidation, err)
 			return nil, err
@@ -1501,7 +1504,7 @@ func createFileExtract(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 			}
 
 			if !exist {
-				return nil, fmt.Errorf("validation \"%s\" does not exist for script \"%s\"", validationHCLID, cFileExtract.HclID)
+				return nil, fmt.Errorf("validation \"%s\" does not exist for FileExtract \"%s\"", validationHCLID, cFileExtract.HclID)
 			}
 		}
 

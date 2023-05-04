@@ -22,12 +22,6 @@ type Validation struct {
 	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// ValidationType holds the value of the "validation_type" field.
 	ValidationType validation.ValidationType `json:"validation_type,omitempty" hcl:"validation_type"`
-	// Output holds the value of the "output" field.
-	Output string `json:"output,omitempty"`
-	// State holds the value of the "state" field.
-	State validation.State `json:"state,omitempty"`
-	// ErrorMessage holds the value of the "error_message" field.
-	ErrorMessage string `json:"error_message,omitempty"`
 	// Hash holds the value of the "hash" field.
 	Hash string `json:"hash,omitempty" hcl:"hash,optional"`
 	// Regex holds the value of the "regex" field.
@@ -61,6 +55,8 @@ type Validation struct {
 	Edges ValidationEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
+	// Users holds the value of the Users edge.
+	HCLUsers []*User `json:"Users,omitempty" hcl:"maintainer,block"`
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
@@ -69,17 +65,28 @@ type Validation struct {
 
 // ValidationEdges holds the relations/edges for other nodes in the graph.
 type ValidationEdges struct {
+	// Users holds the value of the Users edge.
+	Users []*User `json:"Users,omitempty" hcl:"maintainer,block"`
 	// Environment holds the value of the Environment edge.
 	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
+}
+
+// UsersOrErr returns the Users value or an error if the edge
+// was not loaded in eager-loading.
+func (e ValidationEdges) UsersOrErr() ([]*User, error) {
+	if e.loadedTypes[0] {
+		return e.Users, nil
+	}
+	return nil, &NotLoadedError{edge: "Users"}
 }
 
 // EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e ValidationEdges) EnvironmentOrErr() (*Environment, error) {
-	if e.loadedTypes[0] {
+	if e.loadedTypes[1] {
 		if e.Environment == nil {
 			// The edge Environment was loaded in eager-loading,
 			// but was not found.
@@ -99,7 +106,7 @@ func (*Validation) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new([]byte)
 		case validation.FieldPort:
 			values[i] = new(sql.NullInt64)
-		case validation.FieldHclID, validation.FieldValidationType, validation.FieldOutput, validation.FieldState, validation.FieldErrorMessage, validation.FieldHash, validation.FieldRegex, validation.FieldIP, validation.FieldHostname, validation.FieldPackageName, validation.FieldUsername, validation.FieldGroupName, validation.FieldFilePath, validation.FieldSearchString, validation.FieldServiceName, validation.FieldServiceStatus, validation.FieldProcessName:
+		case validation.FieldHclID, validation.FieldValidationType, validation.FieldHash, validation.FieldRegex, validation.FieldIP, validation.FieldHostname, validation.FieldPackageName, validation.FieldUsername, validation.FieldGroupName, validation.FieldFilePath, validation.FieldSearchString, validation.FieldServiceName, validation.FieldServiceStatus, validation.FieldProcessName:
 			values[i] = new(sql.NullString)
 		case validation.FieldID:
 			values[i] = new(uuid.UUID)
@@ -137,24 +144,6 @@ func (v *Validation) assignValues(columns []string, values []interface{}) error 
 				return fmt.Errorf("unexpected type %T for field validation_type", values[i])
 			} else if value.Valid {
 				v.ValidationType = validation.ValidationType(value.String)
-			}
-		case validation.FieldOutput:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field output", values[i])
-			} else if value.Valid {
-				v.Output = value.String
-			}
-		case validation.FieldState:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field state", values[i])
-			} else if value.Valid {
-				v.State = validation.State(value.String)
-			}
-		case validation.FieldErrorMessage:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field error_message", values[i])
-			} else if value.Valid {
-				v.ErrorMessage = value.String
 			}
 		case validation.FieldHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -254,6 +243,11 @@ func (v *Validation) assignValues(columns []string, values []interface{}) error 
 	return nil
 }
 
+// QueryUsers queries the "Users" edge of the Validation entity.
+func (v *Validation) QueryUsers() *UserQuery {
+	return (&ValidationClient{config: v.config}).QueryUsers(v)
+}
+
 // QueryEnvironment queries the "Environment" edge of the Validation entity.
 func (v *Validation) QueryEnvironment() *EnvironmentQuery {
 	return (&ValidationClient{config: v.config}).QueryEnvironment(v)
@@ -286,12 +280,6 @@ func (v *Validation) String() string {
 	builder.WriteString(v.HclID)
 	builder.WriteString(", validation_type=")
 	builder.WriteString(fmt.Sprintf("%v", v.ValidationType))
-	builder.WriteString(", output=")
-	builder.WriteString(v.Output)
-	builder.WriteString(", state=")
-	builder.WriteString(fmt.Sprintf("%v", v.State))
-	builder.WriteString(", error_message=")
-	builder.WriteString(v.ErrorMessage)
 	builder.WriteString(", hash=")
 	builder.WriteString(v.Hash)
 	builder.WriteString(", regex=")

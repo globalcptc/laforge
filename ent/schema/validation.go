@@ -12,15 +12,6 @@ type Validation struct {
 	ent.Schema
 }
 
-/*
-  validation {
-    name = "A Validator Name"
-    source = "path/to/validation/file.laforge"
-	type = "regex-content"
-	regex = "/wew/ig"
-  }
-*/
-
 // Fields of the Validation.
 func (Validation) Fields() []ent.Field {
 	return []ent.Field{
@@ -48,9 +39,6 @@ func (Validation) Fields() []ent.Field {
 				"file-permission",
 			).
 			StructTag(`hcl:"validation_type"`),
-		field.String("output").Default(""),
-		field.Enum("state").Values("AWAITING", "INPROGRESS", "FAILED", "COMPLETE"),
-		field.String("error_message").Default(""),
 		field.String("hash").StructTag(`hcl:"hash,optional"`),
 		field.String("regex").StructTag(`hcl:"regex,optional"`),
 		field.String("ip").StructTag(`hcl:"ip,optional"`),
@@ -74,7 +62,8 @@ func (Validation) Fields() []ent.Field {
 				"alias",
 				"linked",
 			).
-			StructTag(`hcl:"service_status,optional"`),
+			StructTag(`hcl:"service_status,optional"`).
+			Default("active"),
 		field.String("process_name").StructTag(`hcl:"process_name,optional"`),
 	}
 }
@@ -82,6 +71,8 @@ func (Validation) Fields() []ent.Field {
 // Edges of the Validation.
 func (Validation) Edges() []ent.Edge {
 	return []ent.Edge{
+		edge.To("Users", User.Type).
+			StructTag(`hcl:"maintainer,block"`),
 		edge.From("Environment", Environment.Type).
 			Ref("Validations").
 			Unique(),

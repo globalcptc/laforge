@@ -17,7 +17,9 @@ import (
 	"github.com/gen0cide/laforge/ent/identity"
 	"github.com/gen0cide/laforge/ent/includednetwork"
 	"github.com/gen0cide/laforge/ent/network"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
+	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/gen0cide/laforge/server/utils"
 	"github.com/sirupsen/logrus"
 )
@@ -117,6 +119,16 @@ func main() {
 	}
 	println(deletedCount)
 	deletedCount, err = client.HostDependency.Delete().Where(hostdependency.Not(hostdependency.HasEnvironment())).Exec(ctx)
+	if err != nil {
+		log.Fatalf("failed to get env: %v", err)
+	}
+	println(deletedCount)
+	deletedCount, err = client.ScheduledStep.Delete().Where(scheduledstep.Not(scheduledstep.HasEnvironment())).Exec(ctx)
+	if err != nil {
+		log.Fatalf("failed to get env: %v", err)
+	}
+	println(deletedCount)
+	deletedCount, err = client.Validation.Delete().Where(validation.Not(validation.HasEnvironment())).Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to get env: %v", err)
 	}

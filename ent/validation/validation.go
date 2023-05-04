@@ -19,12 +19,6 @@ const (
 	FieldHclID = "hcl_id"
 	// FieldValidationType holds the string denoting the validation_type field in the database.
 	FieldValidationType = "validation_type"
-	// FieldOutput holds the string denoting the output field in the database.
-	FieldOutput = "output"
-	// FieldState holds the string denoting the state field in the database.
-	FieldState = "state"
-	// FieldErrorMessage holds the string denoting the error_message field in the database.
-	FieldErrorMessage = "error_message"
 	// FieldHash holds the string denoting the hash field in the database.
 	FieldHash = "hash"
 	// FieldRegex holds the string denoting the regex field in the database.
@@ -53,10 +47,19 @@ const (
 	FieldServiceStatus = "service_status"
 	// FieldProcessName holds the string denoting the process_name field in the database.
 	FieldProcessName = "process_name"
+	// EdgeUsers holds the string denoting the users edge name in mutations.
+	EdgeUsers = "Users"
 	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
 	EdgeEnvironment = "Environment"
 	// Table holds the table name of the validation in the database.
 	Table = "validations"
+	// UsersTable is the table that holds the Users relation/edge.
+	UsersTable = "users"
+	// UsersInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	UsersInverseTable = "users"
+	// UsersColumn is the table column denoting the Users relation/edge.
+	UsersColumn = "validation_users"
 	// EnvironmentTable is the table that holds the Environment relation/edge.
 	EnvironmentTable = "validations"
 	// EnvironmentInverseTable is the table name for the Environment entity.
@@ -71,9 +74,6 @@ var Columns = []string{
 	FieldID,
 	FieldHclID,
 	FieldValidationType,
-	FieldOutput,
-	FieldState,
-	FieldErrorMessage,
 	FieldHash,
 	FieldRegex,
 	FieldIP,
@@ -112,10 +112,6 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// DefaultOutput holds the default value on creation for the "output" field.
-	DefaultOutput string
-	// DefaultErrorMessage holds the default value on creation for the "error_message" field.
-	DefaultErrorMessage string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -157,33 +153,11 @@ func ValidationTypeValidator(vt ValidationType) error {
 	}
 }
 
-// State defines the type for the "state" enum field.
-type State string
-
-// State values.
-const (
-	StateAWAITING   State = "AWAITING"
-	StateINPROGRESS State = "INPROGRESS"
-	StateFAILED     State = "FAILED"
-	StateCOMPLETE   State = "COMPLETE"
-)
-
-func (s State) String() string {
-	return string(s)
-}
-
-// StateValidator is a validator for the "state" field enum values. It is called by the builders before save.
-func StateValidator(s State) error {
-	switch s {
-	case StateAWAITING, StateINPROGRESS, StateFAILED, StateCOMPLETE:
-		return nil
-	default:
-		return fmt.Errorf("validation: invalid enum value for state field: %q", s)
-	}
-}
-
 // ServiceStatus defines the type for the "service_status" enum field.
 type ServiceStatus string
+
+// ServiceStatusActive is the default value of the ServiceStatus enum.
+const DefaultServiceStatus = ServiceStatusActive
 
 // ServiceStatus values.
 const (
@@ -225,24 +199,6 @@ func (vt *ValidationType) UnmarshalGQL(val interface{}) error {
 	*vt = ValidationType(str)
 	if err := ValidationTypeValidator(*vt); err != nil {
 		return fmt.Errorf("%s is not a valid ValidationType", str)
-	}
-	return nil
-}
-
-// MarshalGQL implements graphql.Marshaler interface.
-func (s State) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.Quote(s.String()))
-}
-
-// UnmarshalGQL implements graphql.Unmarshaler interface.
-func (s *State) UnmarshalGQL(val interface{}) error {
-	str, ok := val.(string)
-	if !ok {
-		return fmt.Errorf("enum %T must be a string", val)
-	}
-	*s = State(str)
-	if err := StateValidator(*s); err != nil {
-		return fmt.Errorf("%s is not a valid State", str)
 	}
 	return nil
 }

@@ -34,11 +34,12 @@ type User struct {
 	// Environments holds the value of the Environments edge.
 	HCLEnvironments []*Environment `json:"Environments,omitempty"`
 	//
-	ansible_users *uuid.UUID
-	command_users *uuid.UUID
-	finding_users *uuid.UUID
-	host_users    *uuid.UUID
-	script_users  *uuid.UUID
+	ansible_users    *uuid.UUID
+	command_users    *uuid.UUID
+	finding_users    *uuid.UUID
+	host_users       *uuid.UUID
+	script_users     *uuid.UUID
+	validation_users *uuid.UUID
 }
 
 // UserEdges holds the relations/edges for other nodes in the graph.
@@ -88,6 +89,8 @@ func (*User) scanValues(columns []string) ([]interface{}, error) {
 		case user.ForeignKeys[3]: // host_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case user.ForeignKeys[4]: // script_users
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case user.ForeignKeys[5]: // validation_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type User", columns[i])
@@ -168,6 +171,13 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				u.script_users = new(uuid.UUID)
 				*u.script_users = *value.S.(*uuid.UUID)
+			}
+		case user.ForeignKeys[5]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field validation_users", values[i])
+			} else if value.Valid {
+				u.validation_users = new(uuid.UUID)
+				*u.validation_users = *value.S.(*uuid.UUID)
 			}
 		}
 	}

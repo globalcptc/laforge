@@ -1388,6 +1388,14 @@ func (u *User) Environments(ctx context.Context) ([]*Environment, error) {
 	return result, err
 }
 
+func (v *Validation) Users(ctx context.Context) ([]*User, error) {
+	result, err := v.Edges.UsersOrErr()
+	if IsNotLoaded(err) {
+		result, err = v.QueryUsers().All(ctx)
+	}
+	return result, err
+}
+
 func (v *Validation) Environment(ctx context.Context) (*Environment, error) {
 	result, err := v.Edges.EnvironmentOrErr()
 	if IsNotLoaded(err) {

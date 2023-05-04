@@ -1006,6 +1006,20 @@ func AbsPathContainsFold(v string) predicate.Script {
 	})
 }
 
+// ValidationsIsNil applies the IsNil predicate on the "validations" field.
+func ValidationsIsNil() predicate.Script {
+	return predicate.Script(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldValidations)))
+	})
+}
+
+// ValidationsNotNil applies the NotNil predicate on the "validations" field.
+func ValidationsNotNil() predicate.Script {
+	return predicate.Script(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldValidations)))
+	})
+}
+
 // HasUsers applies the HasEdge predicate on the "Users" edge.
 func HasUsers() predicate.Script {
 	return predicate.Script(func(s *sql.Selector) {

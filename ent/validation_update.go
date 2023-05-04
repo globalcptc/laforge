@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/predicate"
+	"github.com/gen0cide/laforge/ent/user"
 	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
@@ -38,40 +39,6 @@ func (vu *ValidationUpdate) SetHclID(s string) *ValidationUpdate {
 // SetValidationType sets the "validation_type" field.
 func (vu *ValidationUpdate) SetValidationType(vt validation.ValidationType) *ValidationUpdate {
 	vu.mutation.SetValidationType(vt)
-	return vu
-}
-
-// SetOutput sets the "output" field.
-func (vu *ValidationUpdate) SetOutput(s string) *ValidationUpdate {
-	vu.mutation.SetOutput(s)
-	return vu
-}
-
-// SetNillableOutput sets the "output" field if the given value is not nil.
-func (vu *ValidationUpdate) SetNillableOutput(s *string) *ValidationUpdate {
-	if s != nil {
-		vu.SetOutput(*s)
-	}
-	return vu
-}
-
-// SetState sets the "state" field.
-func (vu *ValidationUpdate) SetState(v validation.State) *ValidationUpdate {
-	vu.mutation.SetState(v)
-	return vu
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (vu *ValidationUpdate) SetErrorMessage(s string) *ValidationUpdate {
-	vu.mutation.SetErrorMessage(s)
-	return vu
-}
-
-// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
-func (vu *ValidationUpdate) SetNillableErrorMessage(s *string) *ValidationUpdate {
-	if s != nil {
-		vu.SetErrorMessage(*s)
-	}
 	return vu
 }
 
@@ -160,10 +127,33 @@ func (vu *ValidationUpdate) SetServiceStatus(vs validation.ServiceStatus) *Valid
 	return vu
 }
 
+// SetNillableServiceStatus sets the "service_status" field if the given value is not nil.
+func (vu *ValidationUpdate) SetNillableServiceStatus(vs *validation.ServiceStatus) *ValidationUpdate {
+	if vs != nil {
+		vu.SetServiceStatus(*vs)
+	}
+	return vu
+}
+
 // SetProcessName sets the "process_name" field.
 func (vu *ValidationUpdate) SetProcessName(s string) *ValidationUpdate {
 	vu.mutation.SetProcessName(s)
 	return vu
+}
+
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (vu *ValidationUpdate) AddUserIDs(ids ...uuid.UUID) *ValidationUpdate {
+	vu.mutation.AddUserIDs(ids...)
+	return vu
+}
+
+// AddUsers adds the "Users" edges to the User entity.
+func (vu *ValidationUpdate) AddUsers(u ...*User) *ValidationUpdate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return vu.AddUserIDs(ids...)
 }
 
 // SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
@@ -188,6 +178,27 @@ func (vu *ValidationUpdate) SetEnvironment(e *Environment) *ValidationUpdate {
 // Mutation returns the ValidationMutation object of the builder.
 func (vu *ValidationUpdate) Mutation() *ValidationMutation {
 	return vu.mutation
+}
+
+// ClearUsers clears all "Users" edges to the User entity.
+func (vu *ValidationUpdate) ClearUsers() *ValidationUpdate {
+	vu.mutation.ClearUsers()
+	return vu
+}
+
+// RemoveUserIDs removes the "Users" edge to User entities by IDs.
+func (vu *ValidationUpdate) RemoveUserIDs(ids ...uuid.UUID) *ValidationUpdate {
+	vu.mutation.RemoveUserIDs(ids...)
+	return vu
+}
+
+// RemoveUsers removes "Users" edges to User entities.
+func (vu *ValidationUpdate) RemoveUsers(u ...*User) *ValidationUpdate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return vu.RemoveUserIDs(ids...)
 }
 
 // ClearEnvironment clears the "Environment" edge to the Environment entity.
@@ -263,11 +274,6 @@ func (vu *ValidationUpdate) check() error {
 			return &ValidationError{Name: "validation_type", err: fmt.Errorf(`ent: validator failed for field "Validation.validation_type": %w`, err)}
 		}
 	}
-	if v, ok := vu.mutation.State(); ok {
-		if err := validation.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Validation.state": %w`, err)}
-		}
-	}
 	if v, ok := vu.mutation.ServiceStatus(); ok {
 		if err := validation.ServiceStatusValidator(v); err != nil {
 			return &ValidationError{Name: "service_status", err: fmt.Errorf(`ent: validator failed for field "Validation.service_status": %w`, err)}
@@ -306,27 +312,6 @@ func (vu *ValidationUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Type:   field.TypeEnum,
 			Value:  value,
 			Column: validation.FieldValidationType,
-		})
-	}
-	if value, ok := vu.mutation.Output(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: validation.FieldOutput,
-		})
-	}
-	if value, ok := vu.mutation.State(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: validation.FieldState,
-		})
-	}
-	if value, ok := vu.mutation.ErrorMessage(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: validation.FieldErrorMessage,
 		})
 	}
 	if value, ok := vu.mutation.Hash(); ok {
@@ -434,6 +419,60 @@ func (vu *ValidationUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: validation.FieldProcessName,
 		})
 	}
+	if vu.mutation.UsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   validation.UsersTable,
+			Columns: []string{validation.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := vu.mutation.RemovedUsersIDs(); len(nodes) > 0 && !vu.mutation.UsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   validation.UsersTable,
+			Columns: []string{validation.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := vu.mutation.UsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   validation.UsersTable,
+			Columns: []string{validation.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if vu.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -497,40 +536,6 @@ func (vuo *ValidationUpdateOne) SetHclID(s string) *ValidationUpdateOne {
 // SetValidationType sets the "validation_type" field.
 func (vuo *ValidationUpdateOne) SetValidationType(vt validation.ValidationType) *ValidationUpdateOne {
 	vuo.mutation.SetValidationType(vt)
-	return vuo
-}
-
-// SetOutput sets the "output" field.
-func (vuo *ValidationUpdateOne) SetOutput(s string) *ValidationUpdateOne {
-	vuo.mutation.SetOutput(s)
-	return vuo
-}
-
-// SetNillableOutput sets the "output" field if the given value is not nil.
-func (vuo *ValidationUpdateOne) SetNillableOutput(s *string) *ValidationUpdateOne {
-	if s != nil {
-		vuo.SetOutput(*s)
-	}
-	return vuo
-}
-
-// SetState sets the "state" field.
-func (vuo *ValidationUpdateOne) SetState(v validation.State) *ValidationUpdateOne {
-	vuo.mutation.SetState(v)
-	return vuo
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (vuo *ValidationUpdateOne) SetErrorMessage(s string) *ValidationUpdateOne {
-	vuo.mutation.SetErrorMessage(s)
-	return vuo
-}
-
-// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
-func (vuo *ValidationUpdateOne) SetNillableErrorMessage(s *string) *ValidationUpdateOne {
-	if s != nil {
-		vuo.SetErrorMessage(*s)
-	}
 	return vuo
 }
 
@@ -619,10 +624,33 @@ func (vuo *ValidationUpdateOne) SetServiceStatus(vs validation.ServiceStatus) *V
 	return vuo
 }
 
+// SetNillableServiceStatus sets the "service_status" field if the given value is not nil.
+func (vuo *ValidationUpdateOne) SetNillableServiceStatus(vs *validation.ServiceStatus) *ValidationUpdateOne {
+	if vs != nil {
+		vuo.SetServiceStatus(*vs)
+	}
+	return vuo
+}
+
 // SetProcessName sets the "process_name" field.
 func (vuo *ValidationUpdateOne) SetProcessName(s string) *ValidationUpdateOne {
 	vuo.mutation.SetProcessName(s)
 	return vuo
+}
+
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (vuo *ValidationUpdateOne) AddUserIDs(ids ...uuid.UUID) *ValidationUpdateOne {
+	vuo.mutation.AddUserIDs(ids...)
+	return vuo
+}
+
+// AddUsers adds the "Users" edges to the User entity.
+func (vuo *ValidationUpdateOne) AddUsers(u ...*User) *ValidationUpdateOne {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return vuo.AddUserIDs(ids...)
 }
 
 // SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
@@ -647,6 +675,27 @@ func (vuo *ValidationUpdateOne) SetEnvironment(e *Environment) *ValidationUpdate
 // Mutation returns the ValidationMutation object of the builder.
 func (vuo *ValidationUpdateOne) Mutation() *ValidationMutation {
 	return vuo.mutation
+}
+
+// ClearUsers clears all "Users" edges to the User entity.
+func (vuo *ValidationUpdateOne) ClearUsers() *ValidationUpdateOne {
+	vuo.mutation.ClearUsers()
+	return vuo
+}
+
+// RemoveUserIDs removes the "Users" edge to User entities by IDs.
+func (vuo *ValidationUpdateOne) RemoveUserIDs(ids ...uuid.UUID) *ValidationUpdateOne {
+	vuo.mutation.RemoveUserIDs(ids...)
+	return vuo
+}
+
+// RemoveUsers removes "Users" edges to User entities.
+func (vuo *ValidationUpdateOne) RemoveUsers(u ...*User) *ValidationUpdateOne {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return vuo.RemoveUserIDs(ids...)
 }
 
 // ClearEnvironment clears the "Environment" edge to the Environment entity.
@@ -735,11 +784,6 @@ func (vuo *ValidationUpdateOne) check() error {
 			return &ValidationError{Name: "validation_type", err: fmt.Errorf(`ent: validator failed for field "Validation.validation_type": %w`, err)}
 		}
 	}
-	if v, ok := vuo.mutation.State(); ok {
-		if err := validation.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Validation.state": %w`, err)}
-		}
-	}
 	if v, ok := vuo.mutation.ServiceStatus(); ok {
 		if err := validation.ServiceStatusValidator(v); err != nil {
 			return &ValidationError{Name: "service_status", err: fmt.Errorf(`ent: validator failed for field "Validation.service_status": %w`, err)}
@@ -795,27 +839,6 @@ func (vuo *ValidationUpdateOne) sqlSave(ctx context.Context) (_node *Validation,
 			Type:   field.TypeEnum,
 			Value:  value,
 			Column: validation.FieldValidationType,
-		})
-	}
-	if value, ok := vuo.mutation.Output(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: validation.FieldOutput,
-		})
-	}
-	if value, ok := vuo.mutation.State(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: validation.FieldState,
-		})
-	}
-	if value, ok := vuo.mutation.ErrorMessage(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: validation.FieldErrorMessage,
 		})
 	}
 	if value, ok := vuo.mutation.Hash(); ok {
@@ -922,6 +945,60 @@ func (vuo *ValidationUpdateOne) sqlSave(ctx context.Context) (_node *Validation,
 			Value:  value,
 			Column: validation.FieldProcessName,
 		})
+	}
+	if vuo.mutation.UsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   validation.UsersTable,
+			Columns: []string{validation.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := vuo.mutation.RemovedUsersIDs(); len(nodes) > 0 && !vuo.mutation.UsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   validation.UsersTable,
+			Columns: []string{validation.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := vuo.mutation.UsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   validation.UsersTable,
+			Columns: []string{validation.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if vuo.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{

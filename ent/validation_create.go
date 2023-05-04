@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/environment"
+	"github.com/gen0cide/laforge/ent/user"
 	"github.com/gen0cide/laforge/ent/validation"
 	"github.com/google/uuid"
 )
@@ -30,40 +31,6 @@ func (vc *ValidationCreate) SetHclID(s string) *ValidationCreate {
 // SetValidationType sets the "validation_type" field.
 func (vc *ValidationCreate) SetValidationType(vt validation.ValidationType) *ValidationCreate {
 	vc.mutation.SetValidationType(vt)
-	return vc
-}
-
-// SetOutput sets the "output" field.
-func (vc *ValidationCreate) SetOutput(s string) *ValidationCreate {
-	vc.mutation.SetOutput(s)
-	return vc
-}
-
-// SetNillableOutput sets the "output" field if the given value is not nil.
-func (vc *ValidationCreate) SetNillableOutput(s *string) *ValidationCreate {
-	if s != nil {
-		vc.SetOutput(*s)
-	}
-	return vc
-}
-
-// SetState sets the "state" field.
-func (vc *ValidationCreate) SetState(v validation.State) *ValidationCreate {
-	vc.mutation.SetState(v)
-	return vc
-}
-
-// SetErrorMessage sets the "error_message" field.
-func (vc *ValidationCreate) SetErrorMessage(s string) *ValidationCreate {
-	vc.mutation.SetErrorMessage(s)
-	return vc
-}
-
-// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
-func (vc *ValidationCreate) SetNillableErrorMessage(s *string) *ValidationCreate {
-	if s != nil {
-		vc.SetErrorMessage(*s)
-	}
 	return vc
 }
 
@@ -145,6 +112,14 @@ func (vc *ValidationCreate) SetServiceStatus(vs validation.ServiceStatus) *Valid
 	return vc
 }
 
+// SetNillableServiceStatus sets the "service_status" field if the given value is not nil.
+func (vc *ValidationCreate) SetNillableServiceStatus(vs *validation.ServiceStatus) *ValidationCreate {
+	if vs != nil {
+		vc.SetServiceStatus(*vs)
+	}
+	return vc
+}
+
 // SetProcessName sets the "process_name" field.
 func (vc *ValidationCreate) SetProcessName(s string) *ValidationCreate {
 	vc.mutation.SetProcessName(s)
@@ -163,6 +138,21 @@ func (vc *ValidationCreate) SetNillableID(u *uuid.UUID) *ValidationCreate {
 		vc.SetID(*u)
 	}
 	return vc
+}
+
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (vc *ValidationCreate) AddUserIDs(ids ...uuid.UUID) *ValidationCreate {
+	vc.mutation.AddUserIDs(ids...)
+	return vc
+}
+
+// AddUsers adds the "Users" edges to the User entity.
+func (vc *ValidationCreate) AddUsers(u ...*User) *ValidationCreate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return vc.AddUserIDs(ids...)
 }
 
 // SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
@@ -261,13 +251,9 @@ func (vc *ValidationCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (vc *ValidationCreate) defaults() {
-	if _, ok := vc.mutation.Output(); !ok {
-		v := validation.DefaultOutput
-		vc.mutation.SetOutput(v)
-	}
-	if _, ok := vc.mutation.ErrorMessage(); !ok {
-		v := validation.DefaultErrorMessage
-		vc.mutation.SetErrorMessage(v)
+	if _, ok := vc.mutation.ServiceStatus(); !ok {
+		v := validation.DefaultServiceStatus
+		vc.mutation.SetServiceStatus(v)
 	}
 	if _, ok := vc.mutation.ID(); !ok {
 		v := validation.DefaultID()
@@ -287,20 +273,6 @@ func (vc *ValidationCreate) check() error {
 		if err := validation.ValidationTypeValidator(v); err != nil {
 			return &ValidationError{Name: "validation_type", err: fmt.Errorf(`ent: validator failed for field "Validation.validation_type": %w`, err)}
 		}
-	}
-	if _, ok := vc.mutation.Output(); !ok {
-		return &ValidationError{Name: "output", err: errors.New(`ent: missing required field "Validation.output"`)}
-	}
-	if _, ok := vc.mutation.State(); !ok {
-		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "Validation.state"`)}
-	}
-	if v, ok := vc.mutation.State(); ok {
-		if err := validation.StateValidator(v); err != nil {
-			return &ValidationError{Name: "state", err: fmt.Errorf(`ent: validator failed for field "Validation.state": %w`, err)}
-		}
-	}
-	if _, ok := vc.mutation.ErrorMessage(); !ok {
-		return &ValidationError{Name: "error_message", err: errors.New(`ent: missing required field "Validation.error_message"`)}
 	}
 	if _, ok := vc.mutation.Hash(); !ok {
 		return &ValidationError{Name: "hash", err: errors.New(`ent: missing required field "Validation.hash"`)}
@@ -400,30 +372,6 @@ func (vc *ValidationCreate) createSpec() (*Validation, *sqlgraph.CreateSpec) {
 			Column: validation.FieldValidationType,
 		})
 		_node.ValidationType = value
-	}
-	if value, ok := vc.mutation.Output(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: validation.FieldOutput,
-		})
-		_node.Output = value
-	}
-	if value, ok := vc.mutation.State(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: validation.FieldState,
-		})
-		_node.State = value
-	}
-	if value, ok := vc.mutation.ErrorMessage(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: validation.FieldErrorMessage,
-		})
-		_node.ErrorMessage = value
 	}
 	if value, ok := vc.mutation.Hash(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -536,6 +484,25 @@ func (vc *ValidationCreate) createSpec() (*Validation, *sqlgraph.CreateSpec) {
 			Column: validation.FieldProcessName,
 		})
 		_node.ProcessName = value
+	}
+	if nodes := vc.mutation.UsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   validation.UsersTable,
+			Columns: []string{validation.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := vc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

@@ -6760,6 +6760,22 @@ func (c *ValidationClient) GetX(ctx context.Context, id uuid.UUID) *Validation {
 	return obj
 }
 
+// QueryUsers queries the Users edge of a Validation.
+func (c *ValidationClient) QueryUsers(v *Validation) *UserQuery {
+	query := &UserQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := v.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(validation.Table, validation.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, validation.UsersTable, validation.UsersColumn),
+		)
+		fromV = sqlgraph.Neighbors(v.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryEnvironment queries the Environment edge of a Validation.
 func (c *ValidationClient) QueryEnvironment(v *Validation) *EnvironmentQuery {
 	query := &EnvironmentQuery{config: c.config}

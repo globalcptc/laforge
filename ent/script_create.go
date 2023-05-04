@@ -303,9 +303,6 @@ func (sc *ScriptCreate) check() error {
 	if _, ok := sc.mutation.Tags(); !ok {
 		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Script.tags"`)}
 	}
-	if _, ok := sc.mutation.Validations(); !ok {
-		return &ValidationError{Name: "validations", err: errors.New(`ent: missing required field "Script.validations"`)}
-	}
 	return nil
 }
 

@@ -135,6 +135,12 @@ func (su *ScriptUpdate) SetValidations(s []string) *ScriptUpdate {
 	return su
 }
 
+// ClearValidations clears the value of the "validations" field.
+func (su *ScriptUpdate) ClearValidations() *ScriptUpdate {
+	su.mutation.ClearValidations()
+	return su
+}
+
 // AddUserIDs adds the "Users" edge to the User entity by IDs.
 func (su *ScriptUpdate) AddUserIDs(ids ...uuid.UUID) *ScriptUpdate {
 	su.mutation.AddUserIDs(ids...)
@@ -428,6 +434,12 @@ func (su *ScriptUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: script.FieldValidations,
 		})
 	}
+	if su.mutation.ValidationsCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Column: script.FieldValidations,
+		})
+	}
 	if su.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -691,6 +703,12 @@ func (suo *ScriptUpdateOne) SetTags(m map[string]string) *ScriptUpdateOne {
 // SetValidations sets the "validations" field.
 func (suo *ScriptUpdateOne) SetValidations(s []string) *ScriptUpdateOne {
 	suo.mutation.SetValidations(s)
+	return suo
+}
+
+// ClearValidations clears the value of the "validations" field.
+func (suo *ScriptUpdateOne) ClearValidations() *ScriptUpdateOne {
+	suo.mutation.ClearValidations()
 	return suo
 }
 
@@ -1014,6 +1032,12 @@ func (suo *ScriptUpdateOne) sqlSave(ctx context.Context) (_node *Script, err err
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeJSON,
 			Value:  value,
+			Column: script.FieldValidations,
+		})
+	}
+	if suo.mutation.ValidationsCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
 			Column: script.FieldValidations,
 		})
 	}

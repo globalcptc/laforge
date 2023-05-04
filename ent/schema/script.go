@@ -47,7 +47,8 @@ func (Script) Fields() []ent.Field {
 		field.JSON("tags", map[string]string{}).
 			StructTag(`hcl:"tags,optional"`),
 		field.Strings("validations").
-			StructTag(`hcl:"validations,optional"`),
+			StructTag(`hcl:"validations,optional"`).
+			Optional(),
 	}
 }
 

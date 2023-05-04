@@ -1082,7 +1082,7 @@ var (
 		{Name: "vars", Type: field.TypeJSON},
 		{Name: "abs_path", Type: field.TypeString},
 		{Name: "tags", Type: field.TypeJSON},
-		{Name: "validations", Type: field.TypeJSON},
+		{Name: "validations", Type: field.TypeJSON, Nullable: true},
 		{Name: "environment_scripts", Type: field.TypeUUID, Nullable: true},
 	}
 	// ScriptsTable holds the schema information for the "scripts" table.
@@ -1316,6 +1316,7 @@ var (
 		{Name: "finding_users", Type: field.TypeUUID, Nullable: true},
 		{Name: "host_users", Type: field.TypeUUID, Nullable: true},
 		{Name: "script_users", Type: field.TypeUUID, Nullable: true},
+		{Name: "validation_users", Type: field.TypeUUID, Nullable: true},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{
@@ -1353,6 +1354,12 @@ var (
 				RefColumns: []*schema.Column{ScriptsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
+			{
+				Symbol:     "users_validations_Users",
+				Columns:    []*schema.Column{UsersColumns[10]},
+				RefColumns: []*schema.Column{ValidationsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
 		},
 	}
 	// ValidationsColumns holds the columns for the "validations" table.
@@ -1360,9 +1367,6 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "hcl_id", Type: field.TypeString},
 		{Name: "validation_type", Type: field.TypeEnum, Enums: []string{"linux-apt-installed", "net-tcp-open", "net-udp-open", "net-http-content-regex", "file-exists", "file-hash", "file-content-regex", "dir-exists", "user-exists", "user-group-membership", "host-port-open", "host-process-running", "host-service-state", "net-icmp", "file-content-string", "file-permission"}},
-		{Name: "output", Type: field.TypeString, Default: ""},
-		{Name: "state", Type: field.TypeEnum, Enums: []string{"AWAITING", "INPROGRESS", "FAILED", "COMPLETE"}},
-		{Name: "error_message", Type: field.TypeString, Default: ""},
 		{Name: "hash", Type: field.TypeString},
 		{Name: "regex", Type: field.TypeString},
 		{Name: "ip", Type: field.TypeString},
@@ -1375,7 +1379,7 @@ var (
 		{Name: "file_path", Type: field.TypeString},
 		{Name: "search_string", Type: field.TypeString},
 		{Name: "service_name", Type: field.TypeString},
-		{Name: "service_status", Type: field.TypeEnum, Enums: []string{"active", "inactive", "enabled", "disabled", "static", "masked", "alias", "linked"}},
+		{Name: "service_status", Type: field.TypeEnum, Enums: []string{"active", "inactive", "enabled", "disabled", "static", "masked", "alias", "linked"}, Default: "active"},
 		{Name: "process_name", Type: field.TypeString},
 		{Name: "environment_validations", Type: field.TypeUUID, Nullable: true},
 	}
@@ -1387,7 +1391,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "validations_environments_Validations",
-				Columns:    []*schema.Column{ValidationsColumns[20]},
+				Columns:    []*schema.Column{ValidationsColumns[17]},
 				RefColumns: []*schema.Column{EnvironmentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1741,6 +1745,7 @@ func init() {
 	UsersTable.ForeignKeys[2].RefTable = FindingsTable
 	UsersTable.ForeignKeys[3].RefTable = HostsTable
 	UsersTable.ForeignKeys[4].RefTable = ScriptsTable
+	UsersTable.ForeignKeys[5].RefTable = ValidationsTable
 	ValidationsTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	AdhocPlanNextAdhocPlansTable.ForeignKeys[0].RefTable = AdhocPlansTable
 	AdhocPlanNextAdhocPlansTable.ForeignKeys[1].RefTable = AdhocPlansTable

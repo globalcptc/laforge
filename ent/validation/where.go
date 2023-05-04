@@ -87,20 +87,6 @@ func HclID(v string) predicate.Validation {
 	})
 }
 
-// Output applies equality check predicate on the "output" field. It's identical to OutputEQ.
-func Output(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldOutput), v))
-	})
-}
-
-// ErrorMessage applies equality check predicate on the "error_message" field. It's identical to ErrorMessageEQ.
-func ErrorMessage(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldErrorMessage), v))
-	})
-}
-
 // Hash applies equality check predicate on the "hash" field. It's identical to HashEQ.
 func Hash(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
@@ -317,240 +303,6 @@ func ValidationTypeNotIn(vs ...ValidationType) predicate.Validation {
 	}
 	return predicate.Validation(func(s *sql.Selector) {
 		s.Where(sql.NotIn(s.C(FieldValidationType), v...))
-	})
-}
-
-// OutputEQ applies the EQ predicate on the "output" field.
-func OutputEQ(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldOutput), v))
-	})
-}
-
-// OutputNEQ applies the NEQ predicate on the "output" field.
-func OutputNEQ(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldOutput), v))
-	})
-}
-
-// OutputIn applies the In predicate on the "output" field.
-func OutputIn(vs ...string) predicate.Validation {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldOutput), v...))
-	})
-}
-
-// OutputNotIn applies the NotIn predicate on the "output" field.
-func OutputNotIn(vs ...string) predicate.Validation {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldOutput), v...))
-	})
-}
-
-// OutputGT applies the GT predicate on the "output" field.
-func OutputGT(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldOutput), v))
-	})
-}
-
-// OutputGTE applies the GTE predicate on the "output" field.
-func OutputGTE(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldOutput), v))
-	})
-}
-
-// OutputLT applies the LT predicate on the "output" field.
-func OutputLT(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldOutput), v))
-	})
-}
-
-// OutputLTE applies the LTE predicate on the "output" field.
-func OutputLTE(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldOutput), v))
-	})
-}
-
-// OutputContains applies the Contains predicate on the "output" field.
-func OutputContains(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldOutput), v))
-	})
-}
-
-// OutputHasPrefix applies the HasPrefix predicate on the "output" field.
-func OutputHasPrefix(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldOutput), v))
-	})
-}
-
-// OutputHasSuffix applies the HasSuffix predicate on the "output" field.
-func OutputHasSuffix(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldOutput), v))
-	})
-}
-
-// OutputEqualFold applies the EqualFold predicate on the "output" field.
-func OutputEqualFold(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldOutput), v))
-	})
-}
-
-// OutputContainsFold applies the ContainsFold predicate on the "output" field.
-func OutputContainsFold(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldOutput), v))
-	})
-}
-
-// StateEQ applies the EQ predicate on the "state" field.
-func StateEQ(v State) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldState), v))
-	})
-}
-
-// StateNEQ applies the NEQ predicate on the "state" field.
-func StateNEQ(v State) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldState), v))
-	})
-}
-
-// StateIn applies the In predicate on the "state" field.
-func StateIn(vs ...State) predicate.Validation {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldState), v...))
-	})
-}
-
-// StateNotIn applies the NotIn predicate on the "state" field.
-func StateNotIn(vs ...State) predicate.Validation {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldState), v...))
-	})
-}
-
-// ErrorMessageEQ applies the EQ predicate on the "error_message" field.
-func ErrorMessageEQ(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldErrorMessage), v))
-	})
-}
-
-// ErrorMessageNEQ applies the NEQ predicate on the "error_message" field.
-func ErrorMessageNEQ(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldErrorMessage), v))
-	})
-}
-
-// ErrorMessageIn applies the In predicate on the "error_message" field.
-func ErrorMessageIn(vs ...string) predicate.Validation {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldErrorMessage), v...))
-	})
-}
-
-// ErrorMessageNotIn applies the NotIn predicate on the "error_message" field.
-func ErrorMessageNotIn(vs ...string) predicate.Validation {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldErrorMessage), v...))
-	})
-}
-
-// ErrorMessageGT applies the GT predicate on the "error_message" field.
-func ErrorMessageGT(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldErrorMessage), v))
-	})
-}
-
-// ErrorMessageGTE applies the GTE predicate on the "error_message" field.
-func ErrorMessageGTE(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldErrorMessage), v))
-	})
-}
-
-// ErrorMessageLT applies the LT predicate on the "error_message" field.
-func ErrorMessageLT(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldErrorMessage), v))
-	})
-}
-
-// ErrorMessageLTE applies the LTE predicate on the "error_message" field.
-func ErrorMessageLTE(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldErrorMessage), v))
-	})
-}
-
-// ErrorMessageContains applies the Contains predicate on the "error_message" field.
-func ErrorMessageContains(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldErrorMessage), v))
-	})
-}
-
-// ErrorMessageHasPrefix applies the HasPrefix predicate on the "error_message" field.
-func ErrorMessageHasPrefix(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldErrorMessage), v))
-	})
-}
-
-// ErrorMessageHasSuffix applies the HasSuffix predicate on the "error_message" field.
-func ErrorMessageHasSuffix(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldErrorMessage), v))
-	})
-}
-
-// ErrorMessageEqualFold applies the EqualFold predicate on the "error_message" field.
-func ErrorMessageEqualFold(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldErrorMessage), v))
-	})
-}
-
-// ErrorMessageContainsFold applies the ContainsFold predicate on the "error_message" field.
-func ErrorMessageContainsFold(v string) predicate.Validation {
-	return predicate.Validation(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldErrorMessage), v))
 	})
 }
 
@@ -1740,6 +1492,34 @@ func ProcessNameEqualFold(v string) predicate.Validation {
 func ProcessNameContainsFold(v string) predicate.Validation {
 	return predicate.Validation(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldProcessName), v))
+	})
+}
+
+// HasUsers applies the HasEdge predicate on the "Users" edge.
+func HasUsers() predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(UsersTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUsersWith applies the HasEdge predicate on the "Users" edge with a given conditions (other predicates).
+func HasUsersWith(preds ...predicate.User) predicate.Validation {
+	return predicate.Validation(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(UsersInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 
