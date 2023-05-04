@@ -90,7 +90,10 @@ export class StepComponent implements OnInit, OnDestroy {
   }
 
   getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['PlanDiffs'][0] | undefined {
-    return this.planDiffs?.filter((pd) => pd.Plan.id === this.provisioningStep.Plan.id)[0] ?? undefined;
+    const step: BuildTreeProvisioningStep | BuildTreeProvisioningScheduledStep = this.provisioningStep || this.provisioningScheduledStep;
+    // UserData scripts have no plan associated
+    if (!step.Plan) return undefined;
+    return this.planDiffs?.filter((pd) => pd.Plan.id === step.Plan.id)[0] ?? undefined;
   }
 
   getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
@@ -177,8 +180,11 @@ export class StepComponent implements OnInit, OnDestroy {
 
   getText(): string {
     const step: BuildTreeProvisioningStep | BuildTreeProvisioningScheduledStep = this.provisioningStep || this.provisioningScheduledStep;
+    console.log(this.provisioningStep);
+    console.log(this.provisioningScheduledStep);
+    console.log(step);
     switch (step.type) {
-      case LaForgeProvisioningStepType.Script:
+      case LaForgeProvisioningStepType.Script || LaForgeProvisioningScheduledStepType.Script:
         return `${step.Script.source} ${step.Script.args.join(' ')}`;
       case LaForgeProvisioningStepType.Command:
         return `${step.Command.program} ${step.Command.args.join(' ')}`;

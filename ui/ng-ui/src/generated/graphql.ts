@@ -1487,10 +1487,66 @@ export type LaForgeGetBuildCommitQuery = { __typename?: 'Query' } & {
                                     Host: { __typename?: 'Host' } & Pick<LaForgeHost, 'id' | 'hostname'>;
                                     ProvisioningSteps: Array<
                                       Maybe<
-                                        { __typename?: 'ProvisioningStep' } & Pick<LaForgeProvisioningStep, 'id' | 'stepNumber'> & {
+                                        { __typename?: 'ProvisioningStep' } & Pick<
+                                          LaForgeProvisioningStep,
+                                          'id' | 'type' | 'stepNumber'
+                                        > & {
+                                            Script?: Maybe<
+                                              { __typename?: 'Script' } & Pick<
+                                                LaForgeScript,
+                                                'id' | 'name' | 'language' | 'description' | 'source' | 'sourceType' | 'disabled' | 'args'
+                                              > & {
+                                                  vars?: Maybe<
+                                                    Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>
+                                                  >;
+                                                  tags?: Maybe<
+                                                    Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>
+                                                  >;
+                                                }
+                                            >;
+                                            Command?: Maybe<
+                                              { __typename?: 'Command' } & Pick<
+                                                LaForgeCommand,
+                                                'id' | 'name' | 'description' | 'program' | 'args' | 'disabled'
+                                              > & {
+                                                  vars?: Maybe<
+                                                    Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>
+                                                  >;
+                                                  tags?: Maybe<
+                                                    Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>
+                                                  >;
+                                                }
+                                            >;
+                                            DNSRecord?: Maybe<
+                                              { __typename?: 'DNSRecord' } & Pick<
+                                                LaForgeDnsRecord,
+                                                'id' | 'name' | 'values' | 'type' | 'zone' | 'disabled'
+                                              > & {
+                                                  vars: Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>;
+                                                  tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
+                                                }
+                                            >;
+                                            FileDownload?: Maybe<
+                                              { __typename?: 'FileDownload' } & Pick<
+                                                LaForgeFileDownload,
+                                                'id' | 'source' | 'sourceType' | 'destination' | 'disabled'
+                                              > & { tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>> }
+                                            >;
+                                            FileDelete?: Maybe<
+                                              { __typename?: 'FileDelete' } & Pick<LaForgeFileDelete, 'id' | 'path'> & {
+                                                  tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
+                                                }
+                                            >;
+                                            FileExtract?: Maybe<
+                                              { __typename?: 'FileExtract' } & Pick<
+                                                LaForgeFileExtract,
+                                                'id' | 'source' | 'destination' | 'type'
+                                              > & { tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>> }
+                                            >;
+                                            Status?: Maybe<{ __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>>;
                                             Plan?: Maybe<
                                               { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
-                                                  Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+                                                  Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
                                                 }
                                             >;
                                           }
@@ -1504,11 +1560,64 @@ export type LaForgeGetBuildCommitQuery = { __typename?: 'Query' } & {
                                         > & {
                                             ScheduledStep: { __typename?: 'ScheduledStep' } & Pick<
                                               LaForgeScheduledStep,
-                                              'id' | 'name' | 'type' | 'step'
+                                              'id' | 'name' | 'description' | 'step' | 'type' | 'schedule' | 'runAt'
                                             >;
+                                            Script?: Maybe<
+                                              { __typename?: 'Script' } & Pick<
+                                                LaForgeScript,
+                                                'id' | 'name' | 'language' | 'description' | 'source' | 'sourceType' | 'disabled' | 'args'
+                                              > & {
+                                                  vars?: Maybe<
+                                                    Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>
+                                                  >;
+                                                  tags?: Maybe<
+                                                    Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>
+                                                  >;
+                                                }
+                                            >;
+                                            Command?: Maybe<
+                                              { __typename?: 'Command' } & Pick<
+                                                LaForgeCommand,
+                                                'id' | 'name' | 'description' | 'program' | 'args' | 'disabled'
+                                              > & {
+                                                  vars?: Maybe<
+                                                    Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>
+                                                  >;
+                                                  tags?: Maybe<
+                                                    Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>
+                                                  >;
+                                                }
+                                            >;
+                                            DNSRecord?: Maybe<
+                                              { __typename?: 'DNSRecord' } & Pick<
+                                                LaForgeDnsRecord,
+                                                'id' | 'name' | 'values' | 'type' | 'zone' | 'disabled'
+                                              > & {
+                                                  vars: Array<Maybe<{ __typename?: 'varsMap' } & Pick<LaForgeVarsMap, 'key' | 'value'>>>;
+                                                  tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
+                                                }
+                                            >;
+                                            FileDownload?: Maybe<
+                                              { __typename?: 'FileDownload' } & Pick<
+                                                LaForgeFileDownload,
+                                                'id' | 'source' | 'sourceType' | 'destination' | 'disabled'
+                                              > & { tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>> }
+                                            >;
+                                            FileDelete?: Maybe<
+                                              { __typename?: 'FileDelete' } & Pick<LaForgeFileDelete, 'id' | 'path'> & {
+                                                  tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>>;
+                                                }
+                                            >;
+                                            FileExtract?: Maybe<
+                                              { __typename?: 'FileExtract' } & Pick<
+                                                LaForgeFileExtract,
+                                                'id' | 'source' | 'destination' | 'type'
+                                              > & { tags: Array<Maybe<{ __typename?: 'tagMap' } & Pick<LaForgeTagMap, 'key' | 'value'>>> }
+                                            >;
+                                            Status?: Maybe<{ __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>>;
                                             Plan?: Maybe<
                                               { __typename?: 'Plan' } & Pick<LaForgePlan, 'id'> & {
-                                                  Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id' | 'state'>;
+                                                  Status: { __typename?: 'Status' } & Pick<LaForgeStatus, 'id'>;
                                                 }
                                             >;
                                           }
@@ -2942,12 +3051,94 @@ export const GetBuildCommitDocument = gql`
               }
               ProvisioningSteps {
                 id
+                type
                 stepNumber
+                Script {
+                  id
+                  name
+                  language
+                  description
+                  source
+                  sourceType
+                  disabled
+                  args
+                  vars {
+                    key
+                    value
+                  }
+                  tags {
+                    key
+                    value
+                  }
+                }
+                Command {
+                  id
+                  name
+                  description
+                  program
+                  args
+                  disabled
+                  vars {
+                    key
+                    value
+                  }
+                  tags {
+                    key
+                    value
+                  }
+                }
+                DNSRecord {
+                  id
+                  name
+                  values
+                  type
+                  zone
+                  disabled
+                  vars {
+                    key
+                    value
+                  }
+                  tags {
+                    key
+                    value
+                  }
+                }
+                FileDownload {
+                  id
+                  source
+                  sourceType
+                  destination
+                  disabled
+                  tags {
+                    key
+                    value
+                  }
+                }
+                FileDelete {
+                  id
+                  path
+                  tags {
+                    key
+                    value
+                  }
+                }
+                FileExtract {
+                  id
+                  source
+                  destination
+                  type
+                  tags {
+                    key
+                    value
+                  }
+                }
+                Status {
+                  id
+                }
                 Plan {
                   id
                   Status {
                     id
-                    state
                   }
                 }
               }
@@ -2958,14 +3149,98 @@ export const GetBuildCommitDocument = gql`
                 ScheduledStep {
                   id
                   name
-                  type
+                  description
                   step
+                  type
+                  schedule
+                  runAt
+                }
+                Script {
+                  id
+                  name
+                  language
+                  description
+                  source
+                  sourceType
+                  disabled
+                  args
+                  vars {
+                    key
+                    value
+                  }
+                  tags {
+                    key
+                    value
+                  }
+                }
+                Command {
+                  id
+                  name
+                  description
+                  program
+                  args
+                  disabled
+                  vars {
+                    key
+                    value
+                  }
+                  tags {
+                    key
+                    value
+                  }
+                }
+                DNSRecord {
+                  id
+                  name
+                  values
+                  type
+                  zone
+                  disabled
+                  vars {
+                    key
+                    value
+                  }
+                  tags {
+                    key
+                    value
+                  }
+                }
+                FileDownload {
+                  id
+                  source
+                  sourceType
+                  destination
+                  disabled
+                  tags {
+                    key
+                    value
+                  }
+                }
+                FileDelete {
+                  id
+                  path
+                  tags {
+                    key
+                    value
+                  }
+                }
+                FileExtract {
+                  id
+                  source
+                  destination
+                  type
+                  tags {
+                    key
+                    value
+                  }
+                }
+                Status {
+                  id
                 }
                 Plan {
                   id
                   Status {
                     id
-                    state
                   }
                 }
               }
