@@ -180,9 +180,6 @@ export class StepComponent implements OnInit, OnDestroy {
 
   getText(): string {
     const step: BuildTreeProvisioningStep | BuildTreeProvisioningScheduledStep = this.provisioningStep || this.provisioningScheduledStep;
-    console.log(this.provisioningStep);
-    console.log(this.provisioningScheduledStep);
-    console.log(step);
     switch (step.type) {
       case LaForgeProvisioningStepType.Script || LaForgeProvisioningScheduledStepType.Script:
         return `${step.Script.source} ${step.Script.args.join(' ')}`;

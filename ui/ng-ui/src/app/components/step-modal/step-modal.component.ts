@@ -2,16 +2,23 @@ import { ChangeDetectorRef, Component, Inject, OnDestroy, OnInit } from '@angula
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import {
   LaForgeGetAgentTasksQuery,
+  LaForgeGetBuildTreeQuery,
   LaForgeProvisioningScheduledStep,
   LaForgeProvisioningStep,
   LaForgeProvisioningStepType,
   LaForgeProvisionStatus,
-  LaForgeStatus
+  LaForgeStatus,
+  LaForgeSubscribeUpdatedStatusSubscription
 } from '@graphql';
 import { EnvironmentService } from '@services/environment/environment.service';
 import { BehaviorSubject, Subscription } from 'rxjs';
 
 import { LaForgeGetAgentTasksGQL } from '../../../generated/graphql';
+
+// eslint-disable-next-line max-len
+type BuildTreeProvisioningStep = LaForgeGetBuildTreeQuery['build']['Teams'][0]['ProvisionedNetworks'][0]['ProvisionedHosts'][0]['ProvisioningSteps'][0];
+// eslint-disable-next-line max-len
+type BuildTreeProvisioningScheduledStep = LaForgeGetBuildTreeQuery['build']['Teams'][0]['ProvisionedNetworks'][0]['ProvisionedHosts'][0]['ProvisioningScheduledSteps'][0];
 
 @Component({
   selector: 'app-step-modal',
@@ -28,9 +35,9 @@ export class StepModalComponent implements OnInit, OnDestroy {
     public dialogRef: MatDialogRef<StepModalComponent>,
     @Inject(MAT_DIALOG_DATA)
     public data: {
-      provisioningStep: LaForgeProvisioningStep | undefined;
-      provisioningScheduledStep: LaForgeProvisioningScheduledStep | undefined;
-      planStatus: LaForgeStatus;
+      provisioningStep: BuildTreeProvisioningStep | null;
+      provisioningScheduledStep: BuildTreeProvisioningScheduledStep | null;
+      planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
     },
     private getAgentTasks: LaForgeGetAgentTasksGQL,
     private cdRef: ChangeDetectorRef,
@@ -93,7 +100,7 @@ export class StepModalComponent implements OnInit, OnDestroy {
 
   getStatusText(): string {
     if (!this.data.planStatus) return 'Unknown';
-    switch (this.data.planStatus.state) {
+    switch (this.data.planStatus.getValue().state) {
       case LaForgeProvisionStatus.Complete:
         return 'Complete';
       case LaForgeProvisionStatus.Failed:
@@ -109,7 +116,7 @@ export class StepModalComponent implements OnInit, OnDestroy {
 
   getStatusIcon(): string {
     if (!this.data.planStatus) return 'minus-circle';
-    switch (this.data.planStatus.state) {
+    switch (this.data.planStatus.getValue().state) {
       case LaForgeProvisionStatus.Complete:
         return 'check-circle';
       case LaForgeProvisionStatus.Failed:
@@ -125,7 +132,7 @@ export class StepModalComponent implements OnInit, OnDestroy {
 
   getStatusColor(): string {
     if (!this.data.planStatus) return 'dark';
-    switch (this.data.planStatus.state) {
+    switch (this.data.planStatus.getValue().state) {
       case LaForgeProvisionStatus.Complete:
         return 'success';
       case LaForgeProvisionStatus.Failed:

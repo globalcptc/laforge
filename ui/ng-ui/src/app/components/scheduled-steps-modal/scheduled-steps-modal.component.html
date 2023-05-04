@@ -28,7 +28,7 @@
 <hr />
 <div class="row">
   <div class="col-12" *ngIf="provisionedHost | async as _provisionedHost">
-    <p class="detail-title"><b>Steps</b></p>
+    <p class="detail-title"><b>Scheduled Steps</b></p>
     <p *ngIf="_provisionedHost.ProvisioningScheduledSteps.length === 0">No Scheduled Steps</p>
     <app-step
       *ngFor="let scheduledStep of _provisionedHost.ProvisioningScheduledSteps | sortBy: 'desc':'runTime'; let i = index"
