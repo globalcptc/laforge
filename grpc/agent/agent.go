@@ -1,4 +1,4 @@
-package agent
+package main
 
 //go:generate fileb0x assets.toml
 import (
@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -545,51 +546,51 @@ func (p *program) Stop(s service.Service) error {
 //	Setup the logger.
 //	Handle service controls (optional).
 //	Run the service.
-// func main() {
-// 	svcFlag := flag.String("service", "", "Control the system service.")
-// 	flag.Parse()
+func main() {
+	svcFlag := flag.String("service", "", "Control the system service.")
+	flag.Parse()
 
-// 	options := make(service.KeyValue)
-// 	options["Restart"] = "always"
-// 	// options["SuccessExitStatus"] = "1 2 8 SIGKILL"
-// 	svcConfig := &service.Config{
-// 		Name:         "laforge-agent",
-// 		DisplayName:  "Laforge Agent",
-// 		Description:  "Tool used for monitoring hosts. NOT IN COMPETITION SCOPE",
-// 		Dependencies: GetSystemDependencies(),
-// 		Option:       options,
-// 	}
+	options := make(service.KeyValue)
+	options["Restart"] = "always"
+	// options["SuccessExitStatus"] = "1 2 8 SIGKILL"
+	svcConfig := &service.Config{
+		Name:         "laforge-agent",
+		DisplayName:  "Laforge Agent",
+		Description:  "Tool used for monitoring hosts. NOT IN COMPETITION SCOPE",
+		Dependencies: GetSystemDependencies(),
+		Option:       options,
+	}
 
-// 	prg := &program{}
-// 	s, err := service.New(prg, svcConfig)
-// 	if err != nil {
-// 		logger.Error(err)
-// 	}
-// 	errs := make(chan error, 5)
-// 	logger, err = s.Logger(errs)
-// 	if err != nil {
-// 		logger.Error(err)
-// 	}
+	prg := &program{}
+	s, err := service.New(prg, svcConfig)
+	if err != nil {
+		logger.Error(err)
+	}
+	errs := make(chan error, 5)
+	logger, err = s.Logger(errs)
+	if err != nil {
+		logger.Error(err)
+	}
 
-// 	go func() {
-// 		for {
-// 			err := <-errs
-// 			if err != nil {
-// 				logger.Error(err)
-// 			}
-// 		}
-// 	}()
+	go func() {
+		for {
+			err := <-errs
+			if err != nil {
+				logger.Error(err)
+			}
+		}
+	}()
 
-// 	if len(*svcFlag) != 0 {
-// 		err := service.Control(s, *svcFlag)
-// 		if err != nil {
-// 			logger.Infof("Valid actions: %q\n", service.ControlAction)
-// 			logger.Error(err)
-// 		}
-// 		return
-// 	}
-// 	err = s.Run()
-// 	if err != nil {
-// 		logger.Error(err)
-// 	}
-// }
+	if len(*svcFlag) != 0 {
+		err := service.Control(s, *svcFlag)
+		if err != nil {
+			logger.Infof("Valid actions: %q\n", service.ControlAction)
+			logger.Error(err)
+		}
+		return
+	}
+	err = s.Run()
+	if err != nil {
+		logger.Error(err)
+	}
+}

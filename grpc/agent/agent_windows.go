@@ -1,7 +1,7 @@
 //go:build windows
 // +build windows
 
-package agent
+package main
 
 import (
 	"crypto/md5"
@@ -12,9 +12,8 @@ import (
 	"net"
 	"net/http"
 	"os"
-	s "os"
 	"os/exec"
-	user "os/user"
+	"os/user"
 	"regexp"
 
 	"path/filepath"
@@ -159,7 +158,7 @@ func NetHttpContentRegex(full_url string) (string, error) { // content hash (str
 }
 
 func FileExists(file_location string) (bool, error) {
-	stat_info, read_err := s.Stat(file_location)
+	stat_info, read_err := os.Stat(file_location)
 	if read_err != nil {
 		return false, read_err
 	}
@@ -167,7 +166,7 @@ func FileExists(file_location string) (bool, error) {
 }
 
 func FileHash(file_location string) (string, error) { // hash of the file (string)
-	file_read, read_err := s.Open(file_location)
+	file_read, read_err := os.Open(file_location)
 	if read_err != nil {
 		return "", read_err
 	}
@@ -193,7 +192,7 @@ func FileContentRegex(file_location string, pattern string) (bool, error) { // p
 }
 
 func DirectoryExists(directory string) (bool, error) { // exists (boolean)
-	stat_info, read_err := s.Stat(directory)
+	stat_info, read_err := os.Stat(directory)
 	if read_err != nil {
 		return false, read_err
 	}
