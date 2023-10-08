@@ -1,0 +1,28 @@
+<div class="laforge-header">
+  <div class="box1">
+    <img class="logo" src="assets/images/logo-light.png" alt="logo" />
+  </div>
+  <div class="box2"></div>
+  <div class="bottom"></div>
+  <div class="container">
+    <div class="numbers-flashing">
+      <div class="numbers-flashing-row" *ngFor="let _ of [].constructor(6); index as i" [ngClass]="'numbers-flashing-row-' + i">
+        <div class="numbers-flashing-cell" *ngFor="let _ of [].constructor(10)">
+          <h2>{{ getRandomInt() }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="navigation">
+      <h1 class="page-title">
+        <ng-container *ngIf="title.getTitle() | async as _title">{{ _title }}</ng-container>
+      </h1>
+      <div class="nav-buttons">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/account" class="nav-link">Account</a>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="laforge-main">
+  <router-outlet></router-outlet>
+</div>

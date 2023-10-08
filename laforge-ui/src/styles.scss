@@ -1,0 +1,79 @@
+// Custom Theming for Angular Material
+// For more information: https://material.angular.io/guide/theming
+@use '@angular/material' as mat;
+@use 'sass:map';
+// Plus imports for other components in your app.
+@import './palette.scss';
+
+// Include the common styles for Angular Material. We include this here so that you only
+// have to load a single css file for Angular Material in your app.
+// Be sure that you only ever include this mixin once!
+@include mat.core();
+
+// Define the palettes for your theme using the Material Design palettes available in palette.scss
+// (imported above). For each palette, you can optionally specify a default, lighter, and darker
+// hue. Available color palettes: https://material.io/design/color/
+$laforge-ui-primary: mat.define-palette($md-primary);
+$laforge-ui-accent: mat.define-palette($md-accent);
+
+// The warn palette is optional (defaults to red).
+$laforge-ui-warn: mat.define-palette(mat.$red-palette);
+
+// Create the theme object. A theme consists of configurations for individual
+// theming systems such as "color" or "typography".
+$laforge-light-theme: mat.define-light-theme(
+  (
+    color: (
+      primary: $laforge-ui-primary,
+      accent: $laforge-ui-accent,
+      warn: $laforge-ui-warn
+    )
+  )
+);
+$laforge-dark-theme: mat.define-dark-theme(
+  (
+    color: (
+      primary: $laforge-ui-primary,
+      accent: $laforge-ui-accent,
+      warn: $laforge-ui-warn
+    )
+  )
+);
+$laforge-dark-bg: #121212;
+$laforge-dark-colors: map.get($laforge-dark-theme, 'color');
+$laforge-dark-background: map.get($laforge-dark-colors, 'background');
+$laforge-dark-background: map.set($laforge-dark-background, 'background', $laforge-dark-bg);
+$laforge-dark-colors: map.set($laforge-dark-colors, 'background', $laforge-dark-background);
+$laforge-dark-theme: map.set($laforge-dark-theme, 'color', $laforge-dark-colors);
+
+// Include theme styles for core and each component used in your app.
+// Alternatively, you can import and @include the theme mixins for each component
+// that you are using.
+.laforge-light {
+  @include mat.all-component-themes($laforge-light-theme);
+}
+.laforge-dark {
+  @include mat.all-component-themes($laforge-dark-theme);
+}
+
+/* You can add global styles to this file, and also import other style files */
+
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  overflow-x: hidden;
+}
+
+.mat-raised-button.mat-warn,
+.mat-fab.mat-warn,
+.mat-mini-fab.mat-warn,
+.mat-flat-button,
+.mat-raised-button,
+.mat-fab,
+.mat-mini-fab {
+  background-color: $laforge-dark-bg;
+}

@@ -1,0 +1,23 @@
+overwrite: true
+schema: '../graphql/graph/schema.graphqls'
+documents: 'src/**/*.graphql'
+generates:
+  src/generated/graphql.ts:
+    config:
+      serviceName: 'GraphQL'
+      serviceProvidedInRoot: true
+      typesPrefix: 'LaForge'
+      enumsPrefix: 'LaForge'
+    hooks:
+      afterOneFileWrite:
+        - eslint ./src/generated --fix
+    plugins:
+      - 'typescript'
+      - 'typescript-operations'
+      - 'typescript-apollo-angular'
+      - 'typescript-mock-data':
+          prefix: 'Mock'
+          addTypename: true
+  ./graphql.schema.json:
+    plugins:
+      - 'introspection'
