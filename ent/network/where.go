@@ -419,25 +419,25 @@ func VdiVisibleNEQ(v bool) predicate.Network {
 	})
 }
 
-// HasNetworkToEnvironment applies the HasEdge predicate on the "NetworkToEnvironment" edge.
-func HasNetworkToEnvironment() predicate.Network {
+// HasEnvironment applies the HasEdge predicate on the "Environment" edge.
+func HasEnvironment() predicate.Network {
 	return predicate.Network(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NetworkToEnvironmentTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, NetworkToEnvironmentTable, NetworkToEnvironmentColumn),
+			sqlgraph.To(EnvironmentTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasNetworkToEnvironmentWith applies the HasEdge predicate on the "NetworkToEnvironment" edge with a given conditions (other predicates).
-func HasNetworkToEnvironmentWith(preds ...predicate.Environment) predicate.Network {
+// HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
+func HasEnvironmentWith(preds ...predicate.Environment) predicate.Network {
 	return predicate.Network(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NetworkToEnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, NetworkToEnvironmentTable, NetworkToEnvironmentColumn),
+			sqlgraph.To(EnvironmentInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -447,25 +447,25 @@ func HasNetworkToEnvironmentWith(preds ...predicate.Environment) predicate.Netwo
 	})
 }
 
-// HasNetworkToHostDependency applies the HasEdge predicate on the "NetworkToHostDependency" edge.
-func HasNetworkToHostDependency() predicate.Network {
+// HasHostDependencies applies the HasEdge predicate on the "HostDependencies" edge.
+func HasHostDependencies() predicate.Network {
 	return predicate.Network(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NetworkToHostDependencyTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, NetworkToHostDependencyTable, NetworkToHostDependencyColumn),
+			sqlgraph.To(HostDependenciesTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, HostDependenciesTable, HostDependenciesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasNetworkToHostDependencyWith applies the HasEdge predicate on the "NetworkToHostDependency" edge with a given conditions (other predicates).
-func HasNetworkToHostDependencyWith(preds ...predicate.HostDependency) predicate.Network {
+// HasHostDependenciesWith applies the HasEdge predicate on the "HostDependencies" edge with a given conditions (other predicates).
+func HasHostDependenciesWith(preds ...predicate.HostDependency) predicate.Network {
 	return predicate.Network(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NetworkToHostDependencyInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, NetworkToHostDependencyTable, NetworkToHostDependencyColumn),
+			sqlgraph.To(HostDependenciesInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, HostDependenciesTable, HostDependenciesColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -475,25 +475,25 @@ func HasNetworkToHostDependencyWith(preds ...predicate.HostDependency) predicate
 	})
 }
 
-// HasNetworkToIncludedNetwork applies the HasEdge predicate on the "NetworkToIncludedNetwork" edge.
-func HasNetworkToIncludedNetwork() predicate.Network {
+// HasIncludedNetworks applies the HasEdge predicate on the "IncludedNetworks" edge.
+func HasIncludedNetworks() predicate.Network {
 	return predicate.Network(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NetworkToIncludedNetworkTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, NetworkToIncludedNetworkTable, NetworkToIncludedNetworkColumn),
+			sqlgraph.To(IncludedNetworksTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, IncludedNetworksTable, IncludedNetworksColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasNetworkToIncludedNetworkWith applies the HasEdge predicate on the "NetworkToIncludedNetwork" edge with a given conditions (other predicates).
-func HasNetworkToIncludedNetworkWith(preds ...predicate.IncludedNetwork) predicate.Network {
+// HasIncludedNetworksWith applies the HasEdge predicate on the "IncludedNetworks" edge with a given conditions (other predicates).
+func HasIncludedNetworksWith(preds ...predicate.IncludedNetwork) predicate.Network {
 	return predicate.Network(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NetworkToIncludedNetworkInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, NetworkToIncludedNetworkTable, NetworkToIncludedNetworkColumn),
+			sqlgraph.To(IncludedNetworksInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, IncludedNetworksTable, IncludedNetworksColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

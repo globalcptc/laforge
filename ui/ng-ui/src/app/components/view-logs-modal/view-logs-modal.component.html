@@ -33,10 +33,10 @@
         </span>
       </div>
       <div class="start-time">
-        {{ task.start_time | amDateFormat: 'MMM Do YYYY, hh:mm:ss A' }}
+        {{ task.startTime | amDateFormat: 'MMM Do YYYY, hh:mm:ss A' }}
       </div>
       <div class="end-time">
-        {{ task.end_time | amDateFormat: 'MMM Do YYYY, hh:mm:ss A' }}
+        {{ task.endTime | amDateFormat: 'MMM Do YYYY, hh:mm:ss A' }}
       </div>
       <div class="view-logs">
         <button (click)="viewLog(task)">View Logs</button>

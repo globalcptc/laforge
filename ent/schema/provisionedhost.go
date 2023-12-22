@@ -27,38 +27,39 @@ func (ProvisionedHost) Fields() []ent.Field {
 // Edges of the ProvisionedHost.
 func (ProvisionedHost) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("ProvisionedHostToStatus", Status.Type).
+		edge.To("Status", Status.Type).
 			Required().
 			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("ProvisionedHostToProvisionedNetwork", ProvisionedNetwork.Type).
+		edge.To("ProvisionedNetwork", ProvisionedNetwork.Type).
 			Required().
 			Unique(),
-		edge.To("ProvisionedHostToHost", Host.Type).
+		edge.To("Host", Host.Type).
 			Required().
 			Unique(),
-		edge.To("ProvisionedHostToEndStepPlan", Plan.Type).
+		edge.To("EndStepPlan", Plan.Type).
 			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("ProvisionedHostToBuild", Build.Type).
+		edge.To("Build", Build.Type).
 			Unique().
 			Required(),
-		edge.To("ProvisionedHostToProvisionedScheduleStep", ProvisionedScheduleStep.Type),
-		edge.From("ProvisionedHostToProvisioningStep", ProvisioningStep.Type).
-			Ref("ProvisioningStepToProvisionedHost"),
-		edge.From("ProvisionedHostToAgentStatus", AgentStatus.Type).
-			Ref("AgentStatusToProvisionedHost"),
-		edge.From("ProvisionedHostToAgentTask", AgentTask.Type).
-			Ref("AgentTaskToProvisionedHost"),
-		edge.From("ProvisionedHostToPlan", Plan.Type).
-			Ref("PlanToProvisionedHost").
+		edge.From("ProvisioningSteps", ProvisioningStep.Type).
+			Ref("ProvisionedHost"),
+		edge.From("ProvisioningScheduledSteps", ProvisioningScheduledStep.Type).
+			Ref("ProvisionedHost"),
+		edge.From("AgentStatuses", AgentStatus.Type).
+			Ref("ProvisionedHost"),
+		edge.From("AgentTasks", AgentTask.Type).
+			Ref("ProvisionedHost"),
+		edge.From("Plan", Plan.Type).
+			Ref("ProvisionedHost").
 			Unique(),
-		edge.From("ProvisionedHostToGinFileMiddleware", GinFileMiddleware.Type).
-			Ref("GinFileMiddlewareToProvisionedHost").
+		edge.From("GinFileMiddleware", GinFileMiddleware.Type).
+			Ref("ProvisionedHost").
 			Unique(),
 	}
 }

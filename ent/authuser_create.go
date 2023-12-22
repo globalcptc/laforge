@@ -158,34 +158,34 @@ func (auc *AuthUserCreate) SetNillableID(u *uuid.UUID) *AuthUserCreate {
 	return auc
 }
 
-// AddAuthUserToTokenIDs adds the "AuthUserToToken" edge to the Token entity by IDs.
-func (auc *AuthUserCreate) AddAuthUserToTokenIDs(ids ...uuid.UUID) *AuthUserCreate {
-	auc.mutation.AddAuthUserToTokenIDs(ids...)
+// AddTokenIDs adds the "Tokens" edge to the Token entity by IDs.
+func (auc *AuthUserCreate) AddTokenIDs(ids ...uuid.UUID) *AuthUserCreate {
+	auc.mutation.AddTokenIDs(ids...)
 	return auc
 }
 
-// AddAuthUserToToken adds the "AuthUserToToken" edges to the Token entity.
-func (auc *AuthUserCreate) AddAuthUserToToken(t ...*Token) *AuthUserCreate {
+// AddTokens adds the "Tokens" edges to the Token entity.
+func (auc *AuthUserCreate) AddTokens(t ...*Token) *AuthUserCreate {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return auc.AddAuthUserToTokenIDs(ids...)
+	return auc.AddTokenIDs(ids...)
 }
 
-// AddAuthUserToServerTaskIDs adds the "AuthUserToServerTasks" edge to the ServerTask entity by IDs.
-func (auc *AuthUserCreate) AddAuthUserToServerTaskIDs(ids ...uuid.UUID) *AuthUserCreate {
-	auc.mutation.AddAuthUserToServerTaskIDs(ids...)
+// AddServerTaskIDs adds the "ServerTasks" edge to the ServerTask entity by IDs.
+func (auc *AuthUserCreate) AddServerTaskIDs(ids ...uuid.UUID) *AuthUserCreate {
+	auc.mutation.AddServerTaskIDs(ids...)
 	return auc
 }
 
-// AddAuthUserToServerTasks adds the "AuthUserToServerTasks" edges to the ServerTask entity.
-func (auc *AuthUserCreate) AddAuthUserToServerTasks(s ...*ServerTask) *AuthUserCreate {
+// AddServerTasks adds the "ServerTasks" edges to the ServerTask entity.
+func (auc *AuthUserCreate) AddServerTasks(s ...*ServerTask) *AuthUserCreate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return auc.AddAuthUserToServerTaskIDs(ids...)
+	return auc.AddServerTaskIDs(ids...)
 }
 
 // Mutation returns the AuthUserMutation object of the builder.
@@ -468,12 +468,12 @@ func (auc *AuthUserCreate) createSpec() (*AuthUser, *sqlgraph.CreateSpec) {
 		})
 		_node.Provider = value
 	}
-	if nodes := auc.mutation.AuthUserToTokenIDs(); len(nodes) > 0 {
+	if nodes := auc.mutation.TokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   authuser.AuthUserToTokenTable,
-			Columns: []string{authuser.AuthUserToTokenColumn},
+			Table:   authuser.TokensTable,
+			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -487,12 +487,12 @@ func (auc *AuthUserCreate) createSpec() (*AuthUser, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := auc.mutation.AuthUserToServerTasksIDs(); len(nodes) > 0 {
+	if nodes := auc.mutation.ServerTasksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   authuser.AuthUserToServerTasksTable,
-			Columns: []string{authuser.AuthUserToServerTasksColumn},
+			Table:   authuser.ServerTasksTable,
+			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

@@ -13,17 +13,17 @@ const (
 	FieldID = "id"
 	// FieldSize holds the string denoting the size field in the database.
 	FieldSize = "size"
-	// EdgeDiskToHost holds the string denoting the disktohost edge name in mutations.
-	EdgeDiskToHost = "DiskToHost"
+	// EdgeHost holds the string denoting the host edge name in mutations.
+	EdgeHost = "Host"
 	// Table holds the table name of the disk in the database.
 	Table = "disks"
-	// DiskToHostTable is the table that holds the DiskToHost relation/edge.
-	DiskToHostTable = "disks"
-	// DiskToHostInverseTable is the table name for the Host entity.
+	// HostTable is the table that holds the Host relation/edge.
+	HostTable = "disks"
+	// HostInverseTable is the table name for the Host entity.
 	// It exists in this package in order to avoid circular dependency with the "host" package.
-	DiskToHostInverseTable = "hosts"
-	// DiskToHostColumn is the table column denoting the DiskToHost relation/edge.
-	DiskToHostColumn = "host_host_to_disk"
+	HostInverseTable = "hosts"
+	// HostColumn is the table column denoting the Host relation/edge.
+	HostColumn = "host_disk"
 )
 
 // Columns holds all SQL columns for disk fields.
@@ -35,7 +35,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "disks"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"host_host_to_disk",
+	"host_disk",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

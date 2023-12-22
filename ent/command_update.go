@@ -110,38 +110,38 @@ func (cu *CommandUpdate) SetTags(m map[string]string) *CommandUpdate {
 	return cu
 }
 
-// AddCommandToUserIDs adds the "CommandToUser" edge to the User entity by IDs.
-func (cu *CommandUpdate) AddCommandToUserIDs(ids ...uuid.UUID) *CommandUpdate {
-	cu.mutation.AddCommandToUserIDs(ids...)
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (cu *CommandUpdate) AddUserIDs(ids ...uuid.UUID) *CommandUpdate {
+	cu.mutation.AddUserIDs(ids...)
 	return cu
 }
 
-// AddCommandToUser adds the "CommandToUser" edges to the User entity.
-func (cu *CommandUpdate) AddCommandToUser(u ...*User) *CommandUpdate {
+// AddUsers adds the "Users" edges to the User entity.
+func (cu *CommandUpdate) AddUsers(u ...*User) *CommandUpdate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return cu.AddCommandToUserIDs(ids...)
+	return cu.AddUserIDs(ids...)
 }
 
-// SetCommandToEnvironmentID sets the "CommandToEnvironment" edge to the Environment entity by ID.
-func (cu *CommandUpdate) SetCommandToEnvironmentID(id uuid.UUID) *CommandUpdate {
-	cu.mutation.SetCommandToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (cu *CommandUpdate) SetEnvironmentID(id uuid.UUID) *CommandUpdate {
+	cu.mutation.SetEnvironmentID(id)
 	return cu
 }
 
-// SetNillableCommandToEnvironmentID sets the "CommandToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (cu *CommandUpdate) SetNillableCommandToEnvironmentID(id *uuid.UUID) *CommandUpdate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (cu *CommandUpdate) SetNillableEnvironmentID(id *uuid.UUID) *CommandUpdate {
 	if id != nil {
-		cu = cu.SetCommandToEnvironmentID(*id)
+		cu = cu.SetEnvironmentID(*id)
 	}
 	return cu
 }
 
-// SetCommandToEnvironment sets the "CommandToEnvironment" edge to the Environment entity.
-func (cu *CommandUpdate) SetCommandToEnvironment(e *Environment) *CommandUpdate {
-	return cu.SetCommandToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (cu *CommandUpdate) SetEnvironment(e *Environment) *CommandUpdate {
+	return cu.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the CommandMutation object of the builder.
@@ -149,30 +149,30 @@ func (cu *CommandUpdate) Mutation() *CommandMutation {
 	return cu.mutation
 }
 
-// ClearCommandToUser clears all "CommandToUser" edges to the User entity.
-func (cu *CommandUpdate) ClearCommandToUser() *CommandUpdate {
-	cu.mutation.ClearCommandToUser()
+// ClearUsers clears all "Users" edges to the User entity.
+func (cu *CommandUpdate) ClearUsers() *CommandUpdate {
+	cu.mutation.ClearUsers()
 	return cu
 }
 
-// RemoveCommandToUserIDs removes the "CommandToUser" edge to User entities by IDs.
-func (cu *CommandUpdate) RemoveCommandToUserIDs(ids ...uuid.UUID) *CommandUpdate {
-	cu.mutation.RemoveCommandToUserIDs(ids...)
+// RemoveUserIDs removes the "Users" edge to User entities by IDs.
+func (cu *CommandUpdate) RemoveUserIDs(ids ...uuid.UUID) *CommandUpdate {
+	cu.mutation.RemoveUserIDs(ids...)
 	return cu
 }
 
-// RemoveCommandToUser removes "CommandToUser" edges to User entities.
-func (cu *CommandUpdate) RemoveCommandToUser(u ...*User) *CommandUpdate {
+// RemoveUsers removes "Users" edges to User entities.
+func (cu *CommandUpdate) RemoveUsers(u ...*User) *CommandUpdate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return cu.RemoveCommandToUserIDs(ids...)
+	return cu.RemoveUserIDs(ids...)
 }
 
-// ClearCommandToEnvironment clears the "CommandToEnvironment" edge to the Environment entity.
-func (cu *CommandUpdate) ClearCommandToEnvironment() *CommandUpdate {
-	cu.mutation.ClearCommandToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (cu *CommandUpdate) ClearEnvironment() *CommandUpdate {
+	cu.mutation.ClearEnvironment()
 	return cu
 }
 
@@ -360,12 +360,12 @@ func (cu *CommandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: command.FieldTags,
 		})
 	}
-	if cu.mutation.CommandToUserCleared() {
+	if cu.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   command.CommandToUserTable,
-			Columns: []string{command.CommandToUserColumn},
+			Table:   command.UsersTable,
+			Columns: []string{command.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -376,12 +376,12 @@ func (cu *CommandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := cu.mutation.RemovedCommandToUserIDs(); len(nodes) > 0 && !cu.mutation.CommandToUserCleared() {
+	if nodes := cu.mutation.RemovedUsersIDs(); len(nodes) > 0 && !cu.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   command.CommandToUserTable,
-			Columns: []string{command.CommandToUserColumn},
+			Table:   command.UsersTable,
+			Columns: []string{command.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -395,12 +395,12 @@ func (cu *CommandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := cu.mutation.CommandToUserIDs(); len(nodes) > 0 {
+	if nodes := cu.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   command.CommandToUserTable,
-			Columns: []string{command.CommandToUserColumn},
+			Table:   command.UsersTable,
+			Columns: []string{command.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -414,12 +414,12 @@ func (cu *CommandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if cu.mutation.CommandToEnvironmentCleared() {
+	if cu.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   command.CommandToEnvironmentTable,
-			Columns: []string{command.CommandToEnvironmentColumn},
+			Table:   command.EnvironmentTable,
+			Columns: []string{command.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -430,12 +430,12 @@ func (cu *CommandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := cu.mutation.CommandToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := cu.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   command.CommandToEnvironmentTable,
-			Columns: []string{command.CommandToEnvironmentColumn},
+			Table:   command.EnvironmentTable,
+			Columns: []string{command.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -548,38 +548,38 @@ func (cuo *CommandUpdateOne) SetTags(m map[string]string) *CommandUpdateOne {
 	return cuo
 }
 
-// AddCommandToUserIDs adds the "CommandToUser" edge to the User entity by IDs.
-func (cuo *CommandUpdateOne) AddCommandToUserIDs(ids ...uuid.UUID) *CommandUpdateOne {
-	cuo.mutation.AddCommandToUserIDs(ids...)
+// AddUserIDs adds the "Users" edge to the User entity by IDs.
+func (cuo *CommandUpdateOne) AddUserIDs(ids ...uuid.UUID) *CommandUpdateOne {
+	cuo.mutation.AddUserIDs(ids...)
 	return cuo
 }
 
-// AddCommandToUser adds the "CommandToUser" edges to the User entity.
-func (cuo *CommandUpdateOne) AddCommandToUser(u ...*User) *CommandUpdateOne {
+// AddUsers adds the "Users" edges to the User entity.
+func (cuo *CommandUpdateOne) AddUsers(u ...*User) *CommandUpdateOne {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return cuo.AddCommandToUserIDs(ids...)
+	return cuo.AddUserIDs(ids...)
 }
 
-// SetCommandToEnvironmentID sets the "CommandToEnvironment" edge to the Environment entity by ID.
-func (cuo *CommandUpdateOne) SetCommandToEnvironmentID(id uuid.UUID) *CommandUpdateOne {
-	cuo.mutation.SetCommandToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (cuo *CommandUpdateOne) SetEnvironmentID(id uuid.UUID) *CommandUpdateOne {
+	cuo.mutation.SetEnvironmentID(id)
 	return cuo
 }
 
-// SetNillableCommandToEnvironmentID sets the "CommandToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (cuo *CommandUpdateOne) SetNillableCommandToEnvironmentID(id *uuid.UUID) *CommandUpdateOne {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (cuo *CommandUpdateOne) SetNillableEnvironmentID(id *uuid.UUID) *CommandUpdateOne {
 	if id != nil {
-		cuo = cuo.SetCommandToEnvironmentID(*id)
+		cuo = cuo.SetEnvironmentID(*id)
 	}
 	return cuo
 }
 
-// SetCommandToEnvironment sets the "CommandToEnvironment" edge to the Environment entity.
-func (cuo *CommandUpdateOne) SetCommandToEnvironment(e *Environment) *CommandUpdateOne {
-	return cuo.SetCommandToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (cuo *CommandUpdateOne) SetEnvironment(e *Environment) *CommandUpdateOne {
+	return cuo.SetEnvironmentID(e.ID)
 }
 
 // Mutation returns the CommandMutation object of the builder.
@@ -587,30 +587,30 @@ func (cuo *CommandUpdateOne) Mutation() *CommandMutation {
 	return cuo.mutation
 }
 
-// ClearCommandToUser clears all "CommandToUser" edges to the User entity.
-func (cuo *CommandUpdateOne) ClearCommandToUser() *CommandUpdateOne {
-	cuo.mutation.ClearCommandToUser()
+// ClearUsers clears all "Users" edges to the User entity.
+func (cuo *CommandUpdateOne) ClearUsers() *CommandUpdateOne {
+	cuo.mutation.ClearUsers()
 	return cuo
 }
 
-// RemoveCommandToUserIDs removes the "CommandToUser" edge to User entities by IDs.
-func (cuo *CommandUpdateOne) RemoveCommandToUserIDs(ids ...uuid.UUID) *CommandUpdateOne {
-	cuo.mutation.RemoveCommandToUserIDs(ids...)
+// RemoveUserIDs removes the "Users" edge to User entities by IDs.
+func (cuo *CommandUpdateOne) RemoveUserIDs(ids ...uuid.UUID) *CommandUpdateOne {
+	cuo.mutation.RemoveUserIDs(ids...)
 	return cuo
 }
 
-// RemoveCommandToUser removes "CommandToUser" edges to User entities.
-func (cuo *CommandUpdateOne) RemoveCommandToUser(u ...*User) *CommandUpdateOne {
+// RemoveUsers removes "Users" edges to User entities.
+func (cuo *CommandUpdateOne) RemoveUsers(u ...*User) *CommandUpdateOne {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return cuo.RemoveCommandToUserIDs(ids...)
+	return cuo.RemoveUserIDs(ids...)
 }
 
-// ClearCommandToEnvironment clears the "CommandToEnvironment" edge to the Environment entity.
-func (cuo *CommandUpdateOne) ClearCommandToEnvironment() *CommandUpdateOne {
-	cuo.mutation.ClearCommandToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (cuo *CommandUpdateOne) ClearEnvironment() *CommandUpdateOne {
+	cuo.mutation.ClearEnvironment()
 	return cuo
 }
 
@@ -828,12 +828,12 @@ func (cuo *CommandUpdateOne) sqlSave(ctx context.Context) (_node *Command, err e
 			Column: command.FieldTags,
 		})
 	}
-	if cuo.mutation.CommandToUserCleared() {
+	if cuo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   command.CommandToUserTable,
-			Columns: []string{command.CommandToUserColumn},
+			Table:   command.UsersTable,
+			Columns: []string{command.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -844,12 +844,12 @@ func (cuo *CommandUpdateOne) sqlSave(ctx context.Context) (_node *Command, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := cuo.mutation.RemovedCommandToUserIDs(); len(nodes) > 0 && !cuo.mutation.CommandToUserCleared() {
+	if nodes := cuo.mutation.RemovedUsersIDs(); len(nodes) > 0 && !cuo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   command.CommandToUserTable,
-			Columns: []string{command.CommandToUserColumn},
+			Table:   command.UsersTable,
+			Columns: []string{command.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -863,12 +863,12 @@ func (cuo *CommandUpdateOne) sqlSave(ctx context.Context) (_node *Command, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := cuo.mutation.CommandToUserIDs(); len(nodes) > 0 {
+	if nodes := cuo.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   command.CommandToUserTable,
-			Columns: []string{command.CommandToUserColumn},
+			Table:   command.UsersTable,
+			Columns: []string{command.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -882,12 +882,12 @@ func (cuo *CommandUpdateOne) sqlSave(ctx context.Context) (_node *Command, err e
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if cuo.mutation.CommandToEnvironmentCleared() {
+	if cuo.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   command.CommandToEnvironmentTable,
-			Columns: []string{command.CommandToEnvironmentColumn},
+			Table:   command.EnvironmentTable,
+			Columns: []string{command.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -898,12 +898,12 @@ func (cuo *CommandUpdateOne) sqlSave(ctx context.Context) (_node *Command, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := cuo.mutation.CommandToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := cuo.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   command.CommandToEnvironmentTable,
-			Columns: []string{command.CommandToEnvironmentColumn},
+			Table:   command.EnvironmentTable,
+			Columns: []string{command.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

@@ -17,7 +17,7 @@ func CreateRootCommit(client *ent.Client, rdb *redis.Client, entBuild *ent.Build
 	ctx := context.Background()
 	defer ctx.Done()
 
-	buildPlans, err := entBuild.QueryBuildToPlan().All(ctx)
+	buildPlans, err := entBuild.QueryPlans().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error querying plans from build: %v", err)
 	}
@@ -25,7 +25,7 @@ func CreateRootCommit(client *ent.Client, rdb *redis.Client, entBuild *ent.Build
 	rootCommit, err := client.BuildCommit.Create().
 		SetType(buildcommit.TypeROOT).
 		SetRevision(0).
-		SetBuildCommitToBuild(entBuild).
+		SetBuild(entBuild).
 		SetState(buildcommit.StatePLANNING).
 		Save(ctx)
 	if err != nil {
@@ -34,7 +34,7 @@ func CreateRootCommit(client *ent.Client, rdb *redis.Client, entBuild *ent.Build
 
 	var planDiffErr error = nil
 	for _, buildPlan := range buildPlans {
-		numExistingDiffs, err := buildPlan.QueryPlanToPlanDiffs().Count(ctx)
+		numExistingDiffs, err := buildPlan.QueryPlanDiffs().Count(ctx)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"buildPlan": buildPlan.ID,
@@ -44,8 +44,8 @@ func CreateRootCommit(client *ent.Client, rdb *redis.Client, entBuild *ent.Build
 		_, planDiffErr := client.PlanDiff.Create().
 			SetNewState(plandiff.NewStatePLANNING).
 			SetRevision(numExistingDiffs).
-			SetPlanDiffToBuildCommit(rootCommit).
-			SetPlanDiffToPlan(buildPlan).
+			SetBuildCommit(rootCommit).
+			SetPlan(buildPlan).
 			Save(ctx)
 		if planDiffErr != nil {
 			logrus.WithFields(logrus.Fields{

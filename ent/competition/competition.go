@@ -15,37 +15,41 @@ const (
 	FieldHclID = "hcl_id"
 	// FieldRootPassword holds the string denoting the root_password field in the database.
 	FieldRootPassword = "root_password"
+	// FieldStartTime holds the string denoting the start_time field in the database.
+	FieldStartTime = "start_time"
+	// FieldStopTime holds the string denoting the stop_time field in the database.
+	FieldStopTime = "stop_time"
 	// FieldConfig holds the string denoting the config field in the database.
 	FieldConfig = "config"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// EdgeCompetitionToDNS holds the string denoting the competitiontodns edge name in mutations.
-	EdgeCompetitionToDNS = "CompetitionToDNS"
-	// EdgeCompetitionToEnvironment holds the string denoting the competitiontoenvironment edge name in mutations.
-	EdgeCompetitionToEnvironment = "CompetitionToEnvironment"
-	// EdgeCompetitionToBuild holds the string denoting the competitiontobuild edge name in mutations.
-	EdgeCompetitionToBuild = "CompetitionToBuild"
+	// EdgeDNS holds the string denoting the dns edge name in mutations.
+	EdgeDNS = "DNS"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
+	// EdgeBuilds holds the string denoting the builds edge name in mutations.
+	EdgeBuilds = "Builds"
 	// Table holds the table name of the competition in the database.
 	Table = "competitions"
-	// CompetitionToDNSTable is the table that holds the CompetitionToDNS relation/edge. The primary key declared below.
-	CompetitionToDNSTable = "competition_CompetitionToDNS"
-	// CompetitionToDNSInverseTable is the table name for the DNS entity.
+	// DNSTable is the table that holds the DNS relation/edge. The primary key declared below.
+	DNSTable = "competition_DNS"
+	// DNSInverseTable is the table name for the DNS entity.
 	// It exists in this package in order to avoid circular dependency with the "dns" package.
-	CompetitionToDNSInverseTable = "dn_ss"
-	// CompetitionToEnvironmentTable is the table that holds the CompetitionToEnvironment relation/edge.
-	CompetitionToEnvironmentTable = "competitions"
-	// CompetitionToEnvironmentInverseTable is the table name for the Environment entity.
+	DNSInverseTable = "dn_ss"
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "competitions"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	CompetitionToEnvironmentInverseTable = "environments"
-	// CompetitionToEnvironmentColumn is the table column denoting the CompetitionToEnvironment relation/edge.
-	CompetitionToEnvironmentColumn = "environment_environment_to_competition"
-	// CompetitionToBuildTable is the table that holds the CompetitionToBuild relation/edge.
-	CompetitionToBuildTable = "builds"
-	// CompetitionToBuildInverseTable is the table name for the Build entity.
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_competitions"
+	// BuildsTable is the table that holds the Builds relation/edge.
+	BuildsTable = "builds"
+	// BuildsInverseTable is the table name for the Build entity.
 	// It exists in this package in order to avoid circular dependency with the "build" package.
-	CompetitionToBuildInverseTable = "builds"
-	// CompetitionToBuildColumn is the table column denoting the CompetitionToBuild relation/edge.
-	CompetitionToBuildColumn = "build_build_to_competition"
+	BuildsInverseTable = "builds"
+	// BuildsColumn is the table column denoting the Builds relation/edge.
+	BuildsColumn = "build_competition"
 )
 
 // Columns holds all SQL columns for competition fields.
@@ -53,6 +57,8 @@ var Columns = []string{
 	FieldID,
 	FieldHclID,
 	FieldRootPassword,
+	FieldStartTime,
+	FieldStopTime,
 	FieldConfig,
 	FieldTags,
 }
@@ -60,13 +66,13 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "competitions"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_competition",
+	"environment_competitions",
 }
 
 var (
-	// CompetitionToDNSPrimaryKey and CompetitionToDNSColumn2 are the table columns denoting the
-	// primary key for the CompetitionToDNS relation (M2M).
-	CompetitionToDNSPrimaryKey = []string{"competition_id", "dns_id"}
+	// DNSPrimaryKey and DNSColumn2 are the table columns denoting the
+	// primary key for the DNS relation (M2M).
+	DNSPrimaryKey = []string{"competition_id", "dns_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).

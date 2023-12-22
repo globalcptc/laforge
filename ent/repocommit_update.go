@@ -85,23 +85,23 @@ func (rcu *RepoCommitUpdate) SetParentHashes(s []string) *RepoCommitUpdate {
 	return rcu
 }
 
-// SetRepoCommitToRepositoryID sets the "RepoCommitToRepository" edge to the Repository entity by ID.
-func (rcu *RepoCommitUpdate) SetRepoCommitToRepositoryID(id uuid.UUID) *RepoCommitUpdate {
-	rcu.mutation.SetRepoCommitToRepositoryID(id)
+// SetRepositoryID sets the "Repository" edge to the Repository entity by ID.
+func (rcu *RepoCommitUpdate) SetRepositoryID(id uuid.UUID) *RepoCommitUpdate {
+	rcu.mutation.SetRepositoryID(id)
 	return rcu
 }
 
-// SetNillableRepoCommitToRepositoryID sets the "RepoCommitToRepository" edge to the Repository entity by ID if the given value is not nil.
-func (rcu *RepoCommitUpdate) SetNillableRepoCommitToRepositoryID(id *uuid.UUID) *RepoCommitUpdate {
+// SetNillableRepositoryID sets the "Repository" edge to the Repository entity by ID if the given value is not nil.
+func (rcu *RepoCommitUpdate) SetNillableRepositoryID(id *uuid.UUID) *RepoCommitUpdate {
 	if id != nil {
-		rcu = rcu.SetRepoCommitToRepositoryID(*id)
+		rcu = rcu.SetRepositoryID(*id)
 	}
 	return rcu
 }
 
-// SetRepoCommitToRepository sets the "RepoCommitToRepository" edge to the Repository entity.
-func (rcu *RepoCommitUpdate) SetRepoCommitToRepository(r *Repository) *RepoCommitUpdate {
-	return rcu.SetRepoCommitToRepositoryID(r.ID)
+// SetRepository sets the "Repository" edge to the Repository entity.
+func (rcu *RepoCommitUpdate) SetRepository(r *Repository) *RepoCommitUpdate {
+	return rcu.SetRepositoryID(r.ID)
 }
 
 // Mutation returns the RepoCommitMutation object of the builder.
@@ -109,9 +109,9 @@ func (rcu *RepoCommitUpdate) Mutation() *RepoCommitMutation {
 	return rcu.mutation
 }
 
-// ClearRepoCommitToRepository clears the "RepoCommitToRepository" edge to the Repository entity.
-func (rcu *RepoCommitUpdate) ClearRepoCommitToRepository() *RepoCommitUpdate {
-	rcu.mutation.ClearRepoCommitToRepository()
+// ClearRepository clears the "Repository" edge to the Repository entity.
+func (rcu *RepoCommitUpdate) ClearRepository() *RepoCommitUpdate {
+	rcu.mutation.ClearRepository()
 	return rcu
 }
 
@@ -250,12 +250,12 @@ func (rcu *RepoCommitUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: repocommit.FieldParentHashes,
 		})
 	}
-	if rcu.mutation.RepoCommitToRepositoryCleared() {
+	if rcu.mutation.RepositoryCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   repocommit.RepoCommitToRepositoryTable,
-			Columns: []string{repocommit.RepoCommitToRepositoryColumn},
+			Table:   repocommit.RepositoryTable,
+			Columns: []string{repocommit.RepositoryColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -266,12 +266,12 @@ func (rcu *RepoCommitUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := rcu.mutation.RepoCommitToRepositoryIDs(); len(nodes) > 0 {
+	if nodes := rcu.mutation.RepositoryIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   repocommit.RepoCommitToRepositoryTable,
-			Columns: []string{repocommit.RepoCommitToRepositoryColumn},
+			Table:   repocommit.RepositoryTable,
+			Columns: []string{repocommit.RepositoryColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -359,23 +359,23 @@ func (rcuo *RepoCommitUpdateOne) SetParentHashes(s []string) *RepoCommitUpdateOn
 	return rcuo
 }
 
-// SetRepoCommitToRepositoryID sets the "RepoCommitToRepository" edge to the Repository entity by ID.
-func (rcuo *RepoCommitUpdateOne) SetRepoCommitToRepositoryID(id uuid.UUID) *RepoCommitUpdateOne {
-	rcuo.mutation.SetRepoCommitToRepositoryID(id)
+// SetRepositoryID sets the "Repository" edge to the Repository entity by ID.
+func (rcuo *RepoCommitUpdateOne) SetRepositoryID(id uuid.UUID) *RepoCommitUpdateOne {
+	rcuo.mutation.SetRepositoryID(id)
 	return rcuo
 }
 
-// SetNillableRepoCommitToRepositoryID sets the "RepoCommitToRepository" edge to the Repository entity by ID if the given value is not nil.
-func (rcuo *RepoCommitUpdateOne) SetNillableRepoCommitToRepositoryID(id *uuid.UUID) *RepoCommitUpdateOne {
+// SetNillableRepositoryID sets the "Repository" edge to the Repository entity by ID if the given value is not nil.
+func (rcuo *RepoCommitUpdateOne) SetNillableRepositoryID(id *uuid.UUID) *RepoCommitUpdateOne {
 	if id != nil {
-		rcuo = rcuo.SetRepoCommitToRepositoryID(*id)
+		rcuo = rcuo.SetRepositoryID(*id)
 	}
 	return rcuo
 }
 
-// SetRepoCommitToRepository sets the "RepoCommitToRepository" edge to the Repository entity.
-func (rcuo *RepoCommitUpdateOne) SetRepoCommitToRepository(r *Repository) *RepoCommitUpdateOne {
-	return rcuo.SetRepoCommitToRepositoryID(r.ID)
+// SetRepository sets the "Repository" edge to the Repository entity.
+func (rcuo *RepoCommitUpdateOne) SetRepository(r *Repository) *RepoCommitUpdateOne {
+	return rcuo.SetRepositoryID(r.ID)
 }
 
 // Mutation returns the RepoCommitMutation object of the builder.
@@ -383,9 +383,9 @@ func (rcuo *RepoCommitUpdateOne) Mutation() *RepoCommitMutation {
 	return rcuo.mutation
 }
 
-// ClearRepoCommitToRepository clears the "RepoCommitToRepository" edge to the Repository entity.
-func (rcuo *RepoCommitUpdateOne) ClearRepoCommitToRepository() *RepoCommitUpdateOne {
-	rcuo.mutation.ClearRepoCommitToRepository()
+// ClearRepository clears the "Repository" edge to the Repository entity.
+func (rcuo *RepoCommitUpdateOne) ClearRepository() *RepoCommitUpdateOne {
+	rcuo.mutation.ClearRepository()
 	return rcuo
 }
 
@@ -554,12 +554,12 @@ func (rcuo *RepoCommitUpdateOne) sqlSave(ctx context.Context) (_node *RepoCommit
 			Column: repocommit.FieldParentHashes,
 		})
 	}
-	if rcuo.mutation.RepoCommitToRepositoryCleared() {
+	if rcuo.mutation.RepositoryCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   repocommit.RepoCommitToRepositoryTable,
-			Columns: []string{repocommit.RepoCommitToRepositoryColumn},
+			Table:   repocommit.RepositoryTable,
+			Columns: []string{repocommit.RepositoryColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -570,12 +570,12 @@ func (rcuo *RepoCommitUpdateOne) sqlSave(ctx context.Context) (_node *RepoCommit
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := rcuo.mutation.RepoCommitToRepositoryIDs(); len(nodes) > 0 {
+	if nodes := rcuo.mutation.RepositoryIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   repocommit.RepoCommitToRepositoryTable,
-			Columns: []string{repocommit.RepoCommitToRepositoryColumn},
+			Table:   repocommit.RepositoryTable,
+			Columns: []string{repocommit.RepositoryColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

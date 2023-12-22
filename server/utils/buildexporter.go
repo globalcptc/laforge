@@ -43,7 +43,7 @@ type hostConf struct {
 
 func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Build) (string, error) {
 
-	entEnvrioment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	entEnvrioment, err := entBuild.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -56,7 +56,7 @@ func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Bu
 		RevisionNumber:  entBuild.Revision,
 		Teams:           []teamConf{},
 	}
-	entTeams, err := entBuild.QueryBuildToTeam().All(ctx)
+	entTeams, err := entBuild.QueryTeams().All(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -65,12 +65,12 @@ func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Bu
 			TeamNumber: entTeam.TeamNumber,
 			Networks:   []networkConf{},
 		}
-		entProNetworks, err := entTeam.QueryTeamToProvisionedNetwork().All(ctx)
+		entProNetworks, err := entTeam.QueryProvisionedNetworks().All(ctx)
 		if err != nil {
 			return "", err
 		}
 		for _, entProNetwork := range entProNetworks {
-			entNetwork, err := entProNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+			entNetwork, err := entProNetwork.QueryNetwork().Only(ctx)
 			if err != nil {
 				return "", err
 			}
@@ -80,20 +80,20 @@ func GenerateBuildConf(ctx context.Context, client *ent.Client, entBuild *ent.Bu
 				VDIVisible:  entNetwork.VdiVisible,
 				Hosts:       []hostConf{},
 			}
-			entProHosts, err := entProNetwork.QueryProvisionedNetworkToProvisionedHost().All(ctx)
+			entProHosts, err := entProNetwork.QueryProvisionedHosts().All(ctx)
 			if err != nil {
 				return "", err
 			}
 			for _, entProHost := range entProHosts {
-				entHost, err := entProHost.QueryProvisionedHostToHost().Only(ctx)
+				entHost, err := entProHost.QueryHost().Only(ctx)
 				if err != nil {
 					return "", err
 				}
-				entDisk, err := entHost.QueryHostToDisk().Only(ctx)
+				entDisk, err := entHost.QueryDisk().Only(ctx)
 				if err != nil {
 					return "", err
 				}
-				entAgent, err := entProHost.QueryProvisionedHostToGinFileMiddleware().First(ctx)
+				entAgent, err := entProHost.QueryGinFileMiddleware().First(ctx)
 				if err != nil {
 					return "", err
 				}

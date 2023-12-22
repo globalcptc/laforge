@@ -19,81 +19,88 @@ const (
 	FieldStepNumber = "step_number"
 	// FieldType holds the string denoting the type field in the database.
 	FieldType = "type"
-	// FieldBuildID holds the string denoting the build_id field in the database.
-	FieldBuildID = "build_id"
-	// EdgePrevPlan holds the string denoting the prevplan edge name in mutations.
-	EdgePrevPlan = "PrevPlan"
-	// EdgeNextPlan holds the string denoting the nextplan edge name in mutations.
-	EdgeNextPlan = "NextPlan"
-	// EdgePlanToBuild holds the string denoting the plantobuild edge name in mutations.
-	EdgePlanToBuild = "PlanToBuild"
-	// EdgePlanToTeam holds the string denoting the plantoteam edge name in mutations.
-	EdgePlanToTeam = "PlanToTeam"
-	// EdgePlanToProvisionedNetwork holds the string denoting the plantoprovisionednetwork edge name in mutations.
-	EdgePlanToProvisionedNetwork = "PlanToProvisionedNetwork"
-	// EdgePlanToProvisionedHost holds the string denoting the plantoprovisionedhost edge name in mutations.
-	EdgePlanToProvisionedHost = "PlanToProvisionedHost"
-	// EdgePlanToProvisioningStep holds the string denoting the plantoprovisioningstep edge name in mutations.
-	EdgePlanToProvisioningStep = "PlanToProvisioningStep"
-	// EdgePlanToStatus holds the string denoting the plantostatus edge name in mutations.
-	EdgePlanToStatus = "PlanToStatus"
-	// EdgePlanToPlanDiffs holds the string denoting the plantoplandiffs edge name in mutations.
-	EdgePlanToPlanDiffs = "PlanToPlanDiffs"
+	// EdgePrevPlans holds the string denoting the prevplans edge name in mutations.
+	EdgePrevPlans = "PrevPlans"
+	// EdgeNextPlans holds the string denoting the nextplans edge name in mutations.
+	EdgeNextPlans = "NextPlans"
+	// EdgeBuild holds the string denoting the build edge name in mutations.
+	EdgeBuild = "Build"
+	// EdgeTeam holds the string denoting the team edge name in mutations.
+	EdgeTeam = "Team"
+	// EdgeProvisionedNetwork holds the string denoting the provisionednetwork edge name in mutations.
+	EdgeProvisionedNetwork = "ProvisionedNetwork"
+	// EdgeProvisionedHost holds the string denoting the provisionedhost edge name in mutations.
+	EdgeProvisionedHost = "ProvisionedHost"
+	// EdgeProvisioningStep holds the string denoting the provisioningstep edge name in mutations.
+	EdgeProvisioningStep = "ProvisioningStep"
+	// EdgeProvisioningScheduledStep holds the string denoting the provisioningscheduledstep edge name in mutations.
+	EdgeProvisioningScheduledStep = "ProvisioningScheduledStep"
+	// EdgeStatus holds the string denoting the status edge name in mutations.
+	EdgeStatus = "Status"
+	// EdgePlanDiffs holds the string denoting the plandiffs edge name in mutations.
+	EdgePlanDiffs = "PlanDiffs"
 	// Table holds the table name of the plan in the database.
 	Table = "plans"
-	// PrevPlanTable is the table that holds the PrevPlan relation/edge. The primary key declared below.
-	PrevPlanTable = "plan_NextPlan"
-	// NextPlanTable is the table that holds the NextPlan relation/edge. The primary key declared below.
-	NextPlanTable = "plan_NextPlan"
-	// PlanToBuildTable is the table that holds the PlanToBuild relation/edge.
-	PlanToBuildTable = "plans"
-	// PlanToBuildInverseTable is the table name for the Build entity.
+	// PrevPlansTable is the table that holds the PrevPlans relation/edge. The primary key declared below.
+	PrevPlansTable = "plan_NextPlans"
+	// NextPlansTable is the table that holds the NextPlans relation/edge. The primary key declared below.
+	NextPlansTable = "plan_NextPlans"
+	// BuildTable is the table that holds the Build relation/edge.
+	BuildTable = "plans"
+	// BuildInverseTable is the table name for the Build entity.
 	// It exists in this package in order to avoid circular dependency with the "build" package.
-	PlanToBuildInverseTable = "builds"
-	// PlanToBuildColumn is the table column denoting the PlanToBuild relation/edge.
-	PlanToBuildColumn = "plan_plan_to_build"
-	// PlanToTeamTable is the table that holds the PlanToTeam relation/edge.
-	PlanToTeamTable = "teams"
-	// PlanToTeamInverseTable is the table name for the Team entity.
+	BuildInverseTable = "builds"
+	// BuildColumn is the table column denoting the Build relation/edge.
+	BuildColumn = "plan_build"
+	// TeamTable is the table that holds the Team relation/edge.
+	TeamTable = "teams"
+	// TeamInverseTable is the table name for the Team entity.
 	// It exists in this package in order to avoid circular dependency with the "team" package.
-	PlanToTeamInverseTable = "teams"
-	// PlanToTeamColumn is the table column denoting the PlanToTeam relation/edge.
-	PlanToTeamColumn = "plan_plan_to_team"
-	// PlanToProvisionedNetworkTable is the table that holds the PlanToProvisionedNetwork relation/edge.
-	PlanToProvisionedNetworkTable = "provisioned_networks"
-	// PlanToProvisionedNetworkInverseTable is the table name for the ProvisionedNetwork entity.
+	TeamInverseTable = "teams"
+	// TeamColumn is the table column denoting the Team relation/edge.
+	TeamColumn = "plan_team"
+	// ProvisionedNetworkTable is the table that holds the ProvisionedNetwork relation/edge.
+	ProvisionedNetworkTable = "provisioned_networks"
+	// ProvisionedNetworkInverseTable is the table name for the ProvisionedNetwork entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionednetwork" package.
-	PlanToProvisionedNetworkInverseTable = "provisioned_networks"
-	// PlanToProvisionedNetworkColumn is the table column denoting the PlanToProvisionedNetwork relation/edge.
-	PlanToProvisionedNetworkColumn = "plan_plan_to_provisioned_network"
-	// PlanToProvisionedHostTable is the table that holds the PlanToProvisionedHost relation/edge.
-	PlanToProvisionedHostTable = "provisioned_hosts"
-	// PlanToProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
+	ProvisionedNetworkInverseTable = "provisioned_networks"
+	// ProvisionedNetworkColumn is the table column denoting the ProvisionedNetwork relation/edge.
+	ProvisionedNetworkColumn = "plan_provisioned_network"
+	// ProvisionedHostTable is the table that holds the ProvisionedHost relation/edge.
+	ProvisionedHostTable = "provisioned_hosts"
+	// ProvisionedHostInverseTable is the table name for the ProvisionedHost entity.
 	// It exists in this package in order to avoid circular dependency with the "provisionedhost" package.
-	PlanToProvisionedHostInverseTable = "provisioned_hosts"
-	// PlanToProvisionedHostColumn is the table column denoting the PlanToProvisionedHost relation/edge.
-	PlanToProvisionedHostColumn = "plan_plan_to_provisioned_host"
-	// PlanToProvisioningStepTable is the table that holds the PlanToProvisioningStep relation/edge.
-	PlanToProvisioningStepTable = "provisioning_steps"
-	// PlanToProvisioningStepInverseTable is the table name for the ProvisioningStep entity.
+	ProvisionedHostInverseTable = "provisioned_hosts"
+	// ProvisionedHostColumn is the table column denoting the ProvisionedHost relation/edge.
+	ProvisionedHostColumn = "plan_provisioned_host"
+	// ProvisioningStepTable is the table that holds the ProvisioningStep relation/edge.
+	ProvisioningStepTable = "provisioning_steps"
+	// ProvisioningStepInverseTable is the table name for the ProvisioningStep entity.
 	// It exists in this package in order to avoid circular dependency with the "provisioningstep" package.
-	PlanToProvisioningStepInverseTable = "provisioning_steps"
-	// PlanToProvisioningStepColumn is the table column denoting the PlanToProvisioningStep relation/edge.
-	PlanToProvisioningStepColumn = "plan_plan_to_provisioning_step"
-	// PlanToStatusTable is the table that holds the PlanToStatus relation/edge.
-	PlanToStatusTable = "status"
-	// PlanToStatusInverseTable is the table name for the Status entity.
+	ProvisioningStepInverseTable = "provisioning_steps"
+	// ProvisioningStepColumn is the table column denoting the ProvisioningStep relation/edge.
+	ProvisioningStepColumn = "plan_provisioning_step"
+	// ProvisioningScheduledStepTable is the table that holds the ProvisioningScheduledStep relation/edge.
+	ProvisioningScheduledStepTable = "provisioning_scheduled_steps"
+	// ProvisioningScheduledStepInverseTable is the table name for the ProvisioningScheduledStep entity.
+	// It exists in this package in order to avoid circular dependency with the "provisioningscheduledstep" package.
+	ProvisioningScheduledStepInverseTable = "provisioning_scheduled_steps"
+	// ProvisioningScheduledStepColumn is the table column denoting the ProvisioningScheduledStep relation/edge.
+	ProvisioningScheduledStepColumn = "plan_provisioning_scheduled_step"
+	// StatusTable is the table that holds the Status relation/edge.
+	StatusTable = "status"
+	// StatusInverseTable is the table name for the Status entity.
 	// It exists in this package in order to avoid circular dependency with the "status" package.
-	PlanToStatusInverseTable = "status"
-	// PlanToStatusColumn is the table column denoting the PlanToStatus relation/edge.
-	PlanToStatusColumn = "plan_plan_to_status"
-	// PlanToPlanDiffsTable is the table that holds the PlanToPlanDiffs relation/edge.
-	PlanToPlanDiffsTable = "plan_diffs"
-	// PlanToPlanDiffsInverseTable is the table name for the PlanDiff entity.
+	StatusInverseTable = "status"
+	// StatusColumn is the table column denoting the Status relation/edge.
+	StatusColumn = "plan_status"
+	// PlanDiffsTable is the table that holds the PlanDiffs relation/edge.
+	PlanDiffsTable = "plan_diffs"
+	// PlanDiffsInverseTable is the table name for the PlanDiff entity.
 	// It exists in this package in order to avoid circular dependency with the "plandiff" package.
-	PlanToPlanDiffsInverseTable = "plan_diffs"
-	// PlanToPlanDiffsColumn is the table column denoting the PlanToPlanDiffs relation/edge.
-	PlanToPlanDiffsColumn = "plan_diff_plan_diff_to_plan"
+	PlanDiffsInverseTable = "plan_diffs"
+	// PlanDiffsColumn is the table column denoting the PlanDiffs relation/edge.
+	PlanDiffsColumn = "plan_diff_plan"
 )
 
 // Columns holds all SQL columns for plan fields.
@@ -101,22 +108,21 @@ var Columns = []string{
 	FieldID,
 	FieldStepNumber,
 	FieldType,
-	FieldBuildID,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "plans"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"plan_plan_to_build",
+	"plan_build",
 }
 
 var (
-	// PrevPlanPrimaryKey and PrevPlanColumn2 are the table columns denoting the
-	// primary key for the PrevPlan relation (M2M).
-	PrevPlanPrimaryKey = []string{"plan_id", "PrevPlan_id"}
-	// NextPlanPrimaryKey and NextPlanColumn2 are the table columns denoting the
-	// primary key for the NextPlan relation (M2M).
-	NextPlanPrimaryKey = []string{"plan_id", "PrevPlan_id"}
+	// PrevPlansPrimaryKey and PrevPlansColumn2 are the table columns denoting the
+	// primary key for the PrevPlans relation (M2M).
+	PrevPlansPrimaryKey = []string{"plan_id", "PrevPlan_id"}
+	// NextPlansPrimaryKey and NextPlansColumn2 are the table columns denoting the
+	// primary key for the NextPlans relation (M2M).
+	NextPlansPrimaryKey = []string{"plan_id", "PrevPlan_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -144,11 +150,12 @@ type Type string
 
 // Type values.
 const (
-	TypeStartBuild       Type = "start_build"
-	TypeStartTeam        Type = "start_team"
-	TypeProvisionNetwork Type = "provision_network"
-	TypeProvisionHost    Type = "provision_host"
-	TypeExecuteStep      Type = "execute_step"
+	TypeStartBuild         Type = "start_build"
+	TypeStartTeam          Type = "start_team"
+	TypeProvisionNetwork   Type = "provision_network"
+	TypeProvisionHost      Type = "provision_host"
+	TypeExecuteStep        Type = "execute_step"
+	TypeStartScheduledStep Type = "start_scheduled_step"
 )
 
 func (_type Type) String() string {
@@ -158,7 +165,7 @@ func (_type Type) String() string {
 // TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
 func TypeValidator(_type Type) error {
 	switch _type {
-	case TypeStartBuild, TypeStartTeam, TypeProvisionNetwork, TypeProvisionHost, TypeExecuteStep:
+	case TypeStartBuild, TypeStartTeam, TypeProvisionNetwork, TypeProvisionHost, TypeExecuteStep, TypeStartScheduledStep:
 		return nil
 	default:
 		return fmt.Errorf("plan: invalid enum value for type field: %q", _type)

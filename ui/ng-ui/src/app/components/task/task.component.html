@@ -6,9 +6,9 @@
     {{ taskStatus.state }}
   </div>
   <div class="task-start">
-    {{ task.start_time ? (task.start_time | amFromUtc | amDateFormat: 'MM/DD/YYYY, h:mm:ss A') : '' }}
+    {{ task.startTime ? (task.startTime | amFromUtc | amDateFormat: 'MM/DD/YYYY, h:mm:ss A') : '' }}
   </div>
   <div class="task-end">
-    {{ task.end_time ? (task.end_time | amFromUtc | amDateFormat: 'MM/DD/YYYY, h:mm:ss A') : '' }}
+    {{ task.endTime ? (task.endTime | amFromUtc | amDateFormat: 'MM/DD/YYYY, h:mm:ss A') : '' }}
   </div>
 </div>

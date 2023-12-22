@@ -20,79 +20,79 @@ type IncludedNetwork struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty" hcl:"name,label"`
-	// Hosts holds the value of the "hosts" field.
-	Hosts []string `json:"hosts,omitempty" hcl:"included_hosts,attr"`
+	// IncludedHosts holds the value of the "included_hosts" field.
+	IncludedHosts []string `json:"included_hosts,omitempty" hcl:"included_hosts,attr"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the IncludedNetworkQuery when eager-loading is set.
 	Edges IncludedNetworkEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// IncludedNetworkToTag holds the value of the IncludedNetworkToTag edge.
-	HCLIncludedNetworkToTag []*Tag `json:"IncludedNetworkToTag,omitempty"`
-	// IncludedNetworkToHost holds the value of the IncludedNetworkToHost edge.
-	HCLIncludedNetworkToHost []*Host `json:"IncludedNetworkToHost,omitempty"`
-	// IncludedNetworkToNetwork holds the value of the IncludedNetworkToNetwork edge.
-	HCLIncludedNetworkToNetwork *Network `json:"IncludedNetworkToNetwork,omitempty"`
-	// IncludedNetworkToEnvironment holds the value of the IncludedNetworkToEnvironment edge.
-	HCLIncludedNetworkToEnvironment []*Environment `json:"IncludedNetworkToEnvironment,omitempty"`
+	// Tags holds the value of the Tags edge.
+	HCLTags []*Tag `json:"Tags,omitempty"`
+	// Hosts holds the value of the Hosts edge.
+	HCLHosts []*Host `json:"Hosts,omitempty"`
+	// Network holds the value of the Network edge.
+	HCLNetwork *Network `json:"Network,omitempty"`
+	// Environments holds the value of the Environments edge.
+	HCLEnvironments []*Environment `json:"Environments,omitempty"`
 	//
-	included_network_included_network_to_network *uuid.UUID
+	included_network_network *uuid.UUID
 }
 
 // IncludedNetworkEdges holds the relations/edges for other nodes in the graph.
 type IncludedNetworkEdges struct {
-	// IncludedNetworkToTag holds the value of the IncludedNetworkToTag edge.
-	IncludedNetworkToTag []*Tag `json:"IncludedNetworkToTag,omitempty"`
-	// IncludedNetworkToHost holds the value of the IncludedNetworkToHost edge.
-	IncludedNetworkToHost []*Host `json:"IncludedNetworkToHost,omitempty"`
-	// IncludedNetworkToNetwork holds the value of the IncludedNetworkToNetwork edge.
-	IncludedNetworkToNetwork *Network `json:"IncludedNetworkToNetwork,omitempty"`
-	// IncludedNetworkToEnvironment holds the value of the IncludedNetworkToEnvironment edge.
-	IncludedNetworkToEnvironment []*Environment `json:"IncludedNetworkToEnvironment,omitempty"`
+	// Tags holds the value of the Tags edge.
+	Tags []*Tag `json:"Tags,omitempty"`
+	// Hosts holds the value of the Hosts edge.
+	Hosts []*Host `json:"Hosts,omitempty"`
+	// Network holds the value of the Network edge.
+	Network *Network `json:"Network,omitempty"`
+	// Environments holds the value of the Environments edge.
+	Environments []*Environment `json:"Environments,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [4]bool
 }
 
-// IncludedNetworkToTagOrErr returns the IncludedNetworkToTag value or an error if the edge
+// TagsOrErr returns the Tags value or an error if the edge
 // was not loaded in eager-loading.
-func (e IncludedNetworkEdges) IncludedNetworkToTagOrErr() ([]*Tag, error) {
+func (e IncludedNetworkEdges) TagsOrErr() ([]*Tag, error) {
 	if e.loadedTypes[0] {
-		return e.IncludedNetworkToTag, nil
+		return e.Tags, nil
 	}
-	return nil, &NotLoadedError{edge: "IncludedNetworkToTag"}
+	return nil, &NotLoadedError{edge: "Tags"}
 }
 
-// IncludedNetworkToHostOrErr returns the IncludedNetworkToHost value or an error if the edge
+// HostsOrErr returns the Hosts value or an error if the edge
 // was not loaded in eager-loading.
-func (e IncludedNetworkEdges) IncludedNetworkToHostOrErr() ([]*Host, error) {
+func (e IncludedNetworkEdges) HostsOrErr() ([]*Host, error) {
 	if e.loadedTypes[1] {
-		return e.IncludedNetworkToHost, nil
+		return e.Hosts, nil
 	}
-	return nil, &NotLoadedError{edge: "IncludedNetworkToHost"}
+	return nil, &NotLoadedError{edge: "Hosts"}
 }
 
-// IncludedNetworkToNetworkOrErr returns the IncludedNetworkToNetwork value or an error if the edge
+// NetworkOrErr returns the Network value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e IncludedNetworkEdges) IncludedNetworkToNetworkOrErr() (*Network, error) {
+func (e IncludedNetworkEdges) NetworkOrErr() (*Network, error) {
 	if e.loadedTypes[2] {
-		if e.IncludedNetworkToNetwork == nil {
-			// The edge IncludedNetworkToNetwork was loaded in eager-loading,
+		if e.Network == nil {
+			// The edge Network was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: network.Label}
 		}
-		return e.IncludedNetworkToNetwork, nil
+		return e.Network, nil
 	}
-	return nil, &NotLoadedError{edge: "IncludedNetworkToNetwork"}
+	return nil, &NotLoadedError{edge: "Network"}
 }
 
-// IncludedNetworkToEnvironmentOrErr returns the IncludedNetworkToEnvironment value or an error if the edge
+// EnvironmentsOrErr returns the Environments value or an error if the edge
 // was not loaded in eager-loading.
-func (e IncludedNetworkEdges) IncludedNetworkToEnvironmentOrErr() ([]*Environment, error) {
+func (e IncludedNetworkEdges) EnvironmentsOrErr() ([]*Environment, error) {
 	if e.loadedTypes[3] {
-		return e.IncludedNetworkToEnvironment, nil
+		return e.Environments, nil
 	}
-	return nil, &NotLoadedError{edge: "IncludedNetworkToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environments"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -100,13 +100,13 @@ func (*IncludedNetwork) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case includednetwork.FieldHosts:
+		case includednetwork.FieldIncludedHosts:
 			values[i] = new([]byte)
 		case includednetwork.FieldName:
 			values[i] = new(sql.NullString)
 		case includednetwork.FieldID:
 			values[i] = new(uuid.UUID)
-		case includednetwork.ForeignKeys[0]: // included_network_included_network_to_network
+		case includednetwork.ForeignKeys[0]: // included_network_network
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type IncludedNetwork", columns[i])
@@ -135,44 +135,44 @@ func (in *IncludedNetwork) assignValues(columns []string, values []interface{}) 
 			} else if value.Valid {
 				in.Name = value.String
 			}
-		case includednetwork.FieldHosts:
+		case includednetwork.FieldIncludedHosts:
 			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field hosts", values[i])
+				return fmt.Errorf("unexpected type %T for field included_hosts", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &in.Hosts); err != nil {
-					return fmt.Errorf("unmarshal field hosts: %w", err)
+				if err := json.Unmarshal(*value, &in.IncludedHosts); err != nil {
+					return fmt.Errorf("unmarshal field included_hosts: %w", err)
 				}
 			}
 		case includednetwork.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field included_network_included_network_to_network", values[i])
+				return fmt.Errorf("unexpected type %T for field included_network_network", values[i])
 			} else if value.Valid {
-				in.included_network_included_network_to_network = new(uuid.UUID)
-				*in.included_network_included_network_to_network = *value.S.(*uuid.UUID)
+				in.included_network_network = new(uuid.UUID)
+				*in.included_network_network = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryIncludedNetworkToTag queries the "IncludedNetworkToTag" edge of the IncludedNetwork entity.
-func (in *IncludedNetwork) QueryIncludedNetworkToTag() *TagQuery {
-	return (&IncludedNetworkClient{config: in.config}).QueryIncludedNetworkToTag(in)
+// QueryTags queries the "Tags" edge of the IncludedNetwork entity.
+func (in *IncludedNetwork) QueryTags() *TagQuery {
+	return (&IncludedNetworkClient{config: in.config}).QueryTags(in)
 }
 
-// QueryIncludedNetworkToHost queries the "IncludedNetworkToHost" edge of the IncludedNetwork entity.
-func (in *IncludedNetwork) QueryIncludedNetworkToHost() *HostQuery {
-	return (&IncludedNetworkClient{config: in.config}).QueryIncludedNetworkToHost(in)
+// QueryHosts queries the "Hosts" edge of the IncludedNetwork entity.
+func (in *IncludedNetwork) QueryHosts() *HostQuery {
+	return (&IncludedNetworkClient{config: in.config}).QueryHosts(in)
 }
 
-// QueryIncludedNetworkToNetwork queries the "IncludedNetworkToNetwork" edge of the IncludedNetwork entity.
-func (in *IncludedNetwork) QueryIncludedNetworkToNetwork() *NetworkQuery {
-	return (&IncludedNetworkClient{config: in.config}).QueryIncludedNetworkToNetwork(in)
+// QueryNetwork queries the "Network" edge of the IncludedNetwork entity.
+func (in *IncludedNetwork) QueryNetwork() *NetworkQuery {
+	return (&IncludedNetworkClient{config: in.config}).QueryNetwork(in)
 }
 
-// QueryIncludedNetworkToEnvironment queries the "IncludedNetworkToEnvironment" edge of the IncludedNetwork entity.
-func (in *IncludedNetwork) QueryIncludedNetworkToEnvironment() *EnvironmentQuery {
-	return (&IncludedNetworkClient{config: in.config}).QueryIncludedNetworkToEnvironment(in)
+// QueryEnvironments queries the "Environments" edge of the IncludedNetwork entity.
+func (in *IncludedNetwork) QueryEnvironments() *EnvironmentQuery {
+	return (&IncludedNetworkClient{config: in.config}).QueryEnvironments(in)
 }
 
 // Update returns a builder for updating this IncludedNetwork.
@@ -200,8 +200,8 @@ func (in *IncludedNetwork) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v", in.ID))
 	builder.WriteString(", name=")
 	builder.WriteString(in.Name)
-	builder.WriteString(", hosts=")
-	builder.WriteString(fmt.Sprintf("%v", in.Hosts))
+	builder.WriteString(", included_hosts=")
+	builder.WriteString(fmt.Sprintf("%v", in.IncludedHosts))
 	builder.WriteByte(')')
 	return builder.String()
 }

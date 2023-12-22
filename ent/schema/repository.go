@@ -27,7 +27,7 @@ func (Repository) Fields() []ent.Field {
 // Edges of the Repository.
 func (Repository) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("RepositoryToEnvironment", Environment.Type),
-		edge.To("RepositoryToRepoCommit", RepoCommit.Type),
+		edge.To("Environments", Environment.Type),
+		edge.To("RepoCommits", RepoCommit.Type),
 	}
 }

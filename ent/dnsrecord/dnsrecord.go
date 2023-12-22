@@ -27,17 +27,17 @@ const (
 	FieldDisabled = "disabled"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// EdgeDNSRecordToEnvironment holds the string denoting the dnsrecordtoenvironment edge name in mutations.
-	EdgeDNSRecordToEnvironment = "DNSRecordToEnvironment"
+	// EdgeEnvironment holds the string denoting the environment edge name in mutations.
+	EdgeEnvironment = "Environment"
 	// Table holds the table name of the dnsrecord in the database.
 	Table = "dns_records"
-	// DNSRecordToEnvironmentTable is the table that holds the DNSRecordToEnvironment relation/edge.
-	DNSRecordToEnvironmentTable = "dns_records"
-	// DNSRecordToEnvironmentInverseTable is the table name for the Environment entity.
+	// EnvironmentTable is the table that holds the Environment relation/edge.
+	EnvironmentTable = "dns_records"
+	// EnvironmentInverseTable is the table name for the Environment entity.
 	// It exists in this package in order to avoid circular dependency with the "environment" package.
-	DNSRecordToEnvironmentInverseTable = "environments"
-	// DNSRecordToEnvironmentColumn is the table column denoting the DNSRecordToEnvironment relation/edge.
-	DNSRecordToEnvironmentColumn = "environment_environment_to_dns_record"
+	EnvironmentInverseTable = "environments"
+	// EnvironmentColumn is the table column denoting the Environment relation/edge.
+	EnvironmentColumn = "environment_dns_records"
 )
 
 // Columns holds all SQL columns for dnsrecord fields.
@@ -56,7 +56,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "dns_records"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"environment_environment_to_dns_record",
+	"environment_dns_records",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

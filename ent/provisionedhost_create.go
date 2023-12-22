@@ -17,7 +17,7 @@ import (
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/google/uuid"
@@ -70,165 +70,165 @@ func (phc *ProvisionedHostCreate) SetNillableID(u *uuid.UUID) *ProvisionedHostCr
 	return phc
 }
 
-// SetProvisionedHostToStatusID sets the "ProvisionedHostToStatus" edge to the Status entity by ID.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToStatusID(id uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.SetProvisionedHostToStatusID(id)
+// SetStatusID sets the "Status" edge to the Status entity by ID.
+func (phc *ProvisionedHostCreate) SetStatusID(id uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.SetStatusID(id)
 	return phc
 }
 
-// SetProvisionedHostToStatus sets the "ProvisionedHostToStatus" edge to the Status entity.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToStatus(s *Status) *ProvisionedHostCreate {
-	return phc.SetProvisionedHostToStatusID(s.ID)
+// SetStatus sets the "Status" edge to the Status entity.
+func (phc *ProvisionedHostCreate) SetStatus(s *Status) *ProvisionedHostCreate {
+	return phc.SetStatusID(s.ID)
 }
 
-// SetProvisionedHostToProvisionedNetworkID sets the "ProvisionedHostToProvisionedNetwork" edge to the ProvisionedNetwork entity by ID.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToProvisionedNetworkID(id uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.SetProvisionedHostToProvisionedNetworkID(id)
+// SetProvisionedNetworkID sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity by ID.
+func (phc *ProvisionedHostCreate) SetProvisionedNetworkID(id uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.SetProvisionedNetworkID(id)
 	return phc
 }
 
-// SetProvisionedHostToProvisionedNetwork sets the "ProvisionedHostToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToProvisionedNetwork(p *ProvisionedNetwork) *ProvisionedHostCreate {
-	return phc.SetProvisionedHostToProvisionedNetworkID(p.ID)
+// SetProvisionedNetwork sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity.
+func (phc *ProvisionedHostCreate) SetProvisionedNetwork(p *ProvisionedNetwork) *ProvisionedHostCreate {
+	return phc.SetProvisionedNetworkID(p.ID)
 }
 
-// SetProvisionedHostToHostID sets the "ProvisionedHostToHost" edge to the Host entity by ID.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToHostID(id uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.SetProvisionedHostToHostID(id)
+// SetHostID sets the "Host" edge to the Host entity by ID.
+func (phc *ProvisionedHostCreate) SetHostID(id uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.SetHostID(id)
 	return phc
 }
 
-// SetProvisionedHostToHost sets the "ProvisionedHostToHost" edge to the Host entity.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToHost(h *Host) *ProvisionedHostCreate {
-	return phc.SetProvisionedHostToHostID(h.ID)
+// SetHost sets the "Host" edge to the Host entity.
+func (phc *ProvisionedHostCreate) SetHost(h *Host) *ProvisionedHostCreate {
+	return phc.SetHostID(h.ID)
 }
 
-// SetProvisionedHostToEndStepPlanID sets the "ProvisionedHostToEndStepPlan" edge to the Plan entity by ID.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToEndStepPlanID(id uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.SetProvisionedHostToEndStepPlanID(id)
+// SetEndStepPlanID sets the "EndStepPlan" edge to the Plan entity by ID.
+func (phc *ProvisionedHostCreate) SetEndStepPlanID(id uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.SetEndStepPlanID(id)
 	return phc
 }
 
-// SetNillableProvisionedHostToEndStepPlanID sets the "ProvisionedHostToEndStepPlan" edge to the Plan entity by ID if the given value is not nil.
-func (phc *ProvisionedHostCreate) SetNillableProvisionedHostToEndStepPlanID(id *uuid.UUID) *ProvisionedHostCreate {
+// SetNillableEndStepPlanID sets the "EndStepPlan" edge to the Plan entity by ID if the given value is not nil.
+func (phc *ProvisionedHostCreate) SetNillableEndStepPlanID(id *uuid.UUID) *ProvisionedHostCreate {
 	if id != nil {
-		phc = phc.SetProvisionedHostToEndStepPlanID(*id)
+		phc = phc.SetEndStepPlanID(*id)
 	}
 	return phc
 }
 
-// SetProvisionedHostToEndStepPlan sets the "ProvisionedHostToEndStepPlan" edge to the Plan entity.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToEndStepPlan(p *Plan) *ProvisionedHostCreate {
-	return phc.SetProvisionedHostToEndStepPlanID(p.ID)
+// SetEndStepPlan sets the "EndStepPlan" edge to the Plan entity.
+func (phc *ProvisionedHostCreate) SetEndStepPlan(p *Plan) *ProvisionedHostCreate {
+	return phc.SetEndStepPlanID(p.ID)
 }
 
-// SetProvisionedHostToBuildID sets the "ProvisionedHostToBuild" edge to the Build entity by ID.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToBuildID(id uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.SetProvisionedHostToBuildID(id)
+// SetBuildID sets the "Build" edge to the Build entity by ID.
+func (phc *ProvisionedHostCreate) SetBuildID(id uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.SetBuildID(id)
 	return phc
 }
 
-// SetProvisionedHostToBuild sets the "ProvisionedHostToBuild" edge to the Build entity.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToBuild(b *Build) *ProvisionedHostCreate {
-	return phc.SetProvisionedHostToBuildID(b.ID)
+// SetBuild sets the "Build" edge to the Build entity.
+func (phc *ProvisionedHostCreate) SetBuild(b *Build) *ProvisionedHostCreate {
+	return phc.SetBuildID(b.ID)
 }
 
-// AddProvisionedHostToProvisionedScheduleStepIDs adds the "ProvisionedHostToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by IDs.
-func (phc *ProvisionedHostCreate) AddProvisionedHostToProvisionedScheduleStepIDs(ids ...uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.AddProvisionedHostToProvisionedScheduleStepIDs(ids...)
+// AddProvisioningStepIDs adds the "ProvisioningSteps" edge to the ProvisioningStep entity by IDs.
+func (phc *ProvisionedHostCreate) AddProvisioningStepIDs(ids ...uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.AddProvisioningStepIDs(ids...)
 	return phc
 }
 
-// AddProvisionedHostToProvisionedScheduleStep adds the "ProvisionedHostToProvisionedScheduleStep" edges to the ProvisionedScheduleStep entity.
-func (phc *ProvisionedHostCreate) AddProvisionedHostToProvisionedScheduleStep(p ...*ProvisionedScheduleStep) *ProvisionedHostCreate {
+// AddProvisioningSteps adds the "ProvisioningSteps" edges to the ProvisioningStep entity.
+func (phc *ProvisionedHostCreate) AddProvisioningSteps(p ...*ProvisioningStep) *ProvisionedHostCreate {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return phc.AddProvisionedHostToProvisionedScheduleStepIDs(ids...)
+	return phc.AddProvisioningStepIDs(ids...)
 }
 
-// AddProvisionedHostToProvisioningStepIDs adds the "ProvisionedHostToProvisioningStep" edge to the ProvisioningStep entity by IDs.
-func (phc *ProvisionedHostCreate) AddProvisionedHostToProvisioningStepIDs(ids ...uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.AddProvisionedHostToProvisioningStepIDs(ids...)
+// AddProvisioningScheduledStepIDs adds the "ProvisioningScheduledSteps" edge to the ProvisioningScheduledStep entity by IDs.
+func (phc *ProvisionedHostCreate) AddProvisioningScheduledStepIDs(ids ...uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.AddProvisioningScheduledStepIDs(ids...)
 	return phc
 }
 
-// AddProvisionedHostToProvisioningStep adds the "ProvisionedHostToProvisioningStep" edges to the ProvisioningStep entity.
-func (phc *ProvisionedHostCreate) AddProvisionedHostToProvisioningStep(p ...*ProvisioningStep) *ProvisionedHostCreate {
+// AddProvisioningScheduledSteps adds the "ProvisioningScheduledSteps" edges to the ProvisioningScheduledStep entity.
+func (phc *ProvisionedHostCreate) AddProvisioningScheduledSteps(p ...*ProvisioningScheduledStep) *ProvisionedHostCreate {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return phc.AddProvisionedHostToProvisioningStepIDs(ids...)
+	return phc.AddProvisioningScheduledStepIDs(ids...)
 }
 
-// AddProvisionedHostToAgentStatuIDs adds the "ProvisionedHostToAgentStatus" edge to the AgentStatus entity by IDs.
-func (phc *ProvisionedHostCreate) AddProvisionedHostToAgentStatuIDs(ids ...uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.AddProvisionedHostToAgentStatuIDs(ids...)
+// AddAgentStatuseIDs adds the "AgentStatuses" edge to the AgentStatus entity by IDs.
+func (phc *ProvisionedHostCreate) AddAgentStatuseIDs(ids ...uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.AddAgentStatuseIDs(ids...)
 	return phc
 }
 
-// AddProvisionedHostToAgentStatus adds the "ProvisionedHostToAgentStatus" edges to the AgentStatus entity.
-func (phc *ProvisionedHostCreate) AddProvisionedHostToAgentStatus(a ...*AgentStatus) *ProvisionedHostCreate {
+// AddAgentStatuses adds the "AgentStatuses" edges to the AgentStatus entity.
+func (phc *ProvisionedHostCreate) AddAgentStatuses(a ...*AgentStatus) *ProvisionedHostCreate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return phc.AddProvisionedHostToAgentStatuIDs(ids...)
+	return phc.AddAgentStatuseIDs(ids...)
 }
 
-// AddProvisionedHostToAgentTaskIDs adds the "ProvisionedHostToAgentTask" edge to the AgentTask entity by IDs.
-func (phc *ProvisionedHostCreate) AddProvisionedHostToAgentTaskIDs(ids ...uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.AddProvisionedHostToAgentTaskIDs(ids...)
+// AddAgentTaskIDs adds the "AgentTasks" edge to the AgentTask entity by IDs.
+func (phc *ProvisionedHostCreate) AddAgentTaskIDs(ids ...uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.AddAgentTaskIDs(ids...)
 	return phc
 }
 
-// AddProvisionedHostToAgentTask adds the "ProvisionedHostToAgentTask" edges to the AgentTask entity.
-func (phc *ProvisionedHostCreate) AddProvisionedHostToAgentTask(a ...*AgentTask) *ProvisionedHostCreate {
+// AddAgentTasks adds the "AgentTasks" edges to the AgentTask entity.
+func (phc *ProvisionedHostCreate) AddAgentTasks(a ...*AgentTask) *ProvisionedHostCreate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return phc.AddProvisionedHostToAgentTaskIDs(ids...)
+	return phc.AddAgentTaskIDs(ids...)
 }
 
-// SetProvisionedHostToPlanID sets the "ProvisionedHostToPlan" edge to the Plan entity by ID.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToPlanID(id uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.SetProvisionedHostToPlanID(id)
+// SetPlanID sets the "Plan" edge to the Plan entity by ID.
+func (phc *ProvisionedHostCreate) SetPlanID(id uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.SetPlanID(id)
 	return phc
 }
 
-// SetNillableProvisionedHostToPlanID sets the "ProvisionedHostToPlan" edge to the Plan entity by ID if the given value is not nil.
-func (phc *ProvisionedHostCreate) SetNillableProvisionedHostToPlanID(id *uuid.UUID) *ProvisionedHostCreate {
+// SetNillablePlanID sets the "Plan" edge to the Plan entity by ID if the given value is not nil.
+func (phc *ProvisionedHostCreate) SetNillablePlanID(id *uuid.UUID) *ProvisionedHostCreate {
 	if id != nil {
-		phc = phc.SetProvisionedHostToPlanID(*id)
+		phc = phc.SetPlanID(*id)
 	}
 	return phc
 }
 
-// SetProvisionedHostToPlan sets the "ProvisionedHostToPlan" edge to the Plan entity.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToPlan(p *Plan) *ProvisionedHostCreate {
-	return phc.SetProvisionedHostToPlanID(p.ID)
+// SetPlan sets the "Plan" edge to the Plan entity.
+func (phc *ProvisionedHostCreate) SetPlan(p *Plan) *ProvisionedHostCreate {
+	return phc.SetPlanID(p.ID)
 }
 
-// SetProvisionedHostToGinFileMiddlewareID sets the "ProvisionedHostToGinFileMiddleware" edge to the GinFileMiddleware entity by ID.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToGinFileMiddlewareID(id uuid.UUID) *ProvisionedHostCreate {
-	phc.mutation.SetProvisionedHostToGinFileMiddlewareID(id)
+// SetGinFileMiddlewareID sets the "GinFileMiddleware" edge to the GinFileMiddleware entity by ID.
+func (phc *ProvisionedHostCreate) SetGinFileMiddlewareID(id uuid.UUID) *ProvisionedHostCreate {
+	phc.mutation.SetGinFileMiddlewareID(id)
 	return phc
 }
 
-// SetNillableProvisionedHostToGinFileMiddlewareID sets the "ProvisionedHostToGinFileMiddleware" edge to the GinFileMiddleware entity by ID if the given value is not nil.
-func (phc *ProvisionedHostCreate) SetNillableProvisionedHostToGinFileMiddlewareID(id *uuid.UUID) *ProvisionedHostCreate {
+// SetNillableGinFileMiddlewareID sets the "GinFileMiddleware" edge to the GinFileMiddleware entity by ID if the given value is not nil.
+func (phc *ProvisionedHostCreate) SetNillableGinFileMiddlewareID(id *uuid.UUID) *ProvisionedHostCreate {
 	if id != nil {
-		phc = phc.SetProvisionedHostToGinFileMiddlewareID(*id)
+		phc = phc.SetGinFileMiddlewareID(*id)
 	}
 	return phc
 }
 
-// SetProvisionedHostToGinFileMiddleware sets the "ProvisionedHostToGinFileMiddleware" edge to the GinFileMiddleware entity.
-func (phc *ProvisionedHostCreate) SetProvisionedHostToGinFileMiddleware(g *GinFileMiddleware) *ProvisionedHostCreate {
-	return phc.SetProvisionedHostToGinFileMiddlewareID(g.ID)
+// SetGinFileMiddleware sets the "GinFileMiddleware" edge to the GinFileMiddleware entity.
+func (phc *ProvisionedHostCreate) SetGinFileMiddleware(g *GinFileMiddleware) *ProvisionedHostCreate {
+	return phc.SetGinFileMiddlewareID(g.ID)
 }
 
 // Mutation returns the ProvisionedHostMutation object of the builder.
@@ -327,17 +327,17 @@ func (phc *ProvisionedHostCreate) check() error {
 	if _, ok := phc.mutation.Vars(); !ok {
 		return &ValidationError{Name: "vars", err: errors.New(`ent: missing required field "ProvisionedHost.vars"`)}
 	}
-	if _, ok := phc.mutation.ProvisionedHostToStatusID(); !ok {
-		return &ValidationError{Name: "ProvisionedHostToStatus", err: errors.New(`ent: missing required edge "ProvisionedHost.ProvisionedHostToStatus"`)}
+	if _, ok := phc.mutation.StatusID(); !ok {
+		return &ValidationError{Name: "Status", err: errors.New(`ent: missing required edge "ProvisionedHost.Status"`)}
 	}
-	if _, ok := phc.mutation.ProvisionedHostToProvisionedNetworkID(); !ok {
-		return &ValidationError{Name: "ProvisionedHostToProvisionedNetwork", err: errors.New(`ent: missing required edge "ProvisionedHost.ProvisionedHostToProvisionedNetwork"`)}
+	if _, ok := phc.mutation.ProvisionedNetworkID(); !ok {
+		return &ValidationError{Name: "ProvisionedNetwork", err: errors.New(`ent: missing required edge "ProvisionedHost.ProvisionedNetwork"`)}
 	}
-	if _, ok := phc.mutation.ProvisionedHostToHostID(); !ok {
-		return &ValidationError{Name: "ProvisionedHostToHost", err: errors.New(`ent: missing required edge "ProvisionedHost.ProvisionedHostToHost"`)}
+	if _, ok := phc.mutation.HostID(); !ok {
+		return &ValidationError{Name: "Host", err: errors.New(`ent: missing required edge "ProvisionedHost.Host"`)}
 	}
-	if _, ok := phc.mutation.ProvisionedHostToBuildID(); !ok {
-		return &ValidationError{Name: "ProvisionedHostToBuild", err: errors.New(`ent: missing required edge "ProvisionedHost.ProvisionedHostToBuild"`)}
+	if _, ok := phc.mutation.BuildID(); !ok {
+		return &ValidationError{Name: "Build", err: errors.New(`ent: missing required edge "ProvisionedHost.Build"`)}
 	}
 	return nil
 }
@@ -399,12 +399,12 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		})
 		_node.Vars = value
 	}
-	if nodes := phc.mutation.ProvisionedHostToStatusIDs(); len(nodes) > 0 {
+	if nodes := phc.mutation.StatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   provisionedhost.ProvisionedHostToStatusTable,
-			Columns: []string{provisionedhost.ProvisionedHostToStatusColumn},
+			Table:   provisionedhost.StatusTable,
+			Columns: []string{provisionedhost.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -418,12 +418,12 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := phc.mutation.ProvisionedHostToProvisionedNetworkIDs(); len(nodes) > 0 {
+	if nodes := phc.mutation.ProvisionedNetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisionedhost.ProvisionedHostToProvisionedNetworkTable,
-			Columns: []string{provisionedhost.ProvisionedHostToProvisionedNetworkColumn},
+			Table:   provisionedhost.ProvisionedNetworkTable,
+			Columns: []string{provisionedhost.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -435,15 +435,15 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioned_host_provisioned_host_to_provisioned_network = &nodes[0]
+		_node.provisioned_host_provisioned_network = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := phc.mutation.ProvisionedHostToHostIDs(); len(nodes) > 0 {
+	if nodes := phc.mutation.HostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisionedhost.ProvisionedHostToHostTable,
-			Columns: []string{provisionedhost.ProvisionedHostToHostColumn},
+			Table:   provisionedhost.HostTable,
+			Columns: []string{provisionedhost.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -455,15 +455,15 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioned_host_provisioned_host_to_host = &nodes[0]
+		_node.provisioned_host_host = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := phc.mutation.ProvisionedHostToEndStepPlanIDs(); len(nodes) > 0 {
+	if nodes := phc.mutation.EndStepPlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisionedhost.ProvisionedHostToEndStepPlanTable,
-			Columns: []string{provisionedhost.ProvisionedHostToEndStepPlanColumn},
+			Table:   provisionedhost.EndStepPlanTable,
+			Columns: []string{provisionedhost.EndStepPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -475,15 +475,15 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioned_host_provisioned_host_to_end_step_plan = &nodes[0]
+		_node.provisioned_host_end_step_plan = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := phc.mutation.ProvisionedHostToBuildIDs(); len(nodes) > 0 {
+	if nodes := phc.mutation.BuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   provisionedhost.ProvisionedHostToBuildTable,
-			Columns: []string{provisionedhost.ProvisionedHostToBuildColumn},
+			Table:   provisionedhost.BuildTable,
+			Columns: []string{provisionedhost.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -495,34 +495,15 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioned_host_provisioned_host_to_build = &nodes[0]
+		_node.provisioned_host_build = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := phc.mutation.ProvisionedHostToProvisionedScheduleStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   provisionedhost.ProvisionedHostToProvisionedScheduleStepTable,
-			Columns: []string{provisionedhost.ProvisionedHostToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := phc.mutation.ProvisionedHostToProvisioningStepIDs(); len(nodes) > 0 {
+	if nodes := phc.mutation.ProvisioningStepsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisionedhost.ProvisionedHostToProvisioningStepTable,
-			Columns: []string{provisionedhost.ProvisionedHostToProvisioningStepColumn},
+			Table:   provisionedhost.ProvisioningStepsTable,
+			Columns: []string{provisionedhost.ProvisioningStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -536,12 +517,31 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := phc.mutation.ProvisionedHostToAgentStatusIDs(); len(nodes) > 0 {
+	if nodes := phc.mutation.ProvisioningScheduledStepsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisionedhost.ProvisionedHostToAgentStatusTable,
-			Columns: []string{provisionedhost.ProvisionedHostToAgentStatusColumn},
+			Table:   provisionedhost.ProvisioningScheduledStepsTable,
+			Columns: []string{provisionedhost.ProvisioningScheduledStepsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: provisioningscheduledstep.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := phc.mutation.AgentStatusesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   provisionedhost.AgentStatusesTable,
+			Columns: []string{provisionedhost.AgentStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -555,12 +555,12 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := phc.mutation.ProvisionedHostToAgentTaskIDs(); len(nodes) > 0 {
+	if nodes := phc.mutation.AgentTasksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   provisionedhost.ProvisionedHostToAgentTaskTable,
-			Columns: []string{provisionedhost.ProvisionedHostToAgentTaskColumn},
+			Table:   provisionedhost.AgentTasksTable,
+			Columns: []string{provisionedhost.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -574,12 +574,12 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := phc.mutation.ProvisionedHostToPlanIDs(); len(nodes) > 0 {
+	if nodes := phc.mutation.PlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisionedhost.ProvisionedHostToPlanTable,
-			Columns: []string{provisionedhost.ProvisionedHostToPlanColumn},
+			Table:   provisionedhost.PlanTable,
+			Columns: []string{provisionedhost.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -591,15 +591,15 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.plan_plan_to_provisioned_host = &nodes[0]
+		_node.plan_provisioned_host = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := phc.mutation.ProvisionedHostToGinFileMiddlewareIDs(); len(nodes) > 0 {
+	if nodes := phc.mutation.GinFileMiddlewareIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   provisionedhost.ProvisionedHostToGinFileMiddlewareTable,
-			Columns: []string{provisionedhost.ProvisionedHostToGinFileMiddlewareColumn},
+			Table:   provisionedhost.GinFileMiddlewareTable,
+			Columns: []string{provisionedhost.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -611,7 +611,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.gin_file_middleware_gin_file_middleware_to_provisioned_host = &nodes[0]
+		_node.gin_file_middleware_provisioned_host = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

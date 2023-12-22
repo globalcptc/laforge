@@ -51,59 +51,59 @@ type Script struct {
 	Edges ScriptEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// ScriptToUser holds the value of the ScriptToUser edge.
-	HCLScriptToUser []*User `json:"ScriptToUser,omitempty" hcl:"maintainer,block"`
-	// ScriptToFinding holds the value of the ScriptToFinding edge.
-	HCLScriptToFinding []*Finding `json:"ScriptToFinding,omitempty" hcl:"finding,block"`
-	// ScriptToEnvironment holds the value of the ScriptToEnvironment edge.
-	HCLScriptToEnvironment *Environment `json:"ScriptToEnvironment,omitempty"`
+	// Users holds the value of the Users edge.
+	HCLUsers []*User `json:"Users,omitempty" hcl:"maintainer,block"`
+	// Findings holds the value of the Findings edge.
+	HCLFindings []*Finding `json:"Findings,omitempty" hcl:"finding,block"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
-	environment_environment_to_script *uuid.UUID
+	environment_scripts *uuid.UUID
 }
 
 // ScriptEdges holds the relations/edges for other nodes in the graph.
 type ScriptEdges struct {
-	// ScriptToUser holds the value of the ScriptToUser edge.
-	ScriptToUser []*User `json:"ScriptToUser,omitempty" hcl:"maintainer,block"`
-	// ScriptToFinding holds the value of the ScriptToFinding edge.
-	ScriptToFinding []*Finding `json:"ScriptToFinding,omitempty" hcl:"finding,block"`
-	// ScriptToEnvironment holds the value of the ScriptToEnvironment edge.
-	ScriptToEnvironment *Environment `json:"ScriptToEnvironment,omitempty"`
+	// Users holds the value of the Users edge.
+	Users []*User `json:"Users,omitempty" hcl:"maintainer,block"`
+	// Findings holds the value of the Findings edge.
+	Findings []*Finding `json:"Findings,omitempty" hcl:"finding,block"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
 }
 
-// ScriptToUserOrErr returns the ScriptToUser value or an error if the edge
+// UsersOrErr returns the Users value or an error if the edge
 // was not loaded in eager-loading.
-func (e ScriptEdges) ScriptToUserOrErr() ([]*User, error) {
+func (e ScriptEdges) UsersOrErr() ([]*User, error) {
 	if e.loadedTypes[0] {
-		return e.ScriptToUser, nil
+		return e.Users, nil
 	}
-	return nil, &NotLoadedError{edge: "ScriptToUser"}
+	return nil, &NotLoadedError{edge: "Users"}
 }
 
-// ScriptToFindingOrErr returns the ScriptToFinding value or an error if the edge
+// FindingsOrErr returns the Findings value or an error if the edge
 // was not loaded in eager-loading.
-func (e ScriptEdges) ScriptToFindingOrErr() ([]*Finding, error) {
+func (e ScriptEdges) FindingsOrErr() ([]*Finding, error) {
 	if e.loadedTypes[1] {
-		return e.ScriptToFinding, nil
+		return e.Findings, nil
 	}
-	return nil, &NotLoadedError{edge: "ScriptToFinding"}
+	return nil, &NotLoadedError{edge: "Findings"}
 }
 
-// ScriptToEnvironmentOrErr returns the ScriptToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ScriptEdges) ScriptToEnvironmentOrErr() (*Environment, error) {
+func (e ScriptEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[2] {
-		if e.ScriptToEnvironment == nil {
-			// The edge ScriptToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.ScriptToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "ScriptToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -121,7 +121,7 @@ func (*Script) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case script.FieldID:
 			values[i] = new(uuid.UUID)
-		case script.ForeignKeys[0]: // environment_environment_to_script
+		case script.ForeignKeys[0]: // environment_scripts
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Script", columns[i])
@@ -236,29 +236,29 @@ func (s *Script) assignValues(columns []string, values []interface{}) error {
 			}
 		case script.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_script", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_scripts", values[i])
 			} else if value.Valid {
-				s.environment_environment_to_script = new(uuid.UUID)
-				*s.environment_environment_to_script = *value.S.(*uuid.UUID)
+				s.environment_scripts = new(uuid.UUID)
+				*s.environment_scripts = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryScriptToUser queries the "ScriptToUser" edge of the Script entity.
-func (s *Script) QueryScriptToUser() *UserQuery {
-	return (&ScriptClient{config: s.config}).QueryScriptToUser(s)
+// QueryUsers queries the "Users" edge of the Script entity.
+func (s *Script) QueryUsers() *UserQuery {
+	return (&ScriptClient{config: s.config}).QueryUsers(s)
 }
 
-// QueryScriptToFinding queries the "ScriptToFinding" edge of the Script entity.
-func (s *Script) QueryScriptToFinding() *FindingQuery {
-	return (&ScriptClient{config: s.config}).QueryScriptToFinding(s)
+// QueryFindings queries the "Findings" edge of the Script entity.
+func (s *Script) QueryFindings() *FindingQuery {
+	return (&ScriptClient{config: s.config}).QueryFindings(s)
 }
 
-// QueryScriptToEnvironment queries the "ScriptToEnvironment" edge of the Script entity.
-func (s *Script) QueryScriptToEnvironment() *EnvironmentQuery {
-	return (&ScriptClient{config: s.config}).QueryScriptToEnvironment(s)
+// QueryEnvironment queries the "Environment" edge of the Script entity.
+func (s *Script) QueryEnvironment() *EnvironmentQuery {
+	return (&ScriptClient{config: s.config}).QueryEnvironment(s)
 }
 
 // Update returns a builder for updating this Script.

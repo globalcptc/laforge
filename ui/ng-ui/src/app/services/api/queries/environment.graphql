@@ -1,14 +1,14 @@
 query GetEnvironment($envId: String!) {
   environment(envUUID: $envId) {
     id
-    competition_id
+    competitionId
     name
     description
     builder
-    team_count
+    teamCount
     revision
-    admin_cidrs
-    exposed_vdi_ports
+    adminCidrs
+    exposedVdiPorts
     tags {
       key
       value
@@ -17,39 +17,39 @@ query GetEnvironment($envId: String!) {
       key
       value
     }
-    EnvironmentToUser {
+    Users {
       id
       name
       uuid
       email
     }
-    EnvironmentToRepository {
+    Repositories {
       id
-      repo_url
-      branch_name
+      repoUrl
+      branchName
     }
-    EnvironmentToBuild {
+    Builds {
       id
       revision
-      buildToStatus {
+      Status {
         ...StatusFields
       }
-      buildToTeam {
+      Teams {
         id
-        team_number
-        TeamToStatus {
+        teamNumber
+        Status {
           ...StatusFields
         }
-        TeamToProvisionedNetwork {
+        ProvisionedNetworks {
           id
           name
           cidr
-          ProvisionedNetworkToStatus {
+          Status {
             ...StatusFields
           }
-          ProvisionedNetworkToNetwork {
+          Network {
             id
-            vdi_visible
+            vdiVisible
             vars {
               key
               value
@@ -59,22 +59,22 @@ query GetEnvironment($envId: String!) {
               value
             }
           }
-          ProvisionedNetworkToProvisionedHost {
+          ProvisionedHosts {
             id
-            subnet_ip
-            ProvisionedHostToStatus {
+            subnetIp
+            Status {
               ...StatusFields
             }
-            ProvisionedHostToHost {
+            Host {
               id
               hostname
               description
               OS
-              allow_mac_changes
-              exposed_tcp_ports
-              exposed_udp_ports
-              user_groups
-              override_password
+              allowMacChanges
+              exposedTcpPorts
+              exposedUdpPorts
+              userGroups
+              overridePassword
               vars {
                 key
                 value
@@ -84,19 +84,19 @@ query GetEnvironment($envId: String!) {
                 value
               }
             }
-            ProvisionedHostToProvisioningStep {
+            ProvisioningSteps {
               id
               type
-              ProvisioningStepToStatus {
+              Status {
                 ...StatusFields
               }
-              ProvisioningStepToScript {
+              Script {
                 id
                 name
                 language
                 description
                 source
-                source_type
+                sourceType
                 disabled
                 args
                 vars {
@@ -108,7 +108,7 @@ query GetEnvironment($envId: String!) {
                   value
                 }
               }
-              ProvisioningStepToCommand {
+              Command {
                 id
                 name
                 description
@@ -124,7 +124,7 @@ query GetEnvironment($envId: String!) {
                   value
                 }
               }
-              ProvisioningStepToDNSRecord {
+              DNSRecord {
                 id
                 name
                 values
@@ -140,7 +140,7 @@ query GetEnvironment($envId: String!) {
                   value
                 }
               }
-              ProvisioningStepToFileDownload {
+              FileDownload {
                 id
                 source
                 sourceType
@@ -151,7 +151,7 @@ query GetEnvironment($envId: String!) {
                   value
                 }
               }
-              ProvisioningStepToFileDelete {
+              FileDelete {
                 id
                 path
                 tags {
@@ -159,7 +159,7 @@ query GetEnvironment($envId: String!) {
                   value
                 }
               }
-              ProvisioningStepToFileExtract {
+              FileExtract {
                 id
                 source
                 destination
@@ -181,10 +181,10 @@ query GetEnvironments {
   environments {
     id
     name
-    competition_id
+    competitionId
     revision
 
-    EnvironmentToBuild {
+    Builds {
       id
       revision
     }
@@ -195,24 +195,26 @@ query ListEnvironments {
   environments {
     id
     name
-    EnvironmentToRepository {
+    Repositories {
       id
-      repo_url
-      RepositoryToRepoCommit {
+      repoUrl
+      branchName
+      environmentFilepath
+      RepoCommits {
         id
         revision
         author
         hash
       }
     }
-    team_count
-    EnvironmentToNetwork {
+    teamCount
+    Networks {
       id
     }
-    EnvironmentToHost {
+    Hosts {
       id
     }
-    EnvironmentToServerTask {
+    ServerTasks {
       id
     }
   }
@@ -221,14 +223,14 @@ query ListEnvironments {
 query GetEnvironmentInfo($envId: String!) {
   environment(envUUID: $envId) {
     id
-    competition_id
+    competitionId
     name
     description
     builder
-    team_count
+    teamCount
     revision
-    admin_cidrs
-    exposed_vdi_ports
+    adminCidrs
+    exposedVdiPorts
     tags {
       key
       value
@@ -237,16 +239,16 @@ query GetEnvironmentInfo($envId: String!) {
       key
       value
     }
-    EnvironmentToUser {
+    Users {
       id
       name
       uuid
       email
     }
-    EnvironmentToBuild {
+    Builds {
       id
       revision
-      buildToStatus {
+      Status {
         ...StatusFields
       }
     }

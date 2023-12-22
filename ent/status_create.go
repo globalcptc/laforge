@@ -15,9 +15,8 @@ import (
 	"github.com/gen0cide/laforge/ent/plan"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
-	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
@@ -127,194 +126,175 @@ func (sc *StatusCreate) SetNillableID(u *uuid.UUID) *StatusCreate {
 	return sc
 }
 
-// SetStatusToBuildID sets the "StatusToBuild" edge to the Build entity by ID.
-func (sc *StatusCreate) SetStatusToBuildID(id uuid.UUID) *StatusCreate {
-	sc.mutation.SetStatusToBuildID(id)
+// SetBuildID sets the "Build" edge to the Build entity by ID.
+func (sc *StatusCreate) SetBuildID(id uuid.UUID) *StatusCreate {
+	sc.mutation.SetBuildID(id)
 	return sc
 }
 
-// SetNillableStatusToBuildID sets the "StatusToBuild" edge to the Build entity by ID if the given value is not nil.
-func (sc *StatusCreate) SetNillableStatusToBuildID(id *uuid.UUID) *StatusCreate {
+// SetNillableBuildID sets the "Build" edge to the Build entity by ID if the given value is not nil.
+func (sc *StatusCreate) SetNillableBuildID(id *uuid.UUID) *StatusCreate {
 	if id != nil {
-		sc = sc.SetStatusToBuildID(*id)
+		sc = sc.SetBuildID(*id)
 	}
 	return sc
 }
 
-// SetStatusToBuild sets the "StatusToBuild" edge to the Build entity.
-func (sc *StatusCreate) SetStatusToBuild(b *Build) *StatusCreate {
-	return sc.SetStatusToBuildID(b.ID)
+// SetBuild sets the "Build" edge to the Build entity.
+func (sc *StatusCreate) SetBuild(b *Build) *StatusCreate {
+	return sc.SetBuildID(b.ID)
 }
 
-// SetStatusToProvisionedNetworkID sets the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity by ID.
-func (sc *StatusCreate) SetStatusToProvisionedNetworkID(id uuid.UUID) *StatusCreate {
-	sc.mutation.SetStatusToProvisionedNetworkID(id)
+// SetProvisionedNetworkID sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity by ID.
+func (sc *StatusCreate) SetProvisionedNetworkID(id uuid.UUID) *StatusCreate {
+	sc.mutation.SetProvisionedNetworkID(id)
 	return sc
 }
 
-// SetNillableStatusToProvisionedNetworkID sets the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity by ID if the given value is not nil.
-func (sc *StatusCreate) SetNillableStatusToProvisionedNetworkID(id *uuid.UUID) *StatusCreate {
+// SetNillableProvisionedNetworkID sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity by ID if the given value is not nil.
+func (sc *StatusCreate) SetNillableProvisionedNetworkID(id *uuid.UUID) *StatusCreate {
 	if id != nil {
-		sc = sc.SetStatusToProvisionedNetworkID(*id)
+		sc = sc.SetProvisionedNetworkID(*id)
 	}
 	return sc
 }
 
-// SetStatusToProvisionedNetwork sets the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (sc *StatusCreate) SetStatusToProvisionedNetwork(p *ProvisionedNetwork) *StatusCreate {
-	return sc.SetStatusToProvisionedNetworkID(p.ID)
+// SetProvisionedNetwork sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity.
+func (sc *StatusCreate) SetProvisionedNetwork(p *ProvisionedNetwork) *StatusCreate {
+	return sc.SetProvisionedNetworkID(p.ID)
 }
 
-// SetStatusToProvisionedHostID sets the "StatusToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (sc *StatusCreate) SetStatusToProvisionedHostID(id uuid.UUID) *StatusCreate {
-	sc.mutation.SetStatusToProvisionedHostID(id)
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (sc *StatusCreate) SetProvisionedHostID(id uuid.UUID) *StatusCreate {
+	sc.mutation.SetProvisionedHostID(id)
 	return sc
 }
 
-// SetNillableStatusToProvisionedHostID sets the "StatusToProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
-func (sc *StatusCreate) SetNillableStatusToProvisionedHostID(id *uuid.UUID) *StatusCreate {
+// SetNillableProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
+func (sc *StatusCreate) SetNillableProvisionedHostID(id *uuid.UUID) *StatusCreate {
 	if id != nil {
-		sc = sc.SetStatusToProvisionedHostID(*id)
+		sc = sc.SetProvisionedHostID(*id)
 	}
 	return sc
 }
 
-// SetStatusToProvisionedHost sets the "StatusToProvisionedHost" edge to the ProvisionedHost entity.
-func (sc *StatusCreate) SetStatusToProvisionedHost(p *ProvisionedHost) *StatusCreate {
-	return sc.SetStatusToProvisionedHostID(p.ID)
+// SetProvisionedHost sets the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (sc *StatusCreate) SetProvisionedHost(p *ProvisionedHost) *StatusCreate {
+	return sc.SetProvisionedHostID(p.ID)
 }
 
-// SetStatusToProvisioningStepID sets the "StatusToProvisioningStep" edge to the ProvisioningStep entity by ID.
-func (sc *StatusCreate) SetStatusToProvisioningStepID(id uuid.UUID) *StatusCreate {
-	sc.mutation.SetStatusToProvisioningStepID(id)
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID.
+func (sc *StatusCreate) SetProvisioningStepID(id uuid.UUID) *StatusCreate {
+	sc.mutation.SetProvisioningStepID(id)
 	return sc
 }
 
-// SetNillableStatusToProvisioningStepID sets the "StatusToProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
-func (sc *StatusCreate) SetNillableStatusToProvisioningStepID(id *uuid.UUID) *StatusCreate {
+// SetNillableProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
+func (sc *StatusCreate) SetNillableProvisioningStepID(id *uuid.UUID) *StatusCreate {
 	if id != nil {
-		sc = sc.SetStatusToProvisioningStepID(*id)
+		sc = sc.SetProvisioningStepID(*id)
 	}
 	return sc
 }
 
-// SetStatusToProvisioningStep sets the "StatusToProvisioningStep" edge to the ProvisioningStep entity.
-func (sc *StatusCreate) SetStatusToProvisioningStep(p *ProvisioningStep) *StatusCreate {
-	return sc.SetStatusToProvisioningStepID(p.ID)
+// SetProvisioningStep sets the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (sc *StatusCreate) SetProvisioningStep(p *ProvisioningStep) *StatusCreate {
+	return sc.SetProvisioningStepID(p.ID)
 }
 
-// SetStatusToTeamID sets the "StatusToTeam" edge to the Team entity by ID.
-func (sc *StatusCreate) SetStatusToTeamID(id uuid.UUID) *StatusCreate {
-	sc.mutation.SetStatusToTeamID(id)
+// SetTeamID sets the "Team" edge to the Team entity by ID.
+func (sc *StatusCreate) SetTeamID(id uuid.UUID) *StatusCreate {
+	sc.mutation.SetTeamID(id)
 	return sc
 }
 
-// SetNillableStatusToTeamID sets the "StatusToTeam" edge to the Team entity by ID if the given value is not nil.
-func (sc *StatusCreate) SetNillableStatusToTeamID(id *uuid.UUID) *StatusCreate {
+// SetNillableTeamID sets the "Team" edge to the Team entity by ID if the given value is not nil.
+func (sc *StatusCreate) SetNillableTeamID(id *uuid.UUID) *StatusCreate {
 	if id != nil {
-		sc = sc.SetStatusToTeamID(*id)
+		sc = sc.SetTeamID(*id)
 	}
 	return sc
 }
 
-// SetStatusToTeam sets the "StatusToTeam" edge to the Team entity.
-func (sc *StatusCreate) SetStatusToTeam(t *Team) *StatusCreate {
-	return sc.SetStatusToTeamID(t.ID)
+// SetTeam sets the "Team" edge to the Team entity.
+func (sc *StatusCreate) SetTeam(t *Team) *StatusCreate {
+	return sc.SetTeamID(t.ID)
 }
 
-// SetStatusToPlanID sets the "StatusToPlan" edge to the Plan entity by ID.
-func (sc *StatusCreate) SetStatusToPlanID(id uuid.UUID) *StatusCreate {
-	sc.mutation.SetStatusToPlanID(id)
+// SetPlanID sets the "Plan" edge to the Plan entity by ID.
+func (sc *StatusCreate) SetPlanID(id uuid.UUID) *StatusCreate {
+	sc.mutation.SetPlanID(id)
 	return sc
 }
 
-// SetNillableStatusToPlanID sets the "StatusToPlan" edge to the Plan entity by ID if the given value is not nil.
-func (sc *StatusCreate) SetNillableStatusToPlanID(id *uuid.UUID) *StatusCreate {
+// SetNillablePlanID sets the "Plan" edge to the Plan entity by ID if the given value is not nil.
+func (sc *StatusCreate) SetNillablePlanID(id *uuid.UUID) *StatusCreate {
 	if id != nil {
-		sc = sc.SetStatusToPlanID(*id)
+		sc = sc.SetPlanID(*id)
 	}
 	return sc
 }
 
-// SetStatusToPlan sets the "StatusToPlan" edge to the Plan entity.
-func (sc *StatusCreate) SetStatusToPlan(p *Plan) *StatusCreate {
-	return sc.SetStatusToPlanID(p.ID)
+// SetPlan sets the "Plan" edge to the Plan entity.
+func (sc *StatusCreate) SetPlan(p *Plan) *StatusCreate {
+	return sc.SetPlanID(p.ID)
 }
 
-// SetStatusToServerTaskID sets the "StatusToServerTask" edge to the ServerTask entity by ID.
-func (sc *StatusCreate) SetStatusToServerTaskID(id uuid.UUID) *StatusCreate {
-	sc.mutation.SetStatusToServerTaskID(id)
+// SetServerTaskID sets the "ServerTask" edge to the ServerTask entity by ID.
+func (sc *StatusCreate) SetServerTaskID(id uuid.UUID) *StatusCreate {
+	sc.mutation.SetServerTaskID(id)
 	return sc
 }
 
-// SetNillableStatusToServerTaskID sets the "StatusToServerTask" edge to the ServerTask entity by ID if the given value is not nil.
-func (sc *StatusCreate) SetNillableStatusToServerTaskID(id *uuid.UUID) *StatusCreate {
+// SetNillableServerTaskID sets the "ServerTask" edge to the ServerTask entity by ID if the given value is not nil.
+func (sc *StatusCreate) SetNillableServerTaskID(id *uuid.UUID) *StatusCreate {
 	if id != nil {
-		sc = sc.SetStatusToServerTaskID(*id)
+		sc = sc.SetServerTaskID(*id)
 	}
 	return sc
 }
 
-// SetStatusToServerTask sets the "StatusToServerTask" edge to the ServerTask entity.
-func (sc *StatusCreate) SetStatusToServerTask(s *ServerTask) *StatusCreate {
-	return sc.SetStatusToServerTaskID(s.ID)
+// SetServerTask sets the "ServerTask" edge to the ServerTask entity.
+func (sc *StatusCreate) SetServerTask(s *ServerTask) *StatusCreate {
+	return sc.SetServerTaskID(s.ID)
 }
 
-// SetStatusToAdhocPlanID sets the "StatusToAdhocPlan" edge to the AdhocPlan entity by ID.
-func (sc *StatusCreate) SetStatusToAdhocPlanID(id uuid.UUID) *StatusCreate {
-	sc.mutation.SetStatusToAdhocPlanID(id)
+// SetAdhocPlanID sets the "AdhocPlan" edge to the AdhocPlan entity by ID.
+func (sc *StatusCreate) SetAdhocPlanID(id uuid.UUID) *StatusCreate {
+	sc.mutation.SetAdhocPlanID(id)
 	return sc
 }
 
-// SetNillableStatusToAdhocPlanID sets the "StatusToAdhocPlan" edge to the AdhocPlan entity by ID if the given value is not nil.
-func (sc *StatusCreate) SetNillableStatusToAdhocPlanID(id *uuid.UUID) *StatusCreate {
+// SetNillableAdhocPlanID sets the "AdhocPlan" edge to the AdhocPlan entity by ID if the given value is not nil.
+func (sc *StatusCreate) SetNillableAdhocPlanID(id *uuid.UUID) *StatusCreate {
 	if id != nil {
-		sc = sc.SetStatusToAdhocPlanID(*id)
+		sc = sc.SetAdhocPlanID(*id)
 	}
 	return sc
 }
 
-// SetStatusToAdhocPlan sets the "StatusToAdhocPlan" edge to the AdhocPlan entity.
-func (sc *StatusCreate) SetStatusToAdhocPlan(a *AdhocPlan) *StatusCreate {
-	return sc.SetStatusToAdhocPlanID(a.ID)
+// SetAdhocPlan sets the "AdhocPlan" edge to the AdhocPlan entity.
+func (sc *StatusCreate) SetAdhocPlan(a *AdhocPlan) *StatusCreate {
+	return sc.SetAdhocPlanID(a.ID)
 }
 
-// SetStatusToScheduleStepID sets the "StatusToScheduleStep" edge to the ScheduleStep entity by ID.
-func (sc *StatusCreate) SetStatusToScheduleStepID(id uuid.UUID) *StatusCreate {
-	sc.mutation.SetStatusToScheduleStepID(id)
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (sc *StatusCreate) SetProvisioningScheduledStepID(id uuid.UUID) *StatusCreate {
+	sc.mutation.SetProvisioningScheduledStepID(id)
 	return sc
 }
 
-// SetNillableStatusToScheduleStepID sets the "StatusToScheduleStep" edge to the ScheduleStep entity by ID if the given value is not nil.
-func (sc *StatusCreate) SetNillableStatusToScheduleStepID(id *uuid.UUID) *StatusCreate {
+// SetNillableProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (sc *StatusCreate) SetNillableProvisioningScheduledStepID(id *uuid.UUID) *StatusCreate {
 	if id != nil {
-		sc = sc.SetStatusToScheduleStepID(*id)
+		sc = sc.SetProvisioningScheduledStepID(*id)
 	}
 	return sc
 }
 
-// SetStatusToScheduleStep sets the "StatusToScheduleStep" edge to the ScheduleStep entity.
-func (sc *StatusCreate) SetStatusToScheduleStep(s *ScheduleStep) *StatusCreate {
-	return sc.SetStatusToScheduleStepID(s.ID)
-}
-
-// SetStatusToProvisionedScheduleStepID sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID.
-func (sc *StatusCreate) SetStatusToProvisionedScheduleStepID(id uuid.UUID) *StatusCreate {
-	sc.mutation.SetStatusToProvisionedScheduleStepID(id)
-	return sc
-}
-
-// SetNillableStatusToProvisionedScheduleStepID sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID if the given value is not nil.
-func (sc *StatusCreate) SetNillableStatusToProvisionedScheduleStepID(id *uuid.UUID) *StatusCreate {
-	if id != nil {
-		sc = sc.SetStatusToProvisionedScheduleStepID(*id)
-	}
-	return sc
-}
-
-// SetStatusToProvisionedScheduleStep sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (sc *StatusCreate) SetStatusToProvisionedScheduleStep(p *ProvisionedScheduleStep) *StatusCreate {
-	return sc.SetStatusToProvisionedScheduleStepID(p.ID)
+// SetProvisioningScheduledStep sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (sc *StatusCreate) SetProvisioningScheduledStep(p *ProvisioningScheduledStep) *StatusCreate {
+	return sc.SetProvisioningScheduledStepID(p.ID)
 }
 
 // Mutation returns the StatusMutation object of the builder.
@@ -524,12 +504,12 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 		})
 		_node.Error = value
 	}
-	if nodes := sc.mutation.StatusToBuildIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.BuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToBuildTable,
-			Columns: []string{status.StatusToBuildColumn},
+			Table:   status.BuildTable,
+			Columns: []string{status.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -541,15 +521,15 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.build_build_to_status = &nodes[0]
+		_node.build_status = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := sc.mutation.StatusToProvisionedNetworkIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.ProvisionedNetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisionedNetworkTable,
-			Columns: []string{status.StatusToProvisionedNetworkColumn},
+			Table:   status.ProvisionedNetworkTable,
+			Columns: []string{status.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -561,15 +541,15 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioned_network_provisioned_network_to_status = &nodes[0]
+		_node.provisioned_network_status = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := sc.mutation.StatusToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisionedHostTable,
-			Columns: []string{status.StatusToProvisionedHostColumn},
+			Table:   status.ProvisionedHostTable,
+			Columns: []string{status.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -581,15 +561,15 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioned_host_provisioned_host_to_status = &nodes[0]
+		_node.provisioned_host_status = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := sc.mutation.StatusToProvisioningStepIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.ProvisioningStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisioningStepTable,
-			Columns: []string{status.StatusToProvisioningStepColumn},
+			Table:   status.ProvisioningStepTable,
+			Columns: []string{status.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -601,15 +581,15 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provisioning_step_provisioning_step_to_status = &nodes[0]
+		_node.provisioning_step_status = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := sc.mutation.StatusToTeamIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.TeamIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToTeamTable,
-			Columns: []string{status.StatusToTeamColumn},
+			Table:   status.TeamTable,
+			Columns: []string{status.TeamColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -621,15 +601,15 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.team_team_to_status = &nodes[0]
+		_node.team_status = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := sc.mutation.StatusToPlanIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.PlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToPlanTable,
-			Columns: []string{status.StatusToPlanColumn},
+			Table:   status.PlanTable,
+			Columns: []string{status.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -641,15 +621,15 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.plan_plan_to_status = &nodes[0]
+		_node.plan_status = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := sc.mutation.StatusToServerTaskIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.ServerTaskIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToServerTaskTable,
-			Columns: []string{status.StatusToServerTaskColumn},
+			Table:   status.ServerTaskTable,
+			Columns: []string{status.ServerTaskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -661,15 +641,15 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.server_task_server_task_to_status = &nodes[0]
+		_node.server_task_status = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := sc.mutation.StatusToAdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.AdhocPlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToAdhocPlanTable,
-			Columns: []string{status.StatusToAdhocPlanColumn},
+			Table:   status.AdhocPlanTable,
+			Columns: []string{status.AdhocPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -681,47 +661,27 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.adhoc_plan_adhoc_plan_to_status = &nodes[0]
+		_node.adhoc_plan_status = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := sc.mutation.StatusToScheduleStepIDs(); len(nodes) > 0 {
+	if nodes := sc.mutation.ProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToScheduleStepTable,
-			Columns: []string{status.StatusToScheduleStepColumn},
+			Table:   status.ProvisioningScheduledStepTable,
+			Columns: []string{status.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.schedule_step_schedule_step_to_status = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := sc.mutation.StatusToProvisionedScheduleStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   status.StatusToProvisionedScheduleStepTable,
-			Columns: []string{status.StatusToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.provisioned_schedule_step_provisioned_schedule_step_to_status = &nodes[0]
+		_node.provisioning_scheduled_step_status = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

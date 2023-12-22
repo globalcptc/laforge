@@ -31,6 +31,12 @@ func (Competition) Fields() []ent.Field {
 			StructTag(`hcl:"id,label"`),
 		field.String("root_password").
 			StructTag(`hcl:"root_password,attr"`),
+		field.Int64("start_time").
+			Optional().
+			StructTag(`hcl:"start_time,optional"`),
+		field.Int64("stop_time").
+			Optional().
+			StructTag(`hcl:"stop_time,optional"`),
 		field.JSON("config", map[string]string{}).
 			StructTag(`hcl:"config,optional"`),
 		field.JSON("tags", map[string]string{}).
@@ -41,12 +47,12 @@ func (Competition) Fields() []ent.Field {
 // Edges of the Competition.
 func (Competition) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("CompetitionToDNS", DNS.Type).
+		edge.To("DNS", DNS.Type).
 			StructTag(`hcl:"dns,block"`),
-		edge.From("CompetitionToEnvironment", Environment.Type).
-			Ref("EnvironmentToCompetition").
+		edge.From("Environment", Environment.Type).
+			Ref("Competitions").
 			Unique(),
-		edge.From("CompetitionToBuild", Build.Type).
-			Ref("BuildToCompetition"),
+		edge.From("Builds", Build.Type).
+			Ref("Competition"),
 	}
 }

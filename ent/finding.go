@@ -35,84 +35,84 @@ type Finding struct {
 	Edges FindingEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// FindingToUser holds the value of the FindingToUser edge.
-	HCLFindingToUser []*User `json:"FindingToUser,omitempty" hcl:"maintainer,block"`
-	// FindingToHost holds the value of the FindingToHost edge.
-	HCLFindingToHost *Host `json:"FindingToHost,omitempty"`
-	// FindingToScript holds the value of the FindingToScript edge.
-	HCLFindingToScript *Script `json:"FindingToScript,omitempty"`
-	// FindingToEnvironment holds the value of the FindingToEnvironment edge.
-	HCLFindingToEnvironment *Environment `json:"FindingToEnvironment,omitempty"`
+	// Users holds the value of the Users edge.
+	HCLUsers []*User `json:"Users,omitempty" hcl:"maintainer,block"`
+	// Host holds the value of the Host edge.
+	HCLHost *Host `json:"Host,omitempty"`
+	// Script holds the value of the Script edge.
+	HCLScript *Script `json:"Script,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
-	environment_environment_to_finding *uuid.UUID
-	finding_finding_to_host            *uuid.UUID
-	script_script_to_finding           *uuid.UUID
+	environment_findings *uuid.UUID
+	finding_host         *uuid.UUID
+	script_findings      *uuid.UUID
 }
 
 // FindingEdges holds the relations/edges for other nodes in the graph.
 type FindingEdges struct {
-	// FindingToUser holds the value of the FindingToUser edge.
-	FindingToUser []*User `json:"FindingToUser,omitempty" hcl:"maintainer,block"`
-	// FindingToHost holds the value of the FindingToHost edge.
-	FindingToHost *Host `json:"FindingToHost,omitempty"`
-	// FindingToScript holds the value of the FindingToScript edge.
-	FindingToScript *Script `json:"FindingToScript,omitempty"`
-	// FindingToEnvironment holds the value of the FindingToEnvironment edge.
-	FindingToEnvironment *Environment `json:"FindingToEnvironment,omitempty"`
+	// Users holds the value of the Users edge.
+	Users []*User `json:"Users,omitempty" hcl:"maintainer,block"`
+	// Host holds the value of the Host edge.
+	Host *Host `json:"Host,omitempty"`
+	// Script holds the value of the Script edge.
+	Script *Script `json:"Script,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [4]bool
 }
 
-// FindingToUserOrErr returns the FindingToUser value or an error if the edge
+// UsersOrErr returns the Users value or an error if the edge
 // was not loaded in eager-loading.
-func (e FindingEdges) FindingToUserOrErr() ([]*User, error) {
+func (e FindingEdges) UsersOrErr() ([]*User, error) {
 	if e.loadedTypes[0] {
-		return e.FindingToUser, nil
+		return e.Users, nil
 	}
-	return nil, &NotLoadedError{edge: "FindingToUser"}
+	return nil, &NotLoadedError{edge: "Users"}
 }
 
-// FindingToHostOrErr returns the FindingToHost value or an error if the edge
+// HostOrErr returns the Host value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e FindingEdges) FindingToHostOrErr() (*Host, error) {
+func (e FindingEdges) HostOrErr() (*Host, error) {
 	if e.loadedTypes[1] {
-		if e.FindingToHost == nil {
-			// The edge FindingToHost was loaded in eager-loading,
+		if e.Host == nil {
+			// The edge Host was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: host.Label}
 		}
-		return e.FindingToHost, nil
+		return e.Host, nil
 	}
-	return nil, &NotLoadedError{edge: "FindingToHost"}
+	return nil, &NotLoadedError{edge: "Host"}
 }
 
-// FindingToScriptOrErr returns the FindingToScript value or an error if the edge
+// ScriptOrErr returns the Script value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e FindingEdges) FindingToScriptOrErr() (*Script, error) {
+func (e FindingEdges) ScriptOrErr() (*Script, error) {
 	if e.loadedTypes[2] {
-		if e.FindingToScript == nil {
-			// The edge FindingToScript was loaded in eager-loading,
+		if e.Script == nil {
+			// The edge Script was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: script.Label}
 		}
-		return e.FindingToScript, nil
+		return e.Script, nil
 	}
-	return nil, &NotLoadedError{edge: "FindingToScript"}
+	return nil, &NotLoadedError{edge: "Script"}
 }
 
-// FindingToEnvironmentOrErr returns the FindingToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e FindingEdges) FindingToEnvironmentOrErr() (*Environment, error) {
+func (e FindingEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[3] {
-		if e.FindingToEnvironment == nil {
-			// The edge FindingToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.FindingToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "FindingToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -126,11 +126,11 @@ func (*Finding) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case finding.FieldID:
 			values[i] = new(uuid.UUID)
-		case finding.ForeignKeys[0]: // environment_environment_to_finding
+		case finding.ForeignKeys[0]: // environment_findings
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case finding.ForeignKeys[1]: // finding_finding_to_host
+		case finding.ForeignKeys[1]: // finding_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case finding.ForeignKeys[2]: // script_script_to_finding
+		case finding.ForeignKeys[2]: // script_findings
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Finding", columns[i])
@@ -187,48 +187,48 @@ func (f *Finding) assignValues(columns []string, values []interface{}) error {
 			}
 		case finding.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_finding", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_findings", values[i])
 			} else if value.Valid {
-				f.environment_environment_to_finding = new(uuid.UUID)
-				*f.environment_environment_to_finding = *value.S.(*uuid.UUID)
+				f.environment_findings = new(uuid.UUID)
+				*f.environment_findings = *value.S.(*uuid.UUID)
 			}
 		case finding.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field finding_finding_to_host", values[i])
+				return fmt.Errorf("unexpected type %T for field finding_host", values[i])
 			} else if value.Valid {
-				f.finding_finding_to_host = new(uuid.UUID)
-				*f.finding_finding_to_host = *value.S.(*uuid.UUID)
+				f.finding_host = new(uuid.UUID)
+				*f.finding_host = *value.S.(*uuid.UUID)
 			}
 		case finding.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field script_script_to_finding", values[i])
+				return fmt.Errorf("unexpected type %T for field script_findings", values[i])
 			} else if value.Valid {
-				f.script_script_to_finding = new(uuid.UUID)
-				*f.script_script_to_finding = *value.S.(*uuid.UUID)
+				f.script_findings = new(uuid.UUID)
+				*f.script_findings = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryFindingToUser queries the "FindingToUser" edge of the Finding entity.
-func (f *Finding) QueryFindingToUser() *UserQuery {
-	return (&FindingClient{config: f.config}).QueryFindingToUser(f)
+// QueryUsers queries the "Users" edge of the Finding entity.
+func (f *Finding) QueryUsers() *UserQuery {
+	return (&FindingClient{config: f.config}).QueryUsers(f)
 }
 
-// QueryFindingToHost queries the "FindingToHost" edge of the Finding entity.
-func (f *Finding) QueryFindingToHost() *HostQuery {
-	return (&FindingClient{config: f.config}).QueryFindingToHost(f)
+// QueryHost queries the "Host" edge of the Finding entity.
+func (f *Finding) QueryHost() *HostQuery {
+	return (&FindingClient{config: f.config}).QueryHost(f)
 }
 
-// QueryFindingToScript queries the "FindingToScript" edge of the Finding entity.
-func (f *Finding) QueryFindingToScript() *ScriptQuery {
-	return (&FindingClient{config: f.config}).QueryFindingToScript(f)
+// QueryScript queries the "Script" edge of the Finding entity.
+func (f *Finding) QueryScript() *ScriptQuery {
+	return (&FindingClient{config: f.config}).QueryScript(f)
 }
 
-// QueryFindingToEnvironment queries the "FindingToEnvironment" edge of the Finding entity.
-func (f *Finding) QueryFindingToEnvironment() *EnvironmentQuery {
-	return (&FindingClient{config: f.config}).QueryFindingToEnvironment(f)
+// QueryEnvironment queries the "Environment" edge of the Finding entity.
+func (f *Finding) QueryEnvironment() *EnvironmentQuery {
+	return (&FindingClient{config: f.config}).QueryEnvironment(f)
 }
 
 // Update returns a builder for updating this Finding.

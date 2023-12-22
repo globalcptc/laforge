@@ -77,188 +77,188 @@ func (bc *BuildCreate) SetNillableID(u *uuid.UUID) *BuildCreate {
 	return bc
 }
 
-// SetBuildToStatusID sets the "BuildToStatus" edge to the Status entity by ID.
-func (bc *BuildCreate) SetBuildToStatusID(id uuid.UUID) *BuildCreate {
-	bc.mutation.SetBuildToStatusID(id)
+// SetStatusID sets the "Status" edge to the Status entity by ID.
+func (bc *BuildCreate) SetStatusID(id uuid.UUID) *BuildCreate {
+	bc.mutation.SetStatusID(id)
 	return bc
 }
 
-// SetNillableBuildToStatusID sets the "BuildToStatus" edge to the Status entity by ID if the given value is not nil.
-func (bc *BuildCreate) SetNillableBuildToStatusID(id *uuid.UUID) *BuildCreate {
+// SetNillableStatusID sets the "Status" edge to the Status entity by ID if the given value is not nil.
+func (bc *BuildCreate) SetNillableStatusID(id *uuid.UUID) *BuildCreate {
 	if id != nil {
-		bc = bc.SetBuildToStatusID(*id)
+		bc = bc.SetStatusID(*id)
 	}
 	return bc
 }
 
-// SetBuildToStatus sets the "BuildToStatus" edge to the Status entity.
-func (bc *BuildCreate) SetBuildToStatus(s *Status) *BuildCreate {
-	return bc.SetBuildToStatusID(s.ID)
+// SetStatus sets the "Status" edge to the Status entity.
+func (bc *BuildCreate) SetStatus(s *Status) *BuildCreate {
+	return bc.SetStatusID(s.ID)
 }
 
-// SetBuildToEnvironmentID sets the "BuildToEnvironment" edge to the Environment entity by ID.
-func (bc *BuildCreate) SetBuildToEnvironmentID(id uuid.UUID) *BuildCreate {
-	bc.mutation.SetBuildToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (bc *BuildCreate) SetEnvironmentID(id uuid.UUID) *BuildCreate {
+	bc.mutation.SetEnvironmentID(id)
 	return bc
 }
 
-// SetBuildToEnvironment sets the "BuildToEnvironment" edge to the Environment entity.
-func (bc *BuildCreate) SetBuildToEnvironment(e *Environment) *BuildCreate {
-	return bc.SetBuildToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (bc *BuildCreate) SetEnvironment(e *Environment) *BuildCreate {
+	return bc.SetEnvironmentID(e.ID)
 }
 
-// SetBuildToCompetitionID sets the "BuildToCompetition" edge to the Competition entity by ID.
-func (bc *BuildCreate) SetBuildToCompetitionID(id uuid.UUID) *BuildCreate {
-	bc.mutation.SetBuildToCompetitionID(id)
+// SetCompetitionID sets the "Competition" edge to the Competition entity by ID.
+func (bc *BuildCreate) SetCompetitionID(id uuid.UUID) *BuildCreate {
+	bc.mutation.SetCompetitionID(id)
 	return bc
 }
 
-// SetBuildToCompetition sets the "BuildToCompetition" edge to the Competition entity.
-func (bc *BuildCreate) SetBuildToCompetition(c *Competition) *BuildCreate {
-	return bc.SetBuildToCompetitionID(c.ID)
+// SetCompetition sets the "Competition" edge to the Competition entity.
+func (bc *BuildCreate) SetCompetition(c *Competition) *BuildCreate {
+	return bc.SetCompetitionID(c.ID)
 }
 
-// SetBuildToLatestBuildCommitID sets the "BuildToLatestBuildCommit" edge to the BuildCommit entity by ID.
-func (bc *BuildCreate) SetBuildToLatestBuildCommitID(id uuid.UUID) *BuildCreate {
-	bc.mutation.SetBuildToLatestBuildCommitID(id)
+// SetLatestBuildCommitID sets the "LatestBuildCommit" edge to the BuildCommit entity by ID.
+func (bc *BuildCreate) SetLatestBuildCommitID(id uuid.UUID) *BuildCreate {
+	bc.mutation.SetLatestBuildCommitID(id)
 	return bc
 }
 
-// SetNillableBuildToLatestBuildCommitID sets the "BuildToLatestBuildCommit" edge to the BuildCommit entity by ID if the given value is not nil.
-func (bc *BuildCreate) SetNillableBuildToLatestBuildCommitID(id *uuid.UUID) *BuildCreate {
+// SetNillableLatestBuildCommitID sets the "LatestBuildCommit" edge to the BuildCommit entity by ID if the given value is not nil.
+func (bc *BuildCreate) SetNillableLatestBuildCommitID(id *uuid.UUID) *BuildCreate {
 	if id != nil {
-		bc = bc.SetBuildToLatestBuildCommitID(*id)
+		bc = bc.SetLatestBuildCommitID(*id)
 	}
 	return bc
 }
 
-// SetBuildToLatestBuildCommit sets the "BuildToLatestBuildCommit" edge to the BuildCommit entity.
-func (bc *BuildCreate) SetBuildToLatestBuildCommit(b *BuildCommit) *BuildCreate {
-	return bc.SetBuildToLatestBuildCommitID(b.ID)
+// SetLatestBuildCommit sets the "LatestBuildCommit" edge to the BuildCommit entity.
+func (bc *BuildCreate) SetLatestBuildCommit(b *BuildCommit) *BuildCreate {
+	return bc.SetLatestBuildCommitID(b.ID)
 }
 
-// SetBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by ID.
-func (bc *BuildCreate) SetBuildToRepoCommitID(id uuid.UUID) *BuildCreate {
-	bc.mutation.SetBuildToRepoCommitID(id)
+// SetRepoCommitID sets the "RepoCommit" edge to the RepoCommit entity by ID.
+func (bc *BuildCreate) SetRepoCommitID(id uuid.UUID) *BuildCreate {
+	bc.mutation.SetRepoCommitID(id)
 	return bc
 }
 
-// SetNillableBuildToRepoCommitID sets the "BuildToRepoCommit" edge to the RepoCommit entity by ID if the given value is not nil.
-func (bc *BuildCreate) SetNillableBuildToRepoCommitID(id *uuid.UUID) *BuildCreate {
+// SetNillableRepoCommitID sets the "RepoCommit" edge to the RepoCommit entity by ID if the given value is not nil.
+func (bc *BuildCreate) SetNillableRepoCommitID(id *uuid.UUID) *BuildCreate {
 	if id != nil {
-		bc = bc.SetBuildToRepoCommitID(*id)
+		bc = bc.SetRepoCommitID(*id)
 	}
 	return bc
 }
 
-// SetBuildToRepoCommit sets the "BuildToRepoCommit" edge to the RepoCommit entity.
-func (bc *BuildCreate) SetBuildToRepoCommit(r *RepoCommit) *BuildCreate {
-	return bc.SetBuildToRepoCommitID(r.ID)
+// SetRepoCommit sets the "RepoCommit" edge to the RepoCommit entity.
+func (bc *BuildCreate) SetRepoCommit(r *RepoCommit) *BuildCreate {
+	return bc.SetRepoCommitID(r.ID)
 }
 
-// AddBuildToProvisionedNetworkIDs adds the "BuildToProvisionedNetwork" edge to the ProvisionedNetwork entity by IDs.
-func (bc *BuildCreate) AddBuildToProvisionedNetworkIDs(ids ...uuid.UUID) *BuildCreate {
-	bc.mutation.AddBuildToProvisionedNetworkIDs(ids...)
+// AddProvisionedNetworkIDs adds the "ProvisionedNetworks" edge to the ProvisionedNetwork entity by IDs.
+func (bc *BuildCreate) AddProvisionedNetworkIDs(ids ...uuid.UUID) *BuildCreate {
+	bc.mutation.AddProvisionedNetworkIDs(ids...)
 	return bc
 }
 
-// AddBuildToProvisionedNetwork adds the "BuildToProvisionedNetwork" edges to the ProvisionedNetwork entity.
-func (bc *BuildCreate) AddBuildToProvisionedNetwork(p ...*ProvisionedNetwork) *BuildCreate {
+// AddProvisionedNetworks adds the "ProvisionedNetworks" edges to the ProvisionedNetwork entity.
+func (bc *BuildCreate) AddProvisionedNetworks(p ...*ProvisionedNetwork) *BuildCreate {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return bc.AddBuildToProvisionedNetworkIDs(ids...)
+	return bc.AddProvisionedNetworkIDs(ids...)
 }
 
-// AddBuildToTeamIDs adds the "BuildToTeam" edge to the Team entity by IDs.
-func (bc *BuildCreate) AddBuildToTeamIDs(ids ...uuid.UUID) *BuildCreate {
-	bc.mutation.AddBuildToTeamIDs(ids...)
+// AddTeamIDs adds the "Teams" edge to the Team entity by IDs.
+func (bc *BuildCreate) AddTeamIDs(ids ...uuid.UUID) *BuildCreate {
+	bc.mutation.AddTeamIDs(ids...)
 	return bc
 }
 
-// AddBuildToTeam adds the "BuildToTeam" edges to the Team entity.
-func (bc *BuildCreate) AddBuildToTeam(t ...*Team) *BuildCreate {
+// AddTeams adds the "Teams" edges to the Team entity.
+func (bc *BuildCreate) AddTeams(t ...*Team) *BuildCreate {
 	ids := make([]uuid.UUID, len(t))
 	for i := range t {
 		ids[i] = t[i].ID
 	}
-	return bc.AddBuildToTeamIDs(ids...)
+	return bc.AddTeamIDs(ids...)
 }
 
-// AddBuildToPlanIDs adds the "BuildToPlan" edge to the Plan entity by IDs.
-func (bc *BuildCreate) AddBuildToPlanIDs(ids ...uuid.UUID) *BuildCreate {
-	bc.mutation.AddBuildToPlanIDs(ids...)
+// AddPlanIDs adds the "Plans" edge to the Plan entity by IDs.
+func (bc *BuildCreate) AddPlanIDs(ids ...uuid.UUID) *BuildCreate {
+	bc.mutation.AddPlanIDs(ids...)
 	return bc
 }
 
-// AddBuildToPlan adds the "BuildToPlan" edges to the Plan entity.
-func (bc *BuildCreate) AddBuildToPlan(p ...*Plan) *BuildCreate {
+// AddPlans adds the "Plans" edges to the Plan entity.
+func (bc *BuildCreate) AddPlans(p ...*Plan) *BuildCreate {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return bc.AddBuildToPlanIDs(ids...)
+	return bc.AddPlanIDs(ids...)
 }
 
-// AddBuildToBuildCommitIDs adds the "BuildToBuildCommits" edge to the BuildCommit entity by IDs.
-func (bc *BuildCreate) AddBuildToBuildCommitIDs(ids ...uuid.UUID) *BuildCreate {
-	bc.mutation.AddBuildToBuildCommitIDs(ids...)
+// AddBuildCommitIDs adds the "BuildCommits" edge to the BuildCommit entity by IDs.
+func (bc *BuildCreate) AddBuildCommitIDs(ids ...uuid.UUID) *BuildCreate {
+	bc.mutation.AddBuildCommitIDs(ids...)
 	return bc
 }
 
-// AddBuildToBuildCommits adds the "BuildToBuildCommits" edges to the BuildCommit entity.
-func (bc *BuildCreate) AddBuildToBuildCommits(b ...*BuildCommit) *BuildCreate {
+// AddBuildCommits adds the "BuildCommits" edges to the BuildCommit entity.
+func (bc *BuildCreate) AddBuildCommits(b ...*BuildCommit) *BuildCreate {
 	ids := make([]uuid.UUID, len(b))
 	for i := range b {
 		ids[i] = b[i].ID
 	}
-	return bc.AddBuildToBuildCommitIDs(ids...)
+	return bc.AddBuildCommitIDs(ids...)
 }
 
-// AddBuildToAdhocPlanIDs adds the "BuildToAdhocPlans" edge to the AdhocPlan entity by IDs.
-func (bc *BuildCreate) AddBuildToAdhocPlanIDs(ids ...uuid.UUID) *BuildCreate {
-	bc.mutation.AddBuildToAdhocPlanIDs(ids...)
+// AddAdhocPlanIDs adds the "AdhocPlans" edge to the AdhocPlan entity by IDs.
+func (bc *BuildCreate) AddAdhocPlanIDs(ids ...uuid.UUID) *BuildCreate {
+	bc.mutation.AddAdhocPlanIDs(ids...)
 	return bc
 }
 
-// AddBuildToAdhocPlans adds the "BuildToAdhocPlans" edges to the AdhocPlan entity.
-func (bc *BuildCreate) AddBuildToAdhocPlans(a ...*AdhocPlan) *BuildCreate {
+// AddAdhocPlans adds the "AdhocPlans" edges to the AdhocPlan entity.
+func (bc *BuildCreate) AddAdhocPlans(a ...*AdhocPlan) *BuildCreate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return bc.AddBuildToAdhocPlanIDs(ids...)
+	return bc.AddAdhocPlanIDs(ids...)
 }
 
-// AddBuildToAgentStatuseIDs adds the "BuildToAgentStatuses" edge to the AgentStatus entity by IDs.
-func (bc *BuildCreate) AddBuildToAgentStatuseIDs(ids ...uuid.UUID) *BuildCreate {
-	bc.mutation.AddBuildToAgentStatuseIDs(ids...)
+// AddAgentStatuseIDs adds the "AgentStatuses" edge to the AgentStatus entity by IDs.
+func (bc *BuildCreate) AddAgentStatuseIDs(ids ...uuid.UUID) *BuildCreate {
+	bc.mutation.AddAgentStatuseIDs(ids...)
 	return bc
 }
 
-// AddBuildToAgentStatuses adds the "BuildToAgentStatuses" edges to the AgentStatus entity.
-func (bc *BuildCreate) AddBuildToAgentStatuses(a ...*AgentStatus) *BuildCreate {
+// AddAgentStatuses adds the "AgentStatuses" edges to the AgentStatus entity.
+func (bc *BuildCreate) AddAgentStatuses(a ...*AgentStatus) *BuildCreate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return bc.AddBuildToAgentStatuseIDs(ids...)
+	return bc.AddAgentStatuseIDs(ids...)
 }
 
-// AddBuildToServerTaskIDs adds the "BuildToServerTasks" edge to the ServerTask entity by IDs.
-func (bc *BuildCreate) AddBuildToServerTaskIDs(ids ...uuid.UUID) *BuildCreate {
-	bc.mutation.AddBuildToServerTaskIDs(ids...)
+// AddServerTaskIDs adds the "ServerTasks" edge to the ServerTask entity by IDs.
+func (bc *BuildCreate) AddServerTaskIDs(ids ...uuid.UUID) *BuildCreate {
+	bc.mutation.AddServerTaskIDs(ids...)
 	return bc
 }
 
-// AddBuildToServerTasks adds the "BuildToServerTasks" edges to the ServerTask entity.
-func (bc *BuildCreate) AddBuildToServerTasks(s ...*ServerTask) *BuildCreate {
+// AddServerTasks adds the "ServerTasks" edges to the ServerTask entity.
+func (bc *BuildCreate) AddServerTasks(s ...*ServerTask) *BuildCreate {
 	ids := make([]uuid.UUID, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return bc.AddBuildToServerTaskIDs(ids...)
+	return bc.AddServerTaskIDs(ids...)
 }
 
 // Mutation returns the BuildMutation object of the builder.
@@ -362,11 +362,11 @@ func (bc *BuildCreate) check() error {
 	if _, ok := bc.mutation.CompletedPlan(); !ok {
 		return &ValidationError{Name: "completed_plan", err: errors.New(`ent: missing required field "Build.completed_plan"`)}
 	}
-	if _, ok := bc.mutation.BuildToEnvironmentID(); !ok {
-		return &ValidationError{Name: "BuildToEnvironment", err: errors.New(`ent: missing required edge "Build.BuildToEnvironment"`)}
+	if _, ok := bc.mutation.EnvironmentID(); !ok {
+		return &ValidationError{Name: "Environment", err: errors.New(`ent: missing required edge "Build.Environment"`)}
 	}
-	if _, ok := bc.mutation.BuildToCompetitionID(); !ok {
-		return &ValidationError{Name: "BuildToCompetition", err: errors.New(`ent: missing required edge "Build.BuildToCompetition"`)}
+	if _, ok := bc.mutation.CompetitionID(); !ok {
+		return &ValidationError{Name: "Competition", err: errors.New(`ent: missing required edge "Build.Competition"`)}
 	}
 	return nil
 }
@@ -436,12 +436,12 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		})
 		_node.CompletedPlan = value
 	}
-	if nodes := bc.mutation.BuildToStatusIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.StatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   build.BuildToStatusTable,
-			Columns: []string{build.BuildToStatusColumn},
+			Table:   build.StatusTable,
+			Columns: []string{build.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -455,12 +455,12 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.BuildToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   build.BuildToEnvironmentTable,
-			Columns: []string{build.BuildToEnvironmentColumn},
+			Table:   build.EnvironmentTable,
+			Columns: []string{build.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -472,15 +472,15 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.build_build_to_environment = &nodes[0]
+		_node.build_environment = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.BuildToCompetitionIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.CompetitionIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   build.BuildToCompetitionTable,
-			Columns: []string{build.BuildToCompetitionColumn},
+			Table:   build.CompetitionTable,
+			Columns: []string{build.CompetitionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -492,15 +492,15 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.build_build_to_competition = &nodes[0]
+		_node.build_competition = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.BuildToLatestBuildCommitIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.LatestBuildCommitIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   build.BuildToLatestBuildCommitTable,
-			Columns: []string{build.BuildToLatestBuildCommitColumn},
+			Table:   build.LatestBuildCommitTable,
+			Columns: []string{build.LatestBuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -512,15 +512,15 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.build_build_to_latest_build_commit = &nodes[0]
+		_node.build_latest_build_commit = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.BuildToRepoCommitIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.RepoCommitIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   build.BuildToRepoCommitTable,
-			Columns: []string{build.BuildToRepoCommitColumn},
+			Table:   build.RepoCommitTable,
+			Columns: []string{build.RepoCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -532,15 +532,15 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.build_build_to_repo_commit = &nodes[0]
+		_node.build_repo_commit = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.BuildToProvisionedNetworkIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.ProvisionedNetworksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   build.BuildToProvisionedNetworkTable,
-			Columns: []string{build.BuildToProvisionedNetworkColumn},
+			Table:   build.ProvisionedNetworksTable,
+			Columns: []string{build.ProvisionedNetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -554,12 +554,12 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.BuildToTeamIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.TeamsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   build.BuildToTeamTable,
-			Columns: []string{build.BuildToTeamColumn},
+			Table:   build.TeamsTable,
+			Columns: []string{build.TeamsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -573,12 +573,12 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.BuildToPlanIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.PlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   build.BuildToPlanTable,
-			Columns: []string{build.BuildToPlanColumn},
+			Table:   build.PlansTable,
+			Columns: []string{build.PlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -592,12 +592,12 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.BuildToBuildCommitsIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.BuildCommitsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   build.BuildToBuildCommitsTable,
-			Columns: []string{build.BuildToBuildCommitsColumn},
+			Table:   build.BuildCommitsTable,
+			Columns: []string{build.BuildCommitsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -611,12 +611,12 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.BuildToAdhocPlansIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.AdhocPlansIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   build.BuildToAdhocPlansTable,
-			Columns: []string{build.BuildToAdhocPlansColumn},
+			Table:   build.AdhocPlansTable,
+			Columns: []string{build.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -630,12 +630,12 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.BuildToAgentStatusesIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.AgentStatusesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   build.BuildToAgentStatusesTable,
-			Columns: []string{build.BuildToAgentStatusesColumn},
+			Table:   build.AgentStatusesTable,
+			Columns: []string{build.AgentStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -649,12 +649,12 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := bc.mutation.BuildToServerTasksIDs(); len(nodes) > 0 {
+	if nodes := bc.mutation.ServerTasksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: true,
-			Table:   build.BuildToServerTasksTable,
-			Columns: []string{build.BuildToServerTasksColumn},
+			Table:   build.ServerTasksTable,
+			Columns: []string{build.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

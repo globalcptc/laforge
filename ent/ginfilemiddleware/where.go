@@ -313,25 +313,25 @@ func AccessedNEQ(v bool) predicate.GinFileMiddleware {
 	})
 }
 
-// HasGinFileMiddlewareToProvisionedHost applies the HasEdge predicate on the "GinFileMiddlewareToProvisionedHost" edge.
-func HasGinFileMiddlewareToProvisionedHost() predicate.GinFileMiddleware {
+// HasProvisionedHost applies the HasEdge predicate on the "ProvisionedHost" edge.
+func HasProvisionedHost() predicate.GinFileMiddleware {
 	return predicate.GinFileMiddleware(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(GinFileMiddlewareToProvisionedHostTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, GinFileMiddlewareToProvisionedHostTable, GinFileMiddlewareToProvisionedHostColumn),
+			sqlgraph.To(ProvisionedHostTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, ProvisionedHostTable, ProvisionedHostColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasGinFileMiddlewareToProvisionedHostWith applies the HasEdge predicate on the "GinFileMiddlewareToProvisionedHost" edge with a given conditions (other predicates).
-func HasGinFileMiddlewareToProvisionedHostWith(preds ...predicate.ProvisionedHost) predicate.GinFileMiddleware {
+// HasProvisionedHostWith applies the HasEdge predicate on the "ProvisionedHost" edge with a given conditions (other predicates).
+func HasProvisionedHostWith(preds ...predicate.ProvisionedHost) predicate.GinFileMiddleware {
 	return predicate.GinFileMiddleware(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(GinFileMiddlewareToProvisionedHostInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, GinFileMiddlewareToProvisionedHostTable, GinFileMiddlewareToProvisionedHostColumn),
+			sqlgraph.To(ProvisionedHostInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, ProvisionedHostTable, ProvisionedHostColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -341,25 +341,53 @@ func HasGinFileMiddlewareToProvisionedHostWith(preds ...predicate.ProvisionedHos
 	})
 }
 
-// HasGinFileMiddlewareToProvisioningStep applies the HasEdge predicate on the "GinFileMiddlewareToProvisioningStep" edge.
-func HasGinFileMiddlewareToProvisioningStep() predicate.GinFileMiddleware {
+// HasProvisioningStep applies the HasEdge predicate on the "ProvisioningStep" edge.
+func HasProvisioningStep() predicate.GinFileMiddleware {
 	return predicate.GinFileMiddleware(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(GinFileMiddlewareToProvisioningStepTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, GinFileMiddlewareToProvisioningStepTable, GinFileMiddlewareToProvisioningStepColumn),
+			sqlgraph.To(ProvisioningStepTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningStepTable, ProvisioningStepColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasGinFileMiddlewareToProvisioningStepWith applies the HasEdge predicate on the "GinFileMiddlewareToProvisioningStep" edge with a given conditions (other predicates).
-func HasGinFileMiddlewareToProvisioningStepWith(preds ...predicate.ProvisioningStep) predicate.GinFileMiddleware {
+// HasProvisioningStepWith applies the HasEdge predicate on the "ProvisioningStep" edge with a given conditions (other predicates).
+func HasProvisioningStepWith(preds ...predicate.ProvisioningStep) predicate.GinFileMiddleware {
 	return predicate.GinFileMiddleware(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(GinFileMiddlewareToProvisioningStepInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, GinFileMiddlewareToProvisioningStepTable, GinFileMiddlewareToProvisioningStepColumn),
+			sqlgraph.To(ProvisioningStepInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningStepTable, ProvisioningStepColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasProvisioningScheduledStep applies the HasEdge predicate on the "ProvisioningScheduledStep" edge.
+func HasProvisioningScheduledStep() predicate.GinFileMiddleware {
+	return predicate.GinFileMiddleware(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ProvisioningScheduledStepTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProvisioningScheduledStepWith applies the HasEdge predicate on the "ProvisioningScheduledStep" edge with a given conditions (other predicates).
+func HasProvisioningScheduledStepWith(preds ...predicate.ProvisioningScheduledStep) predicate.GinFileMiddleware {
+	return predicate.GinFileMiddleware(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ProvisioningScheduledStepInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

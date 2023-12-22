@@ -44,262 +44,275 @@ type Environment struct {
 	Edges EnvironmentEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// EnvironmentToUser holds the value of the EnvironmentToUser edge.
-	HCLEnvironmentToUser []*User `json:"EnvironmentToUser,omitempty" hcl:"maintainer,block"`
-	// EnvironmentToHost holds the value of the EnvironmentToHost edge.
-	HCLEnvironmentToHost []*Host `json:"EnvironmentToHost,omitempty"`
-	// EnvironmentToCompetition holds the value of the EnvironmentToCompetition edge.
-	HCLEnvironmentToCompetition []*Competition `json:"EnvironmentToCompetition,omitempty"`
-	// EnvironmentToIdentity holds the value of the EnvironmentToIdentity edge.
-	HCLEnvironmentToIdentity []*Identity `json:"EnvironmentToIdentity,omitempty"`
-	// EnvironmentToCommand holds the value of the EnvironmentToCommand edge.
-	HCLEnvironmentToCommand []*Command `json:"EnvironmentToCommand,omitempty"`
-	// EnvironmentToScript holds the value of the EnvironmentToScript edge.
-	HCLEnvironmentToScript []*Script `json:"EnvironmentToScript,omitempty"`
-	// EnvironmentToFileDownload holds the value of the EnvironmentToFileDownload edge.
-	HCLEnvironmentToFileDownload []*FileDownload `json:"EnvironmentToFileDownload,omitempty"`
-	// EnvironmentToFileDelete holds the value of the EnvironmentToFileDelete edge.
-	HCLEnvironmentToFileDelete []*FileDelete `json:"EnvironmentToFileDelete,omitempty"`
-	// EnvironmentToFileExtract holds the value of the EnvironmentToFileExtract edge.
-	HCLEnvironmentToFileExtract []*FileExtract `json:"EnvironmentToFileExtract,omitempty"`
-	// EnvironmentToIncludedNetwork holds the value of the EnvironmentToIncludedNetwork edge.
-	HCLEnvironmentToIncludedNetwork []*IncludedNetwork `json:"EnvironmentToIncludedNetwork,omitempty" hcl:"included_network,block"`
-	// EnvironmentToFinding holds the value of the EnvironmentToFinding edge.
-	HCLEnvironmentToFinding []*Finding `json:"EnvironmentToFinding,omitempty"`
-	// EnvironmentToDNSRecord holds the value of the EnvironmentToDNSRecord edge.
-	HCLEnvironmentToDNSRecord []*DNSRecord `json:"EnvironmentToDNSRecord,omitempty"`
-	// EnvironmentToDNS holds the value of the EnvironmentToDNS edge.
-	HCLEnvironmentToDNS []*DNS `json:"EnvironmentToDNS,omitempty"`
-	// EnvironmentToNetwork holds the value of the EnvironmentToNetwork edge.
-	HCLEnvironmentToNetwork []*Network `json:"EnvironmentToNetwork,omitempty"`
-	// EnvironmentToHostDependency holds the value of the EnvironmentToHostDependency edge.
-	HCLEnvironmentToHostDependency []*HostDependency `json:"EnvironmentToHostDependency,omitempty"`
-	// EnvironmentToAnsible holds the value of the EnvironmentToAnsible edge.
-	HCLEnvironmentToAnsible []*Ansible `json:"EnvironmentToAnsible,omitempty"`
-	// EnvironmentToBuild holds the value of the EnvironmentToBuild edge.
-	HCLEnvironmentToBuild []*Build `json:"EnvironmentToBuild,omitempty"`
-	// EnvironmentToRepository holds the value of the EnvironmentToRepository edge.
-	HCLEnvironmentToRepository []*Repository `json:"EnvironmentToRepository,omitempty"`
-	// EnvironmentToServerTask holds the value of the EnvironmentToServerTask edge.
-	HCLEnvironmentToServerTask []*ServerTask `json:"EnvironmentToServerTask,omitempty"`
+	// Users holds the value of the Users edge.
+	HCLUsers []*User `json:"Users,omitempty" hcl:"maintainer,block"`
+	// Hosts holds the value of the Hosts edge.
+	HCLHosts []*Host `json:"Hosts,omitempty"`
+	// Competitions holds the value of the Competitions edge.
+	HCLCompetitions []*Competition `json:"Competitions,omitempty"`
+	// Identities holds the value of the Identities edge.
+	HCLIdentities []*Identity `json:"Identities,omitempty"`
+	// Commands holds the value of the Commands edge.
+	HCLCommands []*Command `json:"Commands,omitempty"`
+	// Scripts holds the value of the Scripts edge.
+	HCLScripts []*Script `json:"Scripts,omitempty"`
+	// FileDownloads holds the value of the FileDownloads edge.
+	HCLFileDownloads []*FileDownload `json:"FileDownloads,omitempty"`
+	// FileDeletes holds the value of the FileDeletes edge.
+	HCLFileDeletes []*FileDelete `json:"FileDeletes,omitempty"`
+	// FileExtracts holds the value of the FileExtracts edge.
+	HCLFileExtracts []*FileExtract `json:"FileExtracts,omitempty"`
+	// IncludedNetworks holds the value of the IncludedNetworks edge.
+	HCLIncludedNetworks []*IncludedNetwork `json:"IncludedNetworks,omitempty" hcl:"included_network,block"`
+	// Findings holds the value of the Findings edge.
+	HCLFindings []*Finding `json:"Findings,omitempty"`
+	// DNSRecords holds the value of the DNSRecords edge.
+	HCLDNSRecords []*DNSRecord `json:"DNSRecords,omitempty"`
+	// DNS holds the value of the DNS edge.
+	HCLDNS []*DNS `json:"DNS,omitempty"`
+	// Networks holds the value of the Networks edge.
+	HCLNetworks []*Network `json:"Networks,omitempty"`
+	// HostDependencies holds the value of the HostDependencies edge.
+	HCLHostDependencies []*HostDependency `json:"HostDependencies,omitempty"`
+	// Ansibles holds the value of the Ansibles edge.
+	HCLAnsibles []*Ansible `json:"Ansibles,omitempty"`
+	// ScheduledSteps holds the value of the ScheduledSteps edge.
+	HCLScheduledSteps []*ScheduledStep `json:"ScheduledSteps,omitempty"`
+	// Builds holds the value of the Builds edge.
+	HCLBuilds []*Build `json:"Builds,omitempty"`
+	// Repositories holds the value of the Repositories edge.
+	HCLRepositories []*Repository `json:"Repositories,omitempty"`
+	// ServerTasks holds the value of the ServerTasks edge.
+	HCLServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
 	//
 
 }
 
 // EnvironmentEdges holds the relations/edges for other nodes in the graph.
 type EnvironmentEdges struct {
-	// EnvironmentToUser holds the value of the EnvironmentToUser edge.
-	EnvironmentToUser []*User `json:"EnvironmentToUser,omitempty" hcl:"maintainer,block"`
-	// EnvironmentToHost holds the value of the EnvironmentToHost edge.
-	EnvironmentToHost []*Host `json:"EnvironmentToHost,omitempty"`
-	// EnvironmentToCompetition holds the value of the EnvironmentToCompetition edge.
-	EnvironmentToCompetition []*Competition `json:"EnvironmentToCompetition,omitempty"`
-	// EnvironmentToIdentity holds the value of the EnvironmentToIdentity edge.
-	EnvironmentToIdentity []*Identity `json:"EnvironmentToIdentity,omitempty"`
-	// EnvironmentToCommand holds the value of the EnvironmentToCommand edge.
-	EnvironmentToCommand []*Command `json:"EnvironmentToCommand,omitempty"`
-	// EnvironmentToScript holds the value of the EnvironmentToScript edge.
-	EnvironmentToScript []*Script `json:"EnvironmentToScript,omitempty"`
-	// EnvironmentToFileDownload holds the value of the EnvironmentToFileDownload edge.
-	EnvironmentToFileDownload []*FileDownload `json:"EnvironmentToFileDownload,omitempty"`
-	// EnvironmentToFileDelete holds the value of the EnvironmentToFileDelete edge.
-	EnvironmentToFileDelete []*FileDelete `json:"EnvironmentToFileDelete,omitempty"`
-	// EnvironmentToFileExtract holds the value of the EnvironmentToFileExtract edge.
-	EnvironmentToFileExtract []*FileExtract `json:"EnvironmentToFileExtract,omitempty"`
-	// EnvironmentToIncludedNetwork holds the value of the EnvironmentToIncludedNetwork edge.
-	EnvironmentToIncludedNetwork []*IncludedNetwork `json:"EnvironmentToIncludedNetwork,omitempty" hcl:"included_network,block"`
-	// EnvironmentToFinding holds the value of the EnvironmentToFinding edge.
-	EnvironmentToFinding []*Finding `json:"EnvironmentToFinding,omitempty"`
-	// EnvironmentToDNSRecord holds the value of the EnvironmentToDNSRecord edge.
-	EnvironmentToDNSRecord []*DNSRecord `json:"EnvironmentToDNSRecord,omitempty"`
-	// EnvironmentToDNS holds the value of the EnvironmentToDNS edge.
-	EnvironmentToDNS []*DNS `json:"EnvironmentToDNS,omitempty"`
-	// EnvironmentToNetwork holds the value of the EnvironmentToNetwork edge.
-	EnvironmentToNetwork []*Network `json:"EnvironmentToNetwork,omitempty"`
-	// EnvironmentToHostDependency holds the value of the EnvironmentToHostDependency edge.
-	EnvironmentToHostDependency []*HostDependency `json:"EnvironmentToHostDependency,omitempty"`
-	// EnvironmentToAnsible holds the value of the EnvironmentToAnsible edge.
-	EnvironmentToAnsible []*Ansible `json:"EnvironmentToAnsible,omitempty"`
-	// EnvironmentToBuild holds the value of the EnvironmentToBuild edge.
-	EnvironmentToBuild []*Build `json:"EnvironmentToBuild,omitempty"`
-	// EnvironmentToRepository holds the value of the EnvironmentToRepository edge.
-	EnvironmentToRepository []*Repository `json:"EnvironmentToRepository,omitempty"`
-	// EnvironmentToServerTask holds the value of the EnvironmentToServerTask edge.
-	EnvironmentToServerTask []*ServerTask `json:"EnvironmentToServerTask,omitempty"`
+	// Users holds the value of the Users edge.
+	Users []*User `json:"Users,omitempty" hcl:"maintainer,block"`
+	// Hosts holds the value of the Hosts edge.
+	Hosts []*Host `json:"Hosts,omitempty"`
+	// Competitions holds the value of the Competitions edge.
+	Competitions []*Competition `json:"Competitions,omitempty"`
+	// Identities holds the value of the Identities edge.
+	Identities []*Identity `json:"Identities,omitempty"`
+	// Commands holds the value of the Commands edge.
+	Commands []*Command `json:"Commands,omitempty"`
+	// Scripts holds the value of the Scripts edge.
+	Scripts []*Script `json:"Scripts,omitempty"`
+	// FileDownloads holds the value of the FileDownloads edge.
+	FileDownloads []*FileDownload `json:"FileDownloads,omitempty"`
+	// FileDeletes holds the value of the FileDeletes edge.
+	FileDeletes []*FileDelete `json:"FileDeletes,omitempty"`
+	// FileExtracts holds the value of the FileExtracts edge.
+	FileExtracts []*FileExtract `json:"FileExtracts,omitempty"`
+	// IncludedNetworks holds the value of the IncludedNetworks edge.
+	IncludedNetworks []*IncludedNetwork `json:"IncludedNetworks,omitempty" hcl:"included_network,block"`
+	// Findings holds the value of the Findings edge.
+	Findings []*Finding `json:"Findings,omitempty"`
+	// DNSRecords holds the value of the DNSRecords edge.
+	DNSRecords []*DNSRecord `json:"DNSRecords,omitempty"`
+	// DNS holds the value of the DNS edge.
+	DNS []*DNS `json:"DNS,omitempty"`
+	// Networks holds the value of the Networks edge.
+	Networks []*Network `json:"Networks,omitempty"`
+	// HostDependencies holds the value of the HostDependencies edge.
+	HostDependencies []*HostDependency `json:"HostDependencies,omitempty"`
+	// Ansibles holds the value of the Ansibles edge.
+	Ansibles []*Ansible `json:"Ansibles,omitempty"`
+	// ScheduledSteps holds the value of the ScheduledSteps edge.
+	ScheduledSteps []*ScheduledStep `json:"ScheduledSteps,omitempty"`
+	// Builds holds the value of the Builds edge.
+	Builds []*Build `json:"Builds,omitempty"`
+	// Repositories holds the value of the Repositories edge.
+	Repositories []*Repository `json:"Repositories,omitempty"`
+	// ServerTasks holds the value of the ServerTasks edge.
+	ServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [19]bool
+	loadedTypes [20]bool
 }
 
-// EnvironmentToUserOrErr returns the EnvironmentToUser value or an error if the edge
+// UsersOrErr returns the Users value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToUserOrErr() ([]*User, error) {
+func (e EnvironmentEdges) UsersOrErr() ([]*User, error) {
 	if e.loadedTypes[0] {
-		return e.EnvironmentToUser, nil
+		return e.Users, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToUser"}
+	return nil, &NotLoadedError{edge: "Users"}
 }
 
-// EnvironmentToHostOrErr returns the EnvironmentToHost value or an error if the edge
+// HostsOrErr returns the Hosts value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToHostOrErr() ([]*Host, error) {
+func (e EnvironmentEdges) HostsOrErr() ([]*Host, error) {
 	if e.loadedTypes[1] {
-		return e.EnvironmentToHost, nil
+		return e.Hosts, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToHost"}
+	return nil, &NotLoadedError{edge: "Hosts"}
 }
 
-// EnvironmentToCompetitionOrErr returns the EnvironmentToCompetition value or an error if the edge
+// CompetitionsOrErr returns the Competitions value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToCompetitionOrErr() ([]*Competition, error) {
+func (e EnvironmentEdges) CompetitionsOrErr() ([]*Competition, error) {
 	if e.loadedTypes[2] {
-		return e.EnvironmentToCompetition, nil
+		return e.Competitions, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToCompetition"}
+	return nil, &NotLoadedError{edge: "Competitions"}
 }
 
-// EnvironmentToIdentityOrErr returns the EnvironmentToIdentity value or an error if the edge
+// IdentitiesOrErr returns the Identities value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToIdentityOrErr() ([]*Identity, error) {
+func (e EnvironmentEdges) IdentitiesOrErr() ([]*Identity, error) {
 	if e.loadedTypes[3] {
-		return e.EnvironmentToIdentity, nil
+		return e.Identities, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToIdentity"}
+	return nil, &NotLoadedError{edge: "Identities"}
 }
 
-// EnvironmentToCommandOrErr returns the EnvironmentToCommand value or an error if the edge
+// CommandsOrErr returns the Commands value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToCommandOrErr() ([]*Command, error) {
+func (e EnvironmentEdges) CommandsOrErr() ([]*Command, error) {
 	if e.loadedTypes[4] {
-		return e.EnvironmentToCommand, nil
+		return e.Commands, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToCommand"}
+	return nil, &NotLoadedError{edge: "Commands"}
 }
 
-// EnvironmentToScriptOrErr returns the EnvironmentToScript value or an error if the edge
+// ScriptsOrErr returns the Scripts value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToScriptOrErr() ([]*Script, error) {
+func (e EnvironmentEdges) ScriptsOrErr() ([]*Script, error) {
 	if e.loadedTypes[5] {
-		return e.EnvironmentToScript, nil
+		return e.Scripts, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToScript"}
+	return nil, &NotLoadedError{edge: "Scripts"}
 }
 
-// EnvironmentToFileDownloadOrErr returns the EnvironmentToFileDownload value or an error if the edge
+// FileDownloadsOrErr returns the FileDownloads value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToFileDownloadOrErr() ([]*FileDownload, error) {
+func (e EnvironmentEdges) FileDownloadsOrErr() ([]*FileDownload, error) {
 	if e.loadedTypes[6] {
-		return e.EnvironmentToFileDownload, nil
+		return e.FileDownloads, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToFileDownload"}
+	return nil, &NotLoadedError{edge: "FileDownloads"}
 }
 
-// EnvironmentToFileDeleteOrErr returns the EnvironmentToFileDelete value or an error if the edge
+// FileDeletesOrErr returns the FileDeletes value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToFileDeleteOrErr() ([]*FileDelete, error) {
+func (e EnvironmentEdges) FileDeletesOrErr() ([]*FileDelete, error) {
 	if e.loadedTypes[7] {
-		return e.EnvironmentToFileDelete, nil
+		return e.FileDeletes, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToFileDelete"}
+	return nil, &NotLoadedError{edge: "FileDeletes"}
 }
 
-// EnvironmentToFileExtractOrErr returns the EnvironmentToFileExtract value or an error if the edge
+// FileExtractsOrErr returns the FileExtracts value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToFileExtractOrErr() ([]*FileExtract, error) {
+func (e EnvironmentEdges) FileExtractsOrErr() ([]*FileExtract, error) {
 	if e.loadedTypes[8] {
-		return e.EnvironmentToFileExtract, nil
+		return e.FileExtracts, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToFileExtract"}
+	return nil, &NotLoadedError{edge: "FileExtracts"}
 }
 
-// EnvironmentToIncludedNetworkOrErr returns the EnvironmentToIncludedNetwork value or an error if the edge
+// IncludedNetworksOrErr returns the IncludedNetworks value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToIncludedNetworkOrErr() ([]*IncludedNetwork, error) {
+func (e EnvironmentEdges) IncludedNetworksOrErr() ([]*IncludedNetwork, error) {
 	if e.loadedTypes[9] {
-		return e.EnvironmentToIncludedNetwork, nil
+		return e.IncludedNetworks, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToIncludedNetwork"}
+	return nil, &NotLoadedError{edge: "IncludedNetworks"}
 }
 
-// EnvironmentToFindingOrErr returns the EnvironmentToFinding value or an error if the edge
+// FindingsOrErr returns the Findings value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToFindingOrErr() ([]*Finding, error) {
+func (e EnvironmentEdges) FindingsOrErr() ([]*Finding, error) {
 	if e.loadedTypes[10] {
-		return e.EnvironmentToFinding, nil
+		return e.Findings, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToFinding"}
+	return nil, &NotLoadedError{edge: "Findings"}
 }
 
-// EnvironmentToDNSRecordOrErr returns the EnvironmentToDNSRecord value or an error if the edge
+// DNSRecordsOrErr returns the DNSRecords value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToDNSRecordOrErr() ([]*DNSRecord, error) {
+func (e EnvironmentEdges) DNSRecordsOrErr() ([]*DNSRecord, error) {
 	if e.loadedTypes[11] {
-		return e.EnvironmentToDNSRecord, nil
+		return e.DNSRecords, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToDNSRecord"}
+	return nil, &NotLoadedError{edge: "DNSRecords"}
 }
 
-// EnvironmentToDNSOrErr returns the EnvironmentToDNS value or an error if the edge
+// DNSOrErr returns the DNS value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToDNSOrErr() ([]*DNS, error) {
+func (e EnvironmentEdges) DNSOrErr() ([]*DNS, error) {
 	if e.loadedTypes[12] {
-		return e.EnvironmentToDNS, nil
+		return e.DNS, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToDNS"}
+	return nil, &NotLoadedError{edge: "DNS"}
 }
 
-// EnvironmentToNetworkOrErr returns the EnvironmentToNetwork value or an error if the edge
+// NetworksOrErr returns the Networks value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToNetworkOrErr() ([]*Network, error) {
+func (e EnvironmentEdges) NetworksOrErr() ([]*Network, error) {
 	if e.loadedTypes[13] {
-		return e.EnvironmentToNetwork, nil
+		return e.Networks, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToNetwork"}
+	return nil, &NotLoadedError{edge: "Networks"}
 }
 
-// EnvironmentToHostDependencyOrErr returns the EnvironmentToHostDependency value or an error if the edge
+// HostDependenciesOrErr returns the HostDependencies value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToHostDependencyOrErr() ([]*HostDependency, error) {
+func (e EnvironmentEdges) HostDependenciesOrErr() ([]*HostDependency, error) {
 	if e.loadedTypes[14] {
-		return e.EnvironmentToHostDependency, nil
+		return e.HostDependencies, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToHostDependency"}
+	return nil, &NotLoadedError{edge: "HostDependencies"}
 }
 
-// EnvironmentToAnsibleOrErr returns the EnvironmentToAnsible value or an error if the edge
+// AnsiblesOrErr returns the Ansibles value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToAnsibleOrErr() ([]*Ansible, error) {
+func (e EnvironmentEdges) AnsiblesOrErr() ([]*Ansible, error) {
 	if e.loadedTypes[15] {
-		return e.EnvironmentToAnsible, nil
+		return e.Ansibles, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToAnsible"}
+	return nil, &NotLoadedError{edge: "Ansibles"}
 }
 
-// EnvironmentToBuildOrErr returns the EnvironmentToBuild value or an error if the edge
+// ScheduledStepsOrErr returns the ScheduledSteps value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToBuildOrErr() ([]*Build, error) {
+func (e EnvironmentEdges) ScheduledStepsOrErr() ([]*ScheduledStep, error) {
 	if e.loadedTypes[16] {
-		return e.EnvironmentToBuild, nil
+		return e.ScheduledSteps, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToBuild"}
+	return nil, &NotLoadedError{edge: "ScheduledSteps"}
 }
 
-// EnvironmentToRepositoryOrErr returns the EnvironmentToRepository value or an error if the edge
+// BuildsOrErr returns the Builds value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToRepositoryOrErr() ([]*Repository, error) {
+func (e EnvironmentEdges) BuildsOrErr() ([]*Build, error) {
 	if e.loadedTypes[17] {
-		return e.EnvironmentToRepository, nil
+		return e.Builds, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToRepository"}
+	return nil, &NotLoadedError{edge: "Builds"}
 }
 
-// EnvironmentToServerTaskOrErr returns the EnvironmentToServerTask value or an error if the edge
+// RepositoriesOrErr returns the Repositories value or an error if the edge
 // was not loaded in eager-loading.
-func (e EnvironmentEdges) EnvironmentToServerTaskOrErr() ([]*ServerTask, error) {
+func (e EnvironmentEdges) RepositoriesOrErr() ([]*Repository, error) {
 	if e.loadedTypes[18] {
-		return e.EnvironmentToServerTask, nil
+		return e.Repositories, nil
 	}
-	return nil, &NotLoadedError{edge: "EnvironmentToServerTask"}
+	return nil, &NotLoadedError{edge: "Repositories"}
+}
+
+// ServerTasksOrErr returns the ServerTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e EnvironmentEdges) ServerTasksOrErr() ([]*ServerTask, error) {
+	if e.loadedTypes[19] {
+		return e.ServerTasks, nil
+	}
+	return nil, &NotLoadedError{edge: "ServerTasks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -415,99 +428,104 @@ func (e *Environment) assignValues(columns []string, values []interface{}) error
 	return nil
 }
 
-// QueryEnvironmentToUser queries the "EnvironmentToUser" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToUser() *UserQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToUser(e)
+// QueryUsers queries the "Users" edge of the Environment entity.
+func (e *Environment) QueryUsers() *UserQuery {
+	return (&EnvironmentClient{config: e.config}).QueryUsers(e)
 }
 
-// QueryEnvironmentToHost queries the "EnvironmentToHost" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToHost() *HostQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToHost(e)
+// QueryHosts queries the "Hosts" edge of the Environment entity.
+func (e *Environment) QueryHosts() *HostQuery {
+	return (&EnvironmentClient{config: e.config}).QueryHosts(e)
 }
 
-// QueryEnvironmentToCompetition queries the "EnvironmentToCompetition" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToCompetition() *CompetitionQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToCompetition(e)
+// QueryCompetitions queries the "Competitions" edge of the Environment entity.
+func (e *Environment) QueryCompetitions() *CompetitionQuery {
+	return (&EnvironmentClient{config: e.config}).QueryCompetitions(e)
 }
 
-// QueryEnvironmentToIdentity queries the "EnvironmentToIdentity" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToIdentity() *IdentityQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToIdentity(e)
+// QueryIdentities queries the "Identities" edge of the Environment entity.
+func (e *Environment) QueryIdentities() *IdentityQuery {
+	return (&EnvironmentClient{config: e.config}).QueryIdentities(e)
 }
 
-// QueryEnvironmentToCommand queries the "EnvironmentToCommand" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToCommand() *CommandQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToCommand(e)
+// QueryCommands queries the "Commands" edge of the Environment entity.
+func (e *Environment) QueryCommands() *CommandQuery {
+	return (&EnvironmentClient{config: e.config}).QueryCommands(e)
 }
 
-// QueryEnvironmentToScript queries the "EnvironmentToScript" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToScript() *ScriptQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToScript(e)
+// QueryScripts queries the "Scripts" edge of the Environment entity.
+func (e *Environment) QueryScripts() *ScriptQuery {
+	return (&EnvironmentClient{config: e.config}).QueryScripts(e)
 }
 
-// QueryEnvironmentToFileDownload queries the "EnvironmentToFileDownload" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToFileDownload() *FileDownloadQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToFileDownload(e)
+// QueryFileDownloads queries the "FileDownloads" edge of the Environment entity.
+func (e *Environment) QueryFileDownloads() *FileDownloadQuery {
+	return (&EnvironmentClient{config: e.config}).QueryFileDownloads(e)
 }
 
-// QueryEnvironmentToFileDelete queries the "EnvironmentToFileDelete" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToFileDelete() *FileDeleteQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToFileDelete(e)
+// QueryFileDeletes queries the "FileDeletes" edge of the Environment entity.
+func (e *Environment) QueryFileDeletes() *FileDeleteQuery {
+	return (&EnvironmentClient{config: e.config}).QueryFileDeletes(e)
 }
 
-// QueryEnvironmentToFileExtract queries the "EnvironmentToFileExtract" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToFileExtract() *FileExtractQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToFileExtract(e)
+// QueryFileExtracts queries the "FileExtracts" edge of the Environment entity.
+func (e *Environment) QueryFileExtracts() *FileExtractQuery {
+	return (&EnvironmentClient{config: e.config}).QueryFileExtracts(e)
 }
 
-// QueryEnvironmentToIncludedNetwork queries the "EnvironmentToIncludedNetwork" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToIncludedNetwork() *IncludedNetworkQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToIncludedNetwork(e)
+// QueryIncludedNetworks queries the "IncludedNetworks" edge of the Environment entity.
+func (e *Environment) QueryIncludedNetworks() *IncludedNetworkQuery {
+	return (&EnvironmentClient{config: e.config}).QueryIncludedNetworks(e)
 }
 
-// QueryEnvironmentToFinding queries the "EnvironmentToFinding" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToFinding() *FindingQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToFinding(e)
+// QueryFindings queries the "Findings" edge of the Environment entity.
+func (e *Environment) QueryFindings() *FindingQuery {
+	return (&EnvironmentClient{config: e.config}).QueryFindings(e)
 }
 
-// QueryEnvironmentToDNSRecord queries the "EnvironmentToDNSRecord" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToDNSRecord() *DNSRecordQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToDNSRecord(e)
+// QueryDNSRecords queries the "DNSRecords" edge of the Environment entity.
+func (e *Environment) QueryDNSRecords() *DNSRecordQuery {
+	return (&EnvironmentClient{config: e.config}).QueryDNSRecords(e)
 }
 
-// QueryEnvironmentToDNS queries the "EnvironmentToDNS" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToDNS() *DNSQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToDNS(e)
+// QueryDNS queries the "DNS" edge of the Environment entity.
+func (e *Environment) QueryDNS() *DNSQuery {
+	return (&EnvironmentClient{config: e.config}).QueryDNS(e)
 }
 
-// QueryEnvironmentToNetwork queries the "EnvironmentToNetwork" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToNetwork() *NetworkQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToNetwork(e)
+// QueryNetworks queries the "Networks" edge of the Environment entity.
+func (e *Environment) QueryNetworks() *NetworkQuery {
+	return (&EnvironmentClient{config: e.config}).QueryNetworks(e)
 }
 
-// QueryEnvironmentToHostDependency queries the "EnvironmentToHostDependency" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToHostDependency() *HostDependencyQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToHostDependency(e)
+// QueryHostDependencies queries the "HostDependencies" edge of the Environment entity.
+func (e *Environment) QueryHostDependencies() *HostDependencyQuery {
+	return (&EnvironmentClient{config: e.config}).QueryHostDependencies(e)
 }
 
-// QueryEnvironmentToAnsible queries the "EnvironmentToAnsible" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToAnsible() *AnsibleQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToAnsible(e)
+// QueryAnsibles queries the "Ansibles" edge of the Environment entity.
+func (e *Environment) QueryAnsibles() *AnsibleQuery {
+	return (&EnvironmentClient{config: e.config}).QueryAnsibles(e)
 }
 
-// QueryEnvironmentToBuild queries the "EnvironmentToBuild" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToBuild() *BuildQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToBuild(e)
+// QueryScheduledSteps queries the "ScheduledSteps" edge of the Environment entity.
+func (e *Environment) QueryScheduledSteps() *ScheduledStepQuery {
+	return (&EnvironmentClient{config: e.config}).QueryScheduledSteps(e)
 }
 
-// QueryEnvironmentToRepository queries the "EnvironmentToRepository" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToRepository() *RepositoryQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToRepository(e)
+// QueryBuilds queries the "Builds" edge of the Environment entity.
+func (e *Environment) QueryBuilds() *BuildQuery {
+	return (&EnvironmentClient{config: e.config}).QueryBuilds(e)
 }
 
-// QueryEnvironmentToServerTask queries the "EnvironmentToServerTask" edge of the Environment entity.
-func (e *Environment) QueryEnvironmentToServerTask() *ServerTaskQuery {
-	return (&EnvironmentClient{config: e.config}).QueryEnvironmentToServerTask(e)
+// QueryRepositories queries the "Repositories" edge of the Environment entity.
+func (e *Environment) QueryRepositories() *RepositoryQuery {
+	return (&EnvironmentClient{config: e.config}).QueryRepositories(e)
+}
+
+// QueryServerTasks queries the "ServerTasks" edge of the Environment entity.
+func (e *Environment) QueryServerTasks() *ServerTaskQuery {
+	return (&EnvironmentClient{config: e.config}).QueryServerTasks(e)
 }
 
 // Update returns a builder for updating this Environment.

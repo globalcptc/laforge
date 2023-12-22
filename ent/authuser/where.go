@@ -1106,25 +1106,25 @@ func ProviderNotIn(vs ...Provider) predicate.AuthUser {
 	})
 }
 
-// HasAuthUserToToken applies the HasEdge predicate on the "AuthUserToToken" edge.
-func HasAuthUserToToken() predicate.AuthUser {
+// HasTokens applies the HasEdge predicate on the "Tokens" edge.
+func HasTokens() predicate.AuthUser {
 	return predicate.AuthUser(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AuthUserToTokenTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, AuthUserToTokenTable, AuthUserToTokenColumn),
+			sqlgraph.To(TokensTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, TokensTable, TokensColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAuthUserToTokenWith applies the HasEdge predicate on the "AuthUserToToken" edge with a given conditions (other predicates).
-func HasAuthUserToTokenWith(preds ...predicate.Token) predicate.AuthUser {
+// HasTokensWith applies the HasEdge predicate on the "Tokens" edge with a given conditions (other predicates).
+func HasTokensWith(preds ...predicate.Token) predicate.AuthUser {
 	return predicate.AuthUser(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AuthUserToTokenInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, AuthUserToTokenTable, AuthUserToTokenColumn),
+			sqlgraph.To(TokensInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, TokensTable, TokensColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
@@ -1134,25 +1134,25 @@ func HasAuthUserToTokenWith(preds ...predicate.Token) predicate.AuthUser {
 	})
 }
 
-// HasAuthUserToServerTasks applies the HasEdge predicate on the "AuthUserToServerTasks" edge.
-func HasAuthUserToServerTasks() predicate.AuthUser {
+// HasServerTasks applies the HasEdge predicate on the "ServerTasks" edge.
+func HasServerTasks() predicate.AuthUser {
 	return predicate.AuthUser(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AuthUserToServerTasksTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, AuthUserToServerTasksTable, AuthUserToServerTasksColumn),
+			sqlgraph.To(ServerTasksTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, ServerTasksTable, ServerTasksColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAuthUserToServerTasksWith applies the HasEdge predicate on the "AuthUserToServerTasks" edge with a given conditions (other predicates).
-func HasAuthUserToServerTasksWith(preds ...predicate.ServerTask) predicate.AuthUser {
+// HasServerTasksWith applies the HasEdge predicate on the "ServerTasks" edge with a given conditions (other predicates).
+func HasServerTasksWith(preds ...predicate.ServerTask) predicate.AuthUser {
 	return predicate.AuthUser(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AuthUserToServerTasksInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, AuthUserToServerTasksTable, AuthUserToServerTasksColumn),
+			sqlgraph.To(ServerTasksInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, ServerTasksTable, ServerTasksColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

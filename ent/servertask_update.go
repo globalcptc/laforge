@@ -113,98 +113,98 @@ func (stu *ServerTaskUpdate) ClearLogFilePath() *ServerTaskUpdate {
 	return stu
 }
 
-// SetServerTaskToAuthUserID sets the "ServerTaskToAuthUser" edge to the AuthUser entity by ID.
-func (stu *ServerTaskUpdate) SetServerTaskToAuthUserID(id uuid.UUID) *ServerTaskUpdate {
-	stu.mutation.SetServerTaskToAuthUserID(id)
+// SetAuthUserID sets the "AuthUser" edge to the AuthUser entity by ID.
+func (stu *ServerTaskUpdate) SetAuthUserID(id uuid.UUID) *ServerTaskUpdate {
+	stu.mutation.SetAuthUserID(id)
 	return stu
 }
 
-// SetServerTaskToAuthUser sets the "ServerTaskToAuthUser" edge to the AuthUser entity.
-func (stu *ServerTaskUpdate) SetServerTaskToAuthUser(a *AuthUser) *ServerTaskUpdate {
-	return stu.SetServerTaskToAuthUserID(a.ID)
+// SetAuthUser sets the "AuthUser" edge to the AuthUser entity.
+func (stu *ServerTaskUpdate) SetAuthUser(a *AuthUser) *ServerTaskUpdate {
+	return stu.SetAuthUserID(a.ID)
 }
 
-// SetServerTaskToStatusID sets the "ServerTaskToStatus" edge to the Status entity by ID.
-func (stu *ServerTaskUpdate) SetServerTaskToStatusID(id uuid.UUID) *ServerTaskUpdate {
-	stu.mutation.SetServerTaskToStatusID(id)
+// SetStatusID sets the "Status" edge to the Status entity by ID.
+func (stu *ServerTaskUpdate) SetStatusID(id uuid.UUID) *ServerTaskUpdate {
+	stu.mutation.SetStatusID(id)
 	return stu
 }
 
-// SetServerTaskToStatus sets the "ServerTaskToStatus" edge to the Status entity.
-func (stu *ServerTaskUpdate) SetServerTaskToStatus(s *Status) *ServerTaskUpdate {
-	return stu.SetServerTaskToStatusID(s.ID)
+// SetStatus sets the "Status" edge to the Status entity.
+func (stu *ServerTaskUpdate) SetStatus(s *Status) *ServerTaskUpdate {
+	return stu.SetStatusID(s.ID)
 }
 
-// SetServerTaskToEnvironmentID sets the "ServerTaskToEnvironment" edge to the Environment entity by ID.
-func (stu *ServerTaskUpdate) SetServerTaskToEnvironmentID(id uuid.UUID) *ServerTaskUpdate {
-	stu.mutation.SetServerTaskToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (stu *ServerTaskUpdate) SetEnvironmentID(id uuid.UUID) *ServerTaskUpdate {
+	stu.mutation.SetEnvironmentID(id)
 	return stu
 }
 
-// SetNillableServerTaskToEnvironmentID sets the "ServerTaskToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (stu *ServerTaskUpdate) SetNillableServerTaskToEnvironmentID(id *uuid.UUID) *ServerTaskUpdate {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (stu *ServerTaskUpdate) SetNillableEnvironmentID(id *uuid.UUID) *ServerTaskUpdate {
 	if id != nil {
-		stu = stu.SetServerTaskToEnvironmentID(*id)
+		stu = stu.SetEnvironmentID(*id)
 	}
 	return stu
 }
 
-// SetServerTaskToEnvironment sets the "ServerTaskToEnvironment" edge to the Environment entity.
-func (stu *ServerTaskUpdate) SetServerTaskToEnvironment(e *Environment) *ServerTaskUpdate {
-	return stu.SetServerTaskToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (stu *ServerTaskUpdate) SetEnvironment(e *Environment) *ServerTaskUpdate {
+	return stu.SetEnvironmentID(e.ID)
 }
 
-// SetServerTaskToBuildID sets the "ServerTaskToBuild" edge to the Build entity by ID.
-func (stu *ServerTaskUpdate) SetServerTaskToBuildID(id uuid.UUID) *ServerTaskUpdate {
-	stu.mutation.SetServerTaskToBuildID(id)
+// SetBuildID sets the "Build" edge to the Build entity by ID.
+func (stu *ServerTaskUpdate) SetBuildID(id uuid.UUID) *ServerTaskUpdate {
+	stu.mutation.SetBuildID(id)
 	return stu
 }
 
-// SetNillableServerTaskToBuildID sets the "ServerTaskToBuild" edge to the Build entity by ID if the given value is not nil.
-func (stu *ServerTaskUpdate) SetNillableServerTaskToBuildID(id *uuid.UUID) *ServerTaskUpdate {
+// SetNillableBuildID sets the "Build" edge to the Build entity by ID if the given value is not nil.
+func (stu *ServerTaskUpdate) SetNillableBuildID(id *uuid.UUID) *ServerTaskUpdate {
 	if id != nil {
-		stu = stu.SetServerTaskToBuildID(*id)
+		stu = stu.SetBuildID(*id)
 	}
 	return stu
 }
 
-// SetServerTaskToBuild sets the "ServerTaskToBuild" edge to the Build entity.
-func (stu *ServerTaskUpdate) SetServerTaskToBuild(b *Build) *ServerTaskUpdate {
-	return stu.SetServerTaskToBuildID(b.ID)
+// SetBuild sets the "Build" edge to the Build entity.
+func (stu *ServerTaskUpdate) SetBuild(b *Build) *ServerTaskUpdate {
+	return stu.SetBuildID(b.ID)
 }
 
-// SetServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by ID.
-func (stu *ServerTaskUpdate) SetServerTaskToBuildCommitID(id uuid.UUID) *ServerTaskUpdate {
-	stu.mutation.SetServerTaskToBuildCommitID(id)
+// SetBuildCommitID sets the "BuildCommit" edge to the BuildCommit entity by ID.
+func (stu *ServerTaskUpdate) SetBuildCommitID(id uuid.UUID) *ServerTaskUpdate {
+	stu.mutation.SetBuildCommitID(id)
 	return stu
 }
 
-// SetNillableServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by ID if the given value is not nil.
-func (stu *ServerTaskUpdate) SetNillableServerTaskToBuildCommitID(id *uuid.UUID) *ServerTaskUpdate {
+// SetNillableBuildCommitID sets the "BuildCommit" edge to the BuildCommit entity by ID if the given value is not nil.
+func (stu *ServerTaskUpdate) SetNillableBuildCommitID(id *uuid.UUID) *ServerTaskUpdate {
 	if id != nil {
-		stu = stu.SetServerTaskToBuildCommitID(*id)
+		stu = stu.SetBuildCommitID(*id)
 	}
 	return stu
 }
 
-// SetServerTaskToBuildCommit sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity.
-func (stu *ServerTaskUpdate) SetServerTaskToBuildCommit(b *BuildCommit) *ServerTaskUpdate {
-	return stu.SetServerTaskToBuildCommitID(b.ID)
+// SetBuildCommit sets the "BuildCommit" edge to the BuildCommit entity.
+func (stu *ServerTaskUpdate) SetBuildCommit(b *BuildCommit) *ServerTaskUpdate {
+	return stu.SetBuildCommitID(b.ID)
 }
 
-// AddServerTaskToGinFileMiddlewareIDs adds the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity by IDs.
-func (stu *ServerTaskUpdate) AddServerTaskToGinFileMiddlewareIDs(ids ...uuid.UUID) *ServerTaskUpdate {
-	stu.mutation.AddServerTaskToGinFileMiddlewareIDs(ids...)
+// AddGinFileMiddlewareIDs adds the "GinFileMiddleware" edge to the GinFileMiddleware entity by IDs.
+func (stu *ServerTaskUpdate) AddGinFileMiddlewareIDs(ids ...uuid.UUID) *ServerTaskUpdate {
+	stu.mutation.AddGinFileMiddlewareIDs(ids...)
 	return stu
 }
 
-// AddServerTaskToGinFileMiddleware adds the "ServerTaskToGinFileMiddleware" edges to the GinFileMiddleware entity.
-func (stu *ServerTaskUpdate) AddServerTaskToGinFileMiddleware(g ...*GinFileMiddleware) *ServerTaskUpdate {
+// AddGinFileMiddleware adds the "GinFileMiddleware" edges to the GinFileMiddleware entity.
+func (stu *ServerTaskUpdate) AddGinFileMiddleware(g ...*GinFileMiddleware) *ServerTaskUpdate {
 	ids := make([]uuid.UUID, len(g))
 	for i := range g {
 		ids[i] = g[i].ID
 	}
-	return stu.AddServerTaskToGinFileMiddlewareIDs(ids...)
+	return stu.AddGinFileMiddlewareIDs(ids...)
 }
 
 // Mutation returns the ServerTaskMutation object of the builder.
@@ -212,55 +212,55 @@ func (stu *ServerTaskUpdate) Mutation() *ServerTaskMutation {
 	return stu.mutation
 }
 
-// ClearServerTaskToAuthUser clears the "ServerTaskToAuthUser" edge to the AuthUser entity.
-func (stu *ServerTaskUpdate) ClearServerTaskToAuthUser() *ServerTaskUpdate {
-	stu.mutation.ClearServerTaskToAuthUser()
+// ClearAuthUser clears the "AuthUser" edge to the AuthUser entity.
+func (stu *ServerTaskUpdate) ClearAuthUser() *ServerTaskUpdate {
+	stu.mutation.ClearAuthUser()
 	return stu
 }
 
-// ClearServerTaskToStatus clears the "ServerTaskToStatus" edge to the Status entity.
-func (stu *ServerTaskUpdate) ClearServerTaskToStatus() *ServerTaskUpdate {
-	stu.mutation.ClearServerTaskToStatus()
+// ClearStatus clears the "Status" edge to the Status entity.
+func (stu *ServerTaskUpdate) ClearStatus() *ServerTaskUpdate {
+	stu.mutation.ClearStatus()
 	return stu
 }
 
-// ClearServerTaskToEnvironment clears the "ServerTaskToEnvironment" edge to the Environment entity.
-func (stu *ServerTaskUpdate) ClearServerTaskToEnvironment() *ServerTaskUpdate {
-	stu.mutation.ClearServerTaskToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (stu *ServerTaskUpdate) ClearEnvironment() *ServerTaskUpdate {
+	stu.mutation.ClearEnvironment()
 	return stu
 }
 
-// ClearServerTaskToBuild clears the "ServerTaskToBuild" edge to the Build entity.
-func (stu *ServerTaskUpdate) ClearServerTaskToBuild() *ServerTaskUpdate {
-	stu.mutation.ClearServerTaskToBuild()
+// ClearBuild clears the "Build" edge to the Build entity.
+func (stu *ServerTaskUpdate) ClearBuild() *ServerTaskUpdate {
+	stu.mutation.ClearBuild()
 	return stu
 }
 
-// ClearServerTaskToBuildCommit clears the "ServerTaskToBuildCommit" edge to the BuildCommit entity.
-func (stu *ServerTaskUpdate) ClearServerTaskToBuildCommit() *ServerTaskUpdate {
-	stu.mutation.ClearServerTaskToBuildCommit()
+// ClearBuildCommit clears the "BuildCommit" edge to the BuildCommit entity.
+func (stu *ServerTaskUpdate) ClearBuildCommit() *ServerTaskUpdate {
+	stu.mutation.ClearBuildCommit()
 	return stu
 }
 
-// ClearServerTaskToGinFileMiddleware clears all "ServerTaskToGinFileMiddleware" edges to the GinFileMiddleware entity.
-func (stu *ServerTaskUpdate) ClearServerTaskToGinFileMiddleware() *ServerTaskUpdate {
-	stu.mutation.ClearServerTaskToGinFileMiddleware()
+// ClearGinFileMiddleware clears all "GinFileMiddleware" edges to the GinFileMiddleware entity.
+func (stu *ServerTaskUpdate) ClearGinFileMiddleware() *ServerTaskUpdate {
+	stu.mutation.ClearGinFileMiddleware()
 	return stu
 }
 
-// RemoveServerTaskToGinFileMiddlewareIDs removes the "ServerTaskToGinFileMiddleware" edge to GinFileMiddleware entities by IDs.
-func (stu *ServerTaskUpdate) RemoveServerTaskToGinFileMiddlewareIDs(ids ...uuid.UUID) *ServerTaskUpdate {
-	stu.mutation.RemoveServerTaskToGinFileMiddlewareIDs(ids...)
+// RemoveGinFileMiddlewareIDs removes the "GinFileMiddleware" edge to GinFileMiddleware entities by IDs.
+func (stu *ServerTaskUpdate) RemoveGinFileMiddlewareIDs(ids ...uuid.UUID) *ServerTaskUpdate {
+	stu.mutation.RemoveGinFileMiddlewareIDs(ids...)
 	return stu
 }
 
-// RemoveServerTaskToGinFileMiddleware removes "ServerTaskToGinFileMiddleware" edges to GinFileMiddleware entities.
-func (stu *ServerTaskUpdate) RemoveServerTaskToGinFileMiddleware(g ...*GinFileMiddleware) *ServerTaskUpdate {
+// RemoveGinFileMiddleware removes "GinFileMiddleware" edges to GinFileMiddleware entities.
+func (stu *ServerTaskUpdate) RemoveGinFileMiddleware(g ...*GinFileMiddleware) *ServerTaskUpdate {
 	ids := make([]uuid.UUID, len(g))
 	for i := range g {
 		ids[i] = g[i].ID
 	}
-	return stu.RemoveServerTaskToGinFileMiddlewareIDs(ids...)
+	return stu.RemoveGinFileMiddlewareIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -330,11 +330,11 @@ func (stu *ServerTaskUpdate) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ServerTask.type": %w`, err)}
 		}
 	}
-	if _, ok := stu.mutation.ServerTaskToAuthUserID(); stu.mutation.ServerTaskToAuthUserCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "ServerTask.ServerTaskToAuthUser"`)
+	if _, ok := stu.mutation.AuthUserID(); stu.mutation.AuthUserCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ServerTask.AuthUser"`)
 	}
-	if _, ok := stu.mutation.ServerTaskToStatusID(); stu.mutation.ServerTaskToStatusCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "ServerTask.ServerTaskToStatus"`)
+	if _, ok := stu.mutation.StatusID(); stu.mutation.StatusCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ServerTask.Status"`)
 	}
 	return nil
 }
@@ -416,12 +416,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: servertask.FieldLogFilePath,
 		})
 	}
-	if stu.mutation.ServerTaskToAuthUserCleared() {
+	if stu.mutation.AuthUserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToAuthUserTable,
-			Columns: []string{servertask.ServerTaskToAuthUserColumn},
+			Table:   servertask.AuthUserTable,
+			Columns: []string{servertask.AuthUserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -432,12 +432,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stu.mutation.ServerTaskToAuthUserIDs(); len(nodes) > 0 {
+	if nodes := stu.mutation.AuthUserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToAuthUserTable,
-			Columns: []string{servertask.ServerTaskToAuthUserColumn},
+			Table:   servertask.AuthUserTable,
+			Columns: []string{servertask.AuthUserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -451,12 +451,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if stu.mutation.ServerTaskToStatusCleared() {
+	if stu.mutation.StatusCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToStatusTable,
-			Columns: []string{servertask.ServerTaskToStatusColumn},
+			Table:   servertask.StatusTable,
+			Columns: []string{servertask.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -467,12 +467,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stu.mutation.ServerTaskToStatusIDs(); len(nodes) > 0 {
+	if nodes := stu.mutation.StatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToStatusTable,
-			Columns: []string{servertask.ServerTaskToStatusColumn},
+			Table:   servertask.StatusTable,
+			Columns: []string{servertask.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -486,12 +486,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if stu.mutation.ServerTaskToEnvironmentCleared() {
+	if stu.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToEnvironmentTable,
-			Columns: []string{servertask.ServerTaskToEnvironmentColumn},
+			Table:   servertask.EnvironmentTable,
+			Columns: []string{servertask.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -502,12 +502,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stu.mutation.ServerTaskToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := stu.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToEnvironmentTable,
-			Columns: []string{servertask.ServerTaskToEnvironmentColumn},
+			Table:   servertask.EnvironmentTable,
+			Columns: []string{servertask.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -521,12 +521,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if stu.mutation.ServerTaskToBuildCleared() {
+	if stu.mutation.BuildCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToBuildTable,
-			Columns: []string{servertask.ServerTaskToBuildColumn},
+			Table:   servertask.BuildTable,
+			Columns: []string{servertask.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -537,12 +537,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stu.mutation.ServerTaskToBuildIDs(); len(nodes) > 0 {
+	if nodes := stu.mutation.BuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToBuildTable,
-			Columns: []string{servertask.ServerTaskToBuildColumn},
+			Table:   servertask.BuildTable,
+			Columns: []string{servertask.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -556,12 +556,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if stu.mutation.ServerTaskToBuildCommitCleared() {
+	if stu.mutation.BuildCommitCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToBuildCommitTable,
-			Columns: []string{servertask.ServerTaskToBuildCommitColumn},
+			Table:   servertask.BuildCommitTable,
+			Columns: []string{servertask.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -572,12 +572,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stu.mutation.ServerTaskToBuildCommitIDs(); len(nodes) > 0 {
+	if nodes := stu.mutation.BuildCommitIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToBuildCommitTable,
-			Columns: []string{servertask.ServerTaskToBuildCommitColumn},
+			Table:   servertask.BuildCommitTable,
+			Columns: []string{servertask.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -591,12 +591,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if stu.mutation.ServerTaskToGinFileMiddlewareCleared() {
+	if stu.mutation.GinFileMiddlewareCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   servertask.ServerTaskToGinFileMiddlewareTable,
-			Columns: []string{servertask.ServerTaskToGinFileMiddlewareColumn},
+			Table:   servertask.GinFileMiddlewareTable,
+			Columns: []string{servertask.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -607,12 +607,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stu.mutation.RemovedServerTaskToGinFileMiddlewareIDs(); len(nodes) > 0 && !stu.mutation.ServerTaskToGinFileMiddlewareCleared() {
+	if nodes := stu.mutation.RemovedGinFileMiddlewareIDs(); len(nodes) > 0 && !stu.mutation.GinFileMiddlewareCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   servertask.ServerTaskToGinFileMiddlewareTable,
-			Columns: []string{servertask.ServerTaskToGinFileMiddlewareColumn},
+			Table:   servertask.GinFileMiddlewareTable,
+			Columns: []string{servertask.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -626,12 +626,12 @@ func (stu *ServerTaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stu.mutation.ServerTaskToGinFileMiddlewareIDs(); len(nodes) > 0 {
+	if nodes := stu.mutation.GinFileMiddlewareIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   servertask.ServerTaskToGinFileMiddlewareTable,
-			Columns: []string{servertask.ServerTaskToGinFileMiddlewareColumn},
+			Table:   servertask.GinFileMiddlewareTable,
+			Columns: []string{servertask.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -742,98 +742,98 @@ func (stuo *ServerTaskUpdateOne) ClearLogFilePath() *ServerTaskUpdateOne {
 	return stuo
 }
 
-// SetServerTaskToAuthUserID sets the "ServerTaskToAuthUser" edge to the AuthUser entity by ID.
-func (stuo *ServerTaskUpdateOne) SetServerTaskToAuthUserID(id uuid.UUID) *ServerTaskUpdateOne {
-	stuo.mutation.SetServerTaskToAuthUserID(id)
+// SetAuthUserID sets the "AuthUser" edge to the AuthUser entity by ID.
+func (stuo *ServerTaskUpdateOne) SetAuthUserID(id uuid.UUID) *ServerTaskUpdateOne {
+	stuo.mutation.SetAuthUserID(id)
 	return stuo
 }
 
-// SetServerTaskToAuthUser sets the "ServerTaskToAuthUser" edge to the AuthUser entity.
-func (stuo *ServerTaskUpdateOne) SetServerTaskToAuthUser(a *AuthUser) *ServerTaskUpdateOne {
-	return stuo.SetServerTaskToAuthUserID(a.ID)
+// SetAuthUser sets the "AuthUser" edge to the AuthUser entity.
+func (stuo *ServerTaskUpdateOne) SetAuthUser(a *AuthUser) *ServerTaskUpdateOne {
+	return stuo.SetAuthUserID(a.ID)
 }
 
-// SetServerTaskToStatusID sets the "ServerTaskToStatus" edge to the Status entity by ID.
-func (stuo *ServerTaskUpdateOne) SetServerTaskToStatusID(id uuid.UUID) *ServerTaskUpdateOne {
-	stuo.mutation.SetServerTaskToStatusID(id)
+// SetStatusID sets the "Status" edge to the Status entity by ID.
+func (stuo *ServerTaskUpdateOne) SetStatusID(id uuid.UUID) *ServerTaskUpdateOne {
+	stuo.mutation.SetStatusID(id)
 	return stuo
 }
 
-// SetServerTaskToStatus sets the "ServerTaskToStatus" edge to the Status entity.
-func (stuo *ServerTaskUpdateOne) SetServerTaskToStatus(s *Status) *ServerTaskUpdateOne {
-	return stuo.SetServerTaskToStatusID(s.ID)
+// SetStatus sets the "Status" edge to the Status entity.
+func (stuo *ServerTaskUpdateOne) SetStatus(s *Status) *ServerTaskUpdateOne {
+	return stuo.SetStatusID(s.ID)
 }
 
-// SetServerTaskToEnvironmentID sets the "ServerTaskToEnvironment" edge to the Environment entity by ID.
-func (stuo *ServerTaskUpdateOne) SetServerTaskToEnvironmentID(id uuid.UUID) *ServerTaskUpdateOne {
-	stuo.mutation.SetServerTaskToEnvironmentID(id)
+// SetEnvironmentID sets the "Environment" edge to the Environment entity by ID.
+func (stuo *ServerTaskUpdateOne) SetEnvironmentID(id uuid.UUID) *ServerTaskUpdateOne {
+	stuo.mutation.SetEnvironmentID(id)
 	return stuo
 }
 
-// SetNillableServerTaskToEnvironmentID sets the "ServerTaskToEnvironment" edge to the Environment entity by ID if the given value is not nil.
-func (stuo *ServerTaskUpdateOne) SetNillableServerTaskToEnvironmentID(id *uuid.UUID) *ServerTaskUpdateOne {
+// SetNillableEnvironmentID sets the "Environment" edge to the Environment entity by ID if the given value is not nil.
+func (stuo *ServerTaskUpdateOne) SetNillableEnvironmentID(id *uuid.UUID) *ServerTaskUpdateOne {
 	if id != nil {
-		stuo = stuo.SetServerTaskToEnvironmentID(*id)
+		stuo = stuo.SetEnvironmentID(*id)
 	}
 	return stuo
 }
 
-// SetServerTaskToEnvironment sets the "ServerTaskToEnvironment" edge to the Environment entity.
-func (stuo *ServerTaskUpdateOne) SetServerTaskToEnvironment(e *Environment) *ServerTaskUpdateOne {
-	return stuo.SetServerTaskToEnvironmentID(e.ID)
+// SetEnvironment sets the "Environment" edge to the Environment entity.
+func (stuo *ServerTaskUpdateOne) SetEnvironment(e *Environment) *ServerTaskUpdateOne {
+	return stuo.SetEnvironmentID(e.ID)
 }
 
-// SetServerTaskToBuildID sets the "ServerTaskToBuild" edge to the Build entity by ID.
-func (stuo *ServerTaskUpdateOne) SetServerTaskToBuildID(id uuid.UUID) *ServerTaskUpdateOne {
-	stuo.mutation.SetServerTaskToBuildID(id)
+// SetBuildID sets the "Build" edge to the Build entity by ID.
+func (stuo *ServerTaskUpdateOne) SetBuildID(id uuid.UUID) *ServerTaskUpdateOne {
+	stuo.mutation.SetBuildID(id)
 	return stuo
 }
 
-// SetNillableServerTaskToBuildID sets the "ServerTaskToBuild" edge to the Build entity by ID if the given value is not nil.
-func (stuo *ServerTaskUpdateOne) SetNillableServerTaskToBuildID(id *uuid.UUID) *ServerTaskUpdateOne {
+// SetNillableBuildID sets the "Build" edge to the Build entity by ID if the given value is not nil.
+func (stuo *ServerTaskUpdateOne) SetNillableBuildID(id *uuid.UUID) *ServerTaskUpdateOne {
 	if id != nil {
-		stuo = stuo.SetServerTaskToBuildID(*id)
+		stuo = stuo.SetBuildID(*id)
 	}
 	return stuo
 }
 
-// SetServerTaskToBuild sets the "ServerTaskToBuild" edge to the Build entity.
-func (stuo *ServerTaskUpdateOne) SetServerTaskToBuild(b *Build) *ServerTaskUpdateOne {
-	return stuo.SetServerTaskToBuildID(b.ID)
+// SetBuild sets the "Build" edge to the Build entity.
+func (stuo *ServerTaskUpdateOne) SetBuild(b *Build) *ServerTaskUpdateOne {
+	return stuo.SetBuildID(b.ID)
 }
 
-// SetServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by ID.
-func (stuo *ServerTaskUpdateOne) SetServerTaskToBuildCommitID(id uuid.UUID) *ServerTaskUpdateOne {
-	stuo.mutation.SetServerTaskToBuildCommitID(id)
+// SetBuildCommitID sets the "BuildCommit" edge to the BuildCommit entity by ID.
+func (stuo *ServerTaskUpdateOne) SetBuildCommitID(id uuid.UUID) *ServerTaskUpdateOne {
+	stuo.mutation.SetBuildCommitID(id)
 	return stuo
 }
 
-// SetNillableServerTaskToBuildCommitID sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity by ID if the given value is not nil.
-func (stuo *ServerTaskUpdateOne) SetNillableServerTaskToBuildCommitID(id *uuid.UUID) *ServerTaskUpdateOne {
+// SetNillableBuildCommitID sets the "BuildCommit" edge to the BuildCommit entity by ID if the given value is not nil.
+func (stuo *ServerTaskUpdateOne) SetNillableBuildCommitID(id *uuid.UUID) *ServerTaskUpdateOne {
 	if id != nil {
-		stuo = stuo.SetServerTaskToBuildCommitID(*id)
+		stuo = stuo.SetBuildCommitID(*id)
 	}
 	return stuo
 }
 
-// SetServerTaskToBuildCommit sets the "ServerTaskToBuildCommit" edge to the BuildCommit entity.
-func (stuo *ServerTaskUpdateOne) SetServerTaskToBuildCommit(b *BuildCommit) *ServerTaskUpdateOne {
-	return stuo.SetServerTaskToBuildCommitID(b.ID)
+// SetBuildCommit sets the "BuildCommit" edge to the BuildCommit entity.
+func (stuo *ServerTaskUpdateOne) SetBuildCommit(b *BuildCommit) *ServerTaskUpdateOne {
+	return stuo.SetBuildCommitID(b.ID)
 }
 
-// AddServerTaskToGinFileMiddlewareIDs adds the "ServerTaskToGinFileMiddleware" edge to the GinFileMiddleware entity by IDs.
-func (stuo *ServerTaskUpdateOne) AddServerTaskToGinFileMiddlewareIDs(ids ...uuid.UUID) *ServerTaskUpdateOne {
-	stuo.mutation.AddServerTaskToGinFileMiddlewareIDs(ids...)
+// AddGinFileMiddlewareIDs adds the "GinFileMiddleware" edge to the GinFileMiddleware entity by IDs.
+func (stuo *ServerTaskUpdateOne) AddGinFileMiddlewareIDs(ids ...uuid.UUID) *ServerTaskUpdateOne {
+	stuo.mutation.AddGinFileMiddlewareIDs(ids...)
 	return stuo
 }
 
-// AddServerTaskToGinFileMiddleware adds the "ServerTaskToGinFileMiddleware" edges to the GinFileMiddleware entity.
-func (stuo *ServerTaskUpdateOne) AddServerTaskToGinFileMiddleware(g ...*GinFileMiddleware) *ServerTaskUpdateOne {
+// AddGinFileMiddleware adds the "GinFileMiddleware" edges to the GinFileMiddleware entity.
+func (stuo *ServerTaskUpdateOne) AddGinFileMiddleware(g ...*GinFileMiddleware) *ServerTaskUpdateOne {
 	ids := make([]uuid.UUID, len(g))
 	for i := range g {
 		ids[i] = g[i].ID
 	}
-	return stuo.AddServerTaskToGinFileMiddlewareIDs(ids...)
+	return stuo.AddGinFileMiddlewareIDs(ids...)
 }
 
 // Mutation returns the ServerTaskMutation object of the builder.
@@ -841,55 +841,55 @@ func (stuo *ServerTaskUpdateOne) Mutation() *ServerTaskMutation {
 	return stuo.mutation
 }
 
-// ClearServerTaskToAuthUser clears the "ServerTaskToAuthUser" edge to the AuthUser entity.
-func (stuo *ServerTaskUpdateOne) ClearServerTaskToAuthUser() *ServerTaskUpdateOne {
-	stuo.mutation.ClearServerTaskToAuthUser()
+// ClearAuthUser clears the "AuthUser" edge to the AuthUser entity.
+func (stuo *ServerTaskUpdateOne) ClearAuthUser() *ServerTaskUpdateOne {
+	stuo.mutation.ClearAuthUser()
 	return stuo
 }
 
-// ClearServerTaskToStatus clears the "ServerTaskToStatus" edge to the Status entity.
-func (stuo *ServerTaskUpdateOne) ClearServerTaskToStatus() *ServerTaskUpdateOne {
-	stuo.mutation.ClearServerTaskToStatus()
+// ClearStatus clears the "Status" edge to the Status entity.
+func (stuo *ServerTaskUpdateOne) ClearStatus() *ServerTaskUpdateOne {
+	stuo.mutation.ClearStatus()
 	return stuo
 }
 
-// ClearServerTaskToEnvironment clears the "ServerTaskToEnvironment" edge to the Environment entity.
-func (stuo *ServerTaskUpdateOne) ClearServerTaskToEnvironment() *ServerTaskUpdateOne {
-	stuo.mutation.ClearServerTaskToEnvironment()
+// ClearEnvironment clears the "Environment" edge to the Environment entity.
+func (stuo *ServerTaskUpdateOne) ClearEnvironment() *ServerTaskUpdateOne {
+	stuo.mutation.ClearEnvironment()
 	return stuo
 }
 
-// ClearServerTaskToBuild clears the "ServerTaskToBuild" edge to the Build entity.
-func (stuo *ServerTaskUpdateOne) ClearServerTaskToBuild() *ServerTaskUpdateOne {
-	stuo.mutation.ClearServerTaskToBuild()
+// ClearBuild clears the "Build" edge to the Build entity.
+func (stuo *ServerTaskUpdateOne) ClearBuild() *ServerTaskUpdateOne {
+	stuo.mutation.ClearBuild()
 	return stuo
 }
 
-// ClearServerTaskToBuildCommit clears the "ServerTaskToBuildCommit" edge to the BuildCommit entity.
-func (stuo *ServerTaskUpdateOne) ClearServerTaskToBuildCommit() *ServerTaskUpdateOne {
-	stuo.mutation.ClearServerTaskToBuildCommit()
+// ClearBuildCommit clears the "BuildCommit" edge to the BuildCommit entity.
+func (stuo *ServerTaskUpdateOne) ClearBuildCommit() *ServerTaskUpdateOne {
+	stuo.mutation.ClearBuildCommit()
 	return stuo
 }
 
-// ClearServerTaskToGinFileMiddleware clears all "ServerTaskToGinFileMiddleware" edges to the GinFileMiddleware entity.
-func (stuo *ServerTaskUpdateOne) ClearServerTaskToGinFileMiddleware() *ServerTaskUpdateOne {
-	stuo.mutation.ClearServerTaskToGinFileMiddleware()
+// ClearGinFileMiddleware clears all "GinFileMiddleware" edges to the GinFileMiddleware entity.
+func (stuo *ServerTaskUpdateOne) ClearGinFileMiddleware() *ServerTaskUpdateOne {
+	stuo.mutation.ClearGinFileMiddleware()
 	return stuo
 }
 
-// RemoveServerTaskToGinFileMiddlewareIDs removes the "ServerTaskToGinFileMiddleware" edge to GinFileMiddleware entities by IDs.
-func (stuo *ServerTaskUpdateOne) RemoveServerTaskToGinFileMiddlewareIDs(ids ...uuid.UUID) *ServerTaskUpdateOne {
-	stuo.mutation.RemoveServerTaskToGinFileMiddlewareIDs(ids...)
+// RemoveGinFileMiddlewareIDs removes the "GinFileMiddleware" edge to GinFileMiddleware entities by IDs.
+func (stuo *ServerTaskUpdateOne) RemoveGinFileMiddlewareIDs(ids ...uuid.UUID) *ServerTaskUpdateOne {
+	stuo.mutation.RemoveGinFileMiddlewareIDs(ids...)
 	return stuo
 }
 
-// RemoveServerTaskToGinFileMiddleware removes "ServerTaskToGinFileMiddleware" edges to GinFileMiddleware entities.
-func (stuo *ServerTaskUpdateOne) RemoveServerTaskToGinFileMiddleware(g ...*GinFileMiddleware) *ServerTaskUpdateOne {
+// RemoveGinFileMiddleware removes "GinFileMiddleware" edges to GinFileMiddleware entities.
+func (stuo *ServerTaskUpdateOne) RemoveGinFileMiddleware(g ...*GinFileMiddleware) *ServerTaskUpdateOne {
 	ids := make([]uuid.UUID, len(g))
 	for i := range g {
 		ids[i] = g[i].ID
 	}
-	return stuo.RemoveServerTaskToGinFileMiddlewareIDs(ids...)
+	return stuo.RemoveGinFileMiddlewareIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -972,11 +972,11 @@ func (stuo *ServerTaskUpdateOne) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ServerTask.type": %w`, err)}
 		}
 	}
-	if _, ok := stuo.mutation.ServerTaskToAuthUserID(); stuo.mutation.ServerTaskToAuthUserCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "ServerTask.ServerTaskToAuthUser"`)
+	if _, ok := stuo.mutation.AuthUserID(); stuo.mutation.AuthUserCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ServerTask.AuthUser"`)
 	}
-	if _, ok := stuo.mutation.ServerTaskToStatusID(); stuo.mutation.ServerTaskToStatusCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "ServerTask.ServerTaskToStatus"`)
+	if _, ok := stuo.mutation.StatusID(); stuo.mutation.StatusCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ServerTask.Status"`)
 	}
 	return nil
 }
@@ -1075,12 +1075,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 			Column: servertask.FieldLogFilePath,
 		})
 	}
-	if stuo.mutation.ServerTaskToAuthUserCleared() {
+	if stuo.mutation.AuthUserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToAuthUserTable,
-			Columns: []string{servertask.ServerTaskToAuthUserColumn},
+			Table:   servertask.AuthUserTable,
+			Columns: []string{servertask.AuthUserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1091,12 +1091,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stuo.mutation.ServerTaskToAuthUserIDs(); len(nodes) > 0 {
+	if nodes := stuo.mutation.AuthUserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToAuthUserTable,
-			Columns: []string{servertask.ServerTaskToAuthUserColumn},
+			Table:   servertask.AuthUserTable,
+			Columns: []string{servertask.AuthUserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1110,12 +1110,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if stuo.mutation.ServerTaskToStatusCleared() {
+	if stuo.mutation.StatusCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToStatusTable,
-			Columns: []string{servertask.ServerTaskToStatusColumn},
+			Table:   servertask.StatusTable,
+			Columns: []string{servertask.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1126,12 +1126,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stuo.mutation.ServerTaskToStatusIDs(); len(nodes) > 0 {
+	if nodes := stuo.mutation.StatusIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToStatusTable,
-			Columns: []string{servertask.ServerTaskToStatusColumn},
+			Table:   servertask.StatusTable,
+			Columns: []string{servertask.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1145,12 +1145,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if stuo.mutation.ServerTaskToEnvironmentCleared() {
+	if stuo.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToEnvironmentTable,
-			Columns: []string{servertask.ServerTaskToEnvironmentColumn},
+			Table:   servertask.EnvironmentTable,
+			Columns: []string{servertask.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1161,12 +1161,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stuo.mutation.ServerTaskToEnvironmentIDs(); len(nodes) > 0 {
+	if nodes := stuo.mutation.EnvironmentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToEnvironmentTable,
-			Columns: []string{servertask.ServerTaskToEnvironmentColumn},
+			Table:   servertask.EnvironmentTable,
+			Columns: []string{servertask.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1180,12 +1180,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if stuo.mutation.ServerTaskToBuildCleared() {
+	if stuo.mutation.BuildCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToBuildTable,
-			Columns: []string{servertask.ServerTaskToBuildColumn},
+			Table:   servertask.BuildTable,
+			Columns: []string{servertask.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1196,12 +1196,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stuo.mutation.ServerTaskToBuildIDs(); len(nodes) > 0 {
+	if nodes := stuo.mutation.BuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToBuildTable,
-			Columns: []string{servertask.ServerTaskToBuildColumn},
+			Table:   servertask.BuildTable,
+			Columns: []string{servertask.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1215,12 +1215,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if stuo.mutation.ServerTaskToBuildCommitCleared() {
+	if stuo.mutation.BuildCommitCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToBuildCommitTable,
-			Columns: []string{servertask.ServerTaskToBuildCommitColumn},
+			Table:   servertask.BuildCommitTable,
+			Columns: []string{servertask.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1231,12 +1231,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stuo.mutation.ServerTaskToBuildCommitIDs(); len(nodes) > 0 {
+	if nodes := stuo.mutation.BuildCommitIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   servertask.ServerTaskToBuildCommitTable,
-			Columns: []string{servertask.ServerTaskToBuildCommitColumn},
+			Table:   servertask.BuildCommitTable,
+			Columns: []string{servertask.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1250,12 +1250,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if stuo.mutation.ServerTaskToGinFileMiddlewareCleared() {
+	if stuo.mutation.GinFileMiddlewareCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   servertask.ServerTaskToGinFileMiddlewareTable,
-			Columns: []string{servertask.ServerTaskToGinFileMiddlewareColumn},
+			Table:   servertask.GinFileMiddlewareTable,
+			Columns: []string{servertask.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1266,12 +1266,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stuo.mutation.RemovedServerTaskToGinFileMiddlewareIDs(); len(nodes) > 0 && !stuo.mutation.ServerTaskToGinFileMiddlewareCleared() {
+	if nodes := stuo.mutation.RemovedGinFileMiddlewareIDs(); len(nodes) > 0 && !stuo.mutation.GinFileMiddlewareCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   servertask.ServerTaskToGinFileMiddlewareTable,
-			Columns: []string{servertask.ServerTaskToGinFileMiddlewareColumn},
+			Table:   servertask.GinFileMiddlewareTable,
+			Columns: []string{servertask.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1285,12 +1285,12 @@ func (stuo *ServerTaskUpdateOne) sqlSave(ctx context.Context) (_node *ServerTask
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := stuo.mutation.ServerTaskToGinFileMiddlewareIDs(); len(nodes) > 0 {
+	if nodes := stuo.mutation.GinFileMiddlewareIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   servertask.ServerTaskToGinFileMiddlewareTable,
-			Columns: []string{servertask.ServerTaskToGinFileMiddlewareColumn},
+			Table:   servertask.GinFileMiddlewareTable,
+			Columns: []string{servertask.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

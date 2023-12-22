@@ -39,33 +39,33 @@ type DNSRecord struct {
 	Edges DNSRecordEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// DNSRecordToEnvironment holds the value of the DNSRecordToEnvironment edge.
-	HCLDNSRecordToEnvironment *Environment `json:"DNSRecordToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	//
-	environment_environment_to_dns_record *uuid.UUID
+	environment_dns_records *uuid.UUID
 }
 
 // DNSRecordEdges holds the relations/edges for other nodes in the graph.
 type DNSRecordEdges struct {
-	// DNSRecordToEnvironment holds the value of the DNSRecordToEnvironment edge.
-	DNSRecordToEnvironment *Environment `json:"DNSRecordToEnvironment,omitempty"`
+	// Environment holds the value of the Environment edge.
+	Environment *Environment `json:"Environment,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// DNSRecordToEnvironmentOrErr returns the DNSRecordToEnvironment value or an error if the edge
+// EnvironmentOrErr returns the Environment value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e DNSRecordEdges) DNSRecordToEnvironmentOrErr() (*Environment, error) {
+func (e DNSRecordEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[0] {
-		if e.DNSRecordToEnvironment == nil {
-			// The edge DNSRecordToEnvironment was loaded in eager-loading,
+		if e.Environment == nil {
+			// The edge Environment was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
-		return e.DNSRecordToEnvironment, nil
+		return e.Environment, nil
 	}
-	return nil, &NotLoadedError{edge: "DNSRecordToEnvironment"}
+	return nil, &NotLoadedError{edge: "Environment"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -81,7 +81,7 @@ func (*DNSRecord) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case dnsrecord.FieldID:
 			values[i] = new(uuid.UUID)
-		case dnsrecord.ForeignKeys[0]: // environment_environment_to_dns_record
+		case dnsrecord.ForeignKeys[0]: // environment_dns_records
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type DNSRecord", columns[i])
@@ -160,19 +160,19 @@ func (dr *DNSRecord) assignValues(columns []string, values []interface{}) error 
 			}
 		case dnsrecord.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field environment_environment_to_dns_record", values[i])
+				return fmt.Errorf("unexpected type %T for field environment_dns_records", values[i])
 			} else if value.Valid {
-				dr.environment_environment_to_dns_record = new(uuid.UUID)
-				*dr.environment_environment_to_dns_record = *value.S.(*uuid.UUID)
+				dr.environment_dns_records = new(uuid.UUID)
+				*dr.environment_dns_records = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryDNSRecordToEnvironment queries the "DNSRecordToEnvironment" edge of the DNSRecord entity.
-func (dr *DNSRecord) QueryDNSRecordToEnvironment() *EnvironmentQuery {
-	return (&DNSRecordClient{config: dr.config}).QueryDNSRecordToEnvironment(dr)
+// QueryEnvironment queries the "Environment" edge of the DNSRecord entity.
+func (dr *DNSRecord) QueryEnvironment() *EnvironmentQuery {
+	return (&DNSRecordClient{config: dr.config}).QueryEnvironment(dr)
 }
 
 // Update returns a builder for updating this DNSRecord.

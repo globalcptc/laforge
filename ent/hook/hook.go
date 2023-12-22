@@ -360,15 +360,15 @@ func (f ProvisionedNetworkFunc) Mutate(ctx context.Context, m ent.Mutation) (ent
 	return f(ctx, mv)
 }
 
-// The ProvisionedScheduleStepFunc type is an adapter to allow the use of ordinary
-// function as ProvisionedScheduleStep mutator.
-type ProvisionedScheduleStepFunc func(context.Context, *ent.ProvisionedScheduleStepMutation) (ent.Value, error)
+// The ProvisioningScheduledStepFunc type is an adapter to allow the use of ordinary
+// function as ProvisioningScheduledStep mutator.
+type ProvisioningScheduledStepFunc func(context.Context, *ent.ProvisioningScheduledStepMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f ProvisionedScheduleStepFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	mv, ok := m.(*ent.ProvisionedScheduleStepMutation)
+func (f ProvisioningScheduledStepFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.ProvisioningScheduledStepMutation)
 	if !ok {
-		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProvisionedScheduleStepMutation", m)
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProvisioningScheduledStepMutation", m)
 	}
 	return f(ctx, mv)
 }
@@ -412,15 +412,15 @@ func (f RepositoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return f(ctx, mv)
 }
 
-// The ScheduleStepFunc type is an adapter to allow the use of ordinary
-// function as ScheduleStep mutator.
-type ScheduleStepFunc func(context.Context, *ent.ScheduleStepMutation) (ent.Value, error)
+// The ScheduledStepFunc type is an adapter to allow the use of ordinary
+// function as ScheduledStep mutator.
+type ScheduledStepFunc func(context.Context, *ent.ScheduledStepMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f ScheduleStepFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	mv, ok := m.(*ent.ScheduleStepMutation)
+func (f ScheduledStepFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.ScheduledStepMutation)
 	if !ok {
-		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ScheduleStepMutation", m)
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ScheduledStepMutation", m)
 	}
 	return f(ctx, mv)
 }

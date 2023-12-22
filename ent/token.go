@@ -26,33 +26,33 @@ type Token struct {
 	Edges TokenEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// TokenToAuthUser holds the value of the TokenToAuthUser edge.
-	HCLTokenToAuthUser *AuthUser `json:"TokenToAuthUser,omitempty"`
+	// AuthUser holds the value of the AuthUser edge.
+	HCLAuthUser *AuthUser `json:"AuthUser,omitempty"`
 	//
-	auth_user_auth_user_to_token *uuid.UUID
+	auth_user_tokens *uuid.UUID
 }
 
 // TokenEdges holds the relations/edges for other nodes in the graph.
 type TokenEdges struct {
-	// TokenToAuthUser holds the value of the TokenToAuthUser edge.
-	TokenToAuthUser *AuthUser `json:"TokenToAuthUser,omitempty"`
+	// AuthUser holds the value of the AuthUser edge.
+	AuthUser *AuthUser `json:"AuthUser,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// TokenToAuthUserOrErr returns the TokenToAuthUser value or an error if the edge
+// AuthUserOrErr returns the AuthUser value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e TokenEdges) TokenToAuthUserOrErr() (*AuthUser, error) {
+func (e TokenEdges) AuthUserOrErr() (*AuthUser, error) {
 	if e.loadedTypes[0] {
-		if e.TokenToAuthUser == nil {
-			// The edge TokenToAuthUser was loaded in eager-loading,
+		if e.AuthUser == nil {
+			// The edge AuthUser was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: authuser.Label}
 		}
-		return e.TokenToAuthUser, nil
+		return e.AuthUser, nil
 	}
-	return nil, &NotLoadedError{edge: "TokenToAuthUser"}
+	return nil, &NotLoadedError{edge: "AuthUser"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -66,7 +66,7 @@ func (*Token) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case token.FieldID:
 			values[i] = new(uuid.UUID)
-		case token.ForeignKeys[0]: // auth_user_auth_user_to_token
+		case token.ForeignKeys[0]: // auth_user_tokens
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Token", columns[i])
@@ -103,19 +103,19 @@ func (t *Token) assignValues(columns []string, values []interface{}) error {
 			}
 		case token.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field auth_user_auth_user_to_token", values[i])
+				return fmt.Errorf("unexpected type %T for field auth_user_tokens", values[i])
 			} else if value.Valid {
-				t.auth_user_auth_user_to_token = new(uuid.UUID)
-				*t.auth_user_auth_user_to_token = *value.S.(*uuid.UUID)
+				t.auth_user_tokens = new(uuid.UUID)
+				*t.auth_user_tokens = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryTokenToAuthUser queries the "TokenToAuthUser" edge of the Token entity.
-func (t *Token) QueryTokenToAuthUser() *AuthUserQuery {
-	return (&TokenClient{config: t.config}).QueryTokenToAuthUser(t)
+// QueryAuthUser queries the "AuthUser" edge of the Token entity.
+func (t *Token) QueryAuthUser() *AuthUserQuery {
+	return (&TokenClient{config: t.config}).QueryAuthUser(t)
 }
 
 // Update returns a builder for updating this Token.

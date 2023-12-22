@@ -87,8 +87,8 @@ type ProvisionedHost func(*sql.Selector)
 // ProvisionedNetwork is the predicate function for provisionednetwork builders.
 type ProvisionedNetwork func(*sql.Selector)
 
-// ProvisionedScheduleStep is the predicate function for provisionedschedulestep builders.
-type ProvisionedScheduleStep func(*sql.Selector)
+// ProvisioningScheduledStep is the predicate function for provisioningscheduledstep builders.
+type ProvisioningScheduledStep func(*sql.Selector)
 
 // ProvisioningStep is the predicate function for provisioningstep builders.
 type ProvisioningStep func(*sql.Selector)
@@ -99,8 +99,8 @@ type RepoCommit func(*sql.Selector)
 // Repository is the predicate function for repository builders.
 type Repository func(*sql.Selector)
 
-// ScheduleStep is the predicate function for schedulestep builders.
-type ScheduleStep func(*sql.Selector)
+// ScheduledStep is the predicate function for scheduledstep builders.
+type ScheduledStep func(*sql.Selector)
 
 // Script is the predicate function for script builders.
 type Script func(*sql.Selector)

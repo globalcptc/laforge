@@ -19,14 +19,14 @@ import (
 // FileDownloadQuery is the builder for querying FileDownload entities.
 type FileDownloadQuery struct {
 	config
-	limit                         *int
-	offset                        *int
-	unique                        *bool
-	order                         []OrderFunc
-	fields                        []string
-	predicates                    []predicate.FileDownload
-	withFileDownloadToEnvironment *EnvironmentQuery
-	withFKs                       bool
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.FileDownload
+	withEnvironment *EnvironmentQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,8 +63,8 @@ func (fdq *FileDownloadQuery) Order(o ...OrderFunc) *FileDownloadQuery {
 	return fdq
 }
 
-// QueryFileDownloadToEnvironment chains the current query on the "FileDownloadToEnvironment" edge.
-func (fdq *FileDownloadQuery) QueryFileDownloadToEnvironment() *EnvironmentQuery {
+// QueryEnvironment chains the current query on the "Environment" edge.
+func (fdq *FileDownloadQuery) QueryEnvironment() *EnvironmentQuery {
 	query := &EnvironmentQuery{config: fdq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := fdq.prepareQuery(ctx); err != nil {
@@ -77,7 +77,7 @@ func (fdq *FileDownloadQuery) QueryFileDownloadToEnvironment() *EnvironmentQuery
 		step := sqlgraph.NewStep(
 			sqlgraph.From(filedownload.Table, filedownload.FieldID, selector),
 			sqlgraph.To(environment.Table, environment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, filedownload.FileDownloadToEnvironmentTable, filedownload.FileDownloadToEnvironmentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, filedownload.EnvironmentTable, filedownload.EnvironmentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(fdq.driver.Dialect(), step)
 		return fromU, nil
@@ -261,12 +261,12 @@ func (fdq *FileDownloadQuery) Clone() *FileDownloadQuery {
 		return nil
 	}
 	return &FileDownloadQuery{
-		config:                        fdq.config,
-		limit:                         fdq.limit,
-		offset:                        fdq.offset,
-		order:                         append([]OrderFunc{}, fdq.order...),
-		predicates:                    append([]predicate.FileDownload{}, fdq.predicates...),
-		withFileDownloadToEnvironment: fdq.withFileDownloadToEnvironment.Clone(),
+		config:          fdq.config,
+		limit:           fdq.limit,
+		offset:          fdq.offset,
+		order:           append([]OrderFunc{}, fdq.order...),
+		predicates:      append([]predicate.FileDownload{}, fdq.predicates...),
+		withEnvironment: fdq.withEnvironment.Clone(),
 		// clone intermediate query.
 		sql:    fdq.sql.Clone(),
 		path:   fdq.path,
@@ -274,14 +274,14 @@ func (fdq *FileDownloadQuery) Clone() *FileDownloadQuery {
 	}
 }
 
-// WithFileDownloadToEnvironment tells the query-builder to eager-load the nodes that are connected to
-// the "FileDownloadToEnvironment" edge. The optional arguments are used to configure the query builder of the edge.
-func (fdq *FileDownloadQuery) WithFileDownloadToEnvironment(opts ...func(*EnvironmentQuery)) *FileDownloadQuery {
+// WithEnvironment tells the query-builder to eager-load the nodes that are connected to
+// the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
+func (fdq *FileDownloadQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *FileDownloadQuery {
 	query := &EnvironmentQuery{config: fdq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	fdq.withFileDownloadToEnvironment = query
+	fdq.withEnvironment = query
 	return fdq
 }
 
@@ -355,10 +355,10 @@ func (fdq *FileDownloadQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		withFKs     = fdq.withFKs
 		_spec       = fdq.querySpec()
 		loadedTypes = [1]bool{
-			fdq.withFileDownloadToEnvironment != nil,
+			fdq.withEnvironment != nil,
 		}
 	)
-	if fdq.withFileDownloadToEnvironment != nil {
+	if fdq.withEnvironment != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -382,23 +382,23 @@ func (fdq *FileDownloadQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := fdq.withFileDownloadToEnvironment; query != nil {
-		if err := fdq.loadFileDownloadToEnvironment(ctx, query, nodes, nil,
-			func(n *FileDownload, e *Environment) { n.Edges.FileDownloadToEnvironment = e }); err != nil {
+	if query := fdq.withEnvironment; query != nil {
+		if err := fdq.loadEnvironment(ctx, query, nodes, nil,
+			func(n *FileDownload, e *Environment) { n.Edges.Environment = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (fdq *FileDownloadQuery) loadFileDownloadToEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*FileDownload, init func(*FileDownload), assign func(*FileDownload, *Environment)) error {
+func (fdq *FileDownloadQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuery, nodes []*FileDownload, init func(*FileDownload), assign func(*FileDownload, *Environment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*FileDownload)
 	for i := range nodes {
-		if nodes[i].environment_environment_to_file_download == nil {
+		if nodes[i].environment_file_downloads == nil {
 			continue
 		}
-		fk := *nodes[i].environment_environment_to_file_download
+		fk := *nodes[i].environment_file_downloads
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -412,7 +412,7 @@ func (fdq *FileDownloadQuery) loadFileDownloadToEnvironment(ctx context.Context,
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "environment_environment_to_file_download" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "environment_file_downloads" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

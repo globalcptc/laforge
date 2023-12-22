@@ -31,8 +31,8 @@ func (User) Fields() []ent.Field {
 // Edges of the User.
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("UserToTag", Tag.Type),
-		edge.From("UserToEnvironment", Environment.Type).
-			Ref("EnvironmentToUser"),
+		edge.To("Tag", Tag.Type),
+		edge.From("Environments", Environment.Type).
+			Ref("Users"),
 	}
 }

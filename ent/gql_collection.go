@@ -333,14 +333,14 @@ func (pn *ProvisionedNetworkQuery) collectField(ctx *graphql.OperationContext, f
 }
 
 // CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
-func (pss *ProvisionedScheduleStepQuery) CollectFields(ctx context.Context, satisfies ...string) *ProvisionedScheduleStepQuery {
+func (pss *ProvisioningScheduledStepQuery) CollectFields(ctx context.Context, satisfies ...string) *ProvisioningScheduledStepQuery {
 	if fc := graphql.GetFieldContext(ctx); fc != nil {
 		pss = pss.collectField(graphql.GetOperationContext(ctx), fc.Field, satisfies...)
 	}
 	return pss
 }
 
-func (pss *ProvisionedScheduleStepQuery) collectField(ctx *graphql.OperationContext, field graphql.CollectedField, satisfies ...string) *ProvisionedScheduleStepQuery {
+func (pss *ProvisioningScheduledStepQuery) collectField(ctx *graphql.OperationContext, field graphql.CollectedField, satisfies ...string) *ProvisioningScheduledStepQuery {
 	return pss
 }
 
@@ -381,14 +381,14 @@ func (r *RepositoryQuery) collectField(ctx *graphql.OperationContext, field grap
 }
 
 // CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
-func (ss *ScheduleStepQuery) CollectFields(ctx context.Context, satisfies ...string) *ScheduleStepQuery {
+func (ss *ScheduledStepQuery) CollectFields(ctx context.Context, satisfies ...string) *ScheduledStepQuery {
 	if fc := graphql.GetFieldContext(ctx); fc != nil {
 		ss = ss.collectField(graphql.GetOperationContext(ctx), fc.Field, satisfies...)
 	}
 	return ss
 }
 
-func (ss *ScheduleStepQuery) collectField(ctx *graphql.OperationContext, field graphql.CollectedField, satisfies ...string) *ScheduleStepQuery {
+func (ss *ScheduledStepQuery) collectField(ctx *graphql.OperationContext, field graphql.CollectedField, satisfies ...string) *ScheduledStepQuery {
 	return ss
 }
 

@@ -575,25 +575,25 @@ func TreeHashContainsFold(v string) predicate.RepoCommit {
 	})
 }
 
-// HasRepoCommitToRepository applies the HasEdge predicate on the "RepoCommitToRepository" edge.
-func HasRepoCommitToRepository() predicate.RepoCommit {
+// HasRepository applies the HasEdge predicate on the "Repository" edge.
+func HasRepository() predicate.RepoCommit {
 	return predicate.RepoCommit(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RepoCommitToRepositoryTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, RepoCommitToRepositoryTable, RepoCommitToRepositoryColumn),
+			sqlgraph.To(RepositoryTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, RepositoryTable, RepositoryColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasRepoCommitToRepositoryWith applies the HasEdge predicate on the "RepoCommitToRepository" edge with a given conditions (other predicates).
-func HasRepoCommitToRepositoryWith(preds ...predicate.Repository) predicate.RepoCommit {
+// HasRepositoryWith applies the HasEdge predicate on the "Repository" edge with a given conditions (other predicates).
+func HasRepositoryWith(preds ...predicate.Repository) predicate.RepoCommit {
 	return predicate.RepoCommit(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RepoCommitToRepositoryInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, RepoCommitToRepositoryTable, RepoCommitToRepositoryColumn),
+			sqlgraph.To(RepositoryInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, RepositoryTable, RepositoryColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

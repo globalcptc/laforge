@@ -16,9 +16,8 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
-	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
@@ -28,23 +27,22 @@ import (
 // StatusQuery is the builder for querying Status entities.
 type StatusQuery struct {
 	config
-	limit                               *int
-	offset                              *int
-	unique                              *bool
-	order                               []OrderFunc
-	fields                              []string
-	predicates                          []predicate.Status
-	withStatusToBuild                   *BuildQuery
-	withStatusToProvisionedNetwork      *ProvisionedNetworkQuery
-	withStatusToProvisionedHost         *ProvisionedHostQuery
-	withStatusToProvisioningStep        *ProvisioningStepQuery
-	withStatusToTeam                    *TeamQuery
-	withStatusToPlan                    *PlanQuery
-	withStatusToServerTask              *ServerTaskQuery
-	withStatusToAdhocPlan               *AdhocPlanQuery
-	withStatusToScheduleStep            *ScheduleStepQuery
-	withStatusToProvisionedScheduleStep *ProvisionedScheduleStepQuery
-	withFKs                             bool
+	limit                         *int
+	offset                        *int
+	unique                        *bool
+	order                         []OrderFunc
+	fields                        []string
+	predicates                    []predicate.Status
+	withBuild                     *BuildQuery
+	withProvisionedNetwork        *ProvisionedNetworkQuery
+	withProvisionedHost           *ProvisionedHostQuery
+	withProvisioningStep          *ProvisioningStepQuery
+	withTeam                      *TeamQuery
+	withPlan                      *PlanQuery
+	withServerTask                *ServerTaskQuery
+	withAdhocPlan                 *AdhocPlanQuery
+	withProvisioningScheduledStep *ProvisioningScheduledStepQuery
+	withFKs                       bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -81,8 +79,8 @@ func (sq *StatusQuery) Order(o ...OrderFunc) *StatusQuery {
 	return sq
 }
 
-// QueryStatusToBuild chains the current query on the "StatusToBuild" edge.
-func (sq *StatusQuery) QueryStatusToBuild() *BuildQuery {
+// QueryBuild chains the current query on the "Build" edge.
+func (sq *StatusQuery) QueryBuild() *BuildQuery {
 	query := &BuildQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
@@ -95,7 +93,7 @@ func (sq *StatusQuery) QueryStatusToBuild() *BuildQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(status.Table, status.FieldID, selector),
 			sqlgraph.To(build.Table, build.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToBuildTable, status.StatusToBuildColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, status.BuildTable, status.BuildColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -103,8 +101,8 @@ func (sq *StatusQuery) QueryStatusToBuild() *BuildQuery {
 	return query
 }
 
-// QueryStatusToProvisionedNetwork chains the current query on the "StatusToProvisionedNetwork" edge.
-func (sq *StatusQuery) QueryStatusToProvisionedNetwork() *ProvisionedNetworkQuery {
+// QueryProvisionedNetwork chains the current query on the "ProvisionedNetwork" edge.
+func (sq *StatusQuery) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
 	query := &ProvisionedNetworkQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
@@ -117,7 +115,7 @@ func (sq *StatusQuery) QueryStatusToProvisionedNetwork() *ProvisionedNetworkQuer
 		step := sqlgraph.NewStep(
 			sqlgraph.From(status.Table, status.FieldID, selector),
 			sqlgraph.To(provisionednetwork.Table, provisionednetwork.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToProvisionedNetworkTable, status.StatusToProvisionedNetworkColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, status.ProvisionedNetworkTable, status.ProvisionedNetworkColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -125,8 +123,8 @@ func (sq *StatusQuery) QueryStatusToProvisionedNetwork() *ProvisionedNetworkQuer
 	return query
 }
 
-// QueryStatusToProvisionedHost chains the current query on the "StatusToProvisionedHost" edge.
-func (sq *StatusQuery) QueryStatusToProvisionedHost() *ProvisionedHostQuery {
+// QueryProvisionedHost chains the current query on the "ProvisionedHost" edge.
+func (sq *StatusQuery) QueryProvisionedHost() *ProvisionedHostQuery {
 	query := &ProvisionedHostQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
@@ -139,7 +137,7 @@ func (sq *StatusQuery) QueryStatusToProvisionedHost() *ProvisionedHostQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(status.Table, status.FieldID, selector),
 			sqlgraph.To(provisionedhost.Table, provisionedhost.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToProvisionedHostTable, status.StatusToProvisionedHostColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, status.ProvisionedHostTable, status.ProvisionedHostColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -147,8 +145,8 @@ func (sq *StatusQuery) QueryStatusToProvisionedHost() *ProvisionedHostQuery {
 	return query
 }
 
-// QueryStatusToProvisioningStep chains the current query on the "StatusToProvisioningStep" edge.
-func (sq *StatusQuery) QueryStatusToProvisioningStep() *ProvisioningStepQuery {
+// QueryProvisioningStep chains the current query on the "ProvisioningStep" edge.
+func (sq *StatusQuery) QueryProvisioningStep() *ProvisioningStepQuery {
 	query := &ProvisioningStepQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
@@ -161,7 +159,7 @@ func (sq *StatusQuery) QueryStatusToProvisioningStep() *ProvisioningStepQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(status.Table, status.FieldID, selector),
 			sqlgraph.To(provisioningstep.Table, provisioningstep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToProvisioningStepTable, status.StatusToProvisioningStepColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, status.ProvisioningStepTable, status.ProvisioningStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -169,8 +167,8 @@ func (sq *StatusQuery) QueryStatusToProvisioningStep() *ProvisioningStepQuery {
 	return query
 }
 
-// QueryStatusToTeam chains the current query on the "StatusToTeam" edge.
-func (sq *StatusQuery) QueryStatusToTeam() *TeamQuery {
+// QueryTeam chains the current query on the "Team" edge.
+func (sq *StatusQuery) QueryTeam() *TeamQuery {
 	query := &TeamQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
@@ -183,7 +181,7 @@ func (sq *StatusQuery) QueryStatusToTeam() *TeamQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(status.Table, status.FieldID, selector),
 			sqlgraph.To(team.Table, team.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToTeamTable, status.StatusToTeamColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, status.TeamTable, status.TeamColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -191,8 +189,8 @@ func (sq *StatusQuery) QueryStatusToTeam() *TeamQuery {
 	return query
 }
 
-// QueryStatusToPlan chains the current query on the "StatusToPlan" edge.
-func (sq *StatusQuery) QueryStatusToPlan() *PlanQuery {
+// QueryPlan chains the current query on the "Plan" edge.
+func (sq *StatusQuery) QueryPlan() *PlanQuery {
 	query := &PlanQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
@@ -205,7 +203,7 @@ func (sq *StatusQuery) QueryStatusToPlan() *PlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(status.Table, status.FieldID, selector),
 			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToPlanTable, status.StatusToPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, status.PlanTable, status.PlanColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -213,8 +211,8 @@ func (sq *StatusQuery) QueryStatusToPlan() *PlanQuery {
 	return query
 }
 
-// QueryStatusToServerTask chains the current query on the "StatusToServerTask" edge.
-func (sq *StatusQuery) QueryStatusToServerTask() *ServerTaskQuery {
+// QueryServerTask chains the current query on the "ServerTask" edge.
+func (sq *StatusQuery) QueryServerTask() *ServerTaskQuery {
 	query := &ServerTaskQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
@@ -227,7 +225,7 @@ func (sq *StatusQuery) QueryStatusToServerTask() *ServerTaskQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(status.Table, status.FieldID, selector),
 			sqlgraph.To(servertask.Table, servertask.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToServerTaskTable, status.StatusToServerTaskColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, status.ServerTaskTable, status.ServerTaskColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -235,8 +233,8 @@ func (sq *StatusQuery) QueryStatusToServerTask() *ServerTaskQuery {
 	return query
 }
 
-// QueryStatusToAdhocPlan chains the current query on the "StatusToAdhocPlan" edge.
-func (sq *StatusQuery) QueryStatusToAdhocPlan() *AdhocPlanQuery {
+// QueryAdhocPlan chains the current query on the "AdhocPlan" edge.
+func (sq *StatusQuery) QueryAdhocPlan() *AdhocPlanQuery {
 	query := &AdhocPlanQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
@@ -249,7 +247,7 @@ func (sq *StatusQuery) QueryStatusToAdhocPlan() *AdhocPlanQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(status.Table, status.FieldID, selector),
 			sqlgraph.To(adhocplan.Table, adhocplan.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToAdhocPlanTable, status.StatusToAdhocPlanColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, status.AdhocPlanTable, status.AdhocPlanColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -257,9 +255,9 @@ func (sq *StatusQuery) QueryStatusToAdhocPlan() *AdhocPlanQuery {
 	return query
 }
 
-// QueryStatusToScheduleStep chains the current query on the "StatusToScheduleStep" edge.
-func (sq *StatusQuery) QueryStatusToScheduleStep() *ScheduleStepQuery {
-	query := &ScheduleStepQuery{config: sq.config}
+// QueryProvisioningScheduledStep chains the current query on the "ProvisioningScheduledStep" edge.
+func (sq *StatusQuery) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+	query := &ProvisioningScheduledStepQuery{config: sq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -270,30 +268,8 @@ func (sq *StatusQuery) QueryStatusToScheduleStep() *ScheduleStepQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(status.Table, status.FieldID, selector),
-			sqlgraph.To(schedulestep.Table, schedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToScheduleStepTable, status.StatusToScheduleStepColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryStatusToProvisionedScheduleStep chains the current query on the "StatusToProvisionedScheduleStep" edge.
-func (sq *StatusQuery) QueryStatusToProvisionedScheduleStep() *ProvisionedScheduleStepQuery {
-	query := &ProvisionedScheduleStepQuery{config: sq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := sq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := sq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(status.Table, status.FieldID, selector),
-			sqlgraph.To(provisionedschedulestep.Table, provisionedschedulestep.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, status.StatusToProvisionedScheduleStepTable, status.StatusToProvisionedScheduleStepColumn),
+			sqlgraph.To(provisioningscheduledstep.Table, provisioningscheduledstep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, status.ProvisioningScheduledStepTable, status.ProvisioningScheduledStepColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -477,21 +453,20 @@ func (sq *StatusQuery) Clone() *StatusQuery {
 		return nil
 	}
 	return &StatusQuery{
-		config:                              sq.config,
-		limit:                               sq.limit,
-		offset:                              sq.offset,
-		order:                               append([]OrderFunc{}, sq.order...),
-		predicates:                          append([]predicate.Status{}, sq.predicates...),
-		withStatusToBuild:                   sq.withStatusToBuild.Clone(),
-		withStatusToProvisionedNetwork:      sq.withStatusToProvisionedNetwork.Clone(),
-		withStatusToProvisionedHost:         sq.withStatusToProvisionedHost.Clone(),
-		withStatusToProvisioningStep:        sq.withStatusToProvisioningStep.Clone(),
-		withStatusToTeam:                    sq.withStatusToTeam.Clone(),
-		withStatusToPlan:                    sq.withStatusToPlan.Clone(),
-		withStatusToServerTask:              sq.withStatusToServerTask.Clone(),
-		withStatusToAdhocPlan:               sq.withStatusToAdhocPlan.Clone(),
-		withStatusToScheduleStep:            sq.withStatusToScheduleStep.Clone(),
-		withStatusToProvisionedScheduleStep: sq.withStatusToProvisionedScheduleStep.Clone(),
+		config:                        sq.config,
+		limit:                         sq.limit,
+		offset:                        sq.offset,
+		order:                         append([]OrderFunc{}, sq.order...),
+		predicates:                    append([]predicate.Status{}, sq.predicates...),
+		withBuild:                     sq.withBuild.Clone(),
+		withProvisionedNetwork:        sq.withProvisionedNetwork.Clone(),
+		withProvisionedHost:           sq.withProvisionedHost.Clone(),
+		withProvisioningStep:          sq.withProvisioningStep.Clone(),
+		withTeam:                      sq.withTeam.Clone(),
+		withPlan:                      sq.withPlan.Clone(),
+		withServerTask:                sq.withServerTask.Clone(),
+		withAdhocPlan:                 sq.withAdhocPlan.Clone(),
+		withProvisioningScheduledStep: sq.withProvisioningScheduledStep.Clone(),
 		// clone intermediate query.
 		sql:    sq.sql.Clone(),
 		path:   sq.path,
@@ -499,113 +474,102 @@ func (sq *StatusQuery) Clone() *StatusQuery {
 	}
 }
 
-// WithStatusToBuild tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToBuild" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToBuild(opts ...func(*BuildQuery)) *StatusQuery {
+// WithBuild tells the query-builder to eager-load the nodes that are connected to
+// the "Build" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StatusQuery) WithBuild(opts ...func(*BuildQuery)) *StatusQuery {
 	query := &BuildQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withStatusToBuild = query
+	sq.withBuild = query
 	return sq
 }
 
-// WithStatusToProvisionedNetwork tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToProvisionedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToProvisionedNetwork(opts ...func(*ProvisionedNetworkQuery)) *StatusQuery {
+// WithProvisionedNetwork tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StatusQuery) WithProvisionedNetwork(opts ...func(*ProvisionedNetworkQuery)) *StatusQuery {
 	query := &ProvisionedNetworkQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withStatusToProvisionedNetwork = query
+	sq.withProvisionedNetwork = query
 	return sq
 }
 
-// WithStatusToProvisionedHost tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToProvisionedHost(opts ...func(*ProvisionedHostQuery)) *StatusQuery {
+// WithProvisionedHost tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StatusQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuery)) *StatusQuery {
 	query := &ProvisionedHostQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withStatusToProvisionedHost = query
+	sq.withProvisionedHost = query
 	return sq
 }
 
-// WithStatusToProvisioningStep tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToProvisioningStep(opts ...func(*ProvisioningStepQuery)) *StatusQuery {
+// WithProvisioningStep tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StatusQuery) WithProvisioningStep(opts ...func(*ProvisioningStepQuery)) *StatusQuery {
 	query := &ProvisioningStepQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withStatusToProvisioningStep = query
+	sq.withProvisioningStep = query
 	return sq
 }
 
-// WithStatusToTeam tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToTeam" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToTeam(opts ...func(*TeamQuery)) *StatusQuery {
+// WithTeam tells the query-builder to eager-load the nodes that are connected to
+// the "Team" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StatusQuery) WithTeam(opts ...func(*TeamQuery)) *StatusQuery {
 	query := &TeamQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withStatusToTeam = query
+	sq.withTeam = query
 	return sq
 }
 
-// WithStatusToPlan tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToPlan(opts ...func(*PlanQuery)) *StatusQuery {
+// WithPlan tells the query-builder to eager-load the nodes that are connected to
+// the "Plan" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StatusQuery) WithPlan(opts ...func(*PlanQuery)) *StatusQuery {
 	query := &PlanQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withStatusToPlan = query
+	sq.withPlan = query
 	return sq
 }
 
-// WithStatusToServerTask tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToServerTask" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToServerTask(opts ...func(*ServerTaskQuery)) *StatusQuery {
+// WithServerTask tells the query-builder to eager-load the nodes that are connected to
+// the "ServerTask" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StatusQuery) WithServerTask(opts ...func(*ServerTaskQuery)) *StatusQuery {
 	query := &ServerTaskQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withStatusToServerTask = query
+	sq.withServerTask = query
 	return sq
 }
 
-// WithStatusToAdhocPlan tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToAdhocPlan" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToAdhocPlan(opts ...func(*AdhocPlanQuery)) *StatusQuery {
+// WithAdhocPlan tells the query-builder to eager-load the nodes that are connected to
+// the "AdhocPlan" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StatusQuery) WithAdhocPlan(opts ...func(*AdhocPlanQuery)) *StatusQuery {
 	query := &AdhocPlanQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withStatusToAdhocPlan = query
+	sq.withAdhocPlan = query
 	return sq
 }
 
-// WithStatusToScheduleStep tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToScheduleStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToScheduleStep(opts ...func(*ScheduleStepQuery)) *StatusQuery {
-	query := &ScheduleStepQuery{config: sq.config}
+// WithProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
+// the "ProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StatusQuery) WithProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *StatusQuery {
+	query := &ProvisioningScheduledStepQuery{config: sq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	sq.withStatusToScheduleStep = query
-	return sq
-}
-
-// WithStatusToProvisionedScheduleStep tells the query-builder to eager-load the nodes that are connected to
-// the "StatusToProvisionedScheduleStep" edge. The optional arguments are used to configure the query builder of the edge.
-func (sq *StatusQuery) WithStatusToProvisionedScheduleStep(opts ...func(*ProvisionedScheduleStepQuery)) *StatusQuery {
-	query := &ProvisionedScheduleStepQuery{config: sq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	sq.withStatusToProvisionedScheduleStep = query
+	sq.withProvisioningScheduledStep = query
 	return sq
 }
 
@@ -678,20 +642,19 @@ func (sq *StatusQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Statu
 		nodes       = []*Status{}
 		withFKs     = sq.withFKs
 		_spec       = sq.querySpec()
-		loadedTypes = [10]bool{
-			sq.withStatusToBuild != nil,
-			sq.withStatusToProvisionedNetwork != nil,
-			sq.withStatusToProvisionedHost != nil,
-			sq.withStatusToProvisioningStep != nil,
-			sq.withStatusToTeam != nil,
-			sq.withStatusToPlan != nil,
-			sq.withStatusToServerTask != nil,
-			sq.withStatusToAdhocPlan != nil,
-			sq.withStatusToScheduleStep != nil,
-			sq.withStatusToProvisionedScheduleStep != nil,
+		loadedTypes = [9]bool{
+			sq.withBuild != nil,
+			sq.withProvisionedNetwork != nil,
+			sq.withProvisionedHost != nil,
+			sq.withProvisioningStep != nil,
+			sq.withTeam != nil,
+			sq.withPlan != nil,
+			sq.withServerTask != nil,
+			sq.withAdhocPlan != nil,
+			sq.withProvisioningScheduledStep != nil,
 		}
 	)
-	if sq.withStatusToBuild != nil || sq.withStatusToProvisionedNetwork != nil || sq.withStatusToProvisionedHost != nil || sq.withStatusToProvisioningStep != nil || sq.withStatusToTeam != nil || sq.withStatusToPlan != nil || sq.withStatusToServerTask != nil || sq.withStatusToAdhocPlan != nil || sq.withStatusToScheduleStep != nil || sq.withStatusToProvisionedScheduleStep != nil {
+	if sq.withBuild != nil || sq.withProvisionedNetwork != nil || sq.withProvisionedHost != nil || sq.withProvisioningStep != nil || sq.withTeam != nil || sq.withPlan != nil || sq.withServerTask != nil || sq.withAdhocPlan != nil || sq.withProvisioningScheduledStep != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -715,77 +678,71 @@ func (sq *StatusQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Statu
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := sq.withStatusToBuild; query != nil {
-		if err := sq.loadStatusToBuild(ctx, query, nodes, nil,
-			func(n *Status, e *Build) { n.Edges.StatusToBuild = e }); err != nil {
+	if query := sq.withBuild; query != nil {
+		if err := sq.loadBuild(ctx, query, nodes, nil,
+			func(n *Status, e *Build) { n.Edges.Build = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := sq.withStatusToProvisionedNetwork; query != nil {
-		if err := sq.loadStatusToProvisionedNetwork(ctx, query, nodes, nil,
-			func(n *Status, e *ProvisionedNetwork) { n.Edges.StatusToProvisionedNetwork = e }); err != nil {
+	if query := sq.withProvisionedNetwork; query != nil {
+		if err := sq.loadProvisionedNetwork(ctx, query, nodes, nil,
+			func(n *Status, e *ProvisionedNetwork) { n.Edges.ProvisionedNetwork = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := sq.withStatusToProvisionedHost; query != nil {
-		if err := sq.loadStatusToProvisionedHost(ctx, query, nodes, nil,
-			func(n *Status, e *ProvisionedHost) { n.Edges.StatusToProvisionedHost = e }); err != nil {
+	if query := sq.withProvisionedHost; query != nil {
+		if err := sq.loadProvisionedHost(ctx, query, nodes, nil,
+			func(n *Status, e *ProvisionedHost) { n.Edges.ProvisionedHost = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := sq.withStatusToProvisioningStep; query != nil {
-		if err := sq.loadStatusToProvisioningStep(ctx, query, nodes, nil,
-			func(n *Status, e *ProvisioningStep) { n.Edges.StatusToProvisioningStep = e }); err != nil {
+	if query := sq.withProvisioningStep; query != nil {
+		if err := sq.loadProvisioningStep(ctx, query, nodes, nil,
+			func(n *Status, e *ProvisioningStep) { n.Edges.ProvisioningStep = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := sq.withStatusToTeam; query != nil {
-		if err := sq.loadStatusToTeam(ctx, query, nodes, nil,
-			func(n *Status, e *Team) { n.Edges.StatusToTeam = e }); err != nil {
+	if query := sq.withTeam; query != nil {
+		if err := sq.loadTeam(ctx, query, nodes, nil,
+			func(n *Status, e *Team) { n.Edges.Team = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := sq.withStatusToPlan; query != nil {
-		if err := sq.loadStatusToPlan(ctx, query, nodes, nil,
-			func(n *Status, e *Plan) { n.Edges.StatusToPlan = e }); err != nil {
+	if query := sq.withPlan; query != nil {
+		if err := sq.loadPlan(ctx, query, nodes, nil,
+			func(n *Status, e *Plan) { n.Edges.Plan = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := sq.withStatusToServerTask; query != nil {
-		if err := sq.loadStatusToServerTask(ctx, query, nodes, nil,
-			func(n *Status, e *ServerTask) { n.Edges.StatusToServerTask = e }); err != nil {
+	if query := sq.withServerTask; query != nil {
+		if err := sq.loadServerTask(ctx, query, nodes, nil,
+			func(n *Status, e *ServerTask) { n.Edges.ServerTask = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := sq.withStatusToAdhocPlan; query != nil {
-		if err := sq.loadStatusToAdhocPlan(ctx, query, nodes, nil,
-			func(n *Status, e *AdhocPlan) { n.Edges.StatusToAdhocPlan = e }); err != nil {
+	if query := sq.withAdhocPlan; query != nil {
+		if err := sq.loadAdhocPlan(ctx, query, nodes, nil,
+			func(n *Status, e *AdhocPlan) { n.Edges.AdhocPlan = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := sq.withStatusToScheduleStep; query != nil {
-		if err := sq.loadStatusToScheduleStep(ctx, query, nodes, nil,
-			func(n *Status, e *ScheduleStep) { n.Edges.StatusToScheduleStep = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := sq.withStatusToProvisionedScheduleStep; query != nil {
-		if err := sq.loadStatusToProvisionedScheduleStep(ctx, query, nodes, nil,
-			func(n *Status, e *ProvisionedScheduleStep) { n.Edges.StatusToProvisionedScheduleStep = e }); err != nil {
+	if query := sq.withProvisioningScheduledStep; query != nil {
+		if err := sq.loadProvisioningScheduledStep(ctx, query, nodes, nil,
+			func(n *Status, e *ProvisioningScheduledStep) { n.Edges.ProvisioningScheduledStep = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (sq *StatusQuery) loadStatusToBuild(ctx context.Context, query *BuildQuery, nodes []*Status, init func(*Status), assign func(*Status, *Build)) error {
+func (sq *StatusQuery) loadBuild(ctx context.Context, query *BuildQuery, nodes []*Status, init func(*Status), assign func(*Status, *Build)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].build_build_to_status == nil {
+		if nodes[i].build_status == nil {
 			continue
 		}
-		fk := *nodes[i].build_build_to_status
+		fk := *nodes[i].build_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -799,7 +756,7 @@ func (sq *StatusQuery) loadStatusToBuild(ctx context.Context, query *BuildQuery,
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_build_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "build_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -807,14 +764,14 @@ func (sq *StatusQuery) loadStatusToBuild(ctx context.Context, query *BuildQuery,
 	}
 	return nil
 }
-func (sq *StatusQuery) loadStatusToProvisionedNetwork(ctx context.Context, query *ProvisionedNetworkQuery, nodes []*Status, init func(*Status), assign func(*Status, *ProvisionedNetwork)) error {
+func (sq *StatusQuery) loadProvisionedNetwork(ctx context.Context, query *ProvisionedNetworkQuery, nodes []*Status, init func(*Status), assign func(*Status, *ProvisionedNetwork)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].provisioned_network_provisioned_network_to_status == nil {
+		if nodes[i].provisioned_network_status == nil {
 			continue
 		}
-		fk := *nodes[i].provisioned_network_provisioned_network_to_status
+		fk := *nodes[i].provisioned_network_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -828,7 +785,7 @@ func (sq *StatusQuery) loadStatusToProvisionedNetwork(ctx context.Context, query
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_network_provisioned_network_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_network_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -836,14 +793,14 @@ func (sq *StatusQuery) loadStatusToProvisionedNetwork(ctx context.Context, query
 	}
 	return nil
 }
-func (sq *StatusQuery) loadStatusToProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*Status, init func(*Status), assign func(*Status, *ProvisionedHost)) error {
+func (sq *StatusQuery) loadProvisionedHost(ctx context.Context, query *ProvisionedHostQuery, nodes []*Status, init func(*Status), assign func(*Status, *ProvisionedHost)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].provisioned_host_provisioned_host_to_status == nil {
+		if nodes[i].provisioned_host_status == nil {
 			continue
 		}
-		fk := *nodes[i].provisioned_host_provisioned_host_to_status
+		fk := *nodes[i].provisioned_host_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -857,7 +814,7 @@ func (sq *StatusQuery) loadStatusToProvisionedHost(ctx context.Context, query *P
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_host_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioned_host_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -865,14 +822,14 @@ func (sq *StatusQuery) loadStatusToProvisionedHost(ctx context.Context, query *P
 	}
 	return nil
 }
-func (sq *StatusQuery) loadStatusToProvisioningStep(ctx context.Context, query *ProvisioningStepQuery, nodes []*Status, init func(*Status), assign func(*Status, *ProvisioningStep)) error {
+func (sq *StatusQuery) loadProvisioningStep(ctx context.Context, query *ProvisioningStepQuery, nodes []*Status, init func(*Status), assign func(*Status, *ProvisioningStep)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].provisioning_step_provisioning_step_to_status == nil {
+		if nodes[i].provisioning_step_status == nil {
 			continue
 		}
-		fk := *nodes[i].provisioning_step_provisioning_step_to_status
+		fk := *nodes[i].provisioning_step_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -886,7 +843,7 @@ func (sq *StatusQuery) loadStatusToProvisioningStep(ctx context.Context, query *
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioning_step_provisioning_step_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_step_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -894,14 +851,14 @@ func (sq *StatusQuery) loadStatusToProvisioningStep(ctx context.Context, query *
 	}
 	return nil
 }
-func (sq *StatusQuery) loadStatusToTeam(ctx context.Context, query *TeamQuery, nodes []*Status, init func(*Status), assign func(*Status, *Team)) error {
+func (sq *StatusQuery) loadTeam(ctx context.Context, query *TeamQuery, nodes []*Status, init func(*Status), assign func(*Status, *Team)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].team_team_to_status == nil {
+		if nodes[i].team_status == nil {
 			continue
 		}
-		fk := *nodes[i].team_team_to_status
+		fk := *nodes[i].team_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -915,7 +872,7 @@ func (sq *StatusQuery) loadStatusToTeam(ctx context.Context, query *TeamQuery, n
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "team_team_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "team_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -923,14 +880,14 @@ func (sq *StatusQuery) loadStatusToTeam(ctx context.Context, query *TeamQuery, n
 	}
 	return nil
 }
-func (sq *StatusQuery) loadStatusToPlan(ctx context.Context, query *PlanQuery, nodes []*Status, init func(*Status), assign func(*Status, *Plan)) error {
+func (sq *StatusQuery) loadPlan(ctx context.Context, query *PlanQuery, nodes []*Status, init func(*Status), assign func(*Status, *Plan)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].plan_plan_to_status == nil {
+		if nodes[i].plan_status == nil {
 			continue
 		}
-		fk := *nodes[i].plan_plan_to_status
+		fk := *nodes[i].plan_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -944,7 +901,7 @@ func (sq *StatusQuery) loadStatusToPlan(ctx context.Context, query *PlanQuery, n
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_plan_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -952,14 +909,14 @@ func (sq *StatusQuery) loadStatusToPlan(ctx context.Context, query *PlanQuery, n
 	}
 	return nil
 }
-func (sq *StatusQuery) loadStatusToServerTask(ctx context.Context, query *ServerTaskQuery, nodes []*Status, init func(*Status), assign func(*Status, *ServerTask)) error {
+func (sq *StatusQuery) loadServerTask(ctx context.Context, query *ServerTaskQuery, nodes []*Status, init func(*Status), assign func(*Status, *ServerTask)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].server_task_server_task_to_status == nil {
+		if nodes[i].server_task_status == nil {
 			continue
 		}
-		fk := *nodes[i].server_task_server_task_to_status
+		fk := *nodes[i].server_task_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -973,7 +930,7 @@ func (sq *StatusQuery) loadStatusToServerTask(ctx context.Context, query *Server
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_server_task_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "server_task_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -981,14 +938,14 @@ func (sq *StatusQuery) loadStatusToServerTask(ctx context.Context, query *Server
 	}
 	return nil
 }
-func (sq *StatusQuery) loadStatusToAdhocPlan(ctx context.Context, query *AdhocPlanQuery, nodes []*Status, init func(*Status), assign func(*Status, *AdhocPlan)) error {
+func (sq *StatusQuery) loadAdhocPlan(ctx context.Context, query *AdhocPlanQuery, nodes []*Status, init func(*Status), assign func(*Status, *AdhocPlan)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].adhoc_plan_adhoc_plan_to_status == nil {
+		if nodes[i].adhoc_plan_status == nil {
 			continue
 		}
-		fk := *nodes[i].adhoc_plan_adhoc_plan_to_status
+		fk := *nodes[i].adhoc_plan_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -1002,7 +959,7 @@ func (sq *StatusQuery) loadStatusToAdhocPlan(ctx context.Context, query *AdhocPl
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_adhoc_plan_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -1010,20 +967,20 @@ func (sq *StatusQuery) loadStatusToAdhocPlan(ctx context.Context, query *AdhocPl
 	}
 	return nil
 }
-func (sq *StatusQuery) loadStatusToScheduleStep(ctx context.Context, query *ScheduleStepQuery, nodes []*Status, init func(*Status), assign func(*Status, *ScheduleStep)) error {
+func (sq *StatusQuery) loadProvisioningScheduledStep(ctx context.Context, query *ProvisioningScheduledStepQuery, nodes []*Status, init func(*Status), assign func(*Status, *ProvisioningScheduledStep)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Status)
 	for i := range nodes {
-		if nodes[i].schedule_step_schedule_step_to_status == nil {
+		if nodes[i].provisioning_scheduled_step_status == nil {
 			continue
 		}
-		fk := *nodes[i].schedule_step_schedule_step_to_status
+		fk := *nodes[i].provisioning_scheduled_step_status
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.Where(schedulestep.IDIn(ids...))
+	query.Where(provisioningscheduledstep.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -1031,36 +988,7 @@ func (sq *StatusQuery) loadStatusToScheduleStep(ctx context.Context, query *Sche
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "schedule_step_schedule_step_to_status" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
-func (sq *StatusQuery) loadStatusToProvisionedScheduleStep(ctx context.Context, query *ProvisionedScheduleStepQuery, nodes []*Status, init func(*Status), assign func(*Status, *ProvisionedScheduleStep)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Status)
-	for i := range nodes {
-		if nodes[i].provisioned_schedule_step_provisioned_schedule_step_to_status == nil {
-			continue
-		}
-		fk := *nodes[i].provisioned_schedule_step_provisioned_schedule_step_to_status
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	query.Where(provisionedschedulestep.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_schedule_step_provisioned_schedule_step_to_status" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provisioning_scheduled_step_status" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

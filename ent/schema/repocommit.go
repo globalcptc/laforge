@@ -32,6 +32,8 @@ func (RepoCommit) Fields() []ent.Field {
 // Edges of the RepoCommit.
 func (RepoCommit) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("RepoCommitToRepository", Repository.Type).Ref("RepositoryToRepoCommit").Unique(),
+		edge.From("Repository", Repository.Type).
+			Ref("RepoCommits").
+			Unique(),
 	}
 }

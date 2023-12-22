@@ -40,33 +40,33 @@ type RepoCommit struct {
 	Edges RepoCommitEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// RepoCommitToRepository holds the value of the RepoCommitToRepository edge.
-	HCLRepoCommitToRepository *Repository `json:"RepoCommitToRepository,omitempty"`
+	// Repository holds the value of the Repository edge.
+	HCLRepository *Repository `json:"Repository,omitempty"`
 	//
-	repository_repository_to_repo_commit *uuid.UUID
+	repository_repo_commits *uuid.UUID
 }
 
 // RepoCommitEdges holds the relations/edges for other nodes in the graph.
 type RepoCommitEdges struct {
-	// RepoCommitToRepository holds the value of the RepoCommitToRepository edge.
-	RepoCommitToRepository *Repository `json:"RepoCommitToRepository,omitempty"`
+	// Repository holds the value of the Repository edge.
+	Repository *Repository `json:"Repository,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// RepoCommitToRepositoryOrErr returns the RepoCommitToRepository value or an error if the edge
+// RepositoryOrErr returns the Repository value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e RepoCommitEdges) RepoCommitToRepositoryOrErr() (*Repository, error) {
+func (e RepoCommitEdges) RepositoryOrErr() (*Repository, error) {
 	if e.loadedTypes[0] {
-		if e.RepoCommitToRepository == nil {
-			// The edge RepoCommitToRepository was loaded in eager-loading,
+		if e.Repository == nil {
+			// The edge Repository was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: repository.Label}
 		}
-		return e.RepoCommitToRepository, nil
+		return e.Repository, nil
 	}
-	return nil, &NotLoadedError{edge: "RepoCommitToRepository"}
+	return nil, &NotLoadedError{edge: "Repository"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -82,7 +82,7 @@ func (*RepoCommit) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case repocommit.FieldID:
 			values[i] = new(uuid.UUID)
-		case repocommit.ForeignKeys[0]: // repository_repository_to_repo_commit
+		case repocommit.ForeignKeys[0]: // repository_repo_commits
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type RepoCommit", columns[i])
@@ -161,19 +161,19 @@ func (rc *RepoCommit) assignValues(columns []string, values []interface{}) error
 			}
 		case repocommit.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field repository_repository_to_repo_commit", values[i])
+				return fmt.Errorf("unexpected type %T for field repository_repo_commits", values[i])
 			} else if value.Valid {
-				rc.repository_repository_to_repo_commit = new(uuid.UUID)
-				*rc.repository_repository_to_repo_commit = *value.S.(*uuid.UUID)
+				rc.repository_repo_commits = new(uuid.UUID)
+				*rc.repository_repo_commits = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryRepoCommitToRepository queries the "RepoCommitToRepository" edge of the RepoCommit entity.
-func (rc *RepoCommit) QueryRepoCommitToRepository() *RepositoryQuery {
-	return (&RepoCommitClient{config: rc.config}).QueryRepoCommitToRepository(rc)
+// QueryRepository queries the "Repository" edge of the RepoCommit entity.
+func (rc *RepoCommit) QueryRepository() *RepositoryQuery {
+	return (&RepoCommitClient{config: rc.config}).QueryRepository(rc)
 }
 
 // Update returns a builder for updating this RepoCommit.

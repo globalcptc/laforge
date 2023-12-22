@@ -15,10 +15,12 @@ import (
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/gen0cide/laforge/server/utils"
 	"github.com/google/uuid"
+	"github.com/gorhill/cronexpr"
 	"github.com/sirupsen/logrus"
 )
 
@@ -40,7 +42,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	cancelMap[entBuild.ID] = cancel
 	ctxClosing := context.Background()
 	defer ctxClosing.Done()
-	entPlans, err := entBuild.QueryBuildToPlan().Where(plan.HasPlanToStatusWith(status.StateEQ(status.StatePLANNING))).All(ctx)
+	entPlans, err := entBuild.QueryPlans().Where(plan.HasStatusWith(status.StateEQ(status.StatePLANNING))).All(ctx)
 
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask)
@@ -55,7 +57,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 	var wg sync.WaitGroup
 
 	for _, entPlan := range entPlans {
-		entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
+		entStatus, err := entPlan.QueryStatus().Only(ctx)
 
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
@@ -79,12 +81,12 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 			defer ctx.Done()
 			switch entPlan.Type {
 			case plan.TypeProvisionNetwork:
-				entProNetwork, err := entPlan.QueryPlanToProvisionedNetwork().Only(ctx)
+				entProNetwork, err := entPlan.QueryProvisionedNetwork().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Provisioned Network. Err: %v", err)
 					return
 				}
-				entStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
+				entStatus, err := entProNetwork.QueryStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -92,12 +94,12 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 				entStatus.Update().SetState(status.StateAWAITING).Save(ctx)
 				rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
 			case plan.TypeProvisionHost:
-				entProHost, err := entPlan.QueryPlanToProvisionedHost().Only(ctx)
+				entProHost, err := entPlan.QueryProvisionedHost().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Provisioned Host. Err: %v", err)
 					return
 				}
-				entStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
+				entStatus, err := entProHost.QueryStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -105,12 +107,12 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 				entStatus.Update().SetState(status.StateAWAITING).Save(ctx)
 				rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
 			case plan.TypeExecuteStep:
-				entProvisioningStep, err := entPlan.QueryPlanToProvisioningStep().Only(ctx)
+				entProvisioningStep, err := entPlan.QueryProvisioningStep().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 					return
 				}
-				entStatus, err := entProvisioningStep.QueryProvisioningStepToStatus().Only(ctx)
+				entStatus, err := entProvisioningStep.QueryStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -118,12 +120,12 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 				entStatus.Update().SetState(status.StateAWAITING).Save(ctx)
 				rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
 			case plan.TypeStartTeam:
-				entTeam, err := entPlan.QueryPlanToTeam().Only(ctx)
+				entTeam, err := entPlan.QueryTeam().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 					return
 				}
-				entStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+				entStatus, err := entTeam.QueryStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -131,12 +133,12 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 				entStatus.Update().SetState(status.StateAWAITING).Save(ctx)
 				rdb.Publish(ctx, "updatedStatus", entStatus.ID.String())
 			case plan.TypeStartBuild:
-				entBuild, err := entPlan.QueryPlanToBuild().Only(ctx)
+				entBuild, err := entPlan.QueryBuild().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 					return
 				}
-				entStatus, err := entBuild.QueryBuildToStatus().Only(ctx)
+				entStatus, err := entBuild.QueryStatus().Only(ctx)
 				if err != nil {
 					logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 					return
@@ -151,7 +153,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 
 	wg.Wait()
 
-	rootPlans, err := entBuild.QueryBuildToPlan().Where(plan.TypeEQ(plan.TypeStartBuild)).All(ctx)
+	rootPlans, err := entBuild.QueryPlans().Where(plan.TypeEQ(plan.TypeStartBuild)).All(ctx)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
 		if err != nil {
@@ -161,7 +163,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 		logger.Log.Errorf("Failed to Query Start Plan Nodes. Err: %v", err)
 		return err
 	}
-	environment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	environment, err := entBuild.QueryEnvironment().Only(ctx)
 	if err != nil {
 		taskStatus, serverTask, err = utils.FailServerTask(ctxClosing, client, rdb, taskStatus, serverTask)
 		if err != nil {
@@ -183,7 +185,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 		return err
 	}
 
-	entRootCommit, err := entBuild.QueryBuildToLatestBuildCommit().Only(ctx)
+	entRootCommit, err := entBuild.QueryLatestBuildCommit().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("error while querying lastest commit from build: %v", err)
 		return err
@@ -236,7 +238,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 	ctxClosing := context.Background()
 	defer ctxClosing.Done()
 
-	entStatus, err := entPlan.QueryPlanToStatus().Only(ctx)
+	entStatus, err := entPlan.QueryStatus().Only(ctx)
 
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
@@ -259,7 +261,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		return
 	}
 
-	prevNodes, err := entPlan.QueryPrevPlan().All(ctx)
+	prevNodes, err := entPlan.QueryPrevPlans().All(ctx)
 
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Plan Start %v. Err: %v", prevNodes, err)
@@ -287,7 +289,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 				break
 			}
 
-			prevCompletedStatus, err := prevNode.QueryPlanToStatus().Where(
+			prevCompletedStatus, err := prevNode.QueryStatus().Where(
 				status.StateNEQ(
 					status.StateCOMPLETE,
 				),
@@ -298,7 +300,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 				return
 			}
 
-			prevFailedStatus, err := prevNode.QueryPlanToStatus().Where(
+			prevFailedStatus, err := prevNode.QueryStatus().Where(
 				status.StateEQ(
 					status.StateFAILED,
 				),
@@ -324,7 +326,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 	logger.Log.WithFields(logrus.Fields{
 		"plan": entPlan.ID,
 	}).Debugf("BUILDER | done waiting on parents")
-	entStatus, err = entPlan.QueryPlanToStatus().Only(ctx)
+	entStatus, err = entPlan.QueryStatus().Only(ctx)
 
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
@@ -337,13 +339,13 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 	var planErr error = nil
 	switch entPlan.Type {
 	case plan.TypeProvisionNetwork:
-		entProNetwork, err := entPlan.QueryPlanToProvisionedNetwork().Only(ctx)
+		entProNetwork, err := entPlan.QueryProvisionedNetwork().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Provisioned Network. Err: %v", err)
 			return
 		}
 		if parentNodeFailed {
-			networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctxClosing)
+			networkStatus, err := entProNetwork.QueryStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
 				return
@@ -359,13 +361,13 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			planErr = buildNetwork(client, logger, builder, ctx, entProNetwork)
 		}
 	case plan.TypeProvisionHost:
-		entProHost, err := entPlan.QueryPlanToProvisionedHost().Only(ctx)
+		entProHost, err := entPlan.QueryProvisionedHost().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Provisioned Host. Err: %v", err)
 			return
 		}
 		if parentNodeFailed {
-			hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctxClosing)
+			hostStatus, err := entProHost.QueryStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
 				return
@@ -381,13 +383,13 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			planErr = buildHost(client, logger, builder, ctx, entProHost)
 		}
 	case plan.TypeExecuteStep:
-		entProvisioningStep, err := entPlan.QueryPlanToProvisioningStep().Only(ctx)
+		entProvisioningStep, err := entPlan.QueryProvisioningStep().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 			return
 		}
 		if parentNodeFailed {
-			stepStatus, err := entProvisioningStep.QueryProvisioningStepToStatus().Only(ctxClosing)
+			stepStatus, err := entProvisioningStep.QueryStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
 				return
@@ -403,13 +405,13 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			planErr = execStep(client, laforgeConfig, logger, ctx, entProvisioningStep)
 		}
 	case plan.TypeStartTeam:
-		entTeam, err := entPlan.QueryPlanToTeam().Only(ctx)
+		entTeam, err := entPlan.QueryTeam().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Ent Tean. Err: %v", err)
 			return
 		}
 		if parentNodeFailed {
-			teamStatus, err := entTeam.QueryTeamToStatus().Only(ctxClosing)
+			teamStatus, err := entTeam.QueryStatus().Only(ctxClosing)
 			if err != nil {
 				logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
 				return
@@ -425,18 +427,29 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			planErr = buildTeam(client, logger, builder, ctx, entTeam)
 		}
 	case plan.TypeStartBuild:
-		entBuild, err := entPlan.QueryPlanToBuild().Only(ctx)
+		entBuild, err := entPlan.QueryBuild().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 			return
 		}
-		entStatus, err := entBuild.QueryBuildToStatus().Only(ctx)
+		entStatus, err := entBuild.QueryStatus().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Status %v. Err: %v", entPlan, err)
 			return
 		}
 		entStatus.Update().SetState(status.StateCOMPLETE).Save(ctxClosing)
 		rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
+	case plan.TypeStartScheduledStep:
+		entProvisioningScheduledStep, err := entPlan.QueryProvisioningScheduledStep().Only(ctx)
+		if err != nil {
+			logger.Log.Errorf("Failed to Query Provisioning Scheduled Step. Err: %v", err)
+			return
+		}
+		if parentNodeFailed {
+			planErr = fmt.Errorf("parent node for Provisioning Step has failed")
+		} else {
+			planErr = startScheduledStep(client, laforgeConfig, logger, ctx, entProvisioningScheduledStep)
+		}
 	default:
 		break
 	}
@@ -458,7 +471,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		"plan": entPlan.ID,
 	}).Debugf("BUILDER | plan done. SPAWNING CHILDREN")
 
-	nextPlans, err := entPlan.QueryNextPlan().All(ctx)
+	nextPlans, err := entPlan.QueryNextPlans().All(ctx)
 	for _, nextPlan := range nextPlans {
 		wg.Add(1)
 		go buildRoutine(client, laforgeConfig, logger, builder, ctx, nextPlan, wg)
@@ -467,14 +480,14 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 }
 
 func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entProHost *ent.ProvisionedHost) error {
-	entProNet, err := entProHost.QueryProvisionedHostToProvisionedNetwork().First(ctx)
+	entProNet, err := entProHost.QueryProvisionedNetwork().First(ctx)
 	if err != nil {
 		logger.Log.WithFields(logrus.Fields{
 			"entProHost": entProHost.ID,
 		}).Error("error querying host and provisioned network from provisioned host")
 		return err
 	} else {
-		entTeam, err := entProNet.QueryProvisionedNetworkToTeam().First(ctx)
+		entTeam, err := entProNet.QueryTeam().First(ctx)
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
 				"entProNet": entProNet.ID,
@@ -489,12 +502,12 @@ func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 		}
 	}
 	logger.Log.Infof("deploying %s", entProHost.SubnetIP)
-	hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
+	hostStatus, err := entProHost.QueryStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Provisioned Host status: %v", err)
 		return err
 	}
-	entProNetwork, err := entProHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	entProNetwork, err := entProHost.QueryProvisionedNetwork().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
 		return err
@@ -530,12 +543,12 @@ func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 
 func buildNetwork(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entProNetwork *ent.ProvisionedNetwork) error {
 	logger.Log.Infof("deploying %s", entProNetwork.Name)
-	networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
+	networkStatus, err := entProNetwork.QueryStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
 		return err
 	}
-	entTeam, err := entProNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := entProNetwork.QueryTeam().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting team: %v", err)
 		return err
@@ -572,7 +585,7 @@ func buildNetwork(client *ent.Client, logger *logging.Logger, builder *builder.B
 func buildTeam(client *ent.Client, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entTeam *ent.Team) error {
 	logger.Log.Infof("deploying Team: %d", entTeam.TeamNumber)
 
-	teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+	teamStatus, err := entTeam.QueryStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting Team status: %v", err)
 		return err
@@ -601,10 +614,10 @@ func buildTeam(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 
 func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entTeam *ent.Team) error {
 	stepAwaitingInProgress, err := entTeam.
-		QueryTeamToProvisionedNetwork().
+		QueryProvisionedNetworks().
 		Where(
 			provisionednetwork.
-				HasProvisionedNetworkToStatusWith(
+				HasStatusWith(
 					status.Or(
 						status.StateEQ(status.StateAWAITING),
 						status.StateEQ(status.StateINPROGRESS),
@@ -620,16 +633,16 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 		return nil
 	}
 
-	teamStatus, err := entTeam.QueryTeamToStatus().Only(ctx)
+	teamStatus, err := entTeam.QueryStatus().Only(ctx)
 	if teamStatus.State != status.StateINPROGRESS {
 		return nil
 	}
 
 	hostFailed, err := entTeam.
-		QueryTeamToProvisionedNetwork().
+		QueryProvisionedNetworks().
 		Where(
 			provisionednetwork.
-				HasProvisionedNetworkToStatusWith(
+				HasStatusWith(
 					status.Or(
 						status.StateEQ(status.StateFAILED),
 						status.StateEQ(status.StateTAINTED),
@@ -652,10 +665,10 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 	}
 
 	stepNotCompleted, err := entTeam.
-		QueryTeamToProvisionedNetwork().
+		QueryProvisionedNetworks().
 		Where(
 			provisionednetwork.
-				HasProvisionedNetworkToStatusWith(
+				HasStatusWith(
 					status.StateNEQ(status.StateCOMPLETE),
 				),
 		).Exist(ctx)
@@ -678,10 +691,10 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 
 func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entProNetwork *ent.ProvisionedNetwork) error {
 	stepAwaitingInProgress, err := entProNetwork.
-		QueryProvisionedNetworkToProvisionedHost().
+		QueryProvisionedHosts().
 		Where(
 			provisionedhost.
-				HasProvisionedHostToStatusWith(
+				HasStatusWith(
 					status.Or(
 						status.StateEQ(status.StateAWAITING),
 						status.StateEQ(status.StateINPROGRESS),
@@ -697,21 +710,21 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 		return nil
 	}
 
-	networkStatus, err := entProNetwork.QueryProvisionedNetworkToStatus().Only(ctx)
+	networkStatus, err := entProNetwork.QueryStatus().Only(ctx)
 	if networkStatus.State != status.StateINPROGRESS {
 		return nil
 	}
-	entTeam, err := entProNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := entProNetwork.QueryTeam().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while getting team: %v", err)
 		return err
 	}
 
 	hostFailed, err := entProNetwork.
-		QueryProvisionedNetworkToProvisionedHost().
+		QueryProvisionedHosts().
 		Where(
 			provisionedhost.
-				HasProvisionedHostToStatusWith(
+				HasStatusWith(
 					status.Or(
 						status.StateEQ(status.StateFAILED),
 						status.StateEQ(status.StateTAINTED),
@@ -735,10 +748,10 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 	}
 
 	stepNotCompleted, err := entProNetwork.
-		QueryProvisionedNetworkToProvisionedHost().
+		QueryProvisionedHosts().
 		Where(
 			provisionedhost.
-				HasProvisionedHostToStatusWith(
+				HasStatusWith(
 					status.StateNEQ(status.StateCOMPLETE),
 				),
 		).Exist(ctx)
@@ -761,21 +774,21 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 }
 
 func checkHostStatus(client *ent.Client, logger *logging.Logger, ctx context.Context, entProHost *ent.ProvisionedHost) error {
-	hostStatus, err := entProHost.QueryProvisionedHostToStatus().Only(ctx)
+	hostStatus, err := entProHost.QueryStatus().Only(ctx)
 	if hostStatus.State != status.StateINPROGRESS {
 		return nil
 	}
-	entProNetwork, err := entProHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	entProNetwork, err := entProHost.QueryProvisionedNetwork().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Error while checking if host step is failed: %v", err)
 		return err
 	}
 
 	stepFailed, err := entProHost.
-		QueryProvisionedHostToProvisioningStep().
+		QueryProvisioningSteps().
 		Where(
 			provisioningstep.
-				HasProvisioningStepToStatusWith(
+				HasStatusWith(
 					status.StateEQ(status.StateFAILED),
 				),
 		).Exist(ctx)
@@ -796,10 +809,10 @@ func checkHostStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 	}
 
 	stepNotCompleted, err := entProHost.
-		QueryProvisionedHostToProvisioningStep().
+		QueryProvisioningSteps().
 		Where(
 			provisioningstep.
-				HasProvisioningStepToStatusWith(
+				HasStatusWith(
 					status.StateNEQ(status.StateCOMPLETE),
 				),
 		).Exist(ctx)
@@ -822,7 +835,7 @@ func checkHostStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 }
 
 func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, ctx context.Context, entStep *ent.ProvisioningStep) error {
-	stepStatus, err := entStep.QueryProvisioningStepToStatus().Only(ctx)
+	stepStatus, err := entStep.QueryStatus().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
 		return err
@@ -834,13 +847,13 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 	}
 	rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
 
-	entProvisionedHost, err := entStep.QueryProvisioningStepToProvisionedHost().Only(ctx)
+	entProvisionedHost, err := entStep.QueryProvisionedHost().Only(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed querying Provisioned Host for Provioning Step: %v", err)
 		return err
 	}
 
-	taskCount, err := entProvisionedHost.QueryProvisionedHostToAgentTask().Count(ctx)
+	taskCount, err := entProvisionedHost.QueryAgentTasks().Count(ctx)
 	if err != nil {
 		logger.Log.Errorf("failed querying Number of Tasks: %v", err)
 		return err
@@ -848,20 +861,20 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 
 	switch entStep.Type {
 	case provisioningstep.TypeScript:
-		entScript, err := entStep.QueryProvisioningStepToScript().Only(ctx)
+		entScript, err := entStep.QueryScript().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying Script for Provioning Step: %v", err)
 			return err
 		}
 		if _, ok := entScript.Vars["build_render"]; ok {
-			_, err := renderScript(ctx, client, logger, entStep)
+			_, err := RenderScript(ctx, client, logger, entStep)
 			if err != nil {
 				logger.Log.Errorf("failed rerendering Script: %v", err)
 				return err
 			}
 			logger.Log.Debug("sucessful rerendering for Script: %v", err)
 		}
-		entGinMiddleware, err := entStep.QueryProvisioningStepToGinFileMiddleware().Only(ctx)
+		entGinMiddleware, err := entStep.QueryGinFileMiddleware().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying Gin File Middleware for Script: %v", err)
 			return err
@@ -871,8 +884,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs(entScript.Source + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + "true").
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
@@ -884,8 +897,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs(entScript.Source + "💔" + strings.Join(entScript.Args, " ")).
 			SetNumber(taskCount + 1).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Execute: %v", err)
@@ -896,15 +909,15 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs(entScript.Source).
 			SetNumber(taskCount + 2).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
 			return err
 		}
 	case provisioningstep.TypeCommand:
-		entCommand, err := entStep.QueryProvisioningStepToCommand().Only(ctx)
+		entCommand, err := entStep.QueryCommand().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying Command for Provioning Step: %v", err)
 			return err
@@ -916,8 +929,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 				SetArgs("").
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningStep(entStep).
 				Save(ctx)
 			if err != nil {
 				logger.Log.Errorf("failed Creating Agent Task for Reboot Command: %v", err)
@@ -929,8 +942,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 				SetArgs(entCommand.Program + "💔" + strings.Join(entCommand.Args, " ")).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningStep(entStep).
 				Save(ctx)
 			if err != nil {
 				logger.Log.Errorf("failed Creating Agent Task for Command: %v", err)
@@ -938,7 +951,7 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			}
 		}
 	case provisioningstep.TypeFileDelete:
-		entFileDelete, err := entStep.QueryProvisioningStepToFileDelete().Only(ctx)
+		entFileDelete, err := entStep.QueryFileDelete().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying File Delete for Provioning Step: %v", err)
 			return err
@@ -948,20 +961,20 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs(entFileDelete.Path).
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for File Delete: %v", err)
 			return err
 		}
 	case provisioningstep.TypeFileDownload:
-		entFileDownload, err := entStep.QueryProvisioningStepToFileDownload().Only(ctx)
+		entFileDownload, err := entStep.QueryFileDownload().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying File Download for Provioning Step: %v", err)
 			return err
 		}
-		entGinMiddleware, err := entStep.QueryProvisioningStepToGinFileMiddleware().Only(ctx)
+		entGinMiddleware, err := entStep.QueryGinFileMiddleware().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying Gin File Middleware for File Download: %v", err)
 			return err
@@ -972,8 +985,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 				SetArgs(entFileDownload.Destination + "💔" + entFileDownload.Source + "💔" + strings.ToLower(fmt.Sprintf("%v", entFileDownload.IsTxt))).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningStep(entStep).
 				Save(ctx)
 		} else {
 			_, err = client.AgentTask.Create().
@@ -981,8 +994,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 				SetArgs(entFileDownload.Destination + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + strings.ToLower(fmt.Sprintf("%v", entFileDownload.IsTxt))).
 				SetNumber(taskCount).
 				SetState(agenttask.StateAWAITING).
-				SetAgentTaskToProvisionedHost(entProvisionedHost).
-				SetAgentTaskToProvisioningStep(entStep).
+				SetProvisionedHost(entProvisionedHost).
+				SetProvisioningStep(entStep).
 				Save(ctx)
 		}
 		if err != nil {
@@ -990,7 +1003,7 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			return err
 		}
 	case provisioningstep.TypeFileExtract:
-		entFileExtract, err := entStep.QueryProvisioningStepToFileExtract().Only(ctx)
+		entFileExtract, err := entStep.QueryFileExtract().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying File Extract for Provioning Step: %v", err)
 			return err
@@ -1000,8 +1013,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs(entFileExtract.Source + "💔" + entFileExtract.Destination).
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for File Extract: %v", err)
@@ -1010,12 +1023,12 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 	case provisioningstep.TypeDNSRecord:
 		break
 	case provisioningstep.TypeAnsible:
-		entAnsible, err := entStep.QueryProvisioningStepToAnsible().Only(ctx)
+		entAnsible, err := entStep.QueryAnsible().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying Ansible for Provioning Step: %v", err)
 			return err
 		}
-		entGinMiddleware, err := entStep.QueryProvisioningStepToGinFileMiddleware().Only(ctx)
+		entGinMiddleware, err := entStep.QueryGinFileMiddleware().Only(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed querying Gin File Middleware for Script: %v", err)
 			return err
@@ -1025,8 +1038,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + laforgeConfig.Agent.ApiDownloadUrl + entGinMiddleware.URLID + "💔" + "false").
 			SetNumber(taskCount).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
@@ -1037,8 +1050,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs("/tmp/" + entAnsible.Name + ".zip" + "💔" + "/tmp").
 			SetNumber(taskCount + 1).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Download: %v", err)
@@ -1049,8 +1062,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs("/tmp/" + entAnsible.Name + "/" + entAnsible.PlaybookName + "💔" + string(entAnsible.Method) + "💔" + entAnsible.Inventory).
 			SetNumber(taskCount + 2).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Execute: %v", err)
@@ -1061,8 +1074,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs("/tmp/" + entAnsible.Name).
 			SetNumber(taskCount + 3).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
@@ -1073,8 +1086,8 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			SetArgs("/tmp/" + entAnsible.Name + ".zip").
 			SetNumber(taskCount + 4).
 			SetState(agenttask.StateAWAITING).
-			SetAgentTaskToProvisionedHost(entProvisionedHost).
-			SetAgentTaskToProvisioningStep(entStep).
+			SetProvisionedHost(entProvisionedHost).
+			SetProvisioningStep(entStep).
 			Save(ctx)
 		if err != nil {
 			logger.Log.Errorf("failed Creating Agent Task for Script Delete: %v", err)
@@ -1085,7 +1098,7 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 	}
 
 	for {
-		taskFailed, err := entStep.QueryProvisioningStepToAgentTask().Where(
+		taskFailed, err := entStep.QueryAgentTasks().Where(
 			agenttask.StateEQ(
 				agenttask.StateFAILED,
 			),
@@ -1107,7 +1120,7 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 			return fmt.Errorf("one or more agent tasks failed")
 		}
 
-		taskRunning, err := entStep.QueryProvisioningStepToAgentTask().Where(
+		taskRunning, err := entStep.QueryAgentTasks().Where(
 			agenttask.StateNEQ(
 				agenttask.StateCOMPLETE,
 			),
@@ -1132,6 +1145,46 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 	}
 	checkHostStatus(client, logger, ctx, entProvisionedHost)
 	rdb.Publish(ctx, "updatedStatus", stepStatus.ID.String())
+
+	return nil
+}
+
+func startScheduledStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, ctx context.Context, entProvisioningScheduledStep *ent.ProvisioningScheduledStep) error {
+	entScheduledStep, err := entProvisioningScheduledStep.QueryScheduledStep().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query scheduled step from provisioning scheduled step: %v", err)
+	}
+	entStatus, err := entProvisioningScheduledStep.QueryStatus().Only(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query status from provisioning scheduled step: %v", err)
+	}
+	if entScheduledStep.Type == scheduledstep.TypeRUNONCE {
+		// We can ignore RUNONCE steps as their run_at time is already accurate
+		//   and will be handled by the scheduling watchdog
+		return nil
+	}
+	if entScheduledStep.Type == scheduledstep.TypeCRON && entProvisioningScheduledStep.RunTime.Unix() > 0 {
+		// These steps were already scheduled during the planning phase and we
+		//   can ignore at build time
+		return nil
+	}
+	scheduleExpr, err := cronexpr.Parse(entScheduledStep.Schedule)
+	if err != nil {
+		return fmt.Errorf("failed to parse scheduled step schedule: %v", err)
+	}
+	// determine the next time this step should run after this
+	runTime := scheduleExpr.Next(time.Now())
+
+	// set the proper run_time, watchdog will handle scheduling the further ones
+	err = entProvisioningScheduledStep.Update().SetRunTime(runTime).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update run_time of provisioning scheduled step: %v", err)
+	}
+
+	err = entStatus.Update().SetState(status.StateAWAITING).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to set provisioning scheduled step status to AWAITING: %v", err)
+	}
 
 	return nil
 }

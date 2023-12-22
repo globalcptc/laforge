@@ -19,7 +19,7 @@ func (IncludedNetwork) Fields() []ent.Field {
 			Default(uuid.New),
 		field.String("name").
 			StructTag(`hcl:"name,label"`),
-		field.JSON("hosts", []string{}).
+		field.JSON("included_hosts", []string{}).
 			StructTag(`hcl:"included_hosts,attr"`),
 	}
 }
@@ -27,11 +27,11 @@ func (IncludedNetwork) Fields() []ent.Field {
 // Edges of the IncludedNetwork.
 func (IncludedNetwork) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("IncludedNetworkToTag", Tag.Type),
-		edge.To("IncludedNetworkToHost", Host.Type),
-		edge.To("IncludedNetworkToNetwork", Network.Type).
+		edge.To("Tags", Tag.Type),
+		edge.To("Hosts", Host.Type),
+		edge.To("Network", Network.Type).
 			Unique(),
-		edge.From("IncludedNetworkToEnvironment", Environment.Type).
-			Ref("EnvironmentToIncludedNetwork"),
+		edge.From("Environments", Environment.Type).
+			Ref("IncludedNetworks"),
 	}
 }

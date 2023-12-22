@@ -17,9 +17,8 @@ import (
 	"github.com/gen0cide/laforge/ent/predicate"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
 	"github.com/gen0cide/laforge/ent/provisionednetwork"
-	"github.com/gen0cide/laforge/ent/provisionedschedulestep"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
-	"github.com/gen0cide/laforge/ent/schedulestep"
 	"github.com/gen0cide/laforge/ent/servertask"
 	"github.com/gen0cide/laforge/ent/status"
 	"github.com/gen0cide/laforge/ent/team"
@@ -139,194 +138,175 @@ func (su *StatusUpdate) ClearError() *StatusUpdate {
 	return su
 }
 
-// SetStatusToBuildID sets the "StatusToBuild" edge to the Build entity by ID.
-func (su *StatusUpdate) SetStatusToBuildID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToBuildID(id)
+// SetBuildID sets the "Build" edge to the Build entity by ID.
+func (su *StatusUpdate) SetBuildID(id uuid.UUID) *StatusUpdate {
+	su.mutation.SetBuildID(id)
 	return su
 }
 
-// SetNillableStatusToBuildID sets the "StatusToBuild" edge to the Build entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToBuildID(id *uuid.UUID) *StatusUpdate {
+// SetNillableBuildID sets the "Build" edge to the Build entity by ID if the given value is not nil.
+func (su *StatusUpdate) SetNillableBuildID(id *uuid.UUID) *StatusUpdate {
 	if id != nil {
-		su = su.SetStatusToBuildID(*id)
+		su = su.SetBuildID(*id)
 	}
 	return su
 }
 
-// SetStatusToBuild sets the "StatusToBuild" edge to the Build entity.
-func (su *StatusUpdate) SetStatusToBuild(b *Build) *StatusUpdate {
-	return su.SetStatusToBuildID(b.ID)
+// SetBuild sets the "Build" edge to the Build entity.
+func (su *StatusUpdate) SetBuild(b *Build) *StatusUpdate {
+	return su.SetBuildID(b.ID)
 }
 
-// SetStatusToProvisionedNetworkID sets the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity by ID.
-func (su *StatusUpdate) SetStatusToProvisionedNetworkID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToProvisionedNetworkID(id)
+// SetProvisionedNetworkID sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity by ID.
+func (su *StatusUpdate) SetProvisionedNetworkID(id uuid.UUID) *StatusUpdate {
+	su.mutation.SetProvisionedNetworkID(id)
 	return su
 }
 
-// SetNillableStatusToProvisionedNetworkID sets the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToProvisionedNetworkID(id *uuid.UUID) *StatusUpdate {
+// SetNillableProvisionedNetworkID sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity by ID if the given value is not nil.
+func (su *StatusUpdate) SetNillableProvisionedNetworkID(id *uuid.UUID) *StatusUpdate {
 	if id != nil {
-		su = su.SetStatusToProvisionedNetworkID(*id)
+		su = su.SetProvisionedNetworkID(*id)
 	}
 	return su
 }
 
-// SetStatusToProvisionedNetwork sets the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (su *StatusUpdate) SetStatusToProvisionedNetwork(p *ProvisionedNetwork) *StatusUpdate {
-	return su.SetStatusToProvisionedNetworkID(p.ID)
+// SetProvisionedNetwork sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity.
+func (su *StatusUpdate) SetProvisionedNetwork(p *ProvisionedNetwork) *StatusUpdate {
+	return su.SetProvisionedNetworkID(p.ID)
 }
 
-// SetStatusToProvisionedHostID sets the "StatusToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (su *StatusUpdate) SetStatusToProvisionedHostID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToProvisionedHostID(id)
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (su *StatusUpdate) SetProvisionedHostID(id uuid.UUID) *StatusUpdate {
+	su.mutation.SetProvisionedHostID(id)
 	return su
 }
 
-// SetNillableStatusToProvisionedHostID sets the "StatusToProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToProvisionedHostID(id *uuid.UUID) *StatusUpdate {
+// SetNillableProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
+func (su *StatusUpdate) SetNillableProvisionedHostID(id *uuid.UUID) *StatusUpdate {
 	if id != nil {
-		su = su.SetStatusToProvisionedHostID(*id)
+		su = su.SetProvisionedHostID(*id)
 	}
 	return su
 }
 
-// SetStatusToProvisionedHost sets the "StatusToProvisionedHost" edge to the ProvisionedHost entity.
-func (su *StatusUpdate) SetStatusToProvisionedHost(p *ProvisionedHost) *StatusUpdate {
-	return su.SetStatusToProvisionedHostID(p.ID)
+// SetProvisionedHost sets the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (su *StatusUpdate) SetProvisionedHost(p *ProvisionedHost) *StatusUpdate {
+	return su.SetProvisionedHostID(p.ID)
 }
 
-// SetStatusToProvisioningStepID sets the "StatusToProvisioningStep" edge to the ProvisioningStep entity by ID.
-func (su *StatusUpdate) SetStatusToProvisioningStepID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToProvisioningStepID(id)
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID.
+func (su *StatusUpdate) SetProvisioningStepID(id uuid.UUID) *StatusUpdate {
+	su.mutation.SetProvisioningStepID(id)
 	return su
 }
 
-// SetNillableStatusToProvisioningStepID sets the "StatusToProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToProvisioningStepID(id *uuid.UUID) *StatusUpdate {
+// SetNillableProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
+func (su *StatusUpdate) SetNillableProvisioningStepID(id *uuid.UUID) *StatusUpdate {
 	if id != nil {
-		su = su.SetStatusToProvisioningStepID(*id)
+		su = su.SetProvisioningStepID(*id)
 	}
 	return su
 }
 
-// SetStatusToProvisioningStep sets the "StatusToProvisioningStep" edge to the ProvisioningStep entity.
-func (su *StatusUpdate) SetStatusToProvisioningStep(p *ProvisioningStep) *StatusUpdate {
-	return su.SetStatusToProvisioningStepID(p.ID)
+// SetProvisioningStep sets the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (su *StatusUpdate) SetProvisioningStep(p *ProvisioningStep) *StatusUpdate {
+	return su.SetProvisioningStepID(p.ID)
 }
 
-// SetStatusToTeamID sets the "StatusToTeam" edge to the Team entity by ID.
-func (su *StatusUpdate) SetStatusToTeamID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToTeamID(id)
+// SetTeamID sets the "Team" edge to the Team entity by ID.
+func (su *StatusUpdate) SetTeamID(id uuid.UUID) *StatusUpdate {
+	su.mutation.SetTeamID(id)
 	return su
 }
 
-// SetNillableStatusToTeamID sets the "StatusToTeam" edge to the Team entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToTeamID(id *uuid.UUID) *StatusUpdate {
+// SetNillableTeamID sets the "Team" edge to the Team entity by ID if the given value is not nil.
+func (su *StatusUpdate) SetNillableTeamID(id *uuid.UUID) *StatusUpdate {
 	if id != nil {
-		su = su.SetStatusToTeamID(*id)
+		su = su.SetTeamID(*id)
 	}
 	return su
 }
 
-// SetStatusToTeam sets the "StatusToTeam" edge to the Team entity.
-func (su *StatusUpdate) SetStatusToTeam(t *Team) *StatusUpdate {
-	return su.SetStatusToTeamID(t.ID)
+// SetTeam sets the "Team" edge to the Team entity.
+func (su *StatusUpdate) SetTeam(t *Team) *StatusUpdate {
+	return su.SetTeamID(t.ID)
 }
 
-// SetStatusToPlanID sets the "StatusToPlan" edge to the Plan entity by ID.
-func (su *StatusUpdate) SetStatusToPlanID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToPlanID(id)
+// SetPlanID sets the "Plan" edge to the Plan entity by ID.
+func (su *StatusUpdate) SetPlanID(id uuid.UUID) *StatusUpdate {
+	su.mutation.SetPlanID(id)
 	return su
 }
 
-// SetNillableStatusToPlanID sets the "StatusToPlan" edge to the Plan entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToPlanID(id *uuid.UUID) *StatusUpdate {
+// SetNillablePlanID sets the "Plan" edge to the Plan entity by ID if the given value is not nil.
+func (su *StatusUpdate) SetNillablePlanID(id *uuid.UUID) *StatusUpdate {
 	if id != nil {
-		su = su.SetStatusToPlanID(*id)
+		su = su.SetPlanID(*id)
 	}
 	return su
 }
 
-// SetStatusToPlan sets the "StatusToPlan" edge to the Plan entity.
-func (su *StatusUpdate) SetStatusToPlan(p *Plan) *StatusUpdate {
-	return su.SetStatusToPlanID(p.ID)
+// SetPlan sets the "Plan" edge to the Plan entity.
+func (su *StatusUpdate) SetPlan(p *Plan) *StatusUpdate {
+	return su.SetPlanID(p.ID)
 }
 
-// SetStatusToServerTaskID sets the "StatusToServerTask" edge to the ServerTask entity by ID.
-func (su *StatusUpdate) SetStatusToServerTaskID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToServerTaskID(id)
+// SetServerTaskID sets the "ServerTask" edge to the ServerTask entity by ID.
+func (su *StatusUpdate) SetServerTaskID(id uuid.UUID) *StatusUpdate {
+	su.mutation.SetServerTaskID(id)
 	return su
 }
 
-// SetNillableStatusToServerTaskID sets the "StatusToServerTask" edge to the ServerTask entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToServerTaskID(id *uuid.UUID) *StatusUpdate {
+// SetNillableServerTaskID sets the "ServerTask" edge to the ServerTask entity by ID if the given value is not nil.
+func (su *StatusUpdate) SetNillableServerTaskID(id *uuid.UUID) *StatusUpdate {
 	if id != nil {
-		su = su.SetStatusToServerTaskID(*id)
+		su = su.SetServerTaskID(*id)
 	}
 	return su
 }
 
-// SetStatusToServerTask sets the "StatusToServerTask" edge to the ServerTask entity.
-func (su *StatusUpdate) SetStatusToServerTask(s *ServerTask) *StatusUpdate {
-	return su.SetStatusToServerTaskID(s.ID)
+// SetServerTask sets the "ServerTask" edge to the ServerTask entity.
+func (su *StatusUpdate) SetServerTask(s *ServerTask) *StatusUpdate {
+	return su.SetServerTaskID(s.ID)
 }
 
-// SetStatusToAdhocPlanID sets the "StatusToAdhocPlan" edge to the AdhocPlan entity by ID.
-func (su *StatusUpdate) SetStatusToAdhocPlanID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToAdhocPlanID(id)
+// SetAdhocPlanID sets the "AdhocPlan" edge to the AdhocPlan entity by ID.
+func (su *StatusUpdate) SetAdhocPlanID(id uuid.UUID) *StatusUpdate {
+	su.mutation.SetAdhocPlanID(id)
 	return su
 }
 
-// SetNillableStatusToAdhocPlanID sets the "StatusToAdhocPlan" edge to the AdhocPlan entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToAdhocPlanID(id *uuid.UUID) *StatusUpdate {
+// SetNillableAdhocPlanID sets the "AdhocPlan" edge to the AdhocPlan entity by ID if the given value is not nil.
+func (su *StatusUpdate) SetNillableAdhocPlanID(id *uuid.UUID) *StatusUpdate {
 	if id != nil {
-		su = su.SetStatusToAdhocPlanID(*id)
+		su = su.SetAdhocPlanID(*id)
 	}
 	return su
 }
 
-// SetStatusToAdhocPlan sets the "StatusToAdhocPlan" edge to the AdhocPlan entity.
-func (su *StatusUpdate) SetStatusToAdhocPlan(a *AdhocPlan) *StatusUpdate {
-	return su.SetStatusToAdhocPlanID(a.ID)
+// SetAdhocPlan sets the "AdhocPlan" edge to the AdhocPlan entity.
+func (su *StatusUpdate) SetAdhocPlan(a *AdhocPlan) *StatusUpdate {
+	return su.SetAdhocPlanID(a.ID)
 }
 
-// SetStatusToScheduleStepID sets the "StatusToScheduleStep" edge to the ScheduleStep entity by ID.
-func (su *StatusUpdate) SetStatusToScheduleStepID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToScheduleStepID(id)
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (su *StatusUpdate) SetProvisioningScheduledStepID(id uuid.UUID) *StatusUpdate {
+	su.mutation.SetProvisioningScheduledStepID(id)
 	return su
 }
 
-// SetNillableStatusToScheduleStepID sets the "StatusToScheduleStep" edge to the ScheduleStep entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToScheduleStepID(id *uuid.UUID) *StatusUpdate {
+// SetNillableProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (su *StatusUpdate) SetNillableProvisioningScheduledStepID(id *uuid.UUID) *StatusUpdate {
 	if id != nil {
-		su = su.SetStatusToScheduleStepID(*id)
+		su = su.SetProvisioningScheduledStepID(*id)
 	}
 	return su
 }
 
-// SetStatusToScheduleStep sets the "StatusToScheduleStep" edge to the ScheduleStep entity.
-func (su *StatusUpdate) SetStatusToScheduleStep(s *ScheduleStep) *StatusUpdate {
-	return su.SetStatusToScheduleStepID(s.ID)
-}
-
-// SetStatusToProvisionedScheduleStepID sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID.
-func (su *StatusUpdate) SetStatusToProvisionedScheduleStepID(id uuid.UUID) *StatusUpdate {
-	su.mutation.SetStatusToProvisionedScheduleStepID(id)
-	return su
-}
-
-// SetNillableStatusToProvisionedScheduleStepID sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID if the given value is not nil.
-func (su *StatusUpdate) SetNillableStatusToProvisionedScheduleStepID(id *uuid.UUID) *StatusUpdate {
-	if id != nil {
-		su = su.SetStatusToProvisionedScheduleStepID(*id)
-	}
-	return su
-}
-
-// SetStatusToProvisionedScheduleStep sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (su *StatusUpdate) SetStatusToProvisionedScheduleStep(p *ProvisionedScheduleStep) *StatusUpdate {
-	return su.SetStatusToProvisionedScheduleStepID(p.ID)
+// SetProvisioningScheduledStep sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (su *StatusUpdate) SetProvisioningScheduledStep(p *ProvisioningScheduledStep) *StatusUpdate {
+	return su.SetProvisioningScheduledStepID(p.ID)
 }
 
 // Mutation returns the StatusMutation object of the builder.
@@ -334,63 +314,57 @@ func (su *StatusUpdate) Mutation() *StatusMutation {
 	return su.mutation
 }
 
-// ClearStatusToBuild clears the "StatusToBuild" edge to the Build entity.
-func (su *StatusUpdate) ClearStatusToBuild() *StatusUpdate {
-	su.mutation.ClearStatusToBuild()
+// ClearBuild clears the "Build" edge to the Build entity.
+func (su *StatusUpdate) ClearBuild() *StatusUpdate {
+	su.mutation.ClearBuild()
 	return su
 }
 
-// ClearStatusToProvisionedNetwork clears the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (su *StatusUpdate) ClearStatusToProvisionedNetwork() *StatusUpdate {
-	su.mutation.ClearStatusToProvisionedNetwork()
+// ClearProvisionedNetwork clears the "ProvisionedNetwork" edge to the ProvisionedNetwork entity.
+func (su *StatusUpdate) ClearProvisionedNetwork() *StatusUpdate {
+	su.mutation.ClearProvisionedNetwork()
 	return su
 }
 
-// ClearStatusToProvisionedHost clears the "StatusToProvisionedHost" edge to the ProvisionedHost entity.
-func (su *StatusUpdate) ClearStatusToProvisionedHost() *StatusUpdate {
-	su.mutation.ClearStatusToProvisionedHost()
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (su *StatusUpdate) ClearProvisionedHost() *StatusUpdate {
+	su.mutation.ClearProvisionedHost()
 	return su
 }
 
-// ClearStatusToProvisioningStep clears the "StatusToProvisioningStep" edge to the ProvisioningStep entity.
-func (su *StatusUpdate) ClearStatusToProvisioningStep() *StatusUpdate {
-	su.mutation.ClearStatusToProvisioningStep()
+// ClearProvisioningStep clears the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (su *StatusUpdate) ClearProvisioningStep() *StatusUpdate {
+	su.mutation.ClearProvisioningStep()
 	return su
 }
 
-// ClearStatusToTeam clears the "StatusToTeam" edge to the Team entity.
-func (su *StatusUpdate) ClearStatusToTeam() *StatusUpdate {
-	su.mutation.ClearStatusToTeam()
+// ClearTeam clears the "Team" edge to the Team entity.
+func (su *StatusUpdate) ClearTeam() *StatusUpdate {
+	su.mutation.ClearTeam()
 	return su
 }
 
-// ClearStatusToPlan clears the "StatusToPlan" edge to the Plan entity.
-func (su *StatusUpdate) ClearStatusToPlan() *StatusUpdate {
-	su.mutation.ClearStatusToPlan()
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (su *StatusUpdate) ClearPlan() *StatusUpdate {
+	su.mutation.ClearPlan()
 	return su
 }
 
-// ClearStatusToServerTask clears the "StatusToServerTask" edge to the ServerTask entity.
-func (su *StatusUpdate) ClearStatusToServerTask() *StatusUpdate {
-	su.mutation.ClearStatusToServerTask()
+// ClearServerTask clears the "ServerTask" edge to the ServerTask entity.
+func (su *StatusUpdate) ClearServerTask() *StatusUpdate {
+	su.mutation.ClearServerTask()
 	return su
 }
 
-// ClearStatusToAdhocPlan clears the "StatusToAdhocPlan" edge to the AdhocPlan entity.
-func (su *StatusUpdate) ClearStatusToAdhocPlan() *StatusUpdate {
-	su.mutation.ClearStatusToAdhocPlan()
+// ClearAdhocPlan clears the "AdhocPlan" edge to the AdhocPlan entity.
+func (su *StatusUpdate) ClearAdhocPlan() *StatusUpdate {
+	su.mutation.ClearAdhocPlan()
 	return su
 }
 
-// ClearStatusToScheduleStep clears the "StatusToScheduleStep" edge to the ScheduleStep entity.
-func (su *StatusUpdate) ClearStatusToScheduleStep() *StatusUpdate {
-	su.mutation.ClearStatusToScheduleStep()
-	return su
-}
-
-// ClearStatusToProvisionedScheduleStep clears the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (su *StatusUpdate) ClearStatusToProvisionedScheduleStep() *StatusUpdate {
-	su.mutation.ClearStatusToProvisionedScheduleStep()
+// ClearProvisioningScheduledStep clears the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (su *StatusUpdate) ClearProvisioningScheduledStep() *StatusUpdate {
+	su.mutation.ClearProvisioningScheduledStep()
 	return su
 }
 
@@ -554,12 +528,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: status.FieldError,
 		})
 	}
-	if su.mutation.StatusToBuildCleared() {
+	if su.mutation.BuildCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToBuildTable,
-			Columns: []string{status.StatusToBuildColumn},
+			Table:   status.BuildTable,
+			Columns: []string{status.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -570,12 +544,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := su.mutation.StatusToBuildIDs(); len(nodes) > 0 {
+	if nodes := su.mutation.BuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToBuildTable,
-			Columns: []string{status.StatusToBuildColumn},
+			Table:   status.BuildTable,
+			Columns: []string{status.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -589,12 +563,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if su.mutation.StatusToProvisionedNetworkCleared() {
+	if su.mutation.ProvisionedNetworkCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisionedNetworkTable,
-			Columns: []string{status.StatusToProvisionedNetworkColumn},
+			Table:   status.ProvisionedNetworkTable,
+			Columns: []string{status.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -605,12 +579,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := su.mutation.StatusToProvisionedNetworkIDs(); len(nodes) > 0 {
+	if nodes := su.mutation.ProvisionedNetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisionedNetworkTable,
-			Columns: []string{status.StatusToProvisionedNetworkColumn},
+			Table:   status.ProvisionedNetworkTable,
+			Columns: []string{status.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -624,12 +598,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if su.mutation.StatusToProvisionedHostCleared() {
+	if su.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisionedHostTable,
-			Columns: []string{status.StatusToProvisionedHostColumn},
+			Table:   status.ProvisionedHostTable,
+			Columns: []string{status.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -640,12 +614,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := su.mutation.StatusToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := su.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisionedHostTable,
-			Columns: []string{status.StatusToProvisionedHostColumn},
+			Table:   status.ProvisionedHostTable,
+			Columns: []string{status.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -659,12 +633,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if su.mutation.StatusToProvisioningStepCleared() {
+	if su.mutation.ProvisioningStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisioningStepTable,
-			Columns: []string{status.StatusToProvisioningStepColumn},
+			Table:   status.ProvisioningStepTable,
+			Columns: []string{status.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -675,12 +649,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := su.mutation.StatusToProvisioningStepIDs(); len(nodes) > 0 {
+	if nodes := su.mutation.ProvisioningStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisioningStepTable,
-			Columns: []string{status.StatusToProvisioningStepColumn},
+			Table:   status.ProvisioningStepTable,
+			Columns: []string{status.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -694,12 +668,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if su.mutation.StatusToTeamCleared() {
+	if su.mutation.TeamCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToTeamTable,
-			Columns: []string{status.StatusToTeamColumn},
+			Table:   status.TeamTable,
+			Columns: []string{status.TeamColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -710,12 +684,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := su.mutation.StatusToTeamIDs(); len(nodes) > 0 {
+	if nodes := su.mutation.TeamIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToTeamTable,
-			Columns: []string{status.StatusToTeamColumn},
+			Table:   status.TeamTable,
+			Columns: []string{status.TeamColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -729,12 +703,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if su.mutation.StatusToPlanCleared() {
+	if su.mutation.PlanCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToPlanTable,
-			Columns: []string{status.StatusToPlanColumn},
+			Table:   status.PlanTable,
+			Columns: []string{status.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -745,12 +719,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := su.mutation.StatusToPlanIDs(); len(nodes) > 0 {
+	if nodes := su.mutation.PlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToPlanTable,
-			Columns: []string{status.StatusToPlanColumn},
+			Table:   status.PlanTable,
+			Columns: []string{status.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -764,12 +738,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if su.mutation.StatusToServerTaskCleared() {
+	if su.mutation.ServerTaskCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToServerTaskTable,
-			Columns: []string{status.StatusToServerTaskColumn},
+			Table:   status.ServerTaskTable,
+			Columns: []string{status.ServerTaskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -780,12 +754,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := su.mutation.StatusToServerTaskIDs(); len(nodes) > 0 {
+	if nodes := su.mutation.ServerTaskIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToServerTaskTable,
-			Columns: []string{status.StatusToServerTaskColumn},
+			Table:   status.ServerTaskTable,
+			Columns: []string{status.ServerTaskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -799,12 +773,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if su.mutation.StatusToAdhocPlanCleared() {
+	if su.mutation.AdhocPlanCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToAdhocPlanTable,
-			Columns: []string{status.StatusToAdhocPlanColumn},
+			Table:   status.AdhocPlanTable,
+			Columns: []string{status.AdhocPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -815,12 +789,12 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := su.mutation.StatusToAdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := su.mutation.AdhocPlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToAdhocPlanTable,
-			Columns: []string{status.StatusToAdhocPlanColumn},
+			Table:   status.AdhocPlanTable,
+			Columns: []string{status.AdhocPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -834,68 +808,33 @@ func (su *StatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if su.mutation.StatusToScheduleStepCleared() {
+	if su.mutation.ProvisioningScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToScheduleStepTable,
-			Columns: []string{status.StatusToScheduleStepColumn},
+			Table:   status.ProvisioningScheduledStepTable,
+			Columns: []string{status.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := su.mutation.StatusToScheduleStepIDs(); len(nodes) > 0 {
+	if nodes := su.mutation.ProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToScheduleStepTable,
-			Columns: []string{status.StatusToScheduleStepColumn},
+			Table:   status.ProvisioningScheduledStepTable,
+			Columns: []string{status.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if su.mutation.StatusToProvisionedScheduleStepCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   status.StatusToProvisionedScheduleStepTable,
-			Columns: []string{status.StatusToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := su.mutation.StatusToProvisionedScheduleStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   status.StatusToProvisionedScheduleStepTable,
-			Columns: []string{status.StatusToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}
@@ -1023,194 +962,175 @@ func (suo *StatusUpdateOne) ClearError() *StatusUpdateOne {
 	return suo
 }
 
-// SetStatusToBuildID sets the "StatusToBuild" edge to the Build entity by ID.
-func (suo *StatusUpdateOne) SetStatusToBuildID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToBuildID(id)
+// SetBuildID sets the "Build" edge to the Build entity by ID.
+func (suo *StatusUpdateOne) SetBuildID(id uuid.UUID) *StatusUpdateOne {
+	suo.mutation.SetBuildID(id)
 	return suo
 }
 
-// SetNillableStatusToBuildID sets the "StatusToBuild" edge to the Build entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToBuildID(id *uuid.UUID) *StatusUpdateOne {
+// SetNillableBuildID sets the "Build" edge to the Build entity by ID if the given value is not nil.
+func (suo *StatusUpdateOne) SetNillableBuildID(id *uuid.UUID) *StatusUpdateOne {
 	if id != nil {
-		suo = suo.SetStatusToBuildID(*id)
+		suo = suo.SetBuildID(*id)
 	}
 	return suo
 }
 
-// SetStatusToBuild sets the "StatusToBuild" edge to the Build entity.
-func (suo *StatusUpdateOne) SetStatusToBuild(b *Build) *StatusUpdateOne {
-	return suo.SetStatusToBuildID(b.ID)
+// SetBuild sets the "Build" edge to the Build entity.
+func (suo *StatusUpdateOne) SetBuild(b *Build) *StatusUpdateOne {
+	return suo.SetBuildID(b.ID)
 }
 
-// SetStatusToProvisionedNetworkID sets the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity by ID.
-func (suo *StatusUpdateOne) SetStatusToProvisionedNetworkID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToProvisionedNetworkID(id)
+// SetProvisionedNetworkID sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity by ID.
+func (suo *StatusUpdateOne) SetProvisionedNetworkID(id uuid.UUID) *StatusUpdateOne {
+	suo.mutation.SetProvisionedNetworkID(id)
 	return suo
 }
 
-// SetNillableStatusToProvisionedNetworkID sets the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToProvisionedNetworkID(id *uuid.UUID) *StatusUpdateOne {
+// SetNillableProvisionedNetworkID sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity by ID if the given value is not nil.
+func (suo *StatusUpdateOne) SetNillableProvisionedNetworkID(id *uuid.UUID) *StatusUpdateOne {
 	if id != nil {
-		suo = suo.SetStatusToProvisionedNetworkID(*id)
+		suo = suo.SetProvisionedNetworkID(*id)
 	}
 	return suo
 }
 
-// SetStatusToProvisionedNetwork sets the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (suo *StatusUpdateOne) SetStatusToProvisionedNetwork(p *ProvisionedNetwork) *StatusUpdateOne {
-	return suo.SetStatusToProvisionedNetworkID(p.ID)
+// SetProvisionedNetwork sets the "ProvisionedNetwork" edge to the ProvisionedNetwork entity.
+func (suo *StatusUpdateOne) SetProvisionedNetwork(p *ProvisionedNetwork) *StatusUpdateOne {
+	return suo.SetProvisionedNetworkID(p.ID)
 }
 
-// SetStatusToProvisionedHostID sets the "StatusToProvisionedHost" edge to the ProvisionedHost entity by ID.
-func (suo *StatusUpdateOne) SetStatusToProvisionedHostID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToProvisionedHostID(id)
+// SetProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID.
+func (suo *StatusUpdateOne) SetProvisionedHostID(id uuid.UUID) *StatusUpdateOne {
+	suo.mutation.SetProvisionedHostID(id)
 	return suo
 }
 
-// SetNillableStatusToProvisionedHostID sets the "StatusToProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToProvisionedHostID(id *uuid.UUID) *StatusUpdateOne {
+// SetNillableProvisionedHostID sets the "ProvisionedHost" edge to the ProvisionedHost entity by ID if the given value is not nil.
+func (suo *StatusUpdateOne) SetNillableProvisionedHostID(id *uuid.UUID) *StatusUpdateOne {
 	if id != nil {
-		suo = suo.SetStatusToProvisionedHostID(*id)
+		suo = suo.SetProvisionedHostID(*id)
 	}
 	return suo
 }
 
-// SetStatusToProvisionedHost sets the "StatusToProvisionedHost" edge to the ProvisionedHost entity.
-func (suo *StatusUpdateOne) SetStatusToProvisionedHost(p *ProvisionedHost) *StatusUpdateOne {
-	return suo.SetStatusToProvisionedHostID(p.ID)
+// SetProvisionedHost sets the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (suo *StatusUpdateOne) SetProvisionedHost(p *ProvisionedHost) *StatusUpdateOne {
+	return suo.SetProvisionedHostID(p.ID)
 }
 
-// SetStatusToProvisioningStepID sets the "StatusToProvisioningStep" edge to the ProvisioningStep entity by ID.
-func (suo *StatusUpdateOne) SetStatusToProvisioningStepID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToProvisioningStepID(id)
+// SetProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID.
+func (suo *StatusUpdateOne) SetProvisioningStepID(id uuid.UUID) *StatusUpdateOne {
+	suo.mutation.SetProvisioningStepID(id)
 	return suo
 }
 
-// SetNillableStatusToProvisioningStepID sets the "StatusToProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToProvisioningStepID(id *uuid.UUID) *StatusUpdateOne {
+// SetNillableProvisioningStepID sets the "ProvisioningStep" edge to the ProvisioningStep entity by ID if the given value is not nil.
+func (suo *StatusUpdateOne) SetNillableProvisioningStepID(id *uuid.UUID) *StatusUpdateOne {
 	if id != nil {
-		suo = suo.SetStatusToProvisioningStepID(*id)
+		suo = suo.SetProvisioningStepID(*id)
 	}
 	return suo
 }
 
-// SetStatusToProvisioningStep sets the "StatusToProvisioningStep" edge to the ProvisioningStep entity.
-func (suo *StatusUpdateOne) SetStatusToProvisioningStep(p *ProvisioningStep) *StatusUpdateOne {
-	return suo.SetStatusToProvisioningStepID(p.ID)
+// SetProvisioningStep sets the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (suo *StatusUpdateOne) SetProvisioningStep(p *ProvisioningStep) *StatusUpdateOne {
+	return suo.SetProvisioningStepID(p.ID)
 }
 
-// SetStatusToTeamID sets the "StatusToTeam" edge to the Team entity by ID.
-func (suo *StatusUpdateOne) SetStatusToTeamID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToTeamID(id)
+// SetTeamID sets the "Team" edge to the Team entity by ID.
+func (suo *StatusUpdateOne) SetTeamID(id uuid.UUID) *StatusUpdateOne {
+	suo.mutation.SetTeamID(id)
 	return suo
 }
 
-// SetNillableStatusToTeamID sets the "StatusToTeam" edge to the Team entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToTeamID(id *uuid.UUID) *StatusUpdateOne {
+// SetNillableTeamID sets the "Team" edge to the Team entity by ID if the given value is not nil.
+func (suo *StatusUpdateOne) SetNillableTeamID(id *uuid.UUID) *StatusUpdateOne {
 	if id != nil {
-		suo = suo.SetStatusToTeamID(*id)
+		suo = suo.SetTeamID(*id)
 	}
 	return suo
 }
 
-// SetStatusToTeam sets the "StatusToTeam" edge to the Team entity.
-func (suo *StatusUpdateOne) SetStatusToTeam(t *Team) *StatusUpdateOne {
-	return suo.SetStatusToTeamID(t.ID)
+// SetTeam sets the "Team" edge to the Team entity.
+func (suo *StatusUpdateOne) SetTeam(t *Team) *StatusUpdateOne {
+	return suo.SetTeamID(t.ID)
 }
 
-// SetStatusToPlanID sets the "StatusToPlan" edge to the Plan entity by ID.
-func (suo *StatusUpdateOne) SetStatusToPlanID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToPlanID(id)
+// SetPlanID sets the "Plan" edge to the Plan entity by ID.
+func (suo *StatusUpdateOne) SetPlanID(id uuid.UUID) *StatusUpdateOne {
+	suo.mutation.SetPlanID(id)
 	return suo
 }
 
-// SetNillableStatusToPlanID sets the "StatusToPlan" edge to the Plan entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToPlanID(id *uuid.UUID) *StatusUpdateOne {
+// SetNillablePlanID sets the "Plan" edge to the Plan entity by ID if the given value is not nil.
+func (suo *StatusUpdateOne) SetNillablePlanID(id *uuid.UUID) *StatusUpdateOne {
 	if id != nil {
-		suo = suo.SetStatusToPlanID(*id)
+		suo = suo.SetPlanID(*id)
 	}
 	return suo
 }
 
-// SetStatusToPlan sets the "StatusToPlan" edge to the Plan entity.
-func (suo *StatusUpdateOne) SetStatusToPlan(p *Plan) *StatusUpdateOne {
-	return suo.SetStatusToPlanID(p.ID)
+// SetPlan sets the "Plan" edge to the Plan entity.
+func (suo *StatusUpdateOne) SetPlan(p *Plan) *StatusUpdateOne {
+	return suo.SetPlanID(p.ID)
 }
 
-// SetStatusToServerTaskID sets the "StatusToServerTask" edge to the ServerTask entity by ID.
-func (suo *StatusUpdateOne) SetStatusToServerTaskID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToServerTaskID(id)
+// SetServerTaskID sets the "ServerTask" edge to the ServerTask entity by ID.
+func (suo *StatusUpdateOne) SetServerTaskID(id uuid.UUID) *StatusUpdateOne {
+	suo.mutation.SetServerTaskID(id)
 	return suo
 }
 
-// SetNillableStatusToServerTaskID sets the "StatusToServerTask" edge to the ServerTask entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToServerTaskID(id *uuid.UUID) *StatusUpdateOne {
+// SetNillableServerTaskID sets the "ServerTask" edge to the ServerTask entity by ID if the given value is not nil.
+func (suo *StatusUpdateOne) SetNillableServerTaskID(id *uuid.UUID) *StatusUpdateOne {
 	if id != nil {
-		suo = suo.SetStatusToServerTaskID(*id)
+		suo = suo.SetServerTaskID(*id)
 	}
 	return suo
 }
 
-// SetStatusToServerTask sets the "StatusToServerTask" edge to the ServerTask entity.
-func (suo *StatusUpdateOne) SetStatusToServerTask(s *ServerTask) *StatusUpdateOne {
-	return suo.SetStatusToServerTaskID(s.ID)
+// SetServerTask sets the "ServerTask" edge to the ServerTask entity.
+func (suo *StatusUpdateOne) SetServerTask(s *ServerTask) *StatusUpdateOne {
+	return suo.SetServerTaskID(s.ID)
 }
 
-// SetStatusToAdhocPlanID sets the "StatusToAdhocPlan" edge to the AdhocPlan entity by ID.
-func (suo *StatusUpdateOne) SetStatusToAdhocPlanID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToAdhocPlanID(id)
+// SetAdhocPlanID sets the "AdhocPlan" edge to the AdhocPlan entity by ID.
+func (suo *StatusUpdateOne) SetAdhocPlanID(id uuid.UUID) *StatusUpdateOne {
+	suo.mutation.SetAdhocPlanID(id)
 	return suo
 }
 
-// SetNillableStatusToAdhocPlanID sets the "StatusToAdhocPlan" edge to the AdhocPlan entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToAdhocPlanID(id *uuid.UUID) *StatusUpdateOne {
+// SetNillableAdhocPlanID sets the "AdhocPlan" edge to the AdhocPlan entity by ID if the given value is not nil.
+func (suo *StatusUpdateOne) SetNillableAdhocPlanID(id *uuid.UUID) *StatusUpdateOne {
 	if id != nil {
-		suo = suo.SetStatusToAdhocPlanID(*id)
+		suo = suo.SetAdhocPlanID(*id)
 	}
 	return suo
 }
 
-// SetStatusToAdhocPlan sets the "StatusToAdhocPlan" edge to the AdhocPlan entity.
-func (suo *StatusUpdateOne) SetStatusToAdhocPlan(a *AdhocPlan) *StatusUpdateOne {
-	return suo.SetStatusToAdhocPlanID(a.ID)
+// SetAdhocPlan sets the "AdhocPlan" edge to the AdhocPlan entity.
+func (suo *StatusUpdateOne) SetAdhocPlan(a *AdhocPlan) *StatusUpdateOne {
+	return suo.SetAdhocPlanID(a.ID)
 }
 
-// SetStatusToScheduleStepID sets the "StatusToScheduleStep" edge to the ScheduleStep entity by ID.
-func (suo *StatusUpdateOne) SetStatusToScheduleStepID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToScheduleStepID(id)
+// SetProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID.
+func (suo *StatusUpdateOne) SetProvisioningScheduledStepID(id uuid.UUID) *StatusUpdateOne {
+	suo.mutation.SetProvisioningScheduledStepID(id)
 	return suo
 }
 
-// SetNillableStatusToScheduleStepID sets the "StatusToScheduleStep" edge to the ScheduleStep entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToScheduleStepID(id *uuid.UUID) *StatusUpdateOne {
+// SetNillableProvisioningScheduledStepID sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity by ID if the given value is not nil.
+func (suo *StatusUpdateOne) SetNillableProvisioningScheduledStepID(id *uuid.UUID) *StatusUpdateOne {
 	if id != nil {
-		suo = suo.SetStatusToScheduleStepID(*id)
+		suo = suo.SetProvisioningScheduledStepID(*id)
 	}
 	return suo
 }
 
-// SetStatusToScheduleStep sets the "StatusToScheduleStep" edge to the ScheduleStep entity.
-func (suo *StatusUpdateOne) SetStatusToScheduleStep(s *ScheduleStep) *StatusUpdateOne {
-	return suo.SetStatusToScheduleStepID(s.ID)
-}
-
-// SetStatusToProvisionedScheduleStepID sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID.
-func (suo *StatusUpdateOne) SetStatusToProvisionedScheduleStepID(id uuid.UUID) *StatusUpdateOne {
-	suo.mutation.SetStatusToProvisionedScheduleStepID(id)
-	return suo
-}
-
-// SetNillableStatusToProvisionedScheduleStepID sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity by ID if the given value is not nil.
-func (suo *StatusUpdateOne) SetNillableStatusToProvisionedScheduleStepID(id *uuid.UUID) *StatusUpdateOne {
-	if id != nil {
-		suo = suo.SetStatusToProvisionedScheduleStepID(*id)
-	}
-	return suo
-}
-
-// SetStatusToProvisionedScheduleStep sets the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (suo *StatusUpdateOne) SetStatusToProvisionedScheduleStep(p *ProvisionedScheduleStep) *StatusUpdateOne {
-	return suo.SetStatusToProvisionedScheduleStepID(p.ID)
+// SetProvisioningScheduledStep sets the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (suo *StatusUpdateOne) SetProvisioningScheduledStep(p *ProvisioningScheduledStep) *StatusUpdateOne {
+	return suo.SetProvisioningScheduledStepID(p.ID)
 }
 
 // Mutation returns the StatusMutation object of the builder.
@@ -1218,63 +1138,57 @@ func (suo *StatusUpdateOne) Mutation() *StatusMutation {
 	return suo.mutation
 }
 
-// ClearStatusToBuild clears the "StatusToBuild" edge to the Build entity.
-func (suo *StatusUpdateOne) ClearStatusToBuild() *StatusUpdateOne {
-	suo.mutation.ClearStatusToBuild()
+// ClearBuild clears the "Build" edge to the Build entity.
+func (suo *StatusUpdateOne) ClearBuild() *StatusUpdateOne {
+	suo.mutation.ClearBuild()
 	return suo
 }
 
-// ClearStatusToProvisionedNetwork clears the "StatusToProvisionedNetwork" edge to the ProvisionedNetwork entity.
-func (suo *StatusUpdateOne) ClearStatusToProvisionedNetwork() *StatusUpdateOne {
-	suo.mutation.ClearStatusToProvisionedNetwork()
+// ClearProvisionedNetwork clears the "ProvisionedNetwork" edge to the ProvisionedNetwork entity.
+func (suo *StatusUpdateOne) ClearProvisionedNetwork() *StatusUpdateOne {
+	suo.mutation.ClearProvisionedNetwork()
 	return suo
 }
 
-// ClearStatusToProvisionedHost clears the "StatusToProvisionedHost" edge to the ProvisionedHost entity.
-func (suo *StatusUpdateOne) ClearStatusToProvisionedHost() *StatusUpdateOne {
-	suo.mutation.ClearStatusToProvisionedHost()
+// ClearProvisionedHost clears the "ProvisionedHost" edge to the ProvisionedHost entity.
+func (suo *StatusUpdateOne) ClearProvisionedHost() *StatusUpdateOne {
+	suo.mutation.ClearProvisionedHost()
 	return suo
 }
 
-// ClearStatusToProvisioningStep clears the "StatusToProvisioningStep" edge to the ProvisioningStep entity.
-func (suo *StatusUpdateOne) ClearStatusToProvisioningStep() *StatusUpdateOne {
-	suo.mutation.ClearStatusToProvisioningStep()
+// ClearProvisioningStep clears the "ProvisioningStep" edge to the ProvisioningStep entity.
+func (suo *StatusUpdateOne) ClearProvisioningStep() *StatusUpdateOne {
+	suo.mutation.ClearProvisioningStep()
 	return suo
 }
 
-// ClearStatusToTeam clears the "StatusToTeam" edge to the Team entity.
-func (suo *StatusUpdateOne) ClearStatusToTeam() *StatusUpdateOne {
-	suo.mutation.ClearStatusToTeam()
+// ClearTeam clears the "Team" edge to the Team entity.
+func (suo *StatusUpdateOne) ClearTeam() *StatusUpdateOne {
+	suo.mutation.ClearTeam()
 	return suo
 }
 
-// ClearStatusToPlan clears the "StatusToPlan" edge to the Plan entity.
-func (suo *StatusUpdateOne) ClearStatusToPlan() *StatusUpdateOne {
-	suo.mutation.ClearStatusToPlan()
+// ClearPlan clears the "Plan" edge to the Plan entity.
+func (suo *StatusUpdateOne) ClearPlan() *StatusUpdateOne {
+	suo.mutation.ClearPlan()
 	return suo
 }
 
-// ClearStatusToServerTask clears the "StatusToServerTask" edge to the ServerTask entity.
-func (suo *StatusUpdateOne) ClearStatusToServerTask() *StatusUpdateOne {
-	suo.mutation.ClearStatusToServerTask()
+// ClearServerTask clears the "ServerTask" edge to the ServerTask entity.
+func (suo *StatusUpdateOne) ClearServerTask() *StatusUpdateOne {
+	suo.mutation.ClearServerTask()
 	return suo
 }
 
-// ClearStatusToAdhocPlan clears the "StatusToAdhocPlan" edge to the AdhocPlan entity.
-func (suo *StatusUpdateOne) ClearStatusToAdhocPlan() *StatusUpdateOne {
-	suo.mutation.ClearStatusToAdhocPlan()
+// ClearAdhocPlan clears the "AdhocPlan" edge to the AdhocPlan entity.
+func (suo *StatusUpdateOne) ClearAdhocPlan() *StatusUpdateOne {
+	suo.mutation.ClearAdhocPlan()
 	return suo
 }
 
-// ClearStatusToScheduleStep clears the "StatusToScheduleStep" edge to the ScheduleStep entity.
-func (suo *StatusUpdateOne) ClearStatusToScheduleStep() *StatusUpdateOne {
-	suo.mutation.ClearStatusToScheduleStep()
-	return suo
-}
-
-// ClearStatusToProvisionedScheduleStep clears the "StatusToProvisionedScheduleStep" edge to the ProvisionedScheduleStep entity.
-func (suo *StatusUpdateOne) ClearStatusToProvisionedScheduleStep() *StatusUpdateOne {
-	suo.mutation.ClearStatusToProvisionedScheduleStep()
+// ClearProvisioningScheduledStep clears the "ProvisioningScheduledStep" edge to the ProvisioningScheduledStep entity.
+func (suo *StatusUpdateOne) ClearProvisioningScheduledStep() *StatusUpdateOne {
+	suo.mutation.ClearProvisioningScheduledStep()
 	return suo
 }
 
@@ -1468,12 +1382,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 			Column: status.FieldError,
 		})
 	}
-	if suo.mutation.StatusToBuildCleared() {
+	if suo.mutation.BuildCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToBuildTable,
-			Columns: []string{status.StatusToBuildColumn},
+			Table:   status.BuildTable,
+			Columns: []string{status.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1484,12 +1398,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := suo.mutation.StatusToBuildIDs(); len(nodes) > 0 {
+	if nodes := suo.mutation.BuildIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToBuildTable,
-			Columns: []string{status.StatusToBuildColumn},
+			Table:   status.BuildTable,
+			Columns: []string{status.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1503,12 +1417,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if suo.mutation.StatusToProvisionedNetworkCleared() {
+	if suo.mutation.ProvisionedNetworkCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisionedNetworkTable,
-			Columns: []string{status.StatusToProvisionedNetworkColumn},
+			Table:   status.ProvisionedNetworkTable,
+			Columns: []string{status.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1519,12 +1433,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := suo.mutation.StatusToProvisionedNetworkIDs(); len(nodes) > 0 {
+	if nodes := suo.mutation.ProvisionedNetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisionedNetworkTable,
-			Columns: []string{status.StatusToProvisionedNetworkColumn},
+			Table:   status.ProvisionedNetworkTable,
+			Columns: []string{status.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1538,12 +1452,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if suo.mutation.StatusToProvisionedHostCleared() {
+	if suo.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisionedHostTable,
-			Columns: []string{status.StatusToProvisionedHostColumn},
+			Table:   status.ProvisionedHostTable,
+			Columns: []string{status.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1554,12 +1468,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := suo.mutation.StatusToProvisionedHostIDs(); len(nodes) > 0 {
+	if nodes := suo.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisionedHostTable,
-			Columns: []string{status.StatusToProvisionedHostColumn},
+			Table:   status.ProvisionedHostTable,
+			Columns: []string{status.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1573,12 +1487,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if suo.mutation.StatusToProvisioningStepCleared() {
+	if suo.mutation.ProvisioningStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisioningStepTable,
-			Columns: []string{status.StatusToProvisioningStepColumn},
+			Table:   status.ProvisioningStepTable,
+			Columns: []string{status.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1589,12 +1503,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := suo.mutation.StatusToProvisioningStepIDs(); len(nodes) > 0 {
+	if nodes := suo.mutation.ProvisioningStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToProvisioningStepTable,
-			Columns: []string{status.StatusToProvisioningStepColumn},
+			Table:   status.ProvisioningStepTable,
+			Columns: []string{status.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1608,12 +1522,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if suo.mutation.StatusToTeamCleared() {
+	if suo.mutation.TeamCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToTeamTable,
-			Columns: []string{status.StatusToTeamColumn},
+			Table:   status.TeamTable,
+			Columns: []string{status.TeamColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1624,12 +1538,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := suo.mutation.StatusToTeamIDs(); len(nodes) > 0 {
+	if nodes := suo.mutation.TeamIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToTeamTable,
-			Columns: []string{status.StatusToTeamColumn},
+			Table:   status.TeamTable,
+			Columns: []string{status.TeamColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1643,12 +1557,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if suo.mutation.StatusToPlanCleared() {
+	if suo.mutation.PlanCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToPlanTable,
-			Columns: []string{status.StatusToPlanColumn},
+			Table:   status.PlanTable,
+			Columns: []string{status.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1659,12 +1573,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := suo.mutation.StatusToPlanIDs(); len(nodes) > 0 {
+	if nodes := suo.mutation.PlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToPlanTable,
-			Columns: []string{status.StatusToPlanColumn},
+			Table:   status.PlanTable,
+			Columns: []string{status.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1678,12 +1592,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if suo.mutation.StatusToServerTaskCleared() {
+	if suo.mutation.ServerTaskCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToServerTaskTable,
-			Columns: []string{status.StatusToServerTaskColumn},
+			Table:   status.ServerTaskTable,
+			Columns: []string{status.ServerTaskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1694,12 +1608,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := suo.mutation.StatusToServerTaskIDs(); len(nodes) > 0 {
+	if nodes := suo.mutation.ServerTaskIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToServerTaskTable,
-			Columns: []string{status.StatusToServerTaskColumn},
+			Table:   status.ServerTaskTable,
+			Columns: []string{status.ServerTaskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1713,12 +1627,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if suo.mutation.StatusToAdhocPlanCleared() {
+	if suo.mutation.AdhocPlanCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToAdhocPlanTable,
-			Columns: []string{status.StatusToAdhocPlanColumn},
+			Table:   status.AdhocPlanTable,
+			Columns: []string{status.AdhocPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1729,12 +1643,12 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := suo.mutation.StatusToAdhocPlanIDs(); len(nodes) > 0 {
+	if nodes := suo.mutation.AdhocPlanIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToAdhocPlanTable,
-			Columns: []string{status.StatusToAdhocPlanColumn},
+			Table:   status.AdhocPlanTable,
+			Columns: []string{status.AdhocPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -1748,68 +1662,33 @@ func (suo *StatusUpdateOne) sqlSave(ctx context.Context) (_node *Status, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if suo.mutation.StatusToScheduleStepCleared() {
+	if suo.mutation.ProvisioningScheduledStepCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToScheduleStepTable,
-			Columns: []string{status.StatusToScheduleStepColumn},
+			Table:   status.ProvisioningScheduledStepTable,
+			Columns: []string{status.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := suo.mutation.StatusToScheduleStepIDs(); len(nodes) > 0 {
+	if nodes := suo.mutation.ProvisioningScheduledStepIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
-			Table:   status.StatusToScheduleStepTable,
-			Columns: []string{status.StatusToScheduleStepColumn},
+			Table:   status.ProvisioningScheduledStepTable,
+			Columns: []string{status.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: schedulestep.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if suo.mutation.StatusToProvisionedScheduleStepCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   status.StatusToProvisionedScheduleStepTable,
-			Columns: []string{status.StatusToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := suo.mutation.StatusToProvisionedScheduleStepIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   status.StatusToProvisionedScheduleStepTable,
-			Columns: []string{status.StatusToProvisionedScheduleStepColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedschedulestep.FieldID,
+					Column: provisioningscheduledstep.FieldID,
 				},
 			},
 		}

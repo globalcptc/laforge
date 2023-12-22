@@ -22,6 +22,7 @@ import { ImportRepoModalComponent } from './import-repo-modal/import-repo-modal.
 import { NetworkModalComponent } from './network-modal/network-modal.component';
 import { NetworkComponent } from './network/network.component';
 import { NukeDbModalComponent } from './nuke-db-modal/nuke-db-modal.component';
+import { ScheduledStepsModalComponent } from './scheduled-steps-modal/scheduled-steps-modal.component';
 import { StepModalComponent } from './step-modal/step-modal.component';
 import { StepComponent } from './step/step.component';
 import { TaskListComponent } from './task-list/task-list.component';
@@ -44,7 +45,8 @@ import { ViewLogsModalComponent } from './view-logs-modal/view-logs-modal.compon
     EditUserModalComponent,
     ImportRepoModalComponent,
     ViewLogsModalComponent,
-    NukeDbModalComponent
+    NukeDbModalComponent,
+    ScheduledStepsModalComponent
   ],
   imports: [
     CommonModule,

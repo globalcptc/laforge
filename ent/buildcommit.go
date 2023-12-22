@@ -31,59 +31,59 @@ type BuildCommit struct {
 	Edges BuildCommitEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// BuildCommitToBuild holds the value of the BuildCommitToBuild edge.
-	HCLBuildCommitToBuild *Build `json:"BuildCommitToBuild,omitempty"`
-	// BuildCommitToServerTask holds the value of the BuildCommitToServerTask edge.
-	HCLBuildCommitToServerTask []*ServerTask `json:"BuildCommitToServerTask,omitempty"`
-	// BuildCommitToPlanDiffs holds the value of the BuildCommitToPlanDiffs edge.
-	HCLBuildCommitToPlanDiffs []*PlanDiff `json:"BuildCommitToPlanDiffs,omitempty"`
+	// Build holds the value of the Build edge.
+	HCLBuild *Build `json:"Build,omitempty"`
+	// ServerTasks holds the value of the ServerTasks edge.
+	HCLServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
+	// PlanDiffs holds the value of the PlanDiffs edge.
+	HCLPlanDiffs []*PlanDiff `json:"PlanDiffs,omitempty"`
 	//
-	build_commit_build_commit_to_build *uuid.UUID
+	build_commit_build *uuid.UUID
 }
 
 // BuildCommitEdges holds the relations/edges for other nodes in the graph.
 type BuildCommitEdges struct {
-	// BuildCommitToBuild holds the value of the BuildCommitToBuild edge.
-	BuildCommitToBuild *Build `json:"BuildCommitToBuild,omitempty"`
-	// BuildCommitToServerTask holds the value of the BuildCommitToServerTask edge.
-	BuildCommitToServerTask []*ServerTask `json:"BuildCommitToServerTask,omitempty"`
-	// BuildCommitToPlanDiffs holds the value of the BuildCommitToPlanDiffs edge.
-	BuildCommitToPlanDiffs []*PlanDiff `json:"BuildCommitToPlanDiffs,omitempty"`
+	// Build holds the value of the Build edge.
+	Build *Build `json:"Build,omitempty"`
+	// ServerTasks holds the value of the ServerTasks edge.
+	ServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
+	// PlanDiffs holds the value of the PlanDiffs edge.
+	PlanDiffs []*PlanDiff `json:"PlanDiffs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
 }
 
-// BuildCommitToBuildOrErr returns the BuildCommitToBuild value or an error if the edge
+// BuildOrErr returns the Build value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e BuildCommitEdges) BuildCommitToBuildOrErr() (*Build, error) {
+func (e BuildCommitEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[0] {
-		if e.BuildCommitToBuild == nil {
-			// The edge BuildCommitToBuild was loaded in eager-loading,
+		if e.Build == nil {
+			// The edge Build was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
-		return e.BuildCommitToBuild, nil
+		return e.Build, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildCommitToBuild"}
+	return nil, &NotLoadedError{edge: "Build"}
 }
 
-// BuildCommitToServerTaskOrErr returns the BuildCommitToServerTask value or an error if the edge
+// ServerTasksOrErr returns the ServerTasks value or an error if the edge
 // was not loaded in eager-loading.
-func (e BuildCommitEdges) BuildCommitToServerTaskOrErr() ([]*ServerTask, error) {
+func (e BuildCommitEdges) ServerTasksOrErr() ([]*ServerTask, error) {
 	if e.loadedTypes[1] {
-		return e.BuildCommitToServerTask, nil
+		return e.ServerTasks, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildCommitToServerTask"}
+	return nil, &NotLoadedError{edge: "ServerTasks"}
 }
 
-// BuildCommitToPlanDiffsOrErr returns the BuildCommitToPlanDiffs value or an error if the edge
+// PlanDiffsOrErr returns the PlanDiffs value or an error if the edge
 // was not loaded in eager-loading.
-func (e BuildCommitEdges) BuildCommitToPlanDiffsOrErr() ([]*PlanDiff, error) {
+func (e BuildCommitEdges) PlanDiffsOrErr() ([]*PlanDiff, error) {
 	if e.loadedTypes[2] {
-		return e.BuildCommitToPlanDiffs, nil
+		return e.PlanDiffs, nil
 	}
-	return nil, &NotLoadedError{edge: "BuildCommitToPlanDiffs"}
+	return nil, &NotLoadedError{edge: "PlanDiffs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -99,7 +99,7 @@ func (*BuildCommit) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullTime)
 		case buildcommit.FieldID:
 			values[i] = new(uuid.UUID)
-		case buildcommit.ForeignKeys[0]: // build_commit_build_commit_to_build
+		case buildcommit.ForeignKeys[0]: // build_commit_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type BuildCommit", columns[i])
@@ -148,29 +148,29 @@ func (bc *BuildCommit) assignValues(columns []string, values []interface{}) erro
 			}
 		case buildcommit.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field build_commit_build_commit_to_build", values[i])
+				return fmt.Errorf("unexpected type %T for field build_commit_build", values[i])
 			} else if value.Valid {
-				bc.build_commit_build_commit_to_build = new(uuid.UUID)
-				*bc.build_commit_build_commit_to_build = *value.S.(*uuid.UUID)
+				bc.build_commit_build = new(uuid.UUID)
+				*bc.build_commit_build = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryBuildCommitToBuild queries the "BuildCommitToBuild" edge of the BuildCommit entity.
-func (bc *BuildCommit) QueryBuildCommitToBuild() *BuildQuery {
-	return (&BuildCommitClient{config: bc.config}).QueryBuildCommitToBuild(bc)
+// QueryBuild queries the "Build" edge of the BuildCommit entity.
+func (bc *BuildCommit) QueryBuild() *BuildQuery {
+	return (&BuildCommitClient{config: bc.config}).QueryBuild(bc)
 }
 
-// QueryBuildCommitToServerTask queries the "BuildCommitToServerTask" edge of the BuildCommit entity.
-func (bc *BuildCommit) QueryBuildCommitToServerTask() *ServerTaskQuery {
-	return (&BuildCommitClient{config: bc.config}).QueryBuildCommitToServerTask(bc)
+// QueryServerTasks queries the "ServerTasks" edge of the BuildCommit entity.
+func (bc *BuildCommit) QueryServerTasks() *ServerTaskQuery {
+	return (&BuildCommitClient{config: bc.config}).QueryServerTasks(bc)
 }
 
-// QueryBuildCommitToPlanDiffs queries the "BuildCommitToPlanDiffs" edge of the BuildCommit entity.
-func (bc *BuildCommit) QueryBuildCommitToPlanDiffs() *PlanDiffQuery {
-	return (&BuildCommitClient{config: bc.config}).QueryBuildCommitToPlanDiffs(bc)
+// QueryPlanDiffs queries the "PlanDiffs" edge of the BuildCommit entity.
+func (bc *BuildCommit) QueryPlanDiffs() *PlanDiffQuery {
+	return (&BuildCommitClient{config: bc.config}).QueryPlanDiffs(bc)
 }
 
 // Update returns a builder for updating this BuildCommit.

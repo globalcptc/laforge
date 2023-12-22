@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
+	"github.com/gen0cide/laforge/ent/provisioningscheduledstep"
 	"github.com/gen0cide/laforge/ent/provisioningstep"
 	"github.com/google/uuid"
 )
@@ -29,51 +30,69 @@ type GinFileMiddleware struct {
 	Edges GinFileMiddlewareEdges `json:"edges"`
 
 	// Edges put into the main struct to be loaded via hcl
-	// GinFileMiddlewareToProvisionedHost holds the value of the GinFileMiddlewareToProvisionedHost edge.
-	HCLGinFileMiddlewareToProvisionedHost *ProvisionedHost `json:"GinFileMiddlewareToProvisionedHost,omitempty"`
-	// GinFileMiddlewareToProvisioningStep holds the value of the GinFileMiddlewareToProvisioningStep edge.
-	HCLGinFileMiddlewareToProvisioningStep *ProvisioningStep `json:"GinFileMiddlewareToProvisioningStep,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	HCLProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// ProvisioningStep holds the value of the ProvisioningStep edge.
+	HCLProvisioningStep *ProvisioningStep `json:"ProvisioningStep,omitempty"`
+	// ProvisioningScheduledStep holds the value of the ProvisioningScheduledStep edge.
+	HCLProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
 	//
-	server_task_server_task_to_gin_file_middleware *uuid.UUID
+	server_task_gin_file_middleware *uuid.UUID
 }
 
 // GinFileMiddlewareEdges holds the relations/edges for other nodes in the graph.
 type GinFileMiddlewareEdges struct {
-	// GinFileMiddlewareToProvisionedHost holds the value of the GinFileMiddlewareToProvisionedHost edge.
-	GinFileMiddlewareToProvisionedHost *ProvisionedHost `json:"GinFileMiddlewareToProvisionedHost,omitempty"`
-	// GinFileMiddlewareToProvisioningStep holds the value of the GinFileMiddlewareToProvisioningStep edge.
-	GinFileMiddlewareToProvisioningStep *ProvisioningStep `json:"GinFileMiddlewareToProvisioningStep,omitempty"`
+	// ProvisionedHost holds the value of the ProvisionedHost edge.
+	ProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
+	// ProvisioningStep holds the value of the ProvisioningStep edge.
+	ProvisioningStep *ProvisioningStep `json:"ProvisioningStep,omitempty"`
+	// ProvisioningScheduledStep holds the value of the ProvisioningScheduledStep edge.
+	ProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
-// GinFileMiddlewareToProvisionedHostOrErr returns the GinFileMiddlewareToProvisionedHost value or an error if the edge
+// ProvisionedHostOrErr returns the ProvisionedHost value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e GinFileMiddlewareEdges) GinFileMiddlewareToProvisionedHostOrErr() (*ProvisionedHost, error) {
+func (e GinFileMiddlewareEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[0] {
-		if e.GinFileMiddlewareToProvisionedHost == nil {
-			// The edge GinFileMiddlewareToProvisionedHost was loaded in eager-loading,
+		if e.ProvisionedHost == nil {
+			// The edge ProvisionedHost was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
-		return e.GinFileMiddlewareToProvisionedHost, nil
+		return e.ProvisionedHost, nil
 	}
-	return nil, &NotLoadedError{edge: "GinFileMiddlewareToProvisionedHost"}
+	return nil, &NotLoadedError{edge: "ProvisionedHost"}
 }
 
-// GinFileMiddlewareToProvisioningStepOrErr returns the GinFileMiddlewareToProvisioningStep value or an error if the edge
+// ProvisioningStepOrErr returns the ProvisioningStep value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e GinFileMiddlewareEdges) GinFileMiddlewareToProvisioningStepOrErr() (*ProvisioningStep, error) {
+func (e GinFileMiddlewareEdges) ProvisioningStepOrErr() (*ProvisioningStep, error) {
 	if e.loadedTypes[1] {
-		if e.GinFileMiddlewareToProvisioningStep == nil {
-			// The edge GinFileMiddlewareToProvisioningStep was loaded in eager-loading,
+		if e.ProvisioningStep == nil {
+			// The edge ProvisioningStep was loaded in eager-loading,
 			// but was not found.
 			return nil, &NotFoundError{label: provisioningstep.Label}
 		}
-		return e.GinFileMiddlewareToProvisioningStep, nil
+		return e.ProvisioningStep, nil
 	}
-	return nil, &NotLoadedError{edge: "GinFileMiddlewareToProvisioningStep"}
+	return nil, &NotLoadedError{edge: "ProvisioningStep"}
+}
+
+// ProvisioningScheduledStepOrErr returns the ProvisioningScheduledStep value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e GinFileMiddlewareEdges) ProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
+	if e.loadedTypes[2] {
+		if e.ProvisioningScheduledStep == nil {
+			// The edge ProvisioningScheduledStep was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: provisioningscheduledstep.Label}
+		}
+		return e.ProvisioningScheduledStep, nil
+	}
+	return nil, &NotLoadedError{edge: "ProvisioningScheduledStep"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -87,7 +106,7 @@ func (*GinFileMiddleware) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case ginfilemiddleware.FieldID:
 			values[i] = new(uuid.UUID)
-		case ginfilemiddleware.ForeignKeys[0]: // server_task_server_task_to_gin_file_middleware
+		case ginfilemiddleware.ForeignKeys[0]: // server_task_gin_file_middleware
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type GinFileMiddleware", columns[i])
@@ -130,24 +149,29 @@ func (gfm *GinFileMiddleware) assignValues(columns []string, values []interface{
 			}
 		case ginfilemiddleware.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field server_task_server_task_to_gin_file_middleware", values[i])
+				return fmt.Errorf("unexpected type %T for field server_task_gin_file_middleware", values[i])
 			} else if value.Valid {
-				gfm.server_task_server_task_to_gin_file_middleware = new(uuid.UUID)
-				*gfm.server_task_server_task_to_gin_file_middleware = *value.S.(*uuid.UUID)
+				gfm.server_task_gin_file_middleware = new(uuid.UUID)
+				*gfm.server_task_gin_file_middleware = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryGinFileMiddlewareToProvisionedHost queries the "GinFileMiddlewareToProvisionedHost" edge of the GinFileMiddleware entity.
-func (gfm *GinFileMiddleware) QueryGinFileMiddlewareToProvisionedHost() *ProvisionedHostQuery {
-	return (&GinFileMiddlewareClient{config: gfm.config}).QueryGinFileMiddlewareToProvisionedHost(gfm)
+// QueryProvisionedHost queries the "ProvisionedHost" edge of the GinFileMiddleware entity.
+func (gfm *GinFileMiddleware) QueryProvisionedHost() *ProvisionedHostQuery {
+	return (&GinFileMiddlewareClient{config: gfm.config}).QueryProvisionedHost(gfm)
 }
 
-// QueryGinFileMiddlewareToProvisioningStep queries the "GinFileMiddlewareToProvisioningStep" edge of the GinFileMiddleware entity.
-func (gfm *GinFileMiddleware) QueryGinFileMiddlewareToProvisioningStep() *ProvisioningStepQuery {
-	return (&GinFileMiddlewareClient{config: gfm.config}).QueryGinFileMiddlewareToProvisioningStep(gfm)
+// QueryProvisioningStep queries the "ProvisioningStep" edge of the GinFileMiddleware entity.
+func (gfm *GinFileMiddleware) QueryProvisioningStep() *ProvisioningStepQuery {
+	return (&GinFileMiddlewareClient{config: gfm.config}).QueryProvisioningStep(gfm)
+}
+
+// QueryProvisioningScheduledStep queries the "ProvisioningScheduledStep" edge of the GinFileMiddleware entity.
+func (gfm *GinFileMiddleware) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
+	return (&GinFileMiddlewareClient{config: gfm.config}).QueryProvisioningScheduledStep(gfm)
 }
 
 // Update returns a builder for updating this GinFileMiddleware.

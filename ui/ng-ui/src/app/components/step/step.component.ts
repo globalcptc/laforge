@@ -6,7 +6,8 @@ import {
   LaForgeSubscribeUpdatedStatusSubscription,
   LaForgeProvisionStatus,
   LaForgePlanFieldsFragment,
-  LaForgeGetBuildCommitQuery
+  LaForgeGetBuildCommitQuery,
+  LaForgeProvisioningScheduledStepType
 } from '@graphql';
 import { StatusService } from '@services/status/status.service';
 import { BehaviorSubject, Subscription } from 'rxjs';
@@ -14,6 +15,11 @@ import { ApiService } from 'src/app/services/api/api.service';
 import { EnvironmentService } from 'src/app/services/environment/environment.service';
 
 import { StepModalComponent } from '@components/step-modal/step-modal.component';
+
+// eslint-disable-next-line max-len
+type BuildTreeProvisioningStep = LaForgeGetBuildTreeQuery['build']['Teams'][0]['ProvisionedNetworks'][0]['ProvisionedHosts'][0]['ProvisioningSteps'][0];
+// eslint-disable-next-line max-len
+type BuildTreeProvisioningScheduledStep = LaForgeGetBuildTreeQuery['build']['Teams'][0]['ProvisionedNetworks'][0]['ProvisionedHosts'][0]['ProvisioningScheduledSteps'][0];
 
 @Component({
   selector: 'app-step',
@@ -24,17 +30,16 @@ import { StepModalComponent } from '@components/step-modal/step-modal.component'
 export class StepComponent implements OnInit, OnDestroy {
   private unsubscribe: Subscription[] = [];
   @Input() stepNumber: number;
-  @Input()
-  // eslint-disable-next-line max-len
-  provisioningStep: LaForgeGetBuildTreeQuery['build']['buildToTeam'][0]['TeamToProvisionedNetwork'][0]['ProvisionedNetworkToProvisionedHost'][0]['ProvisionedHostToProvisioningStep'][0];
-  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'] | undefined;
+  @Input() provisioningStep: BuildTreeProvisioningStep | null;
+  @Input() provisioningScheduledStep: BuildTreeProvisioningScheduledStep | null;
+  @Input() planDiffs: LaForgeGetBuildCommitQuery['getBuildCommit']['PlanDiffs'] | undefined;
   // @Input() buildStatusMap: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'][] | undefined;
   @Input() showDetail: boolean;
   @Input() style: 'compact' | 'expanded';
   @Input() mode: 'plan' | 'build' | 'manage';
   // planStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
   provisioningStepStatus: LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'];
-  latestDiff: LaForgePlanFieldsFragment['PlanToPlanDiffs'][0];
+  latestDiff: LaForgePlanFieldsFragment['PlanDiffs'][0];
   planStatus: BehaviorSubject<LaForgeSubscribeUpdatedStatusSubscription['updatedStatus']>;
 
   constructor(
@@ -48,8 +53,9 @@ export class StepComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    if (this.provisioningStep.ProvisioningStepToPlan?.PlanToStatus?.id) {
-      this.planStatus = this.status.getStatusSubject(this.provisioningStep.ProvisioningStepToPlan.PlanToStatus.id);
+    const step: BuildTreeProvisioningStep | BuildTreeProvisioningScheduledStep = this.provisioningStep || this.provisioningScheduledStep;
+    if (step.Plan?.Status?.id) {
+      this.planStatus = this.status.getStatusSubject(step.Plan.Status.id);
       const sub = this.planStatus.subscribe(() => this.cdRef.markForCheck());
       this.unsubscribe.push(sub);
     }
@@ -72,61 +78,72 @@ export class StepComponent implements OnInit, OnDestroy {
   }
 
   viewDetails(): void {
-    const status = this.getStatus();
-    if (
-      status &&
-      (status.state === LaForgeProvisionStatus.Awaiting ||
-        status.state === LaForgeProvisionStatus.Deleted ||
-        status.state === LaForgeProvisionStatus.Planning)
-    )
-      return;
     this.dialog.open(StepModalComponent, {
       width: '50%',
       height: '80%',
       data: {
         provisioningStep: this.provisioningStep,
+        provisioningScheduledStep: this.provisioningScheduledStep,
         planStatus: this.planStatus
       }
     });
   }
 
-  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['BuildCommitToPlanDiffs'][0] | undefined {
-    return this.planDiffs?.filter((pd) => pd.PlanDiffToPlan.id === this.provisioningStep.ProvisioningStepToPlan.id)[0] ?? undefined;
+  getPlanDiff(): LaForgeGetBuildCommitQuery['getBuildCommit']['PlanDiffs'][0] | undefined {
+    return this.planDiffs?.filter((pd) => pd.Plan.id === this.provisioningStep.Plan.id)[0] ?? undefined;
   }
 
   getStatus(): LaForgeSubscribeUpdatedStatusSubscription['updatedStatus'] | undefined {
     // return (
-    //   this.buildStatusMap?.filter((s) => s.id === this.provisioningStep.ProvisioningStepToPlan?.PlanToStatus.id ?? null)[0] ?? undefined
+    //   this.buildStatusMap?.filter((s) => s.id === this.provisioningStep.ProvisioningStepToPlan?.Status.id ?? null)[0] ?? undefined
     // );
     return this.planStatus?.getValue() ?? undefined;
   }
 
   getStatusIcon(): string {
-    switch (this.provisioningStep.type) {
-      case LaForgeProvisioningStepType.Script:
-        return 'file-code';
-      case LaForgeProvisioningStepType.Command:
-        return 'terminal';
-      case LaForgeProvisioningStepType.DnsRecord:
-        return 'globe';
-      case LaForgeProvisioningStepType.FileDownload:
-        return 'download';
-      case LaForgeProvisioningStepType.FileDelete:
-        return 'trash';
-      case LaForgeProvisioningStepType.FileExtract:
-        return 'file-archive';
-      case LaForgeProvisioningStepType.Ansible:
-        return 'archive';
-      default:
-        return 'minus-circle';
+    if (this.provisioningStep) {
+      switch (this.provisioningStep.type) {
+        case LaForgeProvisioningStepType.Script:
+          return 'file-code';
+        case LaForgeProvisioningStepType.Command:
+          return 'terminal';
+        case LaForgeProvisioningStepType.DnsRecord:
+          return 'globe';
+        case LaForgeProvisioningStepType.FileDownload:
+          return 'download';
+        case LaForgeProvisioningStepType.FileDelete:
+          return 'trash';
+        case LaForgeProvisioningStepType.FileExtract:
+          return 'file-archive';
+        case LaForgeProvisioningStepType.Ansible:
+          return 'archive';
+      }
+    } else if (this.provisioningScheduledStep) {
+      switch (this.provisioningScheduledStep.type) {
+        case LaForgeProvisioningScheduledStepType.Script:
+          return 'file-code';
+        case LaForgeProvisioningScheduledStepType.Command:
+          return 'terminal';
+        case LaForgeProvisioningScheduledStepType.DnsRecord:
+          return 'globe';
+        case LaForgeProvisioningScheduledStepType.FileDownload:
+          return 'download';
+        case LaForgeProvisioningScheduledStepType.FileDelete:
+          return 'trash';
+        case LaForgeProvisioningScheduledStepType.FileExtract:
+          return 'file-archive';
+        case LaForgeProvisioningScheduledStepType.Ansible:
+          return 'archive';
+      }
     }
+    return 'minus-circle';
   }
 
   getStatusColor(): string {
     if (this.mode === 'plan') {
       const planDiff = this.getPlanDiff();
       if (!planDiff) return 'dark';
-      switch (planDiff.new_state) {
+      switch (planDiff.newState) {
         case LaForgeProvisionStatus.Torebuild:
           return 'warning';
         case LaForgeProvisionStatus.Planning:
@@ -159,18 +176,17 @@ export class StepComponent implements OnInit, OnDestroy {
   }
 
   getText(): string {
-    switch (this.provisioningStep.type) {
+    const step: BuildTreeProvisioningStep | BuildTreeProvisioningScheduledStep = this.provisioningStep || this.provisioningScheduledStep;
+    switch (step.type) {
       case LaForgeProvisioningStepType.Script:
-        return `${this.provisioningStep.ProvisioningStepToScript.source} ${this.provisioningStep.ProvisioningStepToScript.args.join(' ')}`;
+        return `${step.Script.source} ${step.Script.args.join(' ')}`;
       case LaForgeProvisioningStepType.Command:
-        return `${this.provisioningStep.ProvisioningStepToCommand.program} ${this.provisioningStep.ProvisioningStepToCommand.args.join(
-          ' '
-        )}`;
+        return `${step.Command.program} ${step.Command.args.join(' ')}`;
       case LaForgeProvisioningStepType.DnsRecord:
         return 'DNSRecord';
       case LaForgeProvisioningStepType.FileDownload:
         // eslint-disable-next-line max-len
-        return `${this.provisioningStep.ProvisioningStepToFileDownload.source} -> ${this.provisioningStep.ProvisioningStepToFileDownload.destination}`;
+        return `${step.FileDownload.source} -> ${step.FileDownload.destination}`;
       case LaForgeProvisioningStepType.FileDelete:
         return 'FileDelete';
       case LaForgeProvisioningStepType.FileExtract:
