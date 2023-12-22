@@ -3,6 +3,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,8 +19,10 @@ import (
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/availabilityzones"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/hypervisors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/secgroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
@@ -32,7 +35,7 @@ const (
 	ID          = "openstack"
 	Name        = "Openstack"
 	Description = "Builder that interfaces with Openstack"
-	Author      = "Tenchi Mata <github.com/0xk7>"
+	Author      = "Tenchi Mata <github.com/0xk7>, Bradley Harker <github.com/BradHacker>"
 	Version     = "0.1"
 )
 
@@ -119,6 +122,97 @@ func (builder OpenstackBuilder) newAuthProvider() (*gophercloud.ProviderClient, 
 		authOpts.DomainID = builder.Config.DomainId
 	}
 	return openstack.AuthenticatedClient(authOpts)
+}
+
+func (builder OpenstackBuilder) listHypervisorHosts(computeClient *gophercloud.ServiceClient) ([]hypervisors.Hypervisor, error) {
+	hypervisorPages, err := hypervisors.List(computeClient, hypervisors.ListOpts{
+		Limit:                     new(int),
+		Marker:                    new(string),
+		HypervisorHostnamePattern: new(string),
+		WithServers:               gophercloud.Enabled,
+	}).AllPages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list openstack hypervisors: %v", err)
+	}
+	hypervisorList, err := hypervisors.ExtractHypervisors(hypervisorPages)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract openstack hypervisors: %v", err)
+	}
+	return hypervisorList, nil
+}
+
+func (builder OpenstackBuilder) getHypervisorVmCounts(computeClient *gophercloud.ServiceClient) (map[string]int, error) {
+	// #######################
+	// Get List of hypervisors
+	// #######################
+	hypervisorList, err := builder.listHypervisorHosts(computeClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list hypervisors: %v", err)
+	}
+
+	// ####################
+	// Create map of counts
+	// ####################
+	hypervisorRunningVmCounts := make(map[string]int, len(hypervisorList))
+	for _, hypervisor := range hypervisorList {
+		hypervisorRunningVmCounts[hypervisor.HypervisorHostname] = hypervisor.RunningVMs
+	}
+	builder.Logger.Log.Debugf("hypervisor vm counts: %v", hypervisorRunningVmCounts)
+	return hypervisorRunningVmCounts, nil
+}
+
+func (builder OpenstackBuilder) getOptimalAvailabilityZone(computeClient *gophercloud.ServiceClient) string {
+	// ############################################################################################
+	// Collect the list of hypervisors running the "nova-compute" service in each availability zone
+	// ############################################################################################
+	azPages, err := availabilityzones.ListDetail(computeClient).AllPages()
+	if err != nil {
+		builder.Logger.Log.Warn("failed to list availability zones: %v", err)
+		return ""
+	}
+	azList, err := availabilityzones.ExtractAvailabilityZones(azPages)
+	azHypervisors := make(map[string][]string, 0)
+	for _, az := range azList {
+		for hostName, hostServices := range az.Hosts {
+			if novaComputeService, exists := hostServices["nova-compute"]; exists && novaComputeService.Active {
+				if _, exists = azHypervisors[az.ZoneName]; !exists {
+					azHypervisors[az.ZoneName] = make([]string, 1)
+				}
+				azHypervisors[az.ZoneName] = append(azHypervisors[az.ZoneName], hostName)
+			}
+		}
+	}
+
+	// ##########################################################
+	// Aggregate the number of running vm's per availability zone
+	// ##########################################################
+	hypervisorVmCounts, err := builder.getHypervisorVmCounts(computeClient)
+	if err != nil {
+		builder.Logger.Log.Warnf("failed to get hypervisor vm counts: %v", err)
+		return ""
+	}
+	azVmCounts := make(map[string]int, len(azHypervisors))
+	for azName, hypervisorNames := range azHypervisors {
+		azVmCounts[azName] = 0
+		for _, hypervisorName := range hypervisorNames {
+			azVmCounts[azName] += hypervisorVmCounts[hypervisorName]
+		}
+		builder.Logger.Log.Debugf("%s (%d)\n", azName, azVmCounts[azName])
+	}
+
+	// #################################################
+	// Choose the Availability Zone with lowest VM count
+	// #################################################
+	optimalAvailabilityZone := azList[0].ZoneName // default to the first hypervisor in list
+	lowestVmCount := math.MaxInt
+	for azName, vmCount := range azVmCounts {
+		if vmCount < lowestVmCount {
+			optimalAvailabilityZone = azName
+			lowestVmCount = vmCount
+		}
+	}
+	builder.Logger.Log.Debugf("optimal availability zone is %s\n", optimalAvailabilityZone)
+	return optimalAvailabilityZone
 }
 
 func waitForObjectTeardown(getFunc func() error) {
@@ -359,7 +453,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 		userData = fmt.Sprintf(`<script>
 powershell -Command mkdir $env:PROGRAMDATA\Laforge -Force
 powershell -Command do{	$test = Test-Connection 1.1.1.1 -Quiet; Start-Sleep -s 5}until($test)
-powershell -Command Invoke-WebRequest %s -OutFile $env:PROGRAMDATA\Laforge\laforge.exe
+powershell -Command [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest %s -OutFile $env:PROGRAMDATA\Laforge\laforge.exe
 powershell -Command %%PROGRAMDATA%%\Laforge\laforge.exe -service install
 powershell -Command %%PROGRAMDATA%%\Laforge\laforge.exe -service start
 powershell -Command logoff
@@ -378,9 +472,14 @@ cd /
 `, agentUrl)
 	}
 
+	imageUuid, ok := builder.Config.Images[entHost.OS]
+	if !ok {
+		return fmt.Errorf("failed to get image UUID (for %s) for host %s", entHost.OS, vmName)
+	}
+
 	blockOps := []bootfromvolume.BlockDevice{
 		{
-			UUID:                builder.Config.Images[entHost.OS],
+			UUID:                imageUuid,
 			BootIndex:           0,
 			DeleteOnTermination: true,
 			DestinationType:     bootfromvolume.DestinationVolume,
@@ -389,9 +488,11 @@ cd /
 		},
 	}
 
+	optimalAvailabilityZone := builder.getOptimalAvailabilityZone(computeClient)
+	builder.Logger.Log.Debugf("Host \"%s\" will deploy in availability zone \"%s\"", vmName, optimalAvailabilityZone)
 	hostOps := servers.CreateOpts{
 		Name:           vmName,
-		ImageRef:       builder.Config.Images[entHost.OS],
+		ImageRef:       imageUuid,
 		FlavorRef:      builder.Config.Flavors[entHost.InstanceSize],
 		SecurityGroups: []string{osSecGroup.ID},
 		UserData:       []byte(userData),
@@ -399,8 +500,9 @@ cd /
 			UUID:    entProvisionedNetwork.Vars["openstack_network_id"],
 			FixedIP: hostAddress,
 		}},
-		AdminPass:  adminPassword,
-		AccessIPv4: hostAddress,
+		AdminPass:        adminPassword,
+		AccessIPv4:       hostAddress,
+		AvailabilityZone: optimalAvailabilityZone,
 	}
 
 	createOpts := bootfromvolume.CreateOptsExt{
@@ -409,7 +511,7 @@ cd /
 	}
 
 	// Create the host
-	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", builder.Config.Images[entHost.OS], builder.Config.Flavors[entHost.InstanceSize])
+	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", imageUuid, builder.Config.Flavors[entHost.InstanceSize])
 	osServer, err := bootfromvolume.Create(computeClient, createOpts).Extract()
 	if err != nil {
 		return fmt.Errorf("failed to create server: %v", err)
@@ -422,7 +524,7 @@ cd /
 		return fmt.Errorf("failed to update provisioned host vars: %v", err)
 	}
 
-	// Deply host with public IP
+	// Deploy host with public IP
 	if entNetwork.Vars["public_net"] == "true" {
 		floatingIPOpts := floatingips.CreateOpts{
 			Pool: builder.Config.FloatingIPPool,
