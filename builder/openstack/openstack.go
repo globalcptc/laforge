@@ -453,7 +453,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 		userData = fmt.Sprintf(`<script>
 powershell -Command mkdir $env:PROGRAMDATA\Laforge -Force
 powershell -Command do{	$test = Test-Connection 1.1.1.1 -Quiet; Start-Sleep -s 5}until($test)
-powershell -Command Invoke-WebRequest %s -OutFile $env:PROGRAMDATA\Laforge\laforge.exe
+powershell -Command [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest %s -OutFile $env:PROGRAMDATA\Laforge\laforge.exe
 powershell -Command %%PROGRAMDATA%%\Laforge\laforge.exe -service install
 powershell -Command %%PROGRAMDATA%%\Laforge\laforge.exe -service start
 powershell -Command logoff
@@ -472,9 +472,14 @@ cd /
 `, agentUrl)
 	}
 
+	imageUuid, ok := builder.Config.Images[entHost.OS]
+	if !ok {
+		return fmt.Errorf("failed to get image UUID (for %s) for host %s", entHost.OS, vmName)
+	}
+
 	blockOps := []bootfromvolume.BlockDevice{
 		{
-			UUID:                builder.Config.Images[entHost.OS],
+			UUID:                imageUuid,
 			BootIndex:           0,
 			DeleteOnTermination: true,
 			DestinationType:     bootfromvolume.DestinationVolume,
@@ -487,7 +492,7 @@ cd /
 	builder.Logger.Log.Debugf("Host \"%s\" will deploy in availability zone \"%s\"", vmName, optimalAvailabilityZone)
 	hostOps := servers.CreateOpts{
 		Name:           vmName,
-		ImageRef:       builder.Config.Images[entHost.OS],
+		ImageRef:       imageUuid,
 		FlavorRef:      builder.Config.Flavors[entHost.InstanceSize],
 		SecurityGroups: []string{osSecGroup.ID},
 		UserData:       []byte(userData),
@@ -506,7 +511,7 @@ cd /
 	}
 
 	// Create the host
-	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", builder.Config.Images[entHost.OS], builder.Config.Flavors[entHost.InstanceSize])
+	builder.Logger.Log.Debugf("Deploying host with image \"%s\" and flavor \"%s\"", imageUuid, builder.Config.Flavors[entHost.InstanceSize])
 	osServer, err := bootfromvolume.Create(computeClient, createOpts).Extract()
 	if err != nil {
 		return fmt.Errorf("failed to create server: %v", err)
