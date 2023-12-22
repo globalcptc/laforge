@@ -97,15 +97,15 @@ func (builder VSphereNSXTBuilder) generateBuildID(build *ent.Build) string {
 }
 
 func (builder VSphereNSXTBuilder) generateVmName(competition *ent.Competition, team *ent.Team, host *ent.Host, build *ent.Build) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + host.Hostname + "-" + builder.generateBuildID(build))
+	return (competition.HCLID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + host.Hostname + "-" + builder.generateBuildID(build))
 }
 
 func (builder VSphereNSXTBuilder) generateRouterName(competition *ent.Competition, team *ent.Team, build *ent.Build) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + builder.generateBuildID(build))
+	return (competition.HCLID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + builder.generateBuildID(build))
 }
 
 func (builder VSphereNSXTBuilder) generateNetworkName(competition *ent.Competition, team *ent.Team, network *ent.Network, build *ent.Build) string {
-	return (competition.HclID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + network.Name + "-" + builder.generateBuildID(build))
+	return (competition.HCLID + "-Team-" + fmt.Sprintf("%02d", team.TeamNumber) + "-" + network.Name + "-" + builder.generateBuildID(build))
 }
 
 // DeployHost deploys a given host from the environment to VSphere
