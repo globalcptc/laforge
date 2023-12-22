@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/plan"
@@ -31,6 +32,7 @@ type Plan struct {
 	// The values are being populated by the PlanQuery when eager-loading is set.
 	Edges PlanEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// PrevPlans holds the value of the PrevPlans edge.
 	HCLPrevPlans []*Plan `json:"PrevPlans,omitempty"`
@@ -52,8 +54,9 @@ type Plan struct {
 	HCLStatus *Status `json:"Status,omitempty"`
 	// PlanDiffs holds the value of the PlanDiffs edge.
 	HCLPlanDiffs []*PlanDiff `json:"PlanDiffs,omitempty"`
-	//
-	plan_build *uuid.UUID
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
+	plan_build   *uuid.UUID
+	selectValues sql.SelectValues
 }
 
 // PlanEdges holds the relations/edges for other nodes in the graph.
@@ -81,6 +84,12 @@ type PlanEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [10]bool
+	// totalCount holds the count of the edges above.
+	totalCount [10]map[string]int
+
+	namedPrevPlans map[string][]*Plan
+	namedNextPlans map[string][]*Plan
+	namedPlanDiffs map[string][]*PlanDiff
 }
 
 // PrevPlansOrErr returns the PrevPlans value or an error if the edge
@@ -106,8 +115,7 @@ func (e PlanEdges) NextPlansOrErr() ([]*Plan, error) {
 func (e PlanEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[2] {
 		if e.Build == nil {
-			// The edge Build was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
 		return e.Build, nil
@@ -120,8 +128,7 @@ func (e PlanEdges) BuildOrErr() (*Build, error) {
 func (e PlanEdges) TeamOrErr() (*Team, error) {
 	if e.loadedTypes[3] {
 		if e.Team == nil {
-			// The edge Team was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: team.Label}
 		}
 		return e.Team, nil
@@ -134,8 +141,7 @@ func (e PlanEdges) TeamOrErr() (*Team, error) {
 func (e PlanEdges) ProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
 	if e.loadedTypes[4] {
 		if e.ProvisionedNetwork == nil {
-			// The edge ProvisionedNetwork was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisionednetwork.Label}
 		}
 		return e.ProvisionedNetwork, nil
@@ -148,8 +154,7 @@ func (e PlanEdges) ProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
 func (e PlanEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[5] {
 		if e.ProvisionedHost == nil {
-			// The edge ProvisionedHost was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
 		return e.ProvisionedHost, nil
@@ -162,8 +167,7 @@ func (e PlanEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 func (e PlanEdges) ProvisioningStepOrErr() (*ProvisioningStep, error) {
 	if e.loadedTypes[6] {
 		if e.ProvisioningStep == nil {
-			// The edge ProvisioningStep was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisioningstep.Label}
 		}
 		return e.ProvisioningStep, nil
@@ -176,8 +180,7 @@ func (e PlanEdges) ProvisioningStepOrErr() (*ProvisioningStep, error) {
 func (e PlanEdges) ProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
 	if e.loadedTypes[7] {
 		if e.ProvisioningScheduledStep == nil {
-			// The edge ProvisioningScheduledStep was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisioningscheduledstep.Label}
 		}
 		return e.ProvisioningScheduledStep, nil
@@ -190,8 +193,7 @@ func (e PlanEdges) ProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep,
 func (e PlanEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[8] {
 		if e.Status == nil {
-			// The edge Status was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
 		return e.Status, nil
@@ -209,8 +211,8 @@ func (e PlanEdges) PlanDiffsOrErr() ([]*PlanDiff, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*Plan) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*Plan) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case plan.FieldStepNumber:
@@ -222,7 +224,7 @@ func (*Plan) scanValues(columns []string) ([]interface{}, error) {
 		case plan.ForeignKeys[0]: // plan_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Plan", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -230,7 +232,7 @@ func (*Plan) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Plan fields.
-func (pl *Plan) assignValues(columns []string, values []interface{}) error {
+func (pl *Plan) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -261,76 +263,84 @@ func (pl *Plan) assignValues(columns []string, values []interface{}) error {
 				pl.plan_build = new(uuid.UUID)
 				*pl.plan_build = *value.S.(*uuid.UUID)
 			}
+		default:
+			pl.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the Plan.
+// This includes values selected through modifiers, order, etc.
+func (pl *Plan) Value(name string) (ent.Value, error) {
+	return pl.selectValues.Get(name)
+}
+
 // QueryPrevPlans queries the "PrevPlans" edge of the Plan entity.
 func (pl *Plan) QueryPrevPlans() *PlanQuery {
-	return (&PlanClient{config: pl.config}).QueryPrevPlans(pl)
+	return NewPlanClient(pl.config).QueryPrevPlans(pl)
 }
 
 // QueryNextPlans queries the "NextPlans" edge of the Plan entity.
 func (pl *Plan) QueryNextPlans() *PlanQuery {
-	return (&PlanClient{config: pl.config}).QueryNextPlans(pl)
+	return NewPlanClient(pl.config).QueryNextPlans(pl)
 }
 
 // QueryBuild queries the "Build" edge of the Plan entity.
 func (pl *Plan) QueryBuild() *BuildQuery {
-	return (&PlanClient{config: pl.config}).QueryBuild(pl)
+	return NewPlanClient(pl.config).QueryBuild(pl)
 }
 
 // QueryTeam queries the "Team" edge of the Plan entity.
 func (pl *Plan) QueryTeam() *TeamQuery {
-	return (&PlanClient{config: pl.config}).QueryTeam(pl)
+	return NewPlanClient(pl.config).QueryTeam(pl)
 }
 
 // QueryProvisionedNetwork queries the "ProvisionedNetwork" edge of the Plan entity.
 func (pl *Plan) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
-	return (&PlanClient{config: pl.config}).QueryProvisionedNetwork(pl)
+	return NewPlanClient(pl.config).QueryProvisionedNetwork(pl)
 }
 
 // QueryProvisionedHost queries the "ProvisionedHost" edge of the Plan entity.
 func (pl *Plan) QueryProvisionedHost() *ProvisionedHostQuery {
-	return (&PlanClient{config: pl.config}).QueryProvisionedHost(pl)
+	return NewPlanClient(pl.config).QueryProvisionedHost(pl)
 }
 
 // QueryProvisioningStep queries the "ProvisioningStep" edge of the Plan entity.
 func (pl *Plan) QueryProvisioningStep() *ProvisioningStepQuery {
-	return (&PlanClient{config: pl.config}).QueryProvisioningStep(pl)
+	return NewPlanClient(pl.config).QueryProvisioningStep(pl)
 }
 
 // QueryProvisioningScheduledStep queries the "ProvisioningScheduledStep" edge of the Plan entity.
 func (pl *Plan) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
-	return (&PlanClient{config: pl.config}).QueryProvisioningScheduledStep(pl)
+	return NewPlanClient(pl.config).QueryProvisioningScheduledStep(pl)
 }
 
 // QueryStatus queries the "Status" edge of the Plan entity.
 func (pl *Plan) QueryStatus() *StatusQuery {
-	return (&PlanClient{config: pl.config}).QueryStatus(pl)
+	return NewPlanClient(pl.config).QueryStatus(pl)
 }
 
 // QueryPlanDiffs queries the "PlanDiffs" edge of the Plan entity.
 func (pl *Plan) QueryPlanDiffs() *PlanDiffQuery {
-	return (&PlanClient{config: pl.config}).QueryPlanDiffs(pl)
+	return NewPlanClient(pl.config).QueryPlanDiffs(pl)
 }
 
 // Update returns a builder for updating this Plan.
 // Note that you need to call Plan.Unwrap() before calling this method if this Plan
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (pl *Plan) Update() *PlanUpdateOne {
-	return (&PlanClient{config: pl.config}).UpdateOne(pl)
+	return NewPlanClient(pl.config).UpdateOne(pl)
 }
 
 // Unwrap unwraps the Plan entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (pl *Plan) Unwrap() *Plan {
-	tx, ok := pl.config.driver.(*txDriver)
+	_tx, ok := pl.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Plan is not a transactional entity")
 	}
-	pl.config.driver = tx.drv
+	pl.config.driver = _tx.drv
 	return pl
 }
 
@@ -338,20 +348,87 @@ func (pl *Plan) Unwrap() *Plan {
 func (pl *Plan) String() string {
 	var builder strings.Builder
 	builder.WriteString("Plan(")
-	builder.WriteString(fmt.Sprintf("id=%v", pl.ID))
-	builder.WriteString(", step_number=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", pl.ID))
+	builder.WriteString("step_number=")
 	builder.WriteString(fmt.Sprintf("%v", pl.StepNumber))
-	builder.WriteString(", type=")
+	builder.WriteString(", ")
+	builder.WriteString("type=")
 	builder.WriteString(fmt.Sprintf("%v", pl.Type))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// Plans is a parsable slice of Plan.
-type Plans []*Plan
+// NamedPrevPlans returns the PrevPlans named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (pl *Plan) NamedPrevPlans(name string) ([]*Plan, error) {
+	if pl.Edges.namedPrevPlans == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := pl.Edges.namedPrevPlans[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (pl Plans) config(cfg config) {
-	for _i := range pl {
-		pl[_i].config = cfg
+func (pl *Plan) appendNamedPrevPlans(name string, edges ...*Plan) {
+	if pl.Edges.namedPrevPlans == nil {
+		pl.Edges.namedPrevPlans = make(map[string][]*Plan)
+	}
+	if len(edges) == 0 {
+		pl.Edges.namedPrevPlans[name] = []*Plan{}
+	} else {
+		pl.Edges.namedPrevPlans[name] = append(pl.Edges.namedPrevPlans[name], edges...)
 	}
 }
+
+// NamedNextPlans returns the NextPlans named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (pl *Plan) NamedNextPlans(name string) ([]*Plan, error) {
+	if pl.Edges.namedNextPlans == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := pl.Edges.namedNextPlans[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (pl *Plan) appendNamedNextPlans(name string, edges ...*Plan) {
+	if pl.Edges.namedNextPlans == nil {
+		pl.Edges.namedNextPlans = make(map[string][]*Plan)
+	}
+	if len(edges) == 0 {
+		pl.Edges.namedNextPlans[name] = []*Plan{}
+	} else {
+		pl.Edges.namedNextPlans[name] = append(pl.Edges.namedNextPlans[name], edges...)
+	}
+}
+
+// NamedPlanDiffs returns the PlanDiffs named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (pl *Plan) NamedPlanDiffs(name string) ([]*PlanDiff, error) {
+	if pl.Edges.namedPlanDiffs == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := pl.Edges.namedPlanDiffs[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (pl *Plan) appendNamedPlanDiffs(name string, edges ...*PlanDiff) {
+	if pl.Edges.namedPlanDiffs == nil {
+		pl.Edges.namedPlanDiffs = make(map[string][]*PlanDiff)
+	}
+	if len(edges) == 0 {
+		pl.Edges.namedPlanDiffs[name] = []*PlanDiff{}
+	} else {
+		pl.Edges.namedPlanDiffs[name] = append(pl.Edges.namedPlanDiffs[name], edges...)
+	}
+}
+
+// Plans is a parsable slice of Plan.
+type Plans []*Plan

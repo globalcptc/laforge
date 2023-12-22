@@ -11,144 +11,92 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Team(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Team(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.Team(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.Team(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.Team(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.Team(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.Team(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.Team(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.Team(sql.FieldLTE(FieldID, id))
 }
 
 // TeamNumber applies equality check predicate on the "team_number" field. It's identical to TeamNumberEQ.
 func TeamNumber(v int) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldTeamNumber), v))
-	})
+	return predicate.Team(sql.FieldEQ(FieldTeamNumber, v))
 }
 
 // TeamNumberEQ applies the EQ predicate on the "team_number" field.
 func TeamNumberEQ(v int) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldTeamNumber), v))
-	})
+	return predicate.Team(sql.FieldEQ(FieldTeamNumber, v))
 }
 
 // TeamNumberNEQ applies the NEQ predicate on the "team_number" field.
 func TeamNumberNEQ(v int) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldTeamNumber), v))
-	})
+	return predicate.Team(sql.FieldNEQ(FieldTeamNumber, v))
 }
 
 // TeamNumberIn applies the In predicate on the "team_number" field.
 func TeamNumberIn(vs ...int) predicate.Team {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldTeamNumber), v...))
-	})
+	return predicate.Team(sql.FieldIn(FieldTeamNumber, vs...))
 }
 
 // TeamNumberNotIn applies the NotIn predicate on the "team_number" field.
 func TeamNumberNotIn(vs ...int) predicate.Team {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldTeamNumber), v...))
-	})
+	return predicate.Team(sql.FieldNotIn(FieldTeamNumber, vs...))
 }
 
 // TeamNumberGT applies the GT predicate on the "team_number" field.
 func TeamNumberGT(v int) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldTeamNumber), v))
-	})
+	return predicate.Team(sql.FieldGT(FieldTeamNumber, v))
 }
 
 // TeamNumberGTE applies the GTE predicate on the "team_number" field.
 func TeamNumberGTE(v int) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldTeamNumber), v))
-	})
+	return predicate.Team(sql.FieldGTE(FieldTeamNumber, v))
 }
 
 // TeamNumberLT applies the LT predicate on the "team_number" field.
 func TeamNumberLT(v int) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldTeamNumber), v))
-	})
+	return predicate.Team(sql.FieldLT(FieldTeamNumber, v))
 }
 
 // TeamNumberLTE applies the LTE predicate on the "team_number" field.
 func TeamNumberLTE(v int) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldTeamNumber), v))
-	})
+	return predicate.Team(sql.FieldLTE(FieldTeamNumber, v))
 }
 
 // HasBuild applies the HasEdge predicate on the "Build" edge.
@@ -156,7 +104,6 @@ func HasBuild() predicate.Team {
 	return predicate.Team(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -166,11 +113,7 @@ func HasBuild() predicate.Team {
 // HasBuildWith applies the HasEdge predicate on the "Build" edge with a given conditions (other predicates).
 func HasBuildWith(preds ...predicate.Build) predicate.Team {
 	return predicate.Team(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
-		)
+		step := newBuildStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -184,7 +127,6 @@ func HasStatus() predicate.Team {
 	return predicate.Team(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(StatusTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -194,11 +136,7 @@ func HasStatus() predicate.Team {
 // HasStatusWith applies the HasEdge predicate on the "Status" edge with a given conditions (other predicates).
 func HasStatusWith(preds ...predicate.Status) predicate.Team {
 	return predicate.Team(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(StatusInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
-		)
+		step := newStatusStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -212,7 +150,6 @@ func HasProvisionedNetworks() predicate.Team {
 	return predicate.Team(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisionedNetworksTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, ProvisionedNetworksTable, ProvisionedNetworksColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -222,11 +159,7 @@ func HasProvisionedNetworks() predicate.Team {
 // HasProvisionedNetworksWith applies the HasEdge predicate on the "ProvisionedNetworks" edge with a given conditions (other predicates).
 func HasProvisionedNetworksWith(preds ...predicate.ProvisionedNetwork) predicate.Team {
 	return predicate.Team(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisionedNetworksInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, ProvisionedNetworksTable, ProvisionedNetworksColumn),
-		)
+		step := newProvisionedNetworksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -240,7 +173,6 @@ func HasPlan() predicate.Team {
 	return predicate.Team(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(PlanTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, PlanTable, PlanColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -250,11 +182,7 @@ func HasPlan() predicate.Team {
 // HasPlanWith applies the HasEdge predicate on the "Plan" edge with a given conditions (other predicates).
 func HasPlanWith(preds ...predicate.Plan) predicate.Team {
 	return predicate.Team(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(PlanInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, PlanTable, PlanColumn),
-		)
+		step := newPlanStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -265,32 +193,15 @@ func HasPlanWith(preds ...predicate.Plan) predicate.Team {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Team) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Team(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Team) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Team(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Team) predicate.Team {
-	return predicate.Team(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Team(sql.NotPredicates(p))
 }

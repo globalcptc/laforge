@@ -3,6 +3,8 @@
 package command
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -11,8 +13,8 @@ const (
 	Label = "command"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldHclID holds the string denoting the hcl_id field in the database.
-	FieldHclID = "hcl_id"
+	// FieldHCLID holds the string denoting the hcl_id field in the database.
+	FieldHCLID = "hcl_id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
 	// FieldDescription holds the string denoting the description field in the database.
@@ -58,7 +60,7 @@ const (
 // Columns holds all SQL columns for command fields.
 var Columns = []string{
 	FieldID,
-	FieldHclID,
+	FieldHCLID,
 	FieldName,
 	FieldDescription,
 	FieldProgram,
@@ -100,3 +102,86 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the Command queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByHCLID orders the results by the hcl_id field.
+func ByHCLID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHCLID, opts...).ToFunc()
+}
+
+// ByName orders the results by the name field.
+func ByName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldName, opts...).ToFunc()
+}
+
+// ByDescription orders the results by the description field.
+func ByDescription(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDescription, opts...).ToFunc()
+}
+
+// ByProgram orders the results by the program field.
+func ByProgram(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProgram, opts...).ToFunc()
+}
+
+// ByIgnoreErrors orders the results by the ignore_errors field.
+func ByIgnoreErrors(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIgnoreErrors, opts...).ToFunc()
+}
+
+// ByDisabled orders the results by the disabled field.
+func ByDisabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDisabled, opts...).ToFunc()
+}
+
+// ByCooldown orders the results by the cooldown field.
+func ByCooldown(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCooldown, opts...).ToFunc()
+}
+
+// ByTimeout orders the results by the timeout field.
+func ByTimeout(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTimeout, opts...).ToFunc()
+}
+
+// ByUsersCount orders the results by Users count.
+func ByUsersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newUsersStep(), opts...)
+	}
+}
+
+// ByUsers orders the results by Users terms.
+func ByUsers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newUsersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByEnvironmentField orders the results by Environment field.
+func ByEnvironmentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEnvironmentStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newUsersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(UsersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
+	)
+}
+func newEnvironmentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EnvironmentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
+	)
+}

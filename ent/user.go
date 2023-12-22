@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/user"
 	"github.com/google/uuid"
@@ -22,23 +23,25 @@ type User struct {
 	UUID string `json:"uuid,omitempty" hcl:"uuid,optional"`
 	// Email holds the value of the "email" field.
 	Email string `json:"email,omitempty" hcl:"email,attr"`
-	// HclID holds the value of the "hcl_id" field.
-	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+	// HCLID holds the value of the "hcl_id" field.
+	HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges UserEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Tag holds the value of the Tag edge.
 	HCLTag []*Tag `json:"Tag,omitempty"`
 	// Environments holds the value of the Environments edge.
 	HCLEnvironments []*Environment `json:"Environments,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	ansible_users *uuid.UUID
 	command_users *uuid.UUID
 	finding_users *uuid.UUID
 	host_users    *uuid.UUID
 	script_users  *uuid.UUID
+	selectValues  sql.SelectValues
 }
 
 // UserEdges holds the relations/edges for other nodes in the graph.
@@ -50,6 +53,11 @@ type UserEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
+	// totalCount holds the count of the edges above.
+	totalCount [2]map[string]int
+
+	namedTag          map[string][]*Tag
+	namedEnvironments map[string][]*Environment
 }
 
 // TagOrErr returns the Tag value or an error if the edge
@@ -71,11 +79,11 @@ func (e UserEdges) EnvironmentsOrErr() ([]*Environment, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*User) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*User) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldName, user.FieldUUID, user.FieldEmail, user.FieldHclID:
+		case user.FieldName, user.FieldUUID, user.FieldEmail, user.FieldHCLID:
 			values[i] = new(sql.NullString)
 		case user.FieldID:
 			values[i] = new(uuid.UUID)
@@ -90,7 +98,7 @@ func (*User) scanValues(columns []string) ([]interface{}, error) {
 		case user.ForeignKeys[4]: // script_users
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type User", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -98,7 +106,7 @@ func (*User) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the User fields.
-func (u *User) assignValues(columns []string, values []interface{}) error {
+func (u *User) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -128,11 +136,11 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				u.Email = value.String
 			}
-		case user.FieldHclID:
+		case user.FieldHCLID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field hcl_id", values[i])
 			} else if value.Valid {
-				u.HclID = value.String
+				u.HCLID = value.String
 			}
 		case user.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -169,36 +177,44 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 				u.script_users = new(uuid.UUID)
 				*u.script_users = *value.S.(*uuid.UUID)
 			}
+		default:
+			u.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the User.
+// This includes values selected through modifiers, order, etc.
+func (u *User) Value(name string) (ent.Value, error) {
+	return u.selectValues.Get(name)
+}
+
 // QueryTag queries the "Tag" edge of the User entity.
 func (u *User) QueryTag() *TagQuery {
-	return (&UserClient{config: u.config}).QueryTag(u)
+	return NewUserClient(u.config).QueryTag(u)
 }
 
 // QueryEnvironments queries the "Environments" edge of the User entity.
 func (u *User) QueryEnvironments() *EnvironmentQuery {
-	return (&UserClient{config: u.config}).QueryEnvironments(u)
+	return NewUserClient(u.config).QueryEnvironments(u)
 }
 
 // Update returns a builder for updating this User.
 // Note that you need to call User.Unwrap() before calling this method if this User
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (u *User) Update() *UserUpdateOne {
-	return (&UserClient{config: u.config}).UpdateOne(u)
+	return NewUserClient(u.config).UpdateOne(u)
 }
 
 // Unwrap unwraps the User entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (u *User) Unwrap() *User {
-	tx, ok := u.config.driver.(*txDriver)
+	_tx, ok := u.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: User is not a transactional entity")
 	}
-	u.config.driver = tx.drv
+	u.config.driver = _tx.drv
 	return u
 }
 
@@ -206,24 +222,69 @@ func (u *User) Unwrap() *User {
 func (u *User) String() string {
 	var builder strings.Builder
 	builder.WriteString("User(")
-	builder.WriteString(fmt.Sprintf("id=%v", u.ID))
-	builder.WriteString(", name=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", u.ID))
+	builder.WriteString("name=")
 	builder.WriteString(u.Name)
-	builder.WriteString(", uuid=")
+	builder.WriteString(", ")
+	builder.WriteString("uuid=")
 	builder.WriteString(u.UUID)
-	builder.WriteString(", email=")
+	builder.WriteString(", ")
+	builder.WriteString("email=")
 	builder.WriteString(u.Email)
-	builder.WriteString(", hcl_id=")
-	builder.WriteString(u.HclID)
+	builder.WriteString(", ")
+	builder.WriteString("hcl_id=")
+	builder.WriteString(u.HCLID)
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// Users is a parsable slice of User.
-type Users []*User
+// NamedTag returns the Tag named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (u *User) NamedTag(name string) ([]*Tag, error) {
+	if u.Edges.namedTag == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := u.Edges.namedTag[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (u Users) config(cfg config) {
-	for _i := range u {
-		u[_i].config = cfg
+func (u *User) appendNamedTag(name string, edges ...*Tag) {
+	if u.Edges.namedTag == nil {
+		u.Edges.namedTag = make(map[string][]*Tag)
+	}
+	if len(edges) == 0 {
+		u.Edges.namedTag[name] = []*Tag{}
+	} else {
+		u.Edges.namedTag[name] = append(u.Edges.namedTag[name], edges...)
 	}
 }
+
+// NamedEnvironments returns the Environments named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (u *User) NamedEnvironments(name string) ([]*Environment, error) {
+	if u.Edges.namedEnvironments == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := u.Edges.namedEnvironments[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (u *User) appendNamedEnvironments(name string, edges ...*Environment) {
+	if u.Edges.namedEnvironments == nil {
+		u.Edges.namedEnvironments = make(map[string][]*Environment)
+	}
+	if len(edges) == 0 {
+		u.Edges.namedEnvironments[name] = []*Environment{}
+	} else {
+		u.Edges.namedEnvironments[name] = append(u.Edges.namedEnvironments[name], edges...)
+	}
+}
+
+// Users is a parsable slice of User.
+type Users []*User

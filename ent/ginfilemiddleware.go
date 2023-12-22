@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
@@ -29,6 +30,7 @@ type GinFileMiddleware struct {
 	// The values are being populated by the GinFileMiddlewareQuery when eager-loading is set.
 	Edges GinFileMiddlewareEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// ProvisionedHost holds the value of the ProvisionedHost edge.
 	HCLProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
@@ -36,8 +38,9 @@ type GinFileMiddleware struct {
 	HCLProvisioningStep *ProvisioningStep `json:"ProvisioningStep,omitempty"`
 	// ProvisioningScheduledStep holds the value of the ProvisioningScheduledStep edge.
 	HCLProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	server_task_gin_file_middleware *uuid.UUID
+	selectValues                    sql.SelectValues
 }
 
 // GinFileMiddlewareEdges holds the relations/edges for other nodes in the graph.
@@ -51,6 +54,8 @@ type GinFileMiddlewareEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
+	// totalCount holds the count of the edges above.
+	totalCount [3]map[string]int
 }
 
 // ProvisionedHostOrErr returns the ProvisionedHost value or an error if the edge
@@ -58,8 +63,7 @@ type GinFileMiddlewareEdges struct {
 func (e GinFileMiddlewareEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[0] {
 		if e.ProvisionedHost == nil {
-			// The edge ProvisionedHost was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
 		return e.ProvisionedHost, nil
@@ -72,8 +76,7 @@ func (e GinFileMiddlewareEdges) ProvisionedHostOrErr() (*ProvisionedHost, error)
 func (e GinFileMiddlewareEdges) ProvisioningStepOrErr() (*ProvisioningStep, error) {
 	if e.loadedTypes[1] {
 		if e.ProvisioningStep == nil {
-			// The edge ProvisioningStep was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisioningstep.Label}
 		}
 		return e.ProvisioningStep, nil
@@ -86,8 +89,7 @@ func (e GinFileMiddlewareEdges) ProvisioningStepOrErr() (*ProvisioningStep, erro
 func (e GinFileMiddlewareEdges) ProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
 	if e.loadedTypes[2] {
 		if e.ProvisioningScheduledStep == nil {
-			// The edge ProvisioningScheduledStep was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisioningscheduledstep.Label}
 		}
 		return e.ProvisioningScheduledStep, nil
@@ -96,8 +98,8 @@ func (e GinFileMiddlewareEdges) ProvisioningScheduledStepOrErr() (*ProvisioningS
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*GinFileMiddleware) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*GinFileMiddleware) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case ginfilemiddleware.FieldAccessed:
@@ -109,7 +111,7 @@ func (*GinFileMiddleware) scanValues(columns []string) ([]interface{}, error) {
 		case ginfilemiddleware.ForeignKeys[0]: // server_task_gin_file_middleware
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type GinFileMiddleware", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -117,7 +119,7 @@ func (*GinFileMiddleware) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the GinFileMiddleware fields.
-func (gfm *GinFileMiddleware) assignValues(columns []string, values []interface{}) error {
+func (gfm *GinFileMiddleware) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -154,41 +156,49 @@ func (gfm *GinFileMiddleware) assignValues(columns []string, values []interface{
 				gfm.server_task_gin_file_middleware = new(uuid.UUID)
 				*gfm.server_task_gin_file_middleware = *value.S.(*uuid.UUID)
 			}
+		default:
+			gfm.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the GinFileMiddleware.
+// This includes values selected through modifiers, order, etc.
+func (gfm *GinFileMiddleware) Value(name string) (ent.Value, error) {
+	return gfm.selectValues.Get(name)
+}
+
 // QueryProvisionedHost queries the "ProvisionedHost" edge of the GinFileMiddleware entity.
 func (gfm *GinFileMiddleware) QueryProvisionedHost() *ProvisionedHostQuery {
-	return (&GinFileMiddlewareClient{config: gfm.config}).QueryProvisionedHost(gfm)
+	return NewGinFileMiddlewareClient(gfm.config).QueryProvisionedHost(gfm)
 }
 
 // QueryProvisioningStep queries the "ProvisioningStep" edge of the GinFileMiddleware entity.
 func (gfm *GinFileMiddleware) QueryProvisioningStep() *ProvisioningStepQuery {
-	return (&GinFileMiddlewareClient{config: gfm.config}).QueryProvisioningStep(gfm)
+	return NewGinFileMiddlewareClient(gfm.config).QueryProvisioningStep(gfm)
 }
 
 // QueryProvisioningScheduledStep queries the "ProvisioningScheduledStep" edge of the GinFileMiddleware entity.
 func (gfm *GinFileMiddleware) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
-	return (&GinFileMiddlewareClient{config: gfm.config}).QueryProvisioningScheduledStep(gfm)
+	return NewGinFileMiddlewareClient(gfm.config).QueryProvisioningScheduledStep(gfm)
 }
 
 // Update returns a builder for updating this GinFileMiddleware.
 // Note that you need to call GinFileMiddleware.Unwrap() before calling this method if this GinFileMiddleware
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (gfm *GinFileMiddleware) Update() *GinFileMiddlewareUpdateOne {
-	return (&GinFileMiddlewareClient{config: gfm.config}).UpdateOne(gfm)
+	return NewGinFileMiddlewareClient(gfm.config).UpdateOne(gfm)
 }
 
 // Unwrap unwraps the GinFileMiddleware entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (gfm *GinFileMiddleware) Unwrap() *GinFileMiddleware {
-	tx, ok := gfm.config.driver.(*txDriver)
+	_tx, ok := gfm.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: GinFileMiddleware is not a transactional entity")
 	}
-	gfm.config.driver = tx.drv
+	gfm.config.driver = _tx.drv
 	return gfm
 }
 
@@ -196,12 +206,14 @@ func (gfm *GinFileMiddleware) Unwrap() *GinFileMiddleware {
 func (gfm *GinFileMiddleware) String() string {
 	var builder strings.Builder
 	builder.WriteString("GinFileMiddleware(")
-	builder.WriteString(fmt.Sprintf("id=%v", gfm.ID))
-	builder.WriteString(", url_id=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", gfm.ID))
+	builder.WriteString("url_id=")
 	builder.WriteString(gfm.URLID)
-	builder.WriteString(", file_path=")
+	builder.WriteString(", ")
+	builder.WriteString("file_path=")
 	builder.WriteString(gfm.FilePath)
-	builder.WriteString(", accessed=")
+	builder.WriteString(", ")
+	builder.WriteString("accessed=")
 	builder.WriteString(fmt.Sprintf("%v", gfm.Accessed))
 	builder.WriteByte(')')
 	return builder.String()
@@ -209,9 +221,3 @@ func (gfm *GinFileMiddleware) String() string {
 
 // GinFileMiddlewares is a parsable slice of GinFileMiddleware.
 type GinFileMiddlewares []*GinFileMiddleware
-
-func (gfm GinFileMiddlewares) config(cfg config) {
-	for _i := range gfm {
-		gfm[_i].config = cfg
-	}
-}

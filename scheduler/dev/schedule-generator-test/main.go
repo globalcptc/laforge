@@ -175,7 +175,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			script.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			script.HclIDEQ(entScheduledStep.Step),
+			script.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -192,7 +192,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			command.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			command.HclIDEQ(entScheduledStep.Step),
+			command.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -209,7 +209,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			filedownload.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			filedownload.HclIDEQ(entScheduledStep.Step),
+			filedownload.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -226,7 +226,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			fileextract.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			fileextract.HclIDEQ(entScheduledStep.Step),
+			fileextract.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -243,7 +243,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			filedelete.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			filedelete.HclIDEQ(entScheduledStep.Step),
+			filedelete.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -260,7 +260,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			dnsrecord.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			dnsrecord.HclIDEQ(entScheduledStep.Step),
+			dnsrecord.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -277,7 +277,7 @@ func generateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			ansible.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			ansible.HclIDEQ(entScheduledStep.Step),
+			ansible.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {

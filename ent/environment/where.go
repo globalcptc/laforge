@@ -11,745 +11,487 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.Environment(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.Environment(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.Environment(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.Environment(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.Environment(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.Environment(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.Environment(sql.FieldLTE(FieldID, id))
 }
 
-// HclID applies equality check predicate on the "hcl_id" field. It's identical to HclIDEQ.
-func HclID(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldHclID), v))
-	})
+// HCLID applies equality check predicate on the "hcl_id" field. It's identical to HCLIDEQ.
+func HCLID(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldEQ(FieldHCLID, v))
 }
 
 // CompetitionID applies equality check predicate on the "competition_id" field. It's identical to CompetitionIDEQ.
 func CompetitionID(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldCompetitionID, v))
 }
 
 // Name applies equality check predicate on the "name" field. It's identical to NameEQ.
 func Name(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldName, v))
 }
 
 // Description applies equality check predicate on the "description" field. It's identical to DescriptionEQ.
 func Description(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldDescription, v))
 }
 
 // Builder applies equality check predicate on the "builder" field. It's identical to BuilderEQ.
 func Builder(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldBuilder, v))
 }
 
 // TeamCount applies equality check predicate on the "team_count" field. It's identical to TeamCountEQ.
 func TeamCount(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldTeamCount), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldTeamCount, v))
 }
 
 // Revision applies equality check predicate on the "revision" field. It's identical to RevisionEQ.
 func Revision(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRevision), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldRevision, v))
 }
 
-// HclIDEQ applies the EQ predicate on the "hcl_id" field.
-func HclIDEQ(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldHclID), v))
-	})
+// HCLIDEQ applies the EQ predicate on the "hcl_id" field.
+func HCLIDEQ(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldEQ(FieldHCLID, v))
 }
 
-// HclIDNEQ applies the NEQ predicate on the "hcl_id" field.
-func HclIDNEQ(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldHclID), v))
-	})
+// HCLIDNEQ applies the NEQ predicate on the "hcl_id" field.
+func HCLIDNEQ(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldNEQ(FieldHCLID, v))
 }
 
-// HclIDIn applies the In predicate on the "hcl_id" field.
-func HclIDIn(vs ...string) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldHclID), v...))
-	})
+// HCLIDIn applies the In predicate on the "hcl_id" field.
+func HCLIDIn(vs ...string) predicate.Environment {
+	return predicate.Environment(sql.FieldIn(FieldHCLID, vs...))
 }
 
-// HclIDNotIn applies the NotIn predicate on the "hcl_id" field.
-func HclIDNotIn(vs ...string) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldHclID), v...))
-	})
+// HCLIDNotIn applies the NotIn predicate on the "hcl_id" field.
+func HCLIDNotIn(vs ...string) predicate.Environment {
+	return predicate.Environment(sql.FieldNotIn(FieldHCLID, vs...))
 }
 
-// HclIDGT applies the GT predicate on the "hcl_id" field.
-func HclIDGT(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldHclID), v))
-	})
+// HCLIDGT applies the GT predicate on the "hcl_id" field.
+func HCLIDGT(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldGT(FieldHCLID, v))
 }
 
-// HclIDGTE applies the GTE predicate on the "hcl_id" field.
-func HclIDGTE(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldHclID), v))
-	})
+// HCLIDGTE applies the GTE predicate on the "hcl_id" field.
+func HCLIDGTE(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldGTE(FieldHCLID, v))
 }
 
-// HclIDLT applies the LT predicate on the "hcl_id" field.
-func HclIDLT(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldHclID), v))
-	})
+// HCLIDLT applies the LT predicate on the "hcl_id" field.
+func HCLIDLT(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldLT(FieldHCLID, v))
 }
 
-// HclIDLTE applies the LTE predicate on the "hcl_id" field.
-func HclIDLTE(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldHclID), v))
-	})
+// HCLIDLTE applies the LTE predicate on the "hcl_id" field.
+func HCLIDLTE(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldLTE(FieldHCLID, v))
 }
 
-// HclIDContains applies the Contains predicate on the "hcl_id" field.
-func HclIDContains(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldHclID), v))
-	})
+// HCLIDContains applies the Contains predicate on the "hcl_id" field.
+func HCLIDContains(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldContains(FieldHCLID, v))
 }
 
-// HclIDHasPrefix applies the HasPrefix predicate on the "hcl_id" field.
-func HclIDHasPrefix(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldHclID), v))
-	})
+// HCLIDHasPrefix applies the HasPrefix predicate on the "hcl_id" field.
+func HCLIDHasPrefix(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldHasPrefix(FieldHCLID, v))
 }
 
-// HclIDHasSuffix applies the HasSuffix predicate on the "hcl_id" field.
-func HclIDHasSuffix(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldHclID), v))
-	})
+// HCLIDHasSuffix applies the HasSuffix predicate on the "hcl_id" field.
+func HCLIDHasSuffix(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldHasSuffix(FieldHCLID, v))
 }
 
-// HclIDEqualFold applies the EqualFold predicate on the "hcl_id" field.
-func HclIDEqualFold(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldHclID), v))
-	})
+// HCLIDEqualFold applies the EqualFold predicate on the "hcl_id" field.
+func HCLIDEqualFold(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldEqualFold(FieldHCLID, v))
 }
 
-// HclIDContainsFold applies the ContainsFold predicate on the "hcl_id" field.
-func HclIDContainsFold(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldHclID), v))
-	})
+// HCLIDContainsFold applies the ContainsFold predicate on the "hcl_id" field.
+func HCLIDContainsFold(v string) predicate.Environment {
+	return predicate.Environment(sql.FieldContainsFold(FieldHCLID, v))
 }
 
 // CompetitionIDEQ applies the EQ predicate on the "competition_id" field.
 func CompetitionIDEQ(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldCompetitionID, v))
 }
 
 // CompetitionIDNEQ applies the NEQ predicate on the "competition_id" field.
 func CompetitionIDNEQ(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldNEQ(FieldCompetitionID, v))
 }
 
 // CompetitionIDIn applies the In predicate on the "competition_id" field.
 func CompetitionIDIn(vs ...string) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldCompetitionID), v...))
-	})
+	return predicate.Environment(sql.FieldIn(FieldCompetitionID, vs...))
 }
 
 // CompetitionIDNotIn applies the NotIn predicate on the "competition_id" field.
 func CompetitionIDNotIn(vs ...string) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldCompetitionID), v...))
-	})
+	return predicate.Environment(sql.FieldNotIn(FieldCompetitionID, vs...))
 }
 
 // CompetitionIDGT applies the GT predicate on the "competition_id" field.
 func CompetitionIDGT(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldGT(FieldCompetitionID, v))
 }
 
 // CompetitionIDGTE applies the GTE predicate on the "competition_id" field.
 func CompetitionIDGTE(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldGTE(FieldCompetitionID, v))
 }
 
 // CompetitionIDLT applies the LT predicate on the "competition_id" field.
 func CompetitionIDLT(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldLT(FieldCompetitionID, v))
 }
 
 // CompetitionIDLTE applies the LTE predicate on the "competition_id" field.
 func CompetitionIDLTE(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldLTE(FieldCompetitionID, v))
 }
 
 // CompetitionIDContains applies the Contains predicate on the "competition_id" field.
 func CompetitionIDContains(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldContains(FieldCompetitionID, v))
 }
 
 // CompetitionIDHasPrefix applies the HasPrefix predicate on the "competition_id" field.
 func CompetitionIDHasPrefix(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldHasPrefix(FieldCompetitionID, v))
 }
 
 // CompetitionIDHasSuffix applies the HasSuffix predicate on the "competition_id" field.
 func CompetitionIDHasSuffix(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldHasSuffix(FieldCompetitionID, v))
 }
 
 // CompetitionIDEqualFold applies the EqualFold predicate on the "competition_id" field.
 func CompetitionIDEqualFold(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldEqualFold(FieldCompetitionID, v))
 }
 
 // CompetitionIDContainsFold applies the ContainsFold predicate on the "competition_id" field.
 func CompetitionIDContainsFold(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldCompetitionID), v))
-	})
+	return predicate.Environment(sql.FieldContainsFold(FieldCompetitionID, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
 func NameEQ(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldName, v))
 }
 
 // NameNEQ applies the NEQ predicate on the "name" field.
 func NameNEQ(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldNEQ(FieldName, v))
 }
 
 // NameIn applies the In predicate on the "name" field.
 func NameIn(vs ...string) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldName), v...))
-	})
+	return predicate.Environment(sql.FieldIn(FieldName, vs...))
 }
 
 // NameNotIn applies the NotIn predicate on the "name" field.
 func NameNotIn(vs ...string) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldName), v...))
-	})
+	return predicate.Environment(sql.FieldNotIn(FieldName, vs...))
 }
 
 // NameGT applies the GT predicate on the "name" field.
 func NameGT(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldGT(FieldName, v))
 }
 
 // NameGTE applies the GTE predicate on the "name" field.
 func NameGTE(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldGTE(FieldName, v))
 }
 
 // NameLT applies the LT predicate on the "name" field.
 func NameLT(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldLT(FieldName, v))
 }
 
 // NameLTE applies the LTE predicate on the "name" field.
 func NameLTE(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldLTE(FieldName, v))
 }
 
 // NameContains applies the Contains predicate on the "name" field.
 func NameContains(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldContains(FieldName, v))
 }
 
 // NameHasPrefix applies the HasPrefix predicate on the "name" field.
 func NameHasPrefix(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldHasPrefix(FieldName, v))
 }
 
 // NameHasSuffix applies the HasSuffix predicate on the "name" field.
 func NameHasSuffix(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldHasSuffix(FieldName, v))
 }
 
 // NameEqualFold applies the EqualFold predicate on the "name" field.
 func NameEqualFold(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldEqualFold(FieldName, v))
 }
 
 // NameContainsFold applies the ContainsFold predicate on the "name" field.
 func NameContainsFold(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldName), v))
-	})
+	return predicate.Environment(sql.FieldContainsFold(FieldName, v))
 }
 
 // DescriptionEQ applies the EQ predicate on the "description" field.
 func DescriptionEQ(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldDescription, v))
 }
 
 // DescriptionNEQ applies the NEQ predicate on the "description" field.
 func DescriptionNEQ(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldNEQ(FieldDescription, v))
 }
 
 // DescriptionIn applies the In predicate on the "description" field.
 func DescriptionIn(vs ...string) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldDescription), v...))
-	})
+	return predicate.Environment(sql.FieldIn(FieldDescription, vs...))
 }
 
 // DescriptionNotIn applies the NotIn predicate on the "description" field.
 func DescriptionNotIn(vs ...string) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldDescription), v...))
-	})
+	return predicate.Environment(sql.FieldNotIn(FieldDescription, vs...))
 }
 
 // DescriptionGT applies the GT predicate on the "description" field.
 func DescriptionGT(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldGT(FieldDescription, v))
 }
 
 // DescriptionGTE applies the GTE predicate on the "description" field.
 func DescriptionGTE(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldGTE(FieldDescription, v))
 }
 
 // DescriptionLT applies the LT predicate on the "description" field.
 func DescriptionLT(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldLT(FieldDescription, v))
 }
 
 // DescriptionLTE applies the LTE predicate on the "description" field.
 func DescriptionLTE(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldLTE(FieldDescription, v))
 }
 
 // DescriptionContains applies the Contains predicate on the "description" field.
 func DescriptionContains(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldContains(FieldDescription, v))
 }
 
 // DescriptionHasPrefix applies the HasPrefix predicate on the "description" field.
 func DescriptionHasPrefix(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldHasPrefix(FieldDescription, v))
 }
 
 // DescriptionHasSuffix applies the HasSuffix predicate on the "description" field.
 func DescriptionHasSuffix(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldHasSuffix(FieldDescription, v))
 }
 
 // DescriptionEqualFold applies the EqualFold predicate on the "description" field.
 func DescriptionEqualFold(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldEqualFold(FieldDescription, v))
 }
 
 // DescriptionContainsFold applies the ContainsFold predicate on the "description" field.
 func DescriptionContainsFold(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldDescription), v))
-	})
+	return predicate.Environment(sql.FieldContainsFold(FieldDescription, v))
 }
 
 // BuilderEQ applies the EQ predicate on the "builder" field.
 func BuilderEQ(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldBuilder, v))
 }
 
 // BuilderNEQ applies the NEQ predicate on the "builder" field.
 func BuilderNEQ(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldNEQ(FieldBuilder, v))
 }
 
 // BuilderIn applies the In predicate on the "builder" field.
 func BuilderIn(vs ...string) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldBuilder), v...))
-	})
+	return predicate.Environment(sql.FieldIn(FieldBuilder, vs...))
 }
 
 // BuilderNotIn applies the NotIn predicate on the "builder" field.
 func BuilderNotIn(vs ...string) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldBuilder), v...))
-	})
+	return predicate.Environment(sql.FieldNotIn(FieldBuilder, vs...))
 }
 
 // BuilderGT applies the GT predicate on the "builder" field.
 func BuilderGT(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldGT(FieldBuilder, v))
 }
 
 // BuilderGTE applies the GTE predicate on the "builder" field.
 func BuilderGTE(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldGTE(FieldBuilder, v))
 }
 
 // BuilderLT applies the LT predicate on the "builder" field.
 func BuilderLT(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldLT(FieldBuilder, v))
 }
 
 // BuilderLTE applies the LTE predicate on the "builder" field.
 func BuilderLTE(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldLTE(FieldBuilder, v))
 }
 
 // BuilderContains applies the Contains predicate on the "builder" field.
 func BuilderContains(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldContains(FieldBuilder, v))
 }
 
 // BuilderHasPrefix applies the HasPrefix predicate on the "builder" field.
 func BuilderHasPrefix(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldHasPrefix(FieldBuilder, v))
 }
 
 // BuilderHasSuffix applies the HasSuffix predicate on the "builder" field.
 func BuilderHasSuffix(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldHasSuffix(FieldBuilder, v))
 }
 
 // BuilderEqualFold applies the EqualFold predicate on the "builder" field.
 func BuilderEqualFold(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldEqualFold(FieldBuilder, v))
 }
 
 // BuilderContainsFold applies the ContainsFold predicate on the "builder" field.
 func BuilderContainsFold(v string) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldBuilder), v))
-	})
+	return predicate.Environment(sql.FieldContainsFold(FieldBuilder, v))
 }
 
 // TeamCountEQ applies the EQ predicate on the "team_count" field.
 func TeamCountEQ(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldTeamCount), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldTeamCount, v))
 }
 
 // TeamCountNEQ applies the NEQ predicate on the "team_count" field.
 func TeamCountNEQ(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldTeamCount), v))
-	})
+	return predicate.Environment(sql.FieldNEQ(FieldTeamCount, v))
 }
 
 // TeamCountIn applies the In predicate on the "team_count" field.
 func TeamCountIn(vs ...int) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldTeamCount), v...))
-	})
+	return predicate.Environment(sql.FieldIn(FieldTeamCount, vs...))
 }
 
 // TeamCountNotIn applies the NotIn predicate on the "team_count" field.
 func TeamCountNotIn(vs ...int) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldTeamCount), v...))
-	})
+	return predicate.Environment(sql.FieldNotIn(FieldTeamCount, vs...))
 }
 
 // TeamCountGT applies the GT predicate on the "team_count" field.
 func TeamCountGT(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldTeamCount), v))
-	})
+	return predicate.Environment(sql.FieldGT(FieldTeamCount, v))
 }
 
 // TeamCountGTE applies the GTE predicate on the "team_count" field.
 func TeamCountGTE(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldTeamCount), v))
-	})
+	return predicate.Environment(sql.FieldGTE(FieldTeamCount, v))
 }
 
 // TeamCountLT applies the LT predicate on the "team_count" field.
 func TeamCountLT(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldTeamCount), v))
-	})
+	return predicate.Environment(sql.FieldLT(FieldTeamCount, v))
 }
 
 // TeamCountLTE applies the LTE predicate on the "team_count" field.
 func TeamCountLTE(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldTeamCount), v))
-	})
+	return predicate.Environment(sql.FieldLTE(FieldTeamCount, v))
 }
 
 // RevisionEQ applies the EQ predicate on the "revision" field.
 func RevisionEQ(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRevision), v))
-	})
+	return predicate.Environment(sql.FieldEQ(FieldRevision, v))
 }
 
 // RevisionNEQ applies the NEQ predicate on the "revision" field.
 func RevisionNEQ(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldRevision), v))
-	})
+	return predicate.Environment(sql.FieldNEQ(FieldRevision, v))
 }
 
 // RevisionIn applies the In predicate on the "revision" field.
 func RevisionIn(vs ...int) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldRevision), v...))
-	})
+	return predicate.Environment(sql.FieldIn(FieldRevision, vs...))
 }
 
 // RevisionNotIn applies the NotIn predicate on the "revision" field.
 func RevisionNotIn(vs ...int) predicate.Environment {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldRevision), v...))
-	})
+	return predicate.Environment(sql.FieldNotIn(FieldRevision, vs...))
 }
 
 // RevisionGT applies the GT predicate on the "revision" field.
 func RevisionGT(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldRevision), v))
-	})
+	return predicate.Environment(sql.FieldGT(FieldRevision, v))
 }
 
 // RevisionGTE applies the GTE predicate on the "revision" field.
 func RevisionGTE(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldRevision), v))
-	})
+	return predicate.Environment(sql.FieldGTE(FieldRevision, v))
 }
 
 // RevisionLT applies the LT predicate on the "revision" field.
 func RevisionLT(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldRevision), v))
-	})
+	return predicate.Environment(sql.FieldLT(FieldRevision, v))
 }
 
 // RevisionLTE applies the LTE predicate on the "revision" field.
 func RevisionLTE(v int) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldRevision), v))
-	})
+	return predicate.Environment(sql.FieldLTE(FieldRevision, v))
 }
 
 // HasUsers applies the HasEdge predicate on the "Users" edge.
@@ -757,7 +499,6 @@ func HasUsers() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UsersTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, UsersTable, UsersPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -767,11 +508,7 @@ func HasUsers() predicate.Environment {
 // HasUsersWith applies the HasEdge predicate on the "Users" edge with a given conditions (other predicates).
 func HasUsersWith(preds ...predicate.User) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UsersInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, UsersTable, UsersPrimaryKey...),
-		)
+		step := newUsersStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -785,7 +522,6 @@ func HasHosts() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(HostsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, HostsTable, HostsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -795,11 +531,7 @@ func HasHosts() predicate.Environment {
 // HasHostsWith applies the HasEdge predicate on the "Hosts" edge with a given conditions (other predicates).
 func HasHostsWith(preds ...predicate.Host) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(HostsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, HostsTable, HostsColumn),
-		)
+		step := newHostsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -813,7 +545,6 @@ func HasCompetitions() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CompetitionsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, CompetitionsTable, CompetitionsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -823,11 +554,7 @@ func HasCompetitions() predicate.Environment {
 // HasCompetitionsWith applies the HasEdge predicate on the "Competitions" edge with a given conditions (other predicates).
 func HasCompetitionsWith(preds ...predicate.Competition) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CompetitionsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, CompetitionsTable, CompetitionsColumn),
-		)
+		step := newCompetitionsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -841,7 +568,6 @@ func HasIdentities() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(IdentitiesTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, IdentitiesTable, IdentitiesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -851,11 +577,7 @@ func HasIdentities() predicate.Environment {
 // HasIdentitiesWith applies the HasEdge predicate on the "Identities" edge with a given conditions (other predicates).
 func HasIdentitiesWith(preds ...predicate.Identity) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(IdentitiesInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, IdentitiesTable, IdentitiesColumn),
-		)
+		step := newIdentitiesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -869,7 +591,6 @@ func HasCommands() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CommandsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, CommandsTable, CommandsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -879,11 +600,7 @@ func HasCommands() predicate.Environment {
 // HasCommandsWith applies the HasEdge predicate on the "Commands" edge with a given conditions (other predicates).
 func HasCommandsWith(preds ...predicate.Command) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CommandsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, CommandsTable, CommandsColumn),
-		)
+		step := newCommandsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -897,7 +614,6 @@ func HasScripts() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ScriptsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, ScriptsTable, ScriptsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -907,11 +623,7 @@ func HasScripts() predicate.Environment {
 // HasScriptsWith applies the HasEdge predicate on the "Scripts" edge with a given conditions (other predicates).
 func HasScriptsWith(preds ...predicate.Script) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ScriptsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ScriptsTable, ScriptsColumn),
-		)
+		step := newScriptsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -925,7 +637,6 @@ func HasFileDownloads() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileDownloadsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, FileDownloadsTable, FileDownloadsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -935,11 +646,7 @@ func HasFileDownloads() predicate.Environment {
 // HasFileDownloadsWith applies the HasEdge predicate on the "FileDownloads" edge with a given conditions (other predicates).
 func HasFileDownloadsWith(preds ...predicate.FileDownload) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileDownloadsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, FileDownloadsTable, FileDownloadsColumn),
-		)
+		step := newFileDownloadsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -953,7 +660,6 @@ func HasFileDeletes() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileDeletesTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, FileDeletesTable, FileDeletesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -963,11 +669,7 @@ func HasFileDeletes() predicate.Environment {
 // HasFileDeletesWith applies the HasEdge predicate on the "FileDeletes" edge with a given conditions (other predicates).
 func HasFileDeletesWith(preds ...predicate.FileDelete) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileDeletesInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, FileDeletesTable, FileDeletesColumn),
-		)
+		step := newFileDeletesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -981,7 +683,6 @@ func HasFileExtracts() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileExtractsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, FileExtractsTable, FileExtractsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -991,11 +692,7 @@ func HasFileExtracts() predicate.Environment {
 // HasFileExtractsWith applies the HasEdge predicate on the "FileExtracts" edge with a given conditions (other predicates).
 func HasFileExtractsWith(preds ...predicate.FileExtract) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FileExtractsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, FileExtractsTable, FileExtractsColumn),
-		)
+		step := newFileExtractsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1009,7 +706,6 @@ func HasIncludedNetworks() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(IncludedNetworksTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, IncludedNetworksTable, IncludedNetworksPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -1019,11 +715,7 @@ func HasIncludedNetworks() predicate.Environment {
 // HasIncludedNetworksWith applies the HasEdge predicate on the "IncludedNetworks" edge with a given conditions (other predicates).
 func HasIncludedNetworksWith(preds ...predicate.IncludedNetwork) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(IncludedNetworksInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, IncludedNetworksTable, IncludedNetworksPrimaryKey...),
-		)
+		step := newIncludedNetworksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1037,7 +729,6 @@ func HasFindings() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FindingsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, FindingsTable, FindingsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -1047,11 +738,7 @@ func HasFindings() predicate.Environment {
 // HasFindingsWith applies the HasEdge predicate on the "Findings" edge with a given conditions (other predicates).
 func HasFindingsWith(preds ...predicate.Finding) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(FindingsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, FindingsTable, FindingsColumn),
-		)
+		step := newFindingsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1065,7 +752,6 @@ func HasDNSRecords() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DNSRecordsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, DNSRecordsTable, DNSRecordsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -1075,11 +761,7 @@ func HasDNSRecords() predicate.Environment {
 // HasDNSRecordsWith applies the HasEdge predicate on the "DNSRecords" edge with a given conditions (other predicates).
 func HasDNSRecordsWith(preds ...predicate.DNSRecord) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DNSRecordsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, DNSRecordsTable, DNSRecordsColumn),
-		)
+		step := newDNSRecordsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1093,7 +775,6 @@ func HasDNS() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DNSTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, DNSTable, DNSPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -1103,11 +784,7 @@ func HasDNS() predicate.Environment {
 // HasDNSWith applies the HasEdge predicate on the "DNS" edge with a given conditions (other predicates).
 func HasDNSWith(preds ...predicate.DNS) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DNSInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, DNSTable, DNSPrimaryKey...),
-		)
+		step := newDNSStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1121,7 +798,6 @@ func HasNetworks() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NetworksTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, NetworksTable, NetworksColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -1131,11 +807,7 @@ func HasNetworks() predicate.Environment {
 // HasNetworksWith applies the HasEdge predicate on the "Networks" edge with a given conditions (other predicates).
 func HasNetworksWith(preds ...predicate.Network) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NetworksInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, NetworksTable, NetworksColumn),
-		)
+		step := newNetworksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1149,7 +821,6 @@ func HasHostDependencies() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(HostDependenciesTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, HostDependenciesTable, HostDependenciesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -1159,11 +830,7 @@ func HasHostDependencies() predicate.Environment {
 // HasHostDependenciesWith applies the HasEdge predicate on the "HostDependencies" edge with a given conditions (other predicates).
 func HasHostDependenciesWith(preds ...predicate.HostDependency) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(HostDependenciesInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, HostDependenciesTable, HostDependenciesColumn),
-		)
+		step := newHostDependenciesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1177,7 +844,6 @@ func HasAnsibles() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AnsiblesTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, AnsiblesTable, AnsiblesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -1187,11 +853,7 @@ func HasAnsibles() predicate.Environment {
 // HasAnsiblesWith applies the HasEdge predicate on the "Ansibles" edge with a given conditions (other predicates).
 func HasAnsiblesWith(preds ...predicate.Ansible) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AnsiblesInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, AnsiblesTable, AnsiblesColumn),
-		)
+		step := newAnsiblesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1205,7 +867,6 @@ func HasScheduledSteps() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ScheduledStepsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, ScheduledStepsTable, ScheduledStepsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -1215,11 +876,7 @@ func HasScheduledSteps() predicate.Environment {
 // HasScheduledStepsWith applies the HasEdge predicate on the "ScheduledSteps" edge with a given conditions (other predicates).
 func HasScheduledStepsWith(preds ...predicate.ScheduledStep) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ScheduledStepsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ScheduledStepsTable, ScheduledStepsColumn),
-		)
+		step := newScheduledStepsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1233,7 +890,6 @@ func HasBuilds() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, BuildsTable, BuildsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -1243,11 +899,7 @@ func HasBuilds() predicate.Environment {
 // HasBuildsWith applies the HasEdge predicate on the "Builds" edge with a given conditions (other predicates).
 func HasBuildsWith(preds ...predicate.Build) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, BuildsTable, BuildsColumn),
-		)
+		step := newBuildsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1261,7 +913,6 @@ func HasRepositories() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RepositoriesTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, RepositoriesTable, RepositoriesPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -1271,11 +922,7 @@ func HasRepositories() predicate.Environment {
 // HasRepositoriesWith applies the HasEdge predicate on the "Repositories" edge with a given conditions (other predicates).
 func HasRepositoriesWith(preds ...predicate.Repository) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RepositoriesInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, RepositoriesTable, RepositoriesPrimaryKey...),
-		)
+		step := newRepositoriesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1289,7 +936,6 @@ func HasServerTasks() predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTasksTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, ServerTasksTable, ServerTasksColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -1299,11 +945,7 @@ func HasServerTasks() predicate.Environment {
 // HasServerTasksWith applies the HasEdge predicate on the "ServerTasks" edge with a given conditions (other predicates).
 func HasServerTasksWith(preds ...predicate.ServerTask) predicate.Environment {
 	return predicate.Environment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTasksInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, ServerTasksTable, ServerTasksColumn),
-		)
+		step := newServerTasksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1314,32 +956,15 @@ func HasServerTasksWith(preds ...predicate.ServerTask) predicate.Environment {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Environment) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Environment(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Environment) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Environment(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Environment) predicate.Environment {
-	return predicate.Environment(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Environment(sql.NotPredicates(p))
 }

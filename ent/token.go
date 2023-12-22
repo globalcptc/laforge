@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/token"
@@ -25,11 +26,13 @@ type Token struct {
 	// The values are being populated by the TokenQuery when eager-loading is set.
 	Edges TokenEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// AuthUser holds the value of the AuthUser edge.
 	HCLAuthUser *AuthUser `json:"AuthUser,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	auth_user_tokens *uuid.UUID
+	selectValues     sql.SelectValues
 }
 
 // TokenEdges holds the relations/edges for other nodes in the graph.
@@ -39,6 +42,8 @@ type TokenEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
+	// totalCount holds the count of the edges above.
+	totalCount [1]map[string]int
 }
 
 // AuthUserOrErr returns the AuthUser value or an error if the edge
@@ -46,8 +51,7 @@ type TokenEdges struct {
 func (e TokenEdges) AuthUserOrErr() (*AuthUser, error) {
 	if e.loadedTypes[0] {
 		if e.AuthUser == nil {
-			// The edge AuthUser was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: authuser.Label}
 		}
 		return e.AuthUser, nil
@@ -56,8 +60,8 @@ func (e TokenEdges) AuthUserOrErr() (*AuthUser, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*Token) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*Token) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case token.FieldExpireAt:
@@ -69,7 +73,7 @@ func (*Token) scanValues(columns []string) ([]interface{}, error) {
 		case token.ForeignKeys[0]: // auth_user_tokens
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Token", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -77,7 +81,7 @@ func (*Token) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Token fields.
-func (t *Token) assignValues(columns []string, values []interface{}) error {
+func (t *Token) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -108,31 +112,39 @@ func (t *Token) assignValues(columns []string, values []interface{}) error {
 				t.auth_user_tokens = new(uuid.UUID)
 				*t.auth_user_tokens = *value.S.(*uuid.UUID)
 			}
+		default:
+			t.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the Token.
+// This includes values selected through modifiers, order, etc.
+func (t *Token) Value(name string) (ent.Value, error) {
+	return t.selectValues.Get(name)
+}
+
 // QueryAuthUser queries the "AuthUser" edge of the Token entity.
 func (t *Token) QueryAuthUser() *AuthUserQuery {
-	return (&TokenClient{config: t.config}).QueryAuthUser(t)
+	return NewTokenClient(t.config).QueryAuthUser(t)
 }
 
 // Update returns a builder for updating this Token.
 // Note that you need to call Token.Unwrap() before calling this method if this Token
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (t *Token) Update() *TokenUpdateOne {
-	return (&TokenClient{config: t.config}).UpdateOne(t)
+	return NewTokenClient(t.config).UpdateOne(t)
 }
 
 // Unwrap unwraps the Token entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (t *Token) Unwrap() *Token {
-	tx, ok := t.config.driver.(*txDriver)
+	_tx, ok := t.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Token is not a transactional entity")
 	}
-	t.config.driver = tx.drv
+	t.config.driver = _tx.drv
 	return t
 }
 
@@ -140,10 +152,11 @@ func (t *Token) Unwrap() *Token {
 func (t *Token) String() string {
 	var builder strings.Builder
 	builder.WriteString("Token(")
-	builder.WriteString(fmt.Sprintf("id=%v", t.ID))
-	builder.WriteString(", token=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", t.ID))
+	builder.WriteString("token=")
 	builder.WriteString(t.Token)
-	builder.WriteString(", expire_at=")
+	builder.WriteString(", ")
+	builder.WriteString("expire_at=")
 	builder.WriteString(fmt.Sprintf("%v", t.ExpireAt))
 	builder.WriteByte(')')
 	return builder.String()
@@ -151,9 +164,3 @@ func (t *Token) String() string {
 
 // Tokens is a parsable slice of Token.
 type Tokens []*Token
-
-func (t Tokens) config(cfg config) {
-	for _i := range t {
-		t[_i].config = cfg
-	}
-}

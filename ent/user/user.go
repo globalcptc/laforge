@@ -3,6 +3,8 @@
 package user
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -17,8 +19,8 @@ const (
 	FieldUUID = "uuid"
 	// FieldEmail holds the string denoting the email field in the database.
 	FieldEmail = "email"
-	// FieldHclID holds the string denoting the hcl_id field in the database.
-	FieldHclID = "hcl_id"
+	// FieldHCLID holds the string denoting the hcl_id field in the database.
+	FieldHCLID = "hcl_id"
 	// EdgeTag holds the string denoting the tag edge name in mutations.
 	EdgeTag = "Tag"
 	// EdgeEnvironments holds the string denoting the environments edge name in mutations.
@@ -45,7 +47,7 @@ var Columns = []string{
 	FieldName,
 	FieldUUID,
 	FieldEmail,
-	FieldHclID,
+	FieldHCLID,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "users"
@@ -83,3 +85,73 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the User queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByName orders the results by the name field.
+func ByName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldName, opts...).ToFunc()
+}
+
+// ByUUID orders the results by the uuid field.
+func ByUUID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUUID, opts...).ToFunc()
+}
+
+// ByEmail orders the results by the email field.
+func ByEmail(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEmail, opts...).ToFunc()
+}
+
+// ByHCLID orders the results by the hcl_id field.
+func ByHCLID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHCLID, opts...).ToFunc()
+}
+
+// ByTagCount orders the results by Tag count.
+func ByTagCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTagStep(), opts...)
+	}
+}
+
+// ByTag orders the results by Tag terms.
+func ByTag(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTagStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByEnvironmentsCount orders the results by Environments count.
+func ByEnvironmentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newEnvironmentsStep(), opts...)
+	}
+}
+
+// ByEnvironments orders the results by Environments terms.
+func ByEnvironments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEnvironmentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newTagStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TagInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TagTable, TagColumn),
+	)
+}
+func newEnvironmentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EnvironmentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, EnvironmentsTable, EnvironmentsPrimaryKey...),
+	)
+}

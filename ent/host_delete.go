@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (hd *HostDelete) Where(ps ...predicate.Host) *HostDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (hd *HostDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(hd.hooks) == 0 {
-		affected, err = hd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*HostMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			hd.mutation = mutation
-			affected, err = hd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(hd.hooks) - 1; i >= 0; i-- {
-			if hd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = hd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, hd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, hd.sqlExec, hd.mutation, hd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (hd *HostDelete) ExecX(ctx context.Context) int {
 }
 
 func (hd *HostDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: host.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: host.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(host.Table, sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID))
 	if ps := hd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (hd *HostDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	hd.mutation.done = true
 	return affected, err
 }
 
 // HostDeleteOne is the builder for deleting a single Host entity.
 type HostDeleteOne struct {
 	hd *HostDelete
+}
+
+// Where appends a list predicates to the HostDelete builder.
+func (hdo *HostDeleteOne) Where(ps ...predicate.Host) *HostDeleteOne {
+	hdo.hd.mutation.Where(ps...)
+	return hdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (hdo *HostDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (hdo *HostDeleteOne) ExecX(ctx context.Context) {
-	hdo.hd.ExecX(ctx)
+	if err := hdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

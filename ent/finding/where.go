@@ -11,357 +11,227 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Finding(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Finding(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.Finding(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.Finding(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.Finding(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.Finding(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.Finding(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.Finding(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.Finding(sql.FieldLTE(FieldID, id))
 }
 
 // Name applies equality check predicate on the "name" field. It's identical to NameEQ.
 func Name(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldEQ(FieldName, v))
 }
 
 // Description applies equality check predicate on the "description" field. It's identical to DescriptionEQ.
 func Description(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldEQ(FieldDescription, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
 func NameEQ(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldEQ(FieldName, v))
 }
 
 // NameNEQ applies the NEQ predicate on the "name" field.
 func NameNEQ(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldNEQ(FieldName, v))
 }
 
 // NameIn applies the In predicate on the "name" field.
 func NameIn(vs ...string) predicate.Finding {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldName), v...))
-	})
+	return predicate.Finding(sql.FieldIn(FieldName, vs...))
 }
 
 // NameNotIn applies the NotIn predicate on the "name" field.
 func NameNotIn(vs ...string) predicate.Finding {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldName), v...))
-	})
+	return predicate.Finding(sql.FieldNotIn(FieldName, vs...))
 }
 
 // NameGT applies the GT predicate on the "name" field.
 func NameGT(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldGT(FieldName, v))
 }
 
 // NameGTE applies the GTE predicate on the "name" field.
 func NameGTE(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldGTE(FieldName, v))
 }
 
 // NameLT applies the LT predicate on the "name" field.
 func NameLT(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldLT(FieldName, v))
 }
 
 // NameLTE applies the LTE predicate on the "name" field.
 func NameLTE(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldLTE(FieldName, v))
 }
 
 // NameContains applies the Contains predicate on the "name" field.
 func NameContains(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldContains(FieldName, v))
 }
 
 // NameHasPrefix applies the HasPrefix predicate on the "name" field.
 func NameHasPrefix(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldHasPrefix(FieldName, v))
 }
 
 // NameHasSuffix applies the HasSuffix predicate on the "name" field.
 func NameHasSuffix(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldHasSuffix(FieldName, v))
 }
 
 // NameEqualFold applies the EqualFold predicate on the "name" field.
 func NameEqualFold(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldEqualFold(FieldName, v))
 }
 
 // NameContainsFold applies the ContainsFold predicate on the "name" field.
 func NameContainsFold(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldName), v))
-	})
+	return predicate.Finding(sql.FieldContainsFold(FieldName, v))
 }
 
 // DescriptionEQ applies the EQ predicate on the "description" field.
 func DescriptionEQ(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldEQ(FieldDescription, v))
 }
 
 // DescriptionNEQ applies the NEQ predicate on the "description" field.
 func DescriptionNEQ(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldNEQ(FieldDescription, v))
 }
 
 // DescriptionIn applies the In predicate on the "description" field.
 func DescriptionIn(vs ...string) predicate.Finding {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldDescription), v...))
-	})
+	return predicate.Finding(sql.FieldIn(FieldDescription, vs...))
 }
 
 // DescriptionNotIn applies the NotIn predicate on the "description" field.
 func DescriptionNotIn(vs ...string) predicate.Finding {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldDescription), v...))
-	})
+	return predicate.Finding(sql.FieldNotIn(FieldDescription, vs...))
 }
 
 // DescriptionGT applies the GT predicate on the "description" field.
 func DescriptionGT(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldGT(FieldDescription, v))
 }
 
 // DescriptionGTE applies the GTE predicate on the "description" field.
 func DescriptionGTE(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldGTE(FieldDescription, v))
 }
 
 // DescriptionLT applies the LT predicate on the "description" field.
 func DescriptionLT(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldLT(FieldDescription, v))
 }
 
 // DescriptionLTE applies the LTE predicate on the "description" field.
 func DescriptionLTE(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldLTE(FieldDescription, v))
 }
 
 // DescriptionContains applies the Contains predicate on the "description" field.
 func DescriptionContains(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldContains(FieldDescription, v))
 }
 
 // DescriptionHasPrefix applies the HasPrefix predicate on the "description" field.
 func DescriptionHasPrefix(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldHasPrefix(FieldDescription, v))
 }
 
 // DescriptionHasSuffix applies the HasSuffix predicate on the "description" field.
 func DescriptionHasSuffix(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldHasSuffix(FieldDescription, v))
 }
 
 // DescriptionEqualFold applies the EqualFold predicate on the "description" field.
 func DescriptionEqualFold(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldEqualFold(FieldDescription, v))
 }
 
 // DescriptionContainsFold applies the ContainsFold predicate on the "description" field.
 func DescriptionContainsFold(v string) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldDescription), v))
-	})
+	return predicate.Finding(sql.FieldContainsFold(FieldDescription, v))
 }
 
 // SeverityEQ applies the EQ predicate on the "severity" field.
 func SeverityEQ(v Severity) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldSeverity), v))
-	})
+	return predicate.Finding(sql.FieldEQ(FieldSeverity, v))
 }
 
 // SeverityNEQ applies the NEQ predicate on the "severity" field.
 func SeverityNEQ(v Severity) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldSeverity), v))
-	})
+	return predicate.Finding(sql.FieldNEQ(FieldSeverity, v))
 }
 
 // SeverityIn applies the In predicate on the "severity" field.
 func SeverityIn(vs ...Severity) predicate.Finding {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldSeverity), v...))
-	})
+	return predicate.Finding(sql.FieldIn(FieldSeverity, vs...))
 }
 
 // SeverityNotIn applies the NotIn predicate on the "severity" field.
 func SeverityNotIn(vs ...Severity) predicate.Finding {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldSeverity), v...))
-	})
+	return predicate.Finding(sql.FieldNotIn(FieldSeverity, vs...))
 }
 
 // DifficultyEQ applies the EQ predicate on the "difficulty" field.
 func DifficultyEQ(v Difficulty) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldDifficulty), v))
-	})
+	return predicate.Finding(sql.FieldEQ(FieldDifficulty, v))
 }
 
 // DifficultyNEQ applies the NEQ predicate on the "difficulty" field.
 func DifficultyNEQ(v Difficulty) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldDifficulty), v))
-	})
+	return predicate.Finding(sql.FieldNEQ(FieldDifficulty, v))
 }
 
 // DifficultyIn applies the In predicate on the "difficulty" field.
 func DifficultyIn(vs ...Difficulty) predicate.Finding {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldDifficulty), v...))
-	})
+	return predicate.Finding(sql.FieldIn(FieldDifficulty, vs...))
 }
 
 // DifficultyNotIn applies the NotIn predicate on the "difficulty" field.
 func DifficultyNotIn(vs ...Difficulty) predicate.Finding {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Finding(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldDifficulty), v...))
-	})
+	return predicate.Finding(sql.FieldNotIn(FieldDifficulty, vs...))
 }
 
 // HasUsers applies the HasEdge predicate on the "Users" edge.
@@ -369,7 +239,6 @@ func HasUsers() predicate.Finding {
 	return predicate.Finding(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UsersTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -379,11 +248,7 @@ func HasUsers() predicate.Finding {
 // HasUsersWith applies the HasEdge predicate on the "Users" edge with a given conditions (other predicates).
 func HasUsersWith(preds ...predicate.User) predicate.Finding {
 	return predicate.Finding(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UsersInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
-		)
+		step := newUsersStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -397,7 +262,6 @@ func HasHost() predicate.Finding {
 	return predicate.Finding(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(HostTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, HostTable, HostColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -407,11 +271,7 @@ func HasHost() predicate.Finding {
 // HasHostWith applies the HasEdge predicate on the "Host" edge with a given conditions (other predicates).
 func HasHostWith(preds ...predicate.Host) predicate.Finding {
 	return predicate.Finding(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(HostInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, HostTable, HostColumn),
-		)
+		step := newHostStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -425,7 +285,6 @@ func HasScript() predicate.Finding {
 	return predicate.Finding(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ScriptTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, ScriptTable, ScriptColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -435,11 +294,7 @@ func HasScript() predicate.Finding {
 // HasScriptWith applies the HasEdge predicate on the "Script" edge with a given conditions (other predicates).
 func HasScriptWith(preds ...predicate.Script) predicate.Finding {
 	return predicate.Finding(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ScriptInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ScriptTable, ScriptColumn),
-		)
+		step := newScriptStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -453,7 +308,6 @@ func HasEnvironment() predicate.Finding {
 	return predicate.Finding(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(EnvironmentTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -463,11 +317,7 @@ func HasEnvironment() predicate.Finding {
 // HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
 func HasEnvironmentWith(preds ...predicate.Environment) predicate.Finding {
 	return predicate.Finding(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(EnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
-		)
+		step := newEnvironmentStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -478,32 +328,15 @@ func HasEnvironmentWith(preds ...predicate.Environment) predicate.Finding {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Finding) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Finding(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Finding) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Finding(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Finding) predicate.Finding {
-	return predicate.Finding(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Finding(sql.NotPredicates(p))
 }

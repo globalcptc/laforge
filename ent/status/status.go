@@ -7,6 +7,8 @@ import (
 	"io"
 	"strconv"
 
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -226,37 +228,206 @@ func StatusForValidator(sf StatusFor) error {
 	}
 }
 
+// OrderOption defines the ordering options for the Status queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByState orders the results by the state field.
+func ByState(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldState, opts...).ToFunc()
+}
+
+// ByStatusFor orders the results by the status_for field.
+func ByStatusFor(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStatusFor, opts...).ToFunc()
+}
+
+// ByStartedAt orders the results by the started_at field.
+func ByStartedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStartedAt, opts...).ToFunc()
+}
+
+// ByEndedAt orders the results by the ended_at field.
+func ByEndedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEndedAt, opts...).ToFunc()
+}
+
+// ByFailed orders the results by the failed field.
+func ByFailed(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFailed, opts...).ToFunc()
+}
+
+// ByCompleted orders the results by the completed field.
+func ByCompleted(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCompleted, opts...).ToFunc()
+}
+
+// ByError orders the results by the error field.
+func ByError(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldError, opts...).ToFunc()
+}
+
+// ByBuildField orders the results by Build field.
+func ByBuildField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBuildStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisionedNetworkField orders the results by ProvisionedNetwork field.
+func ByProvisionedNetworkField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisionedNetworkStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisionedHostField orders the results by ProvisionedHost field.
+func ByProvisionedHostField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisionedHostStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisioningStepField orders the results by ProvisioningStep field.
+func ByProvisioningStepField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisioningStepStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByTeamField orders the results by Team field.
+func ByTeamField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTeamStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByPlanField orders the results by Plan field.
+func ByPlanField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPlanStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByServerTaskField orders the results by ServerTask field.
+func ByServerTaskField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newServerTaskStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByAdhocPlanField orders the results by AdhocPlan field.
+func ByAdhocPlanField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAdhocPlanStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisioningScheduledStepField orders the results by ProvisioningScheduledStep field.
+func ByProvisioningScheduledStepField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisioningScheduledStepStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newBuildStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BuildInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, BuildTable, BuildColumn),
+	)
+}
+func newProvisionedNetworkStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisionedNetworkInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, ProvisionedNetworkTable, ProvisionedNetworkColumn),
+	)
+}
+func newProvisionedHostStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisionedHostInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, ProvisionedHostTable, ProvisionedHostColumn),
+	)
+}
+func newProvisioningStepStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisioningStepInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, ProvisioningStepTable, ProvisioningStepColumn),
+	)
+}
+func newTeamStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TeamInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, TeamTable, TeamColumn),
+	)
+}
+func newPlanStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PlanInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, PlanTable, PlanColumn),
+	)
+}
+func newServerTaskStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ServerTaskInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, ServerTaskTable, ServerTaskColumn),
+	)
+}
+func newAdhocPlanStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AdhocPlanInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, AdhocPlanTable, AdhocPlanColumn),
+	)
+}
+func newProvisioningScheduledStepStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisioningScheduledStepInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
+	)
+}
+
 // MarshalGQL implements graphql.Marshaler interface.
-func (s State) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.Quote(s.String()))
+func (e State) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(e.String()))
 }
 
 // UnmarshalGQL implements graphql.Unmarshaler interface.
-func (s *State) UnmarshalGQL(val interface{}) error {
+func (e *State) UnmarshalGQL(val interface{}) error {
 	str, ok := val.(string)
 	if !ok {
 		return fmt.Errorf("enum %T must be a string", val)
 	}
-	*s = State(str)
-	if err := StateValidator(*s); err != nil {
+	*e = State(str)
+	if err := StateValidator(*e); err != nil {
 		return fmt.Errorf("%s is not a valid State", str)
 	}
 	return nil
 }
 
 // MarshalGQL implements graphql.Marshaler interface.
-func (sf StatusFor) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.Quote(sf.String()))
+func (e StatusFor) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(e.String()))
 }
 
 // UnmarshalGQL implements graphql.Unmarshaler interface.
-func (sf *StatusFor) UnmarshalGQL(val interface{}) error {
+func (e *StatusFor) UnmarshalGQL(val interface{}) error {
 	str, ok := val.(string)
 	if !ok {
 		return fmt.Errorf("enum %T must be a string", val)
 	}
-	*sf = StatusFor(str)
-	if err := StatusForValidator(*sf); err != nil {
+	*e = StatusFor(str)
+	if err := StatusForValidator(*e); err != nil {
 		return fmt.Errorf("%s is not a valid StatusFor", str)
 	}
 	return nil

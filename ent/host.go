@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/disk"
 	"github.com/gen0cide/laforge/ent/environment"
@@ -19,8 +20,8 @@ type Host struct {
 	config ` json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// HclID holds the value of the "hcl_id" field.
-	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+	// HCLID holds the value of the "hcl_id" field.
+	HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// Hostname holds the value of the "hostname" field.
 	Hostname string `json:"hostname,omitempty" hcl:"hostname,attr"`
 	// Description holds the value of the "description" field.
@@ -53,6 +54,7 @@ type Host struct {
 	// The values are being populated by the HostQuery when eager-loading is set.
 	Edges HostEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Disk holds the value of the Disk edge.
 	HCLDisk *Disk `json:"Disk,omitempty" hcl:"disk,block"`
@@ -66,8 +68,9 @@ type Host struct {
 	HCLDependOnHostDependencies []*HostDependency `json:"DependOnHostDependencies,omitempty" hcl:"depends_on,block"`
 	// RequiredByHostDependencies holds the value of the RequiredByHostDependencies edge.
 	HCLRequiredByHostDependencies []*HostDependency `json:"RequiredByHostDependencies,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	environment_hosts *uuid.UUID
+	selectValues      sql.SelectValues
 }
 
 // HostEdges holds the relations/edges for other nodes in the graph.
@@ -87,6 +90,13 @@ type HostEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [6]bool
+	// totalCount holds the count of the edges above.
+	totalCount [6]map[string]int
+
+	namedUsers                      map[string][]*User
+	namedIncludedNetworks           map[string][]*IncludedNetwork
+	namedDependOnHostDependencies   map[string][]*HostDependency
+	namedRequiredByHostDependencies map[string][]*HostDependency
 }
 
 // DiskOrErr returns the Disk value or an error if the edge
@@ -94,8 +104,7 @@ type HostEdges struct {
 func (e HostEdges) DiskOrErr() (*Disk, error) {
 	if e.loadedTypes[0] {
 		if e.Disk == nil {
-			// The edge Disk was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: disk.Label}
 		}
 		return e.Disk, nil
@@ -117,8 +126,7 @@ func (e HostEdges) UsersOrErr() ([]*User, error) {
 func (e HostEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[2] {
 		if e.Environment == nil {
-			// The edge Environment was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
 		return e.Environment, nil
@@ -154,8 +162,8 @@ func (e HostEdges) RequiredByHostDependenciesOrErr() ([]*HostDependency, error) 
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*Host) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*Host) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case host.FieldExposedTCPPorts, host.FieldExposedUDPPorts, host.FieldVars, host.FieldUserGroups, host.FieldProvisionSteps, host.FieldScheduledSteps, host.FieldTags:
@@ -164,14 +172,14 @@ func (*Host) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullBool)
 		case host.FieldLastOctet:
 			values[i] = new(sql.NullInt64)
-		case host.FieldHclID, host.FieldHostname, host.FieldDescription, host.FieldOS, host.FieldInstanceSize, host.FieldOverridePassword:
+		case host.FieldHCLID, host.FieldHostname, host.FieldDescription, host.FieldOS, host.FieldInstanceSize, host.FieldOverridePassword:
 			values[i] = new(sql.NullString)
 		case host.FieldID:
 			values[i] = new(uuid.UUID)
 		case host.ForeignKeys[0]: // environment_hosts
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Host", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -179,7 +187,7 @@ func (*Host) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Host fields.
-func (h *Host) assignValues(columns []string, values []interface{}) error {
+func (h *Host) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -191,11 +199,11 @@ func (h *Host) assignValues(columns []string, values []interface{}) error {
 			} else if value != nil {
 				h.ID = *value
 			}
-		case host.FieldHclID:
+		case host.FieldHCLID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field hcl_id", values[i])
 			} else if value.Valid {
-				h.HclID = value.String
+				h.HCLID = value.String
 			}
 		case host.FieldHostname:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -302,56 +310,64 @@ func (h *Host) assignValues(columns []string, values []interface{}) error {
 				h.environment_hosts = new(uuid.UUID)
 				*h.environment_hosts = *value.S.(*uuid.UUID)
 			}
+		default:
+			h.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the Host.
+// This includes values selected through modifiers, order, etc.
+func (h *Host) Value(name string) (ent.Value, error) {
+	return h.selectValues.Get(name)
+}
+
 // QueryDisk queries the "Disk" edge of the Host entity.
 func (h *Host) QueryDisk() *DiskQuery {
-	return (&HostClient{config: h.config}).QueryDisk(h)
+	return NewHostClient(h.config).QueryDisk(h)
 }
 
 // QueryUsers queries the "Users" edge of the Host entity.
 func (h *Host) QueryUsers() *UserQuery {
-	return (&HostClient{config: h.config}).QueryUsers(h)
+	return NewHostClient(h.config).QueryUsers(h)
 }
 
 // QueryEnvironment queries the "Environment" edge of the Host entity.
 func (h *Host) QueryEnvironment() *EnvironmentQuery {
-	return (&HostClient{config: h.config}).QueryEnvironment(h)
+	return NewHostClient(h.config).QueryEnvironment(h)
 }
 
 // QueryIncludedNetworks queries the "IncludedNetworks" edge of the Host entity.
 func (h *Host) QueryIncludedNetworks() *IncludedNetworkQuery {
-	return (&HostClient{config: h.config}).QueryIncludedNetworks(h)
+	return NewHostClient(h.config).QueryIncludedNetworks(h)
 }
 
 // QueryDependOnHostDependencies queries the "DependOnHostDependencies" edge of the Host entity.
 func (h *Host) QueryDependOnHostDependencies() *HostDependencyQuery {
-	return (&HostClient{config: h.config}).QueryDependOnHostDependencies(h)
+	return NewHostClient(h.config).QueryDependOnHostDependencies(h)
 }
 
 // QueryRequiredByHostDependencies queries the "RequiredByHostDependencies" edge of the Host entity.
 func (h *Host) QueryRequiredByHostDependencies() *HostDependencyQuery {
-	return (&HostClient{config: h.config}).QueryRequiredByHostDependencies(h)
+	return NewHostClient(h.config).QueryRequiredByHostDependencies(h)
 }
 
 // Update returns a builder for updating this Host.
 // Note that you need to call Host.Unwrap() before calling this method if this Host
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (h *Host) Update() *HostUpdateOne {
-	return (&HostClient{config: h.config}).UpdateOne(h)
+	return NewHostClient(h.config).UpdateOne(h)
 }
 
 // Unwrap unwraps the Host entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (h *Host) Unwrap() *Host {
-	tx, ok := h.config.driver.(*txDriver)
+	_tx, ok := h.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Host is not a transactional entity")
 	}
-	h.config.driver = tx.drv
+	h.config.driver = _tx.drv
 	return h
 }
 
@@ -359,46 +375,150 @@ func (h *Host) Unwrap() *Host {
 func (h *Host) String() string {
 	var builder strings.Builder
 	builder.WriteString("Host(")
-	builder.WriteString(fmt.Sprintf("id=%v", h.ID))
-	builder.WriteString(", hcl_id=")
-	builder.WriteString(h.HclID)
-	builder.WriteString(", hostname=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", h.ID))
+	builder.WriteString("hcl_id=")
+	builder.WriteString(h.HCLID)
+	builder.WriteString(", ")
+	builder.WriteString("hostname=")
 	builder.WriteString(h.Hostname)
-	builder.WriteString(", description=")
+	builder.WriteString(", ")
+	builder.WriteString("description=")
 	builder.WriteString(h.Description)
-	builder.WriteString(", OS=")
+	builder.WriteString(", ")
+	builder.WriteString("OS=")
 	builder.WriteString(h.OS)
-	builder.WriteString(", last_octet=")
+	builder.WriteString(", ")
+	builder.WriteString("last_octet=")
 	builder.WriteString(fmt.Sprintf("%v", h.LastOctet))
-	builder.WriteString(", instance_size=")
+	builder.WriteString(", ")
+	builder.WriteString("instance_size=")
 	builder.WriteString(h.InstanceSize)
-	builder.WriteString(", allow_mac_changes=")
+	builder.WriteString(", ")
+	builder.WriteString("allow_mac_changes=")
 	builder.WriteString(fmt.Sprintf("%v", h.AllowMACChanges))
-	builder.WriteString(", exposed_tcp_ports=")
+	builder.WriteString(", ")
+	builder.WriteString("exposed_tcp_ports=")
 	builder.WriteString(fmt.Sprintf("%v", h.ExposedTCPPorts))
-	builder.WriteString(", exposed_udp_ports=")
+	builder.WriteString(", ")
+	builder.WriteString("exposed_udp_ports=")
 	builder.WriteString(fmt.Sprintf("%v", h.ExposedUDPPorts))
-	builder.WriteString(", override_password=")
+	builder.WriteString(", ")
+	builder.WriteString("override_password=")
 	builder.WriteString(h.OverridePassword)
-	builder.WriteString(", vars=")
+	builder.WriteString(", ")
+	builder.WriteString("vars=")
 	builder.WriteString(fmt.Sprintf("%v", h.Vars))
-	builder.WriteString(", user_groups=")
+	builder.WriteString(", ")
+	builder.WriteString("user_groups=")
 	builder.WriteString(fmt.Sprintf("%v", h.UserGroups))
-	builder.WriteString(", provision_steps=")
+	builder.WriteString(", ")
+	builder.WriteString("provision_steps=")
 	builder.WriteString(fmt.Sprintf("%v", h.ProvisionSteps))
-	builder.WriteString(", scheduled_steps=")
+	builder.WriteString(", ")
+	builder.WriteString("scheduled_steps=")
 	builder.WriteString(fmt.Sprintf("%v", h.ScheduledSteps))
-	builder.WriteString(", tags=")
+	builder.WriteString(", ")
+	builder.WriteString("tags=")
 	builder.WriteString(fmt.Sprintf("%v", h.Tags))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// Hosts is a parsable slice of Host.
-type Hosts []*Host
+// NamedUsers returns the Users named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (h *Host) NamedUsers(name string) ([]*User, error) {
+	if h.Edges.namedUsers == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := h.Edges.namedUsers[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (h Hosts) config(cfg config) {
-	for _i := range h {
-		h[_i].config = cfg
+func (h *Host) appendNamedUsers(name string, edges ...*User) {
+	if h.Edges.namedUsers == nil {
+		h.Edges.namedUsers = make(map[string][]*User)
+	}
+	if len(edges) == 0 {
+		h.Edges.namedUsers[name] = []*User{}
+	} else {
+		h.Edges.namedUsers[name] = append(h.Edges.namedUsers[name], edges...)
 	}
 }
+
+// NamedIncludedNetworks returns the IncludedNetworks named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (h *Host) NamedIncludedNetworks(name string) ([]*IncludedNetwork, error) {
+	if h.Edges.namedIncludedNetworks == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := h.Edges.namedIncludedNetworks[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (h *Host) appendNamedIncludedNetworks(name string, edges ...*IncludedNetwork) {
+	if h.Edges.namedIncludedNetworks == nil {
+		h.Edges.namedIncludedNetworks = make(map[string][]*IncludedNetwork)
+	}
+	if len(edges) == 0 {
+		h.Edges.namedIncludedNetworks[name] = []*IncludedNetwork{}
+	} else {
+		h.Edges.namedIncludedNetworks[name] = append(h.Edges.namedIncludedNetworks[name], edges...)
+	}
+}
+
+// NamedDependOnHostDependencies returns the DependOnHostDependencies named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (h *Host) NamedDependOnHostDependencies(name string) ([]*HostDependency, error) {
+	if h.Edges.namedDependOnHostDependencies == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := h.Edges.namedDependOnHostDependencies[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (h *Host) appendNamedDependOnHostDependencies(name string, edges ...*HostDependency) {
+	if h.Edges.namedDependOnHostDependencies == nil {
+		h.Edges.namedDependOnHostDependencies = make(map[string][]*HostDependency)
+	}
+	if len(edges) == 0 {
+		h.Edges.namedDependOnHostDependencies[name] = []*HostDependency{}
+	} else {
+		h.Edges.namedDependOnHostDependencies[name] = append(h.Edges.namedDependOnHostDependencies[name], edges...)
+	}
+}
+
+// NamedRequiredByHostDependencies returns the RequiredByHostDependencies named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (h *Host) NamedRequiredByHostDependencies(name string) ([]*HostDependency, error) {
+	if h.Edges.namedRequiredByHostDependencies == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := h.Edges.namedRequiredByHostDependencies[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (h *Host) appendNamedRequiredByHostDependencies(name string, edges ...*HostDependency) {
+	if h.Edges.namedRequiredByHostDependencies == nil {
+		h.Edges.namedRequiredByHostDependencies = make(map[string][]*HostDependency)
+	}
+	if len(edges) == 0 {
+		h.Edges.namedRequiredByHostDependencies[name] = []*HostDependency{}
+	} else {
+		h.Edges.namedRequiredByHostDependencies[name] = append(h.Edges.namedRequiredByHostDependencies[name], edges...)
+	}
+}
+
+// Hosts is a parsable slice of Host.
+type Hosts []*Host

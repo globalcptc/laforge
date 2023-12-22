@@ -3,6 +3,8 @@
 package hostdependency
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -90,3 +92,77 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the HostDependency queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByHostID orders the results by the host_id field.
+func ByHostID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHostID, opts...).ToFunc()
+}
+
+// ByNetworkID orders the results by the network_id field.
+func ByNetworkID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNetworkID, opts...).ToFunc()
+}
+
+// ByRequiredByField orders the results by RequiredBy field.
+func ByRequiredByField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRequiredByStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByDependOnHostField orders the results by DependOnHost field.
+func ByDependOnHostField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDependOnHostStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByDependOnNetworkField orders the results by DependOnNetwork field.
+func ByDependOnNetworkField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDependOnNetworkStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByEnvironmentField orders the results by Environment field.
+func ByEnvironmentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEnvironmentStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newRequiredByStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RequiredByInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, RequiredByTable, RequiredByColumn),
+	)
+}
+func newDependOnHostStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DependOnHostInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, DependOnHostTable, DependOnHostColumn),
+	)
+}
+func newDependOnNetworkStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DependOnNetworkInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, DependOnNetworkTable, DependOnNetworkColumn),
+	)
+}
+func newEnvironmentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EnvironmentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
+	)
+}

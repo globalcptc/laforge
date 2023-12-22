@@ -3,6 +3,8 @@
 package token
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -60,3 +62,35 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the Token queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByToken orders the results by the token field.
+func ByToken(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldToken, opts...).ToFunc()
+}
+
+// ByExpireAt orders the results by the expire_at field.
+func ByExpireAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExpireAt, opts...).ToFunc()
+}
+
+// ByAuthUserField orders the results by AuthUser field.
+func ByAuthUserField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAuthUserStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newAuthUserStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AuthUserInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, AuthUserTable, AuthUserColumn),
+	)
+}

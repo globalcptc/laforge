@@ -13,477 +13,307 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Status(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Status(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.Status(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.Status(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.Status(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.Status(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.Status(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.Status(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.Status(sql.FieldLTE(FieldID, id))
 }
 
 // StartedAt applies equality check predicate on the "started_at" field. It's identical to StartedAtEQ.
 func StartedAt(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldStartedAt), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldStartedAt, v))
 }
 
 // EndedAt applies equality check predicate on the "ended_at" field. It's identical to EndedAtEQ.
 func EndedAt(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldEndedAt), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldEndedAt, v))
 }
 
 // Failed applies equality check predicate on the "failed" field. It's identical to FailedEQ.
 func Failed(v bool) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldFailed), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldFailed, v))
 }
 
 // Completed applies equality check predicate on the "completed" field. It's identical to CompletedEQ.
 func Completed(v bool) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldCompleted), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldCompleted, v))
 }
 
 // Error applies equality check predicate on the "error" field. It's identical to ErrorEQ.
 func Error(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldError, v))
 }
 
 // StateEQ applies the EQ predicate on the "state" field.
 func StateEQ(v State) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldState), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldState, v))
 }
 
 // StateNEQ applies the NEQ predicate on the "state" field.
 func StateNEQ(v State) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldState), v))
-	})
+	return predicate.Status(sql.FieldNEQ(FieldState, v))
 }
 
 // StateIn applies the In predicate on the "state" field.
 func StateIn(vs ...State) predicate.Status {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldState), v...))
-	})
+	return predicate.Status(sql.FieldIn(FieldState, vs...))
 }
 
 // StateNotIn applies the NotIn predicate on the "state" field.
 func StateNotIn(vs ...State) predicate.Status {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldState), v...))
-	})
+	return predicate.Status(sql.FieldNotIn(FieldState, vs...))
 }
 
 // StatusForEQ applies the EQ predicate on the "status_for" field.
 func StatusForEQ(v StatusFor) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldStatusFor), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldStatusFor, v))
 }
 
 // StatusForNEQ applies the NEQ predicate on the "status_for" field.
 func StatusForNEQ(v StatusFor) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldStatusFor), v))
-	})
+	return predicate.Status(sql.FieldNEQ(FieldStatusFor, v))
 }
 
 // StatusForIn applies the In predicate on the "status_for" field.
 func StatusForIn(vs ...StatusFor) predicate.Status {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldStatusFor), v...))
-	})
+	return predicate.Status(sql.FieldIn(FieldStatusFor, vs...))
 }
 
 // StatusForNotIn applies the NotIn predicate on the "status_for" field.
 func StatusForNotIn(vs ...StatusFor) predicate.Status {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldStatusFor), v...))
-	})
+	return predicate.Status(sql.FieldNotIn(FieldStatusFor, vs...))
 }
 
 // StartedAtEQ applies the EQ predicate on the "started_at" field.
 func StartedAtEQ(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldStartedAt), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldStartedAt, v))
 }
 
 // StartedAtNEQ applies the NEQ predicate on the "started_at" field.
 func StartedAtNEQ(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldStartedAt), v))
-	})
+	return predicate.Status(sql.FieldNEQ(FieldStartedAt, v))
 }
 
 // StartedAtIn applies the In predicate on the "started_at" field.
 func StartedAtIn(vs ...time.Time) predicate.Status {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldStartedAt), v...))
-	})
+	return predicate.Status(sql.FieldIn(FieldStartedAt, vs...))
 }
 
 // StartedAtNotIn applies the NotIn predicate on the "started_at" field.
 func StartedAtNotIn(vs ...time.Time) predicate.Status {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldStartedAt), v...))
-	})
+	return predicate.Status(sql.FieldNotIn(FieldStartedAt, vs...))
 }
 
 // StartedAtGT applies the GT predicate on the "started_at" field.
 func StartedAtGT(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldStartedAt), v))
-	})
+	return predicate.Status(sql.FieldGT(FieldStartedAt, v))
 }
 
 // StartedAtGTE applies the GTE predicate on the "started_at" field.
 func StartedAtGTE(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldStartedAt), v))
-	})
+	return predicate.Status(sql.FieldGTE(FieldStartedAt, v))
 }
 
 // StartedAtLT applies the LT predicate on the "started_at" field.
 func StartedAtLT(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldStartedAt), v))
-	})
+	return predicate.Status(sql.FieldLT(FieldStartedAt, v))
 }
 
 // StartedAtLTE applies the LTE predicate on the "started_at" field.
 func StartedAtLTE(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldStartedAt), v))
-	})
+	return predicate.Status(sql.FieldLTE(FieldStartedAt, v))
 }
 
 // StartedAtIsNil applies the IsNil predicate on the "started_at" field.
 func StartedAtIsNil() predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.IsNull(s.C(FieldStartedAt)))
-	})
+	return predicate.Status(sql.FieldIsNull(FieldStartedAt))
 }
 
 // StartedAtNotNil applies the NotNil predicate on the "started_at" field.
 func StartedAtNotNil() predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NotNull(s.C(FieldStartedAt)))
-	})
+	return predicate.Status(sql.FieldNotNull(FieldStartedAt))
 }
 
 // EndedAtEQ applies the EQ predicate on the "ended_at" field.
 func EndedAtEQ(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldEndedAt), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldEndedAt, v))
 }
 
 // EndedAtNEQ applies the NEQ predicate on the "ended_at" field.
 func EndedAtNEQ(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldEndedAt), v))
-	})
+	return predicate.Status(sql.FieldNEQ(FieldEndedAt, v))
 }
 
 // EndedAtIn applies the In predicate on the "ended_at" field.
 func EndedAtIn(vs ...time.Time) predicate.Status {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldEndedAt), v...))
-	})
+	return predicate.Status(sql.FieldIn(FieldEndedAt, vs...))
 }
 
 // EndedAtNotIn applies the NotIn predicate on the "ended_at" field.
 func EndedAtNotIn(vs ...time.Time) predicate.Status {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldEndedAt), v...))
-	})
+	return predicate.Status(sql.FieldNotIn(FieldEndedAt, vs...))
 }
 
 // EndedAtGT applies the GT predicate on the "ended_at" field.
 func EndedAtGT(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldEndedAt), v))
-	})
+	return predicate.Status(sql.FieldGT(FieldEndedAt, v))
 }
 
 // EndedAtGTE applies the GTE predicate on the "ended_at" field.
 func EndedAtGTE(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldEndedAt), v))
-	})
+	return predicate.Status(sql.FieldGTE(FieldEndedAt, v))
 }
 
 // EndedAtLT applies the LT predicate on the "ended_at" field.
 func EndedAtLT(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldEndedAt), v))
-	})
+	return predicate.Status(sql.FieldLT(FieldEndedAt, v))
 }
 
 // EndedAtLTE applies the LTE predicate on the "ended_at" field.
 func EndedAtLTE(v time.Time) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldEndedAt), v))
-	})
+	return predicate.Status(sql.FieldLTE(FieldEndedAt, v))
 }
 
 // EndedAtIsNil applies the IsNil predicate on the "ended_at" field.
 func EndedAtIsNil() predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.IsNull(s.C(FieldEndedAt)))
-	})
+	return predicate.Status(sql.FieldIsNull(FieldEndedAt))
 }
 
 // EndedAtNotNil applies the NotNil predicate on the "ended_at" field.
 func EndedAtNotNil() predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NotNull(s.C(FieldEndedAt)))
-	})
+	return predicate.Status(sql.FieldNotNull(FieldEndedAt))
 }
 
 // FailedEQ applies the EQ predicate on the "failed" field.
 func FailedEQ(v bool) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldFailed), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldFailed, v))
 }
 
 // FailedNEQ applies the NEQ predicate on the "failed" field.
 func FailedNEQ(v bool) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldFailed), v))
-	})
+	return predicate.Status(sql.FieldNEQ(FieldFailed, v))
 }
 
 // CompletedEQ applies the EQ predicate on the "completed" field.
 func CompletedEQ(v bool) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldCompleted), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldCompleted, v))
 }
 
 // CompletedNEQ applies the NEQ predicate on the "completed" field.
 func CompletedNEQ(v bool) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldCompleted), v))
-	})
+	return predicate.Status(sql.FieldNEQ(FieldCompleted, v))
 }
 
 // ErrorEQ applies the EQ predicate on the "error" field.
 func ErrorEQ(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldEQ(FieldError, v))
 }
 
 // ErrorNEQ applies the NEQ predicate on the "error" field.
 func ErrorNEQ(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldNEQ(FieldError, v))
 }
 
 // ErrorIn applies the In predicate on the "error" field.
 func ErrorIn(vs ...string) predicate.Status {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldError), v...))
-	})
+	return predicate.Status(sql.FieldIn(FieldError, vs...))
 }
 
 // ErrorNotIn applies the NotIn predicate on the "error" field.
 func ErrorNotIn(vs ...string) predicate.Status {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldError), v...))
-	})
+	return predicate.Status(sql.FieldNotIn(FieldError, vs...))
 }
 
 // ErrorGT applies the GT predicate on the "error" field.
 func ErrorGT(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldGT(FieldError, v))
 }
 
 // ErrorGTE applies the GTE predicate on the "error" field.
 func ErrorGTE(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldGTE(FieldError, v))
 }
 
 // ErrorLT applies the LT predicate on the "error" field.
 func ErrorLT(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldLT(FieldError, v))
 }
 
 // ErrorLTE applies the LTE predicate on the "error" field.
 func ErrorLTE(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldLTE(FieldError, v))
 }
 
 // ErrorContains applies the Contains predicate on the "error" field.
 func ErrorContains(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldContains(FieldError, v))
 }
 
 // ErrorHasPrefix applies the HasPrefix predicate on the "error" field.
 func ErrorHasPrefix(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldHasPrefix(FieldError, v))
 }
 
 // ErrorHasSuffix applies the HasSuffix predicate on the "error" field.
 func ErrorHasSuffix(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldHasSuffix(FieldError, v))
 }
 
 // ErrorIsNil applies the IsNil predicate on the "error" field.
 func ErrorIsNil() predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.IsNull(s.C(FieldError)))
-	})
+	return predicate.Status(sql.FieldIsNull(FieldError))
 }
 
 // ErrorNotNil applies the NotNil predicate on the "error" field.
 func ErrorNotNil() predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.NotNull(s.C(FieldError)))
-	})
+	return predicate.Status(sql.FieldNotNull(FieldError))
 }
 
 // ErrorEqualFold applies the EqualFold predicate on the "error" field.
 func ErrorEqualFold(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldEqualFold(FieldError, v))
 }
 
 // ErrorContainsFold applies the ContainsFold predicate on the "error" field.
 func ErrorContainsFold(v string) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldError), v))
-	})
+	return predicate.Status(sql.FieldContainsFold(FieldError, v))
 }
 
 // HasBuild applies the HasEdge predicate on the "Build" edge.
@@ -491,7 +321,6 @@ func HasBuild() predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, BuildTable, BuildColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -501,11 +330,7 @@ func HasBuild() predicate.Status {
 // HasBuildWith applies the HasEdge predicate on the "Build" edge with a given conditions (other predicates).
 func HasBuildWith(preds ...predicate.Build) predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, BuildTable, BuildColumn),
-		)
+		step := newBuildStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -519,7 +344,6 @@ func HasProvisionedNetwork() predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisionedNetworkTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, ProvisionedNetworkTable, ProvisionedNetworkColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -529,11 +353,7 @@ func HasProvisionedNetwork() predicate.Status {
 // HasProvisionedNetworkWith applies the HasEdge predicate on the "ProvisionedNetwork" edge with a given conditions (other predicates).
 func HasProvisionedNetworkWith(preds ...predicate.ProvisionedNetwork) predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisionedNetworkInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, ProvisionedNetworkTable, ProvisionedNetworkColumn),
-		)
+		step := newProvisionedNetworkStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -547,7 +367,6 @@ func HasProvisionedHost() predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisionedHostTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, ProvisionedHostTable, ProvisionedHostColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -557,11 +376,7 @@ func HasProvisionedHost() predicate.Status {
 // HasProvisionedHostWith applies the HasEdge predicate on the "ProvisionedHost" edge with a given conditions (other predicates).
 func HasProvisionedHostWith(preds ...predicate.ProvisionedHost) predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisionedHostInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, ProvisionedHostTable, ProvisionedHostColumn),
-		)
+		step := newProvisionedHostStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -575,7 +390,6 @@ func HasProvisioningStep() predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisioningStepTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, ProvisioningStepTable, ProvisioningStepColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -585,11 +399,7 @@ func HasProvisioningStep() predicate.Status {
 // HasProvisioningStepWith applies the HasEdge predicate on the "ProvisioningStep" edge with a given conditions (other predicates).
 func HasProvisioningStepWith(preds ...predicate.ProvisioningStep) predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisioningStepInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, ProvisioningStepTable, ProvisioningStepColumn),
-		)
+		step := newProvisioningStepStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -603,7 +413,6 @@ func HasTeam() predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(TeamTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, TeamTable, TeamColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -613,11 +422,7 @@ func HasTeam() predicate.Status {
 // HasTeamWith applies the HasEdge predicate on the "Team" edge with a given conditions (other predicates).
 func HasTeamWith(preds ...predicate.Team) predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(TeamInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, TeamTable, TeamColumn),
-		)
+		step := newTeamStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -631,7 +436,6 @@ func HasPlan() predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(PlanTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, PlanTable, PlanColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -641,11 +445,7 @@ func HasPlan() predicate.Status {
 // HasPlanWith applies the HasEdge predicate on the "Plan" edge with a given conditions (other predicates).
 func HasPlanWith(preds ...predicate.Plan) predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(PlanInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, PlanTable, PlanColumn),
-		)
+		step := newPlanStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -659,7 +459,6 @@ func HasServerTask() predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, ServerTaskTable, ServerTaskColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -669,11 +468,7 @@ func HasServerTask() predicate.Status {
 // HasServerTaskWith applies the HasEdge predicate on the "ServerTask" edge with a given conditions (other predicates).
 func HasServerTaskWith(preds ...predicate.ServerTask) predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ServerTaskInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, ServerTaskTable, ServerTaskColumn),
-		)
+		step := newServerTaskStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -687,7 +482,6 @@ func HasAdhocPlan() predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AdhocPlanTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, AdhocPlanTable, AdhocPlanColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -697,11 +491,7 @@ func HasAdhocPlan() predicate.Status {
 // HasAdhocPlanWith applies the HasEdge predicate on the "AdhocPlan" edge with a given conditions (other predicates).
 func HasAdhocPlanWith(preds ...predicate.AdhocPlan) predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AdhocPlanInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, AdhocPlanTable, AdhocPlanColumn),
-		)
+		step := newAdhocPlanStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -715,7 +505,6 @@ func HasProvisioningScheduledStep() predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisioningScheduledStepTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -725,11 +514,7 @@ func HasProvisioningScheduledStep() predicate.Status {
 // HasProvisioningScheduledStepWith applies the HasEdge predicate on the "ProvisioningScheduledStep" edge with a given conditions (other predicates).
 func HasProvisioningScheduledStepWith(preds ...predicate.ProvisioningScheduledStep) predicate.Status {
 	return predicate.Status(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisioningScheduledStepInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
-		)
+		step := newProvisioningScheduledStepStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -740,32 +525,15 @@ func HasProvisioningScheduledStepWith(preds ...predicate.ProvisioningScheduledSt
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Status) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Status(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Status) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Status(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Status) predicate.Status {
-	return predicate.Status(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Status(sql.NotPredicates(p))
 }

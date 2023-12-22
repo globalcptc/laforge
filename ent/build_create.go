@@ -268,50 +268,8 @@ func (bc *BuildCreate) Mutation() *BuildMutation {
 
 // Save creates the Build in the database.
 func (bc *BuildCreate) Save(ctx context.Context) (*Build, error) {
-	var (
-		err  error
-		node *Build
-	)
 	bc.defaults()
-	if len(bc.hooks) == 0 {
-		if err = bc.check(); err != nil {
-			return nil, err
-		}
-		node, err = bc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*BuildMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = bc.check(); err != nil {
-				return nil, err
-			}
-			bc.mutation = mutation
-			if node, err = bc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(bc.hooks) - 1; i >= 0; i-- {
-			if bc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = bc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, bc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Build)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from BuildMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, bc.sqlSave, bc.mutation, bc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -372,6 +330,9 @@ func (bc *BuildCreate) check() error {
 }
 
 func (bc *BuildCreate) sqlSave(ctx context.Context) (*Build, error) {
+	if err := bc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := bc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, bc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -386,54 +347,34 @@ func (bc *BuildCreate) sqlSave(ctx context.Context) (*Build, error) {
 			return nil, err
 		}
 	}
+	bc.mutation.id = &_node.ID
+	bc.mutation.done = true
 	return _node, nil
 }
 
 func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Build{config: bc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: build.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: build.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(build.Table, sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID))
 	)
 	if id, ok := bc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := bc.mutation.Revision(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: build.FieldRevision,
-		})
+		_spec.SetField(build.FieldRevision, field.TypeInt, value)
 		_node.Revision = value
 	}
 	if value, ok := bc.mutation.EnvironmentRevision(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: build.FieldEnvironmentRevision,
-		})
+		_spec.SetField(build.FieldEnvironmentRevision, field.TypeInt, value)
 		_node.EnvironmentRevision = value
 	}
 	if value, ok := bc.mutation.Vars(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: build.FieldVars,
-		})
+		_spec.SetField(build.FieldVars, field.TypeJSON, value)
 		_node.Vars = value
 	}
 	if value, ok := bc.mutation.CompletedPlan(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: build.FieldCompletedPlan,
-		})
+		_spec.SetField(build.FieldCompletedPlan, field.TypeBool, value)
 		_node.CompletedPlan = value
 	}
 	if nodes := bc.mutation.StatusIDs(); len(nodes) > 0 {
@@ -444,10 +385,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: status.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -463,10 +401,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -483,10 +418,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.CompetitionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: competition.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -503,10 +435,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.LatestBuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: buildcommit.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(buildcommit.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -523,10 +452,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.RepoCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repocommit.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(repocommit.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -543,10 +469,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.ProvisionedNetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -562,10 +485,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.TeamsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: team.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -581,10 +501,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.PlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -600,10 +517,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.BuildCommitsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: buildcommit.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(buildcommit.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -619,10 +533,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: adhocplan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(adhocplan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -638,10 +549,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.AgentStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agentstatus.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agentstatus.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -657,10 +565,7 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 			Columns: []string{build.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -674,11 +579,15 @@ func (bc *BuildCreate) createSpec() (*Build, *sqlgraph.CreateSpec) {
 // BuildCreateBulk is the builder for creating many Build entities in bulk.
 type BuildCreateBulk struct {
 	config
+	err      error
 	builders []*BuildCreate
 }
 
 // Save creates the Build entities in the database.
 func (bcb *BuildCreateBulk) Save(ctx context.Context) ([]*Build, error) {
+	if bcb.err != nil {
+		return nil, bcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(bcb.builders))
 	nodes := make([]*Build, len(bcb.builders))
 	mutators := make([]Mutator, len(bcb.builders))
@@ -695,8 +604,8 @@ func (bcb *BuildCreateBulk) Save(ctx context.Context) ([]*Build, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, bcb.builders[i+1].mutation)
 				} else {

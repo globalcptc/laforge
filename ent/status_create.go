@@ -304,50 +304,8 @@ func (sc *StatusCreate) Mutation() *StatusMutation {
 
 // Save creates the Status in the database.
 func (sc *StatusCreate) Save(ctx context.Context) (*Status, error) {
-	var (
-		err  error
-		node *Status
-	)
 	sc.defaults()
-	if len(sc.hooks) == 0 {
-		if err = sc.check(); err != nil {
-			return nil, err
-		}
-		node, err = sc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*StatusMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = sc.check(); err != nil {
-				return nil, err
-			}
-			sc.mutation = mutation
-			if node, err = sc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(sc.hooks) - 1; i >= 0; i-- {
-			if sc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = sc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, sc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Status)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from StatusMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, sc.sqlSave, sc.mutation, sc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -416,6 +374,9 @@ func (sc *StatusCreate) check() error {
 }
 
 func (sc *StatusCreate) sqlSave(ctx context.Context) (*Status, error) {
+	if err := sc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := sc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, sc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -430,78 +391,46 @@ func (sc *StatusCreate) sqlSave(ctx context.Context) (*Status, error) {
 			return nil, err
 		}
 	}
+	sc.mutation.id = &_node.ID
+	sc.mutation.done = true
 	return _node, nil
 }
 
 func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Status{config: sc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: status.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: status.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(status.Table, sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID))
 	)
 	if id, ok := sc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := sc.mutation.State(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: status.FieldState,
-		})
+		_spec.SetField(status.FieldState, field.TypeEnum, value)
 		_node.State = value
 	}
 	if value, ok := sc.mutation.StatusFor(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: status.FieldStatusFor,
-		})
+		_spec.SetField(status.FieldStatusFor, field.TypeEnum, value)
 		_node.StatusFor = value
 	}
 	if value, ok := sc.mutation.StartedAt(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Value:  value,
-			Column: status.FieldStartedAt,
-		})
+		_spec.SetField(status.FieldStartedAt, field.TypeTime, value)
 		_node.StartedAt = value
 	}
 	if value, ok := sc.mutation.EndedAt(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Value:  value,
-			Column: status.FieldEndedAt,
-		})
+		_spec.SetField(status.FieldEndedAt, field.TypeTime, value)
 		_node.EndedAt = value
 	}
 	if value, ok := sc.mutation.Failed(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: status.FieldFailed,
-		})
+		_spec.SetField(status.FieldFailed, field.TypeBool, value)
 		_node.Failed = value
 	}
 	if value, ok := sc.mutation.Completed(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: status.FieldCompleted,
-		})
+		_spec.SetField(status.FieldCompleted, field.TypeBool, value)
 		_node.Completed = value
 	}
 	if value, ok := sc.mutation.Error(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: status.FieldError,
-		})
+		_spec.SetField(status.FieldError, field.TypeString, value)
 		_node.Error = value
 	}
 	if nodes := sc.mutation.BuildIDs(); len(nodes) > 0 {
@@ -512,10 +441,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 			Columns: []string{status.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -532,10 +458,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 			Columns: []string{status.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -552,10 +475,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 			Columns: []string{status.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -572,10 +492,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 			Columns: []string{status.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -592,10 +509,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 			Columns: []string{status.TeamColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: team.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -612,10 +526,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 			Columns: []string{status.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -632,10 +543,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 			Columns: []string{status.ServerTaskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -652,10 +560,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 			Columns: []string{status.AdhocPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: adhocplan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(adhocplan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -672,10 +577,7 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 			Columns: []string{status.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -690,11 +592,15 @@ func (sc *StatusCreate) createSpec() (*Status, *sqlgraph.CreateSpec) {
 // StatusCreateBulk is the builder for creating many Status entities in bulk.
 type StatusCreateBulk struct {
 	config
+	err      error
 	builders []*StatusCreate
 }
 
 // Save creates the Status entities in the database.
 func (scb *StatusCreateBulk) Save(ctx context.Context) ([]*Status, error) {
+	if scb.err != nil {
+		return nil, scb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(scb.builders))
 	nodes := make([]*Status, len(scb.builders))
 	mutators := make([]Mutator, len(scb.builders))
@@ -711,8 +617,8 @@ func (scb *StatusCreateBulk) Save(ctx context.Context) ([]*Status, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, scb.builders[i+1].mutation)
 				} else {

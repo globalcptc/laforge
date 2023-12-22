@@ -175,50 +175,8 @@ func (pnc *ProvisionedNetworkCreate) Mutation() *ProvisionedNetworkMutation {
 
 // Save creates the ProvisionedNetwork in the database.
 func (pnc *ProvisionedNetworkCreate) Save(ctx context.Context) (*ProvisionedNetwork, error) {
-	var (
-		err  error
-		node *ProvisionedNetwork
-	)
 	pnc.defaults()
-	if len(pnc.hooks) == 0 {
-		if err = pnc.check(); err != nil {
-			return nil, err
-		}
-		node, err = pnc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ProvisionedNetworkMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = pnc.check(); err != nil {
-				return nil, err
-			}
-			pnc.mutation = mutation
-			if node, err = pnc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(pnc.hooks) - 1; i >= 0; i-- {
-			if pnc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pnc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, pnc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*ProvisionedNetwork)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from ProvisionedNetworkMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, pnc.sqlSave, pnc.mutation, pnc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -266,6 +224,9 @@ func (pnc *ProvisionedNetworkCreate) check() error {
 }
 
 func (pnc *ProvisionedNetworkCreate) sqlSave(ctx context.Context) (*ProvisionedNetwork, error) {
+	if err := pnc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := pnc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, pnc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -280,46 +241,30 @@ func (pnc *ProvisionedNetworkCreate) sqlSave(ctx context.Context) (*ProvisionedN
 			return nil, err
 		}
 	}
+	pnc.mutation.id = &_node.ID
+	pnc.mutation.done = true
 	return _node, nil
 }
 
 func (pnc *ProvisionedNetworkCreate) createSpec() (*ProvisionedNetwork, *sqlgraph.CreateSpec) {
 	var (
 		_node = &ProvisionedNetwork{config: pnc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: provisionednetwork.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: provisionednetwork.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(provisionednetwork.Table, sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID))
 	)
 	if id, ok := pnc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := pnc.mutation.Name(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: provisionednetwork.FieldName,
-		})
+		_spec.SetField(provisionednetwork.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
 	if value, ok := pnc.mutation.Cidr(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: provisionednetwork.FieldCidr,
-		})
+		_spec.SetField(provisionednetwork.FieldCidr, field.TypeString, value)
 		_node.Cidr = value
 	}
 	if value, ok := pnc.mutation.Vars(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: provisionednetwork.FieldVars,
-		})
+		_spec.SetField(provisionednetwork.FieldVars, field.TypeJSON, value)
 		_node.Vars = value
 	}
 	if nodes := pnc.mutation.StatusIDs(); len(nodes) > 0 {
@@ -330,10 +275,7 @@ func (pnc *ProvisionedNetworkCreate) createSpec() (*ProvisionedNetwork, *sqlgrap
 			Columns: []string{provisionednetwork.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: status.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -349,10 +291,7 @@ func (pnc *ProvisionedNetworkCreate) createSpec() (*ProvisionedNetwork, *sqlgrap
 			Columns: []string{provisionednetwork.NetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -369,10 +308,7 @@ func (pnc *ProvisionedNetworkCreate) createSpec() (*ProvisionedNetwork, *sqlgrap
 			Columns: []string{provisionednetwork.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -389,10 +325,7 @@ func (pnc *ProvisionedNetworkCreate) createSpec() (*ProvisionedNetwork, *sqlgrap
 			Columns: []string{provisionednetwork.TeamColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: team.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -409,10 +342,7 @@ func (pnc *ProvisionedNetworkCreate) createSpec() (*ProvisionedNetwork, *sqlgrap
 			Columns: []string{provisionednetwork.ProvisionedHostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -428,10 +358,7 @@ func (pnc *ProvisionedNetworkCreate) createSpec() (*ProvisionedNetwork, *sqlgrap
 			Columns: []string{provisionednetwork.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -446,11 +373,15 @@ func (pnc *ProvisionedNetworkCreate) createSpec() (*ProvisionedNetwork, *sqlgrap
 // ProvisionedNetworkCreateBulk is the builder for creating many ProvisionedNetwork entities in bulk.
 type ProvisionedNetworkCreateBulk struct {
 	config
+	err      error
 	builders []*ProvisionedNetworkCreate
 }
 
 // Save creates the ProvisionedNetwork entities in the database.
 func (pncb *ProvisionedNetworkCreateBulk) Save(ctx context.Context) ([]*ProvisionedNetwork, error) {
+	if pncb.err != nil {
+		return nil, pncb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(pncb.builders))
 	nodes := make([]*ProvisionedNetwork, len(pncb.builders))
 	mutators := make([]Mutator, len(pncb.builders))
@@ -467,8 +398,8 @@ func (pncb *ProvisionedNetworkCreateBulk) Save(ctx context.Context) ([]*Provisio
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, pncb.builders[i+1].mutation)
 				} else {

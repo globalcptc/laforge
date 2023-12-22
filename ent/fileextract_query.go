@@ -19,14 +19,14 @@ import (
 // FileExtractQuery is the builder for querying FileExtract entities.
 type FileExtractQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
-	order           []OrderFunc
-	fields          []string
+	ctx             *QueryContext
+	order           []fileextract.OrderOption
+	inters          []Interceptor
 	predicates      []predicate.FileExtract
 	withEnvironment *EnvironmentQuery
 	withFKs         bool
+	modifiers       []func(*sql.Selector)
+	loadTotal       []func(context.Context, []*FileExtract) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -38,34 +38,34 @@ func (feq *FileExtractQuery) Where(ps ...predicate.FileExtract) *FileExtractQuer
 	return feq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (feq *FileExtractQuery) Limit(limit int) *FileExtractQuery {
-	feq.limit = &limit
+	feq.ctx.Limit = &limit
 	return feq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (feq *FileExtractQuery) Offset(offset int) *FileExtractQuery {
-	feq.offset = &offset
+	feq.ctx.Offset = &offset
 	return feq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (feq *FileExtractQuery) Unique(unique bool) *FileExtractQuery {
-	feq.unique = &unique
+	feq.ctx.Unique = &unique
 	return feq
 }
 
-// Order adds an order step to the query.
-func (feq *FileExtractQuery) Order(o ...OrderFunc) *FileExtractQuery {
+// Order specifies how the records should be ordered.
+func (feq *FileExtractQuery) Order(o ...fileextract.OrderOption) *FileExtractQuery {
 	feq.order = append(feq.order, o...)
 	return feq
 }
 
 // QueryEnvironment chains the current query on the "Environment" edge.
 func (feq *FileExtractQuery) QueryEnvironment() *EnvironmentQuery {
-	query := &EnvironmentQuery{config: feq.config}
+	query := (&EnvironmentClient{config: feq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := feq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +88,7 @@ func (feq *FileExtractQuery) QueryEnvironment() *EnvironmentQuery {
 // First returns the first FileExtract entity from the query.
 // Returns a *NotFoundError when no FileExtract was found.
 func (feq *FileExtractQuery) First(ctx context.Context) (*FileExtract, error) {
-	nodes, err := feq.Limit(1).All(ctx)
+	nodes, err := feq.Limit(1).All(setContextOp(ctx, feq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (feq *FileExtractQuery) FirstX(ctx context.Context) *FileExtract {
 // Returns a *NotFoundError when no FileExtract ID was found.
 func (feq *FileExtractQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = feq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = feq.Limit(1).IDs(setContextOp(ctx, feq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +134,7 @@ func (feq *FileExtractQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one FileExtract entity is found.
 // Returns a *NotFoundError when no FileExtract entities are found.
 func (feq *FileExtractQuery) Only(ctx context.Context) (*FileExtract, error) {
-	nodes, err := feq.Limit(2).All(ctx)
+	nodes, err := feq.Limit(2).All(setContextOp(ctx, feq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (feq *FileExtractQuery) OnlyX(ctx context.Context) *FileExtract {
 // Returns a *NotFoundError when no entities are found.
 func (feq *FileExtractQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = feq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = feq.Limit(2).IDs(setContextOp(ctx, feq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +187,12 @@ func (feq *FileExtractQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of FileExtracts.
 func (feq *FileExtractQuery) All(ctx context.Context) ([]*FileExtract, error) {
+	ctx = setContextOp(ctx, feq.ctx, "All")
 	if err := feq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return feq.sqlAll(ctx)
+	qr := querierAll[[]*FileExtract, *FileExtractQuery]()
+	return withInterceptors[[]*FileExtract](ctx, feq, qr, feq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -203,9 +205,12 @@ func (feq *FileExtractQuery) AllX(ctx context.Context) []*FileExtract {
 }
 
 // IDs executes the query and returns a list of FileExtract IDs.
-func (feq *FileExtractQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := feq.Select(fileextract.FieldID).Scan(ctx, &ids); err != nil {
+func (feq *FileExtractQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if feq.ctx.Unique == nil && feq.path != nil {
+		feq.Unique(true)
+	}
+	ctx = setContextOp(ctx, feq.ctx, "IDs")
+	if err = feq.Select(fileextract.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -222,10 +227,11 @@ func (feq *FileExtractQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (feq *FileExtractQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, feq.ctx, "Count")
 	if err := feq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return feq.sqlCount(ctx)
+	return withInterceptors[int](ctx, feq, querierCount[*FileExtractQuery](), feq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +245,15 @@ func (feq *FileExtractQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (feq *FileExtractQuery) Exist(ctx context.Context) (bool, error) {
-	if err := feq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, feq.ctx, "Exist")
+	switch _, err := feq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return feq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -262,22 +273,21 @@ func (feq *FileExtractQuery) Clone() *FileExtractQuery {
 	}
 	return &FileExtractQuery{
 		config:          feq.config,
-		limit:           feq.limit,
-		offset:          feq.offset,
-		order:           append([]OrderFunc{}, feq.order...),
+		ctx:             feq.ctx.Clone(),
+		order:           append([]fileextract.OrderOption{}, feq.order...),
+		inters:          append([]Interceptor{}, feq.inters...),
 		predicates:      append([]predicate.FileExtract{}, feq.predicates...),
 		withEnvironment: feq.withEnvironment.Clone(),
 		// clone intermediate query.
-		sql:    feq.sql.Clone(),
-		path:   feq.path,
-		unique: feq.unique,
+		sql:  feq.sql.Clone(),
+		path: feq.path,
 	}
 }
 
 // WithEnvironment tells the query-builder to eager-load the nodes that are connected to
 // the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
 func (feq *FileExtractQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *FileExtractQuery {
-	query := &EnvironmentQuery{config: feq.config}
+	query := (&EnvironmentClient{config: feq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -291,25 +301,20 @@ func (feq *FileExtractQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *F
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.FileExtract.Query().
-//		GroupBy(fileextract.FieldHclID).
+//		GroupBy(fileextract.FieldHCLID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (feq *FileExtractQuery) GroupBy(field string, fields ...string) *FileExtractGroupBy {
-	grbuild := &FileExtractGroupBy{config: feq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := feq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return feq.sqlQuery(ctx), nil
-	}
+	feq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &FileExtractGroupBy{build: feq}
+	grbuild.flds = &feq.ctx.Fields
 	grbuild.label = fileextract.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -319,22 +324,37 @@ func (feq *FileExtractQuery) GroupBy(field string, fields ...string) *FileExtrac
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //	}
 //
 //	client.FileExtract.Query().
-//		Select(fileextract.FieldHclID).
+//		Select(fileextract.FieldHCLID).
 //		Scan(ctx, &v)
 func (feq *FileExtractQuery) Select(fields ...string) *FileExtractSelect {
-	feq.fields = append(feq.fields, fields...)
-	selbuild := &FileExtractSelect{FileExtractQuery: feq}
-	selbuild.label = fileextract.Label
-	selbuild.flds, selbuild.scan = &feq.fields, selbuild.Scan
-	return selbuild
+	feq.ctx.Fields = append(feq.ctx.Fields, fields...)
+	sbuild := &FileExtractSelect{FileExtractQuery: feq}
+	sbuild.label = fileextract.Label
+	sbuild.flds, sbuild.scan = &feq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a FileExtractSelect configured with the given aggregations.
+func (feq *FileExtractQuery) Aggregate(fns ...AggregateFunc) *FileExtractSelect {
+	return feq.Select().Aggregate(fns...)
 }
 
 func (feq *FileExtractQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range feq.fields {
+	for _, inter := range feq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, feq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range feq.ctx.Fields {
 		if !fileextract.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -364,14 +384,17 @@ func (feq *FileExtractQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, fileextract.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*FileExtract).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &FileExtract{config: feq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(feq.modifiers) > 0 {
+		_spec.Modifiers = feq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -385,6 +408,11 @@ func (feq *FileExtractQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if query := feq.withEnvironment; query != nil {
 		if err := feq.loadEnvironment(ctx, query, nodes, nil,
 			func(n *FileExtract, e *Environment) { n.Edges.Environment = e }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range feq.loadTotal {
+		if err := feq.loadTotal[i](ctx, nodes); err != nil {
 			return nil, err
 		}
 	}
@@ -403,6 +431,9 @@ func (feq *FileExtractQuery) loadEnvironment(ctx context.Context, query *Environ
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(environment.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -423,38 +454,25 @@ func (feq *FileExtractQuery) loadEnvironment(ctx context.Context, query *Environ
 
 func (feq *FileExtractQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := feq.querySpec()
-	_spec.Node.Columns = feq.fields
-	if len(feq.fields) > 0 {
-		_spec.Unique = feq.unique != nil && *feq.unique
+	if len(feq.modifiers) > 0 {
+		_spec.Modifiers = feq.modifiers
+	}
+	_spec.Node.Columns = feq.ctx.Fields
+	if len(feq.ctx.Fields) > 0 {
+		_spec.Unique = feq.ctx.Unique != nil && *feq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, feq.driver, _spec)
 }
 
-func (feq *FileExtractQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := feq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (feq *FileExtractQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   fileextract.Table,
-			Columns: fileextract.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: fileextract.FieldID,
-			},
-		},
-		From:   feq.sql,
-		Unique: true,
-	}
-	if unique := feq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(fileextract.Table, fileextract.Columns, sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID))
+	_spec.From = feq.sql
+	if unique := feq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if feq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := feq.fields; len(fields) > 0 {
+	if fields := feq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, fileextract.FieldID)
 		for i := range fields {
@@ -470,10 +488,10 @@ func (feq *FileExtractQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := feq.limit; limit != nil {
+	if limit := feq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := feq.offset; offset != nil {
+	if offset := feq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := feq.order; len(ps) > 0 {
@@ -489,7 +507,7 @@ func (feq *FileExtractQuery) querySpec() *sqlgraph.QuerySpec {
 func (feq *FileExtractQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(feq.driver.Dialect())
 	t1 := builder.Table(fileextract.Table)
-	columns := feq.fields
+	columns := feq.ctx.Fields
 	if len(columns) == 0 {
 		columns = fileextract.Columns
 	}
@@ -498,7 +516,7 @@ func (feq *FileExtractQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = feq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if feq.unique != nil && *feq.unique {
+	if feq.ctx.Unique != nil && *feq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range feq.predicates {
@@ -507,12 +525,12 @@ func (feq *FileExtractQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range feq.order {
 		p(selector)
 	}
-	if offset := feq.offset; offset != nil {
+	if offset := feq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := feq.limit; limit != nil {
+	if limit := feq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -520,13 +538,8 @@ func (feq *FileExtractQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // FileExtractGroupBy is the group-by builder for FileExtract entities.
 type FileExtractGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *FileExtractQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -535,74 +548,77 @@ func (fegb *FileExtractGroupBy) Aggregate(fns ...AggregateFunc) *FileExtractGrou
 	return fegb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (fegb *FileExtractGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := fegb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (fegb *FileExtractGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, fegb.build.ctx, "GroupBy")
+	if err := fegb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	fegb.sql = query
-	return fegb.sqlScan(ctx, v)
+	return scanWithInterceptors[*FileExtractQuery, *FileExtractGroupBy](ctx, fegb.build, fegb, fegb.build.inters, v)
 }
 
-func (fegb *FileExtractGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range fegb.fields {
-		if !fileextract.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (fegb *FileExtractGroupBy) sqlScan(ctx context.Context, root *FileExtractQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(fegb.fns))
+	for _, fn := range fegb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := fegb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*fegb.flds)+len(fegb.fns))
+		for _, f := range *fegb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*fegb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := fegb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := fegb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (fegb *FileExtractGroupBy) sqlQuery() *sql.Selector {
-	selector := fegb.sql.Select()
-	aggregation := make([]string, 0, len(fegb.fns))
-	for _, fn := range fegb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(fegb.fields)+len(fegb.fns))
-		for _, f := range fegb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(fegb.fields...)...)
-}
-
 // FileExtractSelect is the builder for selecting fields of FileExtract entities.
 type FileExtractSelect struct {
 	*FileExtractQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (fes *FileExtractSelect) Aggregate(fns ...AggregateFunc) *FileExtractSelect {
+	fes.fns = append(fes.fns, fns...)
+	return fes
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (fes *FileExtractSelect) Scan(ctx context.Context, v interface{}) error {
+func (fes *FileExtractSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, fes.ctx, "Select")
 	if err := fes.prepareQuery(ctx); err != nil {
 		return err
 	}
-	fes.sql = fes.FileExtractQuery.sqlQuery(ctx)
-	return fes.sqlScan(ctx, v)
+	return scanWithInterceptors[*FileExtractQuery, *FileExtractSelect](ctx, fes.FileExtractQuery, fes, fes.inters, v)
 }
 
-func (fes *FileExtractSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (fes *FileExtractSelect) sqlScan(ctx context.Context, root *FileExtractQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(fes.fns))
+	for _, fn := range fes.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*fes.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := fes.sql.Query()
+	query, args := selector.Query()
 	if err := fes.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

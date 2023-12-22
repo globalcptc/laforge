@@ -19,14 +19,14 @@ import (
 // DiskQuery is the builder for querying Disk entities.
 type DiskQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
+	ctx        *QueryContext
+	order      []disk.OrderOption
+	inters     []Interceptor
 	predicates []predicate.Disk
 	withHost   *HostQuery
 	withFKs    bool
+	modifiers  []func(*sql.Selector)
+	loadTotal  []func(context.Context, []*Disk) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -38,34 +38,34 @@ func (dq *DiskQuery) Where(ps ...predicate.Disk) *DiskQuery {
 	return dq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (dq *DiskQuery) Limit(limit int) *DiskQuery {
-	dq.limit = &limit
+	dq.ctx.Limit = &limit
 	return dq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (dq *DiskQuery) Offset(offset int) *DiskQuery {
-	dq.offset = &offset
+	dq.ctx.Offset = &offset
 	return dq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (dq *DiskQuery) Unique(unique bool) *DiskQuery {
-	dq.unique = &unique
+	dq.ctx.Unique = &unique
 	return dq
 }
 
-// Order adds an order step to the query.
-func (dq *DiskQuery) Order(o ...OrderFunc) *DiskQuery {
+// Order specifies how the records should be ordered.
+func (dq *DiskQuery) Order(o ...disk.OrderOption) *DiskQuery {
 	dq.order = append(dq.order, o...)
 	return dq
 }
 
 // QueryHost chains the current query on the "Host" edge.
 func (dq *DiskQuery) QueryHost() *HostQuery {
-	query := &HostQuery{config: dq.config}
+	query := (&HostClient{config: dq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := dq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +88,7 @@ func (dq *DiskQuery) QueryHost() *HostQuery {
 // First returns the first Disk entity from the query.
 // Returns a *NotFoundError when no Disk was found.
 func (dq *DiskQuery) First(ctx context.Context) (*Disk, error) {
-	nodes, err := dq.Limit(1).All(ctx)
+	nodes, err := dq.Limit(1).All(setContextOp(ctx, dq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (dq *DiskQuery) FirstX(ctx context.Context) *Disk {
 // Returns a *NotFoundError when no Disk ID was found.
 func (dq *DiskQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = dq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = dq.Limit(1).IDs(setContextOp(ctx, dq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +134,7 @@ func (dq *DiskQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Disk entity is found.
 // Returns a *NotFoundError when no Disk entities are found.
 func (dq *DiskQuery) Only(ctx context.Context) (*Disk, error) {
-	nodes, err := dq.Limit(2).All(ctx)
+	nodes, err := dq.Limit(2).All(setContextOp(ctx, dq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (dq *DiskQuery) OnlyX(ctx context.Context) *Disk {
 // Returns a *NotFoundError when no entities are found.
 func (dq *DiskQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = dq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = dq.Limit(2).IDs(setContextOp(ctx, dq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +187,12 @@ func (dq *DiskQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Disks.
 func (dq *DiskQuery) All(ctx context.Context) ([]*Disk, error) {
+	ctx = setContextOp(ctx, dq.ctx, "All")
 	if err := dq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return dq.sqlAll(ctx)
+	qr := querierAll[[]*Disk, *DiskQuery]()
+	return withInterceptors[[]*Disk](ctx, dq, qr, dq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -203,9 +205,12 @@ func (dq *DiskQuery) AllX(ctx context.Context) []*Disk {
 }
 
 // IDs executes the query and returns a list of Disk IDs.
-func (dq *DiskQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := dq.Select(disk.FieldID).Scan(ctx, &ids); err != nil {
+func (dq *DiskQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if dq.ctx.Unique == nil && dq.path != nil {
+		dq.Unique(true)
+	}
+	ctx = setContextOp(ctx, dq.ctx, "IDs")
+	if err = dq.Select(disk.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -222,10 +227,11 @@ func (dq *DiskQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (dq *DiskQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, dq.ctx, "Count")
 	if err := dq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return dq.sqlCount(ctx)
+	return withInterceptors[int](ctx, dq, querierCount[*DiskQuery](), dq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +245,15 @@ func (dq *DiskQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (dq *DiskQuery) Exist(ctx context.Context) (bool, error) {
-	if err := dq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, dq.ctx, "Exist")
+	switch _, err := dq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return dq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -262,22 +273,21 @@ func (dq *DiskQuery) Clone() *DiskQuery {
 	}
 	return &DiskQuery{
 		config:     dq.config,
-		limit:      dq.limit,
-		offset:     dq.offset,
-		order:      append([]OrderFunc{}, dq.order...),
+		ctx:        dq.ctx.Clone(),
+		order:      append([]disk.OrderOption{}, dq.order...),
+		inters:     append([]Interceptor{}, dq.inters...),
 		predicates: append([]predicate.Disk{}, dq.predicates...),
 		withHost:   dq.withHost.Clone(),
 		// clone intermediate query.
-		sql:    dq.sql.Clone(),
-		path:   dq.path,
-		unique: dq.unique,
+		sql:  dq.sql.Clone(),
+		path: dq.path,
 	}
 }
 
 // WithHost tells the query-builder to eager-load the nodes that are connected to
 // the "Host" edge. The optional arguments are used to configure the query builder of the edge.
 func (dq *DiskQuery) WithHost(opts ...func(*HostQuery)) *DiskQuery {
-	query := &HostQuery{config: dq.config}
+	query := (&HostClient{config: dq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -300,16 +310,11 @@ func (dq *DiskQuery) WithHost(opts ...func(*HostQuery)) *DiskQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (dq *DiskQuery) GroupBy(field string, fields ...string) *DiskGroupBy {
-	grbuild := &DiskGroupBy{config: dq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := dq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return dq.sqlQuery(ctx), nil
-	}
+	dq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &DiskGroupBy{build: dq}
+	grbuild.flds = &dq.ctx.Fields
 	grbuild.label = disk.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -326,15 +331,30 @@ func (dq *DiskQuery) GroupBy(field string, fields ...string) *DiskGroupBy {
 //		Select(disk.FieldSize).
 //		Scan(ctx, &v)
 func (dq *DiskQuery) Select(fields ...string) *DiskSelect {
-	dq.fields = append(dq.fields, fields...)
-	selbuild := &DiskSelect{DiskQuery: dq}
-	selbuild.label = disk.Label
-	selbuild.flds, selbuild.scan = &dq.fields, selbuild.Scan
-	return selbuild
+	dq.ctx.Fields = append(dq.ctx.Fields, fields...)
+	sbuild := &DiskSelect{DiskQuery: dq}
+	sbuild.label = disk.Label
+	sbuild.flds, sbuild.scan = &dq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a DiskSelect configured with the given aggregations.
+func (dq *DiskQuery) Aggregate(fns ...AggregateFunc) *DiskSelect {
+	return dq.Select().Aggregate(fns...)
 }
 
 func (dq *DiskQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range dq.fields {
+	for _, inter := range dq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, dq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range dq.ctx.Fields {
 		if !disk.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -364,14 +384,17 @@ func (dq *DiskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Disk, e
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, disk.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Disk).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &Disk{config: dq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(dq.modifiers) > 0 {
+		_spec.Modifiers = dq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -385,6 +408,11 @@ func (dq *DiskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Disk, e
 	if query := dq.withHost; query != nil {
 		if err := dq.loadHost(ctx, query, nodes, nil,
 			func(n *Disk, e *Host) { n.Edges.Host = e }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range dq.loadTotal {
+		if err := dq.loadTotal[i](ctx, nodes); err != nil {
 			return nil, err
 		}
 	}
@@ -403,6 +431,9 @@ func (dq *DiskQuery) loadHost(ctx context.Context, query *HostQuery, nodes []*Di
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(host.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -423,38 +454,25 @@ func (dq *DiskQuery) loadHost(ctx context.Context, query *HostQuery, nodes []*Di
 
 func (dq *DiskQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := dq.querySpec()
-	_spec.Node.Columns = dq.fields
-	if len(dq.fields) > 0 {
-		_spec.Unique = dq.unique != nil && *dq.unique
+	if len(dq.modifiers) > 0 {
+		_spec.Modifiers = dq.modifiers
+	}
+	_spec.Node.Columns = dq.ctx.Fields
+	if len(dq.ctx.Fields) > 0 {
+		_spec.Unique = dq.ctx.Unique != nil && *dq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, dq.driver, _spec)
 }
 
-func (dq *DiskQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := dq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (dq *DiskQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   disk.Table,
-			Columns: disk.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: disk.FieldID,
-			},
-		},
-		From:   dq.sql,
-		Unique: true,
-	}
-	if unique := dq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(disk.Table, disk.Columns, sqlgraph.NewFieldSpec(disk.FieldID, field.TypeUUID))
+	_spec.From = dq.sql
+	if unique := dq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if dq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := dq.fields; len(fields) > 0 {
+	if fields := dq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, disk.FieldID)
 		for i := range fields {
@@ -470,10 +488,10 @@ func (dq *DiskQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := dq.limit; limit != nil {
+	if limit := dq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := dq.offset; offset != nil {
+	if offset := dq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := dq.order; len(ps) > 0 {
@@ -489,7 +507,7 @@ func (dq *DiskQuery) querySpec() *sqlgraph.QuerySpec {
 func (dq *DiskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(dq.driver.Dialect())
 	t1 := builder.Table(disk.Table)
-	columns := dq.fields
+	columns := dq.ctx.Fields
 	if len(columns) == 0 {
 		columns = disk.Columns
 	}
@@ -498,7 +516,7 @@ func (dq *DiskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = dq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if dq.unique != nil && *dq.unique {
+	if dq.ctx.Unique != nil && *dq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range dq.predicates {
@@ -507,12 +525,12 @@ func (dq *DiskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range dq.order {
 		p(selector)
 	}
-	if offset := dq.offset; offset != nil {
+	if offset := dq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := dq.limit; limit != nil {
+	if limit := dq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -520,13 +538,8 @@ func (dq *DiskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // DiskGroupBy is the group-by builder for Disk entities.
 type DiskGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *DiskQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -535,74 +548,77 @@ func (dgb *DiskGroupBy) Aggregate(fns ...AggregateFunc) *DiskGroupBy {
 	return dgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (dgb *DiskGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := dgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (dgb *DiskGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, dgb.build.ctx, "GroupBy")
+	if err := dgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	dgb.sql = query
-	return dgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*DiskQuery, *DiskGroupBy](ctx, dgb.build, dgb, dgb.build.inters, v)
 }
 
-func (dgb *DiskGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range dgb.fields {
-		if !disk.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (dgb *DiskGroupBy) sqlScan(ctx context.Context, root *DiskQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(dgb.fns))
+	for _, fn := range dgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := dgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*dgb.flds)+len(dgb.fns))
+		for _, f := range *dgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*dgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := dgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := dgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (dgb *DiskGroupBy) sqlQuery() *sql.Selector {
-	selector := dgb.sql.Select()
-	aggregation := make([]string, 0, len(dgb.fns))
-	for _, fn := range dgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(dgb.fields)+len(dgb.fns))
-		for _, f := range dgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(dgb.fields...)...)
-}
-
 // DiskSelect is the builder for selecting fields of Disk entities.
 type DiskSelect struct {
 	*DiskQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (ds *DiskSelect) Aggregate(fns ...AggregateFunc) *DiskSelect {
+	ds.fns = append(ds.fns, fns...)
+	return ds
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (ds *DiskSelect) Scan(ctx context.Context, v interface{}) error {
+func (ds *DiskSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, ds.ctx, "Select")
 	if err := ds.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ds.sql = ds.DiskQuery.sqlQuery(ctx)
-	return ds.sqlScan(ctx, v)
+	return scanWithInterceptors[*DiskQuery, *DiskSelect](ctx, ds.DiskQuery, ds, ds.inters, v)
 }
 
-func (ds *DiskSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (ds *DiskSelect) sqlScan(ctx context.Context, root *DiskQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(ds.fns))
+	for _, fn := range ds.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*ds.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := ds.sql.Query()
+	query, args := selector.Query()
 	if err := ds.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

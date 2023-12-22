@@ -22,16 +22,18 @@ import (
 // CompetitionQuery is the builder for querying Competition entities.
 type CompetitionQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
-	order           []OrderFunc
-	fields          []string
+	ctx             *QueryContext
+	order           []competition.OrderOption
+	inters          []Interceptor
 	predicates      []predicate.Competition
 	withDNS         *DNSQuery
 	withEnvironment *EnvironmentQuery
 	withBuilds      *BuildQuery
 	withFKs         bool
+	modifiers       []func(*sql.Selector)
+	loadTotal       []func(context.Context, []*Competition) error
+	withNamedDNS    map[string]*DNSQuery
+	withNamedBuilds map[string]*BuildQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -43,34 +45,34 @@ func (cq *CompetitionQuery) Where(ps ...predicate.Competition) *CompetitionQuery
 	return cq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (cq *CompetitionQuery) Limit(limit int) *CompetitionQuery {
-	cq.limit = &limit
+	cq.ctx.Limit = &limit
 	return cq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (cq *CompetitionQuery) Offset(offset int) *CompetitionQuery {
-	cq.offset = &offset
+	cq.ctx.Offset = &offset
 	return cq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (cq *CompetitionQuery) Unique(unique bool) *CompetitionQuery {
-	cq.unique = &unique
+	cq.ctx.Unique = &unique
 	return cq
 }
 
-// Order adds an order step to the query.
-func (cq *CompetitionQuery) Order(o ...OrderFunc) *CompetitionQuery {
+// Order specifies how the records should be ordered.
+func (cq *CompetitionQuery) Order(o ...competition.OrderOption) *CompetitionQuery {
 	cq.order = append(cq.order, o...)
 	return cq
 }
 
 // QueryDNS chains the current query on the "DNS" edge.
 func (cq *CompetitionQuery) QueryDNS() *DNSQuery {
-	query := &DNSQuery{config: cq.config}
+	query := (&DNSClient{config: cq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -92,7 +94,7 @@ func (cq *CompetitionQuery) QueryDNS() *DNSQuery {
 
 // QueryEnvironment chains the current query on the "Environment" edge.
 func (cq *CompetitionQuery) QueryEnvironment() *EnvironmentQuery {
-	query := &EnvironmentQuery{config: cq.config}
+	query := (&EnvironmentClient{config: cq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -114,7 +116,7 @@ func (cq *CompetitionQuery) QueryEnvironment() *EnvironmentQuery {
 
 // QueryBuilds chains the current query on the "Builds" edge.
 func (cq *CompetitionQuery) QueryBuilds() *BuildQuery {
-	query := &BuildQuery{config: cq.config}
+	query := (&BuildClient{config: cq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -137,7 +139,7 @@ func (cq *CompetitionQuery) QueryBuilds() *BuildQuery {
 // First returns the first Competition entity from the query.
 // Returns a *NotFoundError when no Competition was found.
 func (cq *CompetitionQuery) First(ctx context.Context) (*Competition, error) {
-	nodes, err := cq.Limit(1).All(ctx)
+	nodes, err := cq.Limit(1).All(setContextOp(ctx, cq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +162,7 @@ func (cq *CompetitionQuery) FirstX(ctx context.Context) *Competition {
 // Returns a *NotFoundError when no Competition ID was found.
 func (cq *CompetitionQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = cq.Limit(1).IDs(setContextOp(ctx, cq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -183,7 +185,7 @@ func (cq *CompetitionQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Competition entity is found.
 // Returns a *NotFoundError when no Competition entities are found.
 func (cq *CompetitionQuery) Only(ctx context.Context) (*Competition, error) {
-	nodes, err := cq.Limit(2).All(ctx)
+	nodes, err := cq.Limit(2).All(setContextOp(ctx, cq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +213,7 @@ func (cq *CompetitionQuery) OnlyX(ctx context.Context) *Competition {
 // Returns a *NotFoundError when no entities are found.
 func (cq *CompetitionQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = cq.Limit(2).IDs(setContextOp(ctx, cq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -236,10 +238,12 @@ func (cq *CompetitionQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Competitions.
 func (cq *CompetitionQuery) All(ctx context.Context) ([]*Competition, error) {
+	ctx = setContextOp(ctx, cq.ctx, "All")
 	if err := cq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return cq.sqlAll(ctx)
+	qr := querierAll[[]*Competition, *CompetitionQuery]()
+	return withInterceptors[[]*Competition](ctx, cq, qr, cq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -252,9 +256,12 @@ func (cq *CompetitionQuery) AllX(ctx context.Context) []*Competition {
 }
 
 // IDs executes the query and returns a list of Competition IDs.
-func (cq *CompetitionQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := cq.Select(competition.FieldID).Scan(ctx, &ids); err != nil {
+func (cq *CompetitionQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if cq.ctx.Unique == nil && cq.path != nil {
+		cq.Unique(true)
+	}
+	ctx = setContextOp(ctx, cq.ctx, "IDs")
+	if err = cq.Select(competition.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -271,10 +278,11 @@ func (cq *CompetitionQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (cq *CompetitionQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, cq.ctx, "Count")
 	if err := cq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return cq.sqlCount(ctx)
+	return withInterceptors[int](ctx, cq, querierCount[*CompetitionQuery](), cq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -288,10 +296,15 @@ func (cq *CompetitionQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (cq *CompetitionQuery) Exist(ctx context.Context) (bool, error) {
-	if err := cq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, cq.ctx, "Exist")
+	switch _, err := cq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return cq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -311,24 +324,23 @@ func (cq *CompetitionQuery) Clone() *CompetitionQuery {
 	}
 	return &CompetitionQuery{
 		config:          cq.config,
-		limit:           cq.limit,
-		offset:          cq.offset,
-		order:           append([]OrderFunc{}, cq.order...),
+		ctx:             cq.ctx.Clone(),
+		order:           append([]competition.OrderOption{}, cq.order...),
+		inters:          append([]Interceptor{}, cq.inters...),
 		predicates:      append([]predicate.Competition{}, cq.predicates...),
 		withDNS:         cq.withDNS.Clone(),
 		withEnvironment: cq.withEnvironment.Clone(),
 		withBuilds:      cq.withBuilds.Clone(),
 		// clone intermediate query.
-		sql:    cq.sql.Clone(),
-		path:   cq.path,
-		unique: cq.unique,
+		sql:  cq.sql.Clone(),
+		path: cq.path,
 	}
 }
 
 // WithDNS tells the query-builder to eager-load the nodes that are connected to
 // the "DNS" edge. The optional arguments are used to configure the query builder of the edge.
 func (cq *CompetitionQuery) WithDNS(opts ...func(*DNSQuery)) *CompetitionQuery {
-	query := &DNSQuery{config: cq.config}
+	query := (&DNSClient{config: cq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -339,7 +351,7 @@ func (cq *CompetitionQuery) WithDNS(opts ...func(*DNSQuery)) *CompetitionQuery {
 // WithEnvironment tells the query-builder to eager-load the nodes that are connected to
 // the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
 func (cq *CompetitionQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *CompetitionQuery {
-	query := &EnvironmentQuery{config: cq.config}
+	query := (&EnvironmentClient{config: cq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -350,7 +362,7 @@ func (cq *CompetitionQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *Co
 // WithBuilds tells the query-builder to eager-load the nodes that are connected to
 // the "Builds" edge. The optional arguments are used to configure the query builder of the edge.
 func (cq *CompetitionQuery) WithBuilds(opts ...func(*BuildQuery)) *CompetitionQuery {
-	query := &BuildQuery{config: cq.config}
+	query := (&BuildClient{config: cq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -364,25 +376,20 @@ func (cq *CompetitionQuery) WithBuilds(opts ...func(*BuildQuery)) *CompetitionQu
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Competition.Query().
-//		GroupBy(competition.FieldHclID).
+//		GroupBy(competition.FieldHCLID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (cq *CompetitionQuery) GroupBy(field string, fields ...string) *CompetitionGroupBy {
-	grbuild := &CompetitionGroupBy{config: cq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := cq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return cq.sqlQuery(ctx), nil
-	}
+	cq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &CompetitionGroupBy{build: cq}
+	grbuild.flds = &cq.ctx.Fields
 	grbuild.label = competition.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -392,22 +399,37 @@ func (cq *CompetitionQuery) GroupBy(field string, fields ...string) *Competition
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //	}
 //
 //	client.Competition.Query().
-//		Select(competition.FieldHclID).
+//		Select(competition.FieldHCLID).
 //		Scan(ctx, &v)
 func (cq *CompetitionQuery) Select(fields ...string) *CompetitionSelect {
-	cq.fields = append(cq.fields, fields...)
-	selbuild := &CompetitionSelect{CompetitionQuery: cq}
-	selbuild.label = competition.Label
-	selbuild.flds, selbuild.scan = &cq.fields, selbuild.Scan
-	return selbuild
+	cq.ctx.Fields = append(cq.ctx.Fields, fields...)
+	sbuild := &CompetitionSelect{CompetitionQuery: cq}
+	sbuild.label = competition.Label
+	sbuild.flds, sbuild.scan = &cq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a CompetitionSelect configured with the given aggregations.
+func (cq *CompetitionQuery) Aggregate(fns ...AggregateFunc) *CompetitionSelect {
+	return cq.Select().Aggregate(fns...)
 }
 
 func (cq *CompetitionQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range cq.fields {
+	for _, inter := range cq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, cq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range cq.ctx.Fields {
 		if !competition.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -439,14 +461,17 @@ func (cq *CompetitionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, competition.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Competition).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &Competition{config: cq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(cq.modifiers) > 0 {
+		_spec.Modifiers = cq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -477,6 +502,25 @@ func (cq *CompetitionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 			return nil, err
 		}
 	}
+	for name, query := range cq.withNamedDNS {
+		if err := cq.loadDNS(ctx, query, nodes,
+			func(n *Competition) { n.appendNamedDNS(name) },
+			func(n *Competition, e *DNS) { n.appendNamedDNS(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for name, query := range cq.withNamedBuilds {
+		if err := cq.loadBuilds(ctx, query, nodes,
+			func(n *Competition) { n.appendNamedBuilds(name) },
+			func(n *Competition, e *Build) { n.appendNamedBuilds(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range cq.loadTotal {
+		if err := cq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -503,27 +547,30 @@ func (cq *CompetitionQuery) loadDNS(ctx context.Context, query *DNSQuery, nodes 
 	if err := query.prepareQuery(ctx); err != nil {
 		return err
 	}
-	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
-		assign := spec.Assign
-		values := spec.ScanValues
-		spec.ScanValues = func(columns []string) ([]interface{}, error) {
-			values, err := values(columns[1:])
-			if err != nil {
-				return nil, err
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
 			}
-			return append([]interface{}{new(uuid.UUID)}, values...), nil
-		}
-		spec.Assign = func(columns []string, values []interface{}) error {
-			outValue := *values[0].(*uuid.UUID)
-			inValue := *values[1].(*uuid.UUID)
-			if nids[inValue] == nil {
-				nids[inValue] = map[*Competition]struct{}{byID[outValue]: struct{}{}}
-				return assign(columns[1:], values[1:])
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Competition]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
 			}
-			nids[inValue][byID[outValue]] = struct{}{}
-			return nil
-		}
+		})
 	})
+	neighbors, err := withInterceptors[[]*DNS](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
@@ -550,6 +597,9 @@ func (cq *CompetitionQuery) loadEnvironment(ctx context.Context, query *Environm
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(environment.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -579,7 +629,7 @@ func (cq *CompetitionQuery) loadBuilds(ctx context.Context, query *BuildQuery, n
 	}
 	query.withFKs = true
 	query.Where(predicate.Build(func(s *sql.Selector) {
-		s.Where(sql.InValues(competition.BuildsColumn, fks...))
+		s.Where(sql.InValues(s.C(competition.BuildsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -592,7 +642,7 @@ func (cq *CompetitionQuery) loadBuilds(ctx context.Context, query *BuildQuery, n
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "build_competition" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "build_competition" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -601,38 +651,25 @@ func (cq *CompetitionQuery) loadBuilds(ctx context.Context, query *BuildQuery, n
 
 func (cq *CompetitionQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := cq.querySpec()
-	_spec.Node.Columns = cq.fields
-	if len(cq.fields) > 0 {
-		_spec.Unique = cq.unique != nil && *cq.unique
+	if len(cq.modifiers) > 0 {
+		_spec.Modifiers = cq.modifiers
+	}
+	_spec.Node.Columns = cq.ctx.Fields
+	if len(cq.ctx.Fields) > 0 {
+		_spec.Unique = cq.ctx.Unique != nil && *cq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, cq.driver, _spec)
 }
 
-func (cq *CompetitionQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := cq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (cq *CompetitionQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   competition.Table,
-			Columns: competition.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: competition.FieldID,
-			},
-		},
-		From:   cq.sql,
-		Unique: true,
-	}
-	if unique := cq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(competition.Table, competition.Columns, sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID))
+	_spec.From = cq.sql
+	if unique := cq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if cq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := cq.fields; len(fields) > 0 {
+	if fields := cq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, competition.FieldID)
 		for i := range fields {
@@ -648,10 +685,10 @@ func (cq *CompetitionQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := cq.limit; limit != nil {
+	if limit := cq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := cq.offset; offset != nil {
+	if offset := cq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := cq.order; len(ps) > 0 {
@@ -667,7 +704,7 @@ func (cq *CompetitionQuery) querySpec() *sqlgraph.QuerySpec {
 func (cq *CompetitionQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(cq.driver.Dialect())
 	t1 := builder.Table(competition.Table)
-	columns := cq.fields
+	columns := cq.ctx.Fields
 	if len(columns) == 0 {
 		columns = competition.Columns
 	}
@@ -676,7 +713,7 @@ func (cq *CompetitionQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = cq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if cq.unique != nil && *cq.unique {
+	if cq.ctx.Unique != nil && *cq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range cq.predicates {
@@ -685,26 +722,49 @@ func (cq *CompetitionQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range cq.order {
 		p(selector)
 	}
-	if offset := cq.offset; offset != nil {
+	if offset := cq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := cq.limit; limit != nil {
+	if limit := cq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
 }
 
+// WithNamedDNS tells the query-builder to eager-load the nodes that are connected to the "DNS"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (cq *CompetitionQuery) WithNamedDNS(name string, opts ...func(*DNSQuery)) *CompetitionQuery {
+	query := (&DNSClient{config: cq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if cq.withNamedDNS == nil {
+		cq.withNamedDNS = make(map[string]*DNSQuery)
+	}
+	cq.withNamedDNS[name] = query
+	return cq
+}
+
+// WithNamedBuilds tells the query-builder to eager-load the nodes that are connected to the "Builds"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (cq *CompetitionQuery) WithNamedBuilds(name string, opts ...func(*BuildQuery)) *CompetitionQuery {
+	query := (&BuildClient{config: cq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if cq.withNamedBuilds == nil {
+		cq.withNamedBuilds = make(map[string]*BuildQuery)
+	}
+	cq.withNamedBuilds[name] = query
+	return cq
+}
+
 // CompetitionGroupBy is the group-by builder for Competition entities.
 type CompetitionGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *CompetitionQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -713,74 +773,77 @@ func (cgb *CompetitionGroupBy) Aggregate(fns ...AggregateFunc) *CompetitionGroup
 	return cgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (cgb *CompetitionGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := cgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (cgb *CompetitionGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, cgb.build.ctx, "GroupBy")
+	if err := cgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	cgb.sql = query
-	return cgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*CompetitionQuery, *CompetitionGroupBy](ctx, cgb.build, cgb, cgb.build.inters, v)
 }
 
-func (cgb *CompetitionGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range cgb.fields {
-		if !competition.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (cgb *CompetitionGroupBy) sqlScan(ctx context.Context, root *CompetitionQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(cgb.fns))
+	for _, fn := range cgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := cgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*cgb.flds)+len(cgb.fns))
+		for _, f := range *cgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*cgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := cgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := cgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (cgb *CompetitionGroupBy) sqlQuery() *sql.Selector {
-	selector := cgb.sql.Select()
-	aggregation := make([]string, 0, len(cgb.fns))
-	for _, fn := range cgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(cgb.fields)+len(cgb.fns))
-		for _, f := range cgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(cgb.fields...)...)
-}
-
 // CompetitionSelect is the builder for selecting fields of Competition entities.
 type CompetitionSelect struct {
 	*CompetitionQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (cs *CompetitionSelect) Aggregate(fns ...AggregateFunc) *CompetitionSelect {
+	cs.fns = append(cs.fns, fns...)
+	return cs
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (cs *CompetitionSelect) Scan(ctx context.Context, v interface{}) error {
+func (cs *CompetitionSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, cs.ctx, "Select")
 	if err := cs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	cs.sql = cs.CompetitionQuery.sqlQuery(ctx)
-	return cs.sqlScan(ctx, v)
+	return scanWithInterceptors[*CompetitionQuery, *CompetitionSelect](ctx, cs.CompetitionQuery, cs, cs.inters, v)
 }
 
-func (cs *CompetitionSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (cs *CompetitionSelect) sqlScan(ctx context.Context, root *CompetitionQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(cs.fns))
+	for _, fn := range cs.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*cs.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := cs.sql.Query()
+	query, args := selector.Query()
 	if err := cs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

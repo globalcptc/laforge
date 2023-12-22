@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -142,37 +144,121 @@ func StateValidator(s State) error {
 	}
 }
 
+// OrderOption defines the ordering options for the BuildCommit queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByType orders the results by the type field.
+func ByType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldType, opts...).ToFunc()
+}
+
+// ByRevision orders the results by the revision field.
+func ByRevision(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRevision, opts...).ToFunc()
+}
+
+// ByState orders the results by the state field.
+func ByState(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldState, opts...).ToFunc()
+}
+
+// ByCreatedAt orders the results by the created_at field.
+func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByBuildField orders the results by Build field.
+func ByBuildField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBuildStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByServerTasksCount orders the results by ServerTasks count.
+func ByServerTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newServerTasksStep(), opts...)
+	}
+}
+
+// ByServerTasks orders the results by ServerTasks terms.
+func ByServerTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newServerTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByPlanDiffsCount orders the results by PlanDiffs count.
+func ByPlanDiffsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPlanDiffsStep(), opts...)
+	}
+}
+
+// ByPlanDiffs orders the results by PlanDiffs terms.
+func ByPlanDiffs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPlanDiffsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newBuildStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BuildInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
+	)
+}
+func newServerTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ServerTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, ServerTasksTable, ServerTasksColumn),
+	)
+}
+func newPlanDiffsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PlanDiffsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, PlanDiffsTable, PlanDiffsColumn),
+	)
+}
+
 // MarshalGQL implements graphql.Marshaler interface.
-func (_type Type) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.Quote(_type.String()))
+func (e Type) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(e.String()))
 }
 
 // UnmarshalGQL implements graphql.Unmarshaler interface.
-func (_type *Type) UnmarshalGQL(val interface{}) error {
+func (e *Type) UnmarshalGQL(val interface{}) error {
 	str, ok := val.(string)
 	if !ok {
 		return fmt.Errorf("enum %T must be a string", val)
 	}
-	*_type = Type(str)
-	if err := TypeValidator(*_type); err != nil {
+	*e = Type(str)
+	if err := TypeValidator(*e); err != nil {
 		return fmt.Errorf("%s is not a valid Type", str)
 	}
 	return nil
 }
 
 // MarshalGQL implements graphql.Marshaler interface.
-func (s State) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.Quote(s.String()))
+func (e State) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(e.String()))
 }
 
 // UnmarshalGQL implements graphql.Unmarshaler interface.
-func (s *State) UnmarshalGQL(val interface{}) error {
+func (e *State) UnmarshalGQL(val interface{}) error {
 	str, ok := val.(string)
 	if !ok {
 		return fmt.Errorf("enum %T must be a string", val)
 	}
-	*s = State(str)
-	if err := StateValidator(*s); err != nil {
+	*e = State(str)
+	if err := StateValidator(*e); err != nil {
 		return fmt.Errorf("%s is not a valid State", str)
 	}
 	return nil

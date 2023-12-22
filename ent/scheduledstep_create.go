@@ -21,9 +21,9 @@ type ScheduledStepCreate struct {
 	hooks    []Hook
 }
 
-// SetHclID sets the "hcl_id" field.
-func (ssc *ScheduledStepCreate) SetHclID(s string) *ScheduledStepCreate {
-	ssc.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (ssc *ScheduledStepCreate) SetHCLID(s string) *ScheduledStepCreate {
+	ssc.mutation.SetHCLID(s)
 	return ssc
 }
 
@@ -119,50 +119,8 @@ func (ssc *ScheduledStepCreate) Mutation() *ScheduledStepMutation {
 
 // Save creates the ScheduledStep in the database.
 func (ssc *ScheduledStepCreate) Save(ctx context.Context) (*ScheduledStep, error) {
-	var (
-		err  error
-		node *ScheduledStep
-	)
 	ssc.defaults()
-	if len(ssc.hooks) == 0 {
-		if err = ssc.check(); err != nil {
-			return nil, err
-		}
-		node, err = ssc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ScheduledStepMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = ssc.check(); err != nil {
-				return nil, err
-			}
-			ssc.mutation = mutation
-			if node, err = ssc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(ssc.hooks) - 1; i >= 0; i-- {
-			if ssc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ssc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, ssc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*ScheduledStep)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from ScheduledStepMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, ssc.sqlSave, ssc.mutation, ssc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -197,7 +155,7 @@ func (ssc *ScheduledStepCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (ssc *ScheduledStepCreate) check() error {
-	if _, ok := ssc.mutation.HclID(); !ok {
+	if _, ok := ssc.mutation.HCLID(); !ok {
 		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "ScheduledStep.hcl_id"`)}
 	}
 	if _, ok := ssc.mutation.Name(); !ok {
@@ -221,6 +179,9 @@ func (ssc *ScheduledStepCreate) check() error {
 }
 
 func (ssc *ScheduledStepCreate) sqlSave(ctx context.Context) (*ScheduledStep, error) {
+	if err := ssc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := ssc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, ssc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -235,78 +196,46 @@ func (ssc *ScheduledStepCreate) sqlSave(ctx context.Context) (*ScheduledStep, er
 			return nil, err
 		}
 	}
+	ssc.mutation.id = &_node.ID
+	ssc.mutation.done = true
 	return _node, nil
 }
 
 func (ssc *ScheduledStepCreate) createSpec() (*ScheduledStep, *sqlgraph.CreateSpec) {
 	var (
 		_node = &ScheduledStep{config: ssc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: scheduledstep.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: scheduledstep.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(scheduledstep.Table, sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID))
 	)
 	if id, ok := ssc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := ssc.mutation.HclID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldHclID,
-		})
-		_node.HclID = value
+	if value, ok := ssc.mutation.HCLID(); ok {
+		_spec.SetField(scheduledstep.FieldHCLID, field.TypeString, value)
+		_node.HCLID = value
 	}
 	if value, ok := ssc.mutation.Name(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldName,
-		})
+		_spec.SetField(scheduledstep.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
 	if value, ok := ssc.mutation.Description(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldDescription,
-		})
+		_spec.SetField(scheduledstep.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
 	if value, ok := ssc.mutation.Step(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldStep,
-		})
+		_spec.SetField(scheduledstep.FieldStep, field.TypeString, value)
 		_node.Step = value
 	}
 	if value, ok := ssc.mutation.GetType(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: scheduledstep.FieldType,
-		})
+		_spec.SetField(scheduledstep.FieldType, field.TypeEnum, value)
 		_node.Type = value
 	}
 	if value, ok := ssc.mutation.Schedule(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldSchedule,
-		})
+		_spec.SetField(scheduledstep.FieldSchedule, field.TypeString, value)
 		_node.Schedule = value
 	}
 	if value, ok := ssc.mutation.RunAt(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: scheduledstep.FieldRunAt,
-		})
+		_spec.SetField(scheduledstep.FieldRunAt, field.TypeInt64, value)
 		_node.RunAt = value
 	}
 	if nodes := ssc.mutation.EnvironmentIDs(); len(nodes) > 0 {
@@ -317,10 +246,7 @@ func (ssc *ScheduledStepCreate) createSpec() (*ScheduledStep, *sqlgraph.CreateSp
 			Columns: []string{scheduledstep.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -335,11 +261,15 @@ func (ssc *ScheduledStepCreate) createSpec() (*ScheduledStep, *sqlgraph.CreateSp
 // ScheduledStepCreateBulk is the builder for creating many ScheduledStep entities in bulk.
 type ScheduledStepCreateBulk struct {
 	config
+	err      error
 	builders []*ScheduledStepCreate
 }
 
 // Save creates the ScheduledStep entities in the database.
 func (sscb *ScheduledStepCreateBulk) Save(ctx context.Context) ([]*ScheduledStep, error) {
+	if sscb.err != nil {
+		return nil, sscb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(sscb.builders))
 	nodes := make([]*ScheduledStep, len(sscb.builders))
 	mutators := make([]Mutator, len(sscb.builders))
@@ -356,8 +286,8 @@ func (sscb *ScheduledStepCreateBulk) Save(ctx context.Context) ([]*ScheduledStep
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, sscb.builders[i+1].mutation)
 				} else {

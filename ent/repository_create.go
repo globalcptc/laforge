@@ -113,50 +113,8 @@ func (rc *RepositoryCreate) Mutation() *RepositoryMutation {
 
 // Save creates the Repository in the database.
 func (rc *RepositoryCreate) Save(ctx context.Context) (*Repository, error) {
-	var (
-		err  error
-		node *Repository
-	)
 	rc.defaults()
-	if len(rc.hooks) == 0 {
-		if err = rc.check(); err != nil {
-			return nil, err
-		}
-		node, err = rc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*RepositoryMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = rc.check(); err != nil {
-				return nil, err
-			}
-			rc.mutation = mutation
-			if node, err = rc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(rc.hooks) - 1; i >= 0; i-- {
-			if rc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = rc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, rc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Repository)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from RepositoryMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, rc.sqlSave, rc.mutation, rc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -215,6 +173,9 @@ func (rc *RepositoryCreate) check() error {
 }
 
 func (rc *RepositoryCreate) sqlSave(ctx context.Context) (*Repository, error) {
+	if err := rc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := rc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, rc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -229,54 +190,34 @@ func (rc *RepositoryCreate) sqlSave(ctx context.Context) (*Repository, error) {
 			return nil, err
 		}
 	}
+	rc.mutation.id = &_node.ID
+	rc.mutation.done = true
 	return _node, nil
 }
 
 func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Repository{config: rc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: repository.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: repository.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(repository.Table, sqlgraph.NewFieldSpec(repository.FieldID, field.TypeUUID))
 	)
 	if id, ok := rc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := rc.mutation.RepoURL(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: repository.FieldRepoURL,
-		})
+		_spec.SetField(repository.FieldRepoURL, field.TypeString, value)
 		_node.RepoURL = value
 	}
 	if value, ok := rc.mutation.BranchName(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: repository.FieldBranchName,
-		})
+		_spec.SetField(repository.FieldBranchName, field.TypeString, value)
 		_node.BranchName = value
 	}
 	if value, ok := rc.mutation.EnviromentFilepath(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: repository.FieldEnviromentFilepath,
-		})
+		_spec.SetField(repository.FieldEnviromentFilepath, field.TypeString, value)
 		_node.EnviromentFilepath = value
 	}
 	if value, ok := rc.mutation.FolderPath(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: repository.FieldFolderPath,
-		})
+		_spec.SetField(repository.FieldFolderPath, field.TypeString, value)
 		_node.FolderPath = value
 	}
 	if nodes := rc.mutation.EnvironmentsIDs(); len(nodes) > 0 {
@@ -287,10 +228,7 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 			Columns: repository.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -306,10 +244,7 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 			Columns: []string{repository.RepoCommitsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repocommit.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(repocommit.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -323,11 +258,15 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 // RepositoryCreateBulk is the builder for creating many Repository entities in bulk.
 type RepositoryCreateBulk struct {
 	config
+	err      error
 	builders []*RepositoryCreate
 }
 
 // Save creates the Repository entities in the database.
 func (rcb *RepositoryCreateBulk) Save(ctx context.Context) ([]*Repository, error) {
+	if rcb.err != nil {
+		return nil, rcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(rcb.builders))
 	nodes := make([]*Repository, len(rcb.builders))
 	mutators := make([]Mutator, len(rcb.builders))
@@ -344,8 +283,8 @@ func (rcb *RepositoryCreateBulk) Save(ctx context.Context) ([]*Repository, error
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, rcb.builders[i+1].mutation)
 				} else {

@@ -3,6 +3,8 @@
 package team
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -88,3 +90,79 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the Team queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByTeamNumber orders the results by the team_number field.
+func ByTeamNumber(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTeamNumber, opts...).ToFunc()
+}
+
+// ByBuildField orders the results by Build field.
+func ByBuildField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBuildStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByStatusField orders the results by Status field.
+func ByStatusField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newStatusStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisionedNetworksCount orders the results by ProvisionedNetworks count.
+func ByProvisionedNetworksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProvisionedNetworksStep(), opts...)
+	}
+}
+
+// ByProvisionedNetworks orders the results by ProvisionedNetworks terms.
+func ByProvisionedNetworks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisionedNetworksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByPlanField orders the results by Plan field.
+func ByPlanField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPlanStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newBuildStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BuildInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
+	)
+}
+func newStatusStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(StatusInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
+	)
+}
+func newProvisionedNetworksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisionedNetworksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, ProvisionedNetworksTable, ProvisionedNetworksColumn),
+	)
+}
+func newPlanStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PlanInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, PlanTable, PlanColumn),
+	)
+}

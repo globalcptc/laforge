@@ -37,9 +37,25 @@ func (hdu *HostDependencyUpdate) SetHostID(s string) *HostDependencyUpdate {
 	return hdu
 }
 
+// SetNillableHostID sets the "host_id" field if the given value is not nil.
+func (hdu *HostDependencyUpdate) SetNillableHostID(s *string) *HostDependencyUpdate {
+	if s != nil {
+		hdu.SetHostID(*s)
+	}
+	return hdu
+}
+
 // SetNetworkID sets the "network_id" field.
 func (hdu *HostDependencyUpdate) SetNetworkID(s string) *HostDependencyUpdate {
 	hdu.mutation.SetNetworkID(s)
+	return hdu
+}
+
+// SetNillableNetworkID sets the "network_id" field if the given value is not nil.
+func (hdu *HostDependencyUpdate) SetNillableNetworkID(s *string) *HostDependencyUpdate {
+	if s != nil {
+		hdu.SetNetworkID(*s)
+	}
 	return hdu
 }
 
@@ -150,34 +166,7 @@ func (hdu *HostDependencyUpdate) ClearEnvironment() *HostDependencyUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (hdu *HostDependencyUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(hdu.hooks) == 0 {
-		affected, err = hdu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*HostDependencyMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			hdu.mutation = mutation
-			affected, err = hdu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(hdu.hooks) - 1; i >= 0; i-- {
-			if hdu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = hdu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, hdu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, hdu.sqlSave, hdu.mutation, hdu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -203,16 +192,7 @@ func (hdu *HostDependencyUpdate) ExecX(ctx context.Context) {
 }
 
 func (hdu *HostDependencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   hostdependency.Table,
-			Columns: hostdependency.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: hostdependency.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(hostdependency.Table, hostdependency.Columns, sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID))
 	if ps := hdu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -221,18 +201,10 @@ func (hdu *HostDependencyUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 	}
 	if value, ok := hdu.mutation.HostID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: hostdependency.FieldHostID,
-		})
+		_spec.SetField(hostdependency.FieldHostID, field.TypeString, value)
 	}
 	if value, ok := hdu.mutation.NetworkID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: hostdependency.FieldNetworkID,
-		})
+		_spec.SetField(hostdependency.FieldNetworkID, field.TypeString, value)
 	}
 	if hdu.mutation.RequiredByCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -242,10 +214,7 @@ func (hdu *HostDependencyUpdate) sqlSave(ctx context.Context) (n int, err error)
 			Columns: []string{hostdependency.RequiredByColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -258,10 +227,7 @@ func (hdu *HostDependencyUpdate) sqlSave(ctx context.Context) (n int, err error)
 			Columns: []string{hostdependency.RequiredByColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -277,10 +243,7 @@ func (hdu *HostDependencyUpdate) sqlSave(ctx context.Context) (n int, err error)
 			Columns: []string{hostdependency.DependOnHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -293,10 +256,7 @@ func (hdu *HostDependencyUpdate) sqlSave(ctx context.Context) (n int, err error)
 			Columns: []string{hostdependency.DependOnHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -312,10 +272,7 @@ func (hdu *HostDependencyUpdate) sqlSave(ctx context.Context) (n int, err error)
 			Columns: []string{hostdependency.DependOnNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -328,10 +285,7 @@ func (hdu *HostDependencyUpdate) sqlSave(ctx context.Context) (n int, err error)
 			Columns: []string{hostdependency.DependOnNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -347,10 +301,7 @@ func (hdu *HostDependencyUpdate) sqlSave(ctx context.Context) (n int, err error)
 			Columns: []string{hostdependency.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -363,10 +314,7 @@ func (hdu *HostDependencyUpdate) sqlSave(ctx context.Context) (n int, err error)
 			Columns: []string{hostdependency.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -382,6 +330,7 @@ func (hdu *HostDependencyUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		return 0, err
 	}
+	hdu.mutation.done = true
 	return n, nil
 }
 
@@ -399,9 +348,25 @@ func (hduo *HostDependencyUpdateOne) SetHostID(s string) *HostDependencyUpdateOn
 	return hduo
 }
 
+// SetNillableHostID sets the "host_id" field if the given value is not nil.
+func (hduo *HostDependencyUpdateOne) SetNillableHostID(s *string) *HostDependencyUpdateOne {
+	if s != nil {
+		hduo.SetHostID(*s)
+	}
+	return hduo
+}
+
 // SetNetworkID sets the "network_id" field.
 func (hduo *HostDependencyUpdateOne) SetNetworkID(s string) *HostDependencyUpdateOne {
 	hduo.mutation.SetNetworkID(s)
+	return hduo
+}
+
+// SetNillableNetworkID sets the "network_id" field if the given value is not nil.
+func (hduo *HostDependencyUpdateOne) SetNillableNetworkID(s *string) *HostDependencyUpdateOne {
+	if s != nil {
+		hduo.SetNetworkID(*s)
+	}
 	return hduo
 }
 
@@ -510,6 +475,12 @@ func (hduo *HostDependencyUpdateOne) ClearEnvironment() *HostDependencyUpdateOne
 	return hduo
 }
 
+// Where appends a list predicates to the HostDependencyUpdate builder.
+func (hduo *HostDependencyUpdateOne) Where(ps ...predicate.HostDependency) *HostDependencyUpdateOne {
+	hduo.mutation.Where(ps...)
+	return hduo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (hduo *HostDependencyUpdateOne) Select(field string, fields ...string) *HostDependencyUpdateOne {
@@ -519,40 +490,7 @@ func (hduo *HostDependencyUpdateOne) Select(field string, fields ...string) *Hos
 
 // Save executes the query and returns the updated HostDependency entity.
 func (hduo *HostDependencyUpdateOne) Save(ctx context.Context) (*HostDependency, error) {
-	var (
-		err  error
-		node *HostDependency
-	)
-	if len(hduo.hooks) == 0 {
-		node, err = hduo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*HostDependencyMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			hduo.mutation = mutation
-			node, err = hduo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(hduo.hooks) - 1; i >= 0; i-- {
-			if hduo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = hduo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, hduo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*HostDependency)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from HostDependencyMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, hduo.sqlSave, hduo.mutation, hduo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -578,16 +516,7 @@ func (hduo *HostDependencyUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDependency, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   hostdependency.Table,
-			Columns: hostdependency.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: hostdependency.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(hostdependency.Table, hostdependency.Columns, sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID))
 	id, ok := hduo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "HostDependency.id" for update`)}
@@ -613,18 +542,10 @@ func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDe
 		}
 	}
 	if value, ok := hduo.mutation.HostID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: hostdependency.FieldHostID,
-		})
+		_spec.SetField(hostdependency.FieldHostID, field.TypeString, value)
 	}
 	if value, ok := hduo.mutation.NetworkID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: hostdependency.FieldNetworkID,
-		})
+		_spec.SetField(hostdependency.FieldNetworkID, field.TypeString, value)
 	}
 	if hduo.mutation.RequiredByCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -634,10 +555,7 @@ func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDe
 			Columns: []string{hostdependency.RequiredByColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -650,10 +568,7 @@ func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDe
 			Columns: []string{hostdependency.RequiredByColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -669,10 +584,7 @@ func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDe
 			Columns: []string{hostdependency.DependOnHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -685,10 +597,7 @@ func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDe
 			Columns: []string{hostdependency.DependOnHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -704,10 +613,7 @@ func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDe
 			Columns: []string{hostdependency.DependOnNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -720,10 +626,7 @@ func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDe
 			Columns: []string{hostdependency.DependOnNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -739,10 +642,7 @@ func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDe
 			Columns: []string{hostdependency.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -755,10 +655,7 @@ func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDe
 			Columns: []string{hostdependency.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -777,5 +674,6 @@ func (hduo *HostDependencyUpdateOne) sqlSave(ctx context.Context) (_node *HostDe
 		}
 		return nil, err
 	}
+	hduo.mutation.done = true
 	return _node, nil
 }

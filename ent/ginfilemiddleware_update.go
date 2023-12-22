@@ -37,9 +37,25 @@ func (gfmu *GinFileMiddlewareUpdate) SetURLID(s string) *GinFileMiddlewareUpdate
 	return gfmu
 }
 
+// SetNillableURLID sets the "url_id" field if the given value is not nil.
+func (gfmu *GinFileMiddlewareUpdate) SetNillableURLID(s *string) *GinFileMiddlewareUpdate {
+	if s != nil {
+		gfmu.SetURLID(*s)
+	}
+	return gfmu
+}
+
 // SetFilePath sets the "file_path" field.
 func (gfmu *GinFileMiddlewareUpdate) SetFilePath(s string) *GinFileMiddlewareUpdate {
 	gfmu.mutation.SetFilePath(s)
+	return gfmu
+}
+
+// SetNillableFilePath sets the "file_path" field if the given value is not nil.
+func (gfmu *GinFileMiddlewareUpdate) SetNillableFilePath(s *string) *GinFileMiddlewareUpdate {
+	if s != nil {
+		gfmu.SetFilePath(*s)
+	}
 	return gfmu
 }
 
@@ -139,34 +155,7 @@ func (gfmu *GinFileMiddlewareUpdate) ClearProvisioningScheduledStep() *GinFileMi
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (gfmu *GinFileMiddlewareUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(gfmu.hooks) == 0 {
-		affected, err = gfmu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GinFileMiddlewareMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			gfmu.mutation = mutation
-			affected, err = gfmu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(gfmu.hooks) - 1; i >= 0; i-- {
-			if gfmu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gfmu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, gfmu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, gfmu.sqlSave, gfmu.mutation, gfmu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -192,16 +181,7 @@ func (gfmu *GinFileMiddlewareUpdate) ExecX(ctx context.Context) {
 }
 
 func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   ginfilemiddleware.Table,
-			Columns: ginfilemiddleware.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: ginfilemiddleware.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(ginfilemiddleware.Table, ginfilemiddleware.Columns, sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID))
 	if ps := gfmu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -210,25 +190,13 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 		}
 	}
 	if value, ok := gfmu.mutation.URLID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: ginfilemiddleware.FieldURLID,
-		})
+		_spec.SetField(ginfilemiddleware.FieldURLID, field.TypeString, value)
 	}
 	if value, ok := gfmu.mutation.FilePath(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: ginfilemiddleware.FieldFilePath,
-		})
+		_spec.SetField(ginfilemiddleware.FieldFilePath, field.TypeString, value)
 	}
 	if value, ok := gfmu.mutation.Accessed(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: ginfilemiddleware.FieldAccessed,
-		})
+		_spec.SetField(ginfilemiddleware.FieldAccessed, field.TypeBool, value)
 	}
 	if gfmu.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -238,10 +206,7 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 			Columns: []string{ginfilemiddleware.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -254,10 +219,7 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 			Columns: []string{ginfilemiddleware.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -273,10 +235,7 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 			Columns: []string{ginfilemiddleware.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -289,10 +248,7 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 			Columns: []string{ginfilemiddleware.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -308,10 +264,7 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 			Columns: []string{ginfilemiddleware.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -324,10 +277,7 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 			Columns: []string{ginfilemiddleware.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -343,6 +293,7 @@ func (gfmu *GinFileMiddlewareUpdate) sqlSave(ctx context.Context) (n int, err er
 		}
 		return 0, err
 	}
+	gfmu.mutation.done = true
 	return n, nil
 }
 
@@ -360,9 +311,25 @@ func (gfmuo *GinFileMiddlewareUpdateOne) SetURLID(s string) *GinFileMiddlewareUp
 	return gfmuo
 }
 
+// SetNillableURLID sets the "url_id" field if the given value is not nil.
+func (gfmuo *GinFileMiddlewareUpdateOne) SetNillableURLID(s *string) *GinFileMiddlewareUpdateOne {
+	if s != nil {
+		gfmuo.SetURLID(*s)
+	}
+	return gfmuo
+}
+
 // SetFilePath sets the "file_path" field.
 func (gfmuo *GinFileMiddlewareUpdateOne) SetFilePath(s string) *GinFileMiddlewareUpdateOne {
 	gfmuo.mutation.SetFilePath(s)
+	return gfmuo
+}
+
+// SetNillableFilePath sets the "file_path" field if the given value is not nil.
+func (gfmuo *GinFileMiddlewareUpdateOne) SetNillableFilePath(s *string) *GinFileMiddlewareUpdateOne {
+	if s != nil {
+		gfmuo.SetFilePath(*s)
+	}
 	return gfmuo
 }
 
@@ -460,6 +427,12 @@ func (gfmuo *GinFileMiddlewareUpdateOne) ClearProvisioningScheduledStep() *GinFi
 	return gfmuo
 }
 
+// Where appends a list predicates to the GinFileMiddlewareUpdate builder.
+func (gfmuo *GinFileMiddlewareUpdateOne) Where(ps ...predicate.GinFileMiddleware) *GinFileMiddlewareUpdateOne {
+	gfmuo.mutation.Where(ps...)
+	return gfmuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (gfmuo *GinFileMiddlewareUpdateOne) Select(field string, fields ...string) *GinFileMiddlewareUpdateOne {
@@ -469,40 +442,7 @@ func (gfmuo *GinFileMiddlewareUpdateOne) Select(field string, fields ...string) 
 
 // Save executes the query and returns the updated GinFileMiddleware entity.
 func (gfmuo *GinFileMiddlewareUpdateOne) Save(ctx context.Context) (*GinFileMiddleware, error) {
-	var (
-		err  error
-		node *GinFileMiddleware
-	)
-	if len(gfmuo.hooks) == 0 {
-		node, err = gfmuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GinFileMiddlewareMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			gfmuo.mutation = mutation
-			node, err = gfmuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(gfmuo.hooks) - 1; i >= 0; i-- {
-			if gfmuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gfmuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, gfmuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*GinFileMiddleware)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from GinFileMiddlewareMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, gfmuo.sqlSave, gfmuo.mutation, gfmuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -528,16 +468,7 @@ func (gfmuo *GinFileMiddlewareUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *GinFileMiddleware, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   ginfilemiddleware.Table,
-			Columns: ginfilemiddleware.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: ginfilemiddleware.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(ginfilemiddleware.Table, ginfilemiddleware.Columns, sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID))
 	id, ok := gfmuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "GinFileMiddleware.id" for update`)}
@@ -563,25 +494,13 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 		}
 	}
 	if value, ok := gfmuo.mutation.URLID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: ginfilemiddleware.FieldURLID,
-		})
+		_spec.SetField(ginfilemiddleware.FieldURLID, field.TypeString, value)
 	}
 	if value, ok := gfmuo.mutation.FilePath(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: ginfilemiddleware.FieldFilePath,
-		})
+		_spec.SetField(ginfilemiddleware.FieldFilePath, field.TypeString, value)
 	}
 	if value, ok := gfmuo.mutation.Accessed(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: ginfilemiddleware.FieldAccessed,
-		})
+		_spec.SetField(ginfilemiddleware.FieldAccessed, field.TypeBool, value)
 	}
 	if gfmuo.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -591,10 +510,7 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 			Columns: []string{ginfilemiddleware.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -607,10 +523,7 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 			Columns: []string{ginfilemiddleware.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -626,10 +539,7 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 			Columns: []string{ginfilemiddleware.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -642,10 +552,7 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 			Columns: []string{ginfilemiddleware.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -661,10 +568,7 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 			Columns: []string{ginfilemiddleware.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -677,10 +581,7 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 			Columns: []string{ginfilemiddleware.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -699,5 +600,6 @@ func (gfmuo *GinFileMiddlewareUpdateOne) sqlSave(ctx context.Context) (_node *Gi
 		}
 		return nil, err
 	}
+	gfmuo.mutation.done = true
 	return _node, nil
 }

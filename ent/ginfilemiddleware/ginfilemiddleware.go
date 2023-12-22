@@ -3,6 +3,8 @@
 package ginfilemiddleware
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -83,3 +85,68 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the GinFileMiddleware queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByURLID orders the results by the url_id field.
+func ByURLID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldURLID, opts...).ToFunc()
+}
+
+// ByFilePath orders the results by the file_path field.
+func ByFilePath(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFilePath, opts...).ToFunc()
+}
+
+// ByAccessed orders the results by the accessed field.
+func ByAccessed(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAccessed, opts...).ToFunc()
+}
+
+// ByProvisionedHostField orders the results by ProvisionedHost field.
+func ByProvisionedHostField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisionedHostStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisioningStepField orders the results by ProvisioningStep field.
+func ByProvisioningStepField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisioningStepStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisioningScheduledStepField orders the results by ProvisioningScheduledStep field.
+func ByProvisioningScheduledStepField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisioningScheduledStepStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newProvisionedHostStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisionedHostInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, ProvisionedHostTable, ProvisionedHostColumn),
+	)
+}
+func newProvisioningStepStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisioningStepInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningStepTable, ProvisioningStepColumn),
+	)
+}
+func newProvisioningScheduledStepStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisioningScheduledStepInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
+	)
+}

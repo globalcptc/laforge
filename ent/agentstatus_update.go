@@ -37,9 +37,25 @@ func (asu *AgentStatusUpdate) SetClientID(s string) *AgentStatusUpdate {
 	return asu
 }
 
+// SetNillableClientID sets the "ClientID" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableClientID(s *string) *AgentStatusUpdate {
+	if s != nil {
+		asu.SetClientID(*s)
+	}
+	return asu
+}
+
 // SetHostname sets the "Hostname" field.
 func (asu *AgentStatusUpdate) SetHostname(s string) *AgentStatusUpdate {
 	asu.mutation.SetHostname(s)
+	return asu
+}
+
+// SetNillableHostname sets the "Hostname" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableHostname(s *string) *AgentStatusUpdate {
+	if s != nil {
+		asu.SetHostname(*s)
+	}
 	return asu
 }
 
@@ -47,6 +63,14 @@ func (asu *AgentStatusUpdate) SetHostname(s string) *AgentStatusUpdate {
 func (asu *AgentStatusUpdate) SetUpTime(i int64) *AgentStatusUpdate {
 	asu.mutation.ResetUpTime()
 	asu.mutation.SetUpTime(i)
+	return asu
+}
+
+// SetNillableUpTime sets the "UpTime" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableUpTime(i *int64) *AgentStatusUpdate {
+	if i != nil {
+		asu.SetUpTime(*i)
+	}
 	return asu
 }
 
@@ -63,6 +87,14 @@ func (asu *AgentStatusUpdate) SetBootTime(i int64) *AgentStatusUpdate {
 	return asu
 }
 
+// SetNillableBootTime sets the "BootTime" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableBootTime(i *int64) *AgentStatusUpdate {
+	if i != nil {
+		asu.SetBootTime(*i)
+	}
+	return asu
+}
+
 // AddBootTime adds i to the "BootTime" field.
 func (asu *AgentStatusUpdate) AddBootTime(i int64) *AgentStatusUpdate {
 	asu.mutation.AddBootTime(i)
@@ -73,6 +105,14 @@ func (asu *AgentStatusUpdate) AddBootTime(i int64) *AgentStatusUpdate {
 func (asu *AgentStatusUpdate) SetNumProcs(i int64) *AgentStatusUpdate {
 	asu.mutation.ResetNumProcs()
 	asu.mutation.SetNumProcs(i)
+	return asu
+}
+
+// SetNillableNumProcs sets the "NumProcs" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableNumProcs(i *int64) *AgentStatusUpdate {
+	if i != nil {
+		asu.SetNumProcs(*i)
+	}
 	return asu
 }
 
@@ -88,9 +128,25 @@ func (asu *AgentStatusUpdate) SetOs(s string) *AgentStatusUpdate {
 	return asu
 }
 
+// SetNillableOs sets the "Os" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableOs(s *string) *AgentStatusUpdate {
+	if s != nil {
+		asu.SetOs(*s)
+	}
+	return asu
+}
+
 // SetHostID sets the "HostID" field.
 func (asu *AgentStatusUpdate) SetHostID(s string) *AgentStatusUpdate {
 	asu.mutation.SetHostID(s)
+	return asu
+}
+
+// SetNillableHostID sets the "HostID" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableHostID(s *string) *AgentStatusUpdate {
+	if s != nil {
+		asu.SetHostID(*s)
+	}
 	return asu
 }
 
@@ -98,6 +154,14 @@ func (asu *AgentStatusUpdate) SetHostID(s string) *AgentStatusUpdate {
 func (asu *AgentStatusUpdate) SetLoad1(f float64) *AgentStatusUpdate {
 	asu.mutation.ResetLoad1()
 	asu.mutation.SetLoad1(f)
+	return asu
+}
+
+// SetNillableLoad1 sets the "Load1" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableLoad1(f *float64) *AgentStatusUpdate {
+	if f != nil {
+		asu.SetLoad1(*f)
+	}
 	return asu
 }
 
@@ -114,6 +178,14 @@ func (asu *AgentStatusUpdate) SetLoad5(f float64) *AgentStatusUpdate {
 	return asu
 }
 
+// SetNillableLoad5 sets the "Load5" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableLoad5(f *float64) *AgentStatusUpdate {
+	if f != nil {
+		asu.SetLoad5(*f)
+	}
+	return asu
+}
+
 // AddLoad5 adds f to the "Load5" field.
 func (asu *AgentStatusUpdate) AddLoad5(f float64) *AgentStatusUpdate {
 	asu.mutation.AddLoad5(f)
@@ -124,6 +196,14 @@ func (asu *AgentStatusUpdate) AddLoad5(f float64) *AgentStatusUpdate {
 func (asu *AgentStatusUpdate) SetLoad15(f float64) *AgentStatusUpdate {
 	asu.mutation.ResetLoad15()
 	asu.mutation.SetLoad15(f)
+	return asu
+}
+
+// SetNillableLoad15 sets the "Load15" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableLoad15(f *float64) *AgentStatusUpdate {
+	if f != nil {
+		asu.SetLoad15(*f)
+	}
 	return asu
 }
 
@@ -140,6 +220,14 @@ func (asu *AgentStatusUpdate) SetTotalMem(i int64) *AgentStatusUpdate {
 	return asu
 }
 
+// SetNillableTotalMem sets the "TotalMem" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableTotalMem(i *int64) *AgentStatusUpdate {
+	if i != nil {
+		asu.SetTotalMem(*i)
+	}
+	return asu
+}
+
 // AddTotalMem adds i to the "TotalMem" field.
 func (asu *AgentStatusUpdate) AddTotalMem(i int64) *AgentStatusUpdate {
 	asu.mutation.AddTotalMem(i)
@@ -150,6 +238,14 @@ func (asu *AgentStatusUpdate) AddTotalMem(i int64) *AgentStatusUpdate {
 func (asu *AgentStatusUpdate) SetFreeMem(i int64) *AgentStatusUpdate {
 	asu.mutation.ResetFreeMem()
 	asu.mutation.SetFreeMem(i)
+	return asu
+}
+
+// SetNillableFreeMem sets the "FreeMem" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableFreeMem(i *int64) *AgentStatusUpdate {
+	if i != nil {
+		asu.SetFreeMem(*i)
+	}
 	return asu
 }
 
@@ -166,6 +262,14 @@ func (asu *AgentStatusUpdate) SetUsedMem(i int64) *AgentStatusUpdate {
 	return asu
 }
 
+// SetNillableUsedMem sets the "UsedMem" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableUsedMem(i *int64) *AgentStatusUpdate {
+	if i != nil {
+		asu.SetUsedMem(*i)
+	}
+	return asu
+}
+
 // AddUsedMem adds i to the "UsedMem" field.
 func (asu *AgentStatusUpdate) AddUsedMem(i int64) *AgentStatusUpdate {
 	asu.mutation.AddUsedMem(i)
@@ -176,6 +280,14 @@ func (asu *AgentStatusUpdate) AddUsedMem(i int64) *AgentStatusUpdate {
 func (asu *AgentStatusUpdate) SetTimestamp(i int64) *AgentStatusUpdate {
 	asu.mutation.ResetTimestamp()
 	asu.mutation.SetTimestamp(i)
+	return asu
+}
+
+// SetNillableTimestamp sets the "Timestamp" field if the given value is not nil.
+func (asu *AgentStatusUpdate) SetNillableTimestamp(i *int64) *AgentStatusUpdate {
+	if i != nil {
+		asu.SetTimestamp(*i)
+	}
 	return asu
 }
 
@@ -267,34 +379,7 @@ func (asu *AgentStatusUpdate) ClearBuild() *AgentStatusUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (asu *AgentStatusUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(asu.hooks) == 0 {
-		affected, err = asu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*AgentStatusMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			asu.mutation = mutation
-			affected, err = asu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(asu.hooks) - 1; i >= 0; i-- {
-			if asu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = asu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, asu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, asu.sqlSave, asu.mutation, asu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -320,16 +405,7 @@ func (asu *AgentStatusUpdate) ExecX(ctx context.Context) {
 }
 
 func (asu *AgentStatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   agentstatus.Table,
-			Columns: agentstatus.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: agentstatus.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(agentstatus.Table, agentstatus.Columns, sqlgraph.NewFieldSpec(agentstatus.FieldID, field.TypeUUID))
 	if ps := asu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -338,172 +414,76 @@ func (asu *AgentStatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 	}
 	if value, ok := asu.mutation.ClientID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: agentstatus.FieldClientID,
-		})
+		_spec.SetField(agentstatus.FieldClientID, field.TypeString, value)
 	}
 	if value, ok := asu.mutation.Hostname(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: agentstatus.FieldHostname,
-		})
+		_spec.SetField(agentstatus.FieldHostname, field.TypeString, value)
 	}
 	if value, ok := asu.mutation.UpTime(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldUpTime,
-		})
+		_spec.SetField(agentstatus.FieldUpTime, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.AddedUpTime(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldUpTime,
-		})
+		_spec.AddField(agentstatus.FieldUpTime, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.BootTime(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldBootTime,
-		})
+		_spec.SetField(agentstatus.FieldBootTime, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.AddedBootTime(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldBootTime,
-		})
+		_spec.AddField(agentstatus.FieldBootTime, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.NumProcs(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldNumProcs,
-		})
+		_spec.SetField(agentstatus.FieldNumProcs, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.AddedNumProcs(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldNumProcs,
-		})
+		_spec.AddField(agentstatus.FieldNumProcs, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.Os(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: agentstatus.FieldOs,
-		})
+		_spec.SetField(agentstatus.FieldOs, field.TypeString, value)
 	}
 	if value, ok := asu.mutation.HostID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: agentstatus.FieldHostID,
-		})
+		_spec.SetField(agentstatus.FieldHostID, field.TypeString, value)
 	}
 	if value, ok := asu.mutation.Load1(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad1,
-		})
+		_spec.SetField(agentstatus.FieldLoad1, field.TypeFloat64, value)
 	}
 	if value, ok := asu.mutation.AddedLoad1(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad1,
-		})
+		_spec.AddField(agentstatus.FieldLoad1, field.TypeFloat64, value)
 	}
 	if value, ok := asu.mutation.Load5(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad5,
-		})
+		_spec.SetField(agentstatus.FieldLoad5, field.TypeFloat64, value)
 	}
 	if value, ok := asu.mutation.AddedLoad5(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad5,
-		})
+		_spec.AddField(agentstatus.FieldLoad5, field.TypeFloat64, value)
 	}
 	if value, ok := asu.mutation.Load15(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad15,
-		})
+		_spec.SetField(agentstatus.FieldLoad15, field.TypeFloat64, value)
 	}
 	if value, ok := asu.mutation.AddedLoad15(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad15,
-		})
+		_spec.AddField(agentstatus.FieldLoad15, field.TypeFloat64, value)
 	}
 	if value, ok := asu.mutation.TotalMem(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldTotalMem,
-		})
+		_spec.SetField(agentstatus.FieldTotalMem, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.AddedTotalMem(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldTotalMem,
-		})
+		_spec.AddField(agentstatus.FieldTotalMem, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.FreeMem(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldFreeMem,
-		})
+		_spec.SetField(agentstatus.FieldFreeMem, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.AddedFreeMem(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldFreeMem,
-		})
+		_spec.AddField(agentstatus.FieldFreeMem, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.UsedMem(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldUsedMem,
-		})
+		_spec.SetField(agentstatus.FieldUsedMem, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.AddedUsedMem(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldUsedMem,
-		})
+		_spec.AddField(agentstatus.FieldUsedMem, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.Timestamp(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldTimestamp,
-		})
+		_spec.SetField(agentstatus.FieldTimestamp, field.TypeInt64, value)
 	}
 	if value, ok := asu.mutation.AddedTimestamp(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldTimestamp,
-		})
+		_spec.AddField(agentstatus.FieldTimestamp, field.TypeInt64, value)
 	}
 	if asu.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -513,10 +493,7 @@ func (asu *AgentStatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{agentstatus.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -529,10 +506,7 @@ func (asu *AgentStatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{agentstatus.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -548,10 +522,7 @@ func (asu *AgentStatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{agentstatus.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -564,10 +535,7 @@ func (asu *AgentStatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{agentstatus.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -583,10 +551,7 @@ func (asu *AgentStatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{agentstatus.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -599,10 +564,7 @@ func (asu *AgentStatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{agentstatus.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -618,6 +580,7 @@ func (asu *AgentStatusUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	asu.mutation.done = true
 	return n, nil
 }
 
@@ -635,9 +598,25 @@ func (asuo *AgentStatusUpdateOne) SetClientID(s string) *AgentStatusUpdateOne {
 	return asuo
 }
 
+// SetNillableClientID sets the "ClientID" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableClientID(s *string) *AgentStatusUpdateOne {
+	if s != nil {
+		asuo.SetClientID(*s)
+	}
+	return asuo
+}
+
 // SetHostname sets the "Hostname" field.
 func (asuo *AgentStatusUpdateOne) SetHostname(s string) *AgentStatusUpdateOne {
 	asuo.mutation.SetHostname(s)
+	return asuo
+}
+
+// SetNillableHostname sets the "Hostname" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableHostname(s *string) *AgentStatusUpdateOne {
+	if s != nil {
+		asuo.SetHostname(*s)
+	}
 	return asuo
 }
 
@@ -645,6 +624,14 @@ func (asuo *AgentStatusUpdateOne) SetHostname(s string) *AgentStatusUpdateOne {
 func (asuo *AgentStatusUpdateOne) SetUpTime(i int64) *AgentStatusUpdateOne {
 	asuo.mutation.ResetUpTime()
 	asuo.mutation.SetUpTime(i)
+	return asuo
+}
+
+// SetNillableUpTime sets the "UpTime" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableUpTime(i *int64) *AgentStatusUpdateOne {
+	if i != nil {
+		asuo.SetUpTime(*i)
+	}
 	return asuo
 }
 
@@ -661,6 +648,14 @@ func (asuo *AgentStatusUpdateOne) SetBootTime(i int64) *AgentStatusUpdateOne {
 	return asuo
 }
 
+// SetNillableBootTime sets the "BootTime" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableBootTime(i *int64) *AgentStatusUpdateOne {
+	if i != nil {
+		asuo.SetBootTime(*i)
+	}
+	return asuo
+}
+
 // AddBootTime adds i to the "BootTime" field.
 func (asuo *AgentStatusUpdateOne) AddBootTime(i int64) *AgentStatusUpdateOne {
 	asuo.mutation.AddBootTime(i)
@@ -671,6 +666,14 @@ func (asuo *AgentStatusUpdateOne) AddBootTime(i int64) *AgentStatusUpdateOne {
 func (asuo *AgentStatusUpdateOne) SetNumProcs(i int64) *AgentStatusUpdateOne {
 	asuo.mutation.ResetNumProcs()
 	asuo.mutation.SetNumProcs(i)
+	return asuo
+}
+
+// SetNillableNumProcs sets the "NumProcs" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableNumProcs(i *int64) *AgentStatusUpdateOne {
+	if i != nil {
+		asuo.SetNumProcs(*i)
+	}
 	return asuo
 }
 
@@ -686,9 +689,25 @@ func (asuo *AgentStatusUpdateOne) SetOs(s string) *AgentStatusUpdateOne {
 	return asuo
 }
 
+// SetNillableOs sets the "Os" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableOs(s *string) *AgentStatusUpdateOne {
+	if s != nil {
+		asuo.SetOs(*s)
+	}
+	return asuo
+}
+
 // SetHostID sets the "HostID" field.
 func (asuo *AgentStatusUpdateOne) SetHostID(s string) *AgentStatusUpdateOne {
 	asuo.mutation.SetHostID(s)
+	return asuo
+}
+
+// SetNillableHostID sets the "HostID" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableHostID(s *string) *AgentStatusUpdateOne {
+	if s != nil {
+		asuo.SetHostID(*s)
+	}
 	return asuo
 }
 
@@ -696,6 +715,14 @@ func (asuo *AgentStatusUpdateOne) SetHostID(s string) *AgentStatusUpdateOne {
 func (asuo *AgentStatusUpdateOne) SetLoad1(f float64) *AgentStatusUpdateOne {
 	asuo.mutation.ResetLoad1()
 	asuo.mutation.SetLoad1(f)
+	return asuo
+}
+
+// SetNillableLoad1 sets the "Load1" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableLoad1(f *float64) *AgentStatusUpdateOne {
+	if f != nil {
+		asuo.SetLoad1(*f)
+	}
 	return asuo
 }
 
@@ -712,6 +739,14 @@ func (asuo *AgentStatusUpdateOne) SetLoad5(f float64) *AgentStatusUpdateOne {
 	return asuo
 }
 
+// SetNillableLoad5 sets the "Load5" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableLoad5(f *float64) *AgentStatusUpdateOne {
+	if f != nil {
+		asuo.SetLoad5(*f)
+	}
+	return asuo
+}
+
 // AddLoad5 adds f to the "Load5" field.
 func (asuo *AgentStatusUpdateOne) AddLoad5(f float64) *AgentStatusUpdateOne {
 	asuo.mutation.AddLoad5(f)
@@ -722,6 +757,14 @@ func (asuo *AgentStatusUpdateOne) AddLoad5(f float64) *AgentStatusUpdateOne {
 func (asuo *AgentStatusUpdateOne) SetLoad15(f float64) *AgentStatusUpdateOne {
 	asuo.mutation.ResetLoad15()
 	asuo.mutation.SetLoad15(f)
+	return asuo
+}
+
+// SetNillableLoad15 sets the "Load15" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableLoad15(f *float64) *AgentStatusUpdateOne {
+	if f != nil {
+		asuo.SetLoad15(*f)
+	}
 	return asuo
 }
 
@@ -738,6 +781,14 @@ func (asuo *AgentStatusUpdateOne) SetTotalMem(i int64) *AgentStatusUpdateOne {
 	return asuo
 }
 
+// SetNillableTotalMem sets the "TotalMem" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableTotalMem(i *int64) *AgentStatusUpdateOne {
+	if i != nil {
+		asuo.SetTotalMem(*i)
+	}
+	return asuo
+}
+
 // AddTotalMem adds i to the "TotalMem" field.
 func (asuo *AgentStatusUpdateOne) AddTotalMem(i int64) *AgentStatusUpdateOne {
 	asuo.mutation.AddTotalMem(i)
@@ -748,6 +799,14 @@ func (asuo *AgentStatusUpdateOne) AddTotalMem(i int64) *AgentStatusUpdateOne {
 func (asuo *AgentStatusUpdateOne) SetFreeMem(i int64) *AgentStatusUpdateOne {
 	asuo.mutation.ResetFreeMem()
 	asuo.mutation.SetFreeMem(i)
+	return asuo
+}
+
+// SetNillableFreeMem sets the "FreeMem" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableFreeMem(i *int64) *AgentStatusUpdateOne {
+	if i != nil {
+		asuo.SetFreeMem(*i)
+	}
 	return asuo
 }
 
@@ -764,6 +823,14 @@ func (asuo *AgentStatusUpdateOne) SetUsedMem(i int64) *AgentStatusUpdateOne {
 	return asuo
 }
 
+// SetNillableUsedMem sets the "UsedMem" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableUsedMem(i *int64) *AgentStatusUpdateOne {
+	if i != nil {
+		asuo.SetUsedMem(*i)
+	}
+	return asuo
+}
+
 // AddUsedMem adds i to the "UsedMem" field.
 func (asuo *AgentStatusUpdateOne) AddUsedMem(i int64) *AgentStatusUpdateOne {
 	asuo.mutation.AddUsedMem(i)
@@ -774,6 +841,14 @@ func (asuo *AgentStatusUpdateOne) AddUsedMem(i int64) *AgentStatusUpdateOne {
 func (asuo *AgentStatusUpdateOne) SetTimestamp(i int64) *AgentStatusUpdateOne {
 	asuo.mutation.ResetTimestamp()
 	asuo.mutation.SetTimestamp(i)
+	return asuo
+}
+
+// SetNillableTimestamp sets the "Timestamp" field if the given value is not nil.
+func (asuo *AgentStatusUpdateOne) SetNillableTimestamp(i *int64) *AgentStatusUpdateOne {
+	if i != nil {
+		asuo.SetTimestamp(*i)
+	}
 	return asuo
 }
 
@@ -863,6 +938,12 @@ func (asuo *AgentStatusUpdateOne) ClearBuild() *AgentStatusUpdateOne {
 	return asuo
 }
 
+// Where appends a list predicates to the AgentStatusUpdate builder.
+func (asuo *AgentStatusUpdateOne) Where(ps ...predicate.AgentStatus) *AgentStatusUpdateOne {
+	asuo.mutation.Where(ps...)
+	return asuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (asuo *AgentStatusUpdateOne) Select(field string, fields ...string) *AgentStatusUpdateOne {
@@ -872,40 +953,7 @@ func (asuo *AgentStatusUpdateOne) Select(field string, fields ...string) *AgentS
 
 // Save executes the query and returns the updated AgentStatus entity.
 func (asuo *AgentStatusUpdateOne) Save(ctx context.Context) (*AgentStatus, error) {
-	var (
-		err  error
-		node *AgentStatus
-	)
-	if len(asuo.hooks) == 0 {
-		node, err = asuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*AgentStatusMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			asuo.mutation = mutation
-			node, err = asuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(asuo.hooks) - 1; i >= 0; i-- {
-			if asuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = asuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, asuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*AgentStatus)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from AgentStatusMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, asuo.sqlSave, asuo.mutation, asuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -931,16 +979,7 @@ func (asuo *AgentStatusUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStatus, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   agentstatus.Table,
-			Columns: agentstatus.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: agentstatus.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(agentstatus.Table, agentstatus.Columns, sqlgraph.NewFieldSpec(agentstatus.FieldID, field.TypeUUID))
 	id, ok := asuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "AgentStatus.id" for update`)}
@@ -966,172 +1005,76 @@ func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStat
 		}
 	}
 	if value, ok := asuo.mutation.ClientID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: agentstatus.FieldClientID,
-		})
+		_spec.SetField(agentstatus.FieldClientID, field.TypeString, value)
 	}
 	if value, ok := asuo.mutation.Hostname(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: agentstatus.FieldHostname,
-		})
+		_spec.SetField(agentstatus.FieldHostname, field.TypeString, value)
 	}
 	if value, ok := asuo.mutation.UpTime(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldUpTime,
-		})
+		_spec.SetField(agentstatus.FieldUpTime, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.AddedUpTime(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldUpTime,
-		})
+		_spec.AddField(agentstatus.FieldUpTime, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.BootTime(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldBootTime,
-		})
+		_spec.SetField(agentstatus.FieldBootTime, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.AddedBootTime(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldBootTime,
-		})
+		_spec.AddField(agentstatus.FieldBootTime, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.NumProcs(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldNumProcs,
-		})
+		_spec.SetField(agentstatus.FieldNumProcs, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.AddedNumProcs(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldNumProcs,
-		})
+		_spec.AddField(agentstatus.FieldNumProcs, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.Os(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: agentstatus.FieldOs,
-		})
+		_spec.SetField(agentstatus.FieldOs, field.TypeString, value)
 	}
 	if value, ok := asuo.mutation.HostID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: agentstatus.FieldHostID,
-		})
+		_spec.SetField(agentstatus.FieldHostID, field.TypeString, value)
 	}
 	if value, ok := asuo.mutation.Load1(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad1,
-		})
+		_spec.SetField(agentstatus.FieldLoad1, field.TypeFloat64, value)
 	}
 	if value, ok := asuo.mutation.AddedLoad1(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad1,
-		})
+		_spec.AddField(agentstatus.FieldLoad1, field.TypeFloat64, value)
 	}
 	if value, ok := asuo.mutation.Load5(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad5,
-		})
+		_spec.SetField(agentstatus.FieldLoad5, field.TypeFloat64, value)
 	}
 	if value, ok := asuo.mutation.AddedLoad5(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad5,
-		})
+		_spec.AddField(agentstatus.FieldLoad5, field.TypeFloat64, value)
 	}
 	if value, ok := asuo.mutation.Load15(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad15,
-		})
+		_spec.SetField(agentstatus.FieldLoad15, field.TypeFloat64, value)
 	}
 	if value, ok := asuo.mutation.AddedLoad15(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeFloat64,
-			Value:  value,
-			Column: agentstatus.FieldLoad15,
-		})
+		_spec.AddField(agentstatus.FieldLoad15, field.TypeFloat64, value)
 	}
 	if value, ok := asuo.mutation.TotalMem(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldTotalMem,
-		})
+		_spec.SetField(agentstatus.FieldTotalMem, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.AddedTotalMem(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldTotalMem,
-		})
+		_spec.AddField(agentstatus.FieldTotalMem, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.FreeMem(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldFreeMem,
-		})
+		_spec.SetField(agentstatus.FieldFreeMem, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.AddedFreeMem(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldFreeMem,
-		})
+		_spec.AddField(agentstatus.FieldFreeMem, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.UsedMem(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldUsedMem,
-		})
+		_spec.SetField(agentstatus.FieldUsedMem, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.AddedUsedMem(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldUsedMem,
-		})
+		_spec.AddField(agentstatus.FieldUsedMem, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.Timestamp(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldTimestamp,
-		})
+		_spec.SetField(agentstatus.FieldTimestamp, field.TypeInt64, value)
 	}
 	if value, ok := asuo.mutation.AddedTimestamp(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: agentstatus.FieldTimestamp,
-		})
+		_spec.AddField(agentstatus.FieldTimestamp, field.TypeInt64, value)
 	}
 	if asuo.mutation.ProvisionedHostCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1141,10 +1084,7 @@ func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStat
 			Columns: []string{agentstatus.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1157,10 +1097,7 @@ func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStat
 			Columns: []string{agentstatus.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1176,10 +1113,7 @@ func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStat
 			Columns: []string{agentstatus.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1192,10 +1126,7 @@ func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStat
 			Columns: []string{agentstatus.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1211,10 +1142,7 @@ func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStat
 			Columns: []string{agentstatus.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1227,10 +1155,7 @@ func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStat
 			Columns: []string{agentstatus.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1249,5 +1174,6 @@ func (asuo *AgentStatusUpdateOne) sqlSave(ctx context.Context) (_node *AgentStat
 		}
 		return nil, err
 	}
+	asuo.mutation.done = true
 	return _node, nil
 }

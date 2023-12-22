@@ -127,50 +127,8 @@ func (gfmc *GinFileMiddlewareCreate) Mutation() *GinFileMiddlewareMutation {
 
 // Save creates the GinFileMiddleware in the database.
 func (gfmc *GinFileMiddlewareCreate) Save(ctx context.Context) (*GinFileMiddleware, error) {
-	var (
-		err  error
-		node *GinFileMiddleware
-	)
 	gfmc.defaults()
-	if len(gfmc.hooks) == 0 {
-		if err = gfmc.check(); err != nil {
-			return nil, err
-		}
-		node, err = gfmc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GinFileMiddlewareMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = gfmc.check(); err != nil {
-				return nil, err
-			}
-			gfmc.mutation = mutation
-			if node, err = gfmc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(gfmc.hooks) - 1; i >= 0; i-- {
-			if gfmc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gfmc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, gfmc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*GinFileMiddleware)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from GinFileMiddlewareMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, gfmc.sqlSave, gfmc.mutation, gfmc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -222,6 +180,9 @@ func (gfmc *GinFileMiddlewareCreate) check() error {
 }
 
 func (gfmc *GinFileMiddlewareCreate) sqlSave(ctx context.Context) (*GinFileMiddleware, error) {
+	if err := gfmc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := gfmc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, gfmc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -236,46 +197,30 @@ func (gfmc *GinFileMiddlewareCreate) sqlSave(ctx context.Context) (*GinFileMiddl
 			return nil, err
 		}
 	}
+	gfmc.mutation.id = &_node.ID
+	gfmc.mutation.done = true
 	return _node, nil
 }
 
 func (gfmc *GinFileMiddlewareCreate) createSpec() (*GinFileMiddleware, *sqlgraph.CreateSpec) {
 	var (
 		_node = &GinFileMiddleware{config: gfmc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: ginfilemiddleware.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: ginfilemiddleware.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(ginfilemiddleware.Table, sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID))
 	)
 	if id, ok := gfmc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := gfmc.mutation.URLID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: ginfilemiddleware.FieldURLID,
-		})
+		_spec.SetField(ginfilemiddleware.FieldURLID, field.TypeString, value)
 		_node.URLID = value
 	}
 	if value, ok := gfmc.mutation.FilePath(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: ginfilemiddleware.FieldFilePath,
-		})
+		_spec.SetField(ginfilemiddleware.FieldFilePath, field.TypeString, value)
 		_node.FilePath = value
 	}
 	if value, ok := gfmc.mutation.Accessed(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: ginfilemiddleware.FieldAccessed,
-		})
+		_spec.SetField(ginfilemiddleware.FieldAccessed, field.TypeBool, value)
 		_node.Accessed = value
 	}
 	if nodes := gfmc.mutation.ProvisionedHostIDs(); len(nodes) > 0 {
@@ -286,10 +231,7 @@ func (gfmc *GinFileMiddlewareCreate) createSpec() (*GinFileMiddleware, *sqlgraph
 			Columns: []string{ginfilemiddleware.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -305,10 +247,7 @@ func (gfmc *GinFileMiddlewareCreate) createSpec() (*GinFileMiddleware, *sqlgraph
 			Columns: []string{ginfilemiddleware.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -324,10 +263,7 @@ func (gfmc *GinFileMiddlewareCreate) createSpec() (*GinFileMiddleware, *sqlgraph
 			Columns: []string{ginfilemiddleware.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -341,11 +277,15 @@ func (gfmc *GinFileMiddlewareCreate) createSpec() (*GinFileMiddleware, *sqlgraph
 // GinFileMiddlewareCreateBulk is the builder for creating many GinFileMiddleware entities in bulk.
 type GinFileMiddlewareCreateBulk struct {
 	config
+	err      error
 	builders []*GinFileMiddlewareCreate
 }
 
 // Save creates the GinFileMiddleware entities in the database.
 func (gfmcb *GinFileMiddlewareCreateBulk) Save(ctx context.Context) ([]*GinFileMiddleware, error) {
+	if gfmcb.err != nil {
+		return nil, gfmcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(gfmcb.builders))
 	nodes := make([]*GinFileMiddleware, len(gfmcb.builders))
 	mutators := make([]Mutator, len(gfmcb.builders))
@@ -362,8 +302,8 @@ func (gfmcb *GinFileMiddlewareCreateBulk) Save(ctx context.Context) ([]*GinFileM
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, gfmcb.builders[i+1].mutation)
 				} else {

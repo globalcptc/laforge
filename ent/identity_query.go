@@ -19,14 +19,14 @@ import (
 // IdentityQuery is the builder for querying Identity entities.
 type IdentityQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
-	order           []OrderFunc
-	fields          []string
+	ctx             *QueryContext
+	order           []identity.OrderOption
+	inters          []Interceptor
 	predicates      []predicate.Identity
 	withEnvironment *EnvironmentQuery
 	withFKs         bool
+	modifiers       []func(*sql.Selector)
+	loadTotal       []func(context.Context, []*Identity) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -38,34 +38,34 @@ func (iq *IdentityQuery) Where(ps ...predicate.Identity) *IdentityQuery {
 	return iq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (iq *IdentityQuery) Limit(limit int) *IdentityQuery {
-	iq.limit = &limit
+	iq.ctx.Limit = &limit
 	return iq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (iq *IdentityQuery) Offset(offset int) *IdentityQuery {
-	iq.offset = &offset
+	iq.ctx.Offset = &offset
 	return iq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (iq *IdentityQuery) Unique(unique bool) *IdentityQuery {
-	iq.unique = &unique
+	iq.ctx.Unique = &unique
 	return iq
 }
 
-// Order adds an order step to the query.
-func (iq *IdentityQuery) Order(o ...OrderFunc) *IdentityQuery {
+// Order specifies how the records should be ordered.
+func (iq *IdentityQuery) Order(o ...identity.OrderOption) *IdentityQuery {
 	iq.order = append(iq.order, o...)
 	return iq
 }
 
 // QueryEnvironment chains the current query on the "Environment" edge.
 func (iq *IdentityQuery) QueryEnvironment() *EnvironmentQuery {
-	query := &EnvironmentQuery{config: iq.config}
+	query := (&EnvironmentClient{config: iq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := iq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +88,7 @@ func (iq *IdentityQuery) QueryEnvironment() *EnvironmentQuery {
 // First returns the first Identity entity from the query.
 // Returns a *NotFoundError when no Identity was found.
 func (iq *IdentityQuery) First(ctx context.Context) (*Identity, error) {
-	nodes, err := iq.Limit(1).All(ctx)
+	nodes, err := iq.Limit(1).All(setContextOp(ctx, iq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (iq *IdentityQuery) FirstX(ctx context.Context) *Identity {
 // Returns a *NotFoundError when no Identity ID was found.
 func (iq *IdentityQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = iq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = iq.Limit(1).IDs(setContextOp(ctx, iq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +134,7 @@ func (iq *IdentityQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Identity entity is found.
 // Returns a *NotFoundError when no Identity entities are found.
 func (iq *IdentityQuery) Only(ctx context.Context) (*Identity, error) {
-	nodes, err := iq.Limit(2).All(ctx)
+	nodes, err := iq.Limit(2).All(setContextOp(ctx, iq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (iq *IdentityQuery) OnlyX(ctx context.Context) *Identity {
 // Returns a *NotFoundError when no entities are found.
 func (iq *IdentityQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = iq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = iq.Limit(2).IDs(setContextOp(ctx, iq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +187,12 @@ func (iq *IdentityQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Identities.
 func (iq *IdentityQuery) All(ctx context.Context) ([]*Identity, error) {
+	ctx = setContextOp(ctx, iq.ctx, "All")
 	if err := iq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return iq.sqlAll(ctx)
+	qr := querierAll[[]*Identity, *IdentityQuery]()
+	return withInterceptors[[]*Identity](ctx, iq, qr, iq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -203,9 +205,12 @@ func (iq *IdentityQuery) AllX(ctx context.Context) []*Identity {
 }
 
 // IDs executes the query and returns a list of Identity IDs.
-func (iq *IdentityQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := iq.Select(identity.FieldID).Scan(ctx, &ids); err != nil {
+func (iq *IdentityQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if iq.ctx.Unique == nil && iq.path != nil {
+		iq.Unique(true)
+	}
+	ctx = setContextOp(ctx, iq.ctx, "IDs")
+	if err = iq.Select(identity.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -222,10 +227,11 @@ func (iq *IdentityQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (iq *IdentityQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, iq.ctx, "Count")
 	if err := iq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return iq.sqlCount(ctx)
+	return withInterceptors[int](ctx, iq, querierCount[*IdentityQuery](), iq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +245,15 @@ func (iq *IdentityQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (iq *IdentityQuery) Exist(ctx context.Context) (bool, error) {
-	if err := iq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, iq.ctx, "Exist")
+	switch _, err := iq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return iq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -262,22 +273,21 @@ func (iq *IdentityQuery) Clone() *IdentityQuery {
 	}
 	return &IdentityQuery{
 		config:          iq.config,
-		limit:           iq.limit,
-		offset:          iq.offset,
-		order:           append([]OrderFunc{}, iq.order...),
+		ctx:             iq.ctx.Clone(),
+		order:           append([]identity.OrderOption{}, iq.order...),
+		inters:          append([]Interceptor{}, iq.inters...),
 		predicates:      append([]predicate.Identity{}, iq.predicates...),
 		withEnvironment: iq.withEnvironment.Clone(),
 		// clone intermediate query.
-		sql:    iq.sql.Clone(),
-		path:   iq.path,
-		unique: iq.unique,
+		sql:  iq.sql.Clone(),
+		path: iq.path,
 	}
 }
 
 // WithEnvironment tells the query-builder to eager-load the nodes that are connected to
 // the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
 func (iq *IdentityQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *IdentityQuery {
-	query := &EnvironmentQuery{config: iq.config}
+	query := (&EnvironmentClient{config: iq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -291,25 +301,20 @@ func (iq *IdentityQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *Ident
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Identity.Query().
-//		GroupBy(identity.FieldHclID).
+//		GroupBy(identity.FieldHCLID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (iq *IdentityQuery) GroupBy(field string, fields ...string) *IdentityGroupBy {
-	grbuild := &IdentityGroupBy{config: iq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := iq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return iq.sqlQuery(ctx), nil
-	}
+	iq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &IdentityGroupBy{build: iq}
+	grbuild.flds = &iq.ctx.Fields
 	grbuild.label = identity.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -319,22 +324,37 @@ func (iq *IdentityQuery) GroupBy(field string, fields ...string) *IdentityGroupB
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //	}
 //
 //	client.Identity.Query().
-//		Select(identity.FieldHclID).
+//		Select(identity.FieldHCLID).
 //		Scan(ctx, &v)
 func (iq *IdentityQuery) Select(fields ...string) *IdentitySelect {
-	iq.fields = append(iq.fields, fields...)
-	selbuild := &IdentitySelect{IdentityQuery: iq}
-	selbuild.label = identity.Label
-	selbuild.flds, selbuild.scan = &iq.fields, selbuild.Scan
-	return selbuild
+	iq.ctx.Fields = append(iq.ctx.Fields, fields...)
+	sbuild := &IdentitySelect{IdentityQuery: iq}
+	sbuild.label = identity.Label
+	sbuild.flds, sbuild.scan = &iq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a IdentitySelect configured with the given aggregations.
+func (iq *IdentityQuery) Aggregate(fns ...AggregateFunc) *IdentitySelect {
+	return iq.Select().Aggregate(fns...)
 }
 
 func (iq *IdentityQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range iq.fields {
+	for _, inter := range iq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, iq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range iq.ctx.Fields {
 		if !identity.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -364,14 +384,17 @@ func (iq *IdentityQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ide
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, identity.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Identity).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &Identity{config: iq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(iq.modifiers) > 0 {
+		_spec.Modifiers = iq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -385,6 +408,11 @@ func (iq *IdentityQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ide
 	if query := iq.withEnvironment; query != nil {
 		if err := iq.loadEnvironment(ctx, query, nodes, nil,
 			func(n *Identity, e *Environment) { n.Edges.Environment = e }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range iq.loadTotal {
+		if err := iq.loadTotal[i](ctx, nodes); err != nil {
 			return nil, err
 		}
 	}
@@ -403,6 +431,9 @@ func (iq *IdentityQuery) loadEnvironment(ctx context.Context, query *Environment
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(environment.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -423,38 +454,25 @@ func (iq *IdentityQuery) loadEnvironment(ctx context.Context, query *Environment
 
 func (iq *IdentityQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := iq.querySpec()
-	_spec.Node.Columns = iq.fields
-	if len(iq.fields) > 0 {
-		_spec.Unique = iq.unique != nil && *iq.unique
+	if len(iq.modifiers) > 0 {
+		_spec.Modifiers = iq.modifiers
+	}
+	_spec.Node.Columns = iq.ctx.Fields
+	if len(iq.ctx.Fields) > 0 {
+		_spec.Unique = iq.ctx.Unique != nil && *iq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, iq.driver, _spec)
 }
 
-func (iq *IdentityQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := iq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (iq *IdentityQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   identity.Table,
-			Columns: identity.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: identity.FieldID,
-			},
-		},
-		From:   iq.sql,
-		Unique: true,
-	}
-	if unique := iq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(identity.Table, identity.Columns, sqlgraph.NewFieldSpec(identity.FieldID, field.TypeUUID))
+	_spec.From = iq.sql
+	if unique := iq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if iq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := iq.fields; len(fields) > 0 {
+	if fields := iq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, identity.FieldID)
 		for i := range fields {
@@ -470,10 +488,10 @@ func (iq *IdentityQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := iq.limit; limit != nil {
+	if limit := iq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := iq.offset; offset != nil {
+	if offset := iq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := iq.order; len(ps) > 0 {
@@ -489,7 +507,7 @@ func (iq *IdentityQuery) querySpec() *sqlgraph.QuerySpec {
 func (iq *IdentityQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(iq.driver.Dialect())
 	t1 := builder.Table(identity.Table)
-	columns := iq.fields
+	columns := iq.ctx.Fields
 	if len(columns) == 0 {
 		columns = identity.Columns
 	}
@@ -498,7 +516,7 @@ func (iq *IdentityQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = iq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if iq.unique != nil && *iq.unique {
+	if iq.ctx.Unique != nil && *iq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range iq.predicates {
@@ -507,12 +525,12 @@ func (iq *IdentityQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range iq.order {
 		p(selector)
 	}
-	if offset := iq.offset; offset != nil {
+	if offset := iq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := iq.limit; limit != nil {
+	if limit := iq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -520,13 +538,8 @@ func (iq *IdentityQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // IdentityGroupBy is the group-by builder for Identity entities.
 type IdentityGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *IdentityQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -535,74 +548,77 @@ func (igb *IdentityGroupBy) Aggregate(fns ...AggregateFunc) *IdentityGroupBy {
 	return igb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (igb *IdentityGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := igb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (igb *IdentityGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, igb.build.ctx, "GroupBy")
+	if err := igb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	igb.sql = query
-	return igb.sqlScan(ctx, v)
+	return scanWithInterceptors[*IdentityQuery, *IdentityGroupBy](ctx, igb.build, igb, igb.build.inters, v)
 }
 
-func (igb *IdentityGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range igb.fields {
-		if !identity.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (igb *IdentityGroupBy) sqlScan(ctx context.Context, root *IdentityQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(igb.fns))
+	for _, fn := range igb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := igb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*igb.flds)+len(igb.fns))
+		for _, f := range *igb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*igb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := igb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := igb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (igb *IdentityGroupBy) sqlQuery() *sql.Selector {
-	selector := igb.sql.Select()
-	aggregation := make([]string, 0, len(igb.fns))
-	for _, fn := range igb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(igb.fields)+len(igb.fns))
-		for _, f := range igb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(igb.fields...)...)
-}
-
 // IdentitySelect is the builder for selecting fields of Identity entities.
 type IdentitySelect struct {
 	*IdentityQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (is *IdentitySelect) Aggregate(fns ...AggregateFunc) *IdentitySelect {
+	is.fns = append(is.fns, fns...)
+	return is
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (is *IdentitySelect) Scan(ctx context.Context, v interface{}) error {
+func (is *IdentitySelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, is.ctx, "Select")
 	if err := is.prepareQuery(ctx); err != nil {
 		return err
 	}
-	is.sql = is.IdentityQuery.sqlQuery(ctx)
-	return is.sqlScan(ctx, v)
+	return scanWithInterceptors[*IdentityQuery, *IdentitySelect](ctx, is.IdentityQuery, is, is.inters, v)
 }
 
-func (is *IdentitySelect) sqlScan(ctx context.Context, v interface{}) error {
+func (is *IdentitySelect) sqlScan(ctx context.Context, root *IdentityQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(is.fns))
+	for _, fn := range is.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*is.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := is.sql.Query()
+	query, args := selector.Query()
 	if err := is.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

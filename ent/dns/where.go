@@ -11,391 +11,257 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.DNS(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.DNS(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.DNS(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.DNS(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.DNS(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.DNS(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.DNS(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.DNS(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.DNS(sql.FieldLTE(FieldID, id))
 }
 
-// HclID applies equality check predicate on the "hcl_id" field. It's identical to HclIDEQ.
-func HclID(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldHclID), v))
-	})
+// HCLID applies equality check predicate on the "hcl_id" field. It's identical to HCLIDEQ.
+func HCLID(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldEQ(FieldHCLID, v))
 }
 
 // Type applies equality check predicate on the "type" field. It's identical to TypeEQ.
 func Type(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldEQ(FieldType, v))
 }
 
 // RootDomain applies equality check predicate on the "root_domain" field. It's identical to RootDomainEQ.
 func RootDomain(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldEQ(FieldRootDomain, v))
 }
 
-// HclIDEQ applies the EQ predicate on the "hcl_id" field.
-func HclIDEQ(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldHclID), v))
-	})
+// HCLIDEQ applies the EQ predicate on the "hcl_id" field.
+func HCLIDEQ(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldEQ(FieldHCLID, v))
 }
 
-// HclIDNEQ applies the NEQ predicate on the "hcl_id" field.
-func HclIDNEQ(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldHclID), v))
-	})
+// HCLIDNEQ applies the NEQ predicate on the "hcl_id" field.
+func HCLIDNEQ(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldNEQ(FieldHCLID, v))
 }
 
-// HclIDIn applies the In predicate on the "hcl_id" field.
-func HclIDIn(vs ...string) predicate.DNS {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldHclID), v...))
-	})
+// HCLIDIn applies the In predicate on the "hcl_id" field.
+func HCLIDIn(vs ...string) predicate.DNS {
+	return predicate.DNS(sql.FieldIn(FieldHCLID, vs...))
 }
 
-// HclIDNotIn applies the NotIn predicate on the "hcl_id" field.
-func HclIDNotIn(vs ...string) predicate.DNS {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldHclID), v...))
-	})
+// HCLIDNotIn applies the NotIn predicate on the "hcl_id" field.
+func HCLIDNotIn(vs ...string) predicate.DNS {
+	return predicate.DNS(sql.FieldNotIn(FieldHCLID, vs...))
 }
 
-// HclIDGT applies the GT predicate on the "hcl_id" field.
-func HclIDGT(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldHclID), v))
-	})
+// HCLIDGT applies the GT predicate on the "hcl_id" field.
+func HCLIDGT(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldGT(FieldHCLID, v))
 }
 
-// HclIDGTE applies the GTE predicate on the "hcl_id" field.
-func HclIDGTE(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldHclID), v))
-	})
+// HCLIDGTE applies the GTE predicate on the "hcl_id" field.
+func HCLIDGTE(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldGTE(FieldHCLID, v))
 }
 
-// HclIDLT applies the LT predicate on the "hcl_id" field.
-func HclIDLT(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldHclID), v))
-	})
+// HCLIDLT applies the LT predicate on the "hcl_id" field.
+func HCLIDLT(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldLT(FieldHCLID, v))
 }
 
-// HclIDLTE applies the LTE predicate on the "hcl_id" field.
-func HclIDLTE(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldHclID), v))
-	})
+// HCLIDLTE applies the LTE predicate on the "hcl_id" field.
+func HCLIDLTE(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldLTE(FieldHCLID, v))
 }
 
-// HclIDContains applies the Contains predicate on the "hcl_id" field.
-func HclIDContains(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldHclID), v))
-	})
+// HCLIDContains applies the Contains predicate on the "hcl_id" field.
+func HCLIDContains(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldContains(FieldHCLID, v))
 }
 
-// HclIDHasPrefix applies the HasPrefix predicate on the "hcl_id" field.
-func HclIDHasPrefix(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldHclID), v))
-	})
+// HCLIDHasPrefix applies the HasPrefix predicate on the "hcl_id" field.
+func HCLIDHasPrefix(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldHasPrefix(FieldHCLID, v))
 }
 
-// HclIDHasSuffix applies the HasSuffix predicate on the "hcl_id" field.
-func HclIDHasSuffix(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldHclID), v))
-	})
+// HCLIDHasSuffix applies the HasSuffix predicate on the "hcl_id" field.
+func HCLIDHasSuffix(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldHasSuffix(FieldHCLID, v))
 }
 
-// HclIDEqualFold applies the EqualFold predicate on the "hcl_id" field.
-func HclIDEqualFold(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldHclID), v))
-	})
+// HCLIDEqualFold applies the EqualFold predicate on the "hcl_id" field.
+func HCLIDEqualFold(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldEqualFold(FieldHCLID, v))
 }
 
-// HclIDContainsFold applies the ContainsFold predicate on the "hcl_id" field.
-func HclIDContainsFold(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldHclID), v))
-	})
+// HCLIDContainsFold applies the ContainsFold predicate on the "hcl_id" field.
+func HCLIDContainsFold(v string) predicate.DNS {
+	return predicate.DNS(sql.FieldContainsFold(FieldHCLID, v))
 }
 
 // TypeEQ applies the EQ predicate on the "type" field.
 func TypeEQ(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldEQ(FieldType, v))
 }
 
 // TypeNEQ applies the NEQ predicate on the "type" field.
 func TypeNEQ(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldNEQ(FieldType, v))
 }
 
 // TypeIn applies the In predicate on the "type" field.
 func TypeIn(vs ...string) predicate.DNS {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldType), v...))
-	})
+	return predicate.DNS(sql.FieldIn(FieldType, vs...))
 }
 
 // TypeNotIn applies the NotIn predicate on the "type" field.
 func TypeNotIn(vs ...string) predicate.DNS {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldType), v...))
-	})
+	return predicate.DNS(sql.FieldNotIn(FieldType, vs...))
 }
 
 // TypeGT applies the GT predicate on the "type" field.
 func TypeGT(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldGT(FieldType, v))
 }
 
 // TypeGTE applies the GTE predicate on the "type" field.
 func TypeGTE(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldGTE(FieldType, v))
 }
 
 // TypeLT applies the LT predicate on the "type" field.
 func TypeLT(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldLT(FieldType, v))
 }
 
 // TypeLTE applies the LTE predicate on the "type" field.
 func TypeLTE(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldLTE(FieldType, v))
 }
 
 // TypeContains applies the Contains predicate on the "type" field.
 func TypeContains(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldContains(FieldType, v))
 }
 
 // TypeHasPrefix applies the HasPrefix predicate on the "type" field.
 func TypeHasPrefix(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldHasPrefix(FieldType, v))
 }
 
 // TypeHasSuffix applies the HasSuffix predicate on the "type" field.
 func TypeHasSuffix(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldHasSuffix(FieldType, v))
 }
 
 // TypeEqualFold applies the EqualFold predicate on the "type" field.
 func TypeEqualFold(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldEqualFold(FieldType, v))
 }
 
 // TypeContainsFold applies the ContainsFold predicate on the "type" field.
 func TypeContainsFold(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldType), v))
-	})
+	return predicate.DNS(sql.FieldContainsFold(FieldType, v))
 }
 
 // RootDomainEQ applies the EQ predicate on the "root_domain" field.
 func RootDomainEQ(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldEQ(FieldRootDomain, v))
 }
 
 // RootDomainNEQ applies the NEQ predicate on the "root_domain" field.
 func RootDomainNEQ(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldNEQ(FieldRootDomain, v))
 }
 
 // RootDomainIn applies the In predicate on the "root_domain" field.
 func RootDomainIn(vs ...string) predicate.DNS {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldRootDomain), v...))
-	})
+	return predicate.DNS(sql.FieldIn(FieldRootDomain, vs...))
 }
 
 // RootDomainNotIn applies the NotIn predicate on the "root_domain" field.
 func RootDomainNotIn(vs ...string) predicate.DNS {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldRootDomain), v...))
-	})
+	return predicate.DNS(sql.FieldNotIn(FieldRootDomain, vs...))
 }
 
 // RootDomainGT applies the GT predicate on the "root_domain" field.
 func RootDomainGT(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldGT(FieldRootDomain, v))
 }
 
 // RootDomainGTE applies the GTE predicate on the "root_domain" field.
 func RootDomainGTE(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldGTE(FieldRootDomain, v))
 }
 
 // RootDomainLT applies the LT predicate on the "root_domain" field.
 func RootDomainLT(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldLT(FieldRootDomain, v))
 }
 
 // RootDomainLTE applies the LTE predicate on the "root_domain" field.
 func RootDomainLTE(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldLTE(FieldRootDomain, v))
 }
 
 // RootDomainContains applies the Contains predicate on the "root_domain" field.
 func RootDomainContains(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldContains(FieldRootDomain, v))
 }
 
 // RootDomainHasPrefix applies the HasPrefix predicate on the "root_domain" field.
 func RootDomainHasPrefix(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldHasPrefix(FieldRootDomain, v))
 }
 
 // RootDomainHasSuffix applies the HasSuffix predicate on the "root_domain" field.
 func RootDomainHasSuffix(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldHasSuffix(FieldRootDomain, v))
 }
 
 // RootDomainEqualFold applies the EqualFold predicate on the "root_domain" field.
 func RootDomainEqualFold(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldEqualFold(FieldRootDomain, v))
 }
 
 // RootDomainContainsFold applies the ContainsFold predicate on the "root_domain" field.
 func RootDomainContainsFold(v string) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldRootDomain), v))
-	})
+	return predicate.DNS(sql.FieldContainsFold(FieldRootDomain, v))
 }
 
 // HasEnvironments applies the HasEdge predicate on the "Environments" edge.
@@ -403,7 +269,6 @@ func HasEnvironments() predicate.DNS {
 	return predicate.DNS(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(EnvironmentsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, EnvironmentsTable, EnvironmentsPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -413,11 +278,7 @@ func HasEnvironments() predicate.DNS {
 // HasEnvironmentsWith applies the HasEdge predicate on the "Environments" edge with a given conditions (other predicates).
 func HasEnvironmentsWith(preds ...predicate.Environment) predicate.DNS {
 	return predicate.DNS(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(EnvironmentsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, EnvironmentsTable, EnvironmentsPrimaryKey...),
-		)
+		step := newEnvironmentsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -431,7 +292,6 @@ func HasCompetitions() predicate.DNS {
 	return predicate.DNS(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CompetitionsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, CompetitionsTable, CompetitionsPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -441,11 +301,7 @@ func HasCompetitions() predicate.DNS {
 // HasCompetitionsWith applies the HasEdge predicate on the "Competitions" edge with a given conditions (other predicates).
 func HasCompetitionsWith(preds ...predicate.Competition) predicate.DNS {
 	return predicate.DNS(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(CompetitionsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, CompetitionsTable, CompetitionsPrimaryKey...),
-		)
+		step := newCompetitionsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -456,32 +312,15 @@ func HasCompetitionsWith(preds ...predicate.Competition) predicate.DNS {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.DNS) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.DNS(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.DNS) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.DNS(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.DNS) predicate.DNS {
-	return predicate.DNS(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.DNS(sql.NotPredicates(p))
 }

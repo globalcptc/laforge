@@ -44,6 +44,14 @@ func (phu *ProvisionedHostUpdate) SetSubnetIP(s string) *ProvisionedHostUpdate {
 	return phu
 }
 
+// SetNillableSubnetIP sets the "subnet_ip" field if the given value is not nil.
+func (phu *ProvisionedHostUpdate) SetNillableSubnetIP(s *string) *ProvisionedHostUpdate {
+	if s != nil {
+		phu.SetSubnetIP(*s)
+	}
+	return phu
+}
+
 // SetAddonType sets the "addon_type" field.
 func (phu *ProvisionedHostUpdate) SetAddonType(pt provisionedhost.AddonType) *ProvisionedHostUpdate {
 	phu.mutation.SetAddonType(pt)
@@ -364,40 +372,7 @@ func (phu *ProvisionedHostUpdate) ClearGinFileMiddleware() *ProvisionedHostUpdat
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (phu *ProvisionedHostUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(phu.hooks) == 0 {
-		if err = phu.check(); err != nil {
-			return 0, err
-		}
-		affected, err = phu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ProvisionedHostMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = phu.check(); err != nil {
-				return 0, err
-			}
-			phu.mutation = mutation
-			affected, err = phu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(phu.hooks) - 1; i >= 0; i-- {
-			if phu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = phu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, phu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, phu.sqlSave, phu.mutation, phu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -445,16 +420,10 @@ func (phu *ProvisionedHostUpdate) check() error {
 }
 
 func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   provisionedhost.Table,
-			Columns: provisionedhost.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: provisionedhost.FieldID,
-			},
-		},
+	if err := phu.check(); err != nil {
+		return n, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(provisionedhost.Table, provisionedhost.Columns, sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID))
 	if ps := phu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -463,31 +432,16 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 	}
 	if value, ok := phu.mutation.SubnetIP(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: provisionedhost.FieldSubnetIP,
-		})
+		_spec.SetField(provisionedhost.FieldSubnetIP, field.TypeString, value)
 	}
 	if value, ok := phu.mutation.AddonType(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: provisionedhost.FieldAddonType,
-		})
+		_spec.SetField(provisionedhost.FieldAddonType, field.TypeEnum, value)
 	}
 	if phu.mutation.AddonTypeCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Column: provisionedhost.FieldAddonType,
-		})
+		_spec.ClearField(provisionedhost.FieldAddonType, field.TypeEnum)
 	}
 	if value, ok := phu.mutation.Vars(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: provisionedhost.FieldVars,
-		})
+		_spec.SetField(provisionedhost.FieldVars, field.TypeJSON, value)
 	}
 	if phu.mutation.StatusCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -497,10 +451,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: status.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -513,10 +464,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: status.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -532,10 +480,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -548,10 +493,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -567,10 +509,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -583,10 +522,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -602,10 +538,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.EndStepPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -618,10 +551,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.EndStepPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -637,10 +567,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -653,10 +580,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -672,10 +596,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.ProvisioningStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -688,10 +609,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.ProvisioningStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -707,10 +625,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.ProvisioningStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -726,10 +641,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.ProvisioningScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -742,10 +654,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.ProvisioningScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -761,10 +670,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.ProvisioningScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -780,10 +686,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.AgentStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agentstatus.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agentstatus.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -796,10 +699,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.AgentStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agentstatus.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agentstatus.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -815,10 +715,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.AgentStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agentstatus.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agentstatus.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -834,10 +731,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agenttask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -850,10 +744,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agenttask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -869,10 +760,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agenttask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -888,10 +776,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -904,10 +789,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -923,10 +805,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ginfilemiddleware.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -939,10 +818,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 			Columns: []string{provisionedhost.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ginfilemiddleware.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -958,6 +834,7 @@ func (phu *ProvisionedHostUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		return 0, err
 	}
+	phu.mutation.done = true
 	return n, nil
 }
 
@@ -972,6 +849,14 @@ type ProvisionedHostUpdateOne struct {
 // SetSubnetIP sets the "subnet_ip" field.
 func (phuo *ProvisionedHostUpdateOne) SetSubnetIP(s string) *ProvisionedHostUpdateOne {
 	phuo.mutation.SetSubnetIP(s)
+	return phuo
+}
+
+// SetNillableSubnetIP sets the "subnet_ip" field if the given value is not nil.
+func (phuo *ProvisionedHostUpdateOne) SetNillableSubnetIP(s *string) *ProvisionedHostUpdateOne {
+	if s != nil {
+		phuo.SetSubnetIP(*s)
+	}
 	return phuo
 }
 
@@ -1293,6 +1178,12 @@ func (phuo *ProvisionedHostUpdateOne) ClearGinFileMiddleware() *ProvisionedHostU
 	return phuo
 }
 
+// Where appends a list predicates to the ProvisionedHostUpdate builder.
+func (phuo *ProvisionedHostUpdateOne) Where(ps ...predicate.ProvisionedHost) *ProvisionedHostUpdateOne {
+	phuo.mutation.Where(ps...)
+	return phuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (phuo *ProvisionedHostUpdateOne) Select(field string, fields ...string) *ProvisionedHostUpdateOne {
@@ -1302,46 +1193,7 @@ func (phuo *ProvisionedHostUpdateOne) Select(field string, fields ...string) *Pr
 
 // Save executes the query and returns the updated ProvisionedHost entity.
 func (phuo *ProvisionedHostUpdateOne) Save(ctx context.Context) (*ProvisionedHost, error) {
-	var (
-		err  error
-		node *ProvisionedHost
-	)
-	if len(phuo.hooks) == 0 {
-		if err = phuo.check(); err != nil {
-			return nil, err
-		}
-		node, err = phuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ProvisionedHostMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = phuo.check(); err != nil {
-				return nil, err
-			}
-			phuo.mutation = mutation
-			node, err = phuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(phuo.hooks) - 1; i >= 0; i-- {
-			if phuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = phuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, phuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*ProvisionedHost)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from ProvisionedHostMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, phuo.sqlSave, phuo.mutation, phuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -1389,16 +1241,10 @@ func (phuo *ProvisionedHostUpdateOne) check() error {
 }
 
 func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *ProvisionedHost, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   provisionedhost.Table,
-			Columns: provisionedhost.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: provisionedhost.FieldID,
-			},
-		},
+	if err := phuo.check(); err != nil {
+		return _node, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(provisionedhost.Table, provisionedhost.Columns, sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID))
 	id, ok := phuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProvisionedHost.id" for update`)}
@@ -1424,31 +1270,16 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 	}
 	if value, ok := phuo.mutation.SubnetIP(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: provisionedhost.FieldSubnetIP,
-		})
+		_spec.SetField(provisionedhost.FieldSubnetIP, field.TypeString, value)
 	}
 	if value, ok := phuo.mutation.AddonType(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: provisionedhost.FieldAddonType,
-		})
+		_spec.SetField(provisionedhost.FieldAddonType, field.TypeEnum, value)
 	}
 	if phuo.mutation.AddonTypeCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Column: provisionedhost.FieldAddonType,
-		})
+		_spec.ClearField(provisionedhost.FieldAddonType, field.TypeEnum)
 	}
 	if value, ok := phuo.mutation.Vars(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: provisionedhost.FieldVars,
-		})
+		_spec.SetField(provisionedhost.FieldVars, field.TypeJSON, value)
 	}
 	if phuo.mutation.StatusCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1458,10 +1289,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: status.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1474,10 +1302,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: status.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1493,10 +1318,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1509,10 +1331,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1528,10 +1347,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1544,10 +1360,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1563,10 +1376,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.EndStepPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1579,10 +1389,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.EndStepPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1598,10 +1405,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1614,10 +1418,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1633,10 +1434,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.ProvisioningStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1649,10 +1447,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.ProvisioningStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1668,10 +1463,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.ProvisioningStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1687,10 +1479,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.ProvisioningScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1703,10 +1492,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.ProvisioningScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1722,10 +1508,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.ProvisioningScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1741,10 +1524,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.AgentStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agentstatus.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agentstatus.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1757,10 +1537,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.AgentStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agentstatus.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agentstatus.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1776,10 +1553,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.AgentStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agentstatus.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agentstatus.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1795,10 +1569,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agenttask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1811,10 +1582,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agenttask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1830,10 +1598,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agenttask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1849,10 +1614,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1865,10 +1627,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1884,10 +1643,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ginfilemiddleware.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1900,10 +1656,7 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Columns: []string{provisionedhost.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ginfilemiddleware.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1922,5 +1675,6 @@ func (phuo *ProvisionedHostUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		return nil, err
 	}
+	phuo.mutation.done = true
 	return _node, nil
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -34,6 +35,7 @@ type Build struct {
 	// The values are being populated by the BuildQuery when eager-loading is set.
 	Edges BuildEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Status holds the value of the Status edge.
 	HCLStatus *Status `json:"Status,omitempty"`
@@ -59,11 +61,12 @@ type Build struct {
 	HCLAgentStatuses []*AgentStatus `json:"AgentStatuses,omitempty"`
 	// ServerTasks holds the value of the ServerTasks edge.
 	HCLServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	build_environment         *uuid.UUID
 	build_competition         *uuid.UUID
 	build_latest_build_commit *uuid.UUID
 	build_repo_commit         *uuid.UUID
+	selectValues              sql.SelectValues
 }
 
 // BuildEdges holds the relations/edges for other nodes in the graph.
@@ -95,6 +98,16 @@ type BuildEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [12]bool
+	// totalCount holds the count of the edges above.
+	totalCount [12]map[string]int
+
+	namedProvisionedNetworks map[string][]*ProvisionedNetwork
+	namedTeams               map[string][]*Team
+	namedPlans               map[string][]*Plan
+	namedBuildCommits        map[string][]*BuildCommit
+	namedAdhocPlans          map[string][]*AdhocPlan
+	namedAgentStatuses       map[string][]*AgentStatus
+	namedServerTasks         map[string][]*ServerTask
 }
 
 // StatusOrErr returns the Status value or an error if the edge
@@ -102,8 +115,7 @@ type BuildEdges struct {
 func (e BuildEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[0] {
 		if e.Status == nil {
-			// The edge Status was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
 		return e.Status, nil
@@ -116,8 +128,7 @@ func (e BuildEdges) StatusOrErr() (*Status, error) {
 func (e BuildEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[1] {
 		if e.Environment == nil {
-			// The edge Environment was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
 		return e.Environment, nil
@@ -130,8 +141,7 @@ func (e BuildEdges) EnvironmentOrErr() (*Environment, error) {
 func (e BuildEdges) CompetitionOrErr() (*Competition, error) {
 	if e.loadedTypes[2] {
 		if e.Competition == nil {
-			// The edge Competition was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: competition.Label}
 		}
 		return e.Competition, nil
@@ -144,8 +154,7 @@ func (e BuildEdges) CompetitionOrErr() (*Competition, error) {
 func (e BuildEdges) LatestBuildCommitOrErr() (*BuildCommit, error) {
 	if e.loadedTypes[3] {
 		if e.LatestBuildCommit == nil {
-			// The edge LatestBuildCommit was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: buildcommit.Label}
 		}
 		return e.LatestBuildCommit, nil
@@ -158,8 +167,7 @@ func (e BuildEdges) LatestBuildCommitOrErr() (*BuildCommit, error) {
 func (e BuildEdges) RepoCommitOrErr() (*RepoCommit, error) {
 	if e.loadedTypes[4] {
 		if e.RepoCommit == nil {
-			// The edge RepoCommit was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: repocommit.Label}
 		}
 		return e.RepoCommit, nil
@@ -231,8 +239,8 @@ func (e BuildEdges) ServerTasksOrErr() ([]*ServerTask, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*Build) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*Build) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case build.FieldVars:
@@ -252,7 +260,7 @@ func (*Build) scanValues(columns []string) ([]interface{}, error) {
 		case build.ForeignKeys[3]: // build_repo_commit
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Build", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -260,7 +268,7 @@ func (*Build) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Build fields.
-func (b *Build) assignValues(columns []string, values []interface{}) error {
+func (b *Build) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -326,86 +334,94 @@ func (b *Build) assignValues(columns []string, values []interface{}) error {
 				b.build_repo_commit = new(uuid.UUID)
 				*b.build_repo_commit = *value.S.(*uuid.UUID)
 			}
+		default:
+			b.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the Build.
+// This includes values selected through modifiers, order, etc.
+func (b *Build) Value(name string) (ent.Value, error) {
+	return b.selectValues.Get(name)
+}
+
 // QueryStatus queries the "Status" edge of the Build entity.
 func (b *Build) QueryStatus() *StatusQuery {
-	return (&BuildClient{config: b.config}).QueryStatus(b)
+	return NewBuildClient(b.config).QueryStatus(b)
 }
 
 // QueryEnvironment queries the "Environment" edge of the Build entity.
 func (b *Build) QueryEnvironment() *EnvironmentQuery {
-	return (&BuildClient{config: b.config}).QueryEnvironment(b)
+	return NewBuildClient(b.config).QueryEnvironment(b)
 }
 
 // QueryCompetition queries the "Competition" edge of the Build entity.
 func (b *Build) QueryCompetition() *CompetitionQuery {
-	return (&BuildClient{config: b.config}).QueryCompetition(b)
+	return NewBuildClient(b.config).QueryCompetition(b)
 }
 
 // QueryLatestBuildCommit queries the "LatestBuildCommit" edge of the Build entity.
 func (b *Build) QueryLatestBuildCommit() *BuildCommitQuery {
-	return (&BuildClient{config: b.config}).QueryLatestBuildCommit(b)
+	return NewBuildClient(b.config).QueryLatestBuildCommit(b)
 }
 
 // QueryRepoCommit queries the "RepoCommit" edge of the Build entity.
 func (b *Build) QueryRepoCommit() *RepoCommitQuery {
-	return (&BuildClient{config: b.config}).QueryRepoCommit(b)
+	return NewBuildClient(b.config).QueryRepoCommit(b)
 }
 
 // QueryProvisionedNetworks queries the "ProvisionedNetworks" edge of the Build entity.
 func (b *Build) QueryProvisionedNetworks() *ProvisionedNetworkQuery {
-	return (&BuildClient{config: b.config}).QueryProvisionedNetworks(b)
+	return NewBuildClient(b.config).QueryProvisionedNetworks(b)
 }
 
 // QueryTeams queries the "Teams" edge of the Build entity.
 func (b *Build) QueryTeams() *TeamQuery {
-	return (&BuildClient{config: b.config}).QueryTeams(b)
+	return NewBuildClient(b.config).QueryTeams(b)
 }
 
 // QueryPlans queries the "Plans" edge of the Build entity.
 func (b *Build) QueryPlans() *PlanQuery {
-	return (&BuildClient{config: b.config}).QueryPlans(b)
+	return NewBuildClient(b.config).QueryPlans(b)
 }
 
 // QueryBuildCommits queries the "BuildCommits" edge of the Build entity.
 func (b *Build) QueryBuildCommits() *BuildCommitQuery {
-	return (&BuildClient{config: b.config}).QueryBuildCommits(b)
+	return NewBuildClient(b.config).QueryBuildCommits(b)
 }
 
 // QueryAdhocPlans queries the "AdhocPlans" edge of the Build entity.
 func (b *Build) QueryAdhocPlans() *AdhocPlanQuery {
-	return (&BuildClient{config: b.config}).QueryAdhocPlans(b)
+	return NewBuildClient(b.config).QueryAdhocPlans(b)
 }
 
 // QueryAgentStatuses queries the "AgentStatuses" edge of the Build entity.
 func (b *Build) QueryAgentStatuses() *AgentStatusQuery {
-	return (&BuildClient{config: b.config}).QueryAgentStatuses(b)
+	return NewBuildClient(b.config).QueryAgentStatuses(b)
 }
 
 // QueryServerTasks queries the "ServerTasks" edge of the Build entity.
 func (b *Build) QueryServerTasks() *ServerTaskQuery {
-	return (&BuildClient{config: b.config}).QueryServerTasks(b)
+	return NewBuildClient(b.config).QueryServerTasks(b)
 }
 
 // Update returns a builder for updating this Build.
 // Note that you need to call Build.Unwrap() before calling this method if this Build
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (b *Build) Update() *BuildUpdateOne {
-	return (&BuildClient{config: b.config}).UpdateOne(b)
+	return NewBuildClient(b.config).UpdateOne(b)
 }
 
 // Unwrap unwraps the Build entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (b *Build) Unwrap() *Build {
-	tx, ok := b.config.driver.(*txDriver)
+	_tx, ok := b.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Build is not a transactional entity")
 	}
-	b.config.driver = tx.drv
+	b.config.driver = _tx.drv
 	return b
 }
 
@@ -413,24 +429,189 @@ func (b *Build) Unwrap() *Build {
 func (b *Build) String() string {
 	var builder strings.Builder
 	builder.WriteString("Build(")
-	builder.WriteString(fmt.Sprintf("id=%v", b.ID))
-	builder.WriteString(", revision=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", b.ID))
+	builder.WriteString("revision=")
 	builder.WriteString(fmt.Sprintf("%v", b.Revision))
-	builder.WriteString(", environment_revision=")
+	builder.WriteString(", ")
+	builder.WriteString("environment_revision=")
 	builder.WriteString(fmt.Sprintf("%v", b.EnvironmentRevision))
-	builder.WriteString(", vars=")
+	builder.WriteString(", ")
+	builder.WriteString("vars=")
 	builder.WriteString(fmt.Sprintf("%v", b.Vars))
-	builder.WriteString(", completed_plan=")
+	builder.WriteString(", ")
+	builder.WriteString("completed_plan=")
 	builder.WriteString(fmt.Sprintf("%v", b.CompletedPlan))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// Builds is a parsable slice of Build.
-type Builds []*Build
+// NamedProvisionedNetworks returns the ProvisionedNetworks named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (b *Build) NamedProvisionedNetworks(name string) ([]*ProvisionedNetwork, error) {
+	if b.Edges.namedProvisionedNetworks == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := b.Edges.namedProvisionedNetworks[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (b Builds) config(cfg config) {
-	for _i := range b {
-		b[_i].config = cfg
+func (b *Build) appendNamedProvisionedNetworks(name string, edges ...*ProvisionedNetwork) {
+	if b.Edges.namedProvisionedNetworks == nil {
+		b.Edges.namedProvisionedNetworks = make(map[string][]*ProvisionedNetwork)
+	}
+	if len(edges) == 0 {
+		b.Edges.namedProvisionedNetworks[name] = []*ProvisionedNetwork{}
+	} else {
+		b.Edges.namedProvisionedNetworks[name] = append(b.Edges.namedProvisionedNetworks[name], edges...)
 	}
 }
+
+// NamedTeams returns the Teams named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (b *Build) NamedTeams(name string) ([]*Team, error) {
+	if b.Edges.namedTeams == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := b.Edges.namedTeams[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (b *Build) appendNamedTeams(name string, edges ...*Team) {
+	if b.Edges.namedTeams == nil {
+		b.Edges.namedTeams = make(map[string][]*Team)
+	}
+	if len(edges) == 0 {
+		b.Edges.namedTeams[name] = []*Team{}
+	} else {
+		b.Edges.namedTeams[name] = append(b.Edges.namedTeams[name], edges...)
+	}
+}
+
+// NamedPlans returns the Plans named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (b *Build) NamedPlans(name string) ([]*Plan, error) {
+	if b.Edges.namedPlans == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := b.Edges.namedPlans[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (b *Build) appendNamedPlans(name string, edges ...*Plan) {
+	if b.Edges.namedPlans == nil {
+		b.Edges.namedPlans = make(map[string][]*Plan)
+	}
+	if len(edges) == 0 {
+		b.Edges.namedPlans[name] = []*Plan{}
+	} else {
+		b.Edges.namedPlans[name] = append(b.Edges.namedPlans[name], edges...)
+	}
+}
+
+// NamedBuildCommits returns the BuildCommits named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (b *Build) NamedBuildCommits(name string) ([]*BuildCommit, error) {
+	if b.Edges.namedBuildCommits == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := b.Edges.namedBuildCommits[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (b *Build) appendNamedBuildCommits(name string, edges ...*BuildCommit) {
+	if b.Edges.namedBuildCommits == nil {
+		b.Edges.namedBuildCommits = make(map[string][]*BuildCommit)
+	}
+	if len(edges) == 0 {
+		b.Edges.namedBuildCommits[name] = []*BuildCommit{}
+	} else {
+		b.Edges.namedBuildCommits[name] = append(b.Edges.namedBuildCommits[name], edges...)
+	}
+}
+
+// NamedAdhocPlans returns the AdhocPlans named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (b *Build) NamedAdhocPlans(name string) ([]*AdhocPlan, error) {
+	if b.Edges.namedAdhocPlans == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := b.Edges.namedAdhocPlans[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (b *Build) appendNamedAdhocPlans(name string, edges ...*AdhocPlan) {
+	if b.Edges.namedAdhocPlans == nil {
+		b.Edges.namedAdhocPlans = make(map[string][]*AdhocPlan)
+	}
+	if len(edges) == 0 {
+		b.Edges.namedAdhocPlans[name] = []*AdhocPlan{}
+	} else {
+		b.Edges.namedAdhocPlans[name] = append(b.Edges.namedAdhocPlans[name], edges...)
+	}
+}
+
+// NamedAgentStatuses returns the AgentStatuses named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (b *Build) NamedAgentStatuses(name string) ([]*AgentStatus, error) {
+	if b.Edges.namedAgentStatuses == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := b.Edges.namedAgentStatuses[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (b *Build) appendNamedAgentStatuses(name string, edges ...*AgentStatus) {
+	if b.Edges.namedAgentStatuses == nil {
+		b.Edges.namedAgentStatuses = make(map[string][]*AgentStatus)
+	}
+	if len(edges) == 0 {
+		b.Edges.namedAgentStatuses[name] = []*AgentStatus{}
+	} else {
+		b.Edges.namedAgentStatuses[name] = append(b.Edges.namedAgentStatuses[name], edges...)
+	}
+}
+
+// NamedServerTasks returns the ServerTasks named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (b *Build) NamedServerTasks(name string) ([]*ServerTask, error) {
+	if b.Edges.namedServerTasks == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := b.Edges.namedServerTasks[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (b *Build) appendNamedServerTasks(name string, edges ...*ServerTask) {
+	if b.Edges.namedServerTasks == nil {
+		b.Edges.namedServerTasks = make(map[string][]*ServerTask)
+	}
+	if len(edges) == 0 {
+		b.Edges.namedServerTasks[name] = []*ServerTask{}
+	} else {
+		b.Edges.namedServerTasks[name] = append(b.Edges.namedServerTasks[name], edges...)
+	}
+}
+
+// Builds is a parsable slice of Build.
+type Builds []*Build

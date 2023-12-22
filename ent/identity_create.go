@@ -21,9 +21,9 @@ type IdentityCreate struct {
 	hooks    []Hook
 }
 
-// SetHclID sets the "hcl_id" field.
-func (ic *IdentityCreate) SetHclID(s string) *IdentityCreate {
-	ic.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (ic *IdentityCreate) SetHCLID(s string) *IdentityCreate {
+	ic.mutation.SetHCLID(s)
 	return ic
 }
 
@@ -115,50 +115,8 @@ func (ic *IdentityCreate) Mutation() *IdentityMutation {
 
 // Save creates the Identity in the database.
 func (ic *IdentityCreate) Save(ctx context.Context) (*Identity, error) {
-	var (
-		err  error
-		node *Identity
-	)
 	ic.defaults()
-	if len(ic.hooks) == 0 {
-		if err = ic.check(); err != nil {
-			return nil, err
-		}
-		node, err = ic.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*IdentityMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = ic.check(); err != nil {
-				return nil, err
-			}
-			ic.mutation = mutation
-			if node, err = ic.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(ic.hooks) - 1; i >= 0; i-- {
-			if ic.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ic.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, ic.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Identity)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from IdentityMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, ic.sqlSave, ic.mutation, ic.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -193,7 +151,7 @@ func (ic *IdentityCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (ic *IdentityCreate) check() error {
-	if _, ok := ic.mutation.HclID(); !ok {
+	if _, ok := ic.mutation.HCLID(); !ok {
 		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Identity.hcl_id"`)}
 	}
 	if _, ok := ic.mutation.FirstName(); !ok {
@@ -224,6 +182,9 @@ func (ic *IdentityCreate) check() error {
 }
 
 func (ic *IdentityCreate) sqlSave(ctx context.Context) (*Identity, error) {
+	if err := ic.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := ic.createSpec()
 	if err := sqlgraph.CreateNode(ctx, ic.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -238,94 +199,54 @@ func (ic *IdentityCreate) sqlSave(ctx context.Context) (*Identity, error) {
 			return nil, err
 		}
 	}
+	ic.mutation.id = &_node.ID
+	ic.mutation.done = true
 	return _node, nil
 }
 
 func (ic *IdentityCreate) createSpec() (*Identity, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Identity{config: ic.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: identity.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: identity.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(identity.Table, sqlgraph.NewFieldSpec(identity.FieldID, field.TypeUUID))
 	)
 	if id, ok := ic.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := ic.mutation.HclID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: identity.FieldHclID,
-		})
-		_node.HclID = value
+	if value, ok := ic.mutation.HCLID(); ok {
+		_spec.SetField(identity.FieldHCLID, field.TypeString, value)
+		_node.HCLID = value
 	}
 	if value, ok := ic.mutation.FirstName(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: identity.FieldFirstName,
-		})
+		_spec.SetField(identity.FieldFirstName, field.TypeString, value)
 		_node.FirstName = value
 	}
 	if value, ok := ic.mutation.LastName(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: identity.FieldLastName,
-		})
+		_spec.SetField(identity.FieldLastName, field.TypeString, value)
 		_node.LastName = value
 	}
 	if value, ok := ic.mutation.Email(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: identity.FieldEmail,
-		})
+		_spec.SetField(identity.FieldEmail, field.TypeString, value)
 		_node.Email = value
 	}
 	if value, ok := ic.mutation.Password(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: identity.FieldPassword,
-		})
+		_spec.SetField(identity.FieldPassword, field.TypeString, value)
 		_node.Password = value
 	}
 	if value, ok := ic.mutation.Description(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: identity.FieldDescription,
-		})
+		_spec.SetField(identity.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
 	if value, ok := ic.mutation.AvatarFile(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: identity.FieldAvatarFile,
-		})
+		_spec.SetField(identity.FieldAvatarFile, field.TypeString, value)
 		_node.AvatarFile = value
 	}
 	if value, ok := ic.mutation.Vars(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: identity.FieldVars,
-		})
+		_spec.SetField(identity.FieldVars, field.TypeJSON, value)
 		_node.Vars = value
 	}
 	if value, ok := ic.mutation.Tags(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: identity.FieldTags,
-		})
+		_spec.SetField(identity.FieldTags, field.TypeJSON, value)
 		_node.Tags = value
 	}
 	if nodes := ic.mutation.EnvironmentIDs(); len(nodes) > 0 {
@@ -336,10 +257,7 @@ func (ic *IdentityCreate) createSpec() (*Identity, *sqlgraph.CreateSpec) {
 			Columns: []string{identity.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -354,11 +272,15 @@ func (ic *IdentityCreate) createSpec() (*Identity, *sqlgraph.CreateSpec) {
 // IdentityCreateBulk is the builder for creating many Identity entities in bulk.
 type IdentityCreateBulk struct {
 	config
+	err      error
 	builders []*IdentityCreate
 }
 
 // Save creates the Identity entities in the database.
 func (icb *IdentityCreateBulk) Save(ctx context.Context) ([]*Identity, error) {
+	if icb.err != nil {
+		return nil, icb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(icb.builders))
 	nodes := make([]*Identity, len(icb.builders))
 	mutators := make([]Mutator, len(icb.builders))
@@ -375,8 +297,8 @@ func (icb *IdentityCreateBulk) Save(ctx context.Context) ([]*Identity, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, icb.builders[i+1].mutation)
 				} else {

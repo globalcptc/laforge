@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (rd *RepositoryDelete) Where(ps ...predicate.Repository) *RepositoryDelete 
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (rd *RepositoryDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(rd.hooks) == 0 {
-		affected, err = rd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*RepositoryMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			rd.mutation = mutation
-			affected, err = rd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(rd.hooks) - 1; i >= 0; i-- {
-			if rd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = rd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, rd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, rd.sqlExec, rd.mutation, rd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (rd *RepositoryDelete) ExecX(ctx context.Context) int {
 }
 
 func (rd *RepositoryDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: repository.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: repository.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(repository.Table, sqlgraph.NewFieldSpec(repository.FieldID, field.TypeUUID))
 	if ps := rd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (rd *RepositoryDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	rd.mutation.done = true
 	return affected, err
 }
 
 // RepositoryDeleteOne is the builder for deleting a single Repository entity.
 type RepositoryDeleteOne struct {
 	rd *RepositoryDelete
+}
+
+// Where appends a list predicates to the RepositoryDelete builder.
+func (rdo *RepositoryDeleteOne) Where(ps ...predicate.Repository) *RepositoryDeleteOne {
+	rdo.rd.mutation.Where(ps...)
+	return rdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (rdo *RepositoryDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (rdo *RepositoryDeleteOne) ExecX(ctx context.Context) {
-	rdo.rd.ExecX(ctx)
+	if err := rdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

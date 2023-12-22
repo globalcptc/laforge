@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/competition"
 	"github.com/gen0cide/laforge/ent/environment"
@@ -18,8 +19,8 @@ type Competition struct {
 	config ` json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// HclID holds the value of the "hcl_id" field.
-	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+	// HCLID holds the value of the "hcl_id" field.
+	HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// RootPassword holds the value of the "root_password" field.
 	RootPassword string `json:"root_password,omitempty" hcl:"root_password,attr"`
 	// StartTime holds the value of the "start_time" field.
@@ -34,6 +35,7 @@ type Competition struct {
 	// The values are being populated by the CompetitionQuery when eager-loading is set.
 	Edges CompetitionEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// DNS holds the value of the DNS edge.
 	HCLDNS []*DNS `json:"DNS,omitempty" hcl:"dns,block"`
@@ -41,8 +43,9 @@ type Competition struct {
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
 	// Builds holds the value of the Builds edge.
 	HCLBuilds []*Build `json:"Builds,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	environment_competitions *uuid.UUID
+	selectValues             sql.SelectValues
 }
 
 // CompetitionEdges holds the relations/edges for other nodes in the graph.
@@ -56,6 +59,11 @@ type CompetitionEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
+	// totalCount holds the count of the edges above.
+	totalCount [3]map[string]int
+
+	namedDNS    map[string][]*DNS
+	namedBuilds map[string][]*Build
 }
 
 // DNSOrErr returns the DNS value or an error if the edge
@@ -72,8 +80,7 @@ func (e CompetitionEdges) DNSOrErr() ([]*DNS, error) {
 func (e CompetitionEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[1] {
 		if e.Environment == nil {
-			// The edge Environment was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
 		return e.Environment, nil
@@ -91,22 +98,22 @@ func (e CompetitionEdges) BuildsOrErr() ([]*Build, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*Competition) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*Competition) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case competition.FieldConfig, competition.FieldTags:
 			values[i] = new([]byte)
 		case competition.FieldStartTime, competition.FieldStopTime:
 			values[i] = new(sql.NullInt64)
-		case competition.FieldHclID, competition.FieldRootPassword:
+		case competition.FieldHCLID, competition.FieldRootPassword:
 			values[i] = new(sql.NullString)
 		case competition.FieldID:
 			values[i] = new(uuid.UUID)
 		case competition.ForeignKeys[0]: // environment_competitions
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Competition", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -114,7 +121,7 @@ func (*Competition) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Competition fields.
-func (c *Competition) assignValues(columns []string, values []interface{}) error {
+func (c *Competition) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -126,11 +133,11 @@ func (c *Competition) assignValues(columns []string, values []interface{}) error
 			} else if value != nil {
 				c.ID = *value
 			}
-		case competition.FieldHclID:
+		case competition.FieldHCLID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field hcl_id", values[i])
 			} else if value.Valid {
-				c.HclID = value.String
+				c.HCLID = value.String
 			}
 		case competition.FieldRootPassword:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -173,41 +180,49 @@ func (c *Competition) assignValues(columns []string, values []interface{}) error
 				c.environment_competitions = new(uuid.UUID)
 				*c.environment_competitions = *value.S.(*uuid.UUID)
 			}
+		default:
+			c.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the Competition.
+// This includes values selected through modifiers, order, etc.
+func (c *Competition) Value(name string) (ent.Value, error) {
+	return c.selectValues.Get(name)
+}
+
 // QueryDNS queries the "DNS" edge of the Competition entity.
 func (c *Competition) QueryDNS() *DNSQuery {
-	return (&CompetitionClient{config: c.config}).QueryDNS(c)
+	return NewCompetitionClient(c.config).QueryDNS(c)
 }
 
 // QueryEnvironment queries the "Environment" edge of the Competition entity.
 func (c *Competition) QueryEnvironment() *EnvironmentQuery {
-	return (&CompetitionClient{config: c.config}).QueryEnvironment(c)
+	return NewCompetitionClient(c.config).QueryEnvironment(c)
 }
 
 // QueryBuilds queries the "Builds" edge of the Competition entity.
 func (c *Competition) QueryBuilds() *BuildQuery {
-	return (&CompetitionClient{config: c.config}).QueryBuilds(c)
+	return NewCompetitionClient(c.config).QueryBuilds(c)
 }
 
 // Update returns a builder for updating this Competition.
 // Note that you need to call Competition.Unwrap() before calling this method if this Competition
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (c *Competition) Update() *CompetitionUpdateOne {
-	return (&CompetitionClient{config: c.config}).UpdateOne(c)
+	return NewCompetitionClient(c.config).UpdateOne(c)
 }
 
 // Unwrap unwraps the Competition entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (c *Competition) Unwrap() *Competition {
-	tx, ok := c.config.driver.(*txDriver)
+	_tx, ok := c.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Competition is not a transactional entity")
 	}
-	c.config.driver = tx.drv
+	c.config.driver = _tx.drv
 	return c
 }
 
@@ -215,28 +230,75 @@ func (c *Competition) Unwrap() *Competition {
 func (c *Competition) String() string {
 	var builder strings.Builder
 	builder.WriteString("Competition(")
-	builder.WriteString(fmt.Sprintf("id=%v", c.ID))
-	builder.WriteString(", hcl_id=")
-	builder.WriteString(c.HclID)
-	builder.WriteString(", root_password=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", c.ID))
+	builder.WriteString("hcl_id=")
+	builder.WriteString(c.HCLID)
+	builder.WriteString(", ")
+	builder.WriteString("root_password=")
 	builder.WriteString(c.RootPassword)
-	builder.WriteString(", start_time=")
+	builder.WriteString(", ")
+	builder.WriteString("start_time=")
 	builder.WriteString(fmt.Sprintf("%v", c.StartTime))
-	builder.WriteString(", stop_time=")
+	builder.WriteString(", ")
+	builder.WriteString("stop_time=")
 	builder.WriteString(fmt.Sprintf("%v", c.StopTime))
-	builder.WriteString(", config=")
+	builder.WriteString(", ")
+	builder.WriteString("config=")
 	builder.WriteString(fmt.Sprintf("%v", c.Config))
-	builder.WriteString(", tags=")
+	builder.WriteString(", ")
+	builder.WriteString("tags=")
 	builder.WriteString(fmt.Sprintf("%v", c.Tags))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// Competitions is a parsable slice of Competition.
-type Competitions []*Competition
+// NamedDNS returns the DNS named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (c *Competition) NamedDNS(name string) ([]*DNS, error) {
+	if c.Edges.namedDNS == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := c.Edges.namedDNS[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (c Competitions) config(cfg config) {
-	for _i := range c {
-		c[_i].config = cfg
+func (c *Competition) appendNamedDNS(name string, edges ...*DNS) {
+	if c.Edges.namedDNS == nil {
+		c.Edges.namedDNS = make(map[string][]*DNS)
+	}
+	if len(edges) == 0 {
+		c.Edges.namedDNS[name] = []*DNS{}
+	} else {
+		c.Edges.namedDNS[name] = append(c.Edges.namedDNS[name], edges...)
 	}
 }
+
+// NamedBuilds returns the Builds named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (c *Competition) NamedBuilds(name string) ([]*Build, error) {
+	if c.Edges.namedBuilds == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := c.Edges.namedBuilds[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (c *Competition) appendNamedBuilds(name string, edges ...*Build) {
+	if c.Edges.namedBuilds == nil {
+		c.Edges.namedBuilds = make(map[string][]*Build)
+	}
+	if len(edges) == 0 {
+		c.Edges.namedBuilds[name] = []*Build{}
+	} else {
+		c.Edges.namedBuilds[name] = append(c.Edges.namedBuilds[name], edges...)
+	}
+}
+
+// Competitions is a parsable slice of Competition.
+type Competitions []*Competition

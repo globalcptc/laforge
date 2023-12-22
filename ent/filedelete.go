@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/filedelete"
@@ -18,8 +19,8 @@ type FileDelete struct {
 	config ` json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// HclID holds the value of the "hcl_id" field.
-	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+	// HCLID holds the value of the "hcl_id" field.
+	HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// Path holds the value of the "path" field.
 	Path string `json:"path,omitempty" hcl:"path,attr"`
 	// Tags holds the value of the "tags" field.
@@ -28,11 +29,13 @@ type FileDelete struct {
 	// The values are being populated by the FileDeleteQuery when eager-loading is set.
 	Edges FileDeleteEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	environment_file_deletes *uuid.UUID
+	selectValues             sql.SelectValues
 }
 
 // FileDeleteEdges holds the relations/edges for other nodes in the graph.
@@ -42,6 +45,8 @@ type FileDeleteEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
+	// totalCount holds the count of the edges above.
+	totalCount [1]map[string]int
 }
 
 // EnvironmentOrErr returns the Environment value or an error if the edge
@@ -49,8 +54,7 @@ type FileDeleteEdges struct {
 func (e FileDeleteEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[0] {
 		if e.Environment == nil {
-			// The edge Environment was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
 		return e.Environment, nil
@@ -59,20 +63,20 @@ func (e FileDeleteEdges) EnvironmentOrErr() (*Environment, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*FileDelete) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*FileDelete) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case filedelete.FieldTags:
 			values[i] = new([]byte)
-		case filedelete.FieldHclID, filedelete.FieldPath:
+		case filedelete.FieldHCLID, filedelete.FieldPath:
 			values[i] = new(sql.NullString)
 		case filedelete.FieldID:
 			values[i] = new(uuid.UUID)
 		case filedelete.ForeignKeys[0]: // environment_file_deletes
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type FileDelete", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -80,7 +84,7 @@ func (*FileDelete) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the FileDelete fields.
-func (fd *FileDelete) assignValues(columns []string, values []interface{}) error {
+func (fd *FileDelete) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -92,11 +96,11 @@ func (fd *FileDelete) assignValues(columns []string, values []interface{}) error
 			} else if value != nil {
 				fd.ID = *value
 			}
-		case filedelete.FieldHclID:
+		case filedelete.FieldHCLID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field hcl_id", values[i])
 			} else if value.Valid {
-				fd.HclID = value.String
+				fd.HCLID = value.String
 			}
 		case filedelete.FieldPath:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -119,31 +123,39 @@ func (fd *FileDelete) assignValues(columns []string, values []interface{}) error
 				fd.environment_file_deletes = new(uuid.UUID)
 				*fd.environment_file_deletes = *value.S.(*uuid.UUID)
 			}
+		default:
+			fd.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the FileDelete.
+// This includes values selected through modifiers, order, etc.
+func (fd *FileDelete) Value(name string) (ent.Value, error) {
+	return fd.selectValues.Get(name)
+}
+
 // QueryEnvironment queries the "Environment" edge of the FileDelete entity.
 func (fd *FileDelete) QueryEnvironment() *EnvironmentQuery {
-	return (&FileDeleteClient{config: fd.config}).QueryEnvironment(fd)
+	return NewFileDeleteClient(fd.config).QueryEnvironment(fd)
 }
 
 // Update returns a builder for updating this FileDelete.
 // Note that you need to call FileDelete.Unwrap() before calling this method if this FileDelete
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (fd *FileDelete) Update() *FileDeleteUpdateOne {
-	return (&FileDeleteClient{config: fd.config}).UpdateOne(fd)
+	return NewFileDeleteClient(fd.config).UpdateOne(fd)
 }
 
 // Unwrap unwraps the FileDelete entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (fd *FileDelete) Unwrap() *FileDelete {
-	tx, ok := fd.config.driver.(*txDriver)
+	_tx, ok := fd.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: FileDelete is not a transactional entity")
 	}
-	fd.config.driver = tx.drv
+	fd.config.driver = _tx.drv
 	return fd
 }
 
@@ -151,12 +163,14 @@ func (fd *FileDelete) Unwrap() *FileDelete {
 func (fd *FileDelete) String() string {
 	var builder strings.Builder
 	builder.WriteString("FileDelete(")
-	builder.WriteString(fmt.Sprintf("id=%v", fd.ID))
-	builder.WriteString(", hcl_id=")
-	builder.WriteString(fd.HclID)
-	builder.WriteString(", path=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", fd.ID))
+	builder.WriteString("hcl_id=")
+	builder.WriteString(fd.HCLID)
+	builder.WriteString(", ")
+	builder.WriteString("path=")
 	builder.WriteString(fd.Path)
-	builder.WriteString(", tags=")
+	builder.WriteString(", ")
+	builder.WriteString("tags=")
 	builder.WriteString(fmt.Sprintf("%v", fd.Tags))
 	builder.WriteByte(')')
 	return builder.String()
@@ -164,9 +178,3 @@ func (fd *FileDelete) String() string {
 
 // FileDeletes is a parsable slice of FileDelete.
 type FileDeletes []*FileDelete
-
-func (fd FileDeletes) config(cfg config) {
-	for _i := range fd {
-		fd[_i].config = cfg
-	}
-}

@@ -3,6 +3,8 @@
 package agentstatus
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -116,3 +118,123 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the AgentStatus queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByClientID orders the results by the ClientID field.
+func ByClientID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClientID, opts...).ToFunc()
+}
+
+// ByHostname orders the results by the Hostname field.
+func ByHostname(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHostname, opts...).ToFunc()
+}
+
+// ByUpTime orders the results by the UpTime field.
+func ByUpTime(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUpTime, opts...).ToFunc()
+}
+
+// ByBootTime orders the results by the BootTime field.
+func ByBootTime(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBootTime, opts...).ToFunc()
+}
+
+// ByNumProcs orders the results by the NumProcs field.
+func ByNumProcs(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNumProcs, opts...).ToFunc()
+}
+
+// ByOs orders the results by the Os field.
+func ByOs(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOs, opts...).ToFunc()
+}
+
+// ByHostID orders the results by the HostID field.
+func ByHostID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHostID, opts...).ToFunc()
+}
+
+// ByLoad1 orders the results by the Load1 field.
+func ByLoad1(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLoad1, opts...).ToFunc()
+}
+
+// ByLoad5 orders the results by the Load5 field.
+func ByLoad5(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLoad5, opts...).ToFunc()
+}
+
+// ByLoad15 orders the results by the Load15 field.
+func ByLoad15(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLoad15, opts...).ToFunc()
+}
+
+// ByTotalMem orders the results by the TotalMem field.
+func ByTotalMem(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTotalMem, opts...).ToFunc()
+}
+
+// ByFreeMem orders the results by the FreeMem field.
+func ByFreeMem(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFreeMem, opts...).ToFunc()
+}
+
+// ByUsedMem orders the results by the UsedMem field.
+func ByUsedMem(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUsedMem, opts...).ToFunc()
+}
+
+// ByTimestamp orders the results by the Timestamp field.
+func ByTimestamp(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTimestamp, opts...).ToFunc()
+}
+
+// ByProvisionedHostField orders the results by ProvisionedHost field.
+func ByProvisionedHostField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisionedHostStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisionedNetworkField orders the results by ProvisionedNetwork field.
+func ByProvisionedNetworkField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisionedNetworkStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByBuildField orders the results by Build field.
+func ByBuildField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBuildStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newProvisionedHostStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisionedHostInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, ProvisionedHostTable, ProvisionedHostColumn),
+	)
+}
+func newProvisionedNetworkStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisionedNetworkInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, ProvisionedNetworkTable, ProvisionedNetworkColumn),
+	)
+}
+func newBuildStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BuildInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
+	)
+}

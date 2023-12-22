@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/command"
@@ -37,6 +38,7 @@ type ProvisioningScheduledStep struct {
 	// The values are being populated by the ProvisioningScheduledStepQuery when eager-loading is set.
 	Edges ProvisioningScheduledStepEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Status holds the value of the Status edge.
 	HCLStatus *Status `json:"Status,omitempty"`
@@ -64,7 +66,7 @@ type ProvisioningScheduledStep struct {
 	HCLPlan *Plan `json:"Plan,omitempty"`
 	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
 	HCLGinFileMiddleware *GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	gin_file_middleware_provisioning_scheduled_step *uuid.UUID
 	plan_provisioning_scheduled_step                *uuid.UUID
 	provisioning_scheduled_step_scheduled_step      *uuid.UUID
@@ -76,6 +78,7 @@ type ProvisioningScheduledStep struct {
 	provisioning_scheduled_step_file_download       *uuid.UUID
 	provisioning_scheduled_step_file_extract        *uuid.UUID
 	provisioning_scheduled_step_ansible             *uuid.UUID
+	selectValues                                    sql.SelectValues
 }
 
 // ProvisioningScheduledStepEdges holds the relations/edges for other nodes in the graph.
@@ -109,6 +112,10 @@ type ProvisioningScheduledStepEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [13]bool
+	// totalCount holds the count of the edges above.
+	totalCount [13]map[string]int
+
+	namedAgentTasks map[string][]*AgentTask
 }
 
 // StatusOrErr returns the Status value or an error if the edge
@@ -116,8 +123,7 @@ type ProvisioningScheduledStepEdges struct {
 func (e ProvisioningScheduledStepEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[0] {
 		if e.Status == nil {
-			// The edge Status was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
 		return e.Status, nil
@@ -130,8 +136,7 @@ func (e ProvisioningScheduledStepEdges) StatusOrErr() (*Status, error) {
 func (e ProvisioningScheduledStepEdges) ScheduledStepOrErr() (*ScheduledStep, error) {
 	if e.loadedTypes[1] {
 		if e.ScheduledStep == nil {
-			// The edge ScheduledStep was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: scheduledstep.Label}
 		}
 		return e.ScheduledStep, nil
@@ -144,8 +149,7 @@ func (e ProvisioningScheduledStepEdges) ScheduledStepOrErr() (*ScheduledStep, er
 func (e ProvisioningScheduledStepEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[2] {
 		if e.ProvisionedHost == nil {
-			// The edge ProvisionedHost was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
 		return e.ProvisionedHost, nil
@@ -158,8 +162,7 @@ func (e ProvisioningScheduledStepEdges) ProvisionedHostOrErr() (*ProvisionedHost
 func (e ProvisioningScheduledStepEdges) ScriptOrErr() (*Script, error) {
 	if e.loadedTypes[3] {
 		if e.Script == nil {
-			// The edge Script was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: script.Label}
 		}
 		return e.Script, nil
@@ -172,8 +175,7 @@ func (e ProvisioningScheduledStepEdges) ScriptOrErr() (*Script, error) {
 func (e ProvisioningScheduledStepEdges) CommandOrErr() (*Command, error) {
 	if e.loadedTypes[4] {
 		if e.Command == nil {
-			// The edge Command was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: command.Label}
 		}
 		return e.Command, nil
@@ -186,8 +188,7 @@ func (e ProvisioningScheduledStepEdges) CommandOrErr() (*Command, error) {
 func (e ProvisioningScheduledStepEdges) DNSRecordOrErr() (*DNSRecord, error) {
 	if e.loadedTypes[5] {
 		if e.DNSRecord == nil {
-			// The edge DNSRecord was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: dnsrecord.Label}
 		}
 		return e.DNSRecord, nil
@@ -200,8 +201,7 @@ func (e ProvisioningScheduledStepEdges) DNSRecordOrErr() (*DNSRecord, error) {
 func (e ProvisioningScheduledStepEdges) FileDeleteOrErr() (*FileDelete, error) {
 	if e.loadedTypes[6] {
 		if e.FileDelete == nil {
-			// The edge FileDelete was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: filedelete.Label}
 		}
 		return e.FileDelete, nil
@@ -214,8 +214,7 @@ func (e ProvisioningScheduledStepEdges) FileDeleteOrErr() (*FileDelete, error) {
 func (e ProvisioningScheduledStepEdges) FileDownloadOrErr() (*FileDownload, error) {
 	if e.loadedTypes[7] {
 		if e.FileDownload == nil {
-			// The edge FileDownload was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: filedownload.Label}
 		}
 		return e.FileDownload, nil
@@ -228,8 +227,7 @@ func (e ProvisioningScheduledStepEdges) FileDownloadOrErr() (*FileDownload, erro
 func (e ProvisioningScheduledStepEdges) FileExtractOrErr() (*FileExtract, error) {
 	if e.loadedTypes[8] {
 		if e.FileExtract == nil {
-			// The edge FileExtract was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: fileextract.Label}
 		}
 		return e.FileExtract, nil
@@ -242,8 +240,7 @@ func (e ProvisioningScheduledStepEdges) FileExtractOrErr() (*FileExtract, error)
 func (e ProvisioningScheduledStepEdges) AnsibleOrErr() (*Ansible, error) {
 	if e.loadedTypes[9] {
 		if e.Ansible == nil {
-			// The edge Ansible was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: ansible.Label}
 		}
 		return e.Ansible, nil
@@ -265,8 +262,7 @@ func (e ProvisioningScheduledStepEdges) AgentTasksOrErr() ([]*AgentTask, error) 
 func (e ProvisioningScheduledStepEdges) PlanOrErr() (*Plan, error) {
 	if e.loadedTypes[11] {
 		if e.Plan == nil {
-			// The edge Plan was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: plan.Label}
 		}
 		return e.Plan, nil
@@ -279,8 +275,7 @@ func (e ProvisioningScheduledStepEdges) PlanOrErr() (*Plan, error) {
 func (e ProvisioningScheduledStepEdges) GinFileMiddlewareOrErr() (*GinFileMiddleware, error) {
 	if e.loadedTypes[12] {
 		if e.GinFileMiddleware == nil {
-			// The edge GinFileMiddleware was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: ginfilemiddleware.Label}
 		}
 		return e.GinFileMiddleware, nil
@@ -289,8 +284,8 @@ func (e ProvisioningScheduledStepEdges) GinFileMiddlewareOrErr() (*GinFileMiddle
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*ProvisioningScheduledStep) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*ProvisioningScheduledStep) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case provisioningscheduledstep.FieldType:
@@ -322,7 +317,7 @@ func (*ProvisioningScheduledStep) scanValues(columns []string) ([]interface{}, e
 		case provisioningscheduledstep.ForeignKeys[10]: // provisioning_scheduled_step_ansible
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type ProvisioningScheduledStep", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -330,7 +325,7 @@ func (*ProvisioningScheduledStep) scanValues(columns []string) ([]interface{}, e
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the ProvisioningScheduledStep fields.
-func (pss *ProvisioningScheduledStep) assignValues(columns []string, values []interface{}) error {
+func (pss *ProvisioningScheduledStep) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -431,91 +426,99 @@ func (pss *ProvisioningScheduledStep) assignValues(columns []string, values []in
 				pss.provisioning_scheduled_step_ansible = new(uuid.UUID)
 				*pss.provisioning_scheduled_step_ansible = *value.S.(*uuid.UUID)
 			}
+		default:
+			pss.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the ProvisioningScheduledStep.
+// This includes values selected through modifiers, order, etc.
+func (pss *ProvisioningScheduledStep) Value(name string) (ent.Value, error) {
+	return pss.selectValues.Get(name)
+}
+
 // QueryStatus queries the "Status" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryStatus() *StatusQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryStatus(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryStatus(pss)
 }
 
 // QueryScheduledStep queries the "ScheduledStep" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryScheduledStep() *ScheduledStepQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryScheduledStep(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryScheduledStep(pss)
 }
 
 // QueryProvisionedHost queries the "ProvisionedHost" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryProvisionedHost() *ProvisionedHostQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryProvisionedHost(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryProvisionedHost(pss)
 }
 
 // QueryScript queries the "Script" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryScript() *ScriptQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryScript(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryScript(pss)
 }
 
 // QueryCommand queries the "Command" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryCommand() *CommandQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryCommand(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryCommand(pss)
 }
 
 // QueryDNSRecord queries the "DNSRecord" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryDNSRecord() *DNSRecordQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryDNSRecord(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryDNSRecord(pss)
 }
 
 // QueryFileDelete queries the "FileDelete" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryFileDelete() *FileDeleteQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryFileDelete(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryFileDelete(pss)
 }
 
 // QueryFileDownload queries the "FileDownload" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryFileDownload() *FileDownloadQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryFileDownload(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryFileDownload(pss)
 }
 
 // QueryFileExtract queries the "FileExtract" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryFileExtract() *FileExtractQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryFileExtract(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryFileExtract(pss)
 }
 
 // QueryAnsible queries the "Ansible" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryAnsible() *AnsibleQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryAnsible(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryAnsible(pss)
 }
 
 // QueryAgentTasks queries the "AgentTasks" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryAgentTasks() *AgentTaskQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryAgentTasks(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryAgentTasks(pss)
 }
 
 // QueryPlan queries the "Plan" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryPlan() *PlanQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryPlan(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryPlan(pss)
 }
 
 // QueryGinFileMiddleware queries the "GinFileMiddleware" edge of the ProvisioningScheduledStep entity.
 func (pss *ProvisioningScheduledStep) QueryGinFileMiddleware() *GinFileMiddlewareQuery {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).QueryGinFileMiddleware(pss)
+	return NewProvisioningScheduledStepClient(pss.config).QueryGinFileMiddleware(pss)
 }
 
 // Update returns a builder for updating this ProvisioningScheduledStep.
 // Note that you need to call ProvisioningScheduledStep.Unwrap() before calling this method if this ProvisioningScheduledStep
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (pss *ProvisioningScheduledStep) Update() *ProvisioningScheduledStepUpdateOne {
-	return (&ProvisioningScheduledStepClient{config: pss.config}).UpdateOne(pss)
+	return NewProvisioningScheduledStepClient(pss.config).UpdateOne(pss)
 }
 
 // Unwrap unwraps the ProvisioningScheduledStep entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (pss *ProvisioningScheduledStep) Unwrap() *ProvisioningScheduledStep {
-	tx, ok := pss.config.driver.(*txDriver)
+	_tx, ok := pss.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: ProvisioningScheduledStep is not a transactional entity")
 	}
-	pss.config.driver = tx.drv
+	pss.config.driver = _tx.drv
 	return pss
 }
 
@@ -523,20 +526,39 @@ func (pss *ProvisioningScheduledStep) Unwrap() *ProvisioningScheduledStep {
 func (pss *ProvisioningScheduledStep) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProvisioningScheduledStep(")
-	builder.WriteString(fmt.Sprintf("id=%v", pss.ID))
-	builder.WriteString(", type=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", pss.ID))
+	builder.WriteString("type=")
 	builder.WriteString(fmt.Sprintf("%v", pss.Type))
-	builder.WriteString(", run_time=")
+	builder.WriteString(", ")
+	builder.WriteString("run_time=")
 	builder.WriteString(pss.RunTime.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// ProvisioningScheduledSteps is a parsable slice of ProvisioningScheduledStep.
-type ProvisioningScheduledSteps []*ProvisioningScheduledStep
+// NamedAgentTasks returns the AgentTasks named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (pss *ProvisioningScheduledStep) NamedAgentTasks(name string) ([]*AgentTask, error) {
+	if pss.Edges.namedAgentTasks == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := pss.Edges.namedAgentTasks[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (pss ProvisioningScheduledSteps) config(cfg config) {
-	for _i := range pss {
-		pss[_i].config = cfg
+func (pss *ProvisioningScheduledStep) appendNamedAgentTasks(name string, edges ...*AgentTask) {
+	if pss.Edges.namedAgentTasks == nil {
+		pss.Edges.namedAgentTasks = make(map[string][]*AgentTask)
+	}
+	if len(edges) == 0 {
+		pss.Edges.namedAgentTasks[name] = []*AgentTask{}
+	} else {
+		pss.Edges.namedAgentTasks[name] = append(pss.Edges.namedAgentTasks[name], edges...)
 	}
 }
+
+// ProvisioningScheduledSteps is a parsable slice of ProvisioningScheduledStep.
+type ProvisioningScheduledSteps []*ProvisioningScheduledStep

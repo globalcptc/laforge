@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -1693,10 +1694,13 @@ func init() {
 	CompetitionDNSTable.ForeignKeys[1].RefTable = DnSsTable
 	EnvironmentUsersTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	EnvironmentUsersTable.ForeignKeys[1].RefTable = UsersTable
+	EnvironmentUsersTable.Annotation = &entsql.Annotation{}
 	EnvironmentIncludedNetworksTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	EnvironmentIncludedNetworksTable.ForeignKeys[1].RefTable = IncludedNetworksTable
+	EnvironmentIncludedNetworksTable.Annotation = &entsql.Annotation{}
 	EnvironmentDNSTable.ForeignKeys[0].RefTable = EnvironmentsTable
 	EnvironmentDNSTable.ForeignKeys[1].RefTable = DnSsTable
+	EnvironmentDNSTable.Annotation = &entsql.Annotation{}
 	IncludedNetworkHostsTable.ForeignKeys[0].RefTable = IncludedNetworksTable
 	IncludedNetworkHostsTable.ForeignKeys[1].RefTable = HostsTable
 	PlanNextPlansTable.ForeignKeys[0].RefTable = PlansTable

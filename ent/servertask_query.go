@@ -25,19 +25,20 @@ import (
 // ServerTaskQuery is the builder for querying ServerTask entities.
 type ServerTaskQuery struct {
 	config
-	limit                 *int
-	offset                *int
-	unique                *bool
-	order                 []OrderFunc
-	fields                []string
-	predicates            []predicate.ServerTask
-	withAuthUser          *AuthUserQuery
-	withStatus            *StatusQuery
-	withEnvironment       *EnvironmentQuery
-	withBuild             *BuildQuery
-	withBuildCommit       *BuildCommitQuery
-	withGinFileMiddleware *GinFileMiddlewareQuery
-	withFKs               bool
+	ctx                        *QueryContext
+	order                      []servertask.OrderOption
+	inters                     []Interceptor
+	predicates                 []predicate.ServerTask
+	withAuthUser               *AuthUserQuery
+	withStatus                 *StatusQuery
+	withEnvironment            *EnvironmentQuery
+	withBuild                  *BuildQuery
+	withBuildCommit            *BuildCommitQuery
+	withGinFileMiddleware      *GinFileMiddlewareQuery
+	withFKs                    bool
+	modifiers                  []func(*sql.Selector)
+	loadTotal                  []func(context.Context, []*ServerTask) error
+	withNamedGinFileMiddleware map[string]*GinFileMiddlewareQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -49,34 +50,34 @@ func (stq *ServerTaskQuery) Where(ps ...predicate.ServerTask) *ServerTaskQuery {
 	return stq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (stq *ServerTaskQuery) Limit(limit int) *ServerTaskQuery {
-	stq.limit = &limit
+	stq.ctx.Limit = &limit
 	return stq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (stq *ServerTaskQuery) Offset(offset int) *ServerTaskQuery {
-	stq.offset = &offset
+	stq.ctx.Offset = &offset
 	return stq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (stq *ServerTaskQuery) Unique(unique bool) *ServerTaskQuery {
-	stq.unique = &unique
+	stq.ctx.Unique = &unique
 	return stq
 }
 
-// Order adds an order step to the query.
-func (stq *ServerTaskQuery) Order(o ...OrderFunc) *ServerTaskQuery {
+// Order specifies how the records should be ordered.
+func (stq *ServerTaskQuery) Order(o ...servertask.OrderOption) *ServerTaskQuery {
 	stq.order = append(stq.order, o...)
 	return stq
 }
 
 // QueryAuthUser chains the current query on the "AuthUser" edge.
 func (stq *ServerTaskQuery) QueryAuthUser() *AuthUserQuery {
-	query := &AuthUserQuery{config: stq.config}
+	query := (&AuthUserClient{config: stq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -98,7 +99,7 @@ func (stq *ServerTaskQuery) QueryAuthUser() *AuthUserQuery {
 
 // QueryStatus chains the current query on the "Status" edge.
 func (stq *ServerTaskQuery) QueryStatus() *StatusQuery {
-	query := &StatusQuery{config: stq.config}
+	query := (&StatusClient{config: stq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -120,7 +121,7 @@ func (stq *ServerTaskQuery) QueryStatus() *StatusQuery {
 
 // QueryEnvironment chains the current query on the "Environment" edge.
 func (stq *ServerTaskQuery) QueryEnvironment() *EnvironmentQuery {
-	query := &EnvironmentQuery{config: stq.config}
+	query := (&EnvironmentClient{config: stq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -142,7 +143,7 @@ func (stq *ServerTaskQuery) QueryEnvironment() *EnvironmentQuery {
 
 // QueryBuild chains the current query on the "Build" edge.
 func (stq *ServerTaskQuery) QueryBuild() *BuildQuery {
-	query := &BuildQuery{config: stq.config}
+	query := (&BuildClient{config: stq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -164,7 +165,7 @@ func (stq *ServerTaskQuery) QueryBuild() *BuildQuery {
 
 // QueryBuildCommit chains the current query on the "BuildCommit" edge.
 func (stq *ServerTaskQuery) QueryBuildCommit() *BuildCommitQuery {
-	query := &BuildCommitQuery{config: stq.config}
+	query := (&BuildCommitClient{config: stq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -186,7 +187,7 @@ func (stq *ServerTaskQuery) QueryBuildCommit() *BuildCommitQuery {
 
 // QueryGinFileMiddleware chains the current query on the "GinFileMiddleware" edge.
 func (stq *ServerTaskQuery) QueryGinFileMiddleware() *GinFileMiddlewareQuery {
-	query := &GinFileMiddlewareQuery{config: stq.config}
+	query := (&GinFileMiddlewareClient{config: stq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := stq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -209,7 +210,7 @@ func (stq *ServerTaskQuery) QueryGinFileMiddleware() *GinFileMiddlewareQuery {
 // First returns the first ServerTask entity from the query.
 // Returns a *NotFoundError when no ServerTask was found.
 func (stq *ServerTaskQuery) First(ctx context.Context) (*ServerTask, error) {
-	nodes, err := stq.Limit(1).All(ctx)
+	nodes, err := stq.Limit(1).All(setContextOp(ctx, stq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +233,7 @@ func (stq *ServerTaskQuery) FirstX(ctx context.Context) *ServerTask {
 // Returns a *NotFoundError when no ServerTask ID was found.
 func (stq *ServerTaskQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = stq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = stq.Limit(1).IDs(setContextOp(ctx, stq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -255,7 +256,7 @@ func (stq *ServerTaskQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one ServerTask entity is found.
 // Returns a *NotFoundError when no ServerTask entities are found.
 func (stq *ServerTaskQuery) Only(ctx context.Context) (*ServerTask, error) {
-	nodes, err := stq.Limit(2).All(ctx)
+	nodes, err := stq.Limit(2).All(setContextOp(ctx, stq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +284,7 @@ func (stq *ServerTaskQuery) OnlyX(ctx context.Context) *ServerTask {
 // Returns a *NotFoundError when no entities are found.
 func (stq *ServerTaskQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = stq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = stq.Limit(2).IDs(setContextOp(ctx, stq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -308,10 +309,12 @@ func (stq *ServerTaskQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of ServerTasks.
 func (stq *ServerTaskQuery) All(ctx context.Context) ([]*ServerTask, error) {
+	ctx = setContextOp(ctx, stq.ctx, "All")
 	if err := stq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return stq.sqlAll(ctx)
+	qr := querierAll[[]*ServerTask, *ServerTaskQuery]()
+	return withInterceptors[[]*ServerTask](ctx, stq, qr, stq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -324,9 +327,12 @@ func (stq *ServerTaskQuery) AllX(ctx context.Context) []*ServerTask {
 }
 
 // IDs executes the query and returns a list of ServerTask IDs.
-func (stq *ServerTaskQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := stq.Select(servertask.FieldID).Scan(ctx, &ids); err != nil {
+func (stq *ServerTaskQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if stq.ctx.Unique == nil && stq.path != nil {
+		stq.Unique(true)
+	}
+	ctx = setContextOp(ctx, stq.ctx, "IDs")
+	if err = stq.Select(servertask.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -343,10 +349,11 @@ func (stq *ServerTaskQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (stq *ServerTaskQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, stq.ctx, "Count")
 	if err := stq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return stq.sqlCount(ctx)
+	return withInterceptors[int](ctx, stq, querierCount[*ServerTaskQuery](), stq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -360,10 +367,15 @@ func (stq *ServerTaskQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (stq *ServerTaskQuery) Exist(ctx context.Context) (bool, error) {
-	if err := stq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, stq.ctx, "Exist")
+	switch _, err := stq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return stq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -383,9 +395,9 @@ func (stq *ServerTaskQuery) Clone() *ServerTaskQuery {
 	}
 	return &ServerTaskQuery{
 		config:                stq.config,
-		limit:                 stq.limit,
-		offset:                stq.offset,
-		order:                 append([]OrderFunc{}, stq.order...),
+		ctx:                   stq.ctx.Clone(),
+		order:                 append([]servertask.OrderOption{}, stq.order...),
+		inters:                append([]Interceptor{}, stq.inters...),
 		predicates:            append([]predicate.ServerTask{}, stq.predicates...),
 		withAuthUser:          stq.withAuthUser.Clone(),
 		withStatus:            stq.withStatus.Clone(),
@@ -394,16 +406,15 @@ func (stq *ServerTaskQuery) Clone() *ServerTaskQuery {
 		withBuildCommit:       stq.withBuildCommit.Clone(),
 		withGinFileMiddleware: stq.withGinFileMiddleware.Clone(),
 		// clone intermediate query.
-		sql:    stq.sql.Clone(),
-		path:   stq.path,
-		unique: stq.unique,
+		sql:  stq.sql.Clone(),
+		path: stq.path,
 	}
 }
 
 // WithAuthUser tells the query-builder to eager-load the nodes that are connected to
 // the "AuthUser" edge. The optional arguments are used to configure the query builder of the edge.
 func (stq *ServerTaskQuery) WithAuthUser(opts ...func(*AuthUserQuery)) *ServerTaskQuery {
-	query := &AuthUserQuery{config: stq.config}
+	query := (&AuthUserClient{config: stq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -414,7 +425,7 @@ func (stq *ServerTaskQuery) WithAuthUser(opts ...func(*AuthUserQuery)) *ServerTa
 // WithStatus tells the query-builder to eager-load the nodes that are connected to
 // the "Status" edge. The optional arguments are used to configure the query builder of the edge.
 func (stq *ServerTaskQuery) WithStatus(opts ...func(*StatusQuery)) *ServerTaskQuery {
-	query := &StatusQuery{config: stq.config}
+	query := (&StatusClient{config: stq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -425,7 +436,7 @@ func (stq *ServerTaskQuery) WithStatus(opts ...func(*StatusQuery)) *ServerTaskQu
 // WithEnvironment tells the query-builder to eager-load the nodes that are connected to
 // the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
 func (stq *ServerTaskQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *ServerTaskQuery {
-	query := &EnvironmentQuery{config: stq.config}
+	query := (&EnvironmentClient{config: stq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -436,7 +447,7 @@ func (stq *ServerTaskQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *Se
 // WithBuild tells the query-builder to eager-load the nodes that are connected to
 // the "Build" edge. The optional arguments are used to configure the query builder of the edge.
 func (stq *ServerTaskQuery) WithBuild(opts ...func(*BuildQuery)) *ServerTaskQuery {
-	query := &BuildQuery{config: stq.config}
+	query := (&BuildClient{config: stq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -447,7 +458,7 @@ func (stq *ServerTaskQuery) WithBuild(opts ...func(*BuildQuery)) *ServerTaskQuer
 // WithBuildCommit tells the query-builder to eager-load the nodes that are connected to
 // the "BuildCommit" edge. The optional arguments are used to configure the query builder of the edge.
 func (stq *ServerTaskQuery) WithBuildCommit(opts ...func(*BuildCommitQuery)) *ServerTaskQuery {
-	query := &BuildCommitQuery{config: stq.config}
+	query := (&BuildCommitClient{config: stq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -458,7 +469,7 @@ func (stq *ServerTaskQuery) WithBuildCommit(opts ...func(*BuildCommitQuery)) *Se
 // WithGinFileMiddleware tells the query-builder to eager-load the nodes that are connected to
 // the "GinFileMiddleware" edge. The optional arguments are used to configure the query builder of the edge.
 func (stq *ServerTaskQuery) WithGinFileMiddleware(opts ...func(*GinFileMiddlewareQuery)) *ServerTaskQuery {
-	query := &GinFileMiddlewareQuery{config: stq.config}
+	query := (&GinFileMiddlewareClient{config: stq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -481,16 +492,11 @@ func (stq *ServerTaskQuery) WithGinFileMiddleware(opts ...func(*GinFileMiddlewar
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (stq *ServerTaskQuery) GroupBy(field string, fields ...string) *ServerTaskGroupBy {
-	grbuild := &ServerTaskGroupBy{config: stq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := stq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return stq.sqlQuery(ctx), nil
-	}
+	stq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &ServerTaskGroupBy{build: stq}
+	grbuild.flds = &stq.ctx.Fields
 	grbuild.label = servertask.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -507,15 +513,30 @@ func (stq *ServerTaskQuery) GroupBy(field string, fields ...string) *ServerTaskG
 //		Select(servertask.FieldType).
 //		Scan(ctx, &v)
 func (stq *ServerTaskQuery) Select(fields ...string) *ServerTaskSelect {
-	stq.fields = append(stq.fields, fields...)
-	selbuild := &ServerTaskSelect{ServerTaskQuery: stq}
-	selbuild.label = servertask.Label
-	selbuild.flds, selbuild.scan = &stq.fields, selbuild.Scan
-	return selbuild
+	stq.ctx.Fields = append(stq.ctx.Fields, fields...)
+	sbuild := &ServerTaskSelect{ServerTaskQuery: stq}
+	sbuild.label = servertask.Label
+	sbuild.flds, sbuild.scan = &stq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a ServerTaskSelect configured with the given aggregations.
+func (stq *ServerTaskQuery) Aggregate(fns ...AggregateFunc) *ServerTaskSelect {
+	return stq.Select().Aggregate(fns...)
 }
 
 func (stq *ServerTaskQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range stq.fields {
+	for _, inter := range stq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, stq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range stq.ctx.Fields {
 		if !servertask.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -550,14 +571,17 @@ func (stq *ServerTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, servertask.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*ServerTask).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &ServerTask{config: stq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(stq.modifiers) > 0 {
+		_spec.Modifiers = stq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -607,6 +631,18 @@ func (stq *ServerTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 			return nil, err
 		}
 	}
+	for name, query := range stq.withNamedGinFileMiddleware {
+		if err := stq.loadGinFileMiddleware(ctx, query, nodes,
+			func(n *ServerTask) { n.appendNamedGinFileMiddleware(name) },
+			func(n *ServerTask, e *GinFileMiddleware) { n.appendNamedGinFileMiddleware(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range stq.loadTotal {
+		if err := stq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -622,6 +658,9 @@ func (stq *ServerTaskQuery) loadAuthUser(ctx context.Context, query *AuthUserQue
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(authuser.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -648,7 +687,7 @@ func (stq *ServerTaskQuery) loadStatus(ctx context.Context, query *StatusQuery, 
 	}
 	query.withFKs = true
 	query.Where(predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.InValues(servertask.StatusColumn, fks...))
+		s.Where(sql.InValues(s.C(servertask.StatusColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -661,7 +700,7 @@ func (stq *ServerTaskQuery) loadStatus(ctx context.Context, query *StatusQuery, 
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_status" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "server_task_status" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -679,6 +718,9 @@ func (stq *ServerTaskQuery) loadEnvironment(ctx context.Context, query *Environm
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(environment.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -709,6 +751,9 @@ func (stq *ServerTaskQuery) loadBuild(ctx context.Context, query *BuildQuery, no
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(build.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -738,6 +783,9 @@ func (stq *ServerTaskQuery) loadBuildCommit(ctx context.Context, query *BuildCom
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(buildcommit.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -766,7 +814,7 @@ func (stq *ServerTaskQuery) loadGinFileMiddleware(ctx context.Context, query *Gi
 	}
 	query.withFKs = true
 	query.Where(predicate.GinFileMiddleware(func(s *sql.Selector) {
-		s.Where(sql.InValues(servertask.GinFileMiddlewareColumn, fks...))
+		s.Where(sql.InValues(s.C(servertask.GinFileMiddlewareColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -779,7 +827,7 @@ func (stq *ServerTaskQuery) loadGinFileMiddleware(ctx context.Context, query *Gi
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "server_task_gin_file_middleware" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "server_task_gin_file_middleware" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -788,38 +836,25 @@ func (stq *ServerTaskQuery) loadGinFileMiddleware(ctx context.Context, query *Gi
 
 func (stq *ServerTaskQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := stq.querySpec()
-	_spec.Node.Columns = stq.fields
-	if len(stq.fields) > 0 {
-		_spec.Unique = stq.unique != nil && *stq.unique
+	if len(stq.modifiers) > 0 {
+		_spec.Modifiers = stq.modifiers
+	}
+	_spec.Node.Columns = stq.ctx.Fields
+	if len(stq.ctx.Fields) > 0 {
+		_spec.Unique = stq.ctx.Unique != nil && *stq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, stq.driver, _spec)
 }
 
-func (stq *ServerTaskQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := stq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (stq *ServerTaskQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   servertask.Table,
-			Columns: servertask.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: servertask.FieldID,
-			},
-		},
-		From:   stq.sql,
-		Unique: true,
-	}
-	if unique := stq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(servertask.Table, servertask.Columns, sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID))
+	_spec.From = stq.sql
+	if unique := stq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if stq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := stq.fields; len(fields) > 0 {
+	if fields := stq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, servertask.FieldID)
 		for i := range fields {
@@ -835,10 +870,10 @@ func (stq *ServerTaskQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := stq.limit; limit != nil {
+	if limit := stq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := stq.offset; offset != nil {
+	if offset := stq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := stq.order; len(ps) > 0 {
@@ -854,7 +889,7 @@ func (stq *ServerTaskQuery) querySpec() *sqlgraph.QuerySpec {
 func (stq *ServerTaskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(stq.driver.Dialect())
 	t1 := builder.Table(servertask.Table)
-	columns := stq.fields
+	columns := stq.ctx.Fields
 	if len(columns) == 0 {
 		columns = servertask.Columns
 	}
@@ -863,7 +898,7 @@ func (stq *ServerTaskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = stq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if stq.unique != nil && *stq.unique {
+	if stq.ctx.Unique != nil && *stq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range stq.predicates {
@@ -872,26 +907,35 @@ func (stq *ServerTaskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range stq.order {
 		p(selector)
 	}
-	if offset := stq.offset; offset != nil {
+	if offset := stq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := stq.limit; limit != nil {
+	if limit := stq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
 }
 
+// WithNamedGinFileMiddleware tells the query-builder to eager-load the nodes that are connected to the "GinFileMiddleware"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (stq *ServerTaskQuery) WithNamedGinFileMiddleware(name string, opts ...func(*GinFileMiddlewareQuery)) *ServerTaskQuery {
+	query := (&GinFileMiddlewareClient{config: stq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if stq.withNamedGinFileMiddleware == nil {
+		stq.withNamedGinFileMiddleware = make(map[string]*GinFileMiddlewareQuery)
+	}
+	stq.withNamedGinFileMiddleware[name] = query
+	return stq
+}
+
 // ServerTaskGroupBy is the group-by builder for ServerTask entities.
 type ServerTaskGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *ServerTaskQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -900,74 +944,77 @@ func (stgb *ServerTaskGroupBy) Aggregate(fns ...AggregateFunc) *ServerTaskGroupB
 	return stgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (stgb *ServerTaskGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := stgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (stgb *ServerTaskGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, stgb.build.ctx, "GroupBy")
+	if err := stgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	stgb.sql = query
-	return stgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*ServerTaskQuery, *ServerTaskGroupBy](ctx, stgb.build, stgb, stgb.build.inters, v)
 }
 
-func (stgb *ServerTaskGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range stgb.fields {
-		if !servertask.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (stgb *ServerTaskGroupBy) sqlScan(ctx context.Context, root *ServerTaskQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(stgb.fns))
+	for _, fn := range stgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := stgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*stgb.flds)+len(stgb.fns))
+		for _, f := range *stgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*stgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := stgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := stgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (stgb *ServerTaskGroupBy) sqlQuery() *sql.Selector {
-	selector := stgb.sql.Select()
-	aggregation := make([]string, 0, len(stgb.fns))
-	for _, fn := range stgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(stgb.fields)+len(stgb.fns))
-		for _, f := range stgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(stgb.fields...)...)
-}
-
 // ServerTaskSelect is the builder for selecting fields of ServerTask entities.
 type ServerTaskSelect struct {
 	*ServerTaskQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (sts *ServerTaskSelect) Aggregate(fns ...AggregateFunc) *ServerTaskSelect {
+	sts.fns = append(sts.fns, fns...)
+	return sts
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (sts *ServerTaskSelect) Scan(ctx context.Context, v interface{}) error {
+func (sts *ServerTaskSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, sts.ctx, "Select")
 	if err := sts.prepareQuery(ctx); err != nil {
 		return err
 	}
-	sts.sql = sts.ServerTaskQuery.sqlQuery(ctx)
-	return sts.sqlScan(ctx, v)
+	return scanWithInterceptors[*ServerTaskQuery, *ServerTaskSelect](ctx, sts.ServerTaskQuery, sts, sts.inters, v)
 }
 
-func (sts *ServerTaskSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (sts *ServerTaskSelect) sqlScan(ctx context.Context, root *ServerTaskQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(sts.fns))
+	for _, fn := range sts.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*sts.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := sts.sql.Query()
+	query, args := selector.Query()
 	if err := sts.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

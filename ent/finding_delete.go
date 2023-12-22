@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (fd *FindingDelete) Where(ps ...predicate.Finding) *FindingDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (fd *FindingDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(fd.hooks) == 0 {
-		affected, err = fd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*FindingMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			fd.mutation = mutation
-			affected, err = fd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(fd.hooks) - 1; i >= 0; i-- {
-			if fd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = fd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, fd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, fd.sqlExec, fd.mutation, fd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (fd *FindingDelete) ExecX(ctx context.Context) int {
 }
 
 func (fd *FindingDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: finding.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: finding.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(finding.Table, sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID))
 	if ps := fd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (fd *FindingDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	fd.mutation.done = true
 	return affected, err
 }
 
 // FindingDeleteOne is the builder for deleting a single Finding entity.
 type FindingDeleteOne struct {
 	fd *FindingDelete
+}
+
+// Where appends a list predicates to the FindingDelete builder.
+func (fdo *FindingDeleteOne) Where(ps ...predicate.Finding) *FindingDeleteOne {
+	fdo.fd.mutation.Where(ps...)
+	return fdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (fdo *FindingDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (fdo *FindingDeleteOne) ExecX(ctx context.Context) {
-	fdo.fd.ExecX(ctx)
+	if err := fdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

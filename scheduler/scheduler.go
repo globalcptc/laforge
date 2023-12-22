@@ -108,7 +108,7 @@ func MarkInProgress(ctx context.Context, rdb *redis.Client, logger *logging.Logg
 	planStatus, err := entPlan.Status(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query status from plan: %v", err)
-		
+
 	}
 	entStatus, err := entProvisioningScheduledStep.Status(ctx)
 	if err != nil {
@@ -148,7 +148,7 @@ func ExecuteScheduledStep(ctx context.Context, client *ent.Client, rdb *redis.Cl
 		logger.Log.Errorf("failed to query provisioned scheduled step status: %v", err)
 		return
 	}
-	logger.Log.Debugf("executing %s scheduled step \"%s\" to run \"%s\"", entProvisioningScheduledStep.Type, entScheduledStep.HclID, entScheduledStep.Step)
+	logger.Log.Debugf("executing %s scheduled step \"%s\" to run \"%s\"", entProvisioningScheduledStep.Type, entScheduledStep.HCLID, entScheduledStep.Step)
 
 	entProvisionedHost, err := entProvisioningScheduledStep.ProvisionedHost(ctx)
 	if err != nil {

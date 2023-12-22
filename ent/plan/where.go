@@ -11,180 +11,112 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Plan(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Plan(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.Plan(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.Plan(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.Plan(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.Plan(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.Plan(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.Plan(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.Plan(sql.FieldLTE(FieldID, id))
 }
 
 // StepNumber applies equality check predicate on the "step_number" field. It's identical to StepNumberEQ.
 func StepNumber(v int) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldStepNumber), v))
-	})
+	return predicate.Plan(sql.FieldEQ(FieldStepNumber, v))
 }
 
 // StepNumberEQ applies the EQ predicate on the "step_number" field.
 func StepNumberEQ(v int) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldStepNumber), v))
-	})
+	return predicate.Plan(sql.FieldEQ(FieldStepNumber, v))
 }
 
 // StepNumberNEQ applies the NEQ predicate on the "step_number" field.
 func StepNumberNEQ(v int) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldStepNumber), v))
-	})
+	return predicate.Plan(sql.FieldNEQ(FieldStepNumber, v))
 }
 
 // StepNumberIn applies the In predicate on the "step_number" field.
 func StepNumberIn(vs ...int) predicate.Plan {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldStepNumber), v...))
-	})
+	return predicate.Plan(sql.FieldIn(FieldStepNumber, vs...))
 }
 
 // StepNumberNotIn applies the NotIn predicate on the "step_number" field.
 func StepNumberNotIn(vs ...int) predicate.Plan {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldStepNumber), v...))
-	})
+	return predicate.Plan(sql.FieldNotIn(FieldStepNumber, vs...))
 }
 
 // StepNumberGT applies the GT predicate on the "step_number" field.
 func StepNumberGT(v int) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldStepNumber), v))
-	})
+	return predicate.Plan(sql.FieldGT(FieldStepNumber, v))
 }
 
 // StepNumberGTE applies the GTE predicate on the "step_number" field.
 func StepNumberGTE(v int) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldStepNumber), v))
-	})
+	return predicate.Plan(sql.FieldGTE(FieldStepNumber, v))
 }
 
 // StepNumberLT applies the LT predicate on the "step_number" field.
 func StepNumberLT(v int) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldStepNumber), v))
-	})
+	return predicate.Plan(sql.FieldLT(FieldStepNumber, v))
 }
 
 // StepNumberLTE applies the LTE predicate on the "step_number" field.
 func StepNumberLTE(v int) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldStepNumber), v))
-	})
+	return predicate.Plan(sql.FieldLTE(FieldStepNumber, v))
 }
 
 // TypeEQ applies the EQ predicate on the "type" field.
 func TypeEQ(v Type) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldType), v))
-	})
+	return predicate.Plan(sql.FieldEQ(FieldType, v))
 }
 
 // TypeNEQ applies the NEQ predicate on the "type" field.
 func TypeNEQ(v Type) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldType), v))
-	})
+	return predicate.Plan(sql.FieldNEQ(FieldType, v))
 }
 
 // TypeIn applies the In predicate on the "type" field.
 func TypeIn(vs ...Type) predicate.Plan {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldType), v...))
-	})
+	return predicate.Plan(sql.FieldIn(FieldType, vs...))
 }
 
 // TypeNotIn applies the NotIn predicate on the "type" field.
 func TypeNotIn(vs ...Type) predicate.Plan {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Plan(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldType), v...))
-	})
+	return predicate.Plan(sql.FieldNotIn(FieldType, vs...))
 }
 
 // HasPrevPlans applies the HasEdge predicate on the "PrevPlans" edge.
@@ -192,7 +124,6 @@ func HasPrevPlans() predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(PrevPlansTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, PrevPlansTable, PrevPlansPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -202,11 +133,7 @@ func HasPrevPlans() predicate.Plan {
 // HasPrevPlansWith applies the HasEdge predicate on the "PrevPlans" edge with a given conditions (other predicates).
 func HasPrevPlansWith(preds ...predicate.Plan) predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, PrevPlansTable, PrevPlansPrimaryKey...),
-		)
+		step := newPrevPlansStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -220,7 +147,6 @@ func HasNextPlans() predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NextPlansTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, NextPlansTable, NextPlansPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -230,11 +156,7 @@ func HasNextPlans() predicate.Plan {
 // HasNextPlansWith applies the HasEdge predicate on the "NextPlans" edge with a given conditions (other predicates).
 func HasNextPlansWith(preds ...predicate.Plan) predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, NextPlansTable, NextPlansPrimaryKey...),
-		)
+		step := newNextPlansStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -248,7 +170,6 @@ func HasBuild() predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -258,11 +179,7 @@ func HasBuild() predicate.Plan {
 // HasBuildWith applies the HasEdge predicate on the "Build" edge with a given conditions (other predicates).
 func HasBuildWith(preds ...predicate.Build) predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(BuildInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
-		)
+		step := newBuildStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -276,7 +193,6 @@ func HasTeam() predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(TeamTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, TeamTable, TeamColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -286,11 +202,7 @@ func HasTeam() predicate.Plan {
 // HasTeamWith applies the HasEdge predicate on the "Team" edge with a given conditions (other predicates).
 func HasTeamWith(preds ...predicate.Team) predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(TeamInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, TeamTable, TeamColumn),
-		)
+		step := newTeamStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -304,7 +216,6 @@ func HasProvisionedNetwork() predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisionedNetworkTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, ProvisionedNetworkTable, ProvisionedNetworkColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -314,11 +225,7 @@ func HasProvisionedNetwork() predicate.Plan {
 // HasProvisionedNetworkWith applies the HasEdge predicate on the "ProvisionedNetwork" edge with a given conditions (other predicates).
 func HasProvisionedNetworkWith(preds ...predicate.ProvisionedNetwork) predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisionedNetworkInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ProvisionedNetworkTable, ProvisionedNetworkColumn),
-		)
+		step := newProvisionedNetworkStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -332,7 +239,6 @@ func HasProvisionedHost() predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisionedHostTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, ProvisionedHostTable, ProvisionedHostColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -342,11 +248,7 @@ func HasProvisionedHost() predicate.Plan {
 // HasProvisionedHostWith applies the HasEdge predicate on the "ProvisionedHost" edge with a given conditions (other predicates).
 func HasProvisionedHostWith(preds ...predicate.ProvisionedHost) predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisionedHostInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ProvisionedHostTable, ProvisionedHostColumn),
-		)
+		step := newProvisionedHostStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -360,7 +262,6 @@ func HasProvisioningStep() predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisioningStepTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningStepTable, ProvisioningStepColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -370,11 +271,7 @@ func HasProvisioningStep() predicate.Plan {
 // HasProvisioningStepWith applies the HasEdge predicate on the "ProvisioningStep" edge with a given conditions (other predicates).
 func HasProvisioningStepWith(preds ...predicate.ProvisioningStep) predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisioningStepInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningStepTable, ProvisioningStepColumn),
-		)
+		step := newProvisioningStepStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -388,7 +285,6 @@ func HasProvisioningScheduledStep() predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisioningScheduledStepTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -398,11 +294,7 @@ func HasProvisioningScheduledStep() predicate.Plan {
 // HasProvisioningScheduledStepWith applies the HasEdge predicate on the "ProvisioningScheduledStep" edge with a given conditions (other predicates).
 func HasProvisioningScheduledStepWith(preds ...predicate.ProvisioningScheduledStep) predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ProvisioningScheduledStepInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
-		)
+		step := newProvisioningScheduledStepStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -416,7 +308,6 @@ func HasStatus() predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(StatusTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -426,11 +317,7 @@ func HasStatus() predicate.Plan {
 // HasStatusWith applies the HasEdge predicate on the "Status" edge with a given conditions (other predicates).
 func HasStatusWith(preds ...predicate.Status) predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(StatusInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
-		)
+		step := newStatusStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -444,7 +331,6 @@ func HasPlanDiffs() predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(PlanDiffsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, PlanDiffsTable, PlanDiffsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -454,11 +340,7 @@ func HasPlanDiffs() predicate.Plan {
 // HasPlanDiffsWith applies the HasEdge predicate on the "PlanDiffs" edge with a given conditions (other predicates).
 func HasPlanDiffsWith(preds ...predicate.PlanDiff) predicate.Plan {
 	return predicate.Plan(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(PlanDiffsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, PlanDiffsTable, PlanDiffsColumn),
-		)
+		step := newPlanDiffsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -469,32 +351,15 @@ func HasPlanDiffsWith(preds ...predicate.PlanDiff) predicate.Plan {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Plan) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Plan(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Plan) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Plan(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Plan) predicate.Plan {
-	return predicate.Plan(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Plan(sql.NotPredicates(p))
 }

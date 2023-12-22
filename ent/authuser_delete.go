@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (aud *AuthUserDelete) Where(ps ...predicate.AuthUser) *AuthUserDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (aud *AuthUserDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(aud.hooks) == 0 {
-		affected, err = aud.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*AuthUserMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			aud.mutation = mutation
-			affected, err = aud.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(aud.hooks) - 1; i >= 0; i-- {
-			if aud.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = aud.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, aud.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, aud.sqlExec, aud.mutation, aud.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (aud *AuthUserDelete) ExecX(ctx context.Context) int {
 }
 
 func (aud *AuthUserDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: authuser.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: authuser.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(authuser.Table, sqlgraph.NewFieldSpec(authuser.FieldID, field.TypeUUID))
 	if ps := aud.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (aud *AuthUserDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	aud.mutation.done = true
 	return affected, err
 }
 
 // AuthUserDeleteOne is the builder for deleting a single AuthUser entity.
 type AuthUserDeleteOne struct {
 	aud *AuthUserDelete
+}
+
+// Where appends a list predicates to the AuthUserDelete builder.
+func (audo *AuthUserDeleteOne) Where(ps ...predicate.AuthUser) *AuthUserDeleteOne {
+	audo.aud.mutation.Where(ps...)
+	return audo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (audo *AuthUserDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (audo *AuthUserDeleteOne) ExecX(ctx context.Context) {
-	audo.aud.ExecX(ctx)
+	if err := audo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

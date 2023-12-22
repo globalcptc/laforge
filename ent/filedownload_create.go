@@ -21,9 +21,9 @@ type FileDownloadCreate struct {
 	hooks    []Hook
 }
 
-// SetHclID sets the "hcl_id" field.
-func (fdc *FileDownloadCreate) SetHclID(s string) *FileDownloadCreate {
-	fdc.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (fdc *FileDownloadCreate) SetHCLID(s string) *FileDownloadCreate {
+	fdc.mutation.SetHCLID(s)
 	return fdc
 }
 
@@ -135,50 +135,8 @@ func (fdc *FileDownloadCreate) Mutation() *FileDownloadMutation {
 
 // Save creates the FileDownload in the database.
 func (fdc *FileDownloadCreate) Save(ctx context.Context) (*FileDownload, error) {
-	var (
-		err  error
-		node *FileDownload
-	)
 	fdc.defaults()
-	if len(fdc.hooks) == 0 {
-		if err = fdc.check(); err != nil {
-			return nil, err
-		}
-		node, err = fdc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*FileDownloadMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = fdc.check(); err != nil {
-				return nil, err
-			}
-			fdc.mutation = mutation
-			if node, err = fdc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(fdc.hooks) - 1; i >= 0; i-- {
-			if fdc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = fdc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, fdc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*FileDownload)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from FileDownloadMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, fdc.sqlSave, fdc.mutation, fdc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -217,7 +175,7 @@ func (fdc *FileDownloadCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (fdc *FileDownloadCreate) check() error {
-	if _, ok := fdc.mutation.HclID(); !ok {
+	if _, ok := fdc.mutation.HCLID(); !ok {
 		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "FileDownload.hcl_id"`)}
 	}
 	if _, ok := fdc.mutation.SourceType(); !ok {
@@ -254,6 +212,9 @@ func (fdc *FileDownloadCreate) check() error {
 }
 
 func (fdc *FileDownloadCreate) sqlSave(ctx context.Context) (*FileDownload, error) {
+	if err := fdc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := fdc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, fdc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -268,110 +229,62 @@ func (fdc *FileDownloadCreate) sqlSave(ctx context.Context) (*FileDownload, erro
 			return nil, err
 		}
 	}
+	fdc.mutation.id = &_node.ID
+	fdc.mutation.done = true
 	return _node, nil
 }
 
 func (fdc *FileDownloadCreate) createSpec() (*FileDownload, *sqlgraph.CreateSpec) {
 	var (
 		_node = &FileDownload{config: fdc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: filedownload.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: filedownload.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(filedownload.Table, sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID))
 	)
 	if id, ok := fdc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := fdc.mutation.HclID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldHclID,
-		})
-		_node.HclID = value
+	if value, ok := fdc.mutation.HCLID(); ok {
+		_spec.SetField(filedownload.FieldHCLID, field.TypeString, value)
+		_node.HCLID = value
 	}
 	if value, ok := fdc.mutation.SourceType(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldSourceType,
-		})
+		_spec.SetField(filedownload.FieldSourceType, field.TypeString, value)
 		_node.SourceType = value
 	}
 	if value, ok := fdc.mutation.Source(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldSource,
-		})
+		_spec.SetField(filedownload.FieldSource, field.TypeString, value)
 		_node.Source = value
 	}
 	if value, ok := fdc.mutation.Destination(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldDestination,
-		})
+		_spec.SetField(filedownload.FieldDestination, field.TypeString, value)
 		_node.Destination = value
 	}
 	if value, ok := fdc.mutation.Template(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: filedownload.FieldTemplate,
-		})
+		_spec.SetField(filedownload.FieldTemplate, field.TypeBool, value)
 		_node.Template = value
 	}
 	if value, ok := fdc.mutation.Perms(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldPerms,
-		})
+		_spec.SetField(filedownload.FieldPerms, field.TypeString, value)
 		_node.Perms = value
 	}
 	if value, ok := fdc.mutation.Disabled(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: filedownload.FieldDisabled,
-		})
+		_spec.SetField(filedownload.FieldDisabled, field.TypeBool, value)
 		_node.Disabled = value
 	}
 	if value, ok := fdc.mutation.Md5(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldMd5,
-		})
+		_spec.SetField(filedownload.FieldMd5, field.TypeString, value)
 		_node.Md5 = value
 	}
 	if value, ok := fdc.mutation.AbsPath(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldAbsPath,
-		})
+		_spec.SetField(filedownload.FieldAbsPath, field.TypeString, value)
 		_node.AbsPath = value
 	}
 	if value, ok := fdc.mutation.IsTxt(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: filedownload.FieldIsTxt,
-		})
+		_spec.SetField(filedownload.FieldIsTxt, field.TypeBool, value)
 		_node.IsTxt = value
 	}
 	if value, ok := fdc.mutation.Tags(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: filedownload.FieldTags,
-		})
+		_spec.SetField(filedownload.FieldTags, field.TypeJSON, value)
 		_node.Tags = value
 	}
 	if nodes := fdc.mutation.EnvironmentIDs(); len(nodes) > 0 {
@@ -382,10 +295,7 @@ func (fdc *FileDownloadCreate) createSpec() (*FileDownload, *sqlgraph.CreateSpec
 			Columns: []string{filedownload.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -400,11 +310,15 @@ func (fdc *FileDownloadCreate) createSpec() (*FileDownload, *sqlgraph.CreateSpec
 // FileDownloadCreateBulk is the builder for creating many FileDownload entities in bulk.
 type FileDownloadCreateBulk struct {
 	config
+	err      error
 	builders []*FileDownloadCreate
 }
 
 // Save creates the FileDownload entities in the database.
 func (fdcb *FileDownloadCreateBulk) Save(ctx context.Context) ([]*FileDownload, error) {
+	if fdcb.err != nil {
+		return nil, fdcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(fdcb.builders))
 	nodes := make([]*FileDownload, len(fdcb.builders))
 	mutators := make([]Mutator, len(fdcb.builders))
@@ -421,8 +335,8 @@ func (fdcb *FileDownloadCreateBulk) Save(ctx context.Context) ([]*FileDownload, 
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, fdcb.builders[i+1].mutation)
 				} else {

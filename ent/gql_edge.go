@@ -2,18 +2,30 @@
 
 package ent
 
-import "context"
+import (
+	"context"
 
-func (ap *AdhocPlan) PrevAdhocPlans(ctx context.Context) ([]*AdhocPlan, error) {
-	result, err := ap.Edges.PrevAdhocPlansOrErr()
+	"github.com/99designs/gqlgen/graphql"
+)
+
+func (ap *AdhocPlan) PrevAdhocPlans(ctx context.Context) (result []*AdhocPlan, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = ap.NamedPrevAdhocPlans(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = ap.Edges.PrevAdhocPlansOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = ap.QueryPrevAdhocPlans().All(ctx)
 	}
 	return result, err
 }
 
-func (ap *AdhocPlan) NextAdhocPlans(ctx context.Context) ([]*AdhocPlan, error) {
-	result, err := ap.Edges.NextAdhocPlansOrErr()
+func (ap *AdhocPlan) NextAdhocPlans(ctx context.Context) (result []*AdhocPlan, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = ap.NamedNextAdhocPlans(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = ap.Edges.NextAdhocPlansOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = ap.QueryNextAdhocPlans().All(ctx)
 	}
@@ -92,16 +104,24 @@ func (at *AgentTask) ProvisionedHost(ctx context.Context) (*ProvisionedHost, err
 	return result, err
 }
 
-func (at *AgentTask) AdhocPlans(ctx context.Context) ([]*AdhocPlan, error) {
-	result, err := at.Edges.AdhocPlansOrErr()
+func (at *AgentTask) AdhocPlans(ctx context.Context) (result []*AdhocPlan, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = at.NamedAdhocPlans(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = at.Edges.AdhocPlansOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = at.QueryAdhocPlans().All(ctx)
 	}
 	return result, err
 }
 
-func (a *Ansible) Users(ctx context.Context) ([]*User, error) {
-	result, err := a.Edges.UsersOrErr()
+func (a *Ansible) Users(ctx context.Context) (result []*User, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = a.NamedUsers(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = a.Edges.UsersOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = a.QueryUsers().All(ctx)
 	}
@@ -116,16 +136,24 @@ func (a *Ansible) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (au *AuthUser) Tokens(ctx context.Context) ([]*Token, error) {
-	result, err := au.Edges.TokensOrErr()
+func (au *AuthUser) Tokens(ctx context.Context) (result []*Token, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = au.NamedTokens(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = au.Edges.TokensOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = au.QueryTokens().All(ctx)
 	}
 	return result, err
 }
 
-func (au *AuthUser) ServerTasks(ctx context.Context) ([]*ServerTask, error) {
-	result, err := au.Edges.ServerTasksOrErr()
+func (au *AuthUser) ServerTasks(ctx context.Context) (result []*ServerTask, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = au.NamedServerTasks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = au.Edges.ServerTasksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = au.QueryServerTasks().All(ctx)
 	}
@@ -172,56 +200,84 @@ func (b *Build) RepoCommit(ctx context.Context) (*RepoCommit, error) {
 	return result, MaskNotFound(err)
 }
 
-func (b *Build) ProvisionedNetworks(ctx context.Context) ([]*ProvisionedNetwork, error) {
-	result, err := b.Edges.ProvisionedNetworksOrErr()
+func (b *Build) ProvisionedNetworks(ctx context.Context) (result []*ProvisionedNetwork, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = b.NamedProvisionedNetworks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = b.Edges.ProvisionedNetworksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = b.QueryProvisionedNetworks().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) Teams(ctx context.Context) ([]*Team, error) {
-	result, err := b.Edges.TeamsOrErr()
+func (b *Build) Teams(ctx context.Context) (result []*Team, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = b.NamedTeams(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = b.Edges.TeamsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = b.QueryTeams().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) Plans(ctx context.Context) ([]*Plan, error) {
-	result, err := b.Edges.PlansOrErr()
+func (b *Build) Plans(ctx context.Context) (result []*Plan, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = b.NamedPlans(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = b.Edges.PlansOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = b.QueryPlans().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) BuildCommits(ctx context.Context) ([]*BuildCommit, error) {
-	result, err := b.Edges.BuildCommitsOrErr()
+func (b *Build) BuildCommits(ctx context.Context) (result []*BuildCommit, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = b.NamedBuildCommits(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = b.Edges.BuildCommitsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = b.QueryBuildCommits().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) AdhocPlans(ctx context.Context) ([]*AdhocPlan, error) {
-	result, err := b.Edges.AdhocPlansOrErr()
+func (b *Build) AdhocPlans(ctx context.Context) (result []*AdhocPlan, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = b.NamedAdhocPlans(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = b.Edges.AdhocPlansOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = b.QueryAdhocPlans().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) AgentStatuses(ctx context.Context) ([]*AgentStatus, error) {
-	result, err := b.Edges.AgentStatusesOrErr()
+func (b *Build) AgentStatuses(ctx context.Context) (result []*AgentStatus, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = b.NamedAgentStatuses(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = b.Edges.AgentStatusesOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = b.QueryAgentStatuses().All(ctx)
 	}
 	return result, err
 }
 
-func (b *Build) ServerTasks(ctx context.Context) ([]*ServerTask, error) {
-	result, err := b.Edges.ServerTasksOrErr()
+func (b *Build) ServerTasks(ctx context.Context) (result []*ServerTask, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = b.NamedServerTasks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = b.Edges.ServerTasksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = b.QueryServerTasks().All(ctx)
 	}
@@ -236,24 +292,36 @@ func (bc *BuildCommit) Build(ctx context.Context) (*Build, error) {
 	return result, err
 }
 
-func (bc *BuildCommit) ServerTasks(ctx context.Context) ([]*ServerTask, error) {
-	result, err := bc.Edges.ServerTasksOrErr()
+func (bc *BuildCommit) ServerTasks(ctx context.Context) (result []*ServerTask, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = bc.NamedServerTasks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = bc.Edges.ServerTasksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = bc.QueryServerTasks().All(ctx)
 	}
 	return result, err
 }
 
-func (bc *BuildCommit) PlanDiffs(ctx context.Context) ([]*PlanDiff, error) {
-	result, err := bc.Edges.PlanDiffsOrErr()
+func (bc *BuildCommit) PlanDiffs(ctx context.Context) (result []*PlanDiff, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = bc.NamedPlanDiffs(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = bc.Edges.PlanDiffsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = bc.QueryPlanDiffs().All(ctx)
 	}
 	return result, err
 }
 
-func (c *Command) Users(ctx context.Context) ([]*User, error) {
-	result, err := c.Edges.UsersOrErr()
+func (c *Command) Users(ctx context.Context) (result []*User, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = c.NamedUsers(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = c.Edges.UsersOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = c.QueryUsers().All(ctx)
 	}
@@ -268,8 +336,12 @@ func (c *Command) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (c *Competition) DNS(ctx context.Context) ([]*DNS, error) {
-	result, err := c.Edges.DNSOrErr()
+func (c *Competition) DNS(ctx context.Context) (result []*DNS, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = c.NamedDNS(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = c.Edges.DNSOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = c.QueryDNS().All(ctx)
 	}
@@ -284,24 +356,36 @@ func (c *Competition) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (c *Competition) Builds(ctx context.Context) ([]*Build, error) {
-	result, err := c.Edges.BuildsOrErr()
+func (c *Competition) Builds(ctx context.Context) (result []*Build, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = c.NamedBuilds(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = c.Edges.BuildsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = c.QueryBuilds().All(ctx)
 	}
 	return result, err
 }
 
-func (d *DNS) Environments(ctx context.Context) ([]*Environment, error) {
-	result, err := d.Edges.EnvironmentsOrErr()
+func (d *DNS) Environments(ctx context.Context) (result []*Environment, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = d.NamedEnvironments(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = d.Edges.EnvironmentsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = d.QueryEnvironments().All(ctx)
 	}
 	return result, err
 }
 
-func (d *DNS) Competitions(ctx context.Context) ([]*Competition, error) {
-	result, err := d.Edges.CompetitionsOrErr()
+func (d *DNS) Competitions(ctx context.Context) (result []*Competition, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = d.NamedCompetitions(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = d.Edges.CompetitionsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = d.QueryCompetitions().All(ctx)
 	}
@@ -324,160 +408,240 @@ func (d *Disk) Host(ctx context.Context) (*Host, error) {
 	return result, MaskNotFound(err)
 }
 
-func (e *Environment) Users(ctx context.Context) ([]*User, error) {
-	result, err := e.Edges.UsersOrErr()
+func (e *Environment) Users(ctx context.Context) (result []*User, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedUsers(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.UsersOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryUsers().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) Hosts(ctx context.Context) ([]*Host, error) {
-	result, err := e.Edges.HostsOrErr()
+func (e *Environment) Hosts(ctx context.Context) (result []*Host, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedHosts(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.HostsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryHosts().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) Competitions(ctx context.Context) ([]*Competition, error) {
-	result, err := e.Edges.CompetitionsOrErr()
+func (e *Environment) Competitions(ctx context.Context) (result []*Competition, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedCompetitions(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.CompetitionsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryCompetitions().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) Identities(ctx context.Context) ([]*Identity, error) {
-	result, err := e.Edges.IdentitiesOrErr()
+func (e *Environment) Identities(ctx context.Context) (result []*Identity, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedIdentities(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.IdentitiesOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryIdentities().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) Commands(ctx context.Context) ([]*Command, error) {
-	result, err := e.Edges.CommandsOrErr()
+func (e *Environment) Commands(ctx context.Context) (result []*Command, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedCommands(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.CommandsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryCommands().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) Scripts(ctx context.Context) ([]*Script, error) {
-	result, err := e.Edges.ScriptsOrErr()
+func (e *Environment) Scripts(ctx context.Context) (result []*Script, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedScripts(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.ScriptsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryScripts().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) FileDownloads(ctx context.Context) ([]*FileDownload, error) {
-	result, err := e.Edges.FileDownloadsOrErr()
+func (e *Environment) FileDownloads(ctx context.Context) (result []*FileDownload, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedFileDownloads(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.FileDownloadsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryFileDownloads().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) FileDeletes(ctx context.Context) ([]*FileDelete, error) {
-	result, err := e.Edges.FileDeletesOrErr()
+func (e *Environment) FileDeletes(ctx context.Context) (result []*FileDelete, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedFileDeletes(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.FileDeletesOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryFileDeletes().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) FileExtracts(ctx context.Context) ([]*FileExtract, error) {
-	result, err := e.Edges.FileExtractsOrErr()
+func (e *Environment) FileExtracts(ctx context.Context) (result []*FileExtract, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedFileExtracts(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.FileExtractsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryFileExtracts().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) IncludedNetworks(ctx context.Context) ([]*IncludedNetwork, error) {
-	result, err := e.Edges.IncludedNetworksOrErr()
+func (e *Environment) IncludedNetworks(ctx context.Context) (result []*IncludedNetwork, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedIncludedNetworks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.IncludedNetworksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryIncludedNetworks().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) Findings(ctx context.Context) ([]*Finding, error) {
-	result, err := e.Edges.FindingsOrErr()
+func (e *Environment) Findings(ctx context.Context) (result []*Finding, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedFindings(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.FindingsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryFindings().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) DNSRecords(ctx context.Context) ([]*DNSRecord, error) {
-	result, err := e.Edges.DNSRecordsOrErr()
+func (e *Environment) DNSRecords(ctx context.Context) (result []*DNSRecord, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedDNSRecords(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.DNSRecordsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryDNSRecords().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) DNS(ctx context.Context) ([]*DNS, error) {
-	result, err := e.Edges.DNSOrErr()
+func (e *Environment) DNS(ctx context.Context) (result []*DNS, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedDNS(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.DNSOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryDNS().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) Networks(ctx context.Context) ([]*Network, error) {
-	result, err := e.Edges.NetworksOrErr()
+func (e *Environment) Networks(ctx context.Context) (result []*Network, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedNetworks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.NetworksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryNetworks().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) HostDependencies(ctx context.Context) ([]*HostDependency, error) {
-	result, err := e.Edges.HostDependenciesOrErr()
+func (e *Environment) HostDependencies(ctx context.Context) (result []*HostDependency, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedHostDependencies(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.HostDependenciesOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryHostDependencies().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) Ansibles(ctx context.Context) ([]*Ansible, error) {
-	result, err := e.Edges.AnsiblesOrErr()
+func (e *Environment) Ansibles(ctx context.Context) (result []*Ansible, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedAnsibles(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.AnsiblesOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryAnsibles().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) ScheduledSteps(ctx context.Context) ([]*ScheduledStep, error) {
-	result, err := e.Edges.ScheduledStepsOrErr()
+func (e *Environment) ScheduledSteps(ctx context.Context) (result []*ScheduledStep, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedScheduledSteps(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.ScheduledStepsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryScheduledSteps().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) Builds(ctx context.Context) ([]*Build, error) {
-	result, err := e.Edges.BuildsOrErr()
+func (e *Environment) Builds(ctx context.Context) (result []*Build, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedBuilds(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.BuildsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryBuilds().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) Repositories(ctx context.Context) ([]*Repository, error) {
-	result, err := e.Edges.RepositoriesOrErr()
+func (e *Environment) Repositories(ctx context.Context) (result []*Repository, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedRepositories(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.RepositoriesOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryRepositories().All(ctx)
 	}
 	return result, err
 }
 
-func (e *Environment) ServerTasks(ctx context.Context) ([]*ServerTask, error) {
-	result, err := e.Edges.ServerTasksOrErr()
+func (e *Environment) ServerTasks(ctx context.Context) (result []*ServerTask, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = e.NamedServerTasks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = e.Edges.ServerTasksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = e.QueryServerTasks().All(ctx)
 	}
@@ -508,8 +672,12 @@ func (fe *FileExtract) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (f *Finding) Users(ctx context.Context) ([]*User, error) {
-	result, err := f.Edges.UsersOrErr()
+func (f *Finding) Users(ctx context.Context) (result []*User, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = f.NamedUsers(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = f.Edges.UsersOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = f.QueryUsers().All(ctx)
 	}
@@ -572,8 +740,12 @@ func (h *Host) Disk(ctx context.Context) (*Disk, error) {
 	return result, MaskNotFound(err)
 }
 
-func (h *Host) Users(ctx context.Context) ([]*User, error) {
-	result, err := h.Edges.UsersOrErr()
+func (h *Host) Users(ctx context.Context) (result []*User, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = h.NamedUsers(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = h.Edges.UsersOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = h.QueryUsers().All(ctx)
 	}
@@ -588,24 +760,36 @@ func (h *Host) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (h *Host) IncludedNetworks(ctx context.Context) ([]*IncludedNetwork, error) {
-	result, err := h.Edges.IncludedNetworksOrErr()
+func (h *Host) IncludedNetworks(ctx context.Context) (result []*IncludedNetwork, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = h.NamedIncludedNetworks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = h.Edges.IncludedNetworksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = h.QueryIncludedNetworks().All(ctx)
 	}
 	return result, err
 }
 
-func (h *Host) DependOnHostDependencies(ctx context.Context) ([]*HostDependency, error) {
-	result, err := h.Edges.DependOnHostDependenciesOrErr()
+func (h *Host) DependOnHostDependencies(ctx context.Context) (result []*HostDependency, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = h.NamedDependOnHostDependencies(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = h.Edges.DependOnHostDependenciesOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = h.QueryDependOnHostDependencies().All(ctx)
 	}
 	return result, err
 }
 
-func (h *Host) RequiredByHostDependencies(ctx context.Context) ([]*HostDependency, error) {
-	result, err := h.Edges.RequiredByHostDependenciesOrErr()
+func (h *Host) RequiredByHostDependencies(ctx context.Context) (result []*HostDependency, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = h.NamedRequiredByHostDependencies(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = h.Edges.RequiredByHostDependenciesOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = h.QueryRequiredByHostDependencies().All(ctx)
 	}
@@ -652,16 +836,24 @@ func (i *Identity) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (in *IncludedNetwork) Tags(ctx context.Context) ([]*Tag, error) {
-	result, err := in.Edges.TagsOrErr()
+func (in *IncludedNetwork) Tags(ctx context.Context) (result []*Tag, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = in.NamedTags(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = in.Edges.TagsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = in.QueryTags().All(ctx)
 	}
 	return result, err
 }
 
-func (in *IncludedNetwork) Hosts(ctx context.Context) ([]*Host, error) {
-	result, err := in.Edges.HostsOrErr()
+func (in *IncludedNetwork) Hosts(ctx context.Context) (result []*Host, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = in.NamedHosts(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = in.Edges.HostsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = in.QueryHosts().All(ctx)
 	}
@@ -676,8 +868,12 @@ func (in *IncludedNetwork) Network(ctx context.Context) (*Network, error) {
 	return result, MaskNotFound(err)
 }
 
-func (in *IncludedNetwork) Environments(ctx context.Context) ([]*Environment, error) {
-	result, err := in.Edges.EnvironmentsOrErr()
+func (in *IncludedNetwork) Environments(ctx context.Context) (result []*Environment, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = in.NamedEnvironments(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = in.Edges.EnvironmentsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = in.QueryEnvironments().All(ctx)
 	}
@@ -692,32 +888,48 @@ func (n *Network) Environment(ctx context.Context) (*Environment, error) {
 	return result, MaskNotFound(err)
 }
 
-func (n *Network) HostDependencies(ctx context.Context) ([]*HostDependency, error) {
-	result, err := n.Edges.HostDependenciesOrErr()
+func (n *Network) HostDependencies(ctx context.Context) (result []*HostDependency, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = n.NamedHostDependencies(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = n.Edges.HostDependenciesOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = n.QueryHostDependencies().All(ctx)
 	}
 	return result, err
 }
 
-func (n *Network) IncludedNetworks(ctx context.Context) ([]*IncludedNetwork, error) {
-	result, err := n.Edges.IncludedNetworksOrErr()
+func (n *Network) IncludedNetworks(ctx context.Context) (result []*IncludedNetwork, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = n.NamedIncludedNetworks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = n.Edges.IncludedNetworksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = n.QueryIncludedNetworks().All(ctx)
 	}
 	return result, err
 }
 
-func (pl *Plan) PrevPlans(ctx context.Context) ([]*Plan, error) {
-	result, err := pl.Edges.PrevPlansOrErr()
+func (pl *Plan) PrevPlans(ctx context.Context) (result []*Plan, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = pl.NamedPrevPlans(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = pl.Edges.PrevPlansOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = pl.QueryPrevPlans().All(ctx)
 	}
 	return result, err
 }
 
-func (pl *Plan) NextPlans(ctx context.Context) ([]*Plan, error) {
-	result, err := pl.Edges.NextPlansOrErr()
+func (pl *Plan) NextPlans(ctx context.Context) (result []*Plan, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = pl.NamedNextPlans(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = pl.Edges.NextPlansOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = pl.QueryNextPlans().All(ctx)
 	}
@@ -780,8 +992,12 @@ func (pl *Plan) Status(ctx context.Context) (*Status, error) {
 	return result, err
 }
 
-func (pl *Plan) PlanDiffs(ctx context.Context) ([]*PlanDiff, error) {
-	result, err := pl.Edges.PlanDiffsOrErr()
+func (pl *Plan) PlanDiffs(ctx context.Context) (result []*PlanDiff, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = pl.NamedPlanDiffs(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = pl.Edges.PlanDiffsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = pl.QueryPlanDiffs().All(ctx)
 	}
@@ -844,32 +1060,48 @@ func (ph *ProvisionedHost) Build(ctx context.Context) (*Build, error) {
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisioningSteps(ctx context.Context) ([]*ProvisioningStep, error) {
-	result, err := ph.Edges.ProvisioningStepsOrErr()
+func (ph *ProvisionedHost) ProvisioningSteps(ctx context.Context) (result []*ProvisioningStep, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = ph.NamedProvisioningSteps(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = ph.Edges.ProvisioningStepsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = ph.QueryProvisioningSteps().All(ctx)
 	}
 	return result, err
 }
 
-func (ph *ProvisionedHost) ProvisioningScheduledSteps(ctx context.Context) ([]*ProvisioningScheduledStep, error) {
-	result, err := ph.Edges.ProvisioningScheduledStepsOrErr()
+func (ph *ProvisionedHost) ProvisioningScheduledSteps(ctx context.Context) (result []*ProvisioningScheduledStep, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = ph.NamedProvisioningScheduledSteps(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = ph.Edges.ProvisioningScheduledStepsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = ph.QueryProvisioningScheduledSteps().All(ctx)
 	}
 	return result, err
 }
 
-func (ph *ProvisionedHost) AgentStatuses(ctx context.Context) ([]*AgentStatus, error) {
-	result, err := ph.Edges.AgentStatusesOrErr()
+func (ph *ProvisionedHost) AgentStatuses(ctx context.Context) (result []*AgentStatus, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = ph.NamedAgentStatuses(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = ph.Edges.AgentStatusesOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = ph.QueryAgentStatuses().All(ctx)
 	}
 	return result, err
 }
 
-func (ph *ProvisionedHost) AgentTasks(ctx context.Context) ([]*AgentTask, error) {
-	result, err := ph.Edges.AgentTasksOrErr()
+func (ph *ProvisionedHost) AgentTasks(ctx context.Context) (result []*AgentTask, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = ph.NamedAgentTasks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = ph.Edges.AgentTasksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = ph.QueryAgentTasks().All(ctx)
 	}
@@ -924,8 +1156,12 @@ func (pn *ProvisionedNetwork) Team(ctx context.Context) (*Team, error) {
 	return result, MaskNotFound(err)
 }
 
-func (pn *ProvisionedNetwork) ProvisionedHosts(ctx context.Context) ([]*ProvisionedHost, error) {
-	result, err := pn.Edges.ProvisionedHostsOrErr()
+func (pn *ProvisionedNetwork) ProvisionedHosts(ctx context.Context) (result []*ProvisionedHost, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = pn.NamedProvisionedHosts(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = pn.Edges.ProvisionedHostsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = pn.QueryProvisionedHosts().All(ctx)
 	}
@@ -1020,8 +1256,12 @@ func (pss *ProvisioningScheduledStep) Ansible(ctx context.Context) (*Ansible, er
 	return result, MaskNotFound(err)
 }
 
-func (pss *ProvisioningScheduledStep) AgentTasks(ctx context.Context) ([]*AgentTask, error) {
-	result, err := pss.Edges.AgentTasksOrErr()
+func (pss *ProvisioningScheduledStep) AgentTasks(ctx context.Context) (result []*AgentTask, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = pss.NamedAgentTasks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = pss.Edges.AgentTasksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = pss.QueryAgentTasks().All(ctx)
 	}
@@ -1124,8 +1364,12 @@ func (ps *ProvisioningStep) Plan(ctx context.Context) (*Plan, error) {
 	return result, MaskNotFound(err)
 }
 
-func (ps *ProvisioningStep) AgentTasks(ctx context.Context) ([]*AgentTask, error) {
-	result, err := ps.Edges.AgentTasksOrErr()
+func (ps *ProvisioningStep) AgentTasks(ctx context.Context) (result []*AgentTask, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = ps.NamedAgentTasks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = ps.Edges.AgentTasksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = ps.QueryAgentTasks().All(ctx)
 	}
@@ -1148,16 +1392,24 @@ func (rc *RepoCommit) Repository(ctx context.Context) (*Repository, error) {
 	return result, MaskNotFound(err)
 }
 
-func (r *Repository) Environments(ctx context.Context) ([]*Environment, error) {
-	result, err := r.Edges.EnvironmentsOrErr()
+func (r *Repository) Environments(ctx context.Context) (result []*Environment, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = r.NamedEnvironments(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = r.Edges.EnvironmentsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = r.QueryEnvironments().All(ctx)
 	}
 	return result, err
 }
 
-func (r *Repository) RepoCommits(ctx context.Context) ([]*RepoCommit, error) {
-	result, err := r.Edges.RepoCommitsOrErr()
+func (r *Repository) RepoCommits(ctx context.Context) (result []*RepoCommit, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = r.NamedRepoCommits(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = r.Edges.RepoCommitsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = r.QueryRepoCommits().All(ctx)
 	}
@@ -1172,16 +1424,24 @@ func (ss *ScheduledStep) Environment(ctx context.Context) (*Environment, error) 
 	return result, MaskNotFound(err)
 }
 
-func (s *Script) Users(ctx context.Context) ([]*User, error) {
-	result, err := s.Edges.UsersOrErr()
+func (s *Script) Users(ctx context.Context) (result []*User, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = s.NamedUsers(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = s.Edges.UsersOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = s.QueryUsers().All(ctx)
 	}
 	return result, err
 }
 
-func (s *Script) Findings(ctx context.Context) ([]*Finding, error) {
-	result, err := s.Edges.FindingsOrErr()
+func (s *Script) Findings(ctx context.Context) (result []*Finding, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = s.NamedFindings(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = s.Edges.FindingsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = s.QueryFindings().All(ctx)
 	}
@@ -1236,8 +1496,12 @@ func (st *ServerTask) BuildCommit(ctx context.Context) (*BuildCommit, error) {
 	return result, MaskNotFound(err)
 }
 
-func (st *ServerTask) GinFileMiddleware(ctx context.Context) ([]*GinFileMiddleware, error) {
-	result, err := st.Edges.GinFileMiddlewareOrErr()
+func (st *ServerTask) GinFileMiddleware(ctx context.Context) (result []*GinFileMiddleware, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = st.NamedGinFileMiddleware(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = st.Edges.GinFileMiddlewareOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = st.QueryGinFileMiddleware().All(ctx)
 	}
@@ -1332,8 +1596,12 @@ func (t *Team) Status(ctx context.Context) (*Status, error) {
 	return result, MaskNotFound(err)
 }
 
-func (t *Team) ProvisionedNetworks(ctx context.Context) ([]*ProvisionedNetwork, error) {
-	result, err := t.Edges.ProvisionedNetworksOrErr()
+func (t *Team) ProvisionedNetworks(ctx context.Context) (result []*ProvisionedNetwork, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = t.NamedProvisionedNetworks(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = t.Edges.ProvisionedNetworksOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = t.QueryProvisionedNetworks().All(ctx)
 	}
@@ -1356,16 +1624,24 @@ func (t *Token) AuthUser(ctx context.Context) (*AuthUser, error) {
 	return result, err
 }
 
-func (u *User) Tag(ctx context.Context) ([]*Tag, error) {
-	result, err := u.Edges.TagOrErr()
+func (u *User) Tag(ctx context.Context) (result []*Tag, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = u.NamedTag(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = u.Edges.TagOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = u.QueryTag().All(ctx)
 	}
 	return result, err
 }
 
-func (u *User) Environments(ctx context.Context) ([]*Environment, error) {
-	result, err := u.Edges.EnvironmentsOrErr()
+func (u *User) Environments(ctx context.Context) (result []*Environment, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = u.NamedEnvironments(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = u.Edges.EnvironmentsOrErr()
+	}
 	if IsNotLoaded(err) {
 		result, err = u.QueryEnvironments().All(ctx)
 	}

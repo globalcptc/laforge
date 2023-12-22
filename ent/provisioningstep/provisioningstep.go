@@ -7,6 +7,8 @@ import (
 	"io"
 	"strconv"
 
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -201,19 +203,212 @@ func TypeValidator(_type Type) error {
 	}
 }
 
+// OrderOption defines the ordering options for the ProvisioningStep queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByType orders the results by the type field.
+func ByType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldType, opts...).ToFunc()
+}
+
+// ByStepNumber orders the results by the step_number field.
+func ByStepNumber(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStepNumber, opts...).ToFunc()
+}
+
+// ByStatusField orders the results by Status field.
+func ByStatusField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newStatusStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisionedHostField orders the results by ProvisionedHost field.
+func ByProvisionedHostField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisionedHostStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByScriptField orders the results by Script field.
+func ByScriptField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newScriptStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByCommandField orders the results by Command field.
+func ByCommandField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCommandStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByDNSRecordField orders the results by DNSRecord field.
+func ByDNSRecordField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDNSRecordStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByFileDeleteField orders the results by FileDelete field.
+func ByFileDeleteField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFileDeleteStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByFileDownloadField orders the results by FileDownload field.
+func ByFileDownloadField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFileDownloadStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByFileExtractField orders the results by FileExtract field.
+func ByFileExtractField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFileExtractStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByAnsibleField orders the results by Ansible field.
+func ByAnsibleField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAnsibleStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByPlanField orders the results by Plan field.
+func ByPlanField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPlanStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByAgentTasksCount orders the results by AgentTasks count.
+func ByAgentTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAgentTasksStep(), opts...)
+	}
+}
+
+// ByAgentTasks orders the results by AgentTasks terms.
+func ByAgentTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAgentTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByGinFileMiddlewareField orders the results by GinFileMiddleware field.
+func ByGinFileMiddlewareField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newGinFileMiddlewareStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newStatusStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(StatusInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
+	)
+}
+func newProvisionedHostStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisionedHostInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, ProvisionedHostTable, ProvisionedHostColumn),
+	)
+}
+func newScriptStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ScriptInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, ScriptTable, ScriptColumn),
+	)
+}
+func newCommandStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CommandInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, CommandTable, CommandColumn),
+	)
+}
+func newDNSRecordStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DNSRecordInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, DNSRecordTable, DNSRecordColumn),
+	)
+}
+func newFileDeleteStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FileDeleteInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, FileDeleteTable, FileDeleteColumn),
+	)
+}
+func newFileDownloadStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FileDownloadInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, FileDownloadTable, FileDownloadColumn),
+	)
+}
+func newFileExtractStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FileExtractInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, FileExtractTable, FileExtractColumn),
+	)
+}
+func newAnsibleStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AnsibleInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, AnsibleTable, AnsibleColumn),
+	)
+}
+func newPlanStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PlanInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, PlanTable, PlanColumn),
+	)
+}
+func newAgentTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AgentTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, AgentTasksTable, AgentTasksColumn),
+	)
+}
+func newGinFileMiddlewareStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(GinFileMiddlewareInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, GinFileMiddlewareTable, GinFileMiddlewareColumn),
+	)
+}
+
 // MarshalGQL implements graphql.Marshaler interface.
-func (_type Type) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.Quote(_type.String()))
+func (e Type) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(e.String()))
 }
 
 // UnmarshalGQL implements graphql.Unmarshaler interface.
-func (_type *Type) UnmarshalGQL(val interface{}) error {
+func (e *Type) UnmarshalGQL(val interface{}) error {
 	str, ok := val.(string)
 	if !ok {
 		return fmt.Errorf("enum %T must be a string", val)
 	}
-	*_type = Type(str)
-	if err := TypeValidator(*_type); err != nil {
+	*e = Type(str)
+	if err := TypeValidator(*e); err != nil {
 		return fmt.Errorf("%s is not a valid Type", str)
 	}
 	return nil

@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/disk"
 	"github.com/gen0cide/laforge/ent/environment"
@@ -33,9 +34,17 @@ func (hu *HostUpdate) Where(ps ...predicate.Host) *HostUpdate {
 	return hu
 }
 
-// SetHclID sets the "hcl_id" field.
-func (hu *HostUpdate) SetHclID(s string) *HostUpdate {
-	hu.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (hu *HostUpdate) SetHCLID(s string) *HostUpdate {
+	hu.mutation.SetHCLID(s)
+	return hu
+}
+
+// SetNillableHCLID sets the "hcl_id" field if the given value is not nil.
+func (hu *HostUpdate) SetNillableHCLID(s *string) *HostUpdate {
+	if s != nil {
+		hu.SetHCLID(*s)
+	}
 	return hu
 }
 
@@ -45,9 +54,25 @@ func (hu *HostUpdate) SetHostname(s string) *HostUpdate {
 	return hu
 }
 
+// SetNillableHostname sets the "hostname" field if the given value is not nil.
+func (hu *HostUpdate) SetNillableHostname(s *string) *HostUpdate {
+	if s != nil {
+		hu.SetHostname(*s)
+	}
+	return hu
+}
+
 // SetDescription sets the "description" field.
 func (hu *HostUpdate) SetDescription(s string) *HostUpdate {
 	hu.mutation.SetDescription(s)
+	return hu
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (hu *HostUpdate) SetNillableDescription(s *string) *HostUpdate {
+	if s != nil {
+		hu.SetDescription(*s)
+	}
 	return hu
 }
 
@@ -57,10 +82,26 @@ func (hu *HostUpdate) SetOS(s string) *HostUpdate {
 	return hu
 }
 
+// SetNillableOS sets the "OS" field if the given value is not nil.
+func (hu *HostUpdate) SetNillableOS(s *string) *HostUpdate {
+	if s != nil {
+		hu.SetOS(*s)
+	}
+	return hu
+}
+
 // SetLastOctet sets the "last_octet" field.
 func (hu *HostUpdate) SetLastOctet(i int) *HostUpdate {
 	hu.mutation.ResetLastOctet()
 	hu.mutation.SetLastOctet(i)
+	return hu
+}
+
+// SetNillableLastOctet sets the "last_octet" field if the given value is not nil.
+func (hu *HostUpdate) SetNillableLastOctet(i *int) *HostUpdate {
+	if i != nil {
+		hu.SetLastOctet(*i)
+	}
 	return hu
 }
 
@@ -76,9 +117,25 @@ func (hu *HostUpdate) SetInstanceSize(s string) *HostUpdate {
 	return hu
 }
 
+// SetNillableInstanceSize sets the "instance_size" field if the given value is not nil.
+func (hu *HostUpdate) SetNillableInstanceSize(s *string) *HostUpdate {
+	if s != nil {
+		hu.SetInstanceSize(*s)
+	}
+	return hu
+}
+
 // SetAllowMACChanges sets the "allow_mac_changes" field.
 func (hu *HostUpdate) SetAllowMACChanges(b bool) *HostUpdate {
 	hu.mutation.SetAllowMACChanges(b)
+	return hu
+}
+
+// SetNillableAllowMACChanges sets the "allow_mac_changes" field if the given value is not nil.
+func (hu *HostUpdate) SetNillableAllowMACChanges(b *bool) *HostUpdate {
+	if b != nil {
+		hu.SetAllowMACChanges(*b)
+	}
 	return hu
 }
 
@@ -88,15 +145,35 @@ func (hu *HostUpdate) SetExposedTCPPorts(s []string) *HostUpdate {
 	return hu
 }
 
+// AppendExposedTCPPorts appends s to the "exposed_tcp_ports" field.
+func (hu *HostUpdate) AppendExposedTCPPorts(s []string) *HostUpdate {
+	hu.mutation.AppendExposedTCPPorts(s)
+	return hu
+}
+
 // SetExposedUDPPorts sets the "exposed_udp_ports" field.
 func (hu *HostUpdate) SetExposedUDPPorts(s []string) *HostUpdate {
 	hu.mutation.SetExposedUDPPorts(s)
 	return hu
 }
 
+// AppendExposedUDPPorts appends s to the "exposed_udp_ports" field.
+func (hu *HostUpdate) AppendExposedUDPPorts(s []string) *HostUpdate {
+	hu.mutation.AppendExposedUDPPorts(s)
+	return hu
+}
+
 // SetOverridePassword sets the "override_password" field.
 func (hu *HostUpdate) SetOverridePassword(s string) *HostUpdate {
 	hu.mutation.SetOverridePassword(s)
+	return hu
+}
+
+// SetNillableOverridePassword sets the "override_password" field if the given value is not nil.
+func (hu *HostUpdate) SetNillableOverridePassword(s *string) *HostUpdate {
+	if s != nil {
+		hu.SetOverridePassword(*s)
+	}
 	return hu
 }
 
@@ -112,9 +189,21 @@ func (hu *HostUpdate) SetUserGroups(s []string) *HostUpdate {
 	return hu
 }
 
+// AppendUserGroups appends s to the "user_groups" field.
+func (hu *HostUpdate) AppendUserGroups(s []string) *HostUpdate {
+	hu.mutation.AppendUserGroups(s)
+	return hu
+}
+
 // SetProvisionSteps sets the "provision_steps" field.
 func (hu *HostUpdate) SetProvisionSteps(s []string) *HostUpdate {
 	hu.mutation.SetProvisionSteps(s)
+	return hu
+}
+
+// AppendProvisionSteps appends s to the "provision_steps" field.
+func (hu *HostUpdate) AppendProvisionSteps(s []string) *HostUpdate {
+	hu.mutation.AppendProvisionSteps(s)
 	return hu
 }
 
@@ -127,6 +216,12 @@ func (hu *HostUpdate) ClearProvisionSteps() *HostUpdate {
 // SetScheduledSteps sets the "scheduled_steps" field.
 func (hu *HostUpdate) SetScheduledSteps(s []string) *HostUpdate {
 	hu.mutation.SetScheduledSteps(s)
+	return hu
+}
+
+// AppendScheduledSteps appends s to the "scheduled_steps" field.
+func (hu *HostUpdate) AppendScheduledSteps(s []string) *HostUpdate {
+	hu.mutation.AppendScheduledSteps(s)
 	return hu
 }
 
@@ -343,34 +438,7 @@ func (hu *HostUpdate) RemoveRequiredByHostDependencies(h ...*HostDependency) *Ho
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (hu *HostUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(hu.hooks) == 0 {
-		affected, err = hu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*HostMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			hu.mutation = mutation
-			affected, err = hu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(hu.hooks) - 1; i >= 0; i-- {
-			if hu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = hu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, hu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, hu.sqlSave, hu.mutation, hu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -396,16 +464,7 @@ func (hu *HostUpdate) ExecX(ctx context.Context) {
 }
 
 func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   host.Table,
-			Columns: host.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: host.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(host.Table, host.Columns, sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID))
 	if ps := hu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -413,129 +472,84 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := hu.mutation.HclID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldHclID,
-		})
+	if value, ok := hu.mutation.HCLID(); ok {
+		_spec.SetField(host.FieldHCLID, field.TypeString, value)
 	}
 	if value, ok := hu.mutation.Hostname(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldHostname,
-		})
+		_spec.SetField(host.FieldHostname, field.TypeString, value)
 	}
 	if value, ok := hu.mutation.Description(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldDescription,
-		})
+		_spec.SetField(host.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := hu.mutation.OS(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldOS,
-		})
+		_spec.SetField(host.FieldOS, field.TypeString, value)
 	}
 	if value, ok := hu.mutation.LastOctet(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: host.FieldLastOctet,
-		})
+		_spec.SetField(host.FieldLastOctet, field.TypeInt, value)
 	}
 	if value, ok := hu.mutation.AddedLastOctet(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: host.FieldLastOctet,
-		})
+		_spec.AddField(host.FieldLastOctet, field.TypeInt, value)
 	}
 	if value, ok := hu.mutation.InstanceSize(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldInstanceSize,
-		})
+		_spec.SetField(host.FieldInstanceSize, field.TypeString, value)
 	}
 	if value, ok := hu.mutation.AllowMACChanges(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: host.FieldAllowMACChanges,
-		})
+		_spec.SetField(host.FieldAllowMACChanges, field.TypeBool, value)
 	}
 	if value, ok := hu.mutation.ExposedTCPPorts(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldExposedTCPPorts,
+		_spec.SetField(host.FieldExposedTCPPorts, field.TypeJSON, value)
+	}
+	if value, ok := hu.mutation.AppendedExposedTCPPorts(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, host.FieldExposedTCPPorts, value)
 		})
 	}
 	if value, ok := hu.mutation.ExposedUDPPorts(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldExposedUDPPorts,
+		_spec.SetField(host.FieldExposedUDPPorts, field.TypeJSON, value)
+	}
+	if value, ok := hu.mutation.AppendedExposedUDPPorts(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, host.FieldExposedUDPPorts, value)
 		})
 	}
 	if value, ok := hu.mutation.OverridePassword(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldOverridePassword,
-		})
+		_spec.SetField(host.FieldOverridePassword, field.TypeString, value)
 	}
 	if value, ok := hu.mutation.Vars(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldVars,
-		})
+		_spec.SetField(host.FieldVars, field.TypeJSON, value)
 	}
 	if value, ok := hu.mutation.UserGroups(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldUserGroups,
+		_spec.SetField(host.FieldUserGroups, field.TypeJSON, value)
+	}
+	if value, ok := hu.mutation.AppendedUserGroups(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, host.FieldUserGroups, value)
 		})
 	}
 	if value, ok := hu.mutation.ProvisionSteps(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldProvisionSteps,
+		_spec.SetField(host.FieldProvisionSteps, field.TypeJSON, value)
+	}
+	if value, ok := hu.mutation.AppendedProvisionSteps(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, host.FieldProvisionSteps, value)
 		})
 	}
 	if hu.mutation.ProvisionStepsCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Column: host.FieldProvisionSteps,
-		})
+		_spec.ClearField(host.FieldProvisionSteps, field.TypeJSON)
 	}
 	if value, ok := hu.mutation.ScheduledSteps(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldScheduledSteps,
+		_spec.SetField(host.FieldScheduledSteps, field.TypeJSON, value)
+	}
+	if value, ok := hu.mutation.AppendedScheduledSteps(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, host.FieldScheduledSteps, value)
 		})
 	}
 	if hu.mutation.ScheduledStepsCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Column: host.FieldScheduledSteps,
-		})
+		_spec.ClearField(host.FieldScheduledSteps, field.TypeJSON)
 	}
 	if value, ok := hu.mutation.Tags(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldTags,
-		})
+		_spec.SetField(host.FieldTags, field.TypeJSON, value)
 	}
 	if hu.mutation.DiskCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -545,10 +559,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.DiskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: disk.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(disk.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -561,10 +572,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.DiskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: disk.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(disk.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -580,10 +588,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -596,10 +601,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -615,10 +617,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -634,10 +633,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -650,10 +646,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -669,10 +662,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: host.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -685,10 +675,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: host.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -704,10 +691,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: host.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -723,10 +707,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -739,10 +720,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -758,10 +736,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -777,10 +752,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -793,10 +765,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -812,10 +781,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -831,6 +797,7 @@ func (hu *HostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	hu.mutation.done = true
 	return n, nil
 }
 
@@ -842,9 +809,17 @@ type HostUpdateOne struct {
 	mutation *HostMutation
 }
 
-// SetHclID sets the "hcl_id" field.
-func (huo *HostUpdateOne) SetHclID(s string) *HostUpdateOne {
-	huo.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (huo *HostUpdateOne) SetHCLID(s string) *HostUpdateOne {
+	huo.mutation.SetHCLID(s)
+	return huo
+}
+
+// SetNillableHCLID sets the "hcl_id" field if the given value is not nil.
+func (huo *HostUpdateOne) SetNillableHCLID(s *string) *HostUpdateOne {
+	if s != nil {
+		huo.SetHCLID(*s)
+	}
 	return huo
 }
 
@@ -854,9 +829,25 @@ func (huo *HostUpdateOne) SetHostname(s string) *HostUpdateOne {
 	return huo
 }
 
+// SetNillableHostname sets the "hostname" field if the given value is not nil.
+func (huo *HostUpdateOne) SetNillableHostname(s *string) *HostUpdateOne {
+	if s != nil {
+		huo.SetHostname(*s)
+	}
+	return huo
+}
+
 // SetDescription sets the "description" field.
 func (huo *HostUpdateOne) SetDescription(s string) *HostUpdateOne {
 	huo.mutation.SetDescription(s)
+	return huo
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (huo *HostUpdateOne) SetNillableDescription(s *string) *HostUpdateOne {
+	if s != nil {
+		huo.SetDescription(*s)
+	}
 	return huo
 }
 
@@ -866,10 +857,26 @@ func (huo *HostUpdateOne) SetOS(s string) *HostUpdateOne {
 	return huo
 }
 
+// SetNillableOS sets the "OS" field if the given value is not nil.
+func (huo *HostUpdateOne) SetNillableOS(s *string) *HostUpdateOne {
+	if s != nil {
+		huo.SetOS(*s)
+	}
+	return huo
+}
+
 // SetLastOctet sets the "last_octet" field.
 func (huo *HostUpdateOne) SetLastOctet(i int) *HostUpdateOne {
 	huo.mutation.ResetLastOctet()
 	huo.mutation.SetLastOctet(i)
+	return huo
+}
+
+// SetNillableLastOctet sets the "last_octet" field if the given value is not nil.
+func (huo *HostUpdateOne) SetNillableLastOctet(i *int) *HostUpdateOne {
+	if i != nil {
+		huo.SetLastOctet(*i)
+	}
 	return huo
 }
 
@@ -885,9 +892,25 @@ func (huo *HostUpdateOne) SetInstanceSize(s string) *HostUpdateOne {
 	return huo
 }
 
+// SetNillableInstanceSize sets the "instance_size" field if the given value is not nil.
+func (huo *HostUpdateOne) SetNillableInstanceSize(s *string) *HostUpdateOne {
+	if s != nil {
+		huo.SetInstanceSize(*s)
+	}
+	return huo
+}
+
 // SetAllowMACChanges sets the "allow_mac_changes" field.
 func (huo *HostUpdateOne) SetAllowMACChanges(b bool) *HostUpdateOne {
 	huo.mutation.SetAllowMACChanges(b)
+	return huo
+}
+
+// SetNillableAllowMACChanges sets the "allow_mac_changes" field if the given value is not nil.
+func (huo *HostUpdateOne) SetNillableAllowMACChanges(b *bool) *HostUpdateOne {
+	if b != nil {
+		huo.SetAllowMACChanges(*b)
+	}
 	return huo
 }
 
@@ -897,15 +920,35 @@ func (huo *HostUpdateOne) SetExposedTCPPorts(s []string) *HostUpdateOne {
 	return huo
 }
 
+// AppendExposedTCPPorts appends s to the "exposed_tcp_ports" field.
+func (huo *HostUpdateOne) AppendExposedTCPPorts(s []string) *HostUpdateOne {
+	huo.mutation.AppendExposedTCPPorts(s)
+	return huo
+}
+
 // SetExposedUDPPorts sets the "exposed_udp_ports" field.
 func (huo *HostUpdateOne) SetExposedUDPPorts(s []string) *HostUpdateOne {
 	huo.mutation.SetExposedUDPPorts(s)
 	return huo
 }
 
+// AppendExposedUDPPorts appends s to the "exposed_udp_ports" field.
+func (huo *HostUpdateOne) AppendExposedUDPPorts(s []string) *HostUpdateOne {
+	huo.mutation.AppendExposedUDPPorts(s)
+	return huo
+}
+
 // SetOverridePassword sets the "override_password" field.
 func (huo *HostUpdateOne) SetOverridePassword(s string) *HostUpdateOne {
 	huo.mutation.SetOverridePassword(s)
+	return huo
+}
+
+// SetNillableOverridePassword sets the "override_password" field if the given value is not nil.
+func (huo *HostUpdateOne) SetNillableOverridePassword(s *string) *HostUpdateOne {
+	if s != nil {
+		huo.SetOverridePassword(*s)
+	}
 	return huo
 }
 
@@ -921,9 +964,21 @@ func (huo *HostUpdateOne) SetUserGroups(s []string) *HostUpdateOne {
 	return huo
 }
 
+// AppendUserGroups appends s to the "user_groups" field.
+func (huo *HostUpdateOne) AppendUserGroups(s []string) *HostUpdateOne {
+	huo.mutation.AppendUserGroups(s)
+	return huo
+}
+
 // SetProvisionSteps sets the "provision_steps" field.
 func (huo *HostUpdateOne) SetProvisionSteps(s []string) *HostUpdateOne {
 	huo.mutation.SetProvisionSteps(s)
+	return huo
+}
+
+// AppendProvisionSteps appends s to the "provision_steps" field.
+func (huo *HostUpdateOne) AppendProvisionSteps(s []string) *HostUpdateOne {
+	huo.mutation.AppendProvisionSteps(s)
 	return huo
 }
 
@@ -936,6 +991,12 @@ func (huo *HostUpdateOne) ClearProvisionSteps() *HostUpdateOne {
 // SetScheduledSteps sets the "scheduled_steps" field.
 func (huo *HostUpdateOne) SetScheduledSteps(s []string) *HostUpdateOne {
 	huo.mutation.SetScheduledSteps(s)
+	return huo
+}
+
+// AppendScheduledSteps appends s to the "scheduled_steps" field.
+func (huo *HostUpdateOne) AppendScheduledSteps(s []string) *HostUpdateOne {
+	huo.mutation.AppendScheduledSteps(s)
 	return huo
 }
 
@@ -1150,6 +1211,12 @@ func (huo *HostUpdateOne) RemoveRequiredByHostDependencies(h ...*HostDependency)
 	return huo.RemoveRequiredByHostDependencyIDs(ids...)
 }
 
+// Where appends a list predicates to the HostUpdate builder.
+func (huo *HostUpdateOne) Where(ps ...predicate.Host) *HostUpdateOne {
+	huo.mutation.Where(ps...)
+	return huo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (huo *HostUpdateOne) Select(field string, fields ...string) *HostUpdateOne {
@@ -1159,40 +1226,7 @@ func (huo *HostUpdateOne) Select(field string, fields ...string) *HostUpdateOne 
 
 // Save executes the query and returns the updated Host entity.
 func (huo *HostUpdateOne) Save(ctx context.Context) (*Host, error) {
-	var (
-		err  error
-		node *Host
-	)
-	if len(huo.hooks) == 0 {
-		node, err = huo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*HostMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			huo.mutation = mutation
-			node, err = huo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(huo.hooks) - 1; i >= 0; i-- {
-			if huo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = huo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, huo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Host)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from HostMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, huo.sqlSave, huo.mutation, huo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -1218,16 +1252,7 @@ func (huo *HostUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   host.Table,
-			Columns: host.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: host.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(host.Table, host.Columns, sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID))
 	id, ok := huo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Host.id" for update`)}
@@ -1252,129 +1277,84 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			}
 		}
 	}
-	if value, ok := huo.mutation.HclID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldHclID,
-		})
+	if value, ok := huo.mutation.HCLID(); ok {
+		_spec.SetField(host.FieldHCLID, field.TypeString, value)
 	}
 	if value, ok := huo.mutation.Hostname(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldHostname,
-		})
+		_spec.SetField(host.FieldHostname, field.TypeString, value)
 	}
 	if value, ok := huo.mutation.Description(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldDescription,
-		})
+		_spec.SetField(host.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := huo.mutation.OS(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldOS,
-		})
+		_spec.SetField(host.FieldOS, field.TypeString, value)
 	}
 	if value, ok := huo.mutation.LastOctet(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: host.FieldLastOctet,
-		})
+		_spec.SetField(host.FieldLastOctet, field.TypeInt, value)
 	}
 	if value, ok := huo.mutation.AddedLastOctet(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: host.FieldLastOctet,
-		})
+		_spec.AddField(host.FieldLastOctet, field.TypeInt, value)
 	}
 	if value, ok := huo.mutation.InstanceSize(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldInstanceSize,
-		})
+		_spec.SetField(host.FieldInstanceSize, field.TypeString, value)
 	}
 	if value, ok := huo.mutation.AllowMACChanges(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: host.FieldAllowMACChanges,
-		})
+		_spec.SetField(host.FieldAllowMACChanges, field.TypeBool, value)
 	}
 	if value, ok := huo.mutation.ExposedTCPPorts(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldExposedTCPPorts,
+		_spec.SetField(host.FieldExposedTCPPorts, field.TypeJSON, value)
+	}
+	if value, ok := huo.mutation.AppendedExposedTCPPorts(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, host.FieldExposedTCPPorts, value)
 		})
 	}
 	if value, ok := huo.mutation.ExposedUDPPorts(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldExposedUDPPorts,
+		_spec.SetField(host.FieldExposedUDPPorts, field.TypeJSON, value)
+	}
+	if value, ok := huo.mutation.AppendedExposedUDPPorts(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, host.FieldExposedUDPPorts, value)
 		})
 	}
 	if value, ok := huo.mutation.OverridePassword(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldOverridePassword,
-		})
+		_spec.SetField(host.FieldOverridePassword, field.TypeString, value)
 	}
 	if value, ok := huo.mutation.Vars(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldVars,
-		})
+		_spec.SetField(host.FieldVars, field.TypeJSON, value)
 	}
 	if value, ok := huo.mutation.UserGroups(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldUserGroups,
+		_spec.SetField(host.FieldUserGroups, field.TypeJSON, value)
+	}
+	if value, ok := huo.mutation.AppendedUserGroups(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, host.FieldUserGroups, value)
 		})
 	}
 	if value, ok := huo.mutation.ProvisionSteps(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldProvisionSteps,
+		_spec.SetField(host.FieldProvisionSteps, field.TypeJSON, value)
+	}
+	if value, ok := huo.mutation.AppendedProvisionSteps(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, host.FieldProvisionSteps, value)
 		})
 	}
 	if huo.mutation.ProvisionStepsCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Column: host.FieldProvisionSteps,
-		})
+		_spec.ClearField(host.FieldProvisionSteps, field.TypeJSON)
 	}
 	if value, ok := huo.mutation.ScheduledSteps(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldScheduledSteps,
+		_spec.SetField(host.FieldScheduledSteps, field.TypeJSON, value)
+	}
+	if value, ok := huo.mutation.AppendedScheduledSteps(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, host.FieldScheduledSteps, value)
 		})
 	}
 	if huo.mutation.ScheduledStepsCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Column: host.FieldScheduledSteps,
-		})
+		_spec.ClearField(host.FieldScheduledSteps, field.TypeJSON)
 	}
 	if value, ok := huo.mutation.Tags(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldTags,
-		})
+		_spec.SetField(host.FieldTags, field.TypeJSON, value)
 	}
 	if huo.mutation.DiskCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1384,10 +1364,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.DiskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: disk.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(disk.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1400,10 +1377,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.DiskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: disk.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(disk.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1419,10 +1393,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1435,10 +1406,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1454,10 +1422,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1473,10 +1438,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1489,10 +1451,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1508,10 +1467,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: host.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1524,10 +1480,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: host.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1543,10 +1496,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: host.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1562,10 +1512,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1578,10 +1525,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1597,10 +1541,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1616,10 +1557,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1632,10 +1570,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1651,10 +1586,7 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1673,5 +1605,6 @@ func (huo *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) 
 		}
 		return nil, err
 	}
+	huo.mutation.done = true
 	return _node, nil
 }

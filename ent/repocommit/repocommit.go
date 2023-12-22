@@ -3,6 +3,8 @@
 package repocommit
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -78,3 +80,50 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the RepoCommit queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByRevision orders the results by the revision field.
+func ByRevision(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRevision, opts...).ToFunc()
+}
+
+// ByHash orders the results by the hash field.
+func ByHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHash, opts...).ToFunc()
+}
+
+// ByPgpSignature orders the results by the pgp_signature field.
+func ByPgpSignature(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPgpSignature, opts...).ToFunc()
+}
+
+// ByMessage orders the results by the message field.
+func ByMessage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMessage, opts...).ToFunc()
+}
+
+// ByTreeHash orders the results by the tree_hash field.
+func ByTreeHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTreeHash, opts...).ToFunc()
+}
+
+// ByRepositoryField orders the results by Repository field.
+func ByRepositoryField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRepositoryStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newRepositoryStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RepositoryInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, RepositoryTable, RepositoryColumn),
+	)
+}

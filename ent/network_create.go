@@ -23,9 +23,9 @@ type NetworkCreate struct {
 	hooks    []Hook
 }
 
-// SetHclID sets the "hcl_id" field.
-func (nc *NetworkCreate) SetHclID(s string) *NetworkCreate {
-	nc.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (nc *NetworkCreate) SetHCLID(s string) *NetworkCreate {
+	nc.mutation.SetHCLID(s)
 	return nc
 }
 
@@ -129,50 +129,8 @@ func (nc *NetworkCreate) Mutation() *NetworkMutation {
 
 // Save creates the Network in the database.
 func (nc *NetworkCreate) Save(ctx context.Context) (*Network, error) {
-	var (
-		err  error
-		node *Network
-	)
 	nc.defaults()
-	if len(nc.hooks) == 0 {
-		if err = nc.check(); err != nil {
-			return nil, err
-		}
-		node, err = nc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*NetworkMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = nc.check(); err != nil {
-				return nil, err
-			}
-			nc.mutation = mutation
-			if node, err = nc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(nc.hooks) - 1; i >= 0; i-- {
-			if nc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = nc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, nc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Network)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from NetworkMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, nc.sqlSave, nc.mutation, nc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -207,7 +165,7 @@ func (nc *NetworkCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (nc *NetworkCreate) check() error {
-	if _, ok := nc.mutation.HclID(); !ok {
+	if _, ok := nc.mutation.HCLID(); !ok {
 		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Network.hcl_id"`)}
 	}
 	if _, ok := nc.mutation.Name(); !ok {
@@ -229,6 +187,9 @@ func (nc *NetworkCreate) check() error {
 }
 
 func (nc *NetworkCreate) sqlSave(ctx context.Context) (*Network, error) {
+	if err := nc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := nc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, nc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -243,70 +204,42 @@ func (nc *NetworkCreate) sqlSave(ctx context.Context) (*Network, error) {
 			return nil, err
 		}
 	}
+	nc.mutation.id = &_node.ID
+	nc.mutation.done = true
 	return _node, nil
 }
 
 func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Network{config: nc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: network.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: network.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(network.Table, sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID))
 	)
 	if id, ok := nc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := nc.mutation.HclID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: network.FieldHclID,
-		})
-		_node.HclID = value
+	if value, ok := nc.mutation.HCLID(); ok {
+		_spec.SetField(network.FieldHCLID, field.TypeString, value)
+		_node.HCLID = value
 	}
 	if value, ok := nc.mutation.Name(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: network.FieldName,
-		})
+		_spec.SetField(network.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
 	if value, ok := nc.mutation.Cidr(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: network.FieldCidr,
-		})
+		_spec.SetField(network.FieldCidr, field.TypeString, value)
 		_node.Cidr = value
 	}
 	if value, ok := nc.mutation.VdiVisible(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: network.FieldVdiVisible,
-		})
+		_spec.SetField(network.FieldVdiVisible, field.TypeBool, value)
 		_node.VdiVisible = value
 	}
 	if value, ok := nc.mutation.Vars(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: network.FieldVars,
-		})
+		_spec.SetField(network.FieldVars, field.TypeJSON, value)
 		_node.Vars = value
 	}
 	if value, ok := nc.mutation.Tags(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: network.FieldTags,
-		})
+		_spec.SetField(network.FieldTags, field.TypeJSON, value)
 		_node.Tags = value
 	}
 	if nodes := nc.mutation.EnvironmentIDs(); len(nodes) > 0 {
@@ -317,10 +250,7 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 			Columns: []string{network.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -337,10 +267,7 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 			Columns: []string{network.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -356,10 +283,7 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 			Columns: []string{network.IncludedNetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -373,11 +297,15 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 // NetworkCreateBulk is the builder for creating many Network entities in bulk.
 type NetworkCreateBulk struct {
 	config
+	err      error
 	builders []*NetworkCreate
 }
 
 // Save creates the Network entities in the database.
 func (ncb *NetworkCreateBulk) Save(ctx context.Context) ([]*Network, error) {
+	if ncb.err != nil {
+		return nil, ncb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ncb.builders))
 	nodes := make([]*Network, len(ncb.builders))
 	mutators := make([]Mutator, len(ncb.builders))
@@ -394,8 +322,8 @@ func (ncb *NetworkCreateBulk) Save(ctx context.Context) ([]*Network, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ncb.builders[i+1].mutation)
 				} else {

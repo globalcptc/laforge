@@ -22,9 +22,9 @@ type CommandCreate struct {
 	hooks    []Hook
 }
 
-// SetHclID sets the "hcl_id" field.
-func (cc *CommandCreate) SetHclID(s string) *CommandCreate {
-	cc.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (cc *CommandCreate) SetHCLID(s string) *CommandCreate {
+	cc.mutation.SetHCLID(s)
 	return cc
 }
 
@@ -143,50 +143,8 @@ func (cc *CommandCreate) Mutation() *CommandMutation {
 
 // Save creates the Command in the database.
 func (cc *CommandCreate) Save(ctx context.Context) (*Command, error) {
-	var (
-		err  error
-		node *Command
-	)
 	cc.defaults()
-	if len(cc.hooks) == 0 {
-		if err = cc.check(); err != nil {
-			return nil, err
-		}
-		node, err = cc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*CommandMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = cc.check(); err != nil {
-				return nil, err
-			}
-			cc.mutation = mutation
-			if node, err = cc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(cc.hooks) - 1; i >= 0; i-- {
-			if cc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = cc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, cc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Command)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from CommandMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, cc.sqlSave, cc.mutation, cc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -221,7 +179,7 @@ func (cc *CommandCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (cc *CommandCreate) check() error {
-	if _, ok := cc.mutation.HclID(); !ok {
+	if _, ok := cc.mutation.HCLID(); !ok {
 		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Command.hcl_id"`)}
 	}
 	if _, ok := cc.mutation.Name(); !ok {
@@ -268,6 +226,9 @@ func (cc *CommandCreate) check() error {
 }
 
 func (cc *CommandCreate) sqlSave(ctx context.Context) (*Command, error) {
+	if err := cc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := cc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, cc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -282,110 +243,62 @@ func (cc *CommandCreate) sqlSave(ctx context.Context) (*Command, error) {
 			return nil, err
 		}
 	}
+	cc.mutation.id = &_node.ID
+	cc.mutation.done = true
 	return _node, nil
 }
 
 func (cc *CommandCreate) createSpec() (*Command, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Command{config: cc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: command.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: command.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(command.Table, sqlgraph.NewFieldSpec(command.FieldID, field.TypeUUID))
 	)
 	if id, ok := cc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := cc.mutation.HclID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: command.FieldHclID,
-		})
-		_node.HclID = value
+	if value, ok := cc.mutation.HCLID(); ok {
+		_spec.SetField(command.FieldHCLID, field.TypeString, value)
+		_node.HCLID = value
 	}
 	if value, ok := cc.mutation.Name(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: command.FieldName,
-		})
+		_spec.SetField(command.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
 	if value, ok := cc.mutation.Description(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: command.FieldDescription,
-		})
+		_spec.SetField(command.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
 	if value, ok := cc.mutation.Program(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: command.FieldProgram,
-		})
+		_spec.SetField(command.FieldProgram, field.TypeString, value)
 		_node.Program = value
 	}
 	if value, ok := cc.mutation.Args(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: command.FieldArgs,
-		})
+		_spec.SetField(command.FieldArgs, field.TypeJSON, value)
 		_node.Args = value
 	}
 	if value, ok := cc.mutation.IgnoreErrors(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: command.FieldIgnoreErrors,
-		})
+		_spec.SetField(command.FieldIgnoreErrors, field.TypeBool, value)
 		_node.IgnoreErrors = value
 	}
 	if value, ok := cc.mutation.Disabled(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: command.FieldDisabled,
-		})
+		_spec.SetField(command.FieldDisabled, field.TypeBool, value)
 		_node.Disabled = value
 	}
 	if value, ok := cc.mutation.Cooldown(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: command.FieldCooldown,
-		})
+		_spec.SetField(command.FieldCooldown, field.TypeInt, value)
 		_node.Cooldown = value
 	}
 	if value, ok := cc.mutation.Timeout(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: command.FieldTimeout,
-		})
+		_spec.SetField(command.FieldTimeout, field.TypeInt, value)
 		_node.Timeout = value
 	}
 	if value, ok := cc.mutation.Vars(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: command.FieldVars,
-		})
+		_spec.SetField(command.FieldVars, field.TypeJSON, value)
 		_node.Vars = value
 	}
 	if value, ok := cc.mutation.Tags(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: command.FieldTags,
-		})
+		_spec.SetField(command.FieldTags, field.TypeJSON, value)
 		_node.Tags = value
 	}
 	if nodes := cc.mutation.UsersIDs(); len(nodes) > 0 {
@@ -396,10 +309,7 @@ func (cc *CommandCreate) createSpec() (*Command, *sqlgraph.CreateSpec) {
 			Columns: []string{command.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -415,10 +325,7 @@ func (cc *CommandCreate) createSpec() (*Command, *sqlgraph.CreateSpec) {
 			Columns: []string{command.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -433,11 +340,15 @@ func (cc *CommandCreate) createSpec() (*Command, *sqlgraph.CreateSpec) {
 // CommandCreateBulk is the builder for creating many Command entities in bulk.
 type CommandCreateBulk struct {
 	config
+	err      error
 	builders []*CommandCreate
 }
 
 // Save creates the Command entities in the database.
 func (ccb *CommandCreateBulk) Save(ctx context.Context) ([]*Command, error) {
+	if ccb.err != nil {
+		return nil, ccb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ccb.builders))
 	nodes := make([]*Command, len(ccb.builders))
 	mutators := make([]Mutator, len(ccb.builders))
@@ -454,8 +365,8 @@ func (ccb *CommandCreateBulk) Save(ctx context.Context) ([]*Command, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ccb.builders[i+1].mutation)
 				} else {

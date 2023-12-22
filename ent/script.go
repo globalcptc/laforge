@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/script"
@@ -18,8 +19,8 @@ type Script struct {
 	config ` json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// HclID holds the value of the "hcl_id" field.
-	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+	// HCLID holds the value of the "hcl_id" field.
+	HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty" hcl:"name,attr"`
 	// Language holds the value of the "language" field.
@@ -50,6 +51,7 @@ type Script struct {
 	// The values are being populated by the ScriptQuery when eager-loading is set.
 	Edges ScriptEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Users holds the value of the Users edge.
 	HCLUsers []*User `json:"Users,omitempty" hcl:"maintainer,block"`
@@ -57,8 +59,9 @@ type Script struct {
 	HCLFindings []*Finding `json:"Findings,omitempty" hcl:"finding,block"`
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	environment_scripts *uuid.UUID
+	selectValues        sql.SelectValues
 }
 
 // ScriptEdges holds the relations/edges for other nodes in the graph.
@@ -72,6 +75,11 @@ type ScriptEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
+	// totalCount holds the count of the edges above.
+	totalCount [3]map[string]int
+
+	namedUsers    map[string][]*User
+	namedFindings map[string][]*Finding
 }
 
 // UsersOrErr returns the Users value or an error if the edge
@@ -97,8 +105,7 @@ func (e ScriptEdges) FindingsOrErr() ([]*Finding, error) {
 func (e ScriptEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[2] {
 		if e.Environment == nil {
-			// The edge Environment was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
 		return e.Environment, nil
@@ -107,8 +114,8 @@ func (e ScriptEdges) EnvironmentOrErr() (*Environment, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*Script) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*Script) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case script.FieldArgs, script.FieldVars, script.FieldTags:
@@ -117,14 +124,14 @@ func (*Script) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullBool)
 		case script.FieldCooldown, script.FieldTimeout:
 			values[i] = new(sql.NullInt64)
-		case script.FieldHclID, script.FieldName, script.FieldLanguage, script.FieldDescription, script.FieldSource, script.FieldSourceType, script.FieldAbsPath:
+		case script.FieldHCLID, script.FieldName, script.FieldLanguage, script.FieldDescription, script.FieldSource, script.FieldSourceType, script.FieldAbsPath:
 			values[i] = new(sql.NullString)
 		case script.FieldID:
 			values[i] = new(uuid.UUID)
 		case script.ForeignKeys[0]: // environment_scripts
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Script", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -132,7 +139,7 @@ func (*Script) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Script fields.
-func (s *Script) assignValues(columns []string, values []interface{}) error {
+func (s *Script) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -144,11 +151,11 @@ func (s *Script) assignValues(columns []string, values []interface{}) error {
 			} else if value != nil {
 				s.ID = *value
 			}
-		case script.FieldHclID:
+		case script.FieldHCLID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field hcl_id", values[i])
 			} else if value.Valid {
-				s.HclID = value.String
+				s.HCLID = value.String
 			}
 		case script.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -241,41 +248,49 @@ func (s *Script) assignValues(columns []string, values []interface{}) error {
 				s.environment_scripts = new(uuid.UUID)
 				*s.environment_scripts = *value.S.(*uuid.UUID)
 			}
+		default:
+			s.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the Script.
+// This includes values selected through modifiers, order, etc.
+func (s *Script) Value(name string) (ent.Value, error) {
+	return s.selectValues.Get(name)
+}
+
 // QueryUsers queries the "Users" edge of the Script entity.
 func (s *Script) QueryUsers() *UserQuery {
-	return (&ScriptClient{config: s.config}).QueryUsers(s)
+	return NewScriptClient(s.config).QueryUsers(s)
 }
 
 // QueryFindings queries the "Findings" edge of the Script entity.
 func (s *Script) QueryFindings() *FindingQuery {
-	return (&ScriptClient{config: s.config}).QueryFindings(s)
+	return NewScriptClient(s.config).QueryFindings(s)
 }
 
 // QueryEnvironment queries the "Environment" edge of the Script entity.
 func (s *Script) QueryEnvironment() *EnvironmentQuery {
-	return (&ScriptClient{config: s.config}).QueryEnvironment(s)
+	return NewScriptClient(s.config).QueryEnvironment(s)
 }
 
 // Update returns a builder for updating this Script.
 // Note that you need to call Script.Unwrap() before calling this method if this Script
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (s *Script) Update() *ScriptUpdateOne {
-	return (&ScriptClient{config: s.config}).UpdateOne(s)
+	return NewScriptClient(s.config).UpdateOne(s)
 }
 
 // Unwrap unwraps the Script entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (s *Script) Unwrap() *Script {
-	tx, ok := s.config.driver.(*txDriver)
+	_tx, ok := s.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Script is not a transactional entity")
 	}
-	s.config.driver = tx.drv
+	s.config.driver = _tx.drv
 	return s
 }
 
@@ -283,44 +298,99 @@ func (s *Script) Unwrap() *Script {
 func (s *Script) String() string {
 	var builder strings.Builder
 	builder.WriteString("Script(")
-	builder.WriteString(fmt.Sprintf("id=%v", s.ID))
-	builder.WriteString(", hcl_id=")
-	builder.WriteString(s.HclID)
-	builder.WriteString(", name=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", s.ID))
+	builder.WriteString("hcl_id=")
+	builder.WriteString(s.HCLID)
+	builder.WriteString(", ")
+	builder.WriteString("name=")
 	builder.WriteString(s.Name)
-	builder.WriteString(", language=")
+	builder.WriteString(", ")
+	builder.WriteString("language=")
 	builder.WriteString(s.Language)
-	builder.WriteString(", description=")
+	builder.WriteString(", ")
+	builder.WriteString("description=")
 	builder.WriteString(s.Description)
-	builder.WriteString(", source=")
+	builder.WriteString(", ")
+	builder.WriteString("source=")
 	builder.WriteString(s.Source)
-	builder.WriteString(", source_type=")
+	builder.WriteString(", ")
+	builder.WriteString("source_type=")
 	builder.WriteString(s.SourceType)
-	builder.WriteString(", cooldown=")
+	builder.WriteString(", ")
+	builder.WriteString("cooldown=")
 	builder.WriteString(fmt.Sprintf("%v", s.Cooldown))
-	builder.WriteString(", timeout=")
+	builder.WriteString(", ")
+	builder.WriteString("timeout=")
 	builder.WriteString(fmt.Sprintf("%v", s.Timeout))
-	builder.WriteString(", ignore_errors=")
+	builder.WriteString(", ")
+	builder.WriteString("ignore_errors=")
 	builder.WriteString(fmt.Sprintf("%v", s.IgnoreErrors))
-	builder.WriteString(", args=")
+	builder.WriteString(", ")
+	builder.WriteString("args=")
 	builder.WriteString(fmt.Sprintf("%v", s.Args))
-	builder.WriteString(", disabled=")
+	builder.WriteString(", ")
+	builder.WriteString("disabled=")
 	builder.WriteString(fmt.Sprintf("%v", s.Disabled))
-	builder.WriteString(", vars=")
+	builder.WriteString(", ")
+	builder.WriteString("vars=")
 	builder.WriteString(fmt.Sprintf("%v", s.Vars))
-	builder.WriteString(", abs_path=")
+	builder.WriteString(", ")
+	builder.WriteString("abs_path=")
 	builder.WriteString(s.AbsPath)
-	builder.WriteString(", tags=")
+	builder.WriteString(", ")
+	builder.WriteString("tags=")
 	builder.WriteString(fmt.Sprintf("%v", s.Tags))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// Scripts is a parsable slice of Script.
-type Scripts []*Script
+// NamedUsers returns the Users named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (s *Script) NamedUsers(name string) ([]*User, error) {
+	if s.Edges.namedUsers == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := s.Edges.namedUsers[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (s Scripts) config(cfg config) {
-	for _i := range s {
-		s[_i].config = cfg
+func (s *Script) appendNamedUsers(name string, edges ...*User) {
+	if s.Edges.namedUsers == nil {
+		s.Edges.namedUsers = make(map[string][]*User)
+	}
+	if len(edges) == 0 {
+		s.Edges.namedUsers[name] = []*User{}
+	} else {
+		s.Edges.namedUsers[name] = append(s.Edges.namedUsers[name], edges...)
 	}
 }
+
+// NamedFindings returns the Findings named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (s *Script) NamedFindings(name string) ([]*Finding, error) {
+	if s.Edges.namedFindings == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := s.Edges.namedFindings[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (s *Script) appendNamedFindings(name string, edges ...*Finding) {
+	if s.Edges.namedFindings == nil {
+		s.Edges.namedFindings = make(map[string][]*Finding)
+	}
+	if len(edges) == 0 {
+		s.Edges.namedFindings[name] = []*Finding{}
+	} else {
+		s.Edges.namedFindings[name] = append(s.Edges.namedFindings[name], edges...)
+	}
+}
+
+// Scripts is a parsable slice of Script.
+type Scripts []*Script

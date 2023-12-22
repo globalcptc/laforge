@@ -11,250 +11,162 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Token(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Token(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.Token(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.Token(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.Token(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.Token(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.Token(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.Token(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.Token(sql.FieldLTE(FieldID, id))
 }
 
 // Token applies equality check predicate on the "token" field. It's identical to TokenEQ.
 func Token(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldEQ(FieldToken, v))
 }
 
 // ExpireAt applies equality check predicate on the "expire_at" field. It's identical to ExpireAtEQ.
 func ExpireAt(v int64) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldExpireAt), v))
-	})
+	return predicate.Token(sql.FieldEQ(FieldExpireAt, v))
 }
 
 // TokenEQ applies the EQ predicate on the "token" field.
 func TokenEQ(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldEQ(FieldToken, v))
 }
 
 // TokenNEQ applies the NEQ predicate on the "token" field.
 func TokenNEQ(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldNEQ(FieldToken, v))
 }
 
 // TokenIn applies the In predicate on the "token" field.
 func TokenIn(vs ...string) predicate.Token {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldToken), v...))
-	})
+	return predicate.Token(sql.FieldIn(FieldToken, vs...))
 }
 
 // TokenNotIn applies the NotIn predicate on the "token" field.
 func TokenNotIn(vs ...string) predicate.Token {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldToken), v...))
-	})
+	return predicate.Token(sql.FieldNotIn(FieldToken, vs...))
 }
 
 // TokenGT applies the GT predicate on the "token" field.
 func TokenGT(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldGT(FieldToken, v))
 }
 
 // TokenGTE applies the GTE predicate on the "token" field.
 func TokenGTE(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldGTE(FieldToken, v))
 }
 
 // TokenLT applies the LT predicate on the "token" field.
 func TokenLT(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldLT(FieldToken, v))
 }
 
 // TokenLTE applies the LTE predicate on the "token" field.
 func TokenLTE(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldLTE(FieldToken, v))
 }
 
 // TokenContains applies the Contains predicate on the "token" field.
 func TokenContains(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldContains(FieldToken, v))
 }
 
 // TokenHasPrefix applies the HasPrefix predicate on the "token" field.
 func TokenHasPrefix(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldHasPrefix(FieldToken, v))
 }
 
 // TokenHasSuffix applies the HasSuffix predicate on the "token" field.
 func TokenHasSuffix(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldHasSuffix(FieldToken, v))
 }
 
 // TokenEqualFold applies the EqualFold predicate on the "token" field.
 func TokenEqualFold(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldEqualFold(FieldToken, v))
 }
 
 // TokenContainsFold applies the ContainsFold predicate on the "token" field.
 func TokenContainsFold(v string) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldToken), v))
-	})
+	return predicate.Token(sql.FieldContainsFold(FieldToken, v))
 }
 
 // ExpireAtEQ applies the EQ predicate on the "expire_at" field.
 func ExpireAtEQ(v int64) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldExpireAt), v))
-	})
+	return predicate.Token(sql.FieldEQ(FieldExpireAt, v))
 }
 
 // ExpireAtNEQ applies the NEQ predicate on the "expire_at" field.
 func ExpireAtNEQ(v int64) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldExpireAt), v))
-	})
+	return predicate.Token(sql.FieldNEQ(FieldExpireAt, v))
 }
 
 // ExpireAtIn applies the In predicate on the "expire_at" field.
 func ExpireAtIn(vs ...int64) predicate.Token {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldExpireAt), v...))
-	})
+	return predicate.Token(sql.FieldIn(FieldExpireAt, vs...))
 }
 
 // ExpireAtNotIn applies the NotIn predicate on the "expire_at" field.
 func ExpireAtNotIn(vs ...int64) predicate.Token {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldExpireAt), v...))
-	})
+	return predicate.Token(sql.FieldNotIn(FieldExpireAt, vs...))
 }
 
 // ExpireAtGT applies the GT predicate on the "expire_at" field.
 func ExpireAtGT(v int64) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldExpireAt), v))
-	})
+	return predicate.Token(sql.FieldGT(FieldExpireAt, v))
 }
 
 // ExpireAtGTE applies the GTE predicate on the "expire_at" field.
 func ExpireAtGTE(v int64) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldExpireAt), v))
-	})
+	return predicate.Token(sql.FieldGTE(FieldExpireAt, v))
 }
 
 // ExpireAtLT applies the LT predicate on the "expire_at" field.
 func ExpireAtLT(v int64) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldExpireAt), v))
-	})
+	return predicate.Token(sql.FieldLT(FieldExpireAt, v))
 }
 
 // ExpireAtLTE applies the LTE predicate on the "expire_at" field.
 func ExpireAtLTE(v int64) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldExpireAt), v))
-	})
+	return predicate.Token(sql.FieldLTE(FieldExpireAt, v))
 }
 
 // HasAuthUser applies the HasEdge predicate on the "AuthUser" edge.
@@ -262,7 +174,6 @@ func HasAuthUser() predicate.Token {
 	return predicate.Token(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AuthUserTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, AuthUserTable, AuthUserColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -272,11 +183,7 @@ func HasAuthUser() predicate.Token {
 // HasAuthUserWith applies the HasEdge predicate on the "AuthUser" edge with a given conditions (other predicates).
 func HasAuthUserWith(preds ...predicate.AuthUser) predicate.Token {
 	return predicate.Token(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AuthUserInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, AuthUserTable, AuthUserColumn),
-		)
+		step := newAuthUserStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -287,32 +194,15 @@ func HasAuthUserWith(preds ...predicate.AuthUser) predicate.Token {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Token) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Token(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Token) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Token(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Token) predicate.Token {
-	return predicate.Token(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Token(sql.NotPredicates(p))
 }

@@ -23,17 +23,18 @@ import (
 // FindingQuery is the builder for querying Finding entities.
 type FindingQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
-	order           []OrderFunc
-	fields          []string
+	ctx             *QueryContext
+	order           []finding.OrderOption
+	inters          []Interceptor
 	predicates      []predicate.Finding
 	withUsers       *UserQuery
 	withHost        *HostQuery
 	withScript      *ScriptQuery
 	withEnvironment *EnvironmentQuery
 	withFKs         bool
+	modifiers       []func(*sql.Selector)
+	loadTotal       []func(context.Context, []*Finding) error
+	withNamedUsers  map[string]*UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -45,34 +46,34 @@ func (fq *FindingQuery) Where(ps ...predicate.Finding) *FindingQuery {
 	return fq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (fq *FindingQuery) Limit(limit int) *FindingQuery {
-	fq.limit = &limit
+	fq.ctx.Limit = &limit
 	return fq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (fq *FindingQuery) Offset(offset int) *FindingQuery {
-	fq.offset = &offset
+	fq.ctx.Offset = &offset
 	return fq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (fq *FindingQuery) Unique(unique bool) *FindingQuery {
-	fq.unique = &unique
+	fq.ctx.Unique = &unique
 	return fq
 }
 
-// Order adds an order step to the query.
-func (fq *FindingQuery) Order(o ...OrderFunc) *FindingQuery {
+// Order specifies how the records should be ordered.
+func (fq *FindingQuery) Order(o ...finding.OrderOption) *FindingQuery {
 	fq.order = append(fq.order, o...)
 	return fq
 }
 
 // QueryUsers chains the current query on the "Users" edge.
 func (fq *FindingQuery) QueryUsers() *UserQuery {
-	query := &UserQuery{config: fq.config}
+	query := (&UserClient{config: fq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := fq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -94,7 +95,7 @@ func (fq *FindingQuery) QueryUsers() *UserQuery {
 
 // QueryHost chains the current query on the "Host" edge.
 func (fq *FindingQuery) QueryHost() *HostQuery {
-	query := &HostQuery{config: fq.config}
+	query := (&HostClient{config: fq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := fq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -116,7 +117,7 @@ func (fq *FindingQuery) QueryHost() *HostQuery {
 
 // QueryScript chains the current query on the "Script" edge.
 func (fq *FindingQuery) QueryScript() *ScriptQuery {
-	query := &ScriptQuery{config: fq.config}
+	query := (&ScriptClient{config: fq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := fq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -138,7 +139,7 @@ func (fq *FindingQuery) QueryScript() *ScriptQuery {
 
 // QueryEnvironment chains the current query on the "Environment" edge.
 func (fq *FindingQuery) QueryEnvironment() *EnvironmentQuery {
-	query := &EnvironmentQuery{config: fq.config}
+	query := (&EnvironmentClient{config: fq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := fq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -161,7 +162,7 @@ func (fq *FindingQuery) QueryEnvironment() *EnvironmentQuery {
 // First returns the first Finding entity from the query.
 // Returns a *NotFoundError when no Finding was found.
 func (fq *FindingQuery) First(ctx context.Context) (*Finding, error) {
-	nodes, err := fq.Limit(1).All(ctx)
+	nodes, err := fq.Limit(1).All(setContextOp(ctx, fq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +185,7 @@ func (fq *FindingQuery) FirstX(ctx context.Context) *Finding {
 // Returns a *NotFoundError when no Finding ID was found.
 func (fq *FindingQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = fq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = fq.Limit(1).IDs(setContextOp(ctx, fq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -207,7 +208,7 @@ func (fq *FindingQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Finding entity is found.
 // Returns a *NotFoundError when no Finding entities are found.
 func (fq *FindingQuery) Only(ctx context.Context) (*Finding, error) {
-	nodes, err := fq.Limit(2).All(ctx)
+	nodes, err := fq.Limit(2).All(setContextOp(ctx, fq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +236,7 @@ func (fq *FindingQuery) OnlyX(ctx context.Context) *Finding {
 // Returns a *NotFoundError when no entities are found.
 func (fq *FindingQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = fq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = fq.Limit(2).IDs(setContextOp(ctx, fq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -260,10 +261,12 @@ func (fq *FindingQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Findings.
 func (fq *FindingQuery) All(ctx context.Context) ([]*Finding, error) {
+	ctx = setContextOp(ctx, fq.ctx, "All")
 	if err := fq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return fq.sqlAll(ctx)
+	qr := querierAll[[]*Finding, *FindingQuery]()
+	return withInterceptors[[]*Finding](ctx, fq, qr, fq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -276,9 +279,12 @@ func (fq *FindingQuery) AllX(ctx context.Context) []*Finding {
 }
 
 // IDs executes the query and returns a list of Finding IDs.
-func (fq *FindingQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := fq.Select(finding.FieldID).Scan(ctx, &ids); err != nil {
+func (fq *FindingQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if fq.ctx.Unique == nil && fq.path != nil {
+		fq.Unique(true)
+	}
+	ctx = setContextOp(ctx, fq.ctx, "IDs")
+	if err = fq.Select(finding.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -295,10 +301,11 @@ func (fq *FindingQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (fq *FindingQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, fq.ctx, "Count")
 	if err := fq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return fq.sqlCount(ctx)
+	return withInterceptors[int](ctx, fq, querierCount[*FindingQuery](), fq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -312,10 +319,15 @@ func (fq *FindingQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (fq *FindingQuery) Exist(ctx context.Context) (bool, error) {
-	if err := fq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, fq.ctx, "Exist")
+	switch _, err := fq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return fq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -335,25 +347,24 @@ func (fq *FindingQuery) Clone() *FindingQuery {
 	}
 	return &FindingQuery{
 		config:          fq.config,
-		limit:           fq.limit,
-		offset:          fq.offset,
-		order:           append([]OrderFunc{}, fq.order...),
+		ctx:             fq.ctx.Clone(),
+		order:           append([]finding.OrderOption{}, fq.order...),
+		inters:          append([]Interceptor{}, fq.inters...),
 		predicates:      append([]predicate.Finding{}, fq.predicates...),
 		withUsers:       fq.withUsers.Clone(),
 		withHost:        fq.withHost.Clone(),
 		withScript:      fq.withScript.Clone(),
 		withEnvironment: fq.withEnvironment.Clone(),
 		// clone intermediate query.
-		sql:    fq.sql.Clone(),
-		path:   fq.path,
-		unique: fq.unique,
+		sql:  fq.sql.Clone(),
+		path: fq.path,
 	}
 }
 
 // WithUsers tells the query-builder to eager-load the nodes that are connected to
 // the "Users" edge. The optional arguments are used to configure the query builder of the edge.
 func (fq *FindingQuery) WithUsers(opts ...func(*UserQuery)) *FindingQuery {
-	query := &UserQuery{config: fq.config}
+	query := (&UserClient{config: fq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -364,7 +375,7 @@ func (fq *FindingQuery) WithUsers(opts ...func(*UserQuery)) *FindingQuery {
 // WithHost tells the query-builder to eager-load the nodes that are connected to
 // the "Host" edge. The optional arguments are used to configure the query builder of the edge.
 func (fq *FindingQuery) WithHost(opts ...func(*HostQuery)) *FindingQuery {
-	query := &HostQuery{config: fq.config}
+	query := (&HostClient{config: fq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -375,7 +386,7 @@ func (fq *FindingQuery) WithHost(opts ...func(*HostQuery)) *FindingQuery {
 // WithScript tells the query-builder to eager-load the nodes that are connected to
 // the "Script" edge. The optional arguments are used to configure the query builder of the edge.
 func (fq *FindingQuery) WithScript(opts ...func(*ScriptQuery)) *FindingQuery {
-	query := &ScriptQuery{config: fq.config}
+	query := (&ScriptClient{config: fq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -386,7 +397,7 @@ func (fq *FindingQuery) WithScript(opts ...func(*ScriptQuery)) *FindingQuery {
 // WithEnvironment tells the query-builder to eager-load the nodes that are connected to
 // the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
 func (fq *FindingQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *FindingQuery {
-	query := &EnvironmentQuery{config: fq.config}
+	query := (&EnvironmentClient{config: fq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -409,16 +420,11 @@ func (fq *FindingQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *Findin
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (fq *FindingQuery) GroupBy(field string, fields ...string) *FindingGroupBy {
-	grbuild := &FindingGroupBy{config: fq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := fq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return fq.sqlQuery(ctx), nil
-	}
+	fq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &FindingGroupBy{build: fq}
+	grbuild.flds = &fq.ctx.Fields
 	grbuild.label = finding.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -435,15 +441,30 @@ func (fq *FindingQuery) GroupBy(field string, fields ...string) *FindingGroupBy 
 //		Select(finding.FieldName).
 //		Scan(ctx, &v)
 func (fq *FindingQuery) Select(fields ...string) *FindingSelect {
-	fq.fields = append(fq.fields, fields...)
-	selbuild := &FindingSelect{FindingQuery: fq}
-	selbuild.label = finding.Label
-	selbuild.flds, selbuild.scan = &fq.fields, selbuild.Scan
-	return selbuild
+	fq.ctx.Fields = append(fq.ctx.Fields, fields...)
+	sbuild := &FindingSelect{FindingQuery: fq}
+	sbuild.label = finding.Label
+	sbuild.flds, sbuild.scan = &fq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a FindingSelect configured with the given aggregations.
+func (fq *FindingQuery) Aggregate(fns ...AggregateFunc) *FindingSelect {
+	return fq.Select().Aggregate(fns...)
 }
 
 func (fq *FindingQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range fq.fields {
+	for _, inter := range fq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, fq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range fq.ctx.Fields {
 		if !finding.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -476,14 +497,17 @@ func (fq *FindingQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Find
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, finding.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Finding).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &Finding{config: fq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(fq.modifiers) > 0 {
+		_spec.Modifiers = fq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -519,6 +543,18 @@ func (fq *FindingQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Find
 			return nil, err
 		}
 	}
+	for name, query := range fq.withNamedUsers {
+		if err := fq.loadUsers(ctx, query, nodes,
+			func(n *Finding) { n.appendNamedUsers(name) },
+			func(n *Finding, e *User) { n.appendNamedUsers(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range fq.loadTotal {
+		if err := fq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -534,7 +570,7 @@ func (fq *FindingQuery) loadUsers(ctx context.Context, query *UserQuery, nodes [
 	}
 	query.withFKs = true
 	query.Where(predicate.User(func(s *sql.Selector) {
-		s.Where(sql.InValues(finding.UsersColumn, fks...))
+		s.Where(sql.InValues(s.C(finding.UsersColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -547,7 +583,7 @@ func (fq *FindingQuery) loadUsers(ctx context.Context, query *UserQuery, nodes [
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "finding_users" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "finding_users" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -565,6 +601,9 @@ func (fq *FindingQuery) loadHost(ctx context.Context, query *HostQuery, nodes []
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(host.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -595,6 +634,9 @@ func (fq *FindingQuery) loadScript(ctx context.Context, query *ScriptQuery, node
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(script.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -624,6 +666,9 @@ func (fq *FindingQuery) loadEnvironment(ctx context.Context, query *EnvironmentQ
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(environment.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -643,38 +688,25 @@ func (fq *FindingQuery) loadEnvironment(ctx context.Context, query *EnvironmentQ
 
 func (fq *FindingQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := fq.querySpec()
-	_spec.Node.Columns = fq.fields
-	if len(fq.fields) > 0 {
-		_spec.Unique = fq.unique != nil && *fq.unique
+	if len(fq.modifiers) > 0 {
+		_spec.Modifiers = fq.modifiers
+	}
+	_spec.Node.Columns = fq.ctx.Fields
+	if len(fq.ctx.Fields) > 0 {
+		_spec.Unique = fq.ctx.Unique != nil && *fq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, fq.driver, _spec)
 }
 
-func (fq *FindingQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := fq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (fq *FindingQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   finding.Table,
-			Columns: finding.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: finding.FieldID,
-			},
-		},
-		From:   fq.sql,
-		Unique: true,
-	}
-	if unique := fq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(finding.Table, finding.Columns, sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID))
+	_spec.From = fq.sql
+	if unique := fq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if fq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := fq.fields; len(fields) > 0 {
+	if fields := fq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, finding.FieldID)
 		for i := range fields {
@@ -690,10 +722,10 @@ func (fq *FindingQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := fq.limit; limit != nil {
+	if limit := fq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := fq.offset; offset != nil {
+	if offset := fq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := fq.order; len(ps) > 0 {
@@ -709,7 +741,7 @@ func (fq *FindingQuery) querySpec() *sqlgraph.QuerySpec {
 func (fq *FindingQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(fq.driver.Dialect())
 	t1 := builder.Table(finding.Table)
-	columns := fq.fields
+	columns := fq.ctx.Fields
 	if len(columns) == 0 {
 		columns = finding.Columns
 	}
@@ -718,7 +750,7 @@ func (fq *FindingQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = fq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if fq.unique != nil && *fq.unique {
+	if fq.ctx.Unique != nil && *fq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range fq.predicates {
@@ -727,26 +759,35 @@ func (fq *FindingQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range fq.order {
 		p(selector)
 	}
-	if offset := fq.offset; offset != nil {
+	if offset := fq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := fq.limit; limit != nil {
+	if limit := fq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
 }
 
+// WithNamedUsers tells the query-builder to eager-load the nodes that are connected to the "Users"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (fq *FindingQuery) WithNamedUsers(name string, opts ...func(*UserQuery)) *FindingQuery {
+	query := (&UserClient{config: fq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if fq.withNamedUsers == nil {
+		fq.withNamedUsers = make(map[string]*UserQuery)
+	}
+	fq.withNamedUsers[name] = query
+	return fq
+}
+
 // FindingGroupBy is the group-by builder for Finding entities.
 type FindingGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *FindingQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -755,74 +796,77 @@ func (fgb *FindingGroupBy) Aggregate(fns ...AggregateFunc) *FindingGroupBy {
 	return fgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (fgb *FindingGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := fgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (fgb *FindingGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, fgb.build.ctx, "GroupBy")
+	if err := fgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	fgb.sql = query
-	return fgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*FindingQuery, *FindingGroupBy](ctx, fgb.build, fgb, fgb.build.inters, v)
 }
 
-func (fgb *FindingGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range fgb.fields {
-		if !finding.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (fgb *FindingGroupBy) sqlScan(ctx context.Context, root *FindingQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(fgb.fns))
+	for _, fn := range fgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := fgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*fgb.flds)+len(fgb.fns))
+		for _, f := range *fgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*fgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := fgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := fgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (fgb *FindingGroupBy) sqlQuery() *sql.Selector {
-	selector := fgb.sql.Select()
-	aggregation := make([]string, 0, len(fgb.fns))
-	for _, fn := range fgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(fgb.fields)+len(fgb.fns))
-		for _, f := range fgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(fgb.fields...)...)
-}
-
 // FindingSelect is the builder for selecting fields of Finding entities.
 type FindingSelect struct {
 	*FindingQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (fs *FindingSelect) Aggregate(fns ...AggregateFunc) *FindingSelect {
+	fs.fns = append(fs.fns, fns...)
+	return fs
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (fs *FindingSelect) Scan(ctx context.Context, v interface{}) error {
+func (fs *FindingSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, fs.ctx, "Select")
 	if err := fs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	fs.sql = fs.FindingQuery.sqlQuery(ctx)
-	return fs.sqlScan(ctx, v)
+	return scanWithInterceptors[*FindingQuery, *FindingSelect](ctx, fs.FindingQuery, fs, fs.inters, v)
 }
 
-func (fs *FindingSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (fs *FindingSelect) sqlScan(ctx context.Context, root *FindingQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(fs.fns))
+	for _, fn := range fs.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*fs.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := fs.sql.Query()
+	query, args := selector.Query()
 	if err := fs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

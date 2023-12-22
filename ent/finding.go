@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/finding"
@@ -34,6 +35,7 @@ type Finding struct {
 	// The values are being populated by the FindingQuery when eager-loading is set.
 	Edges FindingEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Users holds the value of the Users edge.
 	HCLUsers []*User `json:"Users,omitempty" hcl:"maintainer,block"`
@@ -43,10 +45,11 @@ type Finding struct {
 	HCLScript *Script `json:"Script,omitempty"`
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	environment_findings *uuid.UUID
 	finding_host         *uuid.UUID
 	script_findings      *uuid.UUID
+	selectValues         sql.SelectValues
 }
 
 // FindingEdges holds the relations/edges for other nodes in the graph.
@@ -62,6 +65,10 @@ type FindingEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [4]bool
+	// totalCount holds the count of the edges above.
+	totalCount [4]map[string]int
+
+	namedUsers map[string][]*User
 }
 
 // UsersOrErr returns the Users value or an error if the edge
@@ -78,8 +85,7 @@ func (e FindingEdges) UsersOrErr() ([]*User, error) {
 func (e FindingEdges) HostOrErr() (*Host, error) {
 	if e.loadedTypes[1] {
 		if e.Host == nil {
-			// The edge Host was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: host.Label}
 		}
 		return e.Host, nil
@@ -92,8 +98,7 @@ func (e FindingEdges) HostOrErr() (*Host, error) {
 func (e FindingEdges) ScriptOrErr() (*Script, error) {
 	if e.loadedTypes[2] {
 		if e.Script == nil {
-			// The edge Script was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: script.Label}
 		}
 		return e.Script, nil
@@ -106,8 +111,7 @@ func (e FindingEdges) ScriptOrErr() (*Script, error) {
 func (e FindingEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[3] {
 		if e.Environment == nil {
-			// The edge Environment was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
 		return e.Environment, nil
@@ -116,8 +120,8 @@ func (e FindingEdges) EnvironmentOrErr() (*Environment, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*Finding) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*Finding) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case finding.FieldTags:
@@ -133,7 +137,7 @@ func (*Finding) scanValues(columns []string) ([]interface{}, error) {
 		case finding.ForeignKeys[2]: // script_findings
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Finding", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -141,7 +145,7 @@ func (*Finding) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Finding fields.
-func (f *Finding) assignValues(columns []string, values []interface{}) error {
+func (f *Finding) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -206,46 +210,54 @@ func (f *Finding) assignValues(columns []string, values []interface{}) error {
 				f.script_findings = new(uuid.UUID)
 				*f.script_findings = *value.S.(*uuid.UUID)
 			}
+		default:
+			f.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the Finding.
+// This includes values selected through modifiers, order, etc.
+func (f *Finding) Value(name string) (ent.Value, error) {
+	return f.selectValues.Get(name)
+}
+
 // QueryUsers queries the "Users" edge of the Finding entity.
 func (f *Finding) QueryUsers() *UserQuery {
-	return (&FindingClient{config: f.config}).QueryUsers(f)
+	return NewFindingClient(f.config).QueryUsers(f)
 }
 
 // QueryHost queries the "Host" edge of the Finding entity.
 func (f *Finding) QueryHost() *HostQuery {
-	return (&FindingClient{config: f.config}).QueryHost(f)
+	return NewFindingClient(f.config).QueryHost(f)
 }
 
 // QueryScript queries the "Script" edge of the Finding entity.
 func (f *Finding) QueryScript() *ScriptQuery {
-	return (&FindingClient{config: f.config}).QueryScript(f)
+	return NewFindingClient(f.config).QueryScript(f)
 }
 
 // QueryEnvironment queries the "Environment" edge of the Finding entity.
 func (f *Finding) QueryEnvironment() *EnvironmentQuery {
-	return (&FindingClient{config: f.config}).QueryEnvironment(f)
+	return NewFindingClient(f.config).QueryEnvironment(f)
 }
 
 // Update returns a builder for updating this Finding.
 // Note that you need to call Finding.Unwrap() before calling this method if this Finding
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (f *Finding) Update() *FindingUpdateOne {
-	return (&FindingClient{config: f.config}).UpdateOne(f)
+	return NewFindingClient(f.config).UpdateOne(f)
 }
 
 // Unwrap unwraps the Finding entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (f *Finding) Unwrap() *Finding {
-	tx, ok := f.config.driver.(*txDriver)
+	_tx, ok := f.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Finding is not a transactional entity")
 	}
-	f.config.driver = tx.drv
+	f.config.driver = _tx.drv
 	return f
 }
 
@@ -253,26 +265,48 @@ func (f *Finding) Unwrap() *Finding {
 func (f *Finding) String() string {
 	var builder strings.Builder
 	builder.WriteString("Finding(")
-	builder.WriteString(fmt.Sprintf("id=%v", f.ID))
-	builder.WriteString(", name=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", f.ID))
+	builder.WriteString("name=")
 	builder.WriteString(f.Name)
-	builder.WriteString(", description=")
+	builder.WriteString(", ")
+	builder.WriteString("description=")
 	builder.WriteString(f.Description)
-	builder.WriteString(", severity=")
+	builder.WriteString(", ")
+	builder.WriteString("severity=")
 	builder.WriteString(fmt.Sprintf("%v", f.Severity))
-	builder.WriteString(", difficulty=")
+	builder.WriteString(", ")
+	builder.WriteString("difficulty=")
 	builder.WriteString(fmt.Sprintf("%v", f.Difficulty))
-	builder.WriteString(", tags=")
+	builder.WriteString(", ")
+	builder.WriteString("tags=")
 	builder.WriteString(fmt.Sprintf("%v", f.Tags))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// Findings is a parsable slice of Finding.
-type Findings []*Finding
+// NamedUsers returns the Users named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (f *Finding) NamedUsers(name string) ([]*User, error) {
+	if f.Edges.namedUsers == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := f.Edges.namedUsers[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (f Findings) config(cfg config) {
-	for _i := range f {
-		f[_i].config = cfg
+func (f *Finding) appendNamedUsers(name string, edges ...*User) {
+	if f.Edges.namedUsers == nil {
+		f.Edges.namedUsers = make(map[string][]*User)
+	}
+	if len(edges) == 0 {
+		f.Edges.namedUsers[name] = []*User{}
+	} else {
+		f.Edges.namedUsers[name] = append(f.Edges.namedUsers[name], edges...)
 	}
 }
+
+// Findings is a parsable slice of Finding.
+type Findings []*Finding

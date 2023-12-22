@@ -77,50 +77,8 @@ func (pdc *PlanDiffCreate) Mutation() *PlanDiffMutation {
 
 // Save creates the PlanDiff in the database.
 func (pdc *PlanDiffCreate) Save(ctx context.Context) (*PlanDiff, error) {
-	var (
-		err  error
-		node *PlanDiff
-	)
 	pdc.defaults()
-	if len(pdc.hooks) == 0 {
-		if err = pdc.check(); err != nil {
-			return nil, err
-		}
-		node, err = pdc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PlanDiffMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = pdc.check(); err != nil {
-				return nil, err
-			}
-			pdc.mutation = mutation
-			if node, err = pdc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(pdc.hooks) - 1; i >= 0; i-- {
-			if pdc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pdc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, pdc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*PlanDiff)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from PlanDiffMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, pdc.sqlSave, pdc.mutation, pdc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -176,6 +134,9 @@ func (pdc *PlanDiffCreate) check() error {
 }
 
 func (pdc *PlanDiffCreate) sqlSave(ctx context.Context) (*PlanDiff, error) {
+	if err := pdc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := pdc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, pdc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -190,38 +151,26 @@ func (pdc *PlanDiffCreate) sqlSave(ctx context.Context) (*PlanDiff, error) {
 			return nil, err
 		}
 	}
+	pdc.mutation.id = &_node.ID
+	pdc.mutation.done = true
 	return _node, nil
 }
 
 func (pdc *PlanDiffCreate) createSpec() (*PlanDiff, *sqlgraph.CreateSpec) {
 	var (
 		_node = &PlanDiff{config: pdc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: plandiff.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: plandiff.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(plandiff.Table, sqlgraph.NewFieldSpec(plandiff.FieldID, field.TypeUUID))
 	)
 	if id, ok := pdc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := pdc.mutation.Revision(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: plandiff.FieldRevision,
-		})
+		_spec.SetField(plandiff.FieldRevision, field.TypeInt, value)
 		_node.Revision = value
 	}
 	if value, ok := pdc.mutation.NewState(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: plandiff.FieldNewState,
-		})
+		_spec.SetField(plandiff.FieldNewState, field.TypeEnum, value)
 		_node.NewState = value
 	}
 	if nodes := pdc.mutation.BuildCommitIDs(); len(nodes) > 0 {
@@ -232,10 +181,7 @@ func (pdc *PlanDiffCreate) createSpec() (*PlanDiff, *sqlgraph.CreateSpec) {
 			Columns: []string{plandiff.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: buildcommit.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(buildcommit.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -252,10 +198,7 @@ func (pdc *PlanDiffCreate) createSpec() (*PlanDiff, *sqlgraph.CreateSpec) {
 			Columns: []string{plandiff.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -270,11 +213,15 @@ func (pdc *PlanDiffCreate) createSpec() (*PlanDiff, *sqlgraph.CreateSpec) {
 // PlanDiffCreateBulk is the builder for creating many PlanDiff entities in bulk.
 type PlanDiffCreateBulk struct {
 	config
+	err      error
 	builders []*PlanDiffCreate
 }
 
 // Save creates the PlanDiff entities in the database.
 func (pdcb *PlanDiffCreateBulk) Save(ctx context.Context) ([]*PlanDiff, error) {
+	if pdcb.err != nil {
+		return nil, pdcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(pdcb.builders))
 	nodes := make([]*PlanDiff, len(pdcb.builders))
 	mutators := make([]Mutator, len(pdcb.builders))
@@ -291,8 +238,8 @@ func (pdcb *PlanDiffCreateBulk) Save(ctx context.Context) ([]*PlanDiff, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, pdcb.builders[i+1].mutation)
 				} else {

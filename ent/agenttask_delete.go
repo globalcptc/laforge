@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (atd *AgentTaskDelete) Where(ps ...predicate.AgentTask) *AgentTaskDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (atd *AgentTaskDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(atd.hooks) == 0 {
-		affected, err = atd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*AgentTaskMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			atd.mutation = mutation
-			affected, err = atd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(atd.hooks) - 1; i >= 0; i-- {
-			if atd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = atd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, atd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, atd.sqlExec, atd.mutation, atd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (atd *AgentTaskDelete) ExecX(ctx context.Context) int {
 }
 
 func (atd *AgentTaskDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: agenttask.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: agenttask.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(agenttask.Table, sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID))
 	if ps := atd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (atd *AgentTaskDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	atd.mutation.done = true
 	return affected, err
 }
 
 // AgentTaskDeleteOne is the builder for deleting a single AgentTask entity.
 type AgentTaskDeleteOne struct {
 	atd *AgentTaskDelete
+}
+
+// Where appends a list predicates to the AgentTaskDelete builder.
+func (atdo *AgentTaskDeleteOne) Where(ps ...predicate.AgentTask) *AgentTaskDeleteOne {
+	atdo.atd.mutation.Where(ps...)
+	return atdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (atdo *AgentTaskDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (atdo *AgentTaskDeleteOne) ExecX(ctx context.Context) {
-	atdo.atd.ExecX(ctx)
+	if err := atdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

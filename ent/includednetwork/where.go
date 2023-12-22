@@ -11,179 +11,117 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.IncludedNetwork(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.IncludedNetwork(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.IncludedNetwork(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.IncludedNetwork(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.IncludedNetwork(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.IncludedNetwork(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.IncludedNetwork(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.IncludedNetwork(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.IncludedNetwork(sql.FieldLTE(FieldID, id))
 }
 
 // Name applies equality check predicate on the "name" field. It's identical to NameEQ.
 func Name(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldEQ(FieldName, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
 func NameEQ(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldEQ(FieldName, v))
 }
 
 // NameNEQ applies the NEQ predicate on the "name" field.
 func NameNEQ(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldNEQ(FieldName, v))
 }
 
 // NameIn applies the In predicate on the "name" field.
 func NameIn(vs ...string) predicate.IncludedNetwork {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldName), v...))
-	})
+	return predicate.IncludedNetwork(sql.FieldIn(FieldName, vs...))
 }
 
 // NameNotIn applies the NotIn predicate on the "name" field.
 func NameNotIn(vs ...string) predicate.IncludedNetwork {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldName), v...))
-	})
+	return predicate.IncludedNetwork(sql.FieldNotIn(FieldName, vs...))
 }
 
 // NameGT applies the GT predicate on the "name" field.
 func NameGT(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldGT(FieldName, v))
 }
 
 // NameGTE applies the GTE predicate on the "name" field.
 func NameGTE(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldGTE(FieldName, v))
 }
 
 // NameLT applies the LT predicate on the "name" field.
 func NameLT(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldLT(FieldName, v))
 }
 
 // NameLTE applies the LTE predicate on the "name" field.
 func NameLTE(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldLTE(FieldName, v))
 }
 
 // NameContains applies the Contains predicate on the "name" field.
 func NameContains(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldContains(FieldName, v))
 }
 
 // NameHasPrefix applies the HasPrefix predicate on the "name" field.
 func NameHasPrefix(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldHasPrefix(FieldName, v))
 }
 
 // NameHasSuffix applies the HasSuffix predicate on the "name" field.
 func NameHasSuffix(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldHasSuffix(FieldName, v))
 }
 
 // NameEqualFold applies the EqualFold predicate on the "name" field.
 func NameEqualFold(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldEqualFold(FieldName, v))
 }
 
 // NameContainsFold applies the ContainsFold predicate on the "name" field.
 func NameContainsFold(v string) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldName), v))
-	})
+	return predicate.IncludedNetwork(sql.FieldContainsFold(FieldName, v))
 }
 
 // HasTags applies the HasEdge predicate on the "Tags" edge.
@@ -191,7 +129,6 @@ func HasTags() predicate.IncludedNetwork {
 	return predicate.IncludedNetwork(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(TagsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, TagsTable, TagsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -201,11 +138,7 @@ func HasTags() predicate.IncludedNetwork {
 // HasTagsWith applies the HasEdge predicate on the "Tags" edge with a given conditions (other predicates).
 func HasTagsWith(preds ...predicate.Tag) predicate.IncludedNetwork {
 	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(TagsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, TagsTable, TagsColumn),
-		)
+		step := newTagsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -219,7 +152,6 @@ func HasHosts() predicate.IncludedNetwork {
 	return predicate.IncludedNetwork(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(HostsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, HostsTable, HostsPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -229,11 +161,7 @@ func HasHosts() predicate.IncludedNetwork {
 // HasHostsWith applies the HasEdge predicate on the "Hosts" edge with a given conditions (other predicates).
 func HasHostsWith(preds ...predicate.Host) predicate.IncludedNetwork {
 	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(HostsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, HostsTable, HostsPrimaryKey...),
-		)
+		step := newHostsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -247,7 +175,6 @@ func HasNetwork() predicate.IncludedNetwork {
 	return predicate.IncludedNetwork(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NetworkTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, NetworkTable, NetworkColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -257,11 +184,7 @@ func HasNetwork() predicate.IncludedNetwork {
 // HasNetworkWith applies the HasEdge predicate on the "Network" edge with a given conditions (other predicates).
 func HasNetworkWith(preds ...predicate.Network) predicate.IncludedNetwork {
 	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(NetworkInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, NetworkTable, NetworkColumn),
-		)
+		step := newNetworkStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -275,7 +198,6 @@ func HasEnvironments() predicate.IncludedNetwork {
 	return predicate.IncludedNetwork(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(EnvironmentsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, EnvironmentsTable, EnvironmentsPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -285,11 +207,7 @@ func HasEnvironments() predicate.IncludedNetwork {
 // HasEnvironmentsWith applies the HasEdge predicate on the "Environments" edge with a given conditions (other predicates).
 func HasEnvironmentsWith(preds ...predicate.Environment) predicate.IncludedNetwork {
 	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(EnvironmentsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, EnvironmentsTable, EnvironmentsPrimaryKey...),
-		)
+		step := newEnvironmentsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -300,32 +218,15 @@ func HasEnvironmentsWith(preds ...predicate.Environment) predicate.IncludedNetwo
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.IncludedNetwork) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.IncludedNetwork(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.IncludedNetwork) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.IncludedNetwork(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.IncludedNetwork) predicate.IncludedNetwork {
-	return predicate.IncludedNetwork(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.IncludedNetwork(sql.NotPredicates(p))
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/repository"
 	"github.com/google/uuid"
@@ -28,13 +29,14 @@ type Repository struct {
 	// The values are being populated by the RepositoryQuery when eager-loading is set.
 	Edges RepositoryEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Environments holds the value of the Environments edge.
 	HCLEnvironments []*Environment `json:"Environments,omitempty"`
 	// RepoCommits holds the value of the RepoCommits edge.
 	HCLRepoCommits []*RepoCommit `json:"RepoCommits,omitempty"`
-	//
-
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
+	selectValues sql.SelectValues
 }
 
 // RepositoryEdges holds the relations/edges for other nodes in the graph.
@@ -46,6 +48,11 @@ type RepositoryEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
+	// totalCount holds the count of the edges above.
+	totalCount [2]map[string]int
+
+	namedEnvironments map[string][]*Environment
+	namedRepoCommits  map[string][]*RepoCommit
 }
 
 // EnvironmentsOrErr returns the Environments value or an error if the edge
@@ -67,8 +74,8 @@ func (e RepositoryEdges) RepoCommitsOrErr() ([]*RepoCommit, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*Repository) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*Repository) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case repository.FieldRepoURL, repository.FieldBranchName, repository.FieldEnviromentFilepath, repository.FieldFolderPath:
@@ -76,7 +83,7 @@ func (*Repository) scanValues(columns []string) ([]interface{}, error) {
 		case repository.FieldID:
 			values[i] = new(uuid.UUID)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Repository", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -84,7 +91,7 @@ func (*Repository) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Repository fields.
-func (r *Repository) assignValues(columns []string, values []interface{}) error {
+func (r *Repository) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -120,36 +127,44 @@ func (r *Repository) assignValues(columns []string, values []interface{}) error 
 			} else if value.Valid {
 				r.FolderPath = value.String
 			}
+		default:
+			r.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the Repository.
+// This includes values selected through modifiers, order, etc.
+func (r *Repository) Value(name string) (ent.Value, error) {
+	return r.selectValues.Get(name)
+}
+
 // QueryEnvironments queries the "Environments" edge of the Repository entity.
 func (r *Repository) QueryEnvironments() *EnvironmentQuery {
-	return (&RepositoryClient{config: r.config}).QueryEnvironments(r)
+	return NewRepositoryClient(r.config).QueryEnvironments(r)
 }
 
 // QueryRepoCommits queries the "RepoCommits" edge of the Repository entity.
 func (r *Repository) QueryRepoCommits() *RepoCommitQuery {
-	return (&RepositoryClient{config: r.config}).QueryRepoCommits(r)
+	return NewRepositoryClient(r.config).QueryRepoCommits(r)
 }
 
 // Update returns a builder for updating this Repository.
 // Note that you need to call Repository.Unwrap() before calling this method if this Repository
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (r *Repository) Update() *RepositoryUpdateOne {
-	return (&RepositoryClient{config: r.config}).UpdateOne(r)
+	return NewRepositoryClient(r.config).UpdateOne(r)
 }
 
 // Unwrap unwraps the Repository entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (r *Repository) Unwrap() *Repository {
-	tx, ok := r.config.driver.(*txDriver)
+	_tx, ok := r.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Repository is not a transactional entity")
 	}
-	r.config.driver = tx.drv
+	r.config.driver = _tx.drv
 	return r
 }
 
@@ -157,24 +172,69 @@ func (r *Repository) Unwrap() *Repository {
 func (r *Repository) String() string {
 	var builder strings.Builder
 	builder.WriteString("Repository(")
-	builder.WriteString(fmt.Sprintf("id=%v", r.ID))
-	builder.WriteString(", repo_url=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", r.ID))
+	builder.WriteString("repo_url=")
 	builder.WriteString(r.RepoURL)
-	builder.WriteString(", branch_name=")
+	builder.WriteString(", ")
+	builder.WriteString("branch_name=")
 	builder.WriteString(r.BranchName)
-	builder.WriteString(", enviroment_filepath=")
+	builder.WriteString(", ")
+	builder.WriteString("enviroment_filepath=")
 	builder.WriteString(r.EnviromentFilepath)
-	builder.WriteString(", folder_path=")
+	builder.WriteString(", ")
+	builder.WriteString("folder_path=")
 	builder.WriteString(r.FolderPath)
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// Repositories is a parsable slice of Repository.
-type Repositories []*Repository
+// NamedEnvironments returns the Environments named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (r *Repository) NamedEnvironments(name string) ([]*Environment, error) {
+	if r.Edges.namedEnvironments == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := r.Edges.namedEnvironments[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (r Repositories) config(cfg config) {
-	for _i := range r {
-		r[_i].config = cfg
+func (r *Repository) appendNamedEnvironments(name string, edges ...*Environment) {
+	if r.Edges.namedEnvironments == nil {
+		r.Edges.namedEnvironments = make(map[string][]*Environment)
+	}
+	if len(edges) == 0 {
+		r.Edges.namedEnvironments[name] = []*Environment{}
+	} else {
+		r.Edges.namedEnvironments[name] = append(r.Edges.namedEnvironments[name], edges...)
 	}
 }
+
+// NamedRepoCommits returns the RepoCommits named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (r *Repository) NamedRepoCommits(name string) ([]*RepoCommit, error) {
+	if r.Edges.namedRepoCommits == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := r.Edges.namedRepoCommits[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (r *Repository) appendNamedRepoCommits(name string, edges ...*RepoCommit) {
+	if r.Edges.namedRepoCommits == nil {
+		r.Edges.namedRepoCommits = make(map[string][]*RepoCommit)
+	}
+	if len(edges) == 0 {
+		r.Edges.namedRepoCommits[name] = []*RepoCommit{}
+	} else {
+		r.Edges.namedRepoCommits[name] = append(r.Edges.namedRepoCommits[name], edges...)
+	}
+}
+
+// Repositories is a parsable slice of Repository.
+type Repositories []*Repository

@@ -3,6 +3,8 @@
 package competition
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -11,8 +13,8 @@ const (
 	Label = "competition"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldHclID holds the string denoting the hcl_id field in the database.
-	FieldHclID = "hcl_id"
+	// FieldHCLID holds the string denoting the hcl_id field in the database.
+	FieldHCLID = "hcl_id"
 	// FieldRootPassword holds the string denoting the root_password field in the database.
 	FieldRootPassword = "root_password"
 	// FieldStartTime holds the string denoting the start_time field in the database.
@@ -55,7 +57,7 @@ const (
 // Columns holds all SQL columns for competition fields.
 var Columns = []string{
 	FieldID,
-	FieldHclID,
+	FieldHCLID,
 	FieldRootPassword,
 	FieldStartTime,
 	FieldStopTime,
@@ -94,3 +96,87 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the Competition queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByHCLID orders the results by the hcl_id field.
+func ByHCLID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHCLID, opts...).ToFunc()
+}
+
+// ByRootPassword orders the results by the root_password field.
+func ByRootPassword(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRootPassword, opts...).ToFunc()
+}
+
+// ByStartTime orders the results by the start_time field.
+func ByStartTime(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStartTime, opts...).ToFunc()
+}
+
+// ByStopTime orders the results by the stop_time field.
+func ByStopTime(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStopTime, opts...).ToFunc()
+}
+
+// ByDNSCount orders the results by DNS count.
+func ByDNSCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newDNSStep(), opts...)
+	}
+}
+
+// ByDNS orders the results by DNS terms.
+func ByDNS(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDNSStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByEnvironmentField orders the results by Environment field.
+func ByEnvironmentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEnvironmentStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByBuildsCount orders the results by Builds count.
+func ByBuildsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newBuildsStep(), opts...)
+	}
+}
+
+// ByBuilds orders the results by Builds terms.
+func ByBuilds(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBuildsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newDNSStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DNSInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, DNSTable, DNSPrimaryKey...),
+	)
+}
+func newEnvironmentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EnvironmentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
+	)
+}
+func newBuildsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BuildsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, BuildsTable, BuildsColumn),
+	)
+}

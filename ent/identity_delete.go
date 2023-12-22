@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (id *IdentityDelete) Where(ps ...predicate.Identity) *IdentityDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (id *IdentityDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(id.hooks) == 0 {
-		affected, err = id.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*IdentityMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			id.mutation = mutation
-			affected, err = id.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(id.hooks) - 1; i >= 0; i-- {
-			if id.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = id.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, id.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, id.sqlExec, id.mutation, id.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (id *IdentityDelete) ExecX(ctx context.Context) int {
 }
 
 func (id *IdentityDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: identity.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: identity.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(identity.Table, sqlgraph.NewFieldSpec(identity.FieldID, field.TypeUUID))
 	if ps := id.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (id *IdentityDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	id.mutation.done = true
 	return affected, err
 }
 
 // IdentityDeleteOne is the builder for deleting a single Identity entity.
 type IdentityDeleteOne struct {
 	id *IdentityDelete
+}
+
+// Where appends a list predicates to the IdentityDelete builder.
+func (ido *IdentityDeleteOne) Where(ps ...predicate.Identity) *IdentityDeleteOne {
+	ido.id.mutation.Where(ps...)
+	return ido
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (ido *IdentityDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ido *IdentityDeleteOne) ExecX(ctx context.Context) {
-	ido.id.ExecX(ctx)
+	if err := ido.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -21,15 +21,16 @@ import (
 // CommandQuery is the builder for querying Command entities.
 type CommandQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
-	order           []OrderFunc
-	fields          []string
+	ctx             *QueryContext
+	order           []command.OrderOption
+	inters          []Interceptor
 	predicates      []predicate.Command
 	withUsers       *UserQuery
 	withEnvironment *EnvironmentQuery
 	withFKs         bool
+	modifiers       []func(*sql.Selector)
+	loadTotal       []func(context.Context, []*Command) error
+	withNamedUsers  map[string]*UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -41,34 +42,34 @@ func (cq *CommandQuery) Where(ps ...predicate.Command) *CommandQuery {
 	return cq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (cq *CommandQuery) Limit(limit int) *CommandQuery {
-	cq.limit = &limit
+	cq.ctx.Limit = &limit
 	return cq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (cq *CommandQuery) Offset(offset int) *CommandQuery {
-	cq.offset = &offset
+	cq.ctx.Offset = &offset
 	return cq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (cq *CommandQuery) Unique(unique bool) *CommandQuery {
-	cq.unique = &unique
+	cq.ctx.Unique = &unique
 	return cq
 }
 
-// Order adds an order step to the query.
-func (cq *CommandQuery) Order(o ...OrderFunc) *CommandQuery {
+// Order specifies how the records should be ordered.
+func (cq *CommandQuery) Order(o ...command.OrderOption) *CommandQuery {
 	cq.order = append(cq.order, o...)
 	return cq
 }
 
 // QueryUsers chains the current query on the "Users" edge.
 func (cq *CommandQuery) QueryUsers() *UserQuery {
-	query := &UserQuery{config: cq.config}
+	query := (&UserClient{config: cq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -90,7 +91,7 @@ func (cq *CommandQuery) QueryUsers() *UserQuery {
 
 // QueryEnvironment chains the current query on the "Environment" edge.
 func (cq *CommandQuery) QueryEnvironment() *EnvironmentQuery {
-	query := &EnvironmentQuery{config: cq.config}
+	query := (&EnvironmentClient{config: cq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -113,7 +114,7 @@ func (cq *CommandQuery) QueryEnvironment() *EnvironmentQuery {
 // First returns the first Command entity from the query.
 // Returns a *NotFoundError when no Command was found.
 func (cq *CommandQuery) First(ctx context.Context) (*Command, error) {
-	nodes, err := cq.Limit(1).All(ctx)
+	nodes, err := cq.Limit(1).All(setContextOp(ctx, cq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +137,7 @@ func (cq *CommandQuery) FirstX(ctx context.Context) *Command {
 // Returns a *NotFoundError when no Command ID was found.
 func (cq *CommandQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = cq.Limit(1).IDs(setContextOp(ctx, cq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -159,7 +160,7 @@ func (cq *CommandQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Command entity is found.
 // Returns a *NotFoundError when no Command entities are found.
 func (cq *CommandQuery) Only(ctx context.Context) (*Command, error) {
-	nodes, err := cq.Limit(2).All(ctx)
+	nodes, err := cq.Limit(2).All(setContextOp(ctx, cq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +188,7 @@ func (cq *CommandQuery) OnlyX(ctx context.Context) *Command {
 // Returns a *NotFoundError when no entities are found.
 func (cq *CommandQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = cq.Limit(2).IDs(setContextOp(ctx, cq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -212,10 +213,12 @@ func (cq *CommandQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Commands.
 func (cq *CommandQuery) All(ctx context.Context) ([]*Command, error) {
+	ctx = setContextOp(ctx, cq.ctx, "All")
 	if err := cq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return cq.sqlAll(ctx)
+	qr := querierAll[[]*Command, *CommandQuery]()
+	return withInterceptors[[]*Command](ctx, cq, qr, cq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -228,9 +231,12 @@ func (cq *CommandQuery) AllX(ctx context.Context) []*Command {
 }
 
 // IDs executes the query and returns a list of Command IDs.
-func (cq *CommandQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := cq.Select(command.FieldID).Scan(ctx, &ids); err != nil {
+func (cq *CommandQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if cq.ctx.Unique == nil && cq.path != nil {
+		cq.Unique(true)
+	}
+	ctx = setContextOp(ctx, cq.ctx, "IDs")
+	if err = cq.Select(command.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -247,10 +253,11 @@ func (cq *CommandQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (cq *CommandQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, cq.ctx, "Count")
 	if err := cq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return cq.sqlCount(ctx)
+	return withInterceptors[int](ctx, cq, querierCount[*CommandQuery](), cq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -264,10 +271,15 @@ func (cq *CommandQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (cq *CommandQuery) Exist(ctx context.Context) (bool, error) {
-	if err := cq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, cq.ctx, "Exist")
+	switch _, err := cq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return cq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -287,23 +299,22 @@ func (cq *CommandQuery) Clone() *CommandQuery {
 	}
 	return &CommandQuery{
 		config:          cq.config,
-		limit:           cq.limit,
-		offset:          cq.offset,
-		order:           append([]OrderFunc{}, cq.order...),
+		ctx:             cq.ctx.Clone(),
+		order:           append([]command.OrderOption{}, cq.order...),
+		inters:          append([]Interceptor{}, cq.inters...),
 		predicates:      append([]predicate.Command{}, cq.predicates...),
 		withUsers:       cq.withUsers.Clone(),
 		withEnvironment: cq.withEnvironment.Clone(),
 		// clone intermediate query.
-		sql:    cq.sql.Clone(),
-		path:   cq.path,
-		unique: cq.unique,
+		sql:  cq.sql.Clone(),
+		path: cq.path,
 	}
 }
 
 // WithUsers tells the query-builder to eager-load the nodes that are connected to
 // the "Users" edge. The optional arguments are used to configure the query builder of the edge.
 func (cq *CommandQuery) WithUsers(opts ...func(*UserQuery)) *CommandQuery {
-	query := &UserQuery{config: cq.config}
+	query := (&UserClient{config: cq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -314,7 +325,7 @@ func (cq *CommandQuery) WithUsers(opts ...func(*UserQuery)) *CommandQuery {
 // WithEnvironment tells the query-builder to eager-load the nodes that are connected to
 // the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
 func (cq *CommandQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *CommandQuery {
-	query := &EnvironmentQuery{config: cq.config}
+	query := (&EnvironmentClient{config: cq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -328,25 +339,20 @@ func (cq *CommandQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *Comman
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Command.Query().
-//		GroupBy(command.FieldHclID).
+//		GroupBy(command.FieldHCLID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (cq *CommandQuery) GroupBy(field string, fields ...string) *CommandGroupBy {
-	grbuild := &CommandGroupBy{config: cq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := cq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return cq.sqlQuery(ctx), nil
-	}
+	cq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &CommandGroupBy{build: cq}
+	grbuild.flds = &cq.ctx.Fields
 	grbuild.label = command.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -356,22 +362,37 @@ func (cq *CommandQuery) GroupBy(field string, fields ...string) *CommandGroupBy 
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //	}
 //
 //	client.Command.Query().
-//		Select(command.FieldHclID).
+//		Select(command.FieldHCLID).
 //		Scan(ctx, &v)
 func (cq *CommandQuery) Select(fields ...string) *CommandSelect {
-	cq.fields = append(cq.fields, fields...)
-	selbuild := &CommandSelect{CommandQuery: cq}
-	selbuild.label = command.Label
-	selbuild.flds, selbuild.scan = &cq.fields, selbuild.Scan
-	return selbuild
+	cq.ctx.Fields = append(cq.ctx.Fields, fields...)
+	sbuild := &CommandSelect{CommandQuery: cq}
+	sbuild.label = command.Label
+	sbuild.flds, sbuild.scan = &cq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a CommandSelect configured with the given aggregations.
+func (cq *CommandQuery) Aggregate(fns ...AggregateFunc) *CommandSelect {
+	return cq.Select().Aggregate(fns...)
 }
 
 func (cq *CommandQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range cq.fields {
+	for _, inter := range cq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, cq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range cq.ctx.Fields {
 		if !command.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -402,14 +423,17 @@ func (cq *CommandQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Comm
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, command.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Command).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &Command{config: cq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(cq.modifiers) > 0 {
+		_spec.Modifiers = cq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -433,6 +457,18 @@ func (cq *CommandQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Comm
 			return nil, err
 		}
 	}
+	for name, query := range cq.withNamedUsers {
+		if err := cq.loadUsers(ctx, query, nodes,
+			func(n *Command) { n.appendNamedUsers(name) },
+			func(n *Command, e *User) { n.appendNamedUsers(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range cq.loadTotal {
+		if err := cq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -448,7 +484,7 @@ func (cq *CommandQuery) loadUsers(ctx context.Context, query *UserQuery, nodes [
 	}
 	query.withFKs = true
 	query.Where(predicate.User(func(s *sql.Selector) {
-		s.Where(sql.InValues(command.UsersColumn, fks...))
+		s.Where(sql.InValues(s.C(command.UsersColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -461,7 +497,7 @@ func (cq *CommandQuery) loadUsers(ctx context.Context, query *UserQuery, nodes [
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "command_users" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "command_users" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -479,6 +515,9 @@ func (cq *CommandQuery) loadEnvironment(ctx context.Context, query *EnvironmentQ
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(environment.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -499,38 +538,25 @@ func (cq *CommandQuery) loadEnvironment(ctx context.Context, query *EnvironmentQ
 
 func (cq *CommandQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := cq.querySpec()
-	_spec.Node.Columns = cq.fields
-	if len(cq.fields) > 0 {
-		_spec.Unique = cq.unique != nil && *cq.unique
+	if len(cq.modifiers) > 0 {
+		_spec.Modifiers = cq.modifiers
+	}
+	_spec.Node.Columns = cq.ctx.Fields
+	if len(cq.ctx.Fields) > 0 {
+		_spec.Unique = cq.ctx.Unique != nil && *cq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, cq.driver, _spec)
 }
 
-func (cq *CommandQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := cq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (cq *CommandQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   command.Table,
-			Columns: command.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: command.FieldID,
-			},
-		},
-		From:   cq.sql,
-		Unique: true,
-	}
-	if unique := cq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(command.Table, command.Columns, sqlgraph.NewFieldSpec(command.FieldID, field.TypeUUID))
+	_spec.From = cq.sql
+	if unique := cq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if cq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := cq.fields; len(fields) > 0 {
+	if fields := cq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, command.FieldID)
 		for i := range fields {
@@ -546,10 +572,10 @@ func (cq *CommandQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := cq.limit; limit != nil {
+	if limit := cq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := cq.offset; offset != nil {
+	if offset := cq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := cq.order; len(ps) > 0 {
@@ -565,7 +591,7 @@ func (cq *CommandQuery) querySpec() *sqlgraph.QuerySpec {
 func (cq *CommandQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(cq.driver.Dialect())
 	t1 := builder.Table(command.Table)
-	columns := cq.fields
+	columns := cq.ctx.Fields
 	if len(columns) == 0 {
 		columns = command.Columns
 	}
@@ -574,7 +600,7 @@ func (cq *CommandQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = cq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if cq.unique != nil && *cq.unique {
+	if cq.ctx.Unique != nil && *cq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range cq.predicates {
@@ -583,26 +609,35 @@ func (cq *CommandQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range cq.order {
 		p(selector)
 	}
-	if offset := cq.offset; offset != nil {
+	if offset := cq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := cq.limit; limit != nil {
+	if limit := cq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
 }
 
+// WithNamedUsers tells the query-builder to eager-load the nodes that are connected to the "Users"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (cq *CommandQuery) WithNamedUsers(name string, opts ...func(*UserQuery)) *CommandQuery {
+	query := (&UserClient{config: cq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if cq.withNamedUsers == nil {
+		cq.withNamedUsers = make(map[string]*UserQuery)
+	}
+	cq.withNamedUsers[name] = query
+	return cq
+}
+
 // CommandGroupBy is the group-by builder for Command entities.
 type CommandGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *CommandQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -611,74 +646,77 @@ func (cgb *CommandGroupBy) Aggregate(fns ...AggregateFunc) *CommandGroupBy {
 	return cgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (cgb *CommandGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := cgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (cgb *CommandGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, cgb.build.ctx, "GroupBy")
+	if err := cgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	cgb.sql = query
-	return cgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*CommandQuery, *CommandGroupBy](ctx, cgb.build, cgb, cgb.build.inters, v)
 }
 
-func (cgb *CommandGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range cgb.fields {
-		if !command.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (cgb *CommandGroupBy) sqlScan(ctx context.Context, root *CommandQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(cgb.fns))
+	for _, fn := range cgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := cgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*cgb.flds)+len(cgb.fns))
+		for _, f := range *cgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*cgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := cgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := cgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (cgb *CommandGroupBy) sqlQuery() *sql.Selector {
-	selector := cgb.sql.Select()
-	aggregation := make([]string, 0, len(cgb.fns))
-	for _, fn := range cgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(cgb.fields)+len(cgb.fns))
-		for _, f := range cgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(cgb.fields...)...)
-}
-
 // CommandSelect is the builder for selecting fields of Command entities.
 type CommandSelect struct {
 	*CommandQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (cs *CommandSelect) Aggregate(fns ...AggregateFunc) *CommandSelect {
+	cs.fns = append(cs.fns, fns...)
+	return cs
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (cs *CommandSelect) Scan(ctx context.Context, v interface{}) error {
+func (cs *CommandSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, cs.ctx, "Select")
 	if err := cs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	cs.sql = cs.CommandQuery.sqlQuery(ctx)
-	return cs.sqlScan(ctx, v)
+	return scanWithInterceptors[*CommandQuery, *CommandSelect](ctx, cs.CommandQuery, cs, cs.inters, v)
 }
 
-func (cs *CommandSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (cs *CommandSelect) sqlScan(ctx context.Context, root *CommandQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(cs.fns))
+	for _, fn := range cs.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*cs.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := cs.sql.Query()
+	query, args := selector.Query()
 	if err := cs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

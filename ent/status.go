@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/build"
@@ -44,6 +45,7 @@ type Status struct {
 	// The values are being populated by the StatusQuery when eager-loading is set.
 	Edges StatusEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Build holds the value of the Build edge.
 	HCLBuild *Build `json:"Build,omitempty"`
@@ -63,7 +65,7 @@ type Status struct {
 	HCLAdhocPlan *AdhocPlan `json:"AdhocPlan,omitempty"`
 	// ProvisioningScheduledStep holds the value of the ProvisioningScheduledStep edge.
 	HCLProvisioningScheduledStep *ProvisioningScheduledStep `json:"ProvisioningScheduledStep,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	adhoc_plan_status                  *uuid.UUID
 	build_status                       *uuid.UUID
 	plan_status                        *uuid.UUID
@@ -73,6 +75,7 @@ type Status struct {
 	provisioning_step_status           *uuid.UUID
 	server_task_status                 *uuid.UUID
 	team_status                        *uuid.UUID
+	selectValues                       sql.SelectValues
 }
 
 // StatusEdges holds the relations/edges for other nodes in the graph.
@@ -98,6 +101,8 @@ type StatusEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [9]bool
+	// totalCount holds the count of the edges above.
+	totalCount [9]map[string]int
 }
 
 // BuildOrErr returns the Build value or an error if the edge
@@ -105,8 +110,7 @@ type StatusEdges struct {
 func (e StatusEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[0] {
 		if e.Build == nil {
-			// The edge Build was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
 		return e.Build, nil
@@ -119,8 +123,7 @@ func (e StatusEdges) BuildOrErr() (*Build, error) {
 func (e StatusEdges) ProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
 	if e.loadedTypes[1] {
 		if e.ProvisionedNetwork == nil {
-			// The edge ProvisionedNetwork was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisionednetwork.Label}
 		}
 		return e.ProvisionedNetwork, nil
@@ -133,8 +136,7 @@ func (e StatusEdges) ProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
 func (e StatusEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[2] {
 		if e.ProvisionedHost == nil {
-			// The edge ProvisionedHost was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
 		return e.ProvisionedHost, nil
@@ -147,8 +149,7 @@ func (e StatusEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 func (e StatusEdges) ProvisioningStepOrErr() (*ProvisioningStep, error) {
 	if e.loadedTypes[3] {
 		if e.ProvisioningStep == nil {
-			// The edge ProvisioningStep was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisioningstep.Label}
 		}
 		return e.ProvisioningStep, nil
@@ -161,8 +162,7 @@ func (e StatusEdges) ProvisioningStepOrErr() (*ProvisioningStep, error) {
 func (e StatusEdges) TeamOrErr() (*Team, error) {
 	if e.loadedTypes[4] {
 		if e.Team == nil {
-			// The edge Team was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: team.Label}
 		}
 		return e.Team, nil
@@ -175,8 +175,7 @@ func (e StatusEdges) TeamOrErr() (*Team, error) {
 func (e StatusEdges) PlanOrErr() (*Plan, error) {
 	if e.loadedTypes[5] {
 		if e.Plan == nil {
-			// The edge Plan was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: plan.Label}
 		}
 		return e.Plan, nil
@@ -189,8 +188,7 @@ func (e StatusEdges) PlanOrErr() (*Plan, error) {
 func (e StatusEdges) ServerTaskOrErr() (*ServerTask, error) {
 	if e.loadedTypes[6] {
 		if e.ServerTask == nil {
-			// The edge ServerTask was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: servertask.Label}
 		}
 		return e.ServerTask, nil
@@ -203,8 +201,7 @@ func (e StatusEdges) ServerTaskOrErr() (*ServerTask, error) {
 func (e StatusEdges) AdhocPlanOrErr() (*AdhocPlan, error) {
 	if e.loadedTypes[7] {
 		if e.AdhocPlan == nil {
-			// The edge AdhocPlan was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: adhocplan.Label}
 		}
 		return e.AdhocPlan, nil
@@ -217,8 +214,7 @@ func (e StatusEdges) AdhocPlanOrErr() (*AdhocPlan, error) {
 func (e StatusEdges) ProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
 	if e.loadedTypes[8] {
 		if e.ProvisioningScheduledStep == nil {
-			// The edge ProvisioningScheduledStep was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisioningscheduledstep.Label}
 		}
 		return e.ProvisioningScheduledStep, nil
@@ -227,8 +223,8 @@ func (e StatusEdges) ProvisioningScheduledStepOrErr() (*ProvisioningScheduledSte
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*Status) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*Status) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case status.FieldFailed, status.FieldCompleted:
@@ -258,7 +254,7 @@ func (*Status) scanValues(columns []string) ([]interface{}, error) {
 		case status.ForeignKeys[8]: // team_status
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Status", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -266,7 +262,7 @@ func (*Status) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Status fields.
-func (s *Status) assignValues(columns []string, values []interface{}) error {
+func (s *Status) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -383,71 +379,79 @@ func (s *Status) assignValues(columns []string, values []interface{}) error {
 				s.team_status = new(uuid.UUID)
 				*s.team_status = *value.S.(*uuid.UUID)
 			}
+		default:
+			s.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the Status.
+// This includes values selected through modifiers, order, etc.
+func (s *Status) Value(name string) (ent.Value, error) {
+	return s.selectValues.Get(name)
+}
+
 // QueryBuild queries the "Build" edge of the Status entity.
 func (s *Status) QueryBuild() *BuildQuery {
-	return (&StatusClient{config: s.config}).QueryBuild(s)
+	return NewStatusClient(s.config).QueryBuild(s)
 }
 
 // QueryProvisionedNetwork queries the "ProvisionedNetwork" edge of the Status entity.
 func (s *Status) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
-	return (&StatusClient{config: s.config}).QueryProvisionedNetwork(s)
+	return NewStatusClient(s.config).QueryProvisionedNetwork(s)
 }
 
 // QueryProvisionedHost queries the "ProvisionedHost" edge of the Status entity.
 func (s *Status) QueryProvisionedHost() *ProvisionedHostQuery {
-	return (&StatusClient{config: s.config}).QueryProvisionedHost(s)
+	return NewStatusClient(s.config).QueryProvisionedHost(s)
 }
 
 // QueryProvisioningStep queries the "ProvisioningStep" edge of the Status entity.
 func (s *Status) QueryProvisioningStep() *ProvisioningStepQuery {
-	return (&StatusClient{config: s.config}).QueryProvisioningStep(s)
+	return NewStatusClient(s.config).QueryProvisioningStep(s)
 }
 
 // QueryTeam queries the "Team" edge of the Status entity.
 func (s *Status) QueryTeam() *TeamQuery {
-	return (&StatusClient{config: s.config}).QueryTeam(s)
+	return NewStatusClient(s.config).QueryTeam(s)
 }
 
 // QueryPlan queries the "Plan" edge of the Status entity.
 func (s *Status) QueryPlan() *PlanQuery {
-	return (&StatusClient{config: s.config}).QueryPlan(s)
+	return NewStatusClient(s.config).QueryPlan(s)
 }
 
 // QueryServerTask queries the "ServerTask" edge of the Status entity.
 func (s *Status) QueryServerTask() *ServerTaskQuery {
-	return (&StatusClient{config: s.config}).QueryServerTask(s)
+	return NewStatusClient(s.config).QueryServerTask(s)
 }
 
 // QueryAdhocPlan queries the "AdhocPlan" edge of the Status entity.
 func (s *Status) QueryAdhocPlan() *AdhocPlanQuery {
-	return (&StatusClient{config: s.config}).QueryAdhocPlan(s)
+	return NewStatusClient(s.config).QueryAdhocPlan(s)
 }
 
 // QueryProvisioningScheduledStep queries the "ProvisioningScheduledStep" edge of the Status entity.
 func (s *Status) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
-	return (&StatusClient{config: s.config}).QueryProvisioningScheduledStep(s)
+	return NewStatusClient(s.config).QueryProvisioningScheduledStep(s)
 }
 
 // Update returns a builder for updating this Status.
 // Note that you need to call Status.Unwrap() before calling this method if this Status
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (s *Status) Update() *StatusUpdateOne {
-	return (&StatusClient{config: s.config}).UpdateOne(s)
+	return NewStatusClient(s.config).UpdateOne(s)
 }
 
 // Unwrap unwraps the Status entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (s *Status) Unwrap() *Status {
-	tx, ok := s.config.driver.(*txDriver)
+	_tx, ok := s.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Status is not a transactional entity")
 	}
-	s.config.driver = tx.drv
+	s.config.driver = _tx.drv
 	return s
 }
 
@@ -455,20 +459,26 @@ func (s *Status) Unwrap() *Status {
 func (s *Status) String() string {
 	var builder strings.Builder
 	builder.WriteString("Status(")
-	builder.WriteString(fmt.Sprintf("id=%v", s.ID))
-	builder.WriteString(", state=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", s.ID))
+	builder.WriteString("state=")
 	builder.WriteString(fmt.Sprintf("%v", s.State))
-	builder.WriteString(", status_for=")
+	builder.WriteString(", ")
+	builder.WriteString("status_for=")
 	builder.WriteString(fmt.Sprintf("%v", s.StatusFor))
-	builder.WriteString(", started_at=")
+	builder.WriteString(", ")
+	builder.WriteString("started_at=")
 	builder.WriteString(s.StartedAt.Format(time.ANSIC))
-	builder.WriteString(", ended_at=")
+	builder.WriteString(", ")
+	builder.WriteString("ended_at=")
 	builder.WriteString(s.EndedAt.Format(time.ANSIC))
-	builder.WriteString(", failed=")
+	builder.WriteString(", ")
+	builder.WriteString("failed=")
 	builder.WriteString(fmt.Sprintf("%v", s.Failed))
-	builder.WriteString(", completed=")
+	builder.WriteString(", ")
+	builder.WriteString("completed=")
 	builder.WriteString(fmt.Sprintf("%v", s.Completed))
-	builder.WriteString(", error=")
+	builder.WriteString(", ")
+	builder.WriteString("error=")
 	builder.WriteString(s.Error)
 	builder.WriteByte(')')
 	return builder.String()
@@ -476,9 +486,3 @@ func (s *Status) String() string {
 
 // StatusSlice is a parsable slice of Status.
 type StatusSlice []*Status
-
-func (s StatusSlice) config(cfg config) {
-	for _i := range s {
-		s[_i].config = cfg
-	}
-}

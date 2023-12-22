@@ -29,9 +29,17 @@ func (fdu *FileDownloadUpdate) Where(ps ...predicate.FileDownload) *FileDownload
 	return fdu
 }
 
-// SetHclID sets the "hcl_id" field.
-func (fdu *FileDownloadUpdate) SetHclID(s string) *FileDownloadUpdate {
-	fdu.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (fdu *FileDownloadUpdate) SetHCLID(s string) *FileDownloadUpdate {
+	fdu.mutation.SetHCLID(s)
+	return fdu
+}
+
+// SetNillableHCLID sets the "hcl_id" field if the given value is not nil.
+func (fdu *FileDownloadUpdate) SetNillableHCLID(s *string) *FileDownloadUpdate {
+	if s != nil {
+		fdu.SetHCLID(*s)
+	}
 	return fdu
 }
 
@@ -41,9 +49,25 @@ func (fdu *FileDownloadUpdate) SetSourceType(s string) *FileDownloadUpdate {
 	return fdu
 }
 
+// SetNillableSourceType sets the "source_type" field if the given value is not nil.
+func (fdu *FileDownloadUpdate) SetNillableSourceType(s *string) *FileDownloadUpdate {
+	if s != nil {
+		fdu.SetSourceType(*s)
+	}
+	return fdu
+}
+
 // SetSource sets the "source" field.
 func (fdu *FileDownloadUpdate) SetSource(s string) *FileDownloadUpdate {
 	fdu.mutation.SetSource(s)
+	return fdu
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (fdu *FileDownloadUpdate) SetNillableSource(s *string) *FileDownloadUpdate {
+	if s != nil {
+		fdu.SetSource(*s)
+	}
 	return fdu
 }
 
@@ -53,9 +77,25 @@ func (fdu *FileDownloadUpdate) SetDestination(s string) *FileDownloadUpdate {
 	return fdu
 }
 
+// SetNillableDestination sets the "destination" field if the given value is not nil.
+func (fdu *FileDownloadUpdate) SetNillableDestination(s *string) *FileDownloadUpdate {
+	if s != nil {
+		fdu.SetDestination(*s)
+	}
+	return fdu
+}
+
 // SetTemplate sets the "template" field.
 func (fdu *FileDownloadUpdate) SetTemplate(b bool) *FileDownloadUpdate {
 	fdu.mutation.SetTemplate(b)
+	return fdu
+}
+
+// SetNillableTemplate sets the "template" field if the given value is not nil.
+func (fdu *FileDownloadUpdate) SetNillableTemplate(b *bool) *FileDownloadUpdate {
+	if b != nil {
+		fdu.SetTemplate(*b)
+	}
 	return fdu
 }
 
@@ -65,9 +105,25 @@ func (fdu *FileDownloadUpdate) SetPerms(s string) *FileDownloadUpdate {
 	return fdu
 }
 
+// SetNillablePerms sets the "perms" field if the given value is not nil.
+func (fdu *FileDownloadUpdate) SetNillablePerms(s *string) *FileDownloadUpdate {
+	if s != nil {
+		fdu.SetPerms(*s)
+	}
+	return fdu
+}
+
 // SetDisabled sets the "disabled" field.
 func (fdu *FileDownloadUpdate) SetDisabled(b bool) *FileDownloadUpdate {
 	fdu.mutation.SetDisabled(b)
+	return fdu
+}
+
+// SetNillableDisabled sets the "disabled" field if the given value is not nil.
+func (fdu *FileDownloadUpdate) SetNillableDisabled(b *bool) *FileDownloadUpdate {
+	if b != nil {
+		fdu.SetDisabled(*b)
+	}
 	return fdu
 }
 
@@ -77,9 +133,25 @@ func (fdu *FileDownloadUpdate) SetMd5(s string) *FileDownloadUpdate {
 	return fdu
 }
 
+// SetNillableMd5 sets the "md5" field if the given value is not nil.
+func (fdu *FileDownloadUpdate) SetNillableMd5(s *string) *FileDownloadUpdate {
+	if s != nil {
+		fdu.SetMd5(*s)
+	}
+	return fdu
+}
+
 // SetAbsPath sets the "abs_path" field.
 func (fdu *FileDownloadUpdate) SetAbsPath(s string) *FileDownloadUpdate {
 	fdu.mutation.SetAbsPath(s)
+	return fdu
+}
+
+// SetNillableAbsPath sets the "abs_path" field if the given value is not nil.
+func (fdu *FileDownloadUpdate) SetNillableAbsPath(s *string) *FileDownloadUpdate {
+	if s != nil {
+		fdu.SetAbsPath(*s)
+	}
 	return fdu
 }
 
@@ -135,34 +207,7 @@ func (fdu *FileDownloadUpdate) ClearEnvironment() *FileDownloadUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (fdu *FileDownloadUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(fdu.hooks) == 0 {
-		affected, err = fdu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*FileDownloadMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			fdu.mutation = mutation
-			affected, err = fdu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(fdu.hooks) - 1; i >= 0; i-- {
-			if fdu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = fdu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, fdu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, fdu.sqlSave, fdu.mutation, fdu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -188,16 +233,7 @@ func (fdu *FileDownloadUpdate) ExecX(ctx context.Context) {
 }
 
 func (fdu *FileDownloadUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   filedownload.Table,
-			Columns: filedownload.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: filedownload.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(filedownload.Table, filedownload.Columns, sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID))
 	if ps := fdu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -205,82 +241,38 @@ func (fdu *FileDownloadUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := fdu.mutation.HclID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldHclID,
-		})
+	if value, ok := fdu.mutation.HCLID(); ok {
+		_spec.SetField(filedownload.FieldHCLID, field.TypeString, value)
 	}
 	if value, ok := fdu.mutation.SourceType(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldSourceType,
-		})
+		_spec.SetField(filedownload.FieldSourceType, field.TypeString, value)
 	}
 	if value, ok := fdu.mutation.Source(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldSource,
-		})
+		_spec.SetField(filedownload.FieldSource, field.TypeString, value)
 	}
 	if value, ok := fdu.mutation.Destination(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldDestination,
-		})
+		_spec.SetField(filedownload.FieldDestination, field.TypeString, value)
 	}
 	if value, ok := fdu.mutation.Template(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: filedownload.FieldTemplate,
-		})
+		_spec.SetField(filedownload.FieldTemplate, field.TypeBool, value)
 	}
 	if value, ok := fdu.mutation.Perms(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldPerms,
-		})
+		_spec.SetField(filedownload.FieldPerms, field.TypeString, value)
 	}
 	if value, ok := fdu.mutation.Disabled(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: filedownload.FieldDisabled,
-		})
+		_spec.SetField(filedownload.FieldDisabled, field.TypeBool, value)
 	}
 	if value, ok := fdu.mutation.Md5(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldMd5,
-		})
+		_spec.SetField(filedownload.FieldMd5, field.TypeString, value)
 	}
 	if value, ok := fdu.mutation.AbsPath(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldAbsPath,
-		})
+		_spec.SetField(filedownload.FieldAbsPath, field.TypeString, value)
 	}
 	if value, ok := fdu.mutation.IsTxt(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: filedownload.FieldIsTxt,
-		})
+		_spec.SetField(filedownload.FieldIsTxt, field.TypeBool, value)
 	}
 	if value, ok := fdu.mutation.Tags(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: filedownload.FieldTags,
-		})
+		_spec.SetField(filedownload.FieldTags, field.TypeJSON, value)
 	}
 	if fdu.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -290,10 +282,7 @@ func (fdu *FileDownloadUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{filedownload.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -306,10 +295,7 @@ func (fdu *FileDownloadUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{filedownload.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -325,6 +311,7 @@ func (fdu *FileDownloadUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	fdu.mutation.done = true
 	return n, nil
 }
 
@@ -336,9 +323,17 @@ type FileDownloadUpdateOne struct {
 	mutation *FileDownloadMutation
 }
 
-// SetHclID sets the "hcl_id" field.
-func (fduo *FileDownloadUpdateOne) SetHclID(s string) *FileDownloadUpdateOne {
-	fduo.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (fduo *FileDownloadUpdateOne) SetHCLID(s string) *FileDownloadUpdateOne {
+	fduo.mutation.SetHCLID(s)
+	return fduo
+}
+
+// SetNillableHCLID sets the "hcl_id" field if the given value is not nil.
+func (fduo *FileDownloadUpdateOne) SetNillableHCLID(s *string) *FileDownloadUpdateOne {
+	if s != nil {
+		fduo.SetHCLID(*s)
+	}
 	return fduo
 }
 
@@ -348,9 +343,25 @@ func (fduo *FileDownloadUpdateOne) SetSourceType(s string) *FileDownloadUpdateOn
 	return fduo
 }
 
+// SetNillableSourceType sets the "source_type" field if the given value is not nil.
+func (fduo *FileDownloadUpdateOne) SetNillableSourceType(s *string) *FileDownloadUpdateOne {
+	if s != nil {
+		fduo.SetSourceType(*s)
+	}
+	return fduo
+}
+
 // SetSource sets the "source" field.
 func (fduo *FileDownloadUpdateOne) SetSource(s string) *FileDownloadUpdateOne {
 	fduo.mutation.SetSource(s)
+	return fduo
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (fduo *FileDownloadUpdateOne) SetNillableSource(s *string) *FileDownloadUpdateOne {
+	if s != nil {
+		fduo.SetSource(*s)
+	}
 	return fduo
 }
 
@@ -360,9 +371,25 @@ func (fduo *FileDownloadUpdateOne) SetDestination(s string) *FileDownloadUpdateO
 	return fduo
 }
 
+// SetNillableDestination sets the "destination" field if the given value is not nil.
+func (fduo *FileDownloadUpdateOne) SetNillableDestination(s *string) *FileDownloadUpdateOne {
+	if s != nil {
+		fduo.SetDestination(*s)
+	}
+	return fduo
+}
+
 // SetTemplate sets the "template" field.
 func (fduo *FileDownloadUpdateOne) SetTemplate(b bool) *FileDownloadUpdateOne {
 	fduo.mutation.SetTemplate(b)
+	return fduo
+}
+
+// SetNillableTemplate sets the "template" field if the given value is not nil.
+func (fduo *FileDownloadUpdateOne) SetNillableTemplate(b *bool) *FileDownloadUpdateOne {
+	if b != nil {
+		fduo.SetTemplate(*b)
+	}
 	return fduo
 }
 
@@ -372,9 +399,25 @@ func (fduo *FileDownloadUpdateOne) SetPerms(s string) *FileDownloadUpdateOne {
 	return fduo
 }
 
+// SetNillablePerms sets the "perms" field if the given value is not nil.
+func (fduo *FileDownloadUpdateOne) SetNillablePerms(s *string) *FileDownloadUpdateOne {
+	if s != nil {
+		fduo.SetPerms(*s)
+	}
+	return fduo
+}
+
 // SetDisabled sets the "disabled" field.
 func (fduo *FileDownloadUpdateOne) SetDisabled(b bool) *FileDownloadUpdateOne {
 	fduo.mutation.SetDisabled(b)
+	return fduo
+}
+
+// SetNillableDisabled sets the "disabled" field if the given value is not nil.
+func (fduo *FileDownloadUpdateOne) SetNillableDisabled(b *bool) *FileDownloadUpdateOne {
+	if b != nil {
+		fduo.SetDisabled(*b)
+	}
 	return fduo
 }
 
@@ -384,9 +427,25 @@ func (fduo *FileDownloadUpdateOne) SetMd5(s string) *FileDownloadUpdateOne {
 	return fduo
 }
 
+// SetNillableMd5 sets the "md5" field if the given value is not nil.
+func (fduo *FileDownloadUpdateOne) SetNillableMd5(s *string) *FileDownloadUpdateOne {
+	if s != nil {
+		fduo.SetMd5(*s)
+	}
+	return fduo
+}
+
 // SetAbsPath sets the "abs_path" field.
 func (fduo *FileDownloadUpdateOne) SetAbsPath(s string) *FileDownloadUpdateOne {
 	fduo.mutation.SetAbsPath(s)
+	return fduo
+}
+
+// SetNillableAbsPath sets the "abs_path" field if the given value is not nil.
+func (fduo *FileDownloadUpdateOne) SetNillableAbsPath(s *string) *FileDownloadUpdateOne {
+	if s != nil {
+		fduo.SetAbsPath(*s)
+	}
 	return fduo
 }
 
@@ -440,6 +499,12 @@ func (fduo *FileDownloadUpdateOne) ClearEnvironment() *FileDownloadUpdateOne {
 	return fduo
 }
 
+// Where appends a list predicates to the FileDownloadUpdate builder.
+func (fduo *FileDownloadUpdateOne) Where(ps ...predicate.FileDownload) *FileDownloadUpdateOne {
+	fduo.mutation.Where(ps...)
+	return fduo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (fduo *FileDownloadUpdateOne) Select(field string, fields ...string) *FileDownloadUpdateOne {
@@ -449,40 +514,7 @@ func (fduo *FileDownloadUpdateOne) Select(field string, fields ...string) *FileD
 
 // Save executes the query and returns the updated FileDownload entity.
 func (fduo *FileDownloadUpdateOne) Save(ctx context.Context) (*FileDownload, error) {
-	var (
-		err  error
-		node *FileDownload
-	)
-	if len(fduo.hooks) == 0 {
-		node, err = fduo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*FileDownloadMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			fduo.mutation = mutation
-			node, err = fduo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(fduo.hooks) - 1; i >= 0; i-- {
-			if fduo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = fduo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, fduo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*FileDownload)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from FileDownloadMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, fduo.sqlSave, fduo.mutation, fduo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -508,16 +540,7 @@ func (fduo *FileDownloadUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (fduo *FileDownloadUpdateOne) sqlSave(ctx context.Context) (_node *FileDownload, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   filedownload.Table,
-			Columns: filedownload.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: filedownload.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(filedownload.Table, filedownload.Columns, sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID))
 	id, ok := fduo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "FileDownload.id" for update`)}
@@ -542,82 +565,38 @@ func (fduo *FileDownloadUpdateOne) sqlSave(ctx context.Context) (_node *FileDown
 			}
 		}
 	}
-	if value, ok := fduo.mutation.HclID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldHclID,
-		})
+	if value, ok := fduo.mutation.HCLID(); ok {
+		_spec.SetField(filedownload.FieldHCLID, field.TypeString, value)
 	}
 	if value, ok := fduo.mutation.SourceType(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldSourceType,
-		})
+		_spec.SetField(filedownload.FieldSourceType, field.TypeString, value)
 	}
 	if value, ok := fduo.mutation.Source(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldSource,
-		})
+		_spec.SetField(filedownload.FieldSource, field.TypeString, value)
 	}
 	if value, ok := fduo.mutation.Destination(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldDestination,
-		})
+		_spec.SetField(filedownload.FieldDestination, field.TypeString, value)
 	}
 	if value, ok := fduo.mutation.Template(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: filedownload.FieldTemplate,
-		})
+		_spec.SetField(filedownload.FieldTemplate, field.TypeBool, value)
 	}
 	if value, ok := fduo.mutation.Perms(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldPerms,
-		})
+		_spec.SetField(filedownload.FieldPerms, field.TypeString, value)
 	}
 	if value, ok := fduo.mutation.Disabled(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: filedownload.FieldDisabled,
-		})
+		_spec.SetField(filedownload.FieldDisabled, field.TypeBool, value)
 	}
 	if value, ok := fduo.mutation.Md5(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldMd5,
-		})
+		_spec.SetField(filedownload.FieldMd5, field.TypeString, value)
 	}
 	if value, ok := fduo.mutation.AbsPath(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: filedownload.FieldAbsPath,
-		})
+		_spec.SetField(filedownload.FieldAbsPath, field.TypeString, value)
 	}
 	if value, ok := fduo.mutation.IsTxt(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: filedownload.FieldIsTxt,
-		})
+		_spec.SetField(filedownload.FieldIsTxt, field.TypeBool, value)
 	}
 	if value, ok := fduo.mutation.Tags(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: filedownload.FieldTags,
-		})
+		_spec.SetField(filedownload.FieldTags, field.TypeJSON, value)
 	}
 	if fduo.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -627,10 +606,7 @@ func (fduo *FileDownloadUpdateOne) sqlSave(ctx context.Context) (_node *FileDown
 			Columns: []string{filedownload.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -643,10 +619,7 @@ func (fduo *FileDownloadUpdateOne) sqlSave(ctx context.Context) (_node *FileDown
 			Columns: []string{filedownload.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -665,5 +638,6 @@ func (fduo *FileDownloadUpdateOne) sqlSave(ctx context.Context) (_node *FileDown
 		}
 		return nil, err
 	}
+	fduo.mutation.done = true
 	return _node, nil
 }

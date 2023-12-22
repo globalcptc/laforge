@@ -29,9 +29,17 @@ func (feu *FileExtractUpdate) Where(ps ...predicate.FileExtract) *FileExtractUpd
 	return feu
 }
 
-// SetHclID sets the "hcl_id" field.
-func (feu *FileExtractUpdate) SetHclID(s string) *FileExtractUpdate {
-	feu.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (feu *FileExtractUpdate) SetHCLID(s string) *FileExtractUpdate {
+	feu.mutation.SetHCLID(s)
+	return feu
+}
+
+// SetNillableHCLID sets the "hcl_id" field if the given value is not nil.
+func (feu *FileExtractUpdate) SetNillableHCLID(s *string) *FileExtractUpdate {
+	if s != nil {
+		feu.SetHCLID(*s)
+	}
 	return feu
 }
 
@@ -41,15 +49,39 @@ func (feu *FileExtractUpdate) SetSource(s string) *FileExtractUpdate {
 	return feu
 }
 
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (feu *FileExtractUpdate) SetNillableSource(s *string) *FileExtractUpdate {
+	if s != nil {
+		feu.SetSource(*s)
+	}
+	return feu
+}
+
 // SetDestination sets the "destination" field.
 func (feu *FileExtractUpdate) SetDestination(s string) *FileExtractUpdate {
 	feu.mutation.SetDestination(s)
 	return feu
 }
 
+// SetNillableDestination sets the "destination" field if the given value is not nil.
+func (feu *FileExtractUpdate) SetNillableDestination(s *string) *FileExtractUpdate {
+	if s != nil {
+		feu.SetDestination(*s)
+	}
+	return feu
+}
+
 // SetType sets the "type" field.
 func (feu *FileExtractUpdate) SetType(s string) *FileExtractUpdate {
 	feu.mutation.SetType(s)
+	return feu
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (feu *FileExtractUpdate) SetNillableType(s *string) *FileExtractUpdate {
+	if s != nil {
+		feu.SetType(*s)
+	}
 	return feu
 }
 
@@ -91,34 +123,7 @@ func (feu *FileExtractUpdate) ClearEnvironment() *FileExtractUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (feu *FileExtractUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(feu.hooks) == 0 {
-		affected, err = feu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*FileExtractMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			feu.mutation = mutation
-			affected, err = feu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(feu.hooks) - 1; i >= 0; i-- {
-			if feu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = feu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, feu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, feu.sqlSave, feu.mutation, feu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -144,16 +149,7 @@ func (feu *FileExtractUpdate) ExecX(ctx context.Context) {
 }
 
 func (feu *FileExtractUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   fileextract.Table,
-			Columns: fileextract.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: fileextract.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(fileextract.Table, fileextract.Columns, sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID))
 	if ps := feu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -161,40 +157,20 @@ func (feu *FileExtractUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := feu.mutation.HclID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldHclID,
-		})
+	if value, ok := feu.mutation.HCLID(); ok {
+		_spec.SetField(fileextract.FieldHCLID, field.TypeString, value)
 	}
 	if value, ok := feu.mutation.Source(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldSource,
-		})
+		_spec.SetField(fileextract.FieldSource, field.TypeString, value)
 	}
 	if value, ok := feu.mutation.Destination(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldDestination,
-		})
+		_spec.SetField(fileextract.FieldDestination, field.TypeString, value)
 	}
 	if value, ok := feu.mutation.GetType(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldType,
-		})
+		_spec.SetField(fileextract.FieldType, field.TypeString, value)
 	}
 	if value, ok := feu.mutation.Tags(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: fileextract.FieldTags,
-		})
+		_spec.SetField(fileextract.FieldTags, field.TypeJSON, value)
 	}
 	if feu.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -204,10 +180,7 @@ func (feu *FileExtractUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{fileextract.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -220,10 +193,7 @@ func (feu *FileExtractUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{fileextract.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -239,6 +209,7 @@ func (feu *FileExtractUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	feu.mutation.done = true
 	return n, nil
 }
 
@@ -250,9 +221,17 @@ type FileExtractUpdateOne struct {
 	mutation *FileExtractMutation
 }
 
-// SetHclID sets the "hcl_id" field.
-func (feuo *FileExtractUpdateOne) SetHclID(s string) *FileExtractUpdateOne {
-	feuo.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (feuo *FileExtractUpdateOne) SetHCLID(s string) *FileExtractUpdateOne {
+	feuo.mutation.SetHCLID(s)
+	return feuo
+}
+
+// SetNillableHCLID sets the "hcl_id" field if the given value is not nil.
+func (feuo *FileExtractUpdateOne) SetNillableHCLID(s *string) *FileExtractUpdateOne {
+	if s != nil {
+		feuo.SetHCLID(*s)
+	}
 	return feuo
 }
 
@@ -262,15 +241,39 @@ func (feuo *FileExtractUpdateOne) SetSource(s string) *FileExtractUpdateOne {
 	return feuo
 }
 
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (feuo *FileExtractUpdateOne) SetNillableSource(s *string) *FileExtractUpdateOne {
+	if s != nil {
+		feuo.SetSource(*s)
+	}
+	return feuo
+}
+
 // SetDestination sets the "destination" field.
 func (feuo *FileExtractUpdateOne) SetDestination(s string) *FileExtractUpdateOne {
 	feuo.mutation.SetDestination(s)
 	return feuo
 }
 
+// SetNillableDestination sets the "destination" field if the given value is not nil.
+func (feuo *FileExtractUpdateOne) SetNillableDestination(s *string) *FileExtractUpdateOne {
+	if s != nil {
+		feuo.SetDestination(*s)
+	}
+	return feuo
+}
+
 // SetType sets the "type" field.
 func (feuo *FileExtractUpdateOne) SetType(s string) *FileExtractUpdateOne {
 	feuo.mutation.SetType(s)
+	return feuo
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (feuo *FileExtractUpdateOne) SetNillableType(s *string) *FileExtractUpdateOne {
+	if s != nil {
+		feuo.SetType(*s)
+	}
 	return feuo
 }
 
@@ -310,6 +313,12 @@ func (feuo *FileExtractUpdateOne) ClearEnvironment() *FileExtractUpdateOne {
 	return feuo
 }
 
+// Where appends a list predicates to the FileExtractUpdate builder.
+func (feuo *FileExtractUpdateOne) Where(ps ...predicate.FileExtract) *FileExtractUpdateOne {
+	feuo.mutation.Where(ps...)
+	return feuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (feuo *FileExtractUpdateOne) Select(field string, fields ...string) *FileExtractUpdateOne {
@@ -319,40 +328,7 @@ func (feuo *FileExtractUpdateOne) Select(field string, fields ...string) *FileEx
 
 // Save executes the query and returns the updated FileExtract entity.
 func (feuo *FileExtractUpdateOne) Save(ctx context.Context) (*FileExtract, error) {
-	var (
-		err  error
-		node *FileExtract
-	)
-	if len(feuo.hooks) == 0 {
-		node, err = feuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*FileExtractMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			feuo.mutation = mutation
-			node, err = feuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(feuo.hooks) - 1; i >= 0; i-- {
-			if feuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = feuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, feuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*FileExtract)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from FileExtractMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, feuo.sqlSave, feuo.mutation, feuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -378,16 +354,7 @@ func (feuo *FileExtractUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (feuo *FileExtractUpdateOne) sqlSave(ctx context.Context) (_node *FileExtract, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   fileextract.Table,
-			Columns: fileextract.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: fileextract.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(fileextract.Table, fileextract.Columns, sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID))
 	id, ok := feuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "FileExtract.id" for update`)}
@@ -412,40 +379,20 @@ func (feuo *FileExtractUpdateOne) sqlSave(ctx context.Context) (_node *FileExtra
 			}
 		}
 	}
-	if value, ok := feuo.mutation.HclID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldHclID,
-		})
+	if value, ok := feuo.mutation.HCLID(); ok {
+		_spec.SetField(fileextract.FieldHCLID, field.TypeString, value)
 	}
 	if value, ok := feuo.mutation.Source(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldSource,
-		})
+		_spec.SetField(fileextract.FieldSource, field.TypeString, value)
 	}
 	if value, ok := feuo.mutation.Destination(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldDestination,
-		})
+		_spec.SetField(fileextract.FieldDestination, field.TypeString, value)
 	}
 	if value, ok := feuo.mutation.GetType(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldType,
-		})
+		_spec.SetField(fileextract.FieldType, field.TypeString, value)
 	}
 	if value, ok := feuo.mutation.Tags(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: fileextract.FieldTags,
-		})
+		_spec.SetField(fileextract.FieldTags, field.TypeJSON, value)
 	}
 	if feuo.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -455,10 +402,7 @@ func (feuo *FileExtractUpdateOne) sqlSave(ctx context.Context) (_node *FileExtra
 			Columns: []string{fileextract.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -471,10 +415,7 @@ func (feuo *FileExtractUpdateOne) sqlSave(ctx context.Context) (_node *FileExtra
 			Columns: []string{fileextract.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -493,5 +434,6 @@ func (feuo *FileExtractUpdateOne) sqlSave(ctx context.Context) (_node *FileExtra
 		}
 		return nil, err
 	}
+	feuo.mutation.done = true
 	return _node, nil
 }

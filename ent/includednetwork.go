@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/includednetwork"
 	"github.com/gen0cide/laforge/ent/network"
@@ -26,6 +27,7 @@ type IncludedNetwork struct {
 	// The values are being populated by the IncludedNetworkQuery when eager-loading is set.
 	Edges IncludedNetworkEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Tags holds the value of the Tags edge.
 	HCLTags []*Tag `json:"Tags,omitempty"`
@@ -35,8 +37,9 @@ type IncludedNetwork struct {
 	HCLNetwork *Network `json:"Network,omitempty"`
 	// Environments holds the value of the Environments edge.
 	HCLEnvironments []*Environment `json:"Environments,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	included_network_network *uuid.UUID
+	selectValues             sql.SelectValues
 }
 
 // IncludedNetworkEdges holds the relations/edges for other nodes in the graph.
@@ -52,6 +55,12 @@ type IncludedNetworkEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [4]bool
+	// totalCount holds the count of the edges above.
+	totalCount [4]map[string]int
+
+	namedTags         map[string][]*Tag
+	namedHosts        map[string][]*Host
+	namedEnvironments map[string][]*Environment
 }
 
 // TagsOrErr returns the Tags value or an error if the edge
@@ -77,8 +86,7 @@ func (e IncludedNetworkEdges) HostsOrErr() ([]*Host, error) {
 func (e IncludedNetworkEdges) NetworkOrErr() (*Network, error) {
 	if e.loadedTypes[2] {
 		if e.Network == nil {
-			// The edge Network was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: network.Label}
 		}
 		return e.Network, nil
@@ -96,8 +104,8 @@ func (e IncludedNetworkEdges) EnvironmentsOrErr() ([]*Environment, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*IncludedNetwork) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*IncludedNetwork) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case includednetwork.FieldIncludedHosts:
@@ -109,7 +117,7 @@ func (*IncludedNetwork) scanValues(columns []string) ([]interface{}, error) {
 		case includednetwork.ForeignKeys[0]: // included_network_network
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type IncludedNetwork", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -117,7 +125,7 @@ func (*IncludedNetwork) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the IncludedNetwork fields.
-func (in *IncludedNetwork) assignValues(columns []string, values []interface{}) error {
+func (in *IncludedNetwork) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -150,46 +158,54 @@ func (in *IncludedNetwork) assignValues(columns []string, values []interface{}) 
 				in.included_network_network = new(uuid.UUID)
 				*in.included_network_network = *value.S.(*uuid.UUID)
 			}
+		default:
+			in.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the IncludedNetwork.
+// This includes values selected through modifiers, order, etc.
+func (in *IncludedNetwork) Value(name string) (ent.Value, error) {
+	return in.selectValues.Get(name)
+}
+
 // QueryTags queries the "Tags" edge of the IncludedNetwork entity.
 func (in *IncludedNetwork) QueryTags() *TagQuery {
-	return (&IncludedNetworkClient{config: in.config}).QueryTags(in)
+	return NewIncludedNetworkClient(in.config).QueryTags(in)
 }
 
 // QueryHosts queries the "Hosts" edge of the IncludedNetwork entity.
 func (in *IncludedNetwork) QueryHosts() *HostQuery {
-	return (&IncludedNetworkClient{config: in.config}).QueryHosts(in)
+	return NewIncludedNetworkClient(in.config).QueryHosts(in)
 }
 
 // QueryNetwork queries the "Network" edge of the IncludedNetwork entity.
 func (in *IncludedNetwork) QueryNetwork() *NetworkQuery {
-	return (&IncludedNetworkClient{config: in.config}).QueryNetwork(in)
+	return NewIncludedNetworkClient(in.config).QueryNetwork(in)
 }
 
 // QueryEnvironments queries the "Environments" edge of the IncludedNetwork entity.
 func (in *IncludedNetwork) QueryEnvironments() *EnvironmentQuery {
-	return (&IncludedNetworkClient{config: in.config}).QueryEnvironments(in)
+	return NewIncludedNetworkClient(in.config).QueryEnvironments(in)
 }
 
 // Update returns a builder for updating this IncludedNetwork.
 // Note that you need to call IncludedNetwork.Unwrap() before calling this method if this IncludedNetwork
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (in *IncludedNetwork) Update() *IncludedNetworkUpdateOne {
-	return (&IncludedNetworkClient{config: in.config}).UpdateOne(in)
+	return NewIncludedNetworkClient(in.config).UpdateOne(in)
 }
 
 // Unwrap unwraps the IncludedNetwork entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (in *IncludedNetwork) Unwrap() *IncludedNetwork {
-	tx, ok := in.config.driver.(*txDriver)
+	_tx, ok := in.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: IncludedNetwork is not a transactional entity")
 	}
-	in.config.driver = tx.drv
+	in.config.driver = _tx.drv
 	return in
 }
 
@@ -197,20 +213,87 @@ func (in *IncludedNetwork) Unwrap() *IncludedNetwork {
 func (in *IncludedNetwork) String() string {
 	var builder strings.Builder
 	builder.WriteString("IncludedNetwork(")
-	builder.WriteString(fmt.Sprintf("id=%v", in.ID))
-	builder.WriteString(", name=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", in.ID))
+	builder.WriteString("name=")
 	builder.WriteString(in.Name)
-	builder.WriteString(", included_hosts=")
+	builder.WriteString(", ")
+	builder.WriteString("included_hosts=")
 	builder.WriteString(fmt.Sprintf("%v", in.IncludedHosts))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// IncludedNetworks is a parsable slice of IncludedNetwork.
-type IncludedNetworks []*IncludedNetwork
+// NamedTags returns the Tags named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (in *IncludedNetwork) NamedTags(name string) ([]*Tag, error) {
+	if in.Edges.namedTags == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := in.Edges.namedTags[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (in IncludedNetworks) config(cfg config) {
-	for _i := range in {
-		in[_i].config = cfg
+func (in *IncludedNetwork) appendNamedTags(name string, edges ...*Tag) {
+	if in.Edges.namedTags == nil {
+		in.Edges.namedTags = make(map[string][]*Tag)
+	}
+	if len(edges) == 0 {
+		in.Edges.namedTags[name] = []*Tag{}
+	} else {
+		in.Edges.namedTags[name] = append(in.Edges.namedTags[name], edges...)
 	}
 }
+
+// NamedHosts returns the Hosts named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (in *IncludedNetwork) NamedHosts(name string) ([]*Host, error) {
+	if in.Edges.namedHosts == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := in.Edges.namedHosts[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (in *IncludedNetwork) appendNamedHosts(name string, edges ...*Host) {
+	if in.Edges.namedHosts == nil {
+		in.Edges.namedHosts = make(map[string][]*Host)
+	}
+	if len(edges) == 0 {
+		in.Edges.namedHosts[name] = []*Host{}
+	} else {
+		in.Edges.namedHosts[name] = append(in.Edges.namedHosts[name], edges...)
+	}
+}
+
+// NamedEnvironments returns the Environments named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (in *IncludedNetwork) NamedEnvironments(name string) ([]*Environment, error) {
+	if in.Edges.namedEnvironments == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := in.Edges.namedEnvironments[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (in *IncludedNetwork) appendNamedEnvironments(name string, edges ...*Environment) {
+	if in.Edges.namedEnvironments == nil {
+		in.Edges.namedEnvironments = make(map[string][]*Environment)
+	}
+	if len(edges) == 0 {
+		in.Edges.namedEnvironments[name] = []*Environment{}
+	} else {
+		in.Edges.namedEnvironments[name] = append(in.Edges.namedEnvironments[name], edges...)
+	}
+}
+
+// IncludedNetworks is a parsable slice of IncludedNetwork.
+type IncludedNetworks []*IncludedNetwork

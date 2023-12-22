@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (dd *DNSDelete) Where(ps ...predicate.DNS) *DNSDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (dd *DNSDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(dd.hooks) == 0 {
-		affected, err = dd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*DNSMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			dd.mutation = mutation
-			affected, err = dd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(dd.hooks) - 1; i >= 0; i-- {
-			if dd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = dd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, dd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, dd.sqlExec, dd.mutation, dd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (dd *DNSDelete) ExecX(ctx context.Context) int {
 }
 
 func (dd *DNSDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: dns.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: dns.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(dns.Table, sqlgraph.NewFieldSpec(dns.FieldID, field.TypeUUID))
 	if ps := dd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (dd *DNSDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	dd.mutation.done = true
 	return affected, err
 }
 
 // DNSDeleteOne is the builder for deleting a single DNS entity.
 type DNSDeleteOne struct {
 	dd *DNSDelete
+}
+
+// Where appends a list predicates to the DNSDelete builder.
+func (ddo *DNSDeleteOne) Where(ps ...predicate.DNS) *DNSDeleteOne {
+	ddo.dd.mutation.Where(ps...)
+	return ddo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (ddo *DNSDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ddo *DNSDeleteOne) ExecX(ctx context.Context) {
-	ddo.dd.ExecX(ctx)
+	if err := ddo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -22,9 +22,9 @@ type DNSCreate struct {
 	hooks    []Hook
 }
 
-// SetHclID sets the "hcl_id" field.
-func (dc *DNSCreate) SetHclID(s string) *DNSCreate {
-	dc.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (dc *DNSCreate) SetHCLID(s string) *DNSCreate {
+	dc.mutation.SetHCLID(s)
 	return dc
 }
 
@@ -109,50 +109,8 @@ func (dc *DNSCreate) Mutation() *DNSMutation {
 
 // Save creates the DNS in the database.
 func (dc *DNSCreate) Save(ctx context.Context) (*DNS, error) {
-	var (
-		err  error
-		node *DNS
-	)
 	dc.defaults()
-	if len(dc.hooks) == 0 {
-		if err = dc.check(); err != nil {
-			return nil, err
-		}
-		node, err = dc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*DNSMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = dc.check(); err != nil {
-				return nil, err
-			}
-			dc.mutation = mutation
-			if node, err = dc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(dc.hooks) - 1; i >= 0; i-- {
-			if dc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = dc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, dc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*DNS)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from DNSMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, dc.sqlSave, dc.mutation, dc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -187,7 +145,7 @@ func (dc *DNSCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (dc *DNSCreate) check() error {
-	if _, ok := dc.mutation.HclID(); !ok {
+	if _, ok := dc.mutation.HCLID(); !ok {
 		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "DNS.hcl_id"`)}
 	}
 	if _, ok := dc.mutation.GetType(); !ok {
@@ -209,6 +167,9 @@ func (dc *DNSCreate) check() error {
 }
 
 func (dc *DNSCreate) sqlSave(ctx context.Context) (*DNS, error) {
+	if err := dc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := dc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, dc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -223,70 +184,42 @@ func (dc *DNSCreate) sqlSave(ctx context.Context) (*DNS, error) {
 			return nil, err
 		}
 	}
+	dc.mutation.id = &_node.ID
+	dc.mutation.done = true
 	return _node, nil
 }
 
 func (dc *DNSCreate) createSpec() (*DNS, *sqlgraph.CreateSpec) {
 	var (
 		_node = &DNS{config: dc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: dns.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: dns.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(dns.Table, sqlgraph.NewFieldSpec(dns.FieldID, field.TypeUUID))
 	)
 	if id, ok := dc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := dc.mutation.HclID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: dns.FieldHclID,
-		})
-		_node.HclID = value
+	if value, ok := dc.mutation.HCLID(); ok {
+		_spec.SetField(dns.FieldHCLID, field.TypeString, value)
+		_node.HCLID = value
 	}
 	if value, ok := dc.mutation.GetType(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: dns.FieldType,
-		})
+		_spec.SetField(dns.FieldType, field.TypeString, value)
 		_node.Type = value
 	}
 	if value, ok := dc.mutation.RootDomain(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: dns.FieldRootDomain,
-		})
+		_spec.SetField(dns.FieldRootDomain, field.TypeString, value)
 		_node.RootDomain = value
 	}
 	if value, ok := dc.mutation.DNSServers(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: dns.FieldDNSServers,
-		})
+		_spec.SetField(dns.FieldDNSServers, field.TypeJSON, value)
 		_node.DNSServers = value
 	}
 	if value, ok := dc.mutation.NtpServers(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: dns.FieldNtpServers,
-		})
+		_spec.SetField(dns.FieldNtpServers, field.TypeJSON, value)
 		_node.NtpServers = value
 	}
 	if value, ok := dc.mutation.Config(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: dns.FieldConfig,
-		})
+		_spec.SetField(dns.FieldConfig, field.TypeJSON, value)
 		_node.Config = value
 	}
 	if nodes := dc.mutation.EnvironmentsIDs(); len(nodes) > 0 {
@@ -297,10 +230,7 @@ func (dc *DNSCreate) createSpec() (*DNS, *sqlgraph.CreateSpec) {
 			Columns: dns.EnvironmentsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -316,10 +246,7 @@ func (dc *DNSCreate) createSpec() (*DNS, *sqlgraph.CreateSpec) {
 			Columns: dns.CompetitionsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: competition.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -333,11 +260,15 @@ func (dc *DNSCreate) createSpec() (*DNS, *sqlgraph.CreateSpec) {
 // DNSCreateBulk is the builder for creating many DNS entities in bulk.
 type DNSCreateBulk struct {
 	config
+	err      error
 	builders []*DNSCreate
 }
 
 // Save creates the DNS entities in the database.
 func (dcb *DNSCreateBulk) Save(ctx context.Context) ([]*DNS, error) {
+	if dcb.err != nil {
+		return nil, dcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(dcb.builders))
 	nodes := make([]*DNS, len(dcb.builders))
 	mutators := make([]Mutator, len(dcb.builders))
@@ -354,8 +285,8 @@ func (dcb *DNSCreateBulk) Save(ctx context.Context) ([]*DNS, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, dcb.builders[i+1].mutation)
 				} else {

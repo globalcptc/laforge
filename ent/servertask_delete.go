@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (std *ServerTaskDelete) Where(ps ...predicate.ServerTask) *ServerTaskDelete
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (std *ServerTaskDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(std.hooks) == 0 {
-		affected, err = std.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ServerTaskMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			std.mutation = mutation
-			affected, err = std.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(std.hooks) - 1; i >= 0; i-- {
-			if std.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = std.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, std.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, std.sqlExec, std.mutation, std.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (std *ServerTaskDelete) ExecX(ctx context.Context) int {
 }
 
 func (std *ServerTaskDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: servertask.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: servertask.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(servertask.Table, sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID))
 	if ps := std.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (std *ServerTaskDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	std.mutation.done = true
 	return affected, err
 }
 
 // ServerTaskDeleteOne is the builder for deleting a single ServerTask entity.
 type ServerTaskDeleteOne struct {
 	std *ServerTaskDelete
+}
+
+// Where appends a list predicates to the ServerTaskDelete builder.
+func (stdo *ServerTaskDeleteOne) Where(ps ...predicate.ServerTask) *ServerTaskDeleteOne {
+	stdo.std.mutation.Where(ps...)
+	return stdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (stdo *ServerTaskDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (stdo *ServerTaskDeleteOne) ExecX(ctx context.Context) {
-	stdo.std.ExecX(ctx)
+	if err := stdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

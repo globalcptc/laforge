@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (ssd *ScheduledStepDelete) Where(ps ...predicate.ScheduledStep) *ScheduledS
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (ssd *ScheduledStepDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(ssd.hooks) == 0 {
-		affected, err = ssd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ScheduledStepMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			ssd.mutation = mutation
-			affected, err = ssd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(ssd.hooks) - 1; i >= 0; i-- {
-			if ssd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ssd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, ssd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, ssd.sqlExec, ssd.mutation, ssd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (ssd *ScheduledStepDelete) ExecX(ctx context.Context) int {
 }
 
 func (ssd *ScheduledStepDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: scheduledstep.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: scheduledstep.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(scheduledstep.Table, sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID))
 	if ps := ssd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (ssd *ScheduledStepDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	ssd.mutation.done = true
 	return affected, err
 }
 
 // ScheduledStepDeleteOne is the builder for deleting a single ScheduledStep entity.
 type ScheduledStepDeleteOne struct {
 	ssd *ScheduledStepDelete
+}
+
+// Where appends a list predicates to the ScheduledStepDelete builder.
+func (ssdo *ScheduledStepDeleteOne) Where(ps ...predicate.ScheduledStep) *ScheduledStepDeleteOne {
+	ssdo.ssd.mutation.Where(ps...)
+	return ssdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (ssdo *ScheduledStepDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ssdo *ScheduledStepDeleteOne) ExecX(ctx context.Context) {
-	ssdo.ssd.ExecX(ctx)
+	if err := ssdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

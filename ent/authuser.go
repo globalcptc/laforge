@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/google/uuid"
@@ -42,13 +43,14 @@ type AuthUser struct {
 	// The values are being populated by the AuthUserQuery when eager-loading is set.
 	Edges AuthUserEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Tokens holds the value of the Tokens edge.
 	HCLTokens []*Token `json:"Tokens,omitempty"`
 	// ServerTasks holds the value of the ServerTasks edge.
 	HCLServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
-	//
-
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
+	selectValues sql.SelectValues
 }
 
 // AuthUserEdges holds the relations/edges for other nodes in the graph.
@@ -60,6 +62,11 @@ type AuthUserEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
+	// totalCount holds the count of the edges above.
+	totalCount [2]map[string]int
+
+	namedTokens      map[string][]*Token
+	namedServerTasks map[string][]*ServerTask
 }
 
 // TokensOrErr returns the Tokens value or an error if the edge
@@ -81,8 +88,8 @@ func (e AuthUserEdges) ServerTasksOrErr() ([]*ServerTask, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*AuthUser) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*AuthUser) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case authuser.FieldUsername, authuser.FieldPassword, authuser.FieldFirstName, authuser.FieldLastName, authuser.FieldEmail, authuser.FieldPhone, authuser.FieldCompany, authuser.FieldOccupation, authuser.FieldPrivateKeyPath, authuser.FieldRole, authuser.FieldProvider:
@@ -90,7 +97,7 @@ func (*AuthUser) scanValues(columns []string) ([]interface{}, error) {
 		case authuser.FieldID:
 			values[i] = new(uuid.UUID)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type AuthUser", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -98,7 +105,7 @@ func (*AuthUser) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the AuthUser fields.
-func (au *AuthUser) assignValues(columns []string, values []interface{}) error {
+func (au *AuthUser) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -176,36 +183,44 @@ func (au *AuthUser) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				au.Provider = authuser.Provider(value.String)
 			}
+		default:
+			au.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the AuthUser.
+// This includes values selected through modifiers, order, etc.
+func (au *AuthUser) Value(name string) (ent.Value, error) {
+	return au.selectValues.Get(name)
+}
+
 // QueryTokens queries the "Tokens" edge of the AuthUser entity.
 func (au *AuthUser) QueryTokens() *TokenQuery {
-	return (&AuthUserClient{config: au.config}).QueryTokens(au)
+	return NewAuthUserClient(au.config).QueryTokens(au)
 }
 
 // QueryServerTasks queries the "ServerTasks" edge of the AuthUser entity.
 func (au *AuthUser) QueryServerTasks() *ServerTaskQuery {
-	return (&AuthUserClient{config: au.config}).QueryServerTasks(au)
+	return NewAuthUserClient(au.config).QueryServerTasks(au)
 }
 
 // Update returns a builder for updating this AuthUser.
 // Note that you need to call AuthUser.Unwrap() before calling this method if this AuthUser
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (au *AuthUser) Update() *AuthUserUpdateOne {
-	return (&AuthUserClient{config: au.config}).UpdateOne(au)
+	return NewAuthUserClient(au.config).UpdateOne(au)
 }
 
 // Unwrap unwraps the AuthUser entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (au *AuthUser) Unwrap() *AuthUser {
-	tx, ok := au.config.driver.(*txDriver)
+	_tx, ok := au.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: AuthUser is not a transactional entity")
 	}
-	au.config.driver = tx.drv
+	au.config.driver = _tx.drv
 	return au
 }
 
@@ -213,37 +228,89 @@ func (au *AuthUser) Unwrap() *AuthUser {
 func (au *AuthUser) String() string {
 	var builder strings.Builder
 	builder.WriteString("AuthUser(")
-	builder.WriteString(fmt.Sprintf("id=%v", au.ID))
-	builder.WriteString(", username=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", au.ID))
+	builder.WriteString("username=")
 	builder.WriteString(au.Username)
-	builder.WriteString(", password=<sensitive>")
-	builder.WriteString(", first_name=")
+	builder.WriteString(", ")
+	builder.WriteString("password=<sensitive>")
+	builder.WriteString(", ")
+	builder.WriteString("first_name=")
 	builder.WriteString(au.FirstName)
-	builder.WriteString(", last_name=")
+	builder.WriteString(", ")
+	builder.WriteString("last_name=")
 	builder.WriteString(au.LastName)
-	builder.WriteString(", email=")
+	builder.WriteString(", ")
+	builder.WriteString("email=")
 	builder.WriteString(au.Email)
-	builder.WriteString(", phone=")
+	builder.WriteString(", ")
+	builder.WriteString("phone=")
 	builder.WriteString(au.Phone)
-	builder.WriteString(", company=")
+	builder.WriteString(", ")
+	builder.WriteString("company=")
 	builder.WriteString(au.Company)
-	builder.WriteString(", occupation=")
+	builder.WriteString(", ")
+	builder.WriteString("occupation=")
 	builder.WriteString(au.Occupation)
-	builder.WriteString(", private_key_path=")
+	builder.WriteString(", ")
+	builder.WriteString("private_key_path=")
 	builder.WriteString(au.PrivateKeyPath)
-	builder.WriteString(", role=")
+	builder.WriteString(", ")
+	builder.WriteString("role=")
 	builder.WriteString(fmt.Sprintf("%v", au.Role))
-	builder.WriteString(", provider=")
+	builder.WriteString(", ")
+	builder.WriteString("provider=")
 	builder.WriteString(fmt.Sprintf("%v", au.Provider))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// AuthUsers is a parsable slice of AuthUser.
-type AuthUsers []*AuthUser
+// NamedTokens returns the Tokens named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (au *AuthUser) NamedTokens(name string) ([]*Token, error) {
+	if au.Edges.namedTokens == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := au.Edges.namedTokens[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (au AuthUsers) config(cfg config) {
-	for _i := range au {
-		au[_i].config = cfg
+func (au *AuthUser) appendNamedTokens(name string, edges ...*Token) {
+	if au.Edges.namedTokens == nil {
+		au.Edges.namedTokens = make(map[string][]*Token)
+	}
+	if len(edges) == 0 {
+		au.Edges.namedTokens[name] = []*Token{}
+	} else {
+		au.Edges.namedTokens[name] = append(au.Edges.namedTokens[name], edges...)
 	}
 }
+
+// NamedServerTasks returns the ServerTasks named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (au *AuthUser) NamedServerTasks(name string) ([]*ServerTask, error) {
+	if au.Edges.namedServerTasks == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := au.Edges.namedServerTasks[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (au *AuthUser) appendNamedServerTasks(name string, edges ...*ServerTask) {
+	if au.Edges.namedServerTasks == nil {
+		au.Edges.namedServerTasks = make(map[string][]*ServerTask)
+	}
+	if len(edges) == 0 {
+		au.Edges.namedServerTasks[name] = []*ServerTask{}
+	} else {
+		au.Edges.namedServerTasks[name] = append(au.Edges.namedServerTasks[name], edges...)
+	}
+}
+
+// AuthUsers is a parsable slice of AuthUser.
+type AuthUsers []*AuthUser

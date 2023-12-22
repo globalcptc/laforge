@@ -294,50 +294,8 @@ func (pssc *ProvisioningScheduledStepCreate) Mutation() *ProvisioningScheduledSt
 
 // Save creates the ProvisioningScheduledStep in the database.
 func (pssc *ProvisioningScheduledStepCreate) Save(ctx context.Context) (*ProvisioningScheduledStep, error) {
-	var (
-		err  error
-		node *ProvisioningScheduledStep
-	)
 	pssc.defaults()
-	if len(pssc.hooks) == 0 {
-		if err = pssc.check(); err != nil {
-			return nil, err
-		}
-		node, err = pssc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ProvisioningScheduledStepMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = pssc.check(); err != nil {
-				return nil, err
-			}
-			pssc.mutation = mutation
-			if node, err = pssc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(pssc.hooks) - 1; i >= 0; i-- {
-			if pssc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pssc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, pssc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*ProvisioningScheduledStep)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from ProvisioningScheduledStepMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, pssc.sqlSave, pssc.mutation, pssc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -393,6 +351,9 @@ func (pssc *ProvisioningScheduledStepCreate) check() error {
 }
 
 func (pssc *ProvisioningScheduledStepCreate) sqlSave(ctx context.Context) (*ProvisioningScheduledStep, error) {
+	if err := pssc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := pssc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, pssc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -407,38 +368,26 @@ func (pssc *ProvisioningScheduledStepCreate) sqlSave(ctx context.Context) (*Prov
 			return nil, err
 		}
 	}
+	pssc.mutation.id = &_node.ID
+	pssc.mutation.done = true
 	return _node, nil
 }
 
 func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningScheduledStep, *sqlgraph.CreateSpec) {
 	var (
 		_node = &ProvisioningScheduledStep{config: pssc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: provisioningscheduledstep.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: provisioningscheduledstep.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(provisioningscheduledstep.Table, sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID))
 	)
 	if id, ok := pssc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := pssc.mutation.GetType(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: provisioningscheduledstep.FieldType,
-		})
+		_spec.SetField(provisioningscheduledstep.FieldType, field.TypeEnum, value)
 		_node.Type = value
 	}
 	if value, ok := pssc.mutation.RunTime(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Value:  value,
-			Column: provisioningscheduledstep.FieldRunTime,
-		})
+		_spec.SetField(provisioningscheduledstep.FieldRunTime, field.TypeTime, value)
 		_node.RunTime = value
 	}
 	if nodes := pssc.mutation.StatusIDs(); len(nodes) > 0 {
@@ -449,10 +398,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: status.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -468,10 +414,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.ScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: scheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -488,10 +431,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -508,10 +448,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -528,10 +465,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.CommandColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: command.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(command.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -548,10 +482,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.DNSRecordColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dnsrecord.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dnsrecord.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -568,10 +499,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.FileDeleteColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedelete.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedelete.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -588,10 +516,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.FileDownloadColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedownload.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -608,10 +533,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.FileExtractColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: fileextract.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -628,10 +550,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.AnsibleColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ansible.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ansible.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -648,10 +567,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agenttask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -667,10 +583,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -687,10 +600,7 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 			Columns: []string{provisioningscheduledstep.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ginfilemiddleware.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -705,11 +615,15 @@ func (pssc *ProvisioningScheduledStepCreate) createSpec() (*ProvisioningSchedule
 // ProvisioningScheduledStepCreateBulk is the builder for creating many ProvisioningScheduledStep entities in bulk.
 type ProvisioningScheduledStepCreateBulk struct {
 	config
+	err      error
 	builders []*ProvisioningScheduledStepCreate
 }
 
 // Save creates the ProvisioningScheduledStep entities in the database.
 func (psscb *ProvisioningScheduledStepCreateBulk) Save(ctx context.Context) ([]*ProvisioningScheduledStep, error) {
+	if psscb.err != nil {
+		return nil, psscb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(psscb.builders))
 	nodes := make([]*ProvisioningScheduledStep, len(psscb.builders))
 	mutators := make([]Mutator, len(psscb.builders))
@@ -726,8 +640,8 @@ func (psscb *ProvisioningScheduledStepCreateBulk) Save(ctx context.Context) ([]*
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, psscb.builders[i+1].mutation)
 				} else {

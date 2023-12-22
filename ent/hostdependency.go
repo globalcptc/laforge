@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/host"
@@ -27,6 +28,7 @@ type HostDependency struct {
 	// The values are being populated by the HostDependencyQuery when eager-loading is set.
 	Edges HostDependencyEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// RequiredBy holds the value of the RequiredBy edge.
 	HCLRequiredBy *Host `json:"RequiredBy,omitempty"`
@@ -36,11 +38,12 @@ type HostDependency struct {
 	HCLDependOnNetwork *Network `json:"DependOnNetwork,omitempty"`
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	environment_host_dependencies     *uuid.UUID
 	host_dependency_required_by       *uuid.UUID
 	host_dependency_depend_on_host    *uuid.UUID
 	host_dependency_depend_on_network *uuid.UUID
+	selectValues                      sql.SelectValues
 }
 
 // HostDependencyEdges holds the relations/edges for other nodes in the graph.
@@ -56,6 +59,8 @@ type HostDependencyEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [4]bool
+	// totalCount holds the count of the edges above.
+	totalCount [4]map[string]int
 }
 
 // RequiredByOrErr returns the RequiredBy value or an error if the edge
@@ -63,8 +68,7 @@ type HostDependencyEdges struct {
 func (e HostDependencyEdges) RequiredByOrErr() (*Host, error) {
 	if e.loadedTypes[0] {
 		if e.RequiredBy == nil {
-			// The edge RequiredBy was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: host.Label}
 		}
 		return e.RequiredBy, nil
@@ -77,8 +81,7 @@ func (e HostDependencyEdges) RequiredByOrErr() (*Host, error) {
 func (e HostDependencyEdges) DependOnHostOrErr() (*Host, error) {
 	if e.loadedTypes[1] {
 		if e.DependOnHost == nil {
-			// The edge DependOnHost was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: host.Label}
 		}
 		return e.DependOnHost, nil
@@ -91,8 +94,7 @@ func (e HostDependencyEdges) DependOnHostOrErr() (*Host, error) {
 func (e HostDependencyEdges) DependOnNetworkOrErr() (*Network, error) {
 	if e.loadedTypes[2] {
 		if e.DependOnNetwork == nil {
-			// The edge DependOnNetwork was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: network.Label}
 		}
 		return e.DependOnNetwork, nil
@@ -105,8 +107,7 @@ func (e HostDependencyEdges) DependOnNetworkOrErr() (*Network, error) {
 func (e HostDependencyEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[3] {
 		if e.Environment == nil {
-			// The edge Environment was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
 		return e.Environment, nil
@@ -115,8 +116,8 @@ func (e HostDependencyEdges) EnvironmentOrErr() (*Environment, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*HostDependency) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*HostDependency) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case hostdependency.FieldHostID, hostdependency.FieldNetworkID:
@@ -132,7 +133,7 @@ func (*HostDependency) scanValues(columns []string) ([]interface{}, error) {
 		case hostdependency.ForeignKeys[3]: // host_dependency_depend_on_network
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type HostDependency", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -140,7 +141,7 @@ func (*HostDependency) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the HostDependency fields.
-func (hd *HostDependency) assignValues(columns []string, values []interface{}) error {
+func (hd *HostDependency) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -192,46 +193,54 @@ func (hd *HostDependency) assignValues(columns []string, values []interface{}) e
 				hd.host_dependency_depend_on_network = new(uuid.UUID)
 				*hd.host_dependency_depend_on_network = *value.S.(*uuid.UUID)
 			}
+		default:
+			hd.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the HostDependency.
+// This includes values selected through modifiers, order, etc.
+func (hd *HostDependency) Value(name string) (ent.Value, error) {
+	return hd.selectValues.Get(name)
+}
+
 // QueryRequiredBy queries the "RequiredBy" edge of the HostDependency entity.
 func (hd *HostDependency) QueryRequiredBy() *HostQuery {
-	return (&HostDependencyClient{config: hd.config}).QueryRequiredBy(hd)
+	return NewHostDependencyClient(hd.config).QueryRequiredBy(hd)
 }
 
 // QueryDependOnHost queries the "DependOnHost" edge of the HostDependency entity.
 func (hd *HostDependency) QueryDependOnHost() *HostQuery {
-	return (&HostDependencyClient{config: hd.config}).QueryDependOnHost(hd)
+	return NewHostDependencyClient(hd.config).QueryDependOnHost(hd)
 }
 
 // QueryDependOnNetwork queries the "DependOnNetwork" edge of the HostDependency entity.
 func (hd *HostDependency) QueryDependOnNetwork() *NetworkQuery {
-	return (&HostDependencyClient{config: hd.config}).QueryDependOnNetwork(hd)
+	return NewHostDependencyClient(hd.config).QueryDependOnNetwork(hd)
 }
 
 // QueryEnvironment queries the "Environment" edge of the HostDependency entity.
 func (hd *HostDependency) QueryEnvironment() *EnvironmentQuery {
-	return (&HostDependencyClient{config: hd.config}).QueryEnvironment(hd)
+	return NewHostDependencyClient(hd.config).QueryEnvironment(hd)
 }
 
 // Update returns a builder for updating this HostDependency.
 // Note that you need to call HostDependency.Unwrap() before calling this method if this HostDependency
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (hd *HostDependency) Update() *HostDependencyUpdateOne {
-	return (&HostDependencyClient{config: hd.config}).UpdateOne(hd)
+	return NewHostDependencyClient(hd.config).UpdateOne(hd)
 }
 
 // Unwrap unwraps the HostDependency entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (hd *HostDependency) Unwrap() *HostDependency {
-	tx, ok := hd.config.driver.(*txDriver)
+	_tx, ok := hd.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: HostDependency is not a transactional entity")
 	}
-	hd.config.driver = tx.drv
+	hd.config.driver = _tx.drv
 	return hd
 }
 
@@ -239,10 +248,11 @@ func (hd *HostDependency) Unwrap() *HostDependency {
 func (hd *HostDependency) String() string {
 	var builder strings.Builder
 	builder.WriteString("HostDependency(")
-	builder.WriteString(fmt.Sprintf("id=%v", hd.ID))
-	builder.WriteString(", host_id=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", hd.ID))
+	builder.WriteString("host_id=")
 	builder.WriteString(hd.HostID)
-	builder.WriteString(", network_id=")
+	builder.WriteString(", ")
+	builder.WriteString("network_id=")
 	builder.WriteString(hd.NetworkID)
 	builder.WriteByte(')')
 	return builder.String()
@@ -250,9 +260,3 @@ func (hd *HostDependency) String() string {
 
 // HostDependencies is a parsable slice of HostDependency.
 type HostDependencies []*HostDependency
-
-func (hd HostDependencies) config(cfg config) {
-	for _i := range hd {
-		hd[_i].config = cfg
-	}
-}

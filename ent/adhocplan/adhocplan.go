@@ -3,6 +3,8 @@
 package adhocplan
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -90,3 +92,95 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the AdhocPlan queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByPrevAdhocPlansCount orders the results by PrevAdhocPlans count.
+func ByPrevAdhocPlansCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPrevAdhocPlansStep(), opts...)
+	}
+}
+
+// ByPrevAdhocPlans orders the results by PrevAdhocPlans terms.
+func ByPrevAdhocPlans(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPrevAdhocPlansStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByNextAdhocPlansCount orders the results by NextAdhocPlans count.
+func ByNextAdhocPlansCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newNextAdhocPlansStep(), opts...)
+	}
+}
+
+// ByNextAdhocPlans orders the results by NextAdhocPlans terms.
+func ByNextAdhocPlans(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newNextAdhocPlansStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByBuildField orders the results by Build field.
+func ByBuildField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBuildStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByStatusField orders the results by Status field.
+func ByStatusField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newStatusStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByAgentTaskField orders the results by AgentTask field.
+func ByAgentTaskField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAgentTaskStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newPrevAdhocPlansStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(Table, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, PrevAdhocPlansTable, PrevAdhocPlansPrimaryKey...),
+	)
+}
+func newNextAdhocPlansStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(Table, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, NextAdhocPlansTable, NextAdhocPlansPrimaryKey...),
+	)
+}
+func newBuildStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BuildInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
+	)
+}
+func newStatusStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(StatusInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
+	)
+}
+func newAgentTaskStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AgentTaskInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, AgentTaskTable, AgentTaskColumn),
+	)
+}

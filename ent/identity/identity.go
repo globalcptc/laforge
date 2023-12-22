@@ -3,6 +3,8 @@
 package identity
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -11,8 +13,8 @@ const (
 	Label = "identity"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldHclID holds the string denoting the hcl_id field in the database.
-	FieldHclID = "hcl_id"
+	// FieldHCLID holds the string denoting the hcl_id field in the database.
+	FieldHCLID = "hcl_id"
 	// FieldFirstName holds the string denoting the first_name field in the database.
 	FieldFirstName = "first_name"
 	// FieldLastName holds the string denoting the last_name field in the database.
@@ -45,7 +47,7 @@ const (
 // Columns holds all SQL columns for identity fields.
 var Columns = []string{
 	FieldID,
-	FieldHclID,
+	FieldHCLID,
 	FieldFirstName,
 	FieldLastName,
 	FieldEmail,
@@ -81,3 +83,60 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the Identity queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByHCLID orders the results by the hcl_id field.
+func ByHCLID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHCLID, opts...).ToFunc()
+}
+
+// ByFirstName orders the results by the first_name field.
+func ByFirstName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFirstName, opts...).ToFunc()
+}
+
+// ByLastName orders the results by the last_name field.
+func ByLastName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastName, opts...).ToFunc()
+}
+
+// ByEmail orders the results by the email field.
+func ByEmail(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEmail, opts...).ToFunc()
+}
+
+// ByPassword orders the results by the password field.
+func ByPassword(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPassword, opts...).ToFunc()
+}
+
+// ByDescription orders the results by the description field.
+func ByDescription(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDescription, opts...).ToFunc()
+}
+
+// ByAvatarFile orders the results by the avatar_file field.
+func ByAvatarFile(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAvatarFile, opts...).ToFunc()
+}
+
+// ByEnvironmentField orders the results by Environment field.
+func ByEnvironmentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEnvironmentStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newEnvironmentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EnvironmentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
+	)
+}

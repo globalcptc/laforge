@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/google/uuid"
@@ -17,8 +18,8 @@ type Environment struct {
 	config ` json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// HclID holds the value of the "hcl_id" field.
-	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+	// HCLID holds the value of the "hcl_id" field.
+	HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// CompetitionID holds the value of the "competition_id" field.
 	CompetitionID string `json:"competition_id,omitempty" hcl:"competition_id,attr"`
 	// Name holds the value of the "name" field.
@@ -43,6 +44,7 @@ type Environment struct {
 	// The values are being populated by the EnvironmentQuery when eager-loading is set.
 	Edges EnvironmentEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Users holds the value of the Users edge.
 	HCLUsers []*User `json:"Users,omitempty" hcl:"maintainer,block"`
@@ -84,8 +86,8 @@ type Environment struct {
 	HCLRepositories []*Repository `json:"Repositories,omitempty"`
 	// ServerTasks holds the value of the ServerTasks edge.
 	HCLServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
-	//
-
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
+	selectValues sql.SelectValues
 }
 
 // EnvironmentEdges holds the relations/edges for other nodes in the graph.
@@ -133,6 +135,29 @@ type EnvironmentEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [20]bool
+	// totalCount holds the count of the edges above.
+	totalCount [20]map[string]int
+
+	namedUsers            map[string][]*User
+	namedHosts            map[string][]*Host
+	namedCompetitions     map[string][]*Competition
+	namedIdentities       map[string][]*Identity
+	namedCommands         map[string][]*Command
+	namedScripts          map[string][]*Script
+	namedFileDownloads    map[string][]*FileDownload
+	namedFileDeletes      map[string][]*FileDelete
+	namedFileExtracts     map[string][]*FileExtract
+	namedIncludedNetworks map[string][]*IncludedNetwork
+	namedFindings         map[string][]*Finding
+	namedDNSRecords       map[string][]*DNSRecord
+	namedDNS              map[string][]*DNS
+	namedNetworks         map[string][]*Network
+	namedHostDependencies map[string][]*HostDependency
+	namedAnsibles         map[string][]*Ansible
+	namedScheduledSteps   map[string][]*ScheduledStep
+	namedBuilds           map[string][]*Build
+	namedRepositories     map[string][]*Repository
+	namedServerTasks      map[string][]*ServerTask
 }
 
 // UsersOrErr returns the Users value or an error if the edge
@@ -316,20 +341,20 @@ func (e EnvironmentEdges) ServerTasksOrErr() ([]*ServerTask, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*Environment) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*Environment) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case environment.FieldAdminCidrs, environment.FieldExposedVdiPorts, environment.FieldConfig, environment.FieldTags:
 			values[i] = new([]byte)
 		case environment.FieldTeamCount, environment.FieldRevision:
 			values[i] = new(sql.NullInt64)
-		case environment.FieldHclID, environment.FieldCompetitionID, environment.FieldName, environment.FieldDescription, environment.FieldBuilder:
+		case environment.FieldHCLID, environment.FieldCompetitionID, environment.FieldName, environment.FieldDescription, environment.FieldBuilder:
 			values[i] = new(sql.NullString)
 		case environment.FieldID:
 			values[i] = new(uuid.UUID)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Environment", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -337,7 +362,7 @@ func (*Environment) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Environment fields.
-func (e *Environment) assignValues(columns []string, values []interface{}) error {
+func (e *Environment) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -349,11 +374,11 @@ func (e *Environment) assignValues(columns []string, values []interface{}) error
 			} else if value != nil {
 				e.ID = *value
 			}
-		case environment.FieldHclID:
+		case environment.FieldHCLID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field hcl_id", values[i])
 			} else if value.Valid {
-				e.HclID = value.String
+				e.HCLID = value.String
 			}
 		case environment.FieldCompetitionID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -423,126 +448,134 @@ func (e *Environment) assignValues(columns []string, values []interface{}) error
 					return fmt.Errorf("unmarshal field tags: %w", err)
 				}
 			}
+		default:
+			e.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the Environment.
+// This includes values selected through modifiers, order, etc.
+func (e *Environment) Value(name string) (ent.Value, error) {
+	return e.selectValues.Get(name)
+}
+
 // QueryUsers queries the "Users" edge of the Environment entity.
 func (e *Environment) QueryUsers() *UserQuery {
-	return (&EnvironmentClient{config: e.config}).QueryUsers(e)
+	return NewEnvironmentClient(e.config).QueryUsers(e)
 }
 
 // QueryHosts queries the "Hosts" edge of the Environment entity.
 func (e *Environment) QueryHosts() *HostQuery {
-	return (&EnvironmentClient{config: e.config}).QueryHosts(e)
+	return NewEnvironmentClient(e.config).QueryHosts(e)
 }
 
 // QueryCompetitions queries the "Competitions" edge of the Environment entity.
 func (e *Environment) QueryCompetitions() *CompetitionQuery {
-	return (&EnvironmentClient{config: e.config}).QueryCompetitions(e)
+	return NewEnvironmentClient(e.config).QueryCompetitions(e)
 }
 
 // QueryIdentities queries the "Identities" edge of the Environment entity.
 func (e *Environment) QueryIdentities() *IdentityQuery {
-	return (&EnvironmentClient{config: e.config}).QueryIdentities(e)
+	return NewEnvironmentClient(e.config).QueryIdentities(e)
 }
 
 // QueryCommands queries the "Commands" edge of the Environment entity.
 func (e *Environment) QueryCommands() *CommandQuery {
-	return (&EnvironmentClient{config: e.config}).QueryCommands(e)
+	return NewEnvironmentClient(e.config).QueryCommands(e)
 }
 
 // QueryScripts queries the "Scripts" edge of the Environment entity.
 func (e *Environment) QueryScripts() *ScriptQuery {
-	return (&EnvironmentClient{config: e.config}).QueryScripts(e)
+	return NewEnvironmentClient(e.config).QueryScripts(e)
 }
 
 // QueryFileDownloads queries the "FileDownloads" edge of the Environment entity.
 func (e *Environment) QueryFileDownloads() *FileDownloadQuery {
-	return (&EnvironmentClient{config: e.config}).QueryFileDownloads(e)
+	return NewEnvironmentClient(e.config).QueryFileDownloads(e)
 }
 
 // QueryFileDeletes queries the "FileDeletes" edge of the Environment entity.
 func (e *Environment) QueryFileDeletes() *FileDeleteQuery {
-	return (&EnvironmentClient{config: e.config}).QueryFileDeletes(e)
+	return NewEnvironmentClient(e.config).QueryFileDeletes(e)
 }
 
 // QueryFileExtracts queries the "FileExtracts" edge of the Environment entity.
 func (e *Environment) QueryFileExtracts() *FileExtractQuery {
-	return (&EnvironmentClient{config: e.config}).QueryFileExtracts(e)
+	return NewEnvironmentClient(e.config).QueryFileExtracts(e)
 }
 
 // QueryIncludedNetworks queries the "IncludedNetworks" edge of the Environment entity.
 func (e *Environment) QueryIncludedNetworks() *IncludedNetworkQuery {
-	return (&EnvironmentClient{config: e.config}).QueryIncludedNetworks(e)
+	return NewEnvironmentClient(e.config).QueryIncludedNetworks(e)
 }
 
 // QueryFindings queries the "Findings" edge of the Environment entity.
 func (e *Environment) QueryFindings() *FindingQuery {
-	return (&EnvironmentClient{config: e.config}).QueryFindings(e)
+	return NewEnvironmentClient(e.config).QueryFindings(e)
 }
 
 // QueryDNSRecords queries the "DNSRecords" edge of the Environment entity.
 func (e *Environment) QueryDNSRecords() *DNSRecordQuery {
-	return (&EnvironmentClient{config: e.config}).QueryDNSRecords(e)
+	return NewEnvironmentClient(e.config).QueryDNSRecords(e)
 }
 
 // QueryDNS queries the "DNS" edge of the Environment entity.
 func (e *Environment) QueryDNS() *DNSQuery {
-	return (&EnvironmentClient{config: e.config}).QueryDNS(e)
+	return NewEnvironmentClient(e.config).QueryDNS(e)
 }
 
 // QueryNetworks queries the "Networks" edge of the Environment entity.
 func (e *Environment) QueryNetworks() *NetworkQuery {
-	return (&EnvironmentClient{config: e.config}).QueryNetworks(e)
+	return NewEnvironmentClient(e.config).QueryNetworks(e)
 }
 
 // QueryHostDependencies queries the "HostDependencies" edge of the Environment entity.
 func (e *Environment) QueryHostDependencies() *HostDependencyQuery {
-	return (&EnvironmentClient{config: e.config}).QueryHostDependencies(e)
+	return NewEnvironmentClient(e.config).QueryHostDependencies(e)
 }
 
 // QueryAnsibles queries the "Ansibles" edge of the Environment entity.
 func (e *Environment) QueryAnsibles() *AnsibleQuery {
-	return (&EnvironmentClient{config: e.config}).QueryAnsibles(e)
+	return NewEnvironmentClient(e.config).QueryAnsibles(e)
 }
 
 // QueryScheduledSteps queries the "ScheduledSteps" edge of the Environment entity.
 func (e *Environment) QueryScheduledSteps() *ScheduledStepQuery {
-	return (&EnvironmentClient{config: e.config}).QueryScheduledSteps(e)
+	return NewEnvironmentClient(e.config).QueryScheduledSteps(e)
 }
 
 // QueryBuilds queries the "Builds" edge of the Environment entity.
 func (e *Environment) QueryBuilds() *BuildQuery {
-	return (&EnvironmentClient{config: e.config}).QueryBuilds(e)
+	return NewEnvironmentClient(e.config).QueryBuilds(e)
 }
 
 // QueryRepositories queries the "Repositories" edge of the Environment entity.
 func (e *Environment) QueryRepositories() *RepositoryQuery {
-	return (&EnvironmentClient{config: e.config}).QueryRepositories(e)
+	return NewEnvironmentClient(e.config).QueryRepositories(e)
 }
 
 // QueryServerTasks queries the "ServerTasks" edge of the Environment entity.
 func (e *Environment) QueryServerTasks() *ServerTaskQuery {
-	return (&EnvironmentClient{config: e.config}).QueryServerTasks(e)
+	return NewEnvironmentClient(e.config).QueryServerTasks(e)
 }
 
 // Update returns a builder for updating this Environment.
 // Note that you need to call Environment.Unwrap() before calling this method if this Environment
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (e *Environment) Update() *EnvironmentUpdateOne {
-	return (&EnvironmentClient{config: e.config}).UpdateOne(e)
+	return NewEnvironmentClient(e.config).UpdateOne(e)
 }
 
 // Unwrap unwraps the Environment entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (e *Environment) Unwrap() *Environment {
-	tx, ok := e.config.driver.(*txDriver)
+	_tx, ok := e.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Environment is not a transactional entity")
 	}
-	e.config.driver = tx.drv
+	e.config.driver = _tx.drv
 	return e
 }
 
@@ -550,38 +583,522 @@ func (e *Environment) Unwrap() *Environment {
 func (e *Environment) String() string {
 	var builder strings.Builder
 	builder.WriteString("Environment(")
-	builder.WriteString(fmt.Sprintf("id=%v", e.ID))
-	builder.WriteString(", hcl_id=")
-	builder.WriteString(e.HclID)
-	builder.WriteString(", competition_id=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", e.ID))
+	builder.WriteString("hcl_id=")
+	builder.WriteString(e.HCLID)
+	builder.WriteString(", ")
+	builder.WriteString("competition_id=")
 	builder.WriteString(e.CompetitionID)
-	builder.WriteString(", name=")
+	builder.WriteString(", ")
+	builder.WriteString("name=")
 	builder.WriteString(e.Name)
-	builder.WriteString(", description=")
+	builder.WriteString(", ")
+	builder.WriteString("description=")
 	builder.WriteString(e.Description)
-	builder.WriteString(", builder=")
+	builder.WriteString(", ")
+	builder.WriteString("builder=")
 	builder.WriteString(e.Builder)
-	builder.WriteString(", team_count=")
+	builder.WriteString(", ")
+	builder.WriteString("team_count=")
 	builder.WriteString(fmt.Sprintf("%v", e.TeamCount))
-	builder.WriteString(", revision=")
+	builder.WriteString(", ")
+	builder.WriteString("revision=")
 	builder.WriteString(fmt.Sprintf("%v", e.Revision))
-	builder.WriteString(", admin_cidrs=")
+	builder.WriteString(", ")
+	builder.WriteString("admin_cidrs=")
 	builder.WriteString(fmt.Sprintf("%v", e.AdminCidrs))
-	builder.WriteString(", exposed_vdi_ports=")
+	builder.WriteString(", ")
+	builder.WriteString("exposed_vdi_ports=")
 	builder.WriteString(fmt.Sprintf("%v", e.ExposedVdiPorts))
-	builder.WriteString(", config=")
+	builder.WriteString(", ")
+	builder.WriteString("config=")
 	builder.WriteString(fmt.Sprintf("%v", e.Config))
-	builder.WriteString(", tags=")
+	builder.WriteString(", ")
+	builder.WriteString("tags=")
 	builder.WriteString(fmt.Sprintf("%v", e.Tags))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// Environments is a parsable slice of Environment.
-type Environments []*Environment
+// NamedUsers returns the Users named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedUsers(name string) ([]*User, error) {
+	if e.Edges.namedUsers == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedUsers[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (e Environments) config(cfg config) {
-	for _i := range e {
-		e[_i].config = cfg
+func (e *Environment) appendNamedUsers(name string, edges ...*User) {
+	if e.Edges.namedUsers == nil {
+		e.Edges.namedUsers = make(map[string][]*User)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedUsers[name] = []*User{}
+	} else {
+		e.Edges.namedUsers[name] = append(e.Edges.namedUsers[name], edges...)
 	}
 }
+
+// NamedHosts returns the Hosts named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedHosts(name string) ([]*Host, error) {
+	if e.Edges.namedHosts == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedHosts[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedHosts(name string, edges ...*Host) {
+	if e.Edges.namedHosts == nil {
+		e.Edges.namedHosts = make(map[string][]*Host)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedHosts[name] = []*Host{}
+	} else {
+		e.Edges.namedHosts[name] = append(e.Edges.namedHosts[name], edges...)
+	}
+}
+
+// NamedCompetitions returns the Competitions named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedCompetitions(name string) ([]*Competition, error) {
+	if e.Edges.namedCompetitions == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedCompetitions[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedCompetitions(name string, edges ...*Competition) {
+	if e.Edges.namedCompetitions == nil {
+		e.Edges.namedCompetitions = make(map[string][]*Competition)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedCompetitions[name] = []*Competition{}
+	} else {
+		e.Edges.namedCompetitions[name] = append(e.Edges.namedCompetitions[name], edges...)
+	}
+}
+
+// NamedIdentities returns the Identities named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedIdentities(name string) ([]*Identity, error) {
+	if e.Edges.namedIdentities == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedIdentities[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedIdentities(name string, edges ...*Identity) {
+	if e.Edges.namedIdentities == nil {
+		e.Edges.namedIdentities = make(map[string][]*Identity)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedIdentities[name] = []*Identity{}
+	} else {
+		e.Edges.namedIdentities[name] = append(e.Edges.namedIdentities[name], edges...)
+	}
+}
+
+// NamedCommands returns the Commands named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedCommands(name string) ([]*Command, error) {
+	if e.Edges.namedCommands == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedCommands[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedCommands(name string, edges ...*Command) {
+	if e.Edges.namedCommands == nil {
+		e.Edges.namedCommands = make(map[string][]*Command)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedCommands[name] = []*Command{}
+	} else {
+		e.Edges.namedCommands[name] = append(e.Edges.namedCommands[name], edges...)
+	}
+}
+
+// NamedScripts returns the Scripts named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedScripts(name string) ([]*Script, error) {
+	if e.Edges.namedScripts == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedScripts[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedScripts(name string, edges ...*Script) {
+	if e.Edges.namedScripts == nil {
+		e.Edges.namedScripts = make(map[string][]*Script)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedScripts[name] = []*Script{}
+	} else {
+		e.Edges.namedScripts[name] = append(e.Edges.namedScripts[name], edges...)
+	}
+}
+
+// NamedFileDownloads returns the FileDownloads named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedFileDownloads(name string) ([]*FileDownload, error) {
+	if e.Edges.namedFileDownloads == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedFileDownloads[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedFileDownloads(name string, edges ...*FileDownload) {
+	if e.Edges.namedFileDownloads == nil {
+		e.Edges.namedFileDownloads = make(map[string][]*FileDownload)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedFileDownloads[name] = []*FileDownload{}
+	} else {
+		e.Edges.namedFileDownloads[name] = append(e.Edges.namedFileDownloads[name], edges...)
+	}
+}
+
+// NamedFileDeletes returns the FileDeletes named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedFileDeletes(name string) ([]*FileDelete, error) {
+	if e.Edges.namedFileDeletes == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedFileDeletes[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedFileDeletes(name string, edges ...*FileDelete) {
+	if e.Edges.namedFileDeletes == nil {
+		e.Edges.namedFileDeletes = make(map[string][]*FileDelete)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedFileDeletes[name] = []*FileDelete{}
+	} else {
+		e.Edges.namedFileDeletes[name] = append(e.Edges.namedFileDeletes[name], edges...)
+	}
+}
+
+// NamedFileExtracts returns the FileExtracts named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedFileExtracts(name string) ([]*FileExtract, error) {
+	if e.Edges.namedFileExtracts == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedFileExtracts[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedFileExtracts(name string, edges ...*FileExtract) {
+	if e.Edges.namedFileExtracts == nil {
+		e.Edges.namedFileExtracts = make(map[string][]*FileExtract)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedFileExtracts[name] = []*FileExtract{}
+	} else {
+		e.Edges.namedFileExtracts[name] = append(e.Edges.namedFileExtracts[name], edges...)
+	}
+}
+
+// NamedIncludedNetworks returns the IncludedNetworks named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedIncludedNetworks(name string) ([]*IncludedNetwork, error) {
+	if e.Edges.namedIncludedNetworks == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedIncludedNetworks[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedIncludedNetworks(name string, edges ...*IncludedNetwork) {
+	if e.Edges.namedIncludedNetworks == nil {
+		e.Edges.namedIncludedNetworks = make(map[string][]*IncludedNetwork)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedIncludedNetworks[name] = []*IncludedNetwork{}
+	} else {
+		e.Edges.namedIncludedNetworks[name] = append(e.Edges.namedIncludedNetworks[name], edges...)
+	}
+}
+
+// NamedFindings returns the Findings named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedFindings(name string) ([]*Finding, error) {
+	if e.Edges.namedFindings == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedFindings[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedFindings(name string, edges ...*Finding) {
+	if e.Edges.namedFindings == nil {
+		e.Edges.namedFindings = make(map[string][]*Finding)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedFindings[name] = []*Finding{}
+	} else {
+		e.Edges.namedFindings[name] = append(e.Edges.namedFindings[name], edges...)
+	}
+}
+
+// NamedDNSRecords returns the DNSRecords named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedDNSRecords(name string) ([]*DNSRecord, error) {
+	if e.Edges.namedDNSRecords == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedDNSRecords[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedDNSRecords(name string, edges ...*DNSRecord) {
+	if e.Edges.namedDNSRecords == nil {
+		e.Edges.namedDNSRecords = make(map[string][]*DNSRecord)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedDNSRecords[name] = []*DNSRecord{}
+	} else {
+		e.Edges.namedDNSRecords[name] = append(e.Edges.namedDNSRecords[name], edges...)
+	}
+}
+
+// NamedDNS returns the DNS named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedDNS(name string) ([]*DNS, error) {
+	if e.Edges.namedDNS == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedDNS[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedDNS(name string, edges ...*DNS) {
+	if e.Edges.namedDNS == nil {
+		e.Edges.namedDNS = make(map[string][]*DNS)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedDNS[name] = []*DNS{}
+	} else {
+		e.Edges.namedDNS[name] = append(e.Edges.namedDNS[name], edges...)
+	}
+}
+
+// NamedNetworks returns the Networks named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedNetworks(name string) ([]*Network, error) {
+	if e.Edges.namedNetworks == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedNetworks[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedNetworks(name string, edges ...*Network) {
+	if e.Edges.namedNetworks == nil {
+		e.Edges.namedNetworks = make(map[string][]*Network)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedNetworks[name] = []*Network{}
+	} else {
+		e.Edges.namedNetworks[name] = append(e.Edges.namedNetworks[name], edges...)
+	}
+}
+
+// NamedHostDependencies returns the HostDependencies named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedHostDependencies(name string) ([]*HostDependency, error) {
+	if e.Edges.namedHostDependencies == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedHostDependencies[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedHostDependencies(name string, edges ...*HostDependency) {
+	if e.Edges.namedHostDependencies == nil {
+		e.Edges.namedHostDependencies = make(map[string][]*HostDependency)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedHostDependencies[name] = []*HostDependency{}
+	} else {
+		e.Edges.namedHostDependencies[name] = append(e.Edges.namedHostDependencies[name], edges...)
+	}
+}
+
+// NamedAnsibles returns the Ansibles named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedAnsibles(name string) ([]*Ansible, error) {
+	if e.Edges.namedAnsibles == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedAnsibles[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedAnsibles(name string, edges ...*Ansible) {
+	if e.Edges.namedAnsibles == nil {
+		e.Edges.namedAnsibles = make(map[string][]*Ansible)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedAnsibles[name] = []*Ansible{}
+	} else {
+		e.Edges.namedAnsibles[name] = append(e.Edges.namedAnsibles[name], edges...)
+	}
+}
+
+// NamedScheduledSteps returns the ScheduledSteps named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedScheduledSteps(name string) ([]*ScheduledStep, error) {
+	if e.Edges.namedScheduledSteps == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedScheduledSteps[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedScheduledSteps(name string, edges ...*ScheduledStep) {
+	if e.Edges.namedScheduledSteps == nil {
+		e.Edges.namedScheduledSteps = make(map[string][]*ScheduledStep)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedScheduledSteps[name] = []*ScheduledStep{}
+	} else {
+		e.Edges.namedScheduledSteps[name] = append(e.Edges.namedScheduledSteps[name], edges...)
+	}
+}
+
+// NamedBuilds returns the Builds named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedBuilds(name string) ([]*Build, error) {
+	if e.Edges.namedBuilds == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedBuilds[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedBuilds(name string, edges ...*Build) {
+	if e.Edges.namedBuilds == nil {
+		e.Edges.namedBuilds = make(map[string][]*Build)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedBuilds[name] = []*Build{}
+	} else {
+		e.Edges.namedBuilds[name] = append(e.Edges.namedBuilds[name], edges...)
+	}
+}
+
+// NamedRepositories returns the Repositories named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedRepositories(name string) ([]*Repository, error) {
+	if e.Edges.namedRepositories == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedRepositories[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedRepositories(name string, edges ...*Repository) {
+	if e.Edges.namedRepositories == nil {
+		e.Edges.namedRepositories = make(map[string][]*Repository)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedRepositories[name] = []*Repository{}
+	} else {
+		e.Edges.namedRepositories[name] = append(e.Edges.namedRepositories[name], edges...)
+	}
+}
+
+// NamedServerTasks returns the ServerTasks named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (e *Environment) NamedServerTasks(name string) ([]*ServerTask, error) {
+	if e.Edges.namedServerTasks == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := e.Edges.namedServerTasks[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (e *Environment) appendNamedServerTasks(name string, edges ...*ServerTask) {
+	if e.Edges.namedServerTasks == nil {
+		e.Edges.namedServerTasks = make(map[string][]*ServerTask)
+	}
+	if len(edges) == 0 {
+		e.Edges.namedServerTasks[name] = []*ServerTask{}
+	} else {
+		e.Edges.namedServerTasks[name] = append(e.Edges.namedServerTasks[name], edges...)
+	}
+}
+
+// Environments is a parsable slice of Environment.
+type Environments []*Environment

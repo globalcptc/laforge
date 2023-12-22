@@ -161,50 +161,8 @@ func (atc *AgentTaskCreate) Mutation() *AgentTaskMutation {
 
 // Save creates the AgentTask in the database.
 func (atc *AgentTaskCreate) Save(ctx context.Context) (*AgentTask, error) {
-	var (
-		err  error
-		node *AgentTask
-	)
 	atc.defaults()
-	if len(atc.hooks) == 0 {
-		if err = atc.check(); err != nil {
-			return nil, err
-		}
-		node, err = atc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*AgentTaskMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = atc.check(); err != nil {
-				return nil, err
-			}
-			atc.mutation = mutation
-			if node, err = atc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(atc.hooks) - 1; i >= 0; i-- {
-			if atc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = atc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, atc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*AgentTask)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from AgentTaskMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, atc.sqlSave, atc.mutation, atc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -282,6 +240,9 @@ func (atc *AgentTaskCreate) check() error {
 }
 
 func (atc *AgentTaskCreate) sqlSave(ctx context.Context) (*AgentTask, error) {
+	if err := atc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := atc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, atc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -296,70 +257,42 @@ func (atc *AgentTaskCreate) sqlSave(ctx context.Context) (*AgentTask, error) {
 			return nil, err
 		}
 	}
+	atc.mutation.id = &_node.ID
+	atc.mutation.done = true
 	return _node, nil
 }
 
 func (atc *AgentTaskCreate) createSpec() (*AgentTask, *sqlgraph.CreateSpec) {
 	var (
 		_node = &AgentTask{config: atc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: agenttask.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: agenttask.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(agenttask.Table, sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID))
 	)
 	if id, ok := atc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := atc.mutation.Command(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: agenttask.FieldCommand,
-		})
+		_spec.SetField(agenttask.FieldCommand, field.TypeEnum, value)
 		_node.Command = value
 	}
 	if value, ok := atc.mutation.Args(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: agenttask.FieldArgs,
-		})
+		_spec.SetField(agenttask.FieldArgs, field.TypeString, value)
 		_node.Args = value
 	}
 	if value, ok := atc.mutation.Number(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: agenttask.FieldNumber,
-		})
+		_spec.SetField(agenttask.FieldNumber, field.TypeInt, value)
 		_node.Number = value
 	}
 	if value, ok := atc.mutation.Output(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: agenttask.FieldOutput,
-		})
+		_spec.SetField(agenttask.FieldOutput, field.TypeString, value)
 		_node.Output = value
 	}
 	if value, ok := atc.mutation.State(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: agenttask.FieldState,
-		})
+		_spec.SetField(agenttask.FieldState, field.TypeEnum, value)
 		_node.State = value
 	}
 	if value, ok := atc.mutation.ErrorMessage(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: agenttask.FieldErrorMessage,
-		})
+		_spec.SetField(agenttask.FieldErrorMessage, field.TypeString, value)
 		_node.ErrorMessage = value
 	}
 	if nodes := atc.mutation.ProvisioningStepIDs(); len(nodes) > 0 {
@@ -370,10 +303,7 @@ func (atc *AgentTaskCreate) createSpec() (*AgentTask, *sqlgraph.CreateSpec) {
 			Columns: []string{agenttask.ProvisioningStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -390,10 +320,7 @@ func (atc *AgentTaskCreate) createSpec() (*AgentTask, *sqlgraph.CreateSpec) {
 			Columns: []string{agenttask.ProvisioningScheduledStepColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -410,10 +337,7 @@ func (atc *AgentTaskCreate) createSpec() (*AgentTask, *sqlgraph.CreateSpec) {
 			Columns: []string{agenttask.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -430,10 +354,7 @@ func (atc *AgentTaskCreate) createSpec() (*AgentTask, *sqlgraph.CreateSpec) {
 			Columns: []string{agenttask.AdhocPlansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: adhocplan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(adhocplan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -447,11 +368,15 @@ func (atc *AgentTaskCreate) createSpec() (*AgentTask, *sqlgraph.CreateSpec) {
 // AgentTaskCreateBulk is the builder for creating many AgentTask entities in bulk.
 type AgentTaskCreateBulk struct {
 	config
+	err      error
 	builders []*AgentTaskCreate
 }
 
 // Save creates the AgentTask entities in the database.
 func (atcb *AgentTaskCreateBulk) Save(ctx context.Context) ([]*AgentTask, error) {
+	if atcb.err != nil {
+		return nil, atcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(atcb.builders))
 	nodes := make([]*AgentTask, len(atcb.builders))
 	mutators := make([]Mutator, len(atcb.builders))
@@ -468,8 +393,8 @@ func (atcb *AgentTaskCreateBulk) Save(ctx context.Context) ([]*AgentTask, error)
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, atcb.builders[i+1].mutation)
 				} else {

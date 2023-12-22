@@ -19,14 +19,14 @@ import (
 // DNSRecordQuery is the builder for querying DNSRecord entities.
 type DNSRecordQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
-	order           []OrderFunc
-	fields          []string
+	ctx             *QueryContext
+	order           []dnsrecord.OrderOption
+	inters          []Interceptor
 	predicates      []predicate.DNSRecord
 	withEnvironment *EnvironmentQuery
 	withFKs         bool
+	modifiers       []func(*sql.Selector)
+	loadTotal       []func(context.Context, []*DNSRecord) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -38,34 +38,34 @@ func (drq *DNSRecordQuery) Where(ps ...predicate.DNSRecord) *DNSRecordQuery {
 	return drq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (drq *DNSRecordQuery) Limit(limit int) *DNSRecordQuery {
-	drq.limit = &limit
+	drq.ctx.Limit = &limit
 	return drq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (drq *DNSRecordQuery) Offset(offset int) *DNSRecordQuery {
-	drq.offset = &offset
+	drq.ctx.Offset = &offset
 	return drq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (drq *DNSRecordQuery) Unique(unique bool) *DNSRecordQuery {
-	drq.unique = &unique
+	drq.ctx.Unique = &unique
 	return drq
 }
 
-// Order adds an order step to the query.
-func (drq *DNSRecordQuery) Order(o ...OrderFunc) *DNSRecordQuery {
+// Order specifies how the records should be ordered.
+func (drq *DNSRecordQuery) Order(o ...dnsrecord.OrderOption) *DNSRecordQuery {
 	drq.order = append(drq.order, o...)
 	return drq
 }
 
 // QueryEnvironment chains the current query on the "Environment" edge.
 func (drq *DNSRecordQuery) QueryEnvironment() *EnvironmentQuery {
-	query := &EnvironmentQuery{config: drq.config}
+	query := (&EnvironmentClient{config: drq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := drq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +88,7 @@ func (drq *DNSRecordQuery) QueryEnvironment() *EnvironmentQuery {
 // First returns the first DNSRecord entity from the query.
 // Returns a *NotFoundError when no DNSRecord was found.
 func (drq *DNSRecordQuery) First(ctx context.Context) (*DNSRecord, error) {
-	nodes, err := drq.Limit(1).All(ctx)
+	nodes, err := drq.Limit(1).All(setContextOp(ctx, drq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (drq *DNSRecordQuery) FirstX(ctx context.Context) *DNSRecord {
 // Returns a *NotFoundError when no DNSRecord ID was found.
 func (drq *DNSRecordQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = drq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = drq.Limit(1).IDs(setContextOp(ctx, drq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +134,7 @@ func (drq *DNSRecordQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one DNSRecord entity is found.
 // Returns a *NotFoundError when no DNSRecord entities are found.
 func (drq *DNSRecordQuery) Only(ctx context.Context) (*DNSRecord, error) {
-	nodes, err := drq.Limit(2).All(ctx)
+	nodes, err := drq.Limit(2).All(setContextOp(ctx, drq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (drq *DNSRecordQuery) OnlyX(ctx context.Context) *DNSRecord {
 // Returns a *NotFoundError when no entities are found.
 func (drq *DNSRecordQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = drq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = drq.Limit(2).IDs(setContextOp(ctx, drq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +187,12 @@ func (drq *DNSRecordQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of DNSRecords.
 func (drq *DNSRecordQuery) All(ctx context.Context) ([]*DNSRecord, error) {
+	ctx = setContextOp(ctx, drq.ctx, "All")
 	if err := drq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return drq.sqlAll(ctx)
+	qr := querierAll[[]*DNSRecord, *DNSRecordQuery]()
+	return withInterceptors[[]*DNSRecord](ctx, drq, qr, drq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -203,9 +205,12 @@ func (drq *DNSRecordQuery) AllX(ctx context.Context) []*DNSRecord {
 }
 
 // IDs executes the query and returns a list of DNSRecord IDs.
-func (drq *DNSRecordQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := drq.Select(dnsrecord.FieldID).Scan(ctx, &ids); err != nil {
+func (drq *DNSRecordQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if drq.ctx.Unique == nil && drq.path != nil {
+		drq.Unique(true)
+	}
+	ctx = setContextOp(ctx, drq.ctx, "IDs")
+	if err = drq.Select(dnsrecord.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -222,10 +227,11 @@ func (drq *DNSRecordQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (drq *DNSRecordQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, drq.ctx, "Count")
 	if err := drq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return drq.sqlCount(ctx)
+	return withInterceptors[int](ctx, drq, querierCount[*DNSRecordQuery](), drq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +245,15 @@ func (drq *DNSRecordQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (drq *DNSRecordQuery) Exist(ctx context.Context) (bool, error) {
-	if err := drq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, drq.ctx, "Exist")
+	switch _, err := drq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return drq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -262,22 +273,21 @@ func (drq *DNSRecordQuery) Clone() *DNSRecordQuery {
 	}
 	return &DNSRecordQuery{
 		config:          drq.config,
-		limit:           drq.limit,
-		offset:          drq.offset,
-		order:           append([]OrderFunc{}, drq.order...),
+		ctx:             drq.ctx.Clone(),
+		order:           append([]dnsrecord.OrderOption{}, drq.order...),
+		inters:          append([]Interceptor{}, drq.inters...),
 		predicates:      append([]predicate.DNSRecord{}, drq.predicates...),
 		withEnvironment: drq.withEnvironment.Clone(),
 		// clone intermediate query.
-		sql:    drq.sql.Clone(),
-		path:   drq.path,
-		unique: drq.unique,
+		sql:  drq.sql.Clone(),
+		path: drq.path,
 	}
 }
 
 // WithEnvironment tells the query-builder to eager-load the nodes that are connected to
 // the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
 func (drq *DNSRecordQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *DNSRecordQuery {
-	query := &EnvironmentQuery{config: drq.config}
+	query := (&EnvironmentClient{config: drq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -291,25 +301,20 @@ func (drq *DNSRecordQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *DNS
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.DNSRecord.Query().
-//		GroupBy(dnsrecord.FieldHclID).
+//		GroupBy(dnsrecord.FieldHCLID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (drq *DNSRecordQuery) GroupBy(field string, fields ...string) *DNSRecordGroupBy {
-	grbuild := &DNSRecordGroupBy{config: drq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := drq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return drq.sqlQuery(ctx), nil
-	}
+	drq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &DNSRecordGroupBy{build: drq}
+	grbuild.flds = &drq.ctx.Fields
 	grbuild.label = dnsrecord.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -319,22 +324,37 @@ func (drq *DNSRecordQuery) GroupBy(field string, fields ...string) *DNSRecordGro
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //	}
 //
 //	client.DNSRecord.Query().
-//		Select(dnsrecord.FieldHclID).
+//		Select(dnsrecord.FieldHCLID).
 //		Scan(ctx, &v)
 func (drq *DNSRecordQuery) Select(fields ...string) *DNSRecordSelect {
-	drq.fields = append(drq.fields, fields...)
-	selbuild := &DNSRecordSelect{DNSRecordQuery: drq}
-	selbuild.label = dnsrecord.Label
-	selbuild.flds, selbuild.scan = &drq.fields, selbuild.Scan
-	return selbuild
+	drq.ctx.Fields = append(drq.ctx.Fields, fields...)
+	sbuild := &DNSRecordSelect{DNSRecordQuery: drq}
+	sbuild.label = dnsrecord.Label
+	sbuild.flds, sbuild.scan = &drq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a DNSRecordSelect configured with the given aggregations.
+func (drq *DNSRecordQuery) Aggregate(fns ...AggregateFunc) *DNSRecordSelect {
+	return drq.Select().Aggregate(fns...)
 }
 
 func (drq *DNSRecordQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range drq.fields {
+	for _, inter := range drq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, drq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range drq.ctx.Fields {
 		if !dnsrecord.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -364,14 +384,17 @@ func (drq *DNSRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*D
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, dnsrecord.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*DNSRecord).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &DNSRecord{config: drq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(drq.modifiers) > 0 {
+		_spec.Modifiers = drq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -385,6 +408,11 @@ func (drq *DNSRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*D
 	if query := drq.withEnvironment; query != nil {
 		if err := drq.loadEnvironment(ctx, query, nodes, nil,
 			func(n *DNSRecord, e *Environment) { n.Edges.Environment = e }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range drq.loadTotal {
+		if err := drq.loadTotal[i](ctx, nodes); err != nil {
 			return nil, err
 		}
 	}
@@ -403,6 +431,9 @@ func (drq *DNSRecordQuery) loadEnvironment(ctx context.Context, query *Environme
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(environment.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -423,38 +454,25 @@ func (drq *DNSRecordQuery) loadEnvironment(ctx context.Context, query *Environme
 
 func (drq *DNSRecordQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := drq.querySpec()
-	_spec.Node.Columns = drq.fields
-	if len(drq.fields) > 0 {
-		_spec.Unique = drq.unique != nil && *drq.unique
+	if len(drq.modifiers) > 0 {
+		_spec.Modifiers = drq.modifiers
+	}
+	_spec.Node.Columns = drq.ctx.Fields
+	if len(drq.ctx.Fields) > 0 {
+		_spec.Unique = drq.ctx.Unique != nil && *drq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, drq.driver, _spec)
 }
 
-func (drq *DNSRecordQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := drq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (drq *DNSRecordQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   dnsrecord.Table,
-			Columns: dnsrecord.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: dnsrecord.FieldID,
-			},
-		},
-		From:   drq.sql,
-		Unique: true,
-	}
-	if unique := drq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(dnsrecord.Table, dnsrecord.Columns, sqlgraph.NewFieldSpec(dnsrecord.FieldID, field.TypeUUID))
+	_spec.From = drq.sql
+	if unique := drq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if drq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := drq.fields; len(fields) > 0 {
+	if fields := drq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, dnsrecord.FieldID)
 		for i := range fields {
@@ -470,10 +488,10 @@ func (drq *DNSRecordQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := drq.limit; limit != nil {
+	if limit := drq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := drq.offset; offset != nil {
+	if offset := drq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := drq.order; len(ps) > 0 {
@@ -489,7 +507,7 @@ func (drq *DNSRecordQuery) querySpec() *sqlgraph.QuerySpec {
 func (drq *DNSRecordQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(drq.driver.Dialect())
 	t1 := builder.Table(dnsrecord.Table)
-	columns := drq.fields
+	columns := drq.ctx.Fields
 	if len(columns) == 0 {
 		columns = dnsrecord.Columns
 	}
@@ -498,7 +516,7 @@ func (drq *DNSRecordQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = drq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if drq.unique != nil && *drq.unique {
+	if drq.ctx.Unique != nil && *drq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range drq.predicates {
@@ -507,12 +525,12 @@ func (drq *DNSRecordQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range drq.order {
 		p(selector)
 	}
-	if offset := drq.offset; offset != nil {
+	if offset := drq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := drq.limit; limit != nil {
+	if limit := drq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -520,13 +538,8 @@ func (drq *DNSRecordQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // DNSRecordGroupBy is the group-by builder for DNSRecord entities.
 type DNSRecordGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *DNSRecordQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -535,74 +548,77 @@ func (drgb *DNSRecordGroupBy) Aggregate(fns ...AggregateFunc) *DNSRecordGroupBy 
 	return drgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (drgb *DNSRecordGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := drgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (drgb *DNSRecordGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, drgb.build.ctx, "GroupBy")
+	if err := drgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	drgb.sql = query
-	return drgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*DNSRecordQuery, *DNSRecordGroupBy](ctx, drgb.build, drgb, drgb.build.inters, v)
 }
 
-func (drgb *DNSRecordGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range drgb.fields {
-		if !dnsrecord.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (drgb *DNSRecordGroupBy) sqlScan(ctx context.Context, root *DNSRecordQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(drgb.fns))
+	for _, fn := range drgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := drgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*drgb.flds)+len(drgb.fns))
+		for _, f := range *drgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*drgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := drgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := drgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (drgb *DNSRecordGroupBy) sqlQuery() *sql.Selector {
-	selector := drgb.sql.Select()
-	aggregation := make([]string, 0, len(drgb.fns))
-	for _, fn := range drgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(drgb.fields)+len(drgb.fns))
-		for _, f := range drgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(drgb.fields...)...)
-}
-
 // DNSRecordSelect is the builder for selecting fields of DNSRecord entities.
 type DNSRecordSelect struct {
 	*DNSRecordQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (drs *DNSRecordSelect) Aggregate(fns ...AggregateFunc) *DNSRecordSelect {
+	drs.fns = append(drs.fns, fns...)
+	return drs
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (drs *DNSRecordSelect) Scan(ctx context.Context, v interface{}) error {
+func (drs *DNSRecordSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, drs.ctx, "Select")
 	if err := drs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	drs.sql = drs.DNSRecordQuery.sqlQuery(ctx)
-	return drs.sqlScan(ctx, v)
+	return scanWithInterceptors[*DNSRecordQuery, *DNSRecordSelect](ctx, drs.DNSRecordQuery, drs, drs.inters, v)
 }
 
-func (drs *DNSRecordSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (drs *DNSRecordSelect) sqlScan(ctx context.Context, root *DNSRecordQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(drs.fns))
+	for _, fn := range drs.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*drs.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := drs.sql.Query()
+	query, args := selector.Query()
 	if err := drs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

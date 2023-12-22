@@ -36,9 +36,25 @@ func (auu *AuthUserUpdate) SetUsername(s string) *AuthUserUpdate {
 	return auu
 }
 
+// SetNillableUsername sets the "username" field if the given value is not nil.
+func (auu *AuthUserUpdate) SetNillableUsername(s *string) *AuthUserUpdate {
+	if s != nil {
+		auu.SetUsername(*s)
+	}
+	return auu
+}
+
 // SetPassword sets the "password" field.
 func (auu *AuthUserUpdate) SetPassword(s string) *AuthUserUpdate {
 	auu.mutation.SetPassword(s)
+	return auu
+}
+
+// SetNillablePassword sets the "password" field if the given value is not nil.
+func (auu *AuthUserUpdate) SetNillablePassword(s *string) *AuthUserUpdate {
+	if s != nil {
+		auu.SetPassword(*s)
+	}
 	return auu
 }
 
@@ -146,9 +162,25 @@ func (auu *AuthUserUpdate) SetRole(a authuser.Role) *AuthUserUpdate {
 	return auu
 }
 
+// SetNillableRole sets the "role" field if the given value is not nil.
+func (auu *AuthUserUpdate) SetNillableRole(a *authuser.Role) *AuthUserUpdate {
+	if a != nil {
+		auu.SetRole(*a)
+	}
+	return auu
+}
+
 // SetProvider sets the "provider" field.
 func (auu *AuthUserUpdate) SetProvider(a authuser.Provider) *AuthUserUpdate {
 	auu.mutation.SetProvider(a)
+	return auu
+}
+
+// SetNillableProvider sets the "provider" field if the given value is not nil.
+func (auu *AuthUserUpdate) SetNillableProvider(a *authuser.Provider) *AuthUserUpdate {
+	if a != nil {
+		auu.SetProvider(*a)
+	}
 	return auu
 }
 
@@ -231,40 +263,7 @@ func (auu *AuthUserUpdate) RemoveServerTasks(s ...*ServerTask) *AuthUserUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (auu *AuthUserUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(auu.hooks) == 0 {
-		if err = auu.check(); err != nil {
-			return 0, err
-		}
-		affected, err = auu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*AuthUserMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = auu.check(); err != nil {
-				return 0, err
-			}
-			auu.mutation = mutation
-			affected, err = auu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(auu.hooks) - 1; i >= 0; i-- {
-			if auu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = auu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, auu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, auu.sqlSave, auu.mutation, auu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -305,16 +304,10 @@ func (auu *AuthUserUpdate) check() error {
 }
 
 func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   authuser.Table,
-			Columns: authuser.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: authuser.FieldID,
-			},
-		},
+	if err := auu.check(); err != nil {
+		return n, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(authuser.Table, authuser.Columns, sqlgraph.NewFieldSpec(authuser.FieldID, field.TypeUUID))
 	if ps := auu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -323,81 +316,37 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 	}
 	if value, ok := auu.mutation.Username(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldUsername,
-		})
+		_spec.SetField(authuser.FieldUsername, field.TypeString, value)
 	}
 	if value, ok := auu.mutation.Password(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldPassword,
-		})
+		_spec.SetField(authuser.FieldPassword, field.TypeString, value)
 	}
 	if value, ok := auu.mutation.FirstName(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldFirstName,
-		})
+		_spec.SetField(authuser.FieldFirstName, field.TypeString, value)
 	}
 	if value, ok := auu.mutation.LastName(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldLastName,
-		})
+		_spec.SetField(authuser.FieldLastName, field.TypeString, value)
 	}
 	if value, ok := auu.mutation.Email(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldEmail,
-		})
+		_spec.SetField(authuser.FieldEmail, field.TypeString, value)
 	}
 	if value, ok := auu.mutation.Phone(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldPhone,
-		})
+		_spec.SetField(authuser.FieldPhone, field.TypeString, value)
 	}
 	if value, ok := auu.mutation.Company(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldCompany,
-		})
+		_spec.SetField(authuser.FieldCompany, field.TypeString, value)
 	}
 	if value, ok := auu.mutation.Occupation(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldOccupation,
-		})
+		_spec.SetField(authuser.FieldOccupation, field.TypeString, value)
 	}
 	if value, ok := auu.mutation.PrivateKeyPath(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldPrivateKeyPath,
-		})
+		_spec.SetField(authuser.FieldPrivateKeyPath, field.TypeString, value)
 	}
 	if value, ok := auu.mutation.Role(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: authuser.FieldRole,
-		})
+		_spec.SetField(authuser.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := auu.mutation.Provider(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: authuser.FieldProvider,
-		})
+		_spec.SetField(authuser.FieldProvider, field.TypeEnum, value)
 	}
 	if auu.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -407,10 +356,7 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: token.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(token.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -423,10 +369,7 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: token.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(token.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -442,10 +385,7 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: token.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(token.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -461,10 +401,7 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -477,10 +414,7 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -496,10 +430,7 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -515,6 +446,7 @@ func (auu *AuthUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	auu.mutation.done = true
 	return n, nil
 }
 
@@ -532,9 +464,25 @@ func (auuo *AuthUserUpdateOne) SetUsername(s string) *AuthUserUpdateOne {
 	return auuo
 }
 
+// SetNillableUsername sets the "username" field if the given value is not nil.
+func (auuo *AuthUserUpdateOne) SetNillableUsername(s *string) *AuthUserUpdateOne {
+	if s != nil {
+		auuo.SetUsername(*s)
+	}
+	return auuo
+}
+
 // SetPassword sets the "password" field.
 func (auuo *AuthUserUpdateOne) SetPassword(s string) *AuthUserUpdateOne {
 	auuo.mutation.SetPassword(s)
+	return auuo
+}
+
+// SetNillablePassword sets the "password" field if the given value is not nil.
+func (auuo *AuthUserUpdateOne) SetNillablePassword(s *string) *AuthUserUpdateOne {
+	if s != nil {
+		auuo.SetPassword(*s)
+	}
 	return auuo
 }
 
@@ -642,9 +590,25 @@ func (auuo *AuthUserUpdateOne) SetRole(a authuser.Role) *AuthUserUpdateOne {
 	return auuo
 }
 
+// SetNillableRole sets the "role" field if the given value is not nil.
+func (auuo *AuthUserUpdateOne) SetNillableRole(a *authuser.Role) *AuthUserUpdateOne {
+	if a != nil {
+		auuo.SetRole(*a)
+	}
+	return auuo
+}
+
 // SetProvider sets the "provider" field.
 func (auuo *AuthUserUpdateOne) SetProvider(a authuser.Provider) *AuthUserUpdateOne {
 	auuo.mutation.SetProvider(a)
+	return auuo
+}
+
+// SetNillableProvider sets the "provider" field if the given value is not nil.
+func (auuo *AuthUserUpdateOne) SetNillableProvider(a *authuser.Provider) *AuthUserUpdateOne {
+	if a != nil {
+		auuo.SetProvider(*a)
+	}
 	return auuo
 }
 
@@ -725,6 +689,12 @@ func (auuo *AuthUserUpdateOne) RemoveServerTasks(s ...*ServerTask) *AuthUserUpda
 	return auuo.RemoveServerTaskIDs(ids...)
 }
 
+// Where appends a list predicates to the AuthUserUpdate builder.
+func (auuo *AuthUserUpdateOne) Where(ps ...predicate.AuthUser) *AuthUserUpdateOne {
+	auuo.mutation.Where(ps...)
+	return auuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (auuo *AuthUserUpdateOne) Select(field string, fields ...string) *AuthUserUpdateOne {
@@ -734,46 +704,7 @@ func (auuo *AuthUserUpdateOne) Select(field string, fields ...string) *AuthUserU
 
 // Save executes the query and returns the updated AuthUser entity.
 func (auuo *AuthUserUpdateOne) Save(ctx context.Context) (*AuthUser, error) {
-	var (
-		err  error
-		node *AuthUser
-	)
-	if len(auuo.hooks) == 0 {
-		if err = auuo.check(); err != nil {
-			return nil, err
-		}
-		node, err = auuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*AuthUserMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = auuo.check(); err != nil {
-				return nil, err
-			}
-			auuo.mutation = mutation
-			node, err = auuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(auuo.hooks) - 1; i >= 0; i-- {
-			if auuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = auuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, auuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*AuthUser)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from AuthUserMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, auuo.sqlSave, auuo.mutation, auuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -814,16 +745,10 @@ func (auuo *AuthUserUpdateOne) check() error {
 }
 
 func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   authuser.Table,
-			Columns: authuser.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: authuser.FieldID,
-			},
-		},
+	if err := auuo.check(); err != nil {
+		return _node, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(authuser.Table, authuser.Columns, sqlgraph.NewFieldSpec(authuser.FieldID, field.TypeUUID))
 	id, ok := auuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "AuthUser.id" for update`)}
@@ -849,81 +774,37 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 		}
 	}
 	if value, ok := auuo.mutation.Username(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldUsername,
-		})
+		_spec.SetField(authuser.FieldUsername, field.TypeString, value)
 	}
 	if value, ok := auuo.mutation.Password(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldPassword,
-		})
+		_spec.SetField(authuser.FieldPassword, field.TypeString, value)
 	}
 	if value, ok := auuo.mutation.FirstName(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldFirstName,
-		})
+		_spec.SetField(authuser.FieldFirstName, field.TypeString, value)
 	}
 	if value, ok := auuo.mutation.LastName(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldLastName,
-		})
+		_spec.SetField(authuser.FieldLastName, field.TypeString, value)
 	}
 	if value, ok := auuo.mutation.Email(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldEmail,
-		})
+		_spec.SetField(authuser.FieldEmail, field.TypeString, value)
 	}
 	if value, ok := auuo.mutation.Phone(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldPhone,
-		})
+		_spec.SetField(authuser.FieldPhone, field.TypeString, value)
 	}
 	if value, ok := auuo.mutation.Company(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldCompany,
-		})
+		_spec.SetField(authuser.FieldCompany, field.TypeString, value)
 	}
 	if value, ok := auuo.mutation.Occupation(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldOccupation,
-		})
+		_spec.SetField(authuser.FieldOccupation, field.TypeString, value)
 	}
 	if value, ok := auuo.mutation.PrivateKeyPath(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: authuser.FieldPrivateKeyPath,
-		})
+		_spec.SetField(authuser.FieldPrivateKeyPath, field.TypeString, value)
 	}
 	if value, ok := auuo.mutation.Role(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: authuser.FieldRole,
-		})
+		_spec.SetField(authuser.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := auuo.mutation.Provider(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: authuser.FieldProvider,
-		})
+		_spec.SetField(authuser.FieldProvider, field.TypeEnum, value)
 	}
 	if auuo.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -933,10 +814,7 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: token.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(token.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -949,10 +827,7 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: token.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(token.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -968,10 +843,7 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 			Columns: []string{authuser.TokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: token.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(token.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -987,10 +859,7 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1003,10 +872,7 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1022,10 +888,7 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 			Columns: []string{authuser.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1044,5 +907,6 @@ func (auuo *AuthUserUpdateOne) sqlSave(ctx context.Context) (_node *AuthUser, er
 		}
 		return nil, err
 	}
+	auuo.mutation.done = true
 	return _node, nil
 }

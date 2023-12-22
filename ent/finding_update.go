@@ -38,9 +38,25 @@ func (fu *FindingUpdate) SetName(s string) *FindingUpdate {
 	return fu
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (fu *FindingUpdate) SetNillableName(s *string) *FindingUpdate {
+	if s != nil {
+		fu.SetName(*s)
+	}
+	return fu
+}
+
 // SetDescription sets the "description" field.
 func (fu *FindingUpdate) SetDescription(s string) *FindingUpdate {
 	fu.mutation.SetDescription(s)
+	return fu
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (fu *FindingUpdate) SetNillableDescription(s *string) *FindingUpdate {
+	if s != nil {
+		fu.SetDescription(*s)
+	}
 	return fu
 }
 
@@ -50,9 +66,25 @@ func (fu *FindingUpdate) SetSeverity(f finding.Severity) *FindingUpdate {
 	return fu
 }
 
+// SetNillableSeverity sets the "severity" field if the given value is not nil.
+func (fu *FindingUpdate) SetNillableSeverity(f *finding.Severity) *FindingUpdate {
+	if f != nil {
+		fu.SetSeverity(*f)
+	}
+	return fu
+}
+
 // SetDifficulty sets the "difficulty" field.
 func (fu *FindingUpdate) SetDifficulty(f finding.Difficulty) *FindingUpdate {
 	fu.mutation.SetDifficulty(f)
+	return fu
+}
+
+// SetNillableDifficulty sets the "difficulty" field if the given value is not nil.
+func (fu *FindingUpdate) SetNillableDifficulty(f *finding.Difficulty) *FindingUpdate {
+	if f != nil {
+		fu.SetDifficulty(*f)
+	}
 	return fu
 }
 
@@ -180,40 +212,7 @@ func (fu *FindingUpdate) ClearEnvironment() *FindingUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (fu *FindingUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(fu.hooks) == 0 {
-		if err = fu.check(); err != nil {
-			return 0, err
-		}
-		affected, err = fu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*FindingMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = fu.check(); err != nil {
-				return 0, err
-			}
-			fu.mutation = mutation
-			affected, err = fu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(fu.hooks) - 1; i >= 0; i-- {
-			if fu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = fu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, fu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, fu.sqlSave, fu.mutation, fu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -254,16 +253,10 @@ func (fu *FindingUpdate) check() error {
 }
 
 func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   finding.Table,
-			Columns: finding.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: finding.FieldID,
-			},
-		},
+	if err := fu.check(); err != nil {
+		return n, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(finding.Table, finding.Columns, sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID))
 	if ps := fu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -272,39 +265,19 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 	}
 	if value, ok := fu.mutation.Name(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: finding.FieldName,
-		})
+		_spec.SetField(finding.FieldName, field.TypeString, value)
 	}
 	if value, ok := fu.mutation.Description(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: finding.FieldDescription,
-		})
+		_spec.SetField(finding.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := fu.mutation.Severity(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: finding.FieldSeverity,
-		})
+		_spec.SetField(finding.FieldSeverity, field.TypeEnum, value)
 	}
 	if value, ok := fu.mutation.Difficulty(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: finding.FieldDifficulty,
-		})
+		_spec.SetField(finding.FieldDifficulty, field.TypeEnum, value)
 	}
 	if value, ok := fu.mutation.Tags(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: finding.FieldTags,
-		})
+		_spec.SetField(finding.FieldTags, field.TypeJSON, value)
 	}
 	if fu.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -314,10 +287,7 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -330,10 +300,7 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -349,10 +316,7 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -368,10 +332,7 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{finding.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -384,10 +345,7 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{finding.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -403,10 +361,7 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{finding.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -419,10 +374,7 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{finding.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -438,10 +390,7 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{finding.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -454,10 +403,7 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{finding.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -473,6 +419,7 @@ func (fu *FindingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	fu.mutation.done = true
 	return n, nil
 }
 
@@ -490,9 +437,25 @@ func (fuo *FindingUpdateOne) SetName(s string) *FindingUpdateOne {
 	return fuo
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (fuo *FindingUpdateOne) SetNillableName(s *string) *FindingUpdateOne {
+	if s != nil {
+		fuo.SetName(*s)
+	}
+	return fuo
+}
+
 // SetDescription sets the "description" field.
 func (fuo *FindingUpdateOne) SetDescription(s string) *FindingUpdateOne {
 	fuo.mutation.SetDescription(s)
+	return fuo
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (fuo *FindingUpdateOne) SetNillableDescription(s *string) *FindingUpdateOne {
+	if s != nil {
+		fuo.SetDescription(*s)
+	}
 	return fuo
 }
 
@@ -502,9 +465,25 @@ func (fuo *FindingUpdateOne) SetSeverity(f finding.Severity) *FindingUpdateOne {
 	return fuo
 }
 
+// SetNillableSeverity sets the "severity" field if the given value is not nil.
+func (fuo *FindingUpdateOne) SetNillableSeverity(f *finding.Severity) *FindingUpdateOne {
+	if f != nil {
+		fuo.SetSeverity(*f)
+	}
+	return fuo
+}
+
 // SetDifficulty sets the "difficulty" field.
 func (fuo *FindingUpdateOne) SetDifficulty(f finding.Difficulty) *FindingUpdateOne {
 	fuo.mutation.SetDifficulty(f)
+	return fuo
+}
+
+// SetNillableDifficulty sets the "difficulty" field if the given value is not nil.
+func (fuo *FindingUpdateOne) SetNillableDifficulty(f *finding.Difficulty) *FindingUpdateOne {
+	if f != nil {
+		fuo.SetDifficulty(*f)
+	}
 	return fuo
 }
 
@@ -630,6 +609,12 @@ func (fuo *FindingUpdateOne) ClearEnvironment() *FindingUpdateOne {
 	return fuo
 }
 
+// Where appends a list predicates to the FindingUpdate builder.
+func (fuo *FindingUpdateOne) Where(ps ...predicate.Finding) *FindingUpdateOne {
+	fuo.mutation.Where(ps...)
+	return fuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (fuo *FindingUpdateOne) Select(field string, fields ...string) *FindingUpdateOne {
@@ -639,46 +624,7 @@ func (fuo *FindingUpdateOne) Select(field string, fields ...string) *FindingUpda
 
 // Save executes the query and returns the updated Finding entity.
 func (fuo *FindingUpdateOne) Save(ctx context.Context) (*Finding, error) {
-	var (
-		err  error
-		node *Finding
-	)
-	if len(fuo.hooks) == 0 {
-		if err = fuo.check(); err != nil {
-			return nil, err
-		}
-		node, err = fuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*FindingMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = fuo.check(); err != nil {
-				return nil, err
-			}
-			fuo.mutation = mutation
-			node, err = fuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(fuo.hooks) - 1; i >= 0; i-- {
-			if fuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = fuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, fuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Finding)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from FindingMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, fuo.sqlSave, fuo.mutation, fuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -719,16 +665,10 @@ func (fuo *FindingUpdateOne) check() error {
 }
 
 func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   finding.Table,
-			Columns: finding.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: finding.FieldID,
-			},
-		},
+	if err := fuo.check(); err != nil {
+		return _node, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(finding.Table, finding.Columns, sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID))
 	id, ok := fuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Finding.id" for update`)}
@@ -754,39 +694,19 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 		}
 	}
 	if value, ok := fuo.mutation.Name(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: finding.FieldName,
-		})
+		_spec.SetField(finding.FieldName, field.TypeString, value)
 	}
 	if value, ok := fuo.mutation.Description(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: finding.FieldDescription,
-		})
+		_spec.SetField(finding.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := fuo.mutation.Severity(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: finding.FieldSeverity,
-		})
+		_spec.SetField(finding.FieldSeverity, field.TypeEnum, value)
 	}
 	if value, ok := fuo.mutation.Difficulty(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: finding.FieldDifficulty,
-		})
+		_spec.SetField(finding.FieldDifficulty, field.TypeEnum, value)
 	}
 	if value, ok := fuo.mutation.Tags(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: finding.FieldTags,
-		})
+		_spec.SetField(finding.FieldTags, field.TypeJSON, value)
 	}
 	if fuo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -796,10 +716,7 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -812,10 +729,7 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -831,10 +745,7 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -850,10 +761,7 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 			Columns: []string{finding.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -866,10 +774,7 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 			Columns: []string{finding.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -885,10 +790,7 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 			Columns: []string{finding.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -901,10 +803,7 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 			Columns: []string{finding.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -920,10 +819,7 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 			Columns: []string{finding.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -936,10 +832,7 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 			Columns: []string{finding.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -958,5 +851,6 @@ func (fuo *FindingUpdateOne) sqlSave(ctx context.Context) (_node *Finding, err e
 		}
 		return nil, err
 	}
+	fuo.mutation.done = true
 	return _node, nil
 }

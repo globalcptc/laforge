@@ -40,9 +40,9 @@ type EnvironmentCreate struct {
 	hooks    []Hook
 }
 
-// SetHclID sets the "hcl_id" field.
-func (ec *EnvironmentCreate) SetHclID(s string) *EnvironmentCreate {
-	ec.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (ec *EnvironmentCreate) SetHCLID(s string) *EnvironmentCreate {
+	ec.mutation.SetHCLID(s)
 	return ec
 }
 
@@ -427,50 +427,8 @@ func (ec *EnvironmentCreate) Mutation() *EnvironmentMutation {
 
 // Save creates the Environment in the database.
 func (ec *EnvironmentCreate) Save(ctx context.Context) (*Environment, error) {
-	var (
-		err  error
-		node *Environment
-	)
 	ec.defaults()
-	if len(ec.hooks) == 0 {
-		if err = ec.check(); err != nil {
-			return nil, err
-		}
-		node, err = ec.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*EnvironmentMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = ec.check(); err != nil {
-				return nil, err
-			}
-			ec.mutation = mutation
-			if node, err = ec.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(ec.hooks) - 1; i >= 0; i-- {
-			if ec.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ec.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, ec.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Environment)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from EnvironmentMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, ec.sqlSave, ec.mutation, ec.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -505,7 +463,7 @@ func (ec *EnvironmentCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (ec *EnvironmentCreate) check() error {
-	if _, ok := ec.mutation.HclID(); !ok {
+	if _, ok := ec.mutation.HCLID(); !ok {
 		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Environment.hcl_id"`)}
 	}
 	if _, ok := ec.mutation.CompetitionID(); !ok {
@@ -542,6 +500,9 @@ func (ec *EnvironmentCreate) check() error {
 }
 
 func (ec *EnvironmentCreate) sqlSave(ctx context.Context) (*Environment, error) {
+	if err := ec.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := ec.createSpec()
 	if err := sqlgraph.CreateNode(ctx, ec.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -556,110 +517,62 @@ func (ec *EnvironmentCreate) sqlSave(ctx context.Context) (*Environment, error) 
 			return nil, err
 		}
 	}
+	ec.mutation.id = &_node.ID
+	ec.mutation.done = true
 	return _node, nil
 }
 
 func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Environment{config: ec.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: environment.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: environment.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(environment.Table, sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID))
 	)
 	if id, ok := ec.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := ec.mutation.HclID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldHclID,
-		})
-		_node.HclID = value
+	if value, ok := ec.mutation.HCLID(); ok {
+		_spec.SetField(environment.FieldHCLID, field.TypeString, value)
+		_node.HCLID = value
 	}
 	if value, ok := ec.mutation.CompetitionID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldCompetitionID,
-		})
+		_spec.SetField(environment.FieldCompetitionID, field.TypeString, value)
 		_node.CompetitionID = value
 	}
 	if value, ok := ec.mutation.Name(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldName,
-		})
+		_spec.SetField(environment.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
 	if value, ok := ec.mutation.Description(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldDescription,
-		})
+		_spec.SetField(environment.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
 	if value, ok := ec.mutation.Builder(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldBuilder,
-		})
+		_spec.SetField(environment.FieldBuilder, field.TypeString, value)
 		_node.Builder = value
 	}
 	if value, ok := ec.mutation.TeamCount(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: environment.FieldTeamCount,
-		})
+		_spec.SetField(environment.FieldTeamCount, field.TypeInt, value)
 		_node.TeamCount = value
 	}
 	if value, ok := ec.mutation.Revision(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: environment.FieldRevision,
-		})
+		_spec.SetField(environment.FieldRevision, field.TypeInt, value)
 		_node.Revision = value
 	}
 	if value, ok := ec.mutation.AdminCidrs(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldAdminCidrs,
-		})
+		_spec.SetField(environment.FieldAdminCidrs, field.TypeJSON, value)
 		_node.AdminCidrs = value
 	}
 	if value, ok := ec.mutation.ExposedVdiPorts(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldExposedVdiPorts,
-		})
+		_spec.SetField(environment.FieldExposedVdiPorts, field.TypeJSON, value)
 		_node.ExposedVdiPorts = value
 	}
 	if value, ok := ec.mutation.Config(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldConfig,
-		})
+		_spec.SetField(environment.FieldConfig, field.TypeJSON, value)
 		_node.Config = value
 	}
 	if value, ok := ec.mutation.Tags(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldTags,
-		})
+		_spec.SetField(environment.FieldTags, field.TypeJSON, value)
 		_node.Tags = value
 	}
 	if nodes := ec.mutation.UsersIDs(); len(nodes) > 0 {
@@ -670,10 +583,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -689,10 +599,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -708,10 +615,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: competition.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -727,10 +631,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: identity.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(identity.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -746,10 +647,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: command.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(command.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -765,10 +663,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -784,10 +679,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedownload.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -803,10 +695,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedelete.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedelete.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -822,10 +711,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: fileextract.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -841,10 +727,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -860,10 +743,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: finding.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -879,10 +759,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dnsrecord.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dnsrecord.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -898,10 +775,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dns.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dns.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -917,10 +791,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -936,10 +807,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -955,10 +823,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ansible.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ansible.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -974,10 +839,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: scheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -993,10 +855,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.BuildsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1012,10 +871,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: environment.RepositoriesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(repository.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1031,10 +887,7 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 			Columns: []string{environment.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1048,11 +901,15 @@ func (ec *EnvironmentCreate) createSpec() (*Environment, *sqlgraph.CreateSpec) {
 // EnvironmentCreateBulk is the builder for creating many Environment entities in bulk.
 type EnvironmentCreateBulk struct {
 	config
+	err      error
 	builders []*EnvironmentCreate
 }
 
 // Save creates the Environment entities in the database.
 func (ecb *EnvironmentCreateBulk) Save(ctx context.Context) ([]*Environment, error) {
+	if ecb.err != nil {
+		return nil, ecb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ecb.builders))
 	nodes := make([]*Environment, len(ecb.builders))
 	mutators := make([]Mutator, len(ecb.builders))
@@ -1069,8 +926,8 @@ func (ecb *EnvironmentCreateBulk) Save(ctx context.Context) ([]*Environment, err
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ecb.builders[i+1].mutation)
 				} else {

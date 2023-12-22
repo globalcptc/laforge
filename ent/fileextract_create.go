@@ -21,9 +21,9 @@ type FileExtractCreate struct {
 	hooks    []Hook
 }
 
-// SetHclID sets the "hcl_id" field.
-func (fec *FileExtractCreate) SetHclID(s string) *FileExtractCreate {
-	fec.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (fec *FileExtractCreate) SetHCLID(s string) *FileExtractCreate {
+	fec.mutation.SetHCLID(s)
 	return fec
 }
 
@@ -91,50 +91,8 @@ func (fec *FileExtractCreate) Mutation() *FileExtractMutation {
 
 // Save creates the FileExtract in the database.
 func (fec *FileExtractCreate) Save(ctx context.Context) (*FileExtract, error) {
-	var (
-		err  error
-		node *FileExtract
-	)
 	fec.defaults()
-	if len(fec.hooks) == 0 {
-		if err = fec.check(); err != nil {
-			return nil, err
-		}
-		node, err = fec.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*FileExtractMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = fec.check(); err != nil {
-				return nil, err
-			}
-			fec.mutation = mutation
-			if node, err = fec.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(fec.hooks) - 1; i >= 0; i-- {
-			if fec.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = fec.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, fec.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*FileExtract)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from FileExtractMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, fec.sqlSave, fec.mutation, fec.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -169,7 +127,7 @@ func (fec *FileExtractCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (fec *FileExtractCreate) check() error {
-	if _, ok := fec.mutation.HclID(); !ok {
+	if _, ok := fec.mutation.HCLID(); !ok {
 		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "FileExtract.hcl_id"`)}
 	}
 	if _, ok := fec.mutation.Source(); !ok {
@@ -188,6 +146,9 @@ func (fec *FileExtractCreate) check() error {
 }
 
 func (fec *FileExtractCreate) sqlSave(ctx context.Context) (*FileExtract, error) {
+	if err := fec.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := fec.createSpec()
 	if err := sqlgraph.CreateNode(ctx, fec.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -202,62 +163,38 @@ func (fec *FileExtractCreate) sqlSave(ctx context.Context) (*FileExtract, error)
 			return nil, err
 		}
 	}
+	fec.mutation.id = &_node.ID
+	fec.mutation.done = true
 	return _node, nil
 }
 
 func (fec *FileExtractCreate) createSpec() (*FileExtract, *sqlgraph.CreateSpec) {
 	var (
 		_node = &FileExtract{config: fec.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: fileextract.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: fileextract.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(fileextract.Table, sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID))
 	)
 	if id, ok := fec.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := fec.mutation.HclID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldHclID,
-		})
-		_node.HclID = value
+	if value, ok := fec.mutation.HCLID(); ok {
+		_spec.SetField(fileextract.FieldHCLID, field.TypeString, value)
+		_node.HCLID = value
 	}
 	if value, ok := fec.mutation.Source(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldSource,
-		})
+		_spec.SetField(fileextract.FieldSource, field.TypeString, value)
 		_node.Source = value
 	}
 	if value, ok := fec.mutation.Destination(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldDestination,
-		})
+		_spec.SetField(fileextract.FieldDestination, field.TypeString, value)
 		_node.Destination = value
 	}
 	if value, ok := fec.mutation.GetType(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: fileextract.FieldType,
-		})
+		_spec.SetField(fileextract.FieldType, field.TypeString, value)
 		_node.Type = value
 	}
 	if value, ok := fec.mutation.Tags(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: fileextract.FieldTags,
-		})
+		_spec.SetField(fileextract.FieldTags, field.TypeJSON, value)
 		_node.Tags = value
 	}
 	if nodes := fec.mutation.EnvironmentIDs(); len(nodes) > 0 {
@@ -268,10 +205,7 @@ func (fec *FileExtractCreate) createSpec() (*FileExtract, *sqlgraph.CreateSpec) 
 			Columns: []string{fileextract.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -286,11 +220,15 @@ func (fec *FileExtractCreate) createSpec() (*FileExtract, *sqlgraph.CreateSpec) 
 // FileExtractCreateBulk is the builder for creating many FileExtract entities in bulk.
 type FileExtractCreateBulk struct {
 	config
+	err      error
 	builders []*FileExtractCreate
 }
 
 // Save creates the FileExtract entities in the database.
 func (fecb *FileExtractCreateBulk) Save(ctx context.Context) ([]*FileExtract, error) {
+	if fecb.err != nil {
+		return nil, fecb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(fecb.builders))
 	nodes := make([]*FileExtract, len(fecb.builders))
 	mutators := make([]Mutator, len(fecb.builders))
@@ -307,8 +245,8 @@ func (fecb *FileExtractCreateBulk) Save(ctx context.Context) ([]*FileExtract, er
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, fecb.builders[i+1].mutation)
 				} else {

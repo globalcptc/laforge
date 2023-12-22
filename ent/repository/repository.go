@@ -3,6 +3,8 @@
 package repository
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -72,3 +74,73 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the Repository queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByRepoURL orders the results by the repo_url field.
+func ByRepoURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRepoURL, opts...).ToFunc()
+}
+
+// ByBranchName orders the results by the branch_name field.
+func ByBranchName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBranchName, opts...).ToFunc()
+}
+
+// ByEnviromentFilepath orders the results by the enviroment_filepath field.
+func ByEnviromentFilepath(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEnviromentFilepath, opts...).ToFunc()
+}
+
+// ByFolderPath orders the results by the folder_path field.
+func ByFolderPath(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFolderPath, opts...).ToFunc()
+}
+
+// ByEnvironmentsCount orders the results by Environments count.
+func ByEnvironmentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newEnvironmentsStep(), opts...)
+	}
+}
+
+// ByEnvironments orders the results by Environments terms.
+func ByEnvironments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEnvironmentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByRepoCommitsCount orders the results by RepoCommits count.
+func ByRepoCommitsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newRepoCommitsStep(), opts...)
+	}
+}
+
+// ByRepoCommits orders the results by RepoCommits terms.
+func ByRepoCommits(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRepoCommitsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newEnvironmentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EnvironmentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, EnvironmentsTable, EnvironmentsPrimaryKey...),
+	)
+}
+func newRepoCommitsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RepoCommitsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, RepoCommitsTable, RepoCommitsColumn),
+	)
+}

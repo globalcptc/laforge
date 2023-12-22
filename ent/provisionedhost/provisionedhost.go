@@ -7,6 +7,8 @@ import (
 	"io"
 	"strconv"
 
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -185,19 +187,219 @@ func AddonTypeValidator(at AddonType) error {
 	}
 }
 
+// OrderOption defines the ordering options for the ProvisionedHost queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// BySubnetIP orders the results by the subnet_ip field.
+func BySubnetIP(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubnetIP, opts...).ToFunc()
+}
+
+// ByAddonType orders the results by the addon_type field.
+func ByAddonType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAddonType, opts...).ToFunc()
+}
+
+// ByStatusField orders the results by Status field.
+func ByStatusField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newStatusStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisionedNetworkField orders the results by ProvisionedNetwork field.
+func ByProvisionedNetworkField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisionedNetworkStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByHostField orders the results by Host field.
+func ByHostField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newHostStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByEndStepPlanField orders the results by EndStepPlan field.
+func ByEndStepPlanField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEndStepPlanStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByBuildField orders the results by Build field.
+func ByBuildField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBuildStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisioningStepsCount orders the results by ProvisioningSteps count.
+func ByProvisioningStepsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProvisioningStepsStep(), opts...)
+	}
+}
+
+// ByProvisioningSteps orders the results by ProvisioningSteps terms.
+func ByProvisioningSteps(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisioningStepsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByProvisioningScheduledStepsCount orders the results by ProvisioningScheduledSteps count.
+func ByProvisioningScheduledStepsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProvisioningScheduledStepsStep(), opts...)
+	}
+}
+
+// ByProvisioningScheduledSteps orders the results by ProvisioningScheduledSteps terms.
+func ByProvisioningScheduledSteps(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisioningScheduledStepsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByAgentStatusesCount orders the results by AgentStatuses count.
+func ByAgentStatusesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAgentStatusesStep(), opts...)
+	}
+}
+
+// ByAgentStatuses orders the results by AgentStatuses terms.
+func ByAgentStatuses(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAgentStatusesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByAgentTasksCount orders the results by AgentTasks count.
+func ByAgentTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAgentTasksStep(), opts...)
+	}
+}
+
+// ByAgentTasks orders the results by AgentTasks terms.
+func ByAgentTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAgentTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByPlanField orders the results by Plan field.
+func ByPlanField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPlanStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByGinFileMiddlewareField orders the results by GinFileMiddleware field.
+func ByGinFileMiddlewareField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newGinFileMiddlewareStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newStatusStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(StatusInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
+	)
+}
+func newProvisionedNetworkStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisionedNetworkInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, ProvisionedNetworkTable, ProvisionedNetworkColumn),
+	)
+}
+func newHostStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(HostInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, HostTable, HostColumn),
+	)
+}
+func newEndStepPlanStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EndStepPlanInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, EndStepPlanTable, EndStepPlanColumn),
+	)
+}
+func newBuildStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BuildInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, BuildTable, BuildColumn),
+	)
+}
+func newProvisioningStepsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisioningStepsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, ProvisioningStepsTable, ProvisioningStepsColumn),
+	)
+}
+func newProvisioningScheduledStepsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisioningScheduledStepsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, ProvisioningScheduledStepsTable, ProvisioningScheduledStepsColumn),
+	)
+}
+func newAgentStatusesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AgentStatusesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, AgentStatusesTable, AgentStatusesColumn),
+	)
+}
+func newAgentTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AgentTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, AgentTasksTable, AgentTasksColumn),
+	)
+}
+func newPlanStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PlanInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, PlanTable, PlanColumn),
+	)
+}
+func newGinFileMiddlewareStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(GinFileMiddlewareInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, GinFileMiddlewareTable, GinFileMiddlewareColumn),
+	)
+}
+
 // MarshalGQL implements graphql.Marshaler interface.
-func (at AddonType) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.Quote(at.String()))
+func (e AddonType) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(e.String()))
 }
 
 // UnmarshalGQL implements graphql.Unmarshaler interface.
-func (at *AddonType) UnmarshalGQL(val interface{}) error {
+func (e *AddonType) UnmarshalGQL(val interface{}) error {
 	str, ok := val.(string)
 	if !ok {
 		return fmt.Errorf("enum %T must be a string", val)
 	}
-	*at = AddonType(str)
-	if err := AddonTypeValidator(*at); err != nil {
+	*e = AddonType(str)
+	if err := AddonTypeValidator(*e); err != nil {
 		return fmt.Errorf("%s is not a valid AddonType", str)
 	}
 	return nil

@@ -23,9 +23,9 @@ type CompetitionCreate struct {
 	hooks    []Hook
 }
 
-// SetHclID sets the "hcl_id" field.
-func (cc *CompetitionCreate) SetHclID(s string) *CompetitionCreate {
-	cc.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (cc *CompetitionCreate) SetHCLID(s string) *CompetitionCreate {
+	cc.mutation.SetHCLID(s)
 	return cc
 }
 
@@ -145,50 +145,8 @@ func (cc *CompetitionCreate) Mutation() *CompetitionMutation {
 
 // Save creates the Competition in the database.
 func (cc *CompetitionCreate) Save(ctx context.Context) (*Competition, error) {
-	var (
-		err  error
-		node *Competition
-	)
 	cc.defaults()
-	if len(cc.hooks) == 0 {
-		if err = cc.check(); err != nil {
-			return nil, err
-		}
-		node, err = cc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*CompetitionMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = cc.check(); err != nil {
-				return nil, err
-			}
-			cc.mutation = mutation
-			if node, err = cc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(cc.hooks) - 1; i >= 0; i-- {
-			if cc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = cc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, cc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Competition)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from CompetitionMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, cc.sqlSave, cc.mutation, cc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -223,7 +181,7 @@ func (cc *CompetitionCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (cc *CompetitionCreate) check() error {
-	if _, ok := cc.mutation.HclID(); !ok {
+	if _, ok := cc.mutation.HCLID(); !ok {
 		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Competition.hcl_id"`)}
 	}
 	if _, ok := cc.mutation.RootPassword(); !ok {
@@ -239,6 +197,9 @@ func (cc *CompetitionCreate) check() error {
 }
 
 func (cc *CompetitionCreate) sqlSave(ctx context.Context) (*Competition, error) {
+	if err := cc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := cc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, cc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -253,70 +214,42 @@ func (cc *CompetitionCreate) sqlSave(ctx context.Context) (*Competition, error) 
 			return nil, err
 		}
 	}
+	cc.mutation.id = &_node.ID
+	cc.mutation.done = true
 	return _node, nil
 }
 
 func (cc *CompetitionCreate) createSpec() (*Competition, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Competition{config: cc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: competition.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: competition.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(competition.Table, sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID))
 	)
 	if id, ok := cc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := cc.mutation.HclID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: competition.FieldHclID,
-		})
-		_node.HclID = value
+	if value, ok := cc.mutation.HCLID(); ok {
+		_spec.SetField(competition.FieldHCLID, field.TypeString, value)
+		_node.HCLID = value
 	}
 	if value, ok := cc.mutation.RootPassword(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: competition.FieldRootPassword,
-		})
+		_spec.SetField(competition.FieldRootPassword, field.TypeString, value)
 		_node.RootPassword = value
 	}
 	if value, ok := cc.mutation.StartTime(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: competition.FieldStartTime,
-		})
+		_spec.SetField(competition.FieldStartTime, field.TypeInt64, value)
 		_node.StartTime = value
 	}
 	if value, ok := cc.mutation.StopTime(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: competition.FieldStopTime,
-		})
+		_spec.SetField(competition.FieldStopTime, field.TypeInt64, value)
 		_node.StopTime = value
 	}
 	if value, ok := cc.mutation.Config(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: competition.FieldConfig,
-		})
+		_spec.SetField(competition.FieldConfig, field.TypeJSON, value)
 		_node.Config = value
 	}
 	if value, ok := cc.mutation.Tags(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: competition.FieldTags,
-		})
+		_spec.SetField(competition.FieldTags, field.TypeJSON, value)
 		_node.Tags = value
 	}
 	if nodes := cc.mutation.DNSIDs(); len(nodes) > 0 {
@@ -327,10 +260,7 @@ func (cc *CompetitionCreate) createSpec() (*Competition, *sqlgraph.CreateSpec) {
 			Columns: competition.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dns.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dns.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -346,10 +276,7 @@ func (cc *CompetitionCreate) createSpec() (*Competition, *sqlgraph.CreateSpec) {
 			Columns: []string{competition.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -366,10 +293,7 @@ func (cc *CompetitionCreate) createSpec() (*Competition, *sqlgraph.CreateSpec) {
 			Columns: []string{competition.BuildsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -383,11 +307,15 @@ func (cc *CompetitionCreate) createSpec() (*Competition, *sqlgraph.CreateSpec) {
 // CompetitionCreateBulk is the builder for creating many Competition entities in bulk.
 type CompetitionCreateBulk struct {
 	config
+	err      error
 	builders []*CompetitionCreate
 }
 
 // Save creates the Competition entities in the database.
 func (ccb *CompetitionCreateBulk) Save(ctx context.Context) ([]*Competition, error) {
+	if ccb.err != nil {
+		return nil, ccb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ccb.builders))
 	nodes := make([]*Competition, len(ccb.builders))
 	mutators := make([]Mutator, len(ccb.builders))
@@ -404,8 +332,8 @@ func (ccb *CompetitionCreateBulk) Save(ctx context.Context) ([]*Competition, err
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ccb.builders[i+1].mutation)
 				} else {

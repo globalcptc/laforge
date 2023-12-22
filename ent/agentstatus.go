@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/build"
@@ -51,6 +52,7 @@ type AgentStatus struct {
 	// The values are being populated by the AgentStatusQuery when eager-loading is set.
 	Edges AgentStatusEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// ProvisionedHost holds the value of the ProvisionedHost edge.
 	HCLProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
@@ -58,10 +60,11 @@ type AgentStatus struct {
 	HCLProvisionedNetwork *ProvisionedNetwork `json:"ProvisionedNetwork,omitempty"`
 	// Build holds the value of the Build edge.
 	HCLBuild *Build `json:"Build,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	agent_status_provisioned_host    *uuid.UUID
 	agent_status_provisioned_network *uuid.UUID
 	agent_status_build               *uuid.UUID
+	selectValues                     sql.SelectValues
 }
 
 // AgentStatusEdges holds the relations/edges for other nodes in the graph.
@@ -75,6 +78,8 @@ type AgentStatusEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
+	// totalCount holds the count of the edges above.
+	totalCount [3]map[string]int
 }
 
 // ProvisionedHostOrErr returns the ProvisionedHost value or an error if the edge
@@ -82,8 +87,7 @@ type AgentStatusEdges struct {
 func (e AgentStatusEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[0] {
 		if e.ProvisionedHost == nil {
-			// The edge ProvisionedHost was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
 		return e.ProvisionedHost, nil
@@ -96,8 +100,7 @@ func (e AgentStatusEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 func (e AgentStatusEdges) ProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
 	if e.loadedTypes[1] {
 		if e.ProvisionedNetwork == nil {
-			// The edge ProvisionedNetwork was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisionednetwork.Label}
 		}
 		return e.ProvisionedNetwork, nil
@@ -110,8 +113,7 @@ func (e AgentStatusEdges) ProvisionedNetworkOrErr() (*ProvisionedNetwork, error)
 func (e AgentStatusEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[2] {
 		if e.Build == nil {
-			// The edge Build was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
 		return e.Build, nil
@@ -120,8 +122,8 @@ func (e AgentStatusEdges) BuildOrErr() (*Build, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*AgentStatus) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*AgentStatus) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case agentstatus.FieldLoad1, agentstatus.FieldLoad5, agentstatus.FieldLoad15:
@@ -139,7 +141,7 @@ func (*AgentStatus) scanValues(columns []string) ([]interface{}, error) {
 		case agentstatus.ForeignKeys[2]: // agent_status_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type AgentStatus", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -147,7 +149,7 @@ func (*AgentStatus) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the AgentStatus fields.
-func (as *AgentStatus) assignValues(columns []string, values []interface{}) error {
+func (as *AgentStatus) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -264,41 +266,49 @@ func (as *AgentStatus) assignValues(columns []string, values []interface{}) erro
 				as.agent_status_build = new(uuid.UUID)
 				*as.agent_status_build = *value.S.(*uuid.UUID)
 			}
+		default:
+			as.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the AgentStatus.
+// This includes values selected through modifiers, order, etc.
+func (as *AgentStatus) Value(name string) (ent.Value, error) {
+	return as.selectValues.Get(name)
+}
+
 // QueryProvisionedHost queries the "ProvisionedHost" edge of the AgentStatus entity.
 func (as *AgentStatus) QueryProvisionedHost() *ProvisionedHostQuery {
-	return (&AgentStatusClient{config: as.config}).QueryProvisionedHost(as)
+	return NewAgentStatusClient(as.config).QueryProvisionedHost(as)
 }
 
 // QueryProvisionedNetwork queries the "ProvisionedNetwork" edge of the AgentStatus entity.
 func (as *AgentStatus) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
-	return (&AgentStatusClient{config: as.config}).QueryProvisionedNetwork(as)
+	return NewAgentStatusClient(as.config).QueryProvisionedNetwork(as)
 }
 
 // QueryBuild queries the "Build" edge of the AgentStatus entity.
 func (as *AgentStatus) QueryBuild() *BuildQuery {
-	return (&AgentStatusClient{config: as.config}).QueryBuild(as)
+	return NewAgentStatusClient(as.config).QueryBuild(as)
 }
 
 // Update returns a builder for updating this AgentStatus.
 // Note that you need to call AgentStatus.Unwrap() before calling this method if this AgentStatus
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (as *AgentStatus) Update() *AgentStatusUpdateOne {
-	return (&AgentStatusClient{config: as.config}).UpdateOne(as)
+	return NewAgentStatusClient(as.config).UpdateOne(as)
 }
 
 // Unwrap unwraps the AgentStatus entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (as *AgentStatus) Unwrap() *AgentStatus {
-	tx, ok := as.config.driver.(*txDriver)
+	_tx, ok := as.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: AgentStatus is not a transactional entity")
 	}
-	as.config.driver = tx.drv
+	as.config.driver = _tx.drv
 	return as
 }
 
@@ -306,34 +316,47 @@ func (as *AgentStatus) Unwrap() *AgentStatus {
 func (as *AgentStatus) String() string {
 	var builder strings.Builder
 	builder.WriteString("AgentStatus(")
-	builder.WriteString(fmt.Sprintf("id=%v", as.ID))
-	builder.WriteString(", ClientID=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", as.ID))
+	builder.WriteString("ClientID=")
 	builder.WriteString(as.ClientID)
-	builder.WriteString(", Hostname=")
+	builder.WriteString(", ")
+	builder.WriteString("Hostname=")
 	builder.WriteString(as.Hostname)
-	builder.WriteString(", UpTime=")
+	builder.WriteString(", ")
+	builder.WriteString("UpTime=")
 	builder.WriteString(fmt.Sprintf("%v", as.UpTime))
-	builder.WriteString(", BootTime=")
+	builder.WriteString(", ")
+	builder.WriteString("BootTime=")
 	builder.WriteString(fmt.Sprintf("%v", as.BootTime))
-	builder.WriteString(", NumProcs=")
+	builder.WriteString(", ")
+	builder.WriteString("NumProcs=")
 	builder.WriteString(fmt.Sprintf("%v", as.NumProcs))
-	builder.WriteString(", Os=")
+	builder.WriteString(", ")
+	builder.WriteString("Os=")
 	builder.WriteString(as.Os)
-	builder.WriteString(", HostID=")
+	builder.WriteString(", ")
+	builder.WriteString("HostID=")
 	builder.WriteString(as.HostID)
-	builder.WriteString(", Load1=")
+	builder.WriteString(", ")
+	builder.WriteString("Load1=")
 	builder.WriteString(fmt.Sprintf("%v", as.Load1))
-	builder.WriteString(", Load5=")
+	builder.WriteString(", ")
+	builder.WriteString("Load5=")
 	builder.WriteString(fmt.Sprintf("%v", as.Load5))
-	builder.WriteString(", Load15=")
+	builder.WriteString(", ")
+	builder.WriteString("Load15=")
 	builder.WriteString(fmt.Sprintf("%v", as.Load15))
-	builder.WriteString(", TotalMem=")
+	builder.WriteString(", ")
+	builder.WriteString("TotalMem=")
 	builder.WriteString(fmt.Sprintf("%v", as.TotalMem))
-	builder.WriteString(", FreeMem=")
+	builder.WriteString(", ")
+	builder.WriteString("FreeMem=")
 	builder.WriteString(fmt.Sprintf("%v", as.FreeMem))
-	builder.WriteString(", UsedMem=")
+	builder.WriteString(", ")
+	builder.WriteString("UsedMem=")
 	builder.WriteString(fmt.Sprintf("%v", as.UsedMem))
-	builder.WriteString(", Timestamp=")
+	builder.WriteString(", ")
+	builder.WriteString("Timestamp=")
 	builder.WriteString(fmt.Sprintf("%v", as.Timestamp))
 	builder.WriteByte(')')
 	return builder.String()
@@ -341,9 +364,3 @@ func (as *AgentStatus) String() string {
 
 // AgentStatusSlice is a parsable slice of AgentStatus.
 type AgentStatusSlice []*AgentStatus
-
-func (as AgentStatusSlice) config(cfg config) {
-	for _i := range as {
-		as[_i].config = cfg
-	}
-}

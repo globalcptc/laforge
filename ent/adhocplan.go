@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agenttask"
@@ -23,6 +24,7 @@ type AdhocPlan struct {
 	// The values are being populated by the AdhocPlanQuery when eager-loading is set.
 	Edges AdhocPlanEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// PrevAdhocPlans holds the value of the PrevAdhocPlans edge.
 	HCLPrevAdhocPlans []*AdhocPlan `json:"PrevAdhocPlans,omitempty"`
@@ -34,9 +36,10 @@ type AdhocPlan struct {
 	HCLStatus *Status `json:"Status,omitempty"`
 	// AgentTask holds the value of the AgentTask edge.
 	HCLAgentTask *AgentTask `json:"AgentTask,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	adhoc_plan_build      *uuid.UUID
 	adhoc_plan_agent_task *uuid.UUID
+	selectValues          sql.SelectValues
 }
 
 // AdhocPlanEdges holds the relations/edges for other nodes in the graph.
@@ -54,6 +57,11 @@ type AdhocPlanEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [5]bool
+	// totalCount holds the count of the edges above.
+	totalCount [5]map[string]int
+
+	namedPrevAdhocPlans map[string][]*AdhocPlan
+	namedNextAdhocPlans map[string][]*AdhocPlan
 }
 
 // PrevAdhocPlansOrErr returns the PrevAdhocPlans value or an error if the edge
@@ -79,8 +87,7 @@ func (e AdhocPlanEdges) NextAdhocPlansOrErr() ([]*AdhocPlan, error) {
 func (e AdhocPlanEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[2] {
 		if e.Build == nil {
-			// The edge Build was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
 		return e.Build, nil
@@ -93,8 +100,7 @@ func (e AdhocPlanEdges) BuildOrErr() (*Build, error) {
 func (e AdhocPlanEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[3] {
 		if e.Status == nil {
-			// The edge Status was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
 		return e.Status, nil
@@ -107,8 +113,7 @@ func (e AdhocPlanEdges) StatusOrErr() (*Status, error) {
 func (e AdhocPlanEdges) AgentTaskOrErr() (*AgentTask, error) {
 	if e.loadedTypes[4] {
 		if e.AgentTask == nil {
-			// The edge AgentTask was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: agenttask.Label}
 		}
 		return e.AgentTask, nil
@@ -117,8 +122,8 @@ func (e AdhocPlanEdges) AgentTaskOrErr() (*AgentTask, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*AdhocPlan) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*AdhocPlan) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case adhocplan.FieldID:
@@ -128,7 +133,7 @@ func (*AdhocPlan) scanValues(columns []string) ([]interface{}, error) {
 		case adhocplan.ForeignKeys[1]: // adhoc_plan_agent_task
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type AdhocPlan", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -136,7 +141,7 @@ func (*AdhocPlan) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the AdhocPlan fields.
-func (ap *AdhocPlan) assignValues(columns []string, values []interface{}) error {
+func (ap *AdhocPlan) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -162,51 +167,59 @@ func (ap *AdhocPlan) assignValues(columns []string, values []interface{}) error 
 				ap.adhoc_plan_agent_task = new(uuid.UUID)
 				*ap.adhoc_plan_agent_task = *value.S.(*uuid.UUID)
 			}
+		default:
+			ap.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the AdhocPlan.
+// This includes values selected through modifiers, order, etc.
+func (ap *AdhocPlan) Value(name string) (ent.Value, error) {
+	return ap.selectValues.Get(name)
+}
+
 // QueryPrevAdhocPlans queries the "PrevAdhocPlans" edge of the AdhocPlan entity.
 func (ap *AdhocPlan) QueryPrevAdhocPlans() *AdhocPlanQuery {
-	return (&AdhocPlanClient{config: ap.config}).QueryPrevAdhocPlans(ap)
+	return NewAdhocPlanClient(ap.config).QueryPrevAdhocPlans(ap)
 }
 
 // QueryNextAdhocPlans queries the "NextAdhocPlans" edge of the AdhocPlan entity.
 func (ap *AdhocPlan) QueryNextAdhocPlans() *AdhocPlanQuery {
-	return (&AdhocPlanClient{config: ap.config}).QueryNextAdhocPlans(ap)
+	return NewAdhocPlanClient(ap.config).QueryNextAdhocPlans(ap)
 }
 
 // QueryBuild queries the "Build" edge of the AdhocPlan entity.
 func (ap *AdhocPlan) QueryBuild() *BuildQuery {
-	return (&AdhocPlanClient{config: ap.config}).QueryBuild(ap)
+	return NewAdhocPlanClient(ap.config).QueryBuild(ap)
 }
 
 // QueryStatus queries the "Status" edge of the AdhocPlan entity.
 func (ap *AdhocPlan) QueryStatus() *StatusQuery {
-	return (&AdhocPlanClient{config: ap.config}).QueryStatus(ap)
+	return NewAdhocPlanClient(ap.config).QueryStatus(ap)
 }
 
 // QueryAgentTask queries the "AgentTask" edge of the AdhocPlan entity.
 func (ap *AdhocPlan) QueryAgentTask() *AgentTaskQuery {
-	return (&AdhocPlanClient{config: ap.config}).QueryAgentTask(ap)
+	return NewAdhocPlanClient(ap.config).QueryAgentTask(ap)
 }
 
 // Update returns a builder for updating this AdhocPlan.
 // Note that you need to call AdhocPlan.Unwrap() before calling this method if this AdhocPlan
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (ap *AdhocPlan) Update() *AdhocPlanUpdateOne {
-	return (&AdhocPlanClient{config: ap.config}).UpdateOne(ap)
+	return NewAdhocPlanClient(ap.config).UpdateOne(ap)
 }
 
 // Unwrap unwraps the AdhocPlan entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (ap *AdhocPlan) Unwrap() *AdhocPlan {
-	tx, ok := ap.config.driver.(*txDriver)
+	_tx, ok := ap.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: AdhocPlan is not a transactional entity")
 	}
-	ap.config.driver = tx.drv
+	ap.config.driver = _tx.drv
 	return ap
 }
 
@@ -219,11 +232,53 @@ func (ap *AdhocPlan) String() string {
 	return builder.String()
 }
 
-// AdhocPlans is a parsable slice of AdhocPlan.
-type AdhocPlans []*AdhocPlan
+// NamedPrevAdhocPlans returns the PrevAdhocPlans named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (ap *AdhocPlan) NamedPrevAdhocPlans(name string) ([]*AdhocPlan, error) {
+	if ap.Edges.namedPrevAdhocPlans == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := ap.Edges.namedPrevAdhocPlans[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (ap AdhocPlans) config(cfg config) {
-	for _i := range ap {
-		ap[_i].config = cfg
+func (ap *AdhocPlan) appendNamedPrevAdhocPlans(name string, edges ...*AdhocPlan) {
+	if ap.Edges.namedPrevAdhocPlans == nil {
+		ap.Edges.namedPrevAdhocPlans = make(map[string][]*AdhocPlan)
+	}
+	if len(edges) == 0 {
+		ap.Edges.namedPrevAdhocPlans[name] = []*AdhocPlan{}
+	} else {
+		ap.Edges.namedPrevAdhocPlans[name] = append(ap.Edges.namedPrevAdhocPlans[name], edges...)
 	}
 }
+
+// NamedNextAdhocPlans returns the NextAdhocPlans named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (ap *AdhocPlan) NamedNextAdhocPlans(name string) ([]*AdhocPlan, error) {
+	if ap.Edges.namedNextAdhocPlans == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := ap.Edges.namedNextAdhocPlans[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (ap *AdhocPlan) appendNamedNextAdhocPlans(name string, edges ...*AdhocPlan) {
+	if ap.Edges.namedNextAdhocPlans == nil {
+		ap.Edges.namedNextAdhocPlans = make(map[string][]*AdhocPlan)
+	}
+	if len(edges) == 0 {
+		ap.Edges.namedNextAdhocPlans[name] = []*AdhocPlan{}
+	} else {
+		ap.Edges.namedNextAdhocPlans[name] = append(ap.Edges.namedNextAdhocPlans[name], edges...)
+	}
+}
+
+// AdhocPlans is a parsable slice of AdhocPlan.
+type AdhocPlans []*AdhocPlan

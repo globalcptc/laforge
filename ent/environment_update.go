@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/build"
@@ -48,9 +49,17 @@ func (eu *EnvironmentUpdate) Where(ps ...predicate.Environment) *EnvironmentUpda
 	return eu
 }
 
-// SetHclID sets the "hcl_id" field.
-func (eu *EnvironmentUpdate) SetHclID(s string) *EnvironmentUpdate {
-	eu.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (eu *EnvironmentUpdate) SetHCLID(s string) *EnvironmentUpdate {
+	eu.mutation.SetHCLID(s)
+	return eu
+}
+
+// SetNillableHCLID sets the "hcl_id" field if the given value is not nil.
+func (eu *EnvironmentUpdate) SetNillableHCLID(s *string) *EnvironmentUpdate {
+	if s != nil {
+		eu.SetHCLID(*s)
+	}
 	return eu
 }
 
@@ -60,9 +69,25 @@ func (eu *EnvironmentUpdate) SetCompetitionID(s string) *EnvironmentUpdate {
 	return eu
 }
 
+// SetNillableCompetitionID sets the "competition_id" field if the given value is not nil.
+func (eu *EnvironmentUpdate) SetNillableCompetitionID(s *string) *EnvironmentUpdate {
+	if s != nil {
+		eu.SetCompetitionID(*s)
+	}
+	return eu
+}
+
 // SetName sets the "name" field.
 func (eu *EnvironmentUpdate) SetName(s string) *EnvironmentUpdate {
 	eu.mutation.SetName(s)
+	return eu
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (eu *EnvironmentUpdate) SetNillableName(s *string) *EnvironmentUpdate {
+	if s != nil {
+		eu.SetName(*s)
+	}
 	return eu
 }
 
@@ -72,9 +97,25 @@ func (eu *EnvironmentUpdate) SetDescription(s string) *EnvironmentUpdate {
 	return eu
 }
 
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (eu *EnvironmentUpdate) SetNillableDescription(s *string) *EnvironmentUpdate {
+	if s != nil {
+		eu.SetDescription(*s)
+	}
+	return eu
+}
+
 // SetBuilder sets the "builder" field.
 func (eu *EnvironmentUpdate) SetBuilder(s string) *EnvironmentUpdate {
 	eu.mutation.SetBuilder(s)
+	return eu
+}
+
+// SetNillableBuilder sets the "builder" field if the given value is not nil.
+func (eu *EnvironmentUpdate) SetNillableBuilder(s *string) *EnvironmentUpdate {
+	if s != nil {
+		eu.SetBuilder(*s)
+	}
 	return eu
 }
 
@@ -82,6 +123,14 @@ func (eu *EnvironmentUpdate) SetBuilder(s string) *EnvironmentUpdate {
 func (eu *EnvironmentUpdate) SetTeamCount(i int) *EnvironmentUpdate {
 	eu.mutation.ResetTeamCount()
 	eu.mutation.SetTeamCount(i)
+	return eu
+}
+
+// SetNillableTeamCount sets the "team_count" field if the given value is not nil.
+func (eu *EnvironmentUpdate) SetNillableTeamCount(i *int) *EnvironmentUpdate {
+	if i != nil {
+		eu.SetTeamCount(*i)
+	}
 	return eu
 }
 
@@ -98,6 +147,14 @@ func (eu *EnvironmentUpdate) SetRevision(i int) *EnvironmentUpdate {
 	return eu
 }
 
+// SetNillableRevision sets the "revision" field if the given value is not nil.
+func (eu *EnvironmentUpdate) SetNillableRevision(i *int) *EnvironmentUpdate {
+	if i != nil {
+		eu.SetRevision(*i)
+	}
+	return eu
+}
+
 // AddRevision adds i to the "revision" field.
 func (eu *EnvironmentUpdate) AddRevision(i int) *EnvironmentUpdate {
 	eu.mutation.AddRevision(i)
@@ -110,9 +167,21 @@ func (eu *EnvironmentUpdate) SetAdminCidrs(s []string) *EnvironmentUpdate {
 	return eu
 }
 
+// AppendAdminCidrs appends s to the "admin_cidrs" field.
+func (eu *EnvironmentUpdate) AppendAdminCidrs(s []string) *EnvironmentUpdate {
+	eu.mutation.AppendAdminCidrs(s)
+	return eu
+}
+
 // SetExposedVdiPorts sets the "exposed_vdi_ports" field.
 func (eu *EnvironmentUpdate) SetExposedVdiPorts(s []string) *EnvironmentUpdate {
 	eu.mutation.SetExposedVdiPorts(s)
+	return eu
+}
+
+// AppendExposedVdiPorts appends s to the "exposed_vdi_ports" field.
+func (eu *EnvironmentUpdate) AppendExposedVdiPorts(s []string) *EnvironmentUpdate {
+	eu.mutation.AppendExposedVdiPorts(s)
 	return eu
 }
 
@@ -855,34 +924,7 @@ func (eu *EnvironmentUpdate) RemoveServerTasks(s ...*ServerTask) *EnvironmentUpd
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (eu *EnvironmentUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(eu.hooks) == 0 {
-		affected, err = eu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*EnvironmentMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			eu.mutation = mutation
-			affected, err = eu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(eu.hooks) - 1; i >= 0; i-- {
-			if eu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = eu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, eu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, eu.sqlSave, eu.mutation, eu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -908,16 +950,7 @@ func (eu *EnvironmentUpdate) ExecX(ctx context.Context) {
 }
 
 func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   environment.Table,
-			Columns: environment.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: environment.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(environment.Table, environment.Columns, sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID))
 	if ps := eu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -925,96 +958,54 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := eu.mutation.HclID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldHclID,
-		})
+	if value, ok := eu.mutation.HCLID(); ok {
+		_spec.SetField(environment.FieldHCLID, field.TypeString, value)
 	}
 	if value, ok := eu.mutation.CompetitionID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldCompetitionID,
-		})
+		_spec.SetField(environment.FieldCompetitionID, field.TypeString, value)
 	}
 	if value, ok := eu.mutation.Name(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldName,
-		})
+		_spec.SetField(environment.FieldName, field.TypeString, value)
 	}
 	if value, ok := eu.mutation.Description(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldDescription,
-		})
+		_spec.SetField(environment.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := eu.mutation.Builder(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldBuilder,
-		})
+		_spec.SetField(environment.FieldBuilder, field.TypeString, value)
 	}
 	if value, ok := eu.mutation.TeamCount(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: environment.FieldTeamCount,
-		})
+		_spec.SetField(environment.FieldTeamCount, field.TypeInt, value)
 	}
 	if value, ok := eu.mutation.AddedTeamCount(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: environment.FieldTeamCount,
-		})
+		_spec.AddField(environment.FieldTeamCount, field.TypeInt, value)
 	}
 	if value, ok := eu.mutation.Revision(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: environment.FieldRevision,
-		})
+		_spec.SetField(environment.FieldRevision, field.TypeInt, value)
 	}
 	if value, ok := eu.mutation.AddedRevision(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: environment.FieldRevision,
-		})
+		_spec.AddField(environment.FieldRevision, field.TypeInt, value)
 	}
 	if value, ok := eu.mutation.AdminCidrs(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldAdminCidrs,
+		_spec.SetField(environment.FieldAdminCidrs, field.TypeJSON, value)
+	}
+	if value, ok := eu.mutation.AppendedAdminCidrs(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, environment.FieldAdminCidrs, value)
 		})
 	}
 	if value, ok := eu.mutation.ExposedVdiPorts(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldExposedVdiPorts,
+		_spec.SetField(environment.FieldExposedVdiPorts, field.TypeJSON, value)
+	}
+	if value, ok := eu.mutation.AppendedExposedVdiPorts(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, environment.FieldExposedVdiPorts, value)
 		})
 	}
 	if value, ok := eu.mutation.Config(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldConfig,
-		})
+		_spec.SetField(environment.FieldConfig, field.TypeJSON, value)
 	}
 	if value, ok := eu.mutation.Tags(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldTags,
-		})
+		_spec.SetField(environment.FieldTags, field.TypeJSON, value)
 	}
 	if eu.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1024,10 +1015,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1040,10 +1028,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1059,10 +1044,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1078,10 +1060,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1094,10 +1073,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1113,10 +1089,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1132,10 +1105,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: competition.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1148,10 +1118,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: competition.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1167,10 +1134,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: competition.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1186,10 +1150,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: identity.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(identity.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1202,10 +1163,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: identity.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(identity.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1221,10 +1179,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: identity.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(identity.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1240,10 +1195,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: command.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(command.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1256,10 +1208,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: command.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(command.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1275,10 +1224,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: command.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(command.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1294,10 +1240,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1310,10 +1253,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1329,10 +1269,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1348,10 +1285,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedownload.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1364,10 +1298,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedownload.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1383,10 +1314,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedownload.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1402,10 +1330,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedelete.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedelete.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1418,10 +1343,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedelete.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedelete.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1437,10 +1359,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedelete.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedelete.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1456,10 +1375,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: fileextract.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1472,10 +1388,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: fileextract.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1491,10 +1404,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: fileextract.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1510,10 +1420,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1526,10 +1433,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1545,10 +1449,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1564,10 +1465,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: finding.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1580,10 +1478,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: finding.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1599,10 +1494,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: finding.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1618,10 +1510,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dnsrecord.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dnsrecord.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1634,10 +1523,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dnsrecord.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dnsrecord.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1653,10 +1539,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dnsrecord.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dnsrecord.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1672,10 +1555,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dns.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dns.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1688,10 +1568,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dns.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dns.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1707,10 +1584,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dns.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dns.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1726,10 +1600,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1742,10 +1613,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1761,10 +1629,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1780,10 +1645,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1796,10 +1658,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1815,10 +1674,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1834,10 +1690,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ansible.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ansible.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1850,10 +1703,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ansible.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ansible.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1869,10 +1719,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ansible.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ansible.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1888,10 +1735,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: scheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1904,10 +1748,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: scheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1923,10 +1764,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: scheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1942,10 +1780,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.BuildsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1958,10 +1793,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.BuildsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1977,10 +1809,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.BuildsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1996,10 +1825,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.RepositoriesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(repository.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -2012,10 +1838,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.RepositoriesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(repository.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -2031,10 +1854,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: environment.RepositoriesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(repository.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -2050,10 +1870,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -2066,10 +1883,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -2085,10 +1899,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{environment.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -2104,6 +1915,7 @@ func (eu *EnvironmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	eu.mutation.done = true
 	return n, nil
 }
 
@@ -2115,9 +1927,17 @@ type EnvironmentUpdateOne struct {
 	mutation *EnvironmentMutation
 }
 
-// SetHclID sets the "hcl_id" field.
-func (euo *EnvironmentUpdateOne) SetHclID(s string) *EnvironmentUpdateOne {
-	euo.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (euo *EnvironmentUpdateOne) SetHCLID(s string) *EnvironmentUpdateOne {
+	euo.mutation.SetHCLID(s)
+	return euo
+}
+
+// SetNillableHCLID sets the "hcl_id" field if the given value is not nil.
+func (euo *EnvironmentUpdateOne) SetNillableHCLID(s *string) *EnvironmentUpdateOne {
+	if s != nil {
+		euo.SetHCLID(*s)
+	}
 	return euo
 }
 
@@ -2127,9 +1947,25 @@ func (euo *EnvironmentUpdateOne) SetCompetitionID(s string) *EnvironmentUpdateOn
 	return euo
 }
 
+// SetNillableCompetitionID sets the "competition_id" field if the given value is not nil.
+func (euo *EnvironmentUpdateOne) SetNillableCompetitionID(s *string) *EnvironmentUpdateOne {
+	if s != nil {
+		euo.SetCompetitionID(*s)
+	}
+	return euo
+}
+
 // SetName sets the "name" field.
 func (euo *EnvironmentUpdateOne) SetName(s string) *EnvironmentUpdateOne {
 	euo.mutation.SetName(s)
+	return euo
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (euo *EnvironmentUpdateOne) SetNillableName(s *string) *EnvironmentUpdateOne {
+	if s != nil {
+		euo.SetName(*s)
+	}
 	return euo
 }
 
@@ -2139,9 +1975,25 @@ func (euo *EnvironmentUpdateOne) SetDescription(s string) *EnvironmentUpdateOne 
 	return euo
 }
 
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (euo *EnvironmentUpdateOne) SetNillableDescription(s *string) *EnvironmentUpdateOne {
+	if s != nil {
+		euo.SetDescription(*s)
+	}
+	return euo
+}
+
 // SetBuilder sets the "builder" field.
 func (euo *EnvironmentUpdateOne) SetBuilder(s string) *EnvironmentUpdateOne {
 	euo.mutation.SetBuilder(s)
+	return euo
+}
+
+// SetNillableBuilder sets the "builder" field if the given value is not nil.
+func (euo *EnvironmentUpdateOne) SetNillableBuilder(s *string) *EnvironmentUpdateOne {
+	if s != nil {
+		euo.SetBuilder(*s)
+	}
 	return euo
 }
 
@@ -2149,6 +2001,14 @@ func (euo *EnvironmentUpdateOne) SetBuilder(s string) *EnvironmentUpdateOne {
 func (euo *EnvironmentUpdateOne) SetTeamCount(i int) *EnvironmentUpdateOne {
 	euo.mutation.ResetTeamCount()
 	euo.mutation.SetTeamCount(i)
+	return euo
+}
+
+// SetNillableTeamCount sets the "team_count" field if the given value is not nil.
+func (euo *EnvironmentUpdateOne) SetNillableTeamCount(i *int) *EnvironmentUpdateOne {
+	if i != nil {
+		euo.SetTeamCount(*i)
+	}
 	return euo
 }
 
@@ -2165,6 +2025,14 @@ func (euo *EnvironmentUpdateOne) SetRevision(i int) *EnvironmentUpdateOne {
 	return euo
 }
 
+// SetNillableRevision sets the "revision" field if the given value is not nil.
+func (euo *EnvironmentUpdateOne) SetNillableRevision(i *int) *EnvironmentUpdateOne {
+	if i != nil {
+		euo.SetRevision(*i)
+	}
+	return euo
+}
+
 // AddRevision adds i to the "revision" field.
 func (euo *EnvironmentUpdateOne) AddRevision(i int) *EnvironmentUpdateOne {
 	euo.mutation.AddRevision(i)
@@ -2177,9 +2045,21 @@ func (euo *EnvironmentUpdateOne) SetAdminCidrs(s []string) *EnvironmentUpdateOne
 	return euo
 }
 
+// AppendAdminCidrs appends s to the "admin_cidrs" field.
+func (euo *EnvironmentUpdateOne) AppendAdminCidrs(s []string) *EnvironmentUpdateOne {
+	euo.mutation.AppendAdminCidrs(s)
+	return euo
+}
+
 // SetExposedVdiPorts sets the "exposed_vdi_ports" field.
 func (euo *EnvironmentUpdateOne) SetExposedVdiPorts(s []string) *EnvironmentUpdateOne {
 	euo.mutation.SetExposedVdiPorts(s)
+	return euo
+}
+
+// AppendExposedVdiPorts appends s to the "exposed_vdi_ports" field.
+func (euo *EnvironmentUpdateOne) AppendExposedVdiPorts(s []string) *EnvironmentUpdateOne {
+	euo.mutation.AppendExposedVdiPorts(s)
 	return euo
 }
 
@@ -2920,6 +2800,12 @@ func (euo *EnvironmentUpdateOne) RemoveServerTasks(s ...*ServerTask) *Environmen
 	return euo.RemoveServerTaskIDs(ids...)
 }
 
+// Where appends a list predicates to the EnvironmentUpdate builder.
+func (euo *EnvironmentUpdateOne) Where(ps ...predicate.Environment) *EnvironmentUpdateOne {
+	euo.mutation.Where(ps...)
+	return euo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (euo *EnvironmentUpdateOne) Select(field string, fields ...string) *EnvironmentUpdateOne {
@@ -2929,40 +2815,7 @@ func (euo *EnvironmentUpdateOne) Select(field string, fields ...string) *Environ
 
 // Save executes the query and returns the updated Environment entity.
 func (euo *EnvironmentUpdateOne) Save(ctx context.Context) (*Environment, error) {
-	var (
-		err  error
-		node *Environment
-	)
-	if len(euo.hooks) == 0 {
-		node, err = euo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*EnvironmentMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			euo.mutation = mutation
-			node, err = euo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(euo.hooks) - 1; i >= 0; i-- {
-			if euo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = euo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, euo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Environment)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from EnvironmentMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, euo.sqlSave, euo.mutation, euo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -2988,16 +2841,7 @@ func (euo *EnvironmentUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environment, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   environment.Table,
-			Columns: environment.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: environment.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(environment.Table, environment.Columns, sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID))
 	id, ok := euo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Environment.id" for update`)}
@@ -3022,96 +2866,54 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			}
 		}
 	}
-	if value, ok := euo.mutation.HclID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldHclID,
-		})
+	if value, ok := euo.mutation.HCLID(); ok {
+		_spec.SetField(environment.FieldHCLID, field.TypeString, value)
 	}
 	if value, ok := euo.mutation.CompetitionID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldCompetitionID,
-		})
+		_spec.SetField(environment.FieldCompetitionID, field.TypeString, value)
 	}
 	if value, ok := euo.mutation.Name(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldName,
-		})
+		_spec.SetField(environment.FieldName, field.TypeString, value)
 	}
 	if value, ok := euo.mutation.Description(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldDescription,
-		})
+		_spec.SetField(environment.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := euo.mutation.Builder(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: environment.FieldBuilder,
-		})
+		_spec.SetField(environment.FieldBuilder, field.TypeString, value)
 	}
 	if value, ok := euo.mutation.TeamCount(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: environment.FieldTeamCount,
-		})
+		_spec.SetField(environment.FieldTeamCount, field.TypeInt, value)
 	}
 	if value, ok := euo.mutation.AddedTeamCount(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: environment.FieldTeamCount,
-		})
+		_spec.AddField(environment.FieldTeamCount, field.TypeInt, value)
 	}
 	if value, ok := euo.mutation.Revision(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: environment.FieldRevision,
-		})
+		_spec.SetField(environment.FieldRevision, field.TypeInt, value)
 	}
 	if value, ok := euo.mutation.AddedRevision(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: environment.FieldRevision,
-		})
+		_spec.AddField(environment.FieldRevision, field.TypeInt, value)
 	}
 	if value, ok := euo.mutation.AdminCidrs(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldAdminCidrs,
+		_spec.SetField(environment.FieldAdminCidrs, field.TypeJSON, value)
+	}
+	if value, ok := euo.mutation.AppendedAdminCidrs(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, environment.FieldAdminCidrs, value)
 		})
 	}
 	if value, ok := euo.mutation.ExposedVdiPorts(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldExposedVdiPorts,
+		_spec.SetField(environment.FieldExposedVdiPorts, field.TypeJSON, value)
+	}
+	if value, ok := euo.mutation.AppendedExposedVdiPorts(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, environment.FieldExposedVdiPorts, value)
 		})
 	}
 	if value, ok := euo.mutation.Config(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldConfig,
-		})
+		_spec.SetField(environment.FieldConfig, field.TypeJSON, value)
 	}
 	if value, ok := euo.mutation.Tags(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: environment.FieldTags,
-		})
+		_spec.SetField(environment.FieldTags, field.TypeJSON, value)
 	}
 	if euo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -3121,10 +2923,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3137,10 +2936,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3156,10 +2952,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3175,10 +2968,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3191,10 +2981,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3210,10 +2997,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.HostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3229,10 +3013,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: competition.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3245,10 +3026,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: competition.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3264,10 +3042,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.CompetitionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: competition.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3283,10 +3058,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: identity.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(identity.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3299,10 +3071,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: identity.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(identity.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3318,10 +3087,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.IdentitiesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: identity.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(identity.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3337,10 +3103,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: command.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(command.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3353,10 +3116,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: command.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(command.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3372,10 +3132,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.CommandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: command.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(command.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3391,10 +3148,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3407,10 +3161,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3426,10 +3177,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.ScriptsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3445,10 +3193,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedownload.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3461,10 +3206,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedownload.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3480,10 +3222,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FileDownloadsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedownload.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3499,10 +3238,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedelete.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedelete.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3515,10 +3251,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedelete.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedelete.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3534,10 +3267,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FileDeletesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedelete.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedelete.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3553,10 +3283,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: fileextract.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3569,10 +3296,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: fileextract.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3588,10 +3312,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FileExtractsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: fileextract.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3607,10 +3328,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3623,10 +3341,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3642,10 +3357,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3661,10 +3373,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: finding.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3677,10 +3386,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: finding.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3696,10 +3402,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.FindingsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: finding.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3715,10 +3418,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dnsrecord.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dnsrecord.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3731,10 +3431,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dnsrecord.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dnsrecord.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3750,10 +3447,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.DNSRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dnsrecord.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dnsrecord.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3769,10 +3463,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dns.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dns.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3785,10 +3476,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dns.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dns.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3804,10 +3492,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.DNSPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dns.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dns.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3823,10 +3508,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3839,10 +3521,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3858,10 +3537,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.NetworksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: network.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3877,10 +3553,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3893,10 +3566,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3912,10 +3582,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.HostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3931,10 +3598,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ansible.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ansible.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -3947,10 +3611,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ansible.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ansible.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3966,10 +3627,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.AnsiblesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ansible.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ansible.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -3985,10 +3643,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: scheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -4001,10 +3656,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: scheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -4020,10 +3672,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.ScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: scheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -4039,10 +3688,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.BuildsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -4055,10 +3701,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.BuildsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -4074,10 +3717,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.BuildsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -4093,10 +3733,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.RepositoriesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(repository.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -4109,10 +3746,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.RepositoriesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(repository.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -4128,10 +3762,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: environment.RepositoriesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: repository.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(repository.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -4147,10 +3778,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -4163,10 +3791,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -4182,10 +3807,7 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 			Columns: []string{environment.ServerTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: servertask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -4204,5 +3826,6 @@ func (euo *EnvironmentUpdateOne) sqlSave(ctx context.Context) (_node *Environmen
 		}
 		return nil, err
 	}
+	euo.mutation.done = true
 	return _node, nil
 }

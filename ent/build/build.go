@@ -3,6 +3,8 @@
 package build
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -170,3 +172,243 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the Build queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByRevision orders the results by the revision field.
+func ByRevision(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRevision, opts...).ToFunc()
+}
+
+// ByEnvironmentRevision orders the results by the environment_revision field.
+func ByEnvironmentRevision(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEnvironmentRevision, opts...).ToFunc()
+}
+
+// ByCompletedPlan orders the results by the completed_plan field.
+func ByCompletedPlan(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCompletedPlan, opts...).ToFunc()
+}
+
+// ByStatusField orders the results by Status field.
+func ByStatusField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newStatusStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByEnvironmentField orders the results by Environment field.
+func ByEnvironmentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEnvironmentStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByCompetitionField orders the results by Competition field.
+func ByCompetitionField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCompetitionStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByLatestBuildCommitField orders the results by LatestBuildCommit field.
+func ByLatestBuildCommitField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newLatestBuildCommitStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByRepoCommitField orders the results by RepoCommit field.
+func ByRepoCommitField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRepoCommitStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisionedNetworksCount orders the results by ProvisionedNetworks count.
+func ByProvisionedNetworksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProvisionedNetworksStep(), opts...)
+	}
+}
+
+// ByProvisionedNetworks orders the results by ProvisionedNetworks terms.
+func ByProvisionedNetworks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisionedNetworksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByTeamsCount orders the results by Teams count.
+func ByTeamsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTeamsStep(), opts...)
+	}
+}
+
+// ByTeams orders the results by Teams terms.
+func ByTeams(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTeamsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByPlansCount orders the results by Plans count.
+func ByPlansCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPlansStep(), opts...)
+	}
+}
+
+// ByPlans orders the results by Plans terms.
+func ByPlans(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPlansStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByBuildCommitsCount orders the results by BuildCommits count.
+func ByBuildCommitsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newBuildCommitsStep(), opts...)
+	}
+}
+
+// ByBuildCommits orders the results by BuildCommits terms.
+func ByBuildCommits(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBuildCommitsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByAdhocPlansCount orders the results by AdhocPlans count.
+func ByAdhocPlansCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAdhocPlansStep(), opts...)
+	}
+}
+
+// ByAdhocPlans orders the results by AdhocPlans terms.
+func ByAdhocPlans(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAdhocPlansStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByAgentStatusesCount orders the results by AgentStatuses count.
+func ByAgentStatusesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAgentStatusesStep(), opts...)
+	}
+}
+
+// ByAgentStatuses orders the results by AgentStatuses terms.
+func ByAgentStatuses(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAgentStatusesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByServerTasksCount orders the results by ServerTasks count.
+func ByServerTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newServerTasksStep(), opts...)
+	}
+}
+
+// ByServerTasks orders the results by ServerTasks terms.
+func ByServerTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newServerTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newStatusStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(StatusInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, StatusTable, StatusColumn),
+	)
+}
+func newEnvironmentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EnvironmentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, EnvironmentTable, EnvironmentColumn),
+	)
+}
+func newCompetitionStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CompetitionInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, CompetitionTable, CompetitionColumn),
+	)
+}
+func newLatestBuildCommitStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(LatestBuildCommitInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, LatestBuildCommitTable, LatestBuildCommitColumn),
+	)
+}
+func newRepoCommitStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RepoCommitInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, RepoCommitTable, RepoCommitColumn),
+	)
+}
+func newProvisionedNetworksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisionedNetworksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, ProvisionedNetworksTable, ProvisionedNetworksColumn),
+	)
+}
+func newTeamsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TeamsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, TeamsTable, TeamsColumn),
+	)
+}
+func newPlansStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PlansInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, PlansTable, PlansColumn),
+	)
+}
+func newBuildCommitsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BuildCommitsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, BuildCommitsTable, BuildCommitsColumn),
+	)
+}
+func newAdhocPlansStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AdhocPlansInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, AdhocPlansTable, AdhocPlansColumn),
+	)
+}
+func newAgentStatusesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AgentStatusesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, AgentStatusesTable, AgentStatusesColumn),
+	)
+}
+func newServerTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ServerTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, ServerTasksTable, ServerTasksColumn),
+	)
+}

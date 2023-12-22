@@ -63,15 +63,15 @@ type PlanCounts struct {
 
 type ServerConfig struct {
 	ConfigFile string                 `json:"ConfigFile"`
-	Debug      *bool                  `json:"Debug"`
+	Debug      *bool                  `json:"Debug,omitempty"`
 	LogFolder  string                 `json:"LogFolder"`
 	GinMode    string                 `json:"GinMode"`
 	Builders   map[string]interface{} `json:"Builders"`
-	Database   *DatabaseConfig        `json:"Database"`
-	Auth       *AuthConfig            `json:"Auth"`
-	UI         *UIConfig              `json:"UI"`
-	Agent      *AgentConfig           `json:"Agent"`
-	Graphql    *GraphqlConfig         `json:"Graphql"`
+	Database   *DatabaseConfig        `json:"Database,omitempty"`
+	Auth       *AuthConfig            `json:"Auth,omitempty"`
+	UI         *UIConfig              `json:"UI,omitempty"`
+	Agent      *AgentConfig           `json:"Agent,omitempty"`
+	Graphql    *GraphqlConfig         `json:"Graphql,omitempty"`
 }
 
 type StatusBatch struct {

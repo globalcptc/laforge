@@ -27,11 +27,9 @@ import (
 // StatusQuery is the builder for querying Status entities.
 type StatusQuery struct {
 	config
-	limit                         *int
-	offset                        *int
-	unique                        *bool
-	order                         []OrderFunc
-	fields                        []string
+	ctx                           *QueryContext
+	order                         []status.OrderOption
+	inters                        []Interceptor
 	predicates                    []predicate.Status
 	withBuild                     *BuildQuery
 	withProvisionedNetwork        *ProvisionedNetworkQuery
@@ -43,6 +41,8 @@ type StatusQuery struct {
 	withAdhocPlan                 *AdhocPlanQuery
 	withProvisioningScheduledStep *ProvisioningScheduledStepQuery
 	withFKs                       bool
+	modifiers                     []func(*sql.Selector)
+	loadTotal                     []func(context.Context, []*Status) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -54,34 +54,34 @@ func (sq *StatusQuery) Where(ps ...predicate.Status) *StatusQuery {
 	return sq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (sq *StatusQuery) Limit(limit int) *StatusQuery {
-	sq.limit = &limit
+	sq.ctx.Limit = &limit
 	return sq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (sq *StatusQuery) Offset(offset int) *StatusQuery {
-	sq.offset = &offset
+	sq.ctx.Offset = &offset
 	return sq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (sq *StatusQuery) Unique(unique bool) *StatusQuery {
-	sq.unique = &unique
+	sq.ctx.Unique = &unique
 	return sq
 }
 
-// Order adds an order step to the query.
-func (sq *StatusQuery) Order(o ...OrderFunc) *StatusQuery {
+// Order specifies how the records should be ordered.
+func (sq *StatusQuery) Order(o ...status.OrderOption) *StatusQuery {
 	sq.order = append(sq.order, o...)
 	return sq
 }
 
 // QueryBuild chains the current query on the "Build" edge.
 func (sq *StatusQuery) QueryBuild() *BuildQuery {
-	query := &BuildQuery{config: sq.config}
+	query := (&BuildClient{config: sq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -103,7 +103,7 @@ func (sq *StatusQuery) QueryBuild() *BuildQuery {
 
 // QueryProvisionedNetwork chains the current query on the "ProvisionedNetwork" edge.
 func (sq *StatusQuery) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
-	query := &ProvisionedNetworkQuery{config: sq.config}
+	query := (&ProvisionedNetworkClient{config: sq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -125,7 +125,7 @@ func (sq *StatusQuery) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
 
 // QueryProvisionedHost chains the current query on the "ProvisionedHost" edge.
 func (sq *StatusQuery) QueryProvisionedHost() *ProvisionedHostQuery {
-	query := &ProvisionedHostQuery{config: sq.config}
+	query := (&ProvisionedHostClient{config: sq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -147,7 +147,7 @@ func (sq *StatusQuery) QueryProvisionedHost() *ProvisionedHostQuery {
 
 // QueryProvisioningStep chains the current query on the "ProvisioningStep" edge.
 func (sq *StatusQuery) QueryProvisioningStep() *ProvisioningStepQuery {
-	query := &ProvisioningStepQuery{config: sq.config}
+	query := (&ProvisioningStepClient{config: sq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -169,7 +169,7 @@ func (sq *StatusQuery) QueryProvisioningStep() *ProvisioningStepQuery {
 
 // QueryTeam chains the current query on the "Team" edge.
 func (sq *StatusQuery) QueryTeam() *TeamQuery {
-	query := &TeamQuery{config: sq.config}
+	query := (&TeamClient{config: sq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -191,7 +191,7 @@ func (sq *StatusQuery) QueryTeam() *TeamQuery {
 
 // QueryPlan chains the current query on the "Plan" edge.
 func (sq *StatusQuery) QueryPlan() *PlanQuery {
-	query := &PlanQuery{config: sq.config}
+	query := (&PlanClient{config: sq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -213,7 +213,7 @@ func (sq *StatusQuery) QueryPlan() *PlanQuery {
 
 // QueryServerTask chains the current query on the "ServerTask" edge.
 func (sq *StatusQuery) QueryServerTask() *ServerTaskQuery {
-	query := &ServerTaskQuery{config: sq.config}
+	query := (&ServerTaskClient{config: sq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -235,7 +235,7 @@ func (sq *StatusQuery) QueryServerTask() *ServerTaskQuery {
 
 // QueryAdhocPlan chains the current query on the "AdhocPlan" edge.
 func (sq *StatusQuery) QueryAdhocPlan() *AdhocPlanQuery {
-	query := &AdhocPlanQuery{config: sq.config}
+	query := (&AdhocPlanClient{config: sq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -257,7 +257,7 @@ func (sq *StatusQuery) QueryAdhocPlan() *AdhocPlanQuery {
 
 // QueryProvisioningScheduledStep chains the current query on the "ProvisioningScheduledStep" edge.
 func (sq *StatusQuery) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
-	query := &ProvisioningScheduledStepQuery{config: sq.config}
+	query := (&ProvisioningScheduledStepClient{config: sq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := sq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -280,7 +280,7 @@ func (sq *StatusQuery) QueryProvisioningScheduledStep() *ProvisioningScheduledSt
 // First returns the first Status entity from the query.
 // Returns a *NotFoundError when no Status was found.
 func (sq *StatusQuery) First(ctx context.Context) (*Status, error) {
-	nodes, err := sq.Limit(1).All(ctx)
+	nodes, err := sq.Limit(1).All(setContextOp(ctx, sq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +303,7 @@ func (sq *StatusQuery) FirstX(ctx context.Context) *Status {
 // Returns a *NotFoundError when no Status ID was found.
 func (sq *StatusQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = sq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = sq.Limit(1).IDs(setContextOp(ctx, sq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -326,7 +326,7 @@ func (sq *StatusQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Status entity is found.
 // Returns a *NotFoundError when no Status entities are found.
 func (sq *StatusQuery) Only(ctx context.Context) (*Status, error) {
-	nodes, err := sq.Limit(2).All(ctx)
+	nodes, err := sq.Limit(2).All(setContextOp(ctx, sq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +354,7 @@ func (sq *StatusQuery) OnlyX(ctx context.Context) *Status {
 // Returns a *NotFoundError when no entities are found.
 func (sq *StatusQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = sq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = sq.Limit(2).IDs(setContextOp(ctx, sq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -379,10 +379,12 @@ func (sq *StatusQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of StatusSlice.
 func (sq *StatusQuery) All(ctx context.Context) ([]*Status, error) {
+	ctx = setContextOp(ctx, sq.ctx, "All")
 	if err := sq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return sq.sqlAll(ctx)
+	qr := querierAll[[]*Status, *StatusQuery]()
+	return withInterceptors[[]*Status](ctx, sq, qr, sq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -395,9 +397,12 @@ func (sq *StatusQuery) AllX(ctx context.Context) []*Status {
 }
 
 // IDs executes the query and returns a list of Status IDs.
-func (sq *StatusQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := sq.Select(status.FieldID).Scan(ctx, &ids); err != nil {
+func (sq *StatusQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if sq.ctx.Unique == nil && sq.path != nil {
+		sq.Unique(true)
+	}
+	ctx = setContextOp(ctx, sq.ctx, "IDs")
+	if err = sq.Select(status.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -414,10 +419,11 @@ func (sq *StatusQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (sq *StatusQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, sq.ctx, "Count")
 	if err := sq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return sq.sqlCount(ctx)
+	return withInterceptors[int](ctx, sq, querierCount[*StatusQuery](), sq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -431,10 +437,15 @@ func (sq *StatusQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (sq *StatusQuery) Exist(ctx context.Context) (bool, error) {
-	if err := sq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, sq.ctx, "Exist")
+	switch _, err := sq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return sq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -454,9 +465,9 @@ func (sq *StatusQuery) Clone() *StatusQuery {
 	}
 	return &StatusQuery{
 		config:                        sq.config,
-		limit:                         sq.limit,
-		offset:                        sq.offset,
-		order:                         append([]OrderFunc{}, sq.order...),
+		ctx:                           sq.ctx.Clone(),
+		order:                         append([]status.OrderOption{}, sq.order...),
+		inters:                        append([]Interceptor{}, sq.inters...),
 		predicates:                    append([]predicate.Status{}, sq.predicates...),
 		withBuild:                     sq.withBuild.Clone(),
 		withProvisionedNetwork:        sq.withProvisionedNetwork.Clone(),
@@ -468,16 +479,15 @@ func (sq *StatusQuery) Clone() *StatusQuery {
 		withAdhocPlan:                 sq.withAdhocPlan.Clone(),
 		withProvisioningScheduledStep: sq.withProvisioningScheduledStep.Clone(),
 		// clone intermediate query.
-		sql:    sq.sql.Clone(),
-		path:   sq.path,
-		unique: sq.unique,
+		sql:  sq.sql.Clone(),
+		path: sq.path,
 	}
 }
 
 // WithBuild tells the query-builder to eager-load the nodes that are connected to
 // the "Build" edge. The optional arguments are used to configure the query builder of the edge.
 func (sq *StatusQuery) WithBuild(opts ...func(*BuildQuery)) *StatusQuery {
-	query := &BuildQuery{config: sq.config}
+	query := (&BuildClient{config: sq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -488,7 +498,7 @@ func (sq *StatusQuery) WithBuild(opts ...func(*BuildQuery)) *StatusQuery {
 // WithProvisionedNetwork tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisionedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
 func (sq *StatusQuery) WithProvisionedNetwork(opts ...func(*ProvisionedNetworkQuery)) *StatusQuery {
-	query := &ProvisionedNetworkQuery{config: sq.config}
+	query := (&ProvisionedNetworkClient{config: sq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -499,7 +509,7 @@ func (sq *StatusQuery) WithProvisionedNetwork(opts ...func(*ProvisionedNetworkQu
 // WithProvisionedHost tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
 func (sq *StatusQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuery)) *StatusQuery {
-	query := &ProvisionedHostQuery{config: sq.config}
+	query := (&ProvisionedHostClient{config: sq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -510,7 +520,7 @@ func (sq *StatusQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuery)) 
 // WithProvisioningStep tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
 func (sq *StatusQuery) WithProvisioningStep(opts ...func(*ProvisioningStepQuery)) *StatusQuery {
-	query := &ProvisioningStepQuery{config: sq.config}
+	query := (&ProvisioningStepClient{config: sq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -521,7 +531,7 @@ func (sq *StatusQuery) WithProvisioningStep(opts ...func(*ProvisioningStepQuery)
 // WithTeam tells the query-builder to eager-load the nodes that are connected to
 // the "Team" edge. The optional arguments are used to configure the query builder of the edge.
 func (sq *StatusQuery) WithTeam(opts ...func(*TeamQuery)) *StatusQuery {
-	query := &TeamQuery{config: sq.config}
+	query := (&TeamClient{config: sq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -532,7 +542,7 @@ func (sq *StatusQuery) WithTeam(opts ...func(*TeamQuery)) *StatusQuery {
 // WithPlan tells the query-builder to eager-load the nodes that are connected to
 // the "Plan" edge. The optional arguments are used to configure the query builder of the edge.
 func (sq *StatusQuery) WithPlan(opts ...func(*PlanQuery)) *StatusQuery {
-	query := &PlanQuery{config: sq.config}
+	query := (&PlanClient{config: sq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -543,7 +553,7 @@ func (sq *StatusQuery) WithPlan(opts ...func(*PlanQuery)) *StatusQuery {
 // WithServerTask tells the query-builder to eager-load the nodes that are connected to
 // the "ServerTask" edge. The optional arguments are used to configure the query builder of the edge.
 func (sq *StatusQuery) WithServerTask(opts ...func(*ServerTaskQuery)) *StatusQuery {
-	query := &ServerTaskQuery{config: sq.config}
+	query := (&ServerTaskClient{config: sq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -554,7 +564,7 @@ func (sq *StatusQuery) WithServerTask(opts ...func(*ServerTaskQuery)) *StatusQue
 // WithAdhocPlan tells the query-builder to eager-load the nodes that are connected to
 // the "AdhocPlan" edge. The optional arguments are used to configure the query builder of the edge.
 func (sq *StatusQuery) WithAdhocPlan(opts ...func(*AdhocPlanQuery)) *StatusQuery {
-	query := &AdhocPlanQuery{config: sq.config}
+	query := (&AdhocPlanClient{config: sq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -565,7 +575,7 @@ func (sq *StatusQuery) WithAdhocPlan(opts ...func(*AdhocPlanQuery)) *StatusQuery
 // WithProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
 func (sq *StatusQuery) WithProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *StatusQuery {
-	query := &ProvisioningScheduledStepQuery{config: sq.config}
+	query := (&ProvisioningScheduledStepClient{config: sq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -588,16 +598,11 @@ func (sq *StatusQuery) WithProvisioningScheduledStep(opts ...func(*ProvisioningS
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (sq *StatusQuery) GroupBy(field string, fields ...string) *StatusGroupBy {
-	grbuild := &StatusGroupBy{config: sq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := sq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return sq.sqlQuery(ctx), nil
-	}
+	sq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &StatusGroupBy{build: sq}
+	grbuild.flds = &sq.ctx.Fields
 	grbuild.label = status.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -614,15 +619,30 @@ func (sq *StatusQuery) GroupBy(field string, fields ...string) *StatusGroupBy {
 //		Select(status.FieldState).
 //		Scan(ctx, &v)
 func (sq *StatusQuery) Select(fields ...string) *StatusSelect {
-	sq.fields = append(sq.fields, fields...)
-	selbuild := &StatusSelect{StatusQuery: sq}
-	selbuild.label = status.Label
-	selbuild.flds, selbuild.scan = &sq.fields, selbuild.Scan
-	return selbuild
+	sq.ctx.Fields = append(sq.ctx.Fields, fields...)
+	sbuild := &StatusSelect{StatusQuery: sq}
+	sbuild.label = status.Label
+	sbuild.flds, sbuild.scan = &sq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a StatusSelect configured with the given aggregations.
+func (sq *StatusQuery) Aggregate(fns ...AggregateFunc) *StatusSelect {
+	return sq.Select().Aggregate(fns...)
 }
 
 func (sq *StatusQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range sq.fields {
+	for _, inter := range sq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, sq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range sq.ctx.Fields {
 		if !status.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -660,14 +680,17 @@ func (sq *StatusQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Statu
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, status.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Status).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &Status{config: sq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(sq.modifiers) > 0 {
+		_spec.Modifiers = sq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -732,6 +755,11 @@ func (sq *StatusQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Statu
 			return nil, err
 		}
 	}
+	for i := range sq.loadTotal {
+		if err := sq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -747,6 +775,9 @@ func (sq *StatusQuery) loadBuild(ctx context.Context, query *BuildQuery, nodes [
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(build.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -777,6 +808,9 @@ func (sq *StatusQuery) loadProvisionedNetwork(ctx context.Context, query *Provis
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(provisionednetwork.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -805,6 +839,9 @@ func (sq *StatusQuery) loadProvisionedHost(ctx context.Context, query *Provision
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(provisionedhost.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -835,6 +872,9 @@ func (sq *StatusQuery) loadProvisioningStep(ctx context.Context, query *Provisio
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(provisioningstep.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -863,6 +903,9 @@ func (sq *StatusQuery) loadTeam(ctx context.Context, query *TeamQuery, nodes []*
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(team.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -893,6 +936,9 @@ func (sq *StatusQuery) loadPlan(ctx context.Context, query *PlanQuery, nodes []*
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(plan.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -921,6 +967,9 @@ func (sq *StatusQuery) loadServerTask(ctx context.Context, query *ServerTaskQuer
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(servertask.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -951,6 +1000,9 @@ func (sq *StatusQuery) loadAdhocPlan(ctx context.Context, query *AdhocPlanQuery,
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(adhocplan.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -980,6 +1032,9 @@ func (sq *StatusQuery) loadProvisioningScheduledStep(ctx context.Context, query 
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(provisioningscheduledstep.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -999,38 +1054,25 @@ func (sq *StatusQuery) loadProvisioningScheduledStep(ctx context.Context, query 
 
 func (sq *StatusQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := sq.querySpec()
-	_spec.Node.Columns = sq.fields
-	if len(sq.fields) > 0 {
-		_spec.Unique = sq.unique != nil && *sq.unique
+	if len(sq.modifiers) > 0 {
+		_spec.Modifiers = sq.modifiers
+	}
+	_spec.Node.Columns = sq.ctx.Fields
+	if len(sq.ctx.Fields) > 0 {
+		_spec.Unique = sq.ctx.Unique != nil && *sq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, sq.driver, _spec)
 }
 
-func (sq *StatusQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := sq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (sq *StatusQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   status.Table,
-			Columns: status.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: status.FieldID,
-			},
-		},
-		From:   sq.sql,
-		Unique: true,
-	}
-	if unique := sq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(status.Table, status.Columns, sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID))
+	_spec.From = sq.sql
+	if unique := sq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if sq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := sq.fields; len(fields) > 0 {
+	if fields := sq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, status.FieldID)
 		for i := range fields {
@@ -1046,10 +1088,10 @@ func (sq *StatusQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := sq.limit; limit != nil {
+	if limit := sq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := sq.offset; offset != nil {
+	if offset := sq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := sq.order; len(ps) > 0 {
@@ -1065,7 +1107,7 @@ func (sq *StatusQuery) querySpec() *sqlgraph.QuerySpec {
 func (sq *StatusQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(sq.driver.Dialect())
 	t1 := builder.Table(status.Table)
-	columns := sq.fields
+	columns := sq.ctx.Fields
 	if len(columns) == 0 {
 		columns = status.Columns
 	}
@@ -1074,7 +1116,7 @@ func (sq *StatusQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = sq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if sq.unique != nil && *sq.unique {
+	if sq.ctx.Unique != nil && *sq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range sq.predicates {
@@ -1083,12 +1125,12 @@ func (sq *StatusQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range sq.order {
 		p(selector)
 	}
-	if offset := sq.offset; offset != nil {
+	if offset := sq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := sq.limit; limit != nil {
+	if limit := sq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -1096,13 +1138,8 @@ func (sq *StatusQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // StatusGroupBy is the group-by builder for Status entities.
 type StatusGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *StatusQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -1111,74 +1148,77 @@ func (sgb *StatusGroupBy) Aggregate(fns ...AggregateFunc) *StatusGroupBy {
 	return sgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (sgb *StatusGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := sgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (sgb *StatusGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, sgb.build.ctx, "GroupBy")
+	if err := sgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	sgb.sql = query
-	return sgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*StatusQuery, *StatusGroupBy](ctx, sgb.build, sgb, sgb.build.inters, v)
 }
 
-func (sgb *StatusGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range sgb.fields {
-		if !status.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (sgb *StatusGroupBy) sqlScan(ctx context.Context, root *StatusQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(sgb.fns))
+	for _, fn := range sgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := sgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*sgb.flds)+len(sgb.fns))
+		for _, f := range *sgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*sgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := sgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := sgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (sgb *StatusGroupBy) sqlQuery() *sql.Selector {
-	selector := sgb.sql.Select()
-	aggregation := make([]string, 0, len(sgb.fns))
-	for _, fn := range sgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(sgb.fields)+len(sgb.fns))
-		for _, f := range sgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(sgb.fields...)...)
-}
-
 // StatusSelect is the builder for selecting fields of Status entities.
 type StatusSelect struct {
 	*StatusQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (ss *StatusSelect) Aggregate(fns ...AggregateFunc) *StatusSelect {
+	ss.fns = append(ss.fns, fns...)
+	return ss
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (ss *StatusSelect) Scan(ctx context.Context, v interface{}) error {
+func (ss *StatusSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, ss.ctx, "Select")
 	if err := ss.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ss.sql = ss.StatusQuery.sqlQuery(ctx)
-	return ss.sqlScan(ctx, v)
+	return scanWithInterceptors[*StatusQuery, *StatusSelect](ctx, ss.StatusQuery, ss, ss.inters, v)
 }
 
-func (ss *StatusSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (ss *StatusSelect) sqlScan(ctx context.Context, root *StatusQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(ss.fns))
+	for _, fn := range ss.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*ss.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := ss.sql.Query()
+	query, args := selector.Query()
 	if err := ss.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

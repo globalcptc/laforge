@@ -7,6 +7,8 @@ import (
 	"io"
 	"strconv"
 
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -151,37 +153,142 @@ func ProviderValidator(pr Provider) error {
 	}
 }
 
+// OrderOption defines the ordering options for the AuthUser queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByUsername orders the results by the username field.
+func ByUsername(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUsername, opts...).ToFunc()
+}
+
+// ByPassword orders the results by the password field.
+func ByPassword(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPassword, opts...).ToFunc()
+}
+
+// ByFirstName orders the results by the first_name field.
+func ByFirstName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFirstName, opts...).ToFunc()
+}
+
+// ByLastName orders the results by the last_name field.
+func ByLastName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastName, opts...).ToFunc()
+}
+
+// ByEmail orders the results by the email field.
+func ByEmail(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEmail, opts...).ToFunc()
+}
+
+// ByPhone orders the results by the phone field.
+func ByPhone(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPhone, opts...).ToFunc()
+}
+
+// ByCompany orders the results by the company field.
+func ByCompany(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCompany, opts...).ToFunc()
+}
+
+// ByOccupation orders the results by the occupation field.
+func ByOccupation(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOccupation, opts...).ToFunc()
+}
+
+// ByPrivateKeyPath orders the results by the private_key_path field.
+func ByPrivateKeyPath(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPrivateKeyPath, opts...).ToFunc()
+}
+
+// ByRole orders the results by the role field.
+func ByRole(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRole, opts...).ToFunc()
+}
+
+// ByProvider orders the results by the provider field.
+func ByProvider(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProvider, opts...).ToFunc()
+}
+
+// ByTokensCount orders the results by Tokens count.
+func ByTokensCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTokensStep(), opts...)
+	}
+}
+
+// ByTokens orders the results by Tokens terms.
+func ByTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByServerTasksCount orders the results by ServerTasks count.
+func ByServerTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newServerTasksStep(), opts...)
+	}
+}
+
+// ByServerTasks orders the results by ServerTasks terms.
+func ByServerTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newServerTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newTokensStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TokensInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TokensTable, TokensColumn),
+	)
+}
+func newServerTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ServerTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, ServerTasksTable, ServerTasksColumn),
+	)
+}
+
 // MarshalGQL implements graphql.Marshaler interface.
-func (r Role) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.Quote(r.String()))
+func (e Role) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(e.String()))
 }
 
 // UnmarshalGQL implements graphql.Unmarshaler interface.
-func (r *Role) UnmarshalGQL(val interface{}) error {
+func (e *Role) UnmarshalGQL(val interface{}) error {
 	str, ok := val.(string)
 	if !ok {
 		return fmt.Errorf("enum %T must be a string", val)
 	}
-	*r = Role(str)
-	if err := RoleValidator(*r); err != nil {
+	*e = Role(str)
+	if err := RoleValidator(*e); err != nil {
 		return fmt.Errorf("%s is not a valid Role", str)
 	}
 	return nil
 }
 
 // MarshalGQL implements graphql.Marshaler interface.
-func (pr Provider) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.Quote(pr.String()))
+func (e Provider) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(e.String()))
 }
 
 // UnmarshalGQL implements graphql.Unmarshaler interface.
-func (pr *Provider) UnmarshalGQL(val interface{}) error {
+func (e *Provider) UnmarshalGQL(val interface{}) error {
 	str, ok := val.(string)
 	if !ok {
 		return fmt.Errorf("enum %T must be a string", val)
 	}
-	*pr = Provider(str)
-	if err := ProviderValidator(*pr); err != nil {
+	*e = Provider(str)
+	if err := ProviderValidator(*e); err != nil {
 		return fmt.Errorf("%s is not a valid Provider", str)
 	}
 	return nil

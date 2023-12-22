@@ -29,9 +29,17 @@ func (ssu *ScheduledStepUpdate) Where(ps ...predicate.ScheduledStep) *ScheduledS
 	return ssu
 }
 
-// SetHclID sets the "hcl_id" field.
-func (ssu *ScheduledStepUpdate) SetHclID(s string) *ScheduledStepUpdate {
-	ssu.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (ssu *ScheduledStepUpdate) SetHCLID(s string) *ScheduledStepUpdate {
+	ssu.mutation.SetHCLID(s)
+	return ssu
+}
+
+// SetNillableHCLID sets the "hcl_id" field if the given value is not nil.
+func (ssu *ScheduledStepUpdate) SetNillableHCLID(s *string) *ScheduledStepUpdate {
+	if s != nil {
+		ssu.SetHCLID(*s)
+	}
 	return ssu
 }
 
@@ -41,9 +49,25 @@ func (ssu *ScheduledStepUpdate) SetName(s string) *ScheduledStepUpdate {
 	return ssu
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (ssu *ScheduledStepUpdate) SetNillableName(s *string) *ScheduledStepUpdate {
+	if s != nil {
+		ssu.SetName(*s)
+	}
+	return ssu
+}
+
 // SetDescription sets the "description" field.
 func (ssu *ScheduledStepUpdate) SetDescription(s string) *ScheduledStepUpdate {
 	ssu.mutation.SetDescription(s)
+	return ssu
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (ssu *ScheduledStepUpdate) SetNillableDescription(s *string) *ScheduledStepUpdate {
+	if s != nil {
+		ssu.SetDescription(*s)
+	}
 	return ssu
 }
 
@@ -53,9 +77,25 @@ func (ssu *ScheduledStepUpdate) SetStep(s string) *ScheduledStepUpdate {
 	return ssu
 }
 
+// SetNillableStep sets the "step" field if the given value is not nil.
+func (ssu *ScheduledStepUpdate) SetNillableStep(s *string) *ScheduledStepUpdate {
+	if s != nil {
+		ssu.SetStep(*s)
+	}
+	return ssu
+}
+
 // SetType sets the "type" field.
 func (ssu *ScheduledStepUpdate) SetType(s scheduledstep.Type) *ScheduledStepUpdate {
 	ssu.mutation.SetType(s)
+	return ssu
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (ssu *ScheduledStepUpdate) SetNillableType(s *scheduledstep.Type) *ScheduledStepUpdate {
+	if s != nil {
+		ssu.SetType(*s)
+	}
 	return ssu
 }
 
@@ -138,40 +178,7 @@ func (ssu *ScheduledStepUpdate) ClearEnvironment() *ScheduledStepUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ssu *ScheduledStepUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(ssu.hooks) == 0 {
-		if err = ssu.check(); err != nil {
-			return 0, err
-		}
-		affected, err = ssu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ScheduledStepMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = ssu.check(); err != nil {
-				return 0, err
-			}
-			ssu.mutation = mutation
-			affected, err = ssu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(ssu.hooks) - 1; i >= 0; i-- {
-			if ssu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ssu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, ssu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, ssu.sqlSave, ssu.mutation, ssu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -207,16 +214,10 @@ func (ssu *ScheduledStepUpdate) check() error {
 }
 
 func (ssu *ScheduledStepUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   scheduledstep.Table,
-			Columns: scheduledstep.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: scheduledstep.FieldID,
-			},
-		},
+	if err := ssu.check(); err != nil {
+		return n, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(scheduledstep.Table, scheduledstep.Columns, sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID))
 	if ps := ssu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -224,73 +225,35 @@ func (ssu *ScheduledStepUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			}
 		}
 	}
-	if value, ok := ssu.mutation.HclID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldHclID,
-		})
+	if value, ok := ssu.mutation.HCLID(); ok {
+		_spec.SetField(scheduledstep.FieldHCLID, field.TypeString, value)
 	}
 	if value, ok := ssu.mutation.Name(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldName,
-		})
+		_spec.SetField(scheduledstep.FieldName, field.TypeString, value)
 	}
 	if value, ok := ssu.mutation.Description(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldDescription,
-		})
+		_spec.SetField(scheduledstep.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := ssu.mutation.Step(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldStep,
-		})
+		_spec.SetField(scheduledstep.FieldStep, field.TypeString, value)
 	}
 	if value, ok := ssu.mutation.GetType(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: scheduledstep.FieldType,
-		})
+		_spec.SetField(scheduledstep.FieldType, field.TypeEnum, value)
 	}
 	if value, ok := ssu.mutation.Schedule(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldSchedule,
-		})
+		_spec.SetField(scheduledstep.FieldSchedule, field.TypeString, value)
 	}
 	if ssu.mutation.ScheduleCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Column: scheduledstep.FieldSchedule,
-		})
+		_spec.ClearField(scheduledstep.FieldSchedule, field.TypeString)
 	}
 	if value, ok := ssu.mutation.RunAt(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: scheduledstep.FieldRunAt,
-		})
+		_spec.SetField(scheduledstep.FieldRunAt, field.TypeInt64, value)
 	}
 	if value, ok := ssu.mutation.AddedRunAt(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: scheduledstep.FieldRunAt,
-		})
+		_spec.AddField(scheduledstep.FieldRunAt, field.TypeInt64, value)
 	}
 	if ssu.mutation.RunAtCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Column: scheduledstep.FieldRunAt,
-		})
+		_spec.ClearField(scheduledstep.FieldRunAt, field.TypeInt64)
 	}
 	if ssu.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -300,10 +263,7 @@ func (ssu *ScheduledStepUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Columns: []string{scheduledstep.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -316,10 +276,7 @@ func (ssu *ScheduledStepUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Columns: []string{scheduledstep.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -335,6 +292,7 @@ func (ssu *ScheduledStepUpdate) sqlSave(ctx context.Context) (n int, err error) 
 		}
 		return 0, err
 	}
+	ssu.mutation.done = true
 	return n, nil
 }
 
@@ -346,9 +304,17 @@ type ScheduledStepUpdateOne struct {
 	mutation *ScheduledStepMutation
 }
 
-// SetHclID sets the "hcl_id" field.
-func (ssuo *ScheduledStepUpdateOne) SetHclID(s string) *ScheduledStepUpdateOne {
-	ssuo.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (ssuo *ScheduledStepUpdateOne) SetHCLID(s string) *ScheduledStepUpdateOne {
+	ssuo.mutation.SetHCLID(s)
+	return ssuo
+}
+
+// SetNillableHCLID sets the "hcl_id" field if the given value is not nil.
+func (ssuo *ScheduledStepUpdateOne) SetNillableHCLID(s *string) *ScheduledStepUpdateOne {
+	if s != nil {
+		ssuo.SetHCLID(*s)
+	}
 	return ssuo
 }
 
@@ -358,9 +324,25 @@ func (ssuo *ScheduledStepUpdateOne) SetName(s string) *ScheduledStepUpdateOne {
 	return ssuo
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (ssuo *ScheduledStepUpdateOne) SetNillableName(s *string) *ScheduledStepUpdateOne {
+	if s != nil {
+		ssuo.SetName(*s)
+	}
+	return ssuo
+}
+
 // SetDescription sets the "description" field.
 func (ssuo *ScheduledStepUpdateOne) SetDescription(s string) *ScheduledStepUpdateOne {
 	ssuo.mutation.SetDescription(s)
+	return ssuo
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (ssuo *ScheduledStepUpdateOne) SetNillableDescription(s *string) *ScheduledStepUpdateOne {
+	if s != nil {
+		ssuo.SetDescription(*s)
+	}
 	return ssuo
 }
 
@@ -370,9 +352,25 @@ func (ssuo *ScheduledStepUpdateOne) SetStep(s string) *ScheduledStepUpdateOne {
 	return ssuo
 }
 
+// SetNillableStep sets the "step" field if the given value is not nil.
+func (ssuo *ScheduledStepUpdateOne) SetNillableStep(s *string) *ScheduledStepUpdateOne {
+	if s != nil {
+		ssuo.SetStep(*s)
+	}
+	return ssuo
+}
+
 // SetType sets the "type" field.
 func (ssuo *ScheduledStepUpdateOne) SetType(s scheduledstep.Type) *ScheduledStepUpdateOne {
 	ssuo.mutation.SetType(s)
+	return ssuo
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (ssuo *ScheduledStepUpdateOne) SetNillableType(s *scheduledstep.Type) *ScheduledStepUpdateOne {
+	if s != nil {
+		ssuo.SetType(*s)
+	}
 	return ssuo
 }
 
@@ -453,6 +451,12 @@ func (ssuo *ScheduledStepUpdateOne) ClearEnvironment() *ScheduledStepUpdateOne {
 	return ssuo
 }
 
+// Where appends a list predicates to the ScheduledStepUpdate builder.
+func (ssuo *ScheduledStepUpdateOne) Where(ps ...predicate.ScheduledStep) *ScheduledStepUpdateOne {
+	ssuo.mutation.Where(ps...)
+	return ssuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ssuo *ScheduledStepUpdateOne) Select(field string, fields ...string) *ScheduledStepUpdateOne {
@@ -462,46 +466,7 @@ func (ssuo *ScheduledStepUpdateOne) Select(field string, fields ...string) *Sche
 
 // Save executes the query and returns the updated ScheduledStep entity.
 func (ssuo *ScheduledStepUpdateOne) Save(ctx context.Context) (*ScheduledStep, error) {
-	var (
-		err  error
-		node *ScheduledStep
-	)
-	if len(ssuo.hooks) == 0 {
-		if err = ssuo.check(); err != nil {
-			return nil, err
-		}
-		node, err = ssuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ScheduledStepMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = ssuo.check(); err != nil {
-				return nil, err
-			}
-			ssuo.mutation = mutation
-			node, err = ssuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(ssuo.hooks) - 1; i >= 0; i-- {
-			if ssuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ssuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, ssuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*ScheduledStep)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from ScheduledStepMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, ssuo.sqlSave, ssuo.mutation, ssuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -537,16 +502,10 @@ func (ssuo *ScheduledStepUpdateOne) check() error {
 }
 
 func (ssuo *ScheduledStepUpdateOne) sqlSave(ctx context.Context) (_node *ScheduledStep, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   scheduledstep.Table,
-			Columns: scheduledstep.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: scheduledstep.FieldID,
-			},
-		},
+	if err := ssuo.check(); err != nil {
+		return _node, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(scheduledstep.Table, scheduledstep.Columns, sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID))
 	id, ok := ssuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ScheduledStep.id" for update`)}
@@ -571,73 +530,35 @@ func (ssuo *ScheduledStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedul
 			}
 		}
 	}
-	if value, ok := ssuo.mutation.HclID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldHclID,
-		})
+	if value, ok := ssuo.mutation.HCLID(); ok {
+		_spec.SetField(scheduledstep.FieldHCLID, field.TypeString, value)
 	}
 	if value, ok := ssuo.mutation.Name(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldName,
-		})
+		_spec.SetField(scheduledstep.FieldName, field.TypeString, value)
 	}
 	if value, ok := ssuo.mutation.Description(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldDescription,
-		})
+		_spec.SetField(scheduledstep.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := ssuo.mutation.Step(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldStep,
-		})
+		_spec.SetField(scheduledstep.FieldStep, field.TypeString, value)
 	}
 	if value, ok := ssuo.mutation.GetType(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: scheduledstep.FieldType,
-		})
+		_spec.SetField(scheduledstep.FieldType, field.TypeEnum, value)
 	}
 	if value, ok := ssuo.mutation.Schedule(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: scheduledstep.FieldSchedule,
-		})
+		_spec.SetField(scheduledstep.FieldSchedule, field.TypeString, value)
 	}
 	if ssuo.mutation.ScheduleCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Column: scheduledstep.FieldSchedule,
-		})
+		_spec.ClearField(scheduledstep.FieldSchedule, field.TypeString)
 	}
 	if value, ok := ssuo.mutation.RunAt(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: scheduledstep.FieldRunAt,
-		})
+		_spec.SetField(scheduledstep.FieldRunAt, field.TypeInt64, value)
 	}
 	if value, ok := ssuo.mutation.AddedRunAt(); ok {
-		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Value:  value,
-			Column: scheduledstep.FieldRunAt,
-		})
+		_spec.AddField(scheduledstep.FieldRunAt, field.TypeInt64, value)
 	}
 	if ssuo.mutation.RunAtCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt64,
-			Column: scheduledstep.FieldRunAt,
-		})
+		_spec.ClearField(scheduledstep.FieldRunAt, field.TypeInt64)
 	}
 	if ssuo.mutation.EnvironmentCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -647,10 +568,7 @@ func (ssuo *ScheduledStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedul
 			Columns: []string{scheduledstep.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -663,10 +581,7 @@ func (ssuo *ScheduledStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedul
 			Columns: []string{scheduledstep.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -685,5 +600,6 @@ func (ssuo *ScheduledStepUpdateOne) sqlSave(ctx context.Context) (_node *Schedul
 		}
 		return nil, err
 	}
+	ssuo.mutation.done = true
 	return _node, nil
 }

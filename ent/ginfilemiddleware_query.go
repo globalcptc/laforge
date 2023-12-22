@@ -22,16 +22,16 @@ import (
 // GinFileMiddlewareQuery is the builder for querying GinFileMiddleware entities.
 type GinFileMiddlewareQuery struct {
 	config
-	limit                         *int
-	offset                        *int
-	unique                        *bool
-	order                         []OrderFunc
-	fields                        []string
+	ctx                           *QueryContext
+	order                         []ginfilemiddleware.OrderOption
+	inters                        []Interceptor
 	predicates                    []predicate.GinFileMiddleware
 	withProvisionedHost           *ProvisionedHostQuery
 	withProvisioningStep          *ProvisioningStepQuery
 	withProvisioningScheduledStep *ProvisioningScheduledStepQuery
 	withFKs                       bool
+	modifiers                     []func(*sql.Selector)
+	loadTotal                     []func(context.Context, []*GinFileMiddleware) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -43,34 +43,34 @@ func (gfmq *GinFileMiddlewareQuery) Where(ps ...predicate.GinFileMiddleware) *Gi
 	return gfmq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (gfmq *GinFileMiddlewareQuery) Limit(limit int) *GinFileMiddlewareQuery {
-	gfmq.limit = &limit
+	gfmq.ctx.Limit = &limit
 	return gfmq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (gfmq *GinFileMiddlewareQuery) Offset(offset int) *GinFileMiddlewareQuery {
-	gfmq.offset = &offset
+	gfmq.ctx.Offset = &offset
 	return gfmq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (gfmq *GinFileMiddlewareQuery) Unique(unique bool) *GinFileMiddlewareQuery {
-	gfmq.unique = &unique
+	gfmq.ctx.Unique = &unique
 	return gfmq
 }
 
-// Order adds an order step to the query.
-func (gfmq *GinFileMiddlewareQuery) Order(o ...OrderFunc) *GinFileMiddlewareQuery {
+// Order specifies how the records should be ordered.
+func (gfmq *GinFileMiddlewareQuery) Order(o ...ginfilemiddleware.OrderOption) *GinFileMiddlewareQuery {
 	gfmq.order = append(gfmq.order, o...)
 	return gfmq
 }
 
 // QueryProvisionedHost chains the current query on the "ProvisionedHost" edge.
 func (gfmq *GinFileMiddlewareQuery) QueryProvisionedHost() *ProvisionedHostQuery {
-	query := &ProvisionedHostQuery{config: gfmq.config}
+	query := (&ProvisionedHostClient{config: gfmq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := gfmq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -92,7 +92,7 @@ func (gfmq *GinFileMiddlewareQuery) QueryProvisionedHost() *ProvisionedHostQuery
 
 // QueryProvisioningStep chains the current query on the "ProvisioningStep" edge.
 func (gfmq *GinFileMiddlewareQuery) QueryProvisioningStep() *ProvisioningStepQuery {
-	query := &ProvisioningStepQuery{config: gfmq.config}
+	query := (&ProvisioningStepClient{config: gfmq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := gfmq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -114,7 +114,7 @@ func (gfmq *GinFileMiddlewareQuery) QueryProvisioningStep() *ProvisioningStepQue
 
 // QueryProvisioningScheduledStep chains the current query on the "ProvisioningScheduledStep" edge.
 func (gfmq *GinFileMiddlewareQuery) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
-	query := &ProvisioningScheduledStepQuery{config: gfmq.config}
+	query := (&ProvisioningScheduledStepClient{config: gfmq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := gfmq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -137,7 +137,7 @@ func (gfmq *GinFileMiddlewareQuery) QueryProvisioningScheduledStep() *Provisioni
 // First returns the first GinFileMiddleware entity from the query.
 // Returns a *NotFoundError when no GinFileMiddleware was found.
 func (gfmq *GinFileMiddlewareQuery) First(ctx context.Context) (*GinFileMiddleware, error) {
-	nodes, err := gfmq.Limit(1).All(ctx)
+	nodes, err := gfmq.Limit(1).All(setContextOp(ctx, gfmq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func (gfmq *GinFileMiddlewareQuery) FirstX(ctx context.Context) *GinFileMiddlewa
 // Returns a *NotFoundError when no GinFileMiddleware ID was found.
 func (gfmq *GinFileMiddlewareQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gfmq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = gfmq.Limit(1).IDs(setContextOp(ctx, gfmq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -183,7 +183,7 @@ func (gfmq *GinFileMiddlewareQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one GinFileMiddleware entity is found.
 // Returns a *NotFoundError when no GinFileMiddleware entities are found.
 func (gfmq *GinFileMiddlewareQuery) Only(ctx context.Context) (*GinFileMiddleware, error) {
-	nodes, err := gfmq.Limit(2).All(ctx)
+	nodes, err := gfmq.Limit(2).All(setContextOp(ctx, gfmq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func (gfmq *GinFileMiddlewareQuery) OnlyX(ctx context.Context) *GinFileMiddlewar
 // Returns a *NotFoundError when no entities are found.
 func (gfmq *GinFileMiddlewareQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gfmq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = gfmq.Limit(2).IDs(setContextOp(ctx, gfmq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -236,10 +236,12 @@ func (gfmq *GinFileMiddlewareQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of GinFileMiddlewares.
 func (gfmq *GinFileMiddlewareQuery) All(ctx context.Context) ([]*GinFileMiddleware, error) {
+	ctx = setContextOp(ctx, gfmq.ctx, "All")
 	if err := gfmq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return gfmq.sqlAll(ctx)
+	qr := querierAll[[]*GinFileMiddleware, *GinFileMiddlewareQuery]()
+	return withInterceptors[[]*GinFileMiddleware](ctx, gfmq, qr, gfmq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -252,9 +254,12 @@ func (gfmq *GinFileMiddlewareQuery) AllX(ctx context.Context) []*GinFileMiddlewa
 }
 
 // IDs executes the query and returns a list of GinFileMiddleware IDs.
-func (gfmq *GinFileMiddlewareQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := gfmq.Select(ginfilemiddleware.FieldID).Scan(ctx, &ids); err != nil {
+func (gfmq *GinFileMiddlewareQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if gfmq.ctx.Unique == nil && gfmq.path != nil {
+		gfmq.Unique(true)
+	}
+	ctx = setContextOp(ctx, gfmq.ctx, "IDs")
+	if err = gfmq.Select(ginfilemiddleware.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -271,10 +276,11 @@ func (gfmq *GinFileMiddlewareQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (gfmq *GinFileMiddlewareQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, gfmq.ctx, "Count")
 	if err := gfmq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return gfmq.sqlCount(ctx)
+	return withInterceptors[int](ctx, gfmq, querierCount[*GinFileMiddlewareQuery](), gfmq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -288,10 +294,15 @@ func (gfmq *GinFileMiddlewareQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (gfmq *GinFileMiddlewareQuery) Exist(ctx context.Context) (bool, error) {
-	if err := gfmq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, gfmq.ctx, "Exist")
+	switch _, err := gfmq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return gfmq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -311,24 +322,23 @@ func (gfmq *GinFileMiddlewareQuery) Clone() *GinFileMiddlewareQuery {
 	}
 	return &GinFileMiddlewareQuery{
 		config:                        gfmq.config,
-		limit:                         gfmq.limit,
-		offset:                        gfmq.offset,
-		order:                         append([]OrderFunc{}, gfmq.order...),
+		ctx:                           gfmq.ctx.Clone(),
+		order:                         append([]ginfilemiddleware.OrderOption{}, gfmq.order...),
+		inters:                        append([]Interceptor{}, gfmq.inters...),
 		predicates:                    append([]predicate.GinFileMiddleware{}, gfmq.predicates...),
 		withProvisionedHost:           gfmq.withProvisionedHost.Clone(),
 		withProvisioningStep:          gfmq.withProvisioningStep.Clone(),
 		withProvisioningScheduledStep: gfmq.withProvisioningScheduledStep.Clone(),
 		// clone intermediate query.
-		sql:    gfmq.sql.Clone(),
-		path:   gfmq.path,
-		unique: gfmq.unique,
+		sql:  gfmq.sql.Clone(),
+		path: gfmq.path,
 	}
 }
 
 // WithProvisionedHost tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
 func (gfmq *GinFileMiddlewareQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuery)) *GinFileMiddlewareQuery {
-	query := &ProvisionedHostQuery{config: gfmq.config}
+	query := (&ProvisionedHostClient{config: gfmq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -339,7 +349,7 @@ func (gfmq *GinFileMiddlewareQuery) WithProvisionedHost(opts ...func(*Provisione
 // WithProvisioningStep tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
 func (gfmq *GinFileMiddlewareQuery) WithProvisioningStep(opts ...func(*ProvisioningStepQuery)) *GinFileMiddlewareQuery {
-	query := &ProvisioningStepQuery{config: gfmq.config}
+	query := (&ProvisioningStepClient{config: gfmq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -350,7 +360,7 @@ func (gfmq *GinFileMiddlewareQuery) WithProvisioningStep(opts ...func(*Provision
 // WithProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
 func (gfmq *GinFileMiddlewareQuery) WithProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *GinFileMiddlewareQuery {
-	query := &ProvisioningScheduledStepQuery{config: gfmq.config}
+	query := (&ProvisioningScheduledStepClient{config: gfmq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -373,16 +383,11 @@ func (gfmq *GinFileMiddlewareQuery) WithProvisioningScheduledStep(opts ...func(*
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (gfmq *GinFileMiddlewareQuery) GroupBy(field string, fields ...string) *GinFileMiddlewareGroupBy {
-	grbuild := &GinFileMiddlewareGroupBy{config: gfmq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := gfmq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return gfmq.sqlQuery(ctx), nil
-	}
+	gfmq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &GinFileMiddlewareGroupBy{build: gfmq}
+	grbuild.flds = &gfmq.ctx.Fields
 	grbuild.label = ginfilemiddleware.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -399,15 +404,30 @@ func (gfmq *GinFileMiddlewareQuery) GroupBy(field string, fields ...string) *Gin
 //		Select(ginfilemiddleware.FieldURLID).
 //		Scan(ctx, &v)
 func (gfmq *GinFileMiddlewareQuery) Select(fields ...string) *GinFileMiddlewareSelect {
-	gfmq.fields = append(gfmq.fields, fields...)
-	selbuild := &GinFileMiddlewareSelect{GinFileMiddlewareQuery: gfmq}
-	selbuild.label = ginfilemiddleware.Label
-	selbuild.flds, selbuild.scan = &gfmq.fields, selbuild.Scan
-	return selbuild
+	gfmq.ctx.Fields = append(gfmq.ctx.Fields, fields...)
+	sbuild := &GinFileMiddlewareSelect{GinFileMiddlewareQuery: gfmq}
+	sbuild.label = ginfilemiddleware.Label
+	sbuild.flds, sbuild.scan = &gfmq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a GinFileMiddlewareSelect configured with the given aggregations.
+func (gfmq *GinFileMiddlewareQuery) Aggregate(fns ...AggregateFunc) *GinFileMiddlewareSelect {
+	return gfmq.Select().Aggregate(fns...)
 }
 
 func (gfmq *GinFileMiddlewareQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range gfmq.fields {
+	for _, inter := range gfmq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, gfmq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range gfmq.ctx.Fields {
 		if !ginfilemiddleware.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -436,14 +456,17 @@ func (gfmq *GinFileMiddlewareQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, ginfilemiddleware.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*GinFileMiddleware).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &GinFileMiddleware{config: gfmq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(gfmq.modifiers) > 0 {
+		_spec.Modifiers = gfmq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -472,6 +495,11 @@ func (gfmq *GinFileMiddlewareQuery) sqlAll(ctx context.Context, hooks ...queryHo
 			return nil, err
 		}
 	}
+	for i := range gfmq.loadTotal {
+		if err := gfmq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -484,7 +512,7 @@ func (gfmq *GinFileMiddlewareQuery) loadProvisionedHost(ctx context.Context, que
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisionedHost(func(s *sql.Selector) {
-		s.Where(sql.InValues(ginfilemiddleware.ProvisionedHostColumn, fks...))
+		s.Where(sql.InValues(s.C(ginfilemiddleware.ProvisionedHostColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -497,7 +525,7 @@ func (gfmq *GinFileMiddlewareQuery) loadProvisionedHost(ctx context.Context, que
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_provisioned_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "gin_file_middleware_provisioned_host" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -512,7 +540,7 @@ func (gfmq *GinFileMiddlewareQuery) loadProvisioningStep(ctx context.Context, qu
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisioningStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(ginfilemiddleware.ProvisioningStepColumn, fks...))
+		s.Where(sql.InValues(s.C(ginfilemiddleware.ProvisioningStepColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -525,7 +553,7 @@ func (gfmq *GinFileMiddlewareQuery) loadProvisioningStep(ctx context.Context, qu
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_provisioning_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "gin_file_middleware_provisioning_step" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -540,7 +568,7 @@ func (gfmq *GinFileMiddlewareQuery) loadProvisioningScheduledStep(ctx context.Co
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisioningScheduledStep(func(s *sql.Selector) {
-		s.Where(sql.InValues(ginfilemiddleware.ProvisioningScheduledStepColumn, fks...))
+		s.Where(sql.InValues(s.C(ginfilemiddleware.ProvisioningScheduledStepColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -553,7 +581,7 @@ func (gfmq *GinFileMiddlewareQuery) loadProvisioningScheduledStep(ctx context.Co
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "gin_file_middleware_provisioning_scheduled_step" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "gin_file_middleware_provisioning_scheduled_step" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -562,38 +590,25 @@ func (gfmq *GinFileMiddlewareQuery) loadProvisioningScheduledStep(ctx context.Co
 
 func (gfmq *GinFileMiddlewareQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := gfmq.querySpec()
-	_spec.Node.Columns = gfmq.fields
-	if len(gfmq.fields) > 0 {
-		_spec.Unique = gfmq.unique != nil && *gfmq.unique
+	if len(gfmq.modifiers) > 0 {
+		_spec.Modifiers = gfmq.modifiers
+	}
+	_spec.Node.Columns = gfmq.ctx.Fields
+	if len(gfmq.ctx.Fields) > 0 {
+		_spec.Unique = gfmq.ctx.Unique != nil && *gfmq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, gfmq.driver, _spec)
 }
 
-func (gfmq *GinFileMiddlewareQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := gfmq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (gfmq *GinFileMiddlewareQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   ginfilemiddleware.Table,
-			Columns: ginfilemiddleware.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: ginfilemiddleware.FieldID,
-			},
-		},
-		From:   gfmq.sql,
-		Unique: true,
-	}
-	if unique := gfmq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(ginfilemiddleware.Table, ginfilemiddleware.Columns, sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID))
+	_spec.From = gfmq.sql
+	if unique := gfmq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if gfmq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := gfmq.fields; len(fields) > 0 {
+	if fields := gfmq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, ginfilemiddleware.FieldID)
 		for i := range fields {
@@ -609,10 +624,10 @@ func (gfmq *GinFileMiddlewareQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := gfmq.limit; limit != nil {
+	if limit := gfmq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := gfmq.offset; offset != nil {
+	if offset := gfmq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := gfmq.order; len(ps) > 0 {
@@ -628,7 +643,7 @@ func (gfmq *GinFileMiddlewareQuery) querySpec() *sqlgraph.QuerySpec {
 func (gfmq *GinFileMiddlewareQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(gfmq.driver.Dialect())
 	t1 := builder.Table(ginfilemiddleware.Table)
-	columns := gfmq.fields
+	columns := gfmq.ctx.Fields
 	if len(columns) == 0 {
 		columns = ginfilemiddleware.Columns
 	}
@@ -637,7 +652,7 @@ func (gfmq *GinFileMiddlewareQuery) sqlQuery(ctx context.Context) *sql.Selector 
 		selector = gfmq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if gfmq.unique != nil && *gfmq.unique {
+	if gfmq.ctx.Unique != nil && *gfmq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range gfmq.predicates {
@@ -646,12 +661,12 @@ func (gfmq *GinFileMiddlewareQuery) sqlQuery(ctx context.Context) *sql.Selector 
 	for _, p := range gfmq.order {
 		p(selector)
 	}
-	if offset := gfmq.offset; offset != nil {
+	if offset := gfmq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := gfmq.limit; limit != nil {
+	if limit := gfmq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -659,13 +674,8 @@ func (gfmq *GinFileMiddlewareQuery) sqlQuery(ctx context.Context) *sql.Selector 
 
 // GinFileMiddlewareGroupBy is the group-by builder for GinFileMiddleware entities.
 type GinFileMiddlewareGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *GinFileMiddlewareQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -674,74 +684,77 @@ func (gfmgb *GinFileMiddlewareGroupBy) Aggregate(fns ...AggregateFunc) *GinFileM
 	return gfmgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (gfmgb *GinFileMiddlewareGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := gfmgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (gfmgb *GinFileMiddlewareGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, gfmgb.build.ctx, "GroupBy")
+	if err := gfmgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	gfmgb.sql = query
-	return gfmgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*GinFileMiddlewareQuery, *GinFileMiddlewareGroupBy](ctx, gfmgb.build, gfmgb, gfmgb.build.inters, v)
 }
 
-func (gfmgb *GinFileMiddlewareGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range gfmgb.fields {
-		if !ginfilemiddleware.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (gfmgb *GinFileMiddlewareGroupBy) sqlScan(ctx context.Context, root *GinFileMiddlewareQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(gfmgb.fns))
+	for _, fn := range gfmgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := gfmgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*gfmgb.flds)+len(gfmgb.fns))
+		for _, f := range *gfmgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*gfmgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := gfmgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := gfmgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (gfmgb *GinFileMiddlewareGroupBy) sqlQuery() *sql.Selector {
-	selector := gfmgb.sql.Select()
-	aggregation := make([]string, 0, len(gfmgb.fns))
-	for _, fn := range gfmgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(gfmgb.fields)+len(gfmgb.fns))
-		for _, f := range gfmgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(gfmgb.fields...)...)
-}
-
 // GinFileMiddlewareSelect is the builder for selecting fields of GinFileMiddleware entities.
 type GinFileMiddlewareSelect struct {
 	*GinFileMiddlewareQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (gfms *GinFileMiddlewareSelect) Aggregate(fns ...AggregateFunc) *GinFileMiddlewareSelect {
+	gfms.fns = append(gfms.fns, fns...)
+	return gfms
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (gfms *GinFileMiddlewareSelect) Scan(ctx context.Context, v interface{}) error {
+func (gfms *GinFileMiddlewareSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, gfms.ctx, "Select")
 	if err := gfms.prepareQuery(ctx); err != nil {
 		return err
 	}
-	gfms.sql = gfms.GinFileMiddlewareQuery.sqlQuery(ctx)
-	return gfms.sqlScan(ctx, v)
+	return scanWithInterceptors[*GinFileMiddlewareQuery, *GinFileMiddlewareSelect](ctx, gfms.GinFileMiddlewareQuery, gfms, gfms.inters, v)
 }
 
-func (gfms *GinFileMiddlewareSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (gfms *GinFileMiddlewareSelect) sqlScan(ctx context.Context, root *GinFileMiddlewareQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(gfms.fns))
+	for _, fn := range gfms.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*gfms.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := gfms.sql.Query()
+	query, args := selector.Query()
 	if err := gfms.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

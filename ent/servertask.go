@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/authuser"
 	"github.com/gen0cide/laforge/ent/build"
@@ -37,6 +38,7 @@ type ServerTask struct {
 	// The values are being populated by the ServerTaskQuery when eager-loading is set.
 	Edges ServerTaskEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// AuthUser holds the value of the AuthUser edge.
 	HCLAuthUser *AuthUser `json:"AuthUser,omitempty"`
@@ -50,11 +52,12 @@ type ServerTask struct {
 	HCLBuildCommit *BuildCommit `json:"BuildCommit,omitempty"`
 	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
 	HCLGinFileMiddleware []*GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	server_task_auth_user    *uuid.UUID
 	server_task_environment  *uuid.UUID
 	server_task_build        *uuid.UUID
 	server_task_build_commit *uuid.UUID
+	selectValues             sql.SelectValues
 }
 
 // ServerTaskEdges holds the relations/edges for other nodes in the graph.
@@ -74,6 +77,10 @@ type ServerTaskEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [6]bool
+	// totalCount holds the count of the edges above.
+	totalCount [6]map[string]int
+
+	namedGinFileMiddleware map[string][]*GinFileMiddleware
 }
 
 // AuthUserOrErr returns the AuthUser value or an error if the edge
@@ -81,8 +88,7 @@ type ServerTaskEdges struct {
 func (e ServerTaskEdges) AuthUserOrErr() (*AuthUser, error) {
 	if e.loadedTypes[0] {
 		if e.AuthUser == nil {
-			// The edge AuthUser was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: authuser.Label}
 		}
 		return e.AuthUser, nil
@@ -95,8 +101,7 @@ func (e ServerTaskEdges) AuthUserOrErr() (*AuthUser, error) {
 func (e ServerTaskEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[1] {
 		if e.Status == nil {
-			// The edge Status was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
 		return e.Status, nil
@@ -109,8 +114,7 @@ func (e ServerTaskEdges) StatusOrErr() (*Status, error) {
 func (e ServerTaskEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[2] {
 		if e.Environment == nil {
-			// The edge Environment was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
 		return e.Environment, nil
@@ -123,8 +127,7 @@ func (e ServerTaskEdges) EnvironmentOrErr() (*Environment, error) {
 func (e ServerTaskEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[3] {
 		if e.Build == nil {
-			// The edge Build was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
 		return e.Build, nil
@@ -137,8 +140,7 @@ func (e ServerTaskEdges) BuildOrErr() (*Build, error) {
 func (e ServerTaskEdges) BuildCommitOrErr() (*BuildCommit, error) {
 	if e.loadedTypes[4] {
 		if e.BuildCommit == nil {
-			// The edge BuildCommit was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: buildcommit.Label}
 		}
 		return e.BuildCommit, nil
@@ -156,8 +158,8 @@ func (e ServerTaskEdges) GinFileMiddlewareOrErr() ([]*GinFileMiddleware, error) 
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*ServerTask) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*ServerTask) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case servertask.FieldErrors:
@@ -177,7 +179,7 @@ func (*ServerTask) scanValues(columns []string) ([]interface{}, error) {
 		case servertask.ForeignKeys[3]: // server_task_build_commit
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type ServerTask", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -185,7 +187,7 @@ func (*ServerTask) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the ServerTask fields.
-func (st *ServerTask) assignValues(columns []string, values []interface{}) error {
+func (st *ServerTask) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -257,56 +259,64 @@ func (st *ServerTask) assignValues(columns []string, values []interface{}) error
 				st.server_task_build_commit = new(uuid.UUID)
 				*st.server_task_build_commit = *value.S.(*uuid.UUID)
 			}
+		default:
+			st.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the ServerTask.
+// This includes values selected through modifiers, order, etc.
+func (st *ServerTask) Value(name string) (ent.Value, error) {
+	return st.selectValues.Get(name)
+}
+
 // QueryAuthUser queries the "AuthUser" edge of the ServerTask entity.
 func (st *ServerTask) QueryAuthUser() *AuthUserQuery {
-	return (&ServerTaskClient{config: st.config}).QueryAuthUser(st)
+	return NewServerTaskClient(st.config).QueryAuthUser(st)
 }
 
 // QueryStatus queries the "Status" edge of the ServerTask entity.
 func (st *ServerTask) QueryStatus() *StatusQuery {
-	return (&ServerTaskClient{config: st.config}).QueryStatus(st)
+	return NewServerTaskClient(st.config).QueryStatus(st)
 }
 
 // QueryEnvironment queries the "Environment" edge of the ServerTask entity.
 func (st *ServerTask) QueryEnvironment() *EnvironmentQuery {
-	return (&ServerTaskClient{config: st.config}).QueryEnvironment(st)
+	return NewServerTaskClient(st.config).QueryEnvironment(st)
 }
 
 // QueryBuild queries the "Build" edge of the ServerTask entity.
 func (st *ServerTask) QueryBuild() *BuildQuery {
-	return (&ServerTaskClient{config: st.config}).QueryBuild(st)
+	return NewServerTaskClient(st.config).QueryBuild(st)
 }
 
 // QueryBuildCommit queries the "BuildCommit" edge of the ServerTask entity.
 func (st *ServerTask) QueryBuildCommit() *BuildCommitQuery {
-	return (&ServerTaskClient{config: st.config}).QueryBuildCommit(st)
+	return NewServerTaskClient(st.config).QueryBuildCommit(st)
 }
 
 // QueryGinFileMiddleware queries the "GinFileMiddleware" edge of the ServerTask entity.
 func (st *ServerTask) QueryGinFileMiddleware() *GinFileMiddlewareQuery {
-	return (&ServerTaskClient{config: st.config}).QueryGinFileMiddleware(st)
+	return NewServerTaskClient(st.config).QueryGinFileMiddleware(st)
 }
 
 // Update returns a builder for updating this ServerTask.
 // Note that you need to call ServerTask.Unwrap() before calling this method if this ServerTask
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (st *ServerTask) Update() *ServerTaskUpdateOne {
-	return (&ServerTaskClient{config: st.config}).UpdateOne(st)
+	return NewServerTaskClient(st.config).UpdateOne(st)
 }
 
 // Unwrap unwraps the ServerTask entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (st *ServerTask) Unwrap() *ServerTask {
-	tx, ok := st.config.driver.(*txDriver)
+	_tx, ok := st.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: ServerTask is not a transactional entity")
 	}
-	st.config.driver = tx.drv
+	st.config.driver = _tx.drv
 	return st
 }
 
@@ -314,26 +324,48 @@ func (st *ServerTask) Unwrap() *ServerTask {
 func (st *ServerTask) String() string {
 	var builder strings.Builder
 	builder.WriteString("ServerTask(")
-	builder.WriteString(fmt.Sprintf("id=%v", st.ID))
-	builder.WriteString(", type=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", st.ID))
+	builder.WriteString("type=")
 	builder.WriteString(fmt.Sprintf("%v", st.Type))
-	builder.WriteString(", start_time=")
+	builder.WriteString(", ")
+	builder.WriteString("start_time=")
 	builder.WriteString(st.StartTime.Format(time.ANSIC))
-	builder.WriteString(", end_time=")
+	builder.WriteString(", ")
+	builder.WriteString("end_time=")
 	builder.WriteString(st.EndTime.Format(time.ANSIC))
-	builder.WriteString(", errors=")
+	builder.WriteString(", ")
+	builder.WriteString("errors=")
 	builder.WriteString(fmt.Sprintf("%v", st.Errors))
-	builder.WriteString(", log_file_path=")
+	builder.WriteString(", ")
+	builder.WriteString("log_file_path=")
 	builder.WriteString(st.LogFilePath)
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// ServerTasks is a parsable slice of ServerTask.
-type ServerTasks []*ServerTask
+// NamedGinFileMiddleware returns the GinFileMiddleware named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (st *ServerTask) NamedGinFileMiddleware(name string) ([]*GinFileMiddleware, error) {
+	if st.Edges.namedGinFileMiddleware == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := st.Edges.namedGinFileMiddleware[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (st ServerTasks) config(cfg config) {
-	for _i := range st {
-		st[_i].config = cfg
+func (st *ServerTask) appendNamedGinFileMiddleware(name string, edges ...*GinFileMiddleware) {
+	if st.Edges.namedGinFileMiddleware == nil {
+		st.Edges.namedGinFileMiddleware = make(map[string][]*GinFileMiddleware)
+	}
+	if len(edges) == 0 {
+		st.Edges.namedGinFileMiddleware[name] = []*GinFileMiddleware{}
+	} else {
+		st.Edges.namedGinFileMiddleware[name] = append(st.Edges.namedGinFileMiddleware[name], edges...)
 	}
 }
+
+// ServerTasks is a parsable slice of ServerTask.
+type ServerTasks []*ServerTask

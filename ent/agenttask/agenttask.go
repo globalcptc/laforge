@@ -7,6 +7,8 @@ import (
 	"io"
 	"strconv"
 
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -169,37 +171,138 @@ func StateValidator(s State) error {
 	}
 }
 
+// OrderOption defines the ordering options for the AgentTask queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByCommand orders the results by the command field.
+func ByCommand(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCommand, opts...).ToFunc()
+}
+
+// ByArgs orders the results by the args field.
+func ByArgs(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArgs, opts...).ToFunc()
+}
+
+// ByNumber orders the results by the number field.
+func ByNumber(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNumber, opts...).ToFunc()
+}
+
+// ByOutput orders the results by the output field.
+func ByOutput(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOutput, opts...).ToFunc()
+}
+
+// ByState orders the results by the state field.
+func ByState(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldState, opts...).ToFunc()
+}
+
+// ByErrorMessage orders the results by the error_message field.
+func ByErrorMessage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldErrorMessage, opts...).ToFunc()
+}
+
+// ByProvisioningStepField orders the results by ProvisioningStep field.
+func ByProvisioningStepField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisioningStepStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisioningScheduledStepField orders the results by ProvisioningScheduledStep field.
+func ByProvisioningScheduledStepField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisioningScheduledStepStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisionedHostField orders the results by ProvisionedHost field.
+func ByProvisionedHostField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisionedHostStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByAdhocPlansCount orders the results by AdhocPlans count.
+func ByAdhocPlansCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAdhocPlansStep(), opts...)
+	}
+}
+
+// ByAdhocPlans orders the results by AdhocPlans terms.
+func ByAdhocPlans(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAdhocPlansStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newProvisioningStepStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisioningStepInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, ProvisioningStepTable, ProvisioningStepColumn),
+	)
+}
+func newProvisioningScheduledStepStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisioningScheduledStepInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, ProvisioningScheduledStepTable, ProvisioningScheduledStepColumn),
+	)
+}
+func newProvisionedHostStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProvisionedHostInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, ProvisionedHostTable, ProvisionedHostColumn),
+	)
+}
+func newAdhocPlansStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AdhocPlansInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, AdhocPlansTable, AdhocPlansColumn),
+	)
+}
+
 // MarshalGQL implements graphql.Marshaler interface.
-func (c Command) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.Quote(c.String()))
+func (e Command) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(e.String()))
 }
 
 // UnmarshalGQL implements graphql.Unmarshaler interface.
-func (c *Command) UnmarshalGQL(val interface{}) error {
+func (e *Command) UnmarshalGQL(val interface{}) error {
 	str, ok := val.(string)
 	if !ok {
 		return fmt.Errorf("enum %T must be a string", val)
 	}
-	*c = Command(str)
-	if err := CommandValidator(*c); err != nil {
+	*e = Command(str)
+	if err := CommandValidator(*e); err != nil {
 		return fmt.Errorf("%s is not a valid Command", str)
 	}
 	return nil
 }
 
 // MarshalGQL implements graphql.Marshaler interface.
-func (s State) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.Quote(s.String()))
+func (e State) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(e.String()))
 }
 
 // UnmarshalGQL implements graphql.Unmarshaler interface.
-func (s *State) UnmarshalGQL(val interface{}) error {
+func (e *State) UnmarshalGQL(val interface{}) error {
 	str, ok := val.(string)
 	if !ok {
 		return fmt.Errorf("enum %T must be a string", val)
 	}
-	*s = State(str)
-	if err := StateValidator(*s); err != nil {
+	*e = State(str)
+	if err := StateValidator(*e); err != nil {
 		return fmt.Errorf("%s is not a valid State", str)
 	}
 	return nil

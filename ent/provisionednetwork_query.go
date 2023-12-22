@@ -25,19 +25,20 @@ import (
 // ProvisionedNetworkQuery is the builder for querying ProvisionedNetwork entities.
 type ProvisionedNetworkQuery struct {
 	config
-	limit                *int
-	offset               *int
-	unique               *bool
-	order                []OrderFunc
-	fields               []string
-	predicates           []predicate.ProvisionedNetwork
-	withStatus           *StatusQuery
-	withNetwork          *NetworkQuery
-	withBuild            *BuildQuery
-	withTeam             *TeamQuery
-	withProvisionedHosts *ProvisionedHostQuery
-	withPlan             *PlanQuery
-	withFKs              bool
+	ctx                       *QueryContext
+	order                     []provisionednetwork.OrderOption
+	inters                    []Interceptor
+	predicates                []predicate.ProvisionedNetwork
+	withStatus                *StatusQuery
+	withNetwork               *NetworkQuery
+	withBuild                 *BuildQuery
+	withTeam                  *TeamQuery
+	withProvisionedHosts      *ProvisionedHostQuery
+	withPlan                  *PlanQuery
+	withFKs                   bool
+	modifiers                 []func(*sql.Selector)
+	loadTotal                 []func(context.Context, []*ProvisionedNetwork) error
+	withNamedProvisionedHosts map[string]*ProvisionedHostQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -49,34 +50,34 @@ func (pnq *ProvisionedNetworkQuery) Where(ps ...predicate.ProvisionedNetwork) *P
 	return pnq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (pnq *ProvisionedNetworkQuery) Limit(limit int) *ProvisionedNetworkQuery {
-	pnq.limit = &limit
+	pnq.ctx.Limit = &limit
 	return pnq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (pnq *ProvisionedNetworkQuery) Offset(offset int) *ProvisionedNetworkQuery {
-	pnq.offset = &offset
+	pnq.ctx.Offset = &offset
 	return pnq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (pnq *ProvisionedNetworkQuery) Unique(unique bool) *ProvisionedNetworkQuery {
-	pnq.unique = &unique
+	pnq.ctx.Unique = &unique
 	return pnq
 }
 
-// Order adds an order step to the query.
-func (pnq *ProvisionedNetworkQuery) Order(o ...OrderFunc) *ProvisionedNetworkQuery {
+// Order specifies how the records should be ordered.
+func (pnq *ProvisionedNetworkQuery) Order(o ...provisionednetwork.OrderOption) *ProvisionedNetworkQuery {
 	pnq.order = append(pnq.order, o...)
 	return pnq
 }
 
 // QueryStatus chains the current query on the "Status" edge.
 func (pnq *ProvisionedNetworkQuery) QueryStatus() *StatusQuery {
-	query := &StatusQuery{config: pnq.config}
+	query := (&StatusClient{config: pnq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -98,7 +99,7 @@ func (pnq *ProvisionedNetworkQuery) QueryStatus() *StatusQuery {
 
 // QueryNetwork chains the current query on the "Network" edge.
 func (pnq *ProvisionedNetworkQuery) QueryNetwork() *NetworkQuery {
-	query := &NetworkQuery{config: pnq.config}
+	query := (&NetworkClient{config: pnq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -120,7 +121,7 @@ func (pnq *ProvisionedNetworkQuery) QueryNetwork() *NetworkQuery {
 
 // QueryBuild chains the current query on the "Build" edge.
 func (pnq *ProvisionedNetworkQuery) QueryBuild() *BuildQuery {
-	query := &BuildQuery{config: pnq.config}
+	query := (&BuildClient{config: pnq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -142,7 +143,7 @@ func (pnq *ProvisionedNetworkQuery) QueryBuild() *BuildQuery {
 
 // QueryTeam chains the current query on the "Team" edge.
 func (pnq *ProvisionedNetworkQuery) QueryTeam() *TeamQuery {
-	query := &TeamQuery{config: pnq.config}
+	query := (&TeamClient{config: pnq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -164,7 +165,7 @@ func (pnq *ProvisionedNetworkQuery) QueryTeam() *TeamQuery {
 
 // QueryProvisionedHosts chains the current query on the "ProvisionedHosts" edge.
 func (pnq *ProvisionedNetworkQuery) QueryProvisionedHosts() *ProvisionedHostQuery {
-	query := &ProvisionedHostQuery{config: pnq.config}
+	query := (&ProvisionedHostClient{config: pnq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -186,7 +187,7 @@ func (pnq *ProvisionedNetworkQuery) QueryProvisionedHosts() *ProvisionedHostQuer
 
 // QueryPlan chains the current query on the "Plan" edge.
 func (pnq *ProvisionedNetworkQuery) QueryPlan() *PlanQuery {
-	query := &PlanQuery{config: pnq.config}
+	query := (&PlanClient{config: pnq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pnq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -209,7 +210,7 @@ func (pnq *ProvisionedNetworkQuery) QueryPlan() *PlanQuery {
 // First returns the first ProvisionedNetwork entity from the query.
 // Returns a *NotFoundError when no ProvisionedNetwork was found.
 func (pnq *ProvisionedNetworkQuery) First(ctx context.Context) (*ProvisionedNetwork, error) {
-	nodes, err := pnq.Limit(1).All(ctx)
+	nodes, err := pnq.Limit(1).All(setContextOp(ctx, pnq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +233,7 @@ func (pnq *ProvisionedNetworkQuery) FirstX(ctx context.Context) *ProvisionedNetw
 // Returns a *NotFoundError when no ProvisionedNetwork ID was found.
 func (pnq *ProvisionedNetworkQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pnq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = pnq.Limit(1).IDs(setContextOp(ctx, pnq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -255,7 +256,7 @@ func (pnq *ProvisionedNetworkQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one ProvisionedNetwork entity is found.
 // Returns a *NotFoundError when no ProvisionedNetwork entities are found.
 func (pnq *ProvisionedNetworkQuery) Only(ctx context.Context) (*ProvisionedNetwork, error) {
-	nodes, err := pnq.Limit(2).All(ctx)
+	nodes, err := pnq.Limit(2).All(setContextOp(ctx, pnq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +284,7 @@ func (pnq *ProvisionedNetworkQuery) OnlyX(ctx context.Context) *ProvisionedNetwo
 // Returns a *NotFoundError when no entities are found.
 func (pnq *ProvisionedNetworkQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pnq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = pnq.Limit(2).IDs(setContextOp(ctx, pnq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -308,10 +309,12 @@ func (pnq *ProvisionedNetworkQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of ProvisionedNetworks.
 func (pnq *ProvisionedNetworkQuery) All(ctx context.Context) ([]*ProvisionedNetwork, error) {
+	ctx = setContextOp(ctx, pnq.ctx, "All")
 	if err := pnq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return pnq.sqlAll(ctx)
+	qr := querierAll[[]*ProvisionedNetwork, *ProvisionedNetworkQuery]()
+	return withInterceptors[[]*ProvisionedNetwork](ctx, pnq, qr, pnq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -324,9 +327,12 @@ func (pnq *ProvisionedNetworkQuery) AllX(ctx context.Context) []*ProvisionedNetw
 }
 
 // IDs executes the query and returns a list of ProvisionedNetwork IDs.
-func (pnq *ProvisionedNetworkQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := pnq.Select(provisionednetwork.FieldID).Scan(ctx, &ids); err != nil {
+func (pnq *ProvisionedNetworkQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if pnq.ctx.Unique == nil && pnq.path != nil {
+		pnq.Unique(true)
+	}
+	ctx = setContextOp(ctx, pnq.ctx, "IDs")
+	if err = pnq.Select(provisionednetwork.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -343,10 +349,11 @@ func (pnq *ProvisionedNetworkQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (pnq *ProvisionedNetworkQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, pnq.ctx, "Count")
 	if err := pnq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return pnq.sqlCount(ctx)
+	return withInterceptors[int](ctx, pnq, querierCount[*ProvisionedNetworkQuery](), pnq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -360,10 +367,15 @@ func (pnq *ProvisionedNetworkQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (pnq *ProvisionedNetworkQuery) Exist(ctx context.Context) (bool, error) {
-	if err := pnq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, pnq.ctx, "Exist")
+	switch _, err := pnq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return pnq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -383,9 +395,9 @@ func (pnq *ProvisionedNetworkQuery) Clone() *ProvisionedNetworkQuery {
 	}
 	return &ProvisionedNetworkQuery{
 		config:               pnq.config,
-		limit:                pnq.limit,
-		offset:               pnq.offset,
-		order:                append([]OrderFunc{}, pnq.order...),
+		ctx:                  pnq.ctx.Clone(),
+		order:                append([]provisionednetwork.OrderOption{}, pnq.order...),
+		inters:               append([]Interceptor{}, pnq.inters...),
 		predicates:           append([]predicate.ProvisionedNetwork{}, pnq.predicates...),
 		withStatus:           pnq.withStatus.Clone(),
 		withNetwork:          pnq.withNetwork.Clone(),
@@ -394,16 +406,15 @@ func (pnq *ProvisionedNetworkQuery) Clone() *ProvisionedNetworkQuery {
 		withProvisionedHosts: pnq.withProvisionedHosts.Clone(),
 		withPlan:             pnq.withPlan.Clone(),
 		// clone intermediate query.
-		sql:    pnq.sql.Clone(),
-		path:   pnq.path,
-		unique: pnq.unique,
+		sql:  pnq.sql.Clone(),
+		path: pnq.path,
 	}
 }
 
 // WithStatus tells the query-builder to eager-load the nodes that are connected to
 // the "Status" edge. The optional arguments are used to configure the query builder of the edge.
 func (pnq *ProvisionedNetworkQuery) WithStatus(opts ...func(*StatusQuery)) *ProvisionedNetworkQuery {
-	query := &StatusQuery{config: pnq.config}
+	query := (&StatusClient{config: pnq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -414,7 +425,7 @@ func (pnq *ProvisionedNetworkQuery) WithStatus(opts ...func(*StatusQuery)) *Prov
 // WithNetwork tells the query-builder to eager-load the nodes that are connected to
 // the "Network" edge. The optional arguments are used to configure the query builder of the edge.
 func (pnq *ProvisionedNetworkQuery) WithNetwork(opts ...func(*NetworkQuery)) *ProvisionedNetworkQuery {
-	query := &NetworkQuery{config: pnq.config}
+	query := (&NetworkClient{config: pnq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -425,7 +436,7 @@ func (pnq *ProvisionedNetworkQuery) WithNetwork(opts ...func(*NetworkQuery)) *Pr
 // WithBuild tells the query-builder to eager-load the nodes that are connected to
 // the "Build" edge. The optional arguments are used to configure the query builder of the edge.
 func (pnq *ProvisionedNetworkQuery) WithBuild(opts ...func(*BuildQuery)) *ProvisionedNetworkQuery {
-	query := &BuildQuery{config: pnq.config}
+	query := (&BuildClient{config: pnq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -436,7 +447,7 @@ func (pnq *ProvisionedNetworkQuery) WithBuild(opts ...func(*BuildQuery)) *Provis
 // WithTeam tells the query-builder to eager-load the nodes that are connected to
 // the "Team" edge. The optional arguments are used to configure the query builder of the edge.
 func (pnq *ProvisionedNetworkQuery) WithTeam(opts ...func(*TeamQuery)) *ProvisionedNetworkQuery {
-	query := &TeamQuery{config: pnq.config}
+	query := (&TeamClient{config: pnq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -447,7 +458,7 @@ func (pnq *ProvisionedNetworkQuery) WithTeam(opts ...func(*TeamQuery)) *Provisio
 // WithProvisionedHosts tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisionedHosts" edge. The optional arguments are used to configure the query builder of the edge.
 func (pnq *ProvisionedNetworkQuery) WithProvisionedHosts(opts ...func(*ProvisionedHostQuery)) *ProvisionedNetworkQuery {
-	query := &ProvisionedHostQuery{config: pnq.config}
+	query := (&ProvisionedHostClient{config: pnq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -458,7 +469,7 @@ func (pnq *ProvisionedNetworkQuery) WithProvisionedHosts(opts ...func(*Provision
 // WithPlan tells the query-builder to eager-load the nodes that are connected to
 // the "Plan" edge. The optional arguments are used to configure the query builder of the edge.
 func (pnq *ProvisionedNetworkQuery) WithPlan(opts ...func(*PlanQuery)) *ProvisionedNetworkQuery {
-	query := &PlanQuery{config: pnq.config}
+	query := (&PlanClient{config: pnq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -481,16 +492,11 @@ func (pnq *ProvisionedNetworkQuery) WithPlan(opts ...func(*PlanQuery)) *Provisio
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (pnq *ProvisionedNetworkQuery) GroupBy(field string, fields ...string) *ProvisionedNetworkGroupBy {
-	grbuild := &ProvisionedNetworkGroupBy{config: pnq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := pnq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return pnq.sqlQuery(ctx), nil
-	}
+	pnq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &ProvisionedNetworkGroupBy{build: pnq}
+	grbuild.flds = &pnq.ctx.Fields
 	grbuild.label = provisionednetwork.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -507,15 +513,30 @@ func (pnq *ProvisionedNetworkQuery) GroupBy(field string, fields ...string) *Pro
 //		Select(provisionednetwork.FieldName).
 //		Scan(ctx, &v)
 func (pnq *ProvisionedNetworkQuery) Select(fields ...string) *ProvisionedNetworkSelect {
-	pnq.fields = append(pnq.fields, fields...)
-	selbuild := &ProvisionedNetworkSelect{ProvisionedNetworkQuery: pnq}
-	selbuild.label = provisionednetwork.Label
-	selbuild.flds, selbuild.scan = &pnq.fields, selbuild.Scan
-	return selbuild
+	pnq.ctx.Fields = append(pnq.ctx.Fields, fields...)
+	sbuild := &ProvisionedNetworkSelect{ProvisionedNetworkQuery: pnq}
+	sbuild.label = provisionednetwork.Label
+	sbuild.flds, sbuild.scan = &pnq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a ProvisionedNetworkSelect configured with the given aggregations.
+func (pnq *ProvisionedNetworkQuery) Aggregate(fns ...AggregateFunc) *ProvisionedNetworkSelect {
+	return pnq.Select().Aggregate(fns...)
 }
 
 func (pnq *ProvisionedNetworkQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range pnq.fields {
+	for _, inter := range pnq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, pnq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range pnq.ctx.Fields {
 		if !provisionednetwork.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -550,14 +571,17 @@ func (pnq *ProvisionedNetworkQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, provisionednetwork.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*ProvisionedNetwork).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &ProvisionedNetwork{config: pnq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(pnq.modifiers) > 0 {
+		_spec.Modifiers = pnq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -607,6 +631,18 @@ func (pnq *ProvisionedNetworkQuery) sqlAll(ctx context.Context, hooks ...queryHo
 			return nil, err
 		}
 	}
+	for name, query := range pnq.withNamedProvisionedHosts {
+		if err := pnq.loadProvisionedHosts(ctx, query, nodes,
+			func(n *ProvisionedNetwork) { n.appendNamedProvisionedHosts(name) },
+			func(n *ProvisionedNetwork, e *ProvisionedHost) { n.appendNamedProvisionedHosts(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range pnq.loadTotal {
+		if err := pnq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -619,7 +655,7 @@ func (pnq *ProvisionedNetworkQuery) loadStatus(ctx context.Context, query *Statu
 	}
 	query.withFKs = true
 	query.Where(predicate.Status(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisionednetwork.StatusColumn, fks...))
+		s.Where(sql.InValues(s.C(provisionednetwork.StatusColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -632,7 +668,7 @@ func (pnq *ProvisionedNetworkQuery) loadStatus(ctx context.Context, query *Statu
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_network_status" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "provisioned_network_status" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -650,6 +686,9 @@ func (pnq *ProvisionedNetworkQuery) loadNetwork(ctx context.Context, query *Netw
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(network.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -680,6 +719,9 @@ func (pnq *ProvisionedNetworkQuery) loadBuild(ctx context.Context, query *BuildQ
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(build.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -709,6 +751,9 @@ func (pnq *ProvisionedNetworkQuery) loadTeam(ctx context.Context, query *TeamQue
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(team.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -737,7 +782,7 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedHosts(ctx context.Context, qu
 	}
 	query.withFKs = true
 	query.Where(predicate.ProvisionedHost(func(s *sql.Selector) {
-		s.Where(sql.InValues(provisionednetwork.ProvisionedHostsColumn, fks...))
+		s.Where(sql.InValues(s.C(provisionednetwork.ProvisionedHostsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -750,7 +795,7 @@ func (pnq *ProvisionedNetworkQuery) loadProvisionedHosts(ctx context.Context, qu
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provisioned_host_provisioned_network" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "provisioned_host_provisioned_network" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -768,6 +813,9 @@ func (pnq *ProvisionedNetworkQuery) loadPlan(ctx context.Context, query *PlanQue
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(plan.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -788,38 +836,25 @@ func (pnq *ProvisionedNetworkQuery) loadPlan(ctx context.Context, query *PlanQue
 
 func (pnq *ProvisionedNetworkQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := pnq.querySpec()
-	_spec.Node.Columns = pnq.fields
-	if len(pnq.fields) > 0 {
-		_spec.Unique = pnq.unique != nil && *pnq.unique
+	if len(pnq.modifiers) > 0 {
+		_spec.Modifiers = pnq.modifiers
+	}
+	_spec.Node.Columns = pnq.ctx.Fields
+	if len(pnq.ctx.Fields) > 0 {
+		_spec.Unique = pnq.ctx.Unique != nil && *pnq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, pnq.driver, _spec)
 }
 
-func (pnq *ProvisionedNetworkQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := pnq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (pnq *ProvisionedNetworkQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   provisionednetwork.Table,
-			Columns: provisionednetwork.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: provisionednetwork.FieldID,
-			},
-		},
-		From:   pnq.sql,
-		Unique: true,
-	}
-	if unique := pnq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(provisionednetwork.Table, provisionednetwork.Columns, sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID))
+	_spec.From = pnq.sql
+	if unique := pnq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if pnq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := pnq.fields; len(fields) > 0 {
+	if fields := pnq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, provisionednetwork.FieldID)
 		for i := range fields {
@@ -835,10 +870,10 @@ func (pnq *ProvisionedNetworkQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := pnq.limit; limit != nil {
+	if limit := pnq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := pnq.offset; offset != nil {
+	if offset := pnq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := pnq.order; len(ps) > 0 {
@@ -854,7 +889,7 @@ func (pnq *ProvisionedNetworkQuery) querySpec() *sqlgraph.QuerySpec {
 func (pnq *ProvisionedNetworkQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(pnq.driver.Dialect())
 	t1 := builder.Table(provisionednetwork.Table)
-	columns := pnq.fields
+	columns := pnq.ctx.Fields
 	if len(columns) == 0 {
 		columns = provisionednetwork.Columns
 	}
@@ -863,7 +898,7 @@ func (pnq *ProvisionedNetworkQuery) sqlQuery(ctx context.Context) *sql.Selector 
 		selector = pnq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if pnq.unique != nil && *pnq.unique {
+	if pnq.ctx.Unique != nil && *pnq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range pnq.predicates {
@@ -872,26 +907,35 @@ func (pnq *ProvisionedNetworkQuery) sqlQuery(ctx context.Context) *sql.Selector 
 	for _, p := range pnq.order {
 		p(selector)
 	}
-	if offset := pnq.offset; offset != nil {
+	if offset := pnq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := pnq.limit; limit != nil {
+	if limit := pnq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
 }
 
+// WithNamedProvisionedHosts tells the query-builder to eager-load the nodes that are connected to the "ProvisionedHosts"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (pnq *ProvisionedNetworkQuery) WithNamedProvisionedHosts(name string, opts ...func(*ProvisionedHostQuery)) *ProvisionedNetworkQuery {
+	query := (&ProvisionedHostClient{config: pnq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if pnq.withNamedProvisionedHosts == nil {
+		pnq.withNamedProvisionedHosts = make(map[string]*ProvisionedHostQuery)
+	}
+	pnq.withNamedProvisionedHosts[name] = query
+	return pnq
+}
+
 // ProvisionedNetworkGroupBy is the group-by builder for ProvisionedNetwork entities.
 type ProvisionedNetworkGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *ProvisionedNetworkQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -900,74 +944,77 @@ func (pngb *ProvisionedNetworkGroupBy) Aggregate(fns ...AggregateFunc) *Provisio
 	return pngb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (pngb *ProvisionedNetworkGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := pngb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (pngb *ProvisionedNetworkGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, pngb.build.ctx, "GroupBy")
+	if err := pngb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	pngb.sql = query
-	return pngb.sqlScan(ctx, v)
+	return scanWithInterceptors[*ProvisionedNetworkQuery, *ProvisionedNetworkGroupBy](ctx, pngb.build, pngb, pngb.build.inters, v)
 }
 
-func (pngb *ProvisionedNetworkGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range pngb.fields {
-		if !provisionednetwork.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (pngb *ProvisionedNetworkGroupBy) sqlScan(ctx context.Context, root *ProvisionedNetworkQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(pngb.fns))
+	for _, fn := range pngb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := pngb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*pngb.flds)+len(pngb.fns))
+		for _, f := range *pngb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*pngb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pngb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := pngb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (pngb *ProvisionedNetworkGroupBy) sqlQuery() *sql.Selector {
-	selector := pngb.sql.Select()
-	aggregation := make([]string, 0, len(pngb.fns))
-	for _, fn := range pngb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(pngb.fields)+len(pngb.fns))
-		for _, f := range pngb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(pngb.fields...)...)
-}
-
 // ProvisionedNetworkSelect is the builder for selecting fields of ProvisionedNetwork entities.
 type ProvisionedNetworkSelect struct {
 	*ProvisionedNetworkQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (pns *ProvisionedNetworkSelect) Aggregate(fns ...AggregateFunc) *ProvisionedNetworkSelect {
+	pns.fns = append(pns.fns, fns...)
+	return pns
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (pns *ProvisionedNetworkSelect) Scan(ctx context.Context, v interface{}) error {
+func (pns *ProvisionedNetworkSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, pns.ctx, "Select")
 	if err := pns.prepareQuery(ctx); err != nil {
 		return err
 	}
-	pns.sql = pns.ProvisionedNetworkQuery.sqlQuery(ctx)
-	return pns.sqlScan(ctx, v)
+	return scanWithInterceptors[*ProvisionedNetworkQuery, *ProvisionedNetworkSelect](ctx, pns.ProvisionedNetworkQuery, pns, pns.inters, v)
 }
 
-func (pns *ProvisionedNetworkSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (pns *ProvisionedNetworkSelect) sqlScan(ctx context.Context, root *ProvisionedNetworkQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(pns.fns))
+	for _, fn := range pns.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*pns.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := pns.sql.Query()
+	query, args := selector.Query()
 	if err := pns.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

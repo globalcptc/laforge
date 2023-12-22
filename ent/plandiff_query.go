@@ -20,15 +20,15 @@ import (
 // PlanDiffQuery is the builder for querying PlanDiff entities.
 type PlanDiffQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
-	order           []OrderFunc
-	fields          []string
+	ctx             *QueryContext
+	order           []plandiff.OrderOption
+	inters          []Interceptor
 	predicates      []predicate.PlanDiff
 	withBuildCommit *BuildCommitQuery
 	withPlan        *PlanQuery
 	withFKs         bool
+	modifiers       []func(*sql.Selector)
+	loadTotal       []func(context.Context, []*PlanDiff) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -40,34 +40,34 @@ func (pdq *PlanDiffQuery) Where(ps ...predicate.PlanDiff) *PlanDiffQuery {
 	return pdq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (pdq *PlanDiffQuery) Limit(limit int) *PlanDiffQuery {
-	pdq.limit = &limit
+	pdq.ctx.Limit = &limit
 	return pdq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (pdq *PlanDiffQuery) Offset(offset int) *PlanDiffQuery {
-	pdq.offset = &offset
+	pdq.ctx.Offset = &offset
 	return pdq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (pdq *PlanDiffQuery) Unique(unique bool) *PlanDiffQuery {
-	pdq.unique = &unique
+	pdq.ctx.Unique = &unique
 	return pdq
 }
 
-// Order adds an order step to the query.
-func (pdq *PlanDiffQuery) Order(o ...OrderFunc) *PlanDiffQuery {
+// Order specifies how the records should be ordered.
+func (pdq *PlanDiffQuery) Order(o ...plandiff.OrderOption) *PlanDiffQuery {
 	pdq.order = append(pdq.order, o...)
 	return pdq
 }
 
 // QueryBuildCommit chains the current query on the "BuildCommit" edge.
 func (pdq *PlanDiffQuery) QueryBuildCommit() *BuildCommitQuery {
-	query := &BuildCommitQuery{config: pdq.config}
+	query := (&BuildCommitClient{config: pdq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pdq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -89,7 +89,7 @@ func (pdq *PlanDiffQuery) QueryBuildCommit() *BuildCommitQuery {
 
 // QueryPlan chains the current query on the "Plan" edge.
 func (pdq *PlanDiffQuery) QueryPlan() *PlanQuery {
-	query := &PlanQuery{config: pdq.config}
+	query := (&PlanClient{config: pdq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pdq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -112,7 +112,7 @@ func (pdq *PlanDiffQuery) QueryPlan() *PlanQuery {
 // First returns the first PlanDiff entity from the query.
 // Returns a *NotFoundError when no PlanDiff was found.
 func (pdq *PlanDiffQuery) First(ctx context.Context) (*PlanDiff, error) {
-	nodes, err := pdq.Limit(1).All(ctx)
+	nodes, err := pdq.Limit(1).All(setContextOp(ctx, pdq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (pdq *PlanDiffQuery) FirstX(ctx context.Context) *PlanDiff {
 // Returns a *NotFoundError when no PlanDiff ID was found.
 func (pdq *PlanDiffQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pdq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = pdq.Limit(1).IDs(setContextOp(ctx, pdq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -158,7 +158,7 @@ func (pdq *PlanDiffQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one PlanDiff entity is found.
 // Returns a *NotFoundError when no PlanDiff entities are found.
 func (pdq *PlanDiffQuery) Only(ctx context.Context) (*PlanDiff, error) {
-	nodes, err := pdq.Limit(2).All(ctx)
+	nodes, err := pdq.Limit(2).All(setContextOp(ctx, pdq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (pdq *PlanDiffQuery) OnlyX(ctx context.Context) *PlanDiff {
 // Returns a *NotFoundError when no entities are found.
 func (pdq *PlanDiffQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pdq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = pdq.Limit(2).IDs(setContextOp(ctx, pdq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -211,10 +211,12 @@ func (pdq *PlanDiffQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of PlanDiffs.
 func (pdq *PlanDiffQuery) All(ctx context.Context) ([]*PlanDiff, error) {
+	ctx = setContextOp(ctx, pdq.ctx, "All")
 	if err := pdq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return pdq.sqlAll(ctx)
+	qr := querierAll[[]*PlanDiff, *PlanDiffQuery]()
+	return withInterceptors[[]*PlanDiff](ctx, pdq, qr, pdq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -227,9 +229,12 @@ func (pdq *PlanDiffQuery) AllX(ctx context.Context) []*PlanDiff {
 }
 
 // IDs executes the query and returns a list of PlanDiff IDs.
-func (pdq *PlanDiffQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := pdq.Select(plandiff.FieldID).Scan(ctx, &ids); err != nil {
+func (pdq *PlanDiffQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if pdq.ctx.Unique == nil && pdq.path != nil {
+		pdq.Unique(true)
+	}
+	ctx = setContextOp(ctx, pdq.ctx, "IDs")
+	if err = pdq.Select(plandiff.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -246,10 +251,11 @@ func (pdq *PlanDiffQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (pdq *PlanDiffQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, pdq.ctx, "Count")
 	if err := pdq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return pdq.sqlCount(ctx)
+	return withInterceptors[int](ctx, pdq, querierCount[*PlanDiffQuery](), pdq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -263,10 +269,15 @@ func (pdq *PlanDiffQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (pdq *PlanDiffQuery) Exist(ctx context.Context) (bool, error) {
-	if err := pdq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, pdq.ctx, "Exist")
+	switch _, err := pdq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return pdq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -286,23 +297,22 @@ func (pdq *PlanDiffQuery) Clone() *PlanDiffQuery {
 	}
 	return &PlanDiffQuery{
 		config:          pdq.config,
-		limit:           pdq.limit,
-		offset:          pdq.offset,
-		order:           append([]OrderFunc{}, pdq.order...),
+		ctx:             pdq.ctx.Clone(),
+		order:           append([]plandiff.OrderOption{}, pdq.order...),
+		inters:          append([]Interceptor{}, pdq.inters...),
 		predicates:      append([]predicate.PlanDiff{}, pdq.predicates...),
 		withBuildCommit: pdq.withBuildCommit.Clone(),
 		withPlan:        pdq.withPlan.Clone(),
 		// clone intermediate query.
-		sql:    pdq.sql.Clone(),
-		path:   pdq.path,
-		unique: pdq.unique,
+		sql:  pdq.sql.Clone(),
+		path: pdq.path,
 	}
 }
 
 // WithBuildCommit tells the query-builder to eager-load the nodes that are connected to
 // the "BuildCommit" edge. The optional arguments are used to configure the query builder of the edge.
 func (pdq *PlanDiffQuery) WithBuildCommit(opts ...func(*BuildCommitQuery)) *PlanDiffQuery {
-	query := &BuildCommitQuery{config: pdq.config}
+	query := (&BuildCommitClient{config: pdq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -313,7 +323,7 @@ func (pdq *PlanDiffQuery) WithBuildCommit(opts ...func(*BuildCommitQuery)) *Plan
 // WithPlan tells the query-builder to eager-load the nodes that are connected to
 // the "Plan" edge. The optional arguments are used to configure the query builder of the edge.
 func (pdq *PlanDiffQuery) WithPlan(opts ...func(*PlanQuery)) *PlanDiffQuery {
-	query := &PlanQuery{config: pdq.config}
+	query := (&PlanClient{config: pdq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -336,16 +346,11 @@ func (pdq *PlanDiffQuery) WithPlan(opts ...func(*PlanQuery)) *PlanDiffQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (pdq *PlanDiffQuery) GroupBy(field string, fields ...string) *PlanDiffGroupBy {
-	grbuild := &PlanDiffGroupBy{config: pdq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := pdq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return pdq.sqlQuery(ctx), nil
-	}
+	pdq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &PlanDiffGroupBy{build: pdq}
+	grbuild.flds = &pdq.ctx.Fields
 	grbuild.label = plandiff.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -362,15 +367,30 @@ func (pdq *PlanDiffQuery) GroupBy(field string, fields ...string) *PlanDiffGroup
 //		Select(plandiff.FieldRevision).
 //		Scan(ctx, &v)
 func (pdq *PlanDiffQuery) Select(fields ...string) *PlanDiffSelect {
-	pdq.fields = append(pdq.fields, fields...)
-	selbuild := &PlanDiffSelect{PlanDiffQuery: pdq}
-	selbuild.label = plandiff.Label
-	selbuild.flds, selbuild.scan = &pdq.fields, selbuild.Scan
-	return selbuild
+	pdq.ctx.Fields = append(pdq.ctx.Fields, fields...)
+	sbuild := &PlanDiffSelect{PlanDiffQuery: pdq}
+	sbuild.label = plandiff.Label
+	sbuild.flds, sbuild.scan = &pdq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a PlanDiffSelect configured with the given aggregations.
+func (pdq *PlanDiffQuery) Aggregate(fns ...AggregateFunc) *PlanDiffSelect {
+	return pdq.Select().Aggregate(fns...)
 }
 
 func (pdq *PlanDiffQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range pdq.fields {
+	for _, inter := range pdq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, pdq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range pdq.ctx.Fields {
 		if !plandiff.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -401,14 +421,17 @@ func (pdq *PlanDiffQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pl
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, plandiff.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*PlanDiff).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &PlanDiff{config: pdq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(pdq.modifiers) > 0 {
+		_spec.Modifiers = pdq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -431,6 +454,11 @@ func (pdq *PlanDiffQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pl
 			return nil, err
 		}
 	}
+	for i := range pdq.loadTotal {
+		if err := pdq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -446,6 +474,9 @@ func (pdq *PlanDiffQuery) loadBuildCommit(ctx context.Context, query *BuildCommi
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(buildcommit.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -476,6 +507,9 @@ func (pdq *PlanDiffQuery) loadPlan(ctx context.Context, query *PlanQuery, nodes 
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(plan.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -495,38 +529,25 @@ func (pdq *PlanDiffQuery) loadPlan(ctx context.Context, query *PlanQuery, nodes 
 
 func (pdq *PlanDiffQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := pdq.querySpec()
-	_spec.Node.Columns = pdq.fields
-	if len(pdq.fields) > 0 {
-		_spec.Unique = pdq.unique != nil && *pdq.unique
+	if len(pdq.modifiers) > 0 {
+		_spec.Modifiers = pdq.modifiers
+	}
+	_spec.Node.Columns = pdq.ctx.Fields
+	if len(pdq.ctx.Fields) > 0 {
+		_spec.Unique = pdq.ctx.Unique != nil && *pdq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, pdq.driver, _spec)
 }
 
-func (pdq *PlanDiffQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := pdq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (pdq *PlanDiffQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   plandiff.Table,
-			Columns: plandiff.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: plandiff.FieldID,
-			},
-		},
-		From:   pdq.sql,
-		Unique: true,
-	}
-	if unique := pdq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(plandiff.Table, plandiff.Columns, sqlgraph.NewFieldSpec(plandiff.FieldID, field.TypeUUID))
+	_spec.From = pdq.sql
+	if unique := pdq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if pdq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := pdq.fields; len(fields) > 0 {
+	if fields := pdq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, plandiff.FieldID)
 		for i := range fields {
@@ -542,10 +563,10 @@ func (pdq *PlanDiffQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := pdq.limit; limit != nil {
+	if limit := pdq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := pdq.offset; offset != nil {
+	if offset := pdq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := pdq.order; len(ps) > 0 {
@@ -561,7 +582,7 @@ func (pdq *PlanDiffQuery) querySpec() *sqlgraph.QuerySpec {
 func (pdq *PlanDiffQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(pdq.driver.Dialect())
 	t1 := builder.Table(plandiff.Table)
-	columns := pdq.fields
+	columns := pdq.ctx.Fields
 	if len(columns) == 0 {
 		columns = plandiff.Columns
 	}
@@ -570,7 +591,7 @@ func (pdq *PlanDiffQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = pdq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if pdq.unique != nil && *pdq.unique {
+	if pdq.ctx.Unique != nil && *pdq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range pdq.predicates {
@@ -579,12 +600,12 @@ func (pdq *PlanDiffQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range pdq.order {
 		p(selector)
 	}
-	if offset := pdq.offset; offset != nil {
+	if offset := pdq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := pdq.limit; limit != nil {
+	if limit := pdq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -592,13 +613,8 @@ func (pdq *PlanDiffQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // PlanDiffGroupBy is the group-by builder for PlanDiff entities.
 type PlanDiffGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *PlanDiffQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -607,74 +623,77 @@ func (pdgb *PlanDiffGroupBy) Aggregate(fns ...AggregateFunc) *PlanDiffGroupBy {
 	return pdgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (pdgb *PlanDiffGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := pdgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (pdgb *PlanDiffGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, pdgb.build.ctx, "GroupBy")
+	if err := pdgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	pdgb.sql = query
-	return pdgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*PlanDiffQuery, *PlanDiffGroupBy](ctx, pdgb.build, pdgb, pdgb.build.inters, v)
 }
 
-func (pdgb *PlanDiffGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range pdgb.fields {
-		if !plandiff.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (pdgb *PlanDiffGroupBy) sqlScan(ctx context.Context, root *PlanDiffQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(pdgb.fns))
+	for _, fn := range pdgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := pdgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*pdgb.flds)+len(pdgb.fns))
+		for _, f := range *pdgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*pdgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pdgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := pdgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (pdgb *PlanDiffGroupBy) sqlQuery() *sql.Selector {
-	selector := pdgb.sql.Select()
-	aggregation := make([]string, 0, len(pdgb.fns))
-	for _, fn := range pdgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(pdgb.fields)+len(pdgb.fns))
-		for _, f := range pdgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(pdgb.fields...)...)
-}
-
 // PlanDiffSelect is the builder for selecting fields of PlanDiff entities.
 type PlanDiffSelect struct {
 	*PlanDiffQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (pds *PlanDiffSelect) Aggregate(fns ...AggregateFunc) *PlanDiffSelect {
+	pds.fns = append(pds.fns, fns...)
+	return pds
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (pds *PlanDiffSelect) Scan(ctx context.Context, v interface{}) error {
+func (pds *PlanDiffSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, pds.ctx, "Select")
 	if err := pds.prepareQuery(ctx); err != nil {
 		return err
 	}
-	pds.sql = pds.PlanDiffQuery.sqlQuery(ctx)
-	return pds.sqlScan(ctx, v)
+	return scanWithInterceptors[*PlanDiffQuery, *PlanDiffSelect](ctx, pds.PlanDiffQuery, pds, pds.inters, v)
 }
 
-func (pds *PlanDiffSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (pds *PlanDiffSelect) sqlScan(ctx context.Context, root *PlanDiffQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(pds.fns))
+	for _, fn := range pds.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*pds.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := pds.sql.Query()
+	query, args := selector.Query()
 	if err := pds.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

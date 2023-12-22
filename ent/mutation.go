@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"entgo.io/ent"
+	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/adhocplan"
 	"github.com/gen0cide/laforge/ent/agentstatus"
 	"github.com/gen0cide/laforge/ent/agenttask"
@@ -51,8 +53,6 @@ import (
 	"github.com/gen0cide/laforge/ent/user"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/uuid"
-
-	"entgo.io/ent"
 )
 
 const (
@@ -463,9 +463,24 @@ func (m *AdhocPlanMutation) Where(ps ...predicate.AdhocPlan) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the AdhocPlanMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AdhocPlanMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AdhocPlan, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *AdhocPlanMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AdhocPlanMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (AdhocPlan).
@@ -1685,9 +1700,24 @@ func (m *AgentStatusMutation) Where(ps ...predicate.AgentStatus) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the AgentStatusMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AgentStatusMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AgentStatus, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *AgentStatusMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AgentStatusMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (AgentStatus).
@@ -2184,8 +2214,6 @@ func (m *AgentStatusMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *AgentStatusMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -2796,9 +2824,24 @@ func (m *AgentTaskMutation) Where(ps ...predicate.AgentTask) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the AgentTaskMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AgentTaskMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AgentTask, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *AgentTaskMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AgentTaskMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (AgentTask).
@@ -3311,13 +3354,13 @@ func (m *AnsibleMutation) ResetName() {
 	m.name = nil
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *AnsibleMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *AnsibleMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *AnsibleMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *AnsibleMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -3325,25 +3368,25 @@ func (m *AnsibleMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the Ansible entity.
+// OldHCLID returns the old "hcl_id" field's value of the Ansible entity.
 // If the Ansible object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnsibleMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *AnsibleMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *AnsibleMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *AnsibleMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -3697,9 +3740,24 @@ func (m *AnsibleMutation) Where(ps ...predicate.Ansible) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the AnsibleMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AnsibleMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Ansible, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *AnsibleMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AnsibleMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Ansible).
@@ -3716,7 +3774,7 @@ func (m *AnsibleMutation) Fields() []string {
 		fields = append(fields, ansible.FieldName)
 	}
 	if m.hcl_id != nil {
-		fields = append(fields, ansible.FieldHclID)
+		fields = append(fields, ansible.FieldHCLID)
 	}
 	if m.description != nil {
 		fields = append(fields, ansible.FieldDescription)
@@ -3749,8 +3807,8 @@ func (m *AnsibleMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case ansible.FieldName:
 		return m.Name()
-	case ansible.FieldHclID:
-		return m.HclID()
+	case ansible.FieldHCLID:
+		return m.HCLID()
 	case ansible.FieldDescription:
 		return m.Description()
 	case ansible.FieldSource:
@@ -3776,8 +3834,8 @@ func (m *AnsibleMutation) OldField(ctx context.Context, name string) (ent.Value,
 	switch name {
 	case ansible.FieldName:
 		return m.OldName(ctx)
-	case ansible.FieldHclID:
-		return m.OldHclID(ctx)
+	case ansible.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case ansible.FieldDescription:
 		return m.OldDescription(ctx)
 	case ansible.FieldSource:
@@ -3808,12 +3866,12 @@ func (m *AnsibleMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetName(v)
 		return nil
-	case ansible.FieldHclID:
+	case ansible.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case ansible.FieldDescription:
 		v, ok := value.(string)
@@ -3916,8 +3974,8 @@ func (m *AnsibleMutation) ResetField(name string) error {
 	case ansible.FieldName:
 		m.ResetName()
 		return nil
-	case ansible.FieldHclID:
-		m.ResetHclID()
+	case ansible.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case ansible.FieldDescription:
 		m.ResetDescription()
@@ -4688,9 +4746,24 @@ func (m *AuthUserMutation) Where(ps ...predicate.AuthUser) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the AuthUserMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AuthUserMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AuthUser, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *AuthUserMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AuthUserMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (AuthUser).
@@ -5994,9 +6067,24 @@ func (m *BuildMutation) Where(ps ...predicate.Build) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the BuildMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *BuildMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Build, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *BuildMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *BuildMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Build).
@@ -6958,9 +7046,24 @@ func (m *BuildCommitMutation) Where(ps ...predicate.BuildCommit) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the BuildCommitMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *BuildCommitMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.BuildCommit, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *BuildCommitMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *BuildCommitMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (BuildCommit).
@@ -7274,6 +7377,7 @@ type CommandMutation struct {
 	description         *string
 	program             *string
 	args                *[]string
+	appendargs          []string
 	ignore_errors       *bool
 	disabled            *bool
 	cooldown            *int
@@ -7397,13 +7501,13 @@ func (m *CommandMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *CommandMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *CommandMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *CommandMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *CommandMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -7411,25 +7515,25 @@ func (m *CommandMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the Command entity.
+// OldHCLID returns the old "hcl_id" field's value of the Command entity.
 // If the Command object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CommandMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *CommandMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *CommandMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *CommandMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -7544,6 +7648,7 @@ func (m *CommandMutation) ResetProgram() {
 // SetArgs sets the "args" field.
 func (m *CommandMutation) SetArgs(s []string) {
 	m.args = &s
+	m.appendargs = nil
 }
 
 // Args returns the value of the "args" field in the mutation.
@@ -7572,9 +7677,23 @@ func (m *CommandMutation) OldArgs(ctx context.Context) (v []string, err error) {
 	return oldValue.Args, nil
 }
 
+// AppendArgs adds s to the "args" field.
+func (m *CommandMutation) AppendArgs(s []string) {
+	m.appendargs = append(m.appendargs, s...)
+}
+
+// AppendedArgs returns the list of values that were appended to the "args" field in this mutation.
+func (m *CommandMutation) AppendedArgs() ([]string, bool) {
+	if len(m.appendargs) == 0 {
+		return nil, false
+	}
+	return m.appendargs, true
+}
+
 // ResetArgs resets all changes to the "args" field.
 func (m *CommandMutation) ResetArgs() {
 	m.args = nil
+	m.appendargs = nil
 }
 
 // SetIgnoreErrors sets the "ignore_errors" field.
@@ -7931,9 +8050,24 @@ func (m *CommandMutation) Where(ps ...predicate.Command) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the CommandMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *CommandMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Command, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *CommandMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *CommandMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Command).
@@ -7947,7 +8081,7 @@ func (m *CommandMutation) Type() string {
 func (m *CommandMutation) Fields() []string {
 	fields := make([]string, 0, 11)
 	if m.hcl_id != nil {
-		fields = append(fields, command.FieldHclID)
+		fields = append(fields, command.FieldHCLID)
 	}
 	if m.name != nil {
 		fields = append(fields, command.FieldName)
@@ -7987,8 +8121,8 @@ func (m *CommandMutation) Fields() []string {
 // schema.
 func (m *CommandMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case command.FieldHclID:
-		return m.HclID()
+	case command.FieldHCLID:
+		return m.HCLID()
 	case command.FieldName:
 		return m.Name()
 	case command.FieldDescription:
@@ -8018,8 +8152,8 @@ func (m *CommandMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *CommandMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case command.FieldHclID:
-		return m.OldHclID(ctx)
+	case command.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case command.FieldName:
 		return m.OldName(ctx)
 	case command.FieldDescription:
@@ -8049,12 +8183,12 @@ func (m *CommandMutation) OldField(ctx context.Context, name string) (ent.Value,
 // type.
 func (m *CommandMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case command.FieldHclID:
+	case command.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case command.FieldName:
 		v, ok := value.(string)
@@ -8202,8 +8336,8 @@ func (m *CommandMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *CommandMutation) ResetField(name string) error {
 	switch name {
-	case command.FieldHclID:
-		m.ResetHclID()
+	case command.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case command.FieldName:
 		m.ResetName()
@@ -8473,13 +8607,13 @@ func (m *CompetitionMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *CompetitionMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *CompetitionMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *CompetitionMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *CompetitionMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -8487,25 +8621,25 @@ func (m *CompetitionMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the Competition entity.
+// OldHCLID returns the old "hcl_id" field's value of the Competition entity.
 // If the Competition object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CompetitionMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *CompetitionMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *CompetitionMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *CompetitionMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -8909,9 +9043,24 @@ func (m *CompetitionMutation) Where(ps ...predicate.Competition) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the CompetitionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *CompetitionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Competition, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *CompetitionMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *CompetitionMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Competition).
@@ -8925,7 +9074,7 @@ func (m *CompetitionMutation) Type() string {
 func (m *CompetitionMutation) Fields() []string {
 	fields := make([]string, 0, 6)
 	if m.hcl_id != nil {
-		fields = append(fields, competition.FieldHclID)
+		fields = append(fields, competition.FieldHCLID)
 	}
 	if m.root_password != nil {
 		fields = append(fields, competition.FieldRootPassword)
@@ -8950,8 +9099,8 @@ func (m *CompetitionMutation) Fields() []string {
 // schema.
 func (m *CompetitionMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case competition.FieldHclID:
-		return m.HclID()
+	case competition.FieldHCLID:
+		return m.HCLID()
 	case competition.FieldRootPassword:
 		return m.RootPassword()
 	case competition.FieldStartTime:
@@ -8971,8 +9120,8 @@ func (m *CompetitionMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *CompetitionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case competition.FieldHclID:
-		return m.OldHclID(ctx)
+	case competition.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case competition.FieldRootPassword:
 		return m.OldRootPassword(ctx)
 	case competition.FieldStartTime:
@@ -8992,12 +9141,12 @@ func (m *CompetitionMutation) OldField(ctx context.Context, name string) (ent.Va
 // type.
 func (m *CompetitionMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case competition.FieldHclID:
+	case competition.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case competition.FieldRootPassword:
 		v, ok := value.(string)
@@ -9125,8 +9274,8 @@ func (m *CompetitionMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *CompetitionMutation) ResetField(name string) error {
 	switch name {
-	case competition.FieldHclID:
-		m.ResetHclID()
+	case competition.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case competition.FieldRootPassword:
 		m.ResetRootPassword()
@@ -9285,7 +9434,9 @@ type DNSMutation struct {
 	_type                *string
 	root_domain          *string
 	dns_servers          *[]string
+	appenddns_servers    []string
 	ntp_servers          *[]string
+	appendntp_servers    []string
 	_config              *map[string]string
 	clearedFields        map[string]struct{}
 	_Environments        map[uuid.UUID]struct{}
@@ -9403,13 +9554,13 @@ func (m *DNSMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *DNSMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *DNSMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *DNSMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *DNSMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -9417,25 +9568,25 @@ func (m *DNSMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the DNS entity.
+// OldHCLID returns the old "hcl_id" field's value of the DNS entity.
 // If the DNS object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DNSMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *DNSMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *DNSMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *DNSMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -9514,6 +9665,7 @@ func (m *DNSMutation) ResetRootDomain() {
 // SetDNSServers sets the "dns_servers" field.
 func (m *DNSMutation) SetDNSServers(s []string) {
 	m.dns_servers = &s
+	m.appenddns_servers = nil
 }
 
 // DNSServers returns the value of the "dns_servers" field in the mutation.
@@ -9542,14 +9694,29 @@ func (m *DNSMutation) OldDNSServers(ctx context.Context) (v []string, err error)
 	return oldValue.DNSServers, nil
 }
 
+// AppendDNSServers adds s to the "dns_servers" field.
+func (m *DNSMutation) AppendDNSServers(s []string) {
+	m.appenddns_servers = append(m.appenddns_servers, s...)
+}
+
+// AppendedDNSServers returns the list of values that were appended to the "dns_servers" field in this mutation.
+func (m *DNSMutation) AppendedDNSServers() ([]string, bool) {
+	if len(m.appenddns_servers) == 0 {
+		return nil, false
+	}
+	return m.appenddns_servers, true
+}
+
 // ResetDNSServers resets all changes to the "dns_servers" field.
 func (m *DNSMutation) ResetDNSServers() {
 	m.dns_servers = nil
+	m.appenddns_servers = nil
 }
 
 // SetNtpServers sets the "ntp_servers" field.
 func (m *DNSMutation) SetNtpServers(s []string) {
 	m.ntp_servers = &s
+	m.appendntp_servers = nil
 }
 
 // NtpServers returns the value of the "ntp_servers" field in the mutation.
@@ -9578,9 +9745,23 @@ func (m *DNSMutation) OldNtpServers(ctx context.Context) (v []string, err error)
 	return oldValue.NtpServers, nil
 }
 
+// AppendNtpServers adds s to the "ntp_servers" field.
+func (m *DNSMutation) AppendNtpServers(s []string) {
+	m.appendntp_servers = append(m.appendntp_servers, s...)
+}
+
+// AppendedNtpServers returns the list of values that were appended to the "ntp_servers" field in this mutation.
+func (m *DNSMutation) AppendedNtpServers() ([]string, bool) {
+	if len(m.appendntp_servers) == 0 {
+		return nil, false
+	}
+	return m.appendntp_servers, true
+}
+
 // ResetNtpServers resets all changes to the "ntp_servers" field.
 func (m *DNSMutation) ResetNtpServers() {
 	m.ntp_servers = nil
+	m.appendntp_servers = nil
 }
 
 // SetConfig sets the "config" field.
@@ -9732,9 +9913,24 @@ func (m *DNSMutation) Where(ps ...predicate.DNS) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the DNSMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *DNSMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.DNS, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *DNSMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *DNSMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (DNS).
@@ -9748,7 +9944,7 @@ func (m *DNSMutation) Type() string {
 func (m *DNSMutation) Fields() []string {
 	fields := make([]string, 0, 6)
 	if m.hcl_id != nil {
-		fields = append(fields, dns.FieldHclID)
+		fields = append(fields, dns.FieldHCLID)
 	}
 	if m._type != nil {
 		fields = append(fields, dns.FieldType)
@@ -9773,8 +9969,8 @@ func (m *DNSMutation) Fields() []string {
 // schema.
 func (m *DNSMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case dns.FieldHclID:
-		return m.HclID()
+	case dns.FieldHCLID:
+		return m.HCLID()
 	case dns.FieldType:
 		return m.GetType()
 	case dns.FieldRootDomain:
@@ -9794,8 +9990,8 @@ func (m *DNSMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *DNSMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case dns.FieldHclID:
-		return m.OldHclID(ctx)
+	case dns.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case dns.FieldType:
 		return m.OldType(ctx)
 	case dns.FieldRootDomain:
@@ -9815,12 +10011,12 @@ func (m *DNSMutation) OldField(ctx context.Context, name string) (ent.Value, err
 // type.
 func (m *DNSMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case dns.FieldHclID:
+	case dns.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case dns.FieldType:
 		v, ok := value.(string)
@@ -9906,8 +10102,8 @@ func (m *DNSMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *DNSMutation) ResetField(name string) error {
 	switch name {
-	case dns.FieldHclID:
-		m.ResetHclID()
+	case dns.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case dns.FieldType:
 		m.ResetType()
@@ -10047,6 +10243,7 @@ type DNSRecordMutation struct {
 	hcl_id              *string
 	name                *string
 	values              *[]string
+	appendvalues        []string
 	_type               *string
 	zone                *string
 	vars                *map[string]string
@@ -10164,13 +10361,13 @@ func (m *DNSRecordMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *DNSRecordMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *DNSRecordMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *DNSRecordMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *DNSRecordMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -10178,25 +10375,25 @@ func (m *DNSRecordMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the DNSRecord entity.
+// OldHCLID returns the old "hcl_id" field's value of the DNSRecord entity.
 // If the DNSRecord object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DNSRecordMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *DNSRecordMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *DNSRecordMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *DNSRecordMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -10239,6 +10436,7 @@ func (m *DNSRecordMutation) ResetName() {
 // SetValues sets the "values" field.
 func (m *DNSRecordMutation) SetValues(s []string) {
 	m.values = &s
+	m.appendvalues = nil
 }
 
 // Values returns the value of the "values" field in the mutation.
@@ -10267,9 +10465,23 @@ func (m *DNSRecordMutation) OldValues(ctx context.Context) (v []string, err erro
 	return oldValue.Values, nil
 }
 
+// AppendValues adds s to the "values" field.
+func (m *DNSRecordMutation) AppendValues(s []string) {
+	m.appendvalues = append(m.appendvalues, s...)
+}
+
+// AppendedValues returns the list of values that were appended to the "values" field in this mutation.
+func (m *DNSRecordMutation) AppendedValues() ([]string, bool) {
+	if len(m.appendvalues) == 0 {
+		return nil, false
+	}
+	return m.appendvalues, true
+}
+
 // ResetValues resets all changes to the "values" field.
 func (m *DNSRecordMutation) ResetValues() {
 	m.values = nil
+	m.appendvalues = nil
 }
 
 // SetType sets the "type" field.
@@ -10496,9 +10708,24 @@ func (m *DNSRecordMutation) Where(ps ...predicate.DNSRecord) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the DNSRecordMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *DNSRecordMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.DNSRecord, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *DNSRecordMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *DNSRecordMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (DNSRecord).
@@ -10512,7 +10739,7 @@ func (m *DNSRecordMutation) Type() string {
 func (m *DNSRecordMutation) Fields() []string {
 	fields := make([]string, 0, 8)
 	if m.hcl_id != nil {
-		fields = append(fields, dnsrecord.FieldHclID)
+		fields = append(fields, dnsrecord.FieldHCLID)
 	}
 	if m.name != nil {
 		fields = append(fields, dnsrecord.FieldName)
@@ -10543,8 +10770,8 @@ func (m *DNSRecordMutation) Fields() []string {
 // schema.
 func (m *DNSRecordMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case dnsrecord.FieldHclID:
-		return m.HclID()
+	case dnsrecord.FieldHCLID:
+		return m.HCLID()
 	case dnsrecord.FieldName:
 		return m.Name()
 	case dnsrecord.FieldValues:
@@ -10568,8 +10795,8 @@ func (m *DNSRecordMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *DNSRecordMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case dnsrecord.FieldHclID:
-		return m.OldHclID(ctx)
+	case dnsrecord.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case dnsrecord.FieldName:
 		return m.OldName(ctx)
 	case dnsrecord.FieldValues:
@@ -10593,12 +10820,12 @@ func (m *DNSRecordMutation) OldField(ctx context.Context, name string) (ent.Valu
 // type.
 func (m *DNSRecordMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case dnsrecord.FieldHclID:
+	case dnsrecord.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case dnsrecord.FieldName:
 		v, ok := value.(string)
@@ -10698,8 +10925,8 @@ func (m *DNSRecordMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *DNSRecordMutation) ResetField(name string) error {
 	switch name {
-	case dnsrecord.FieldHclID:
-		m.ResetHclID()
+	case dnsrecord.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case dnsrecord.FieldName:
 		m.ResetName()
@@ -10756,8 +10983,6 @@ func (m *DNSRecordMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *DNSRecordMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -11022,9 +11247,24 @@ func (m *DiskMutation) Where(ps ...predicate.Disk) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the DiskMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *DiskMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Disk, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *DiskMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *DiskMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Disk).
@@ -11178,8 +11418,6 @@ func (m *DiskMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *DiskMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -11240,7 +11478,9 @@ type EnvironmentMutation struct {
 	revision                 *int
 	addrevision              *int
 	admin_cidrs              *[]string
+	appendadmin_cidrs        []string
 	exposed_vdi_ports        *[]string
+	appendexposed_vdi_ports  []string
 	_config                  *map[string]string
 	tags                     *map[string]string
 	clearedFields            map[string]struct{}
@@ -11413,13 +11653,13 @@ func (m *EnvironmentMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *EnvironmentMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *EnvironmentMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *EnvironmentMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *EnvironmentMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -11427,25 +11667,25 @@ func (m *EnvironmentMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the Environment entity.
+// OldHCLID returns the old "hcl_id" field's value of the Environment entity.
 // If the Environment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *EnvironmentMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *EnvironmentMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *EnvironmentMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *EnvironmentMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -11708,6 +11948,7 @@ func (m *EnvironmentMutation) ResetRevision() {
 // SetAdminCidrs sets the "admin_cidrs" field.
 func (m *EnvironmentMutation) SetAdminCidrs(s []string) {
 	m.admin_cidrs = &s
+	m.appendadmin_cidrs = nil
 }
 
 // AdminCidrs returns the value of the "admin_cidrs" field in the mutation.
@@ -11736,14 +11977,29 @@ func (m *EnvironmentMutation) OldAdminCidrs(ctx context.Context) (v []string, er
 	return oldValue.AdminCidrs, nil
 }
 
+// AppendAdminCidrs adds s to the "admin_cidrs" field.
+func (m *EnvironmentMutation) AppendAdminCidrs(s []string) {
+	m.appendadmin_cidrs = append(m.appendadmin_cidrs, s...)
+}
+
+// AppendedAdminCidrs returns the list of values that were appended to the "admin_cidrs" field in this mutation.
+func (m *EnvironmentMutation) AppendedAdminCidrs() ([]string, bool) {
+	if len(m.appendadmin_cidrs) == 0 {
+		return nil, false
+	}
+	return m.appendadmin_cidrs, true
+}
+
 // ResetAdminCidrs resets all changes to the "admin_cidrs" field.
 func (m *EnvironmentMutation) ResetAdminCidrs() {
 	m.admin_cidrs = nil
+	m.appendadmin_cidrs = nil
 }
 
 // SetExposedVdiPorts sets the "exposed_vdi_ports" field.
 func (m *EnvironmentMutation) SetExposedVdiPorts(s []string) {
 	m.exposed_vdi_ports = &s
+	m.appendexposed_vdi_ports = nil
 }
 
 // ExposedVdiPorts returns the value of the "exposed_vdi_ports" field in the mutation.
@@ -11772,9 +12028,23 @@ func (m *EnvironmentMutation) OldExposedVdiPorts(ctx context.Context) (v []strin
 	return oldValue.ExposedVdiPorts, nil
 }
 
+// AppendExposedVdiPorts adds s to the "exposed_vdi_ports" field.
+func (m *EnvironmentMutation) AppendExposedVdiPorts(s []string) {
+	m.appendexposed_vdi_ports = append(m.appendexposed_vdi_ports, s...)
+}
+
+// AppendedExposedVdiPorts returns the list of values that were appended to the "exposed_vdi_ports" field in this mutation.
+func (m *EnvironmentMutation) AppendedExposedVdiPorts() ([]string, bool) {
+	if len(m.appendexposed_vdi_ports) == 0 {
+		return nil, false
+	}
+	return m.appendexposed_vdi_ports, true
+}
+
 // ResetExposedVdiPorts resets all changes to the "exposed_vdi_ports" field.
 func (m *EnvironmentMutation) ResetExposedVdiPorts() {
 	m.exposed_vdi_ports = nil
+	m.appendexposed_vdi_ports = nil
 }
 
 // SetConfig sets the "config" field.
@@ -12934,9 +13204,24 @@ func (m *EnvironmentMutation) Where(ps ...predicate.Environment) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the EnvironmentMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *EnvironmentMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Environment, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *EnvironmentMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *EnvironmentMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Environment).
@@ -12950,7 +13235,7 @@ func (m *EnvironmentMutation) Type() string {
 func (m *EnvironmentMutation) Fields() []string {
 	fields := make([]string, 0, 11)
 	if m.hcl_id != nil {
-		fields = append(fields, environment.FieldHclID)
+		fields = append(fields, environment.FieldHCLID)
 	}
 	if m.competition_id != nil {
 		fields = append(fields, environment.FieldCompetitionID)
@@ -12990,8 +13275,8 @@ func (m *EnvironmentMutation) Fields() []string {
 // schema.
 func (m *EnvironmentMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case environment.FieldHclID:
-		return m.HclID()
+	case environment.FieldHCLID:
+		return m.HCLID()
 	case environment.FieldCompetitionID:
 		return m.CompetitionID()
 	case environment.FieldName:
@@ -13021,8 +13306,8 @@ func (m *EnvironmentMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *EnvironmentMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case environment.FieldHclID:
-		return m.OldHclID(ctx)
+	case environment.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case environment.FieldCompetitionID:
 		return m.OldCompetitionID(ctx)
 	case environment.FieldName:
@@ -13052,12 +13337,12 @@ func (m *EnvironmentMutation) OldField(ctx context.Context, name string) (ent.Va
 // type.
 func (m *EnvironmentMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case environment.FieldHclID:
+	case environment.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case environment.FieldCompetitionID:
 		v, ok := value.(string)
@@ -13205,8 +13490,8 @@ func (m *EnvironmentMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *EnvironmentMutation) ResetField(name string) error {
 	switch name {
-	case environment.FieldHclID:
-		m.ResetHclID()
+	case environment.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case environment.FieldCompetitionID:
 		m.ResetCompetitionID()
@@ -13941,13 +14226,13 @@ func (m *FileDeleteMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *FileDeleteMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *FileDeleteMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *FileDeleteMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *FileDeleteMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -13955,25 +14240,25 @@ func (m *FileDeleteMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the FileDelete entity.
+// OldHCLID returns the old "hcl_id" field's value of the FileDelete entity.
 // If the FileDelete object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FileDeleteMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *FileDeleteMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *FileDeleteMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *FileDeleteMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -14093,9 +14378,24 @@ func (m *FileDeleteMutation) Where(ps ...predicate.FileDelete) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the FileDeleteMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *FileDeleteMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.FileDelete, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *FileDeleteMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *FileDeleteMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (FileDelete).
@@ -14109,7 +14409,7 @@ func (m *FileDeleteMutation) Type() string {
 func (m *FileDeleteMutation) Fields() []string {
 	fields := make([]string, 0, 3)
 	if m.hcl_id != nil {
-		fields = append(fields, filedelete.FieldHclID)
+		fields = append(fields, filedelete.FieldHCLID)
 	}
 	if m._path != nil {
 		fields = append(fields, filedelete.FieldPath)
@@ -14125,8 +14425,8 @@ func (m *FileDeleteMutation) Fields() []string {
 // schema.
 func (m *FileDeleteMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case filedelete.FieldHclID:
-		return m.HclID()
+	case filedelete.FieldHCLID:
+		return m.HCLID()
 	case filedelete.FieldPath:
 		return m.Path()
 	case filedelete.FieldTags:
@@ -14140,8 +14440,8 @@ func (m *FileDeleteMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *FileDeleteMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case filedelete.FieldHclID:
-		return m.OldHclID(ctx)
+	case filedelete.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case filedelete.FieldPath:
 		return m.OldPath(ctx)
 	case filedelete.FieldTags:
@@ -14155,12 +14455,12 @@ func (m *FileDeleteMutation) OldField(ctx context.Context, name string) (ent.Val
 // type.
 func (m *FileDeleteMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case filedelete.FieldHclID:
+	case filedelete.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case filedelete.FieldPath:
 		v, ok := value.(string)
@@ -14225,8 +14525,8 @@ func (m *FileDeleteMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *FileDeleteMutation) ResetField(name string) error {
 	switch name {
-	case filedelete.FieldHclID:
-		m.ResetHclID()
+	case filedelete.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case filedelete.FieldPath:
 		m.ResetPath()
@@ -14268,8 +14568,6 @@ func (m *FileDeleteMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *FileDeleteMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -14443,13 +14741,13 @@ func (m *FileDownloadMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *FileDownloadMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *FileDownloadMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *FileDownloadMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *FileDownloadMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -14457,25 +14755,25 @@ func (m *FileDownloadMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the FileDownload entity.
+// OldHCLID returns the old "hcl_id" field's value of the FileDownload entity.
 // If the FileDownload object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FileDownloadMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *FileDownloadMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *FileDownloadMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *FileDownloadMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -14883,9 +15181,24 @@ func (m *FileDownloadMutation) Where(ps ...predicate.FileDownload) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the FileDownloadMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *FileDownloadMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.FileDownload, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *FileDownloadMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *FileDownloadMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (FileDownload).
@@ -14899,7 +15212,7 @@ func (m *FileDownloadMutation) Type() string {
 func (m *FileDownloadMutation) Fields() []string {
 	fields := make([]string, 0, 11)
 	if m.hcl_id != nil {
-		fields = append(fields, filedownload.FieldHclID)
+		fields = append(fields, filedownload.FieldHCLID)
 	}
 	if m.source_type != nil {
 		fields = append(fields, filedownload.FieldSourceType)
@@ -14939,8 +15252,8 @@ func (m *FileDownloadMutation) Fields() []string {
 // schema.
 func (m *FileDownloadMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case filedownload.FieldHclID:
-		return m.HclID()
+	case filedownload.FieldHCLID:
+		return m.HCLID()
 	case filedownload.FieldSourceType:
 		return m.SourceType()
 	case filedownload.FieldSource:
@@ -14970,8 +15283,8 @@ func (m *FileDownloadMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *FileDownloadMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case filedownload.FieldHclID:
-		return m.OldHclID(ctx)
+	case filedownload.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case filedownload.FieldSourceType:
 		return m.OldSourceType(ctx)
 	case filedownload.FieldSource:
@@ -15001,12 +15314,12 @@ func (m *FileDownloadMutation) OldField(ctx context.Context, name string) (ent.V
 // type.
 func (m *FileDownloadMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case filedownload.FieldHclID:
+	case filedownload.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case filedownload.FieldSourceType:
 		v, ok := value.(string)
@@ -15127,8 +15440,8 @@ func (m *FileDownloadMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *FileDownloadMutation) ResetField(name string) error {
 	switch name {
-	case filedownload.FieldHclID:
-		m.ResetHclID()
+	case filedownload.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case filedownload.FieldSourceType:
 		m.ResetSourceType()
@@ -15194,8 +15507,6 @@ func (m *FileDownloadMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *FileDownloadMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -15363,13 +15674,13 @@ func (m *FileExtractMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *FileExtractMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *FileExtractMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *FileExtractMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *FileExtractMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -15377,25 +15688,25 @@ func (m *FileExtractMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the FileExtract entity.
+// OldHCLID returns the old "hcl_id" field's value of the FileExtract entity.
 // If the FileExtract object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FileExtractMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *FileExtractMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *FileExtractMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *FileExtractMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -15587,9 +15898,24 @@ func (m *FileExtractMutation) Where(ps ...predicate.FileExtract) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the FileExtractMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *FileExtractMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.FileExtract, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *FileExtractMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *FileExtractMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (FileExtract).
@@ -15603,7 +15929,7 @@ func (m *FileExtractMutation) Type() string {
 func (m *FileExtractMutation) Fields() []string {
 	fields := make([]string, 0, 5)
 	if m.hcl_id != nil {
-		fields = append(fields, fileextract.FieldHclID)
+		fields = append(fields, fileextract.FieldHCLID)
 	}
 	if m.source != nil {
 		fields = append(fields, fileextract.FieldSource)
@@ -15625,8 +15951,8 @@ func (m *FileExtractMutation) Fields() []string {
 // schema.
 func (m *FileExtractMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case fileextract.FieldHclID:
-		return m.HclID()
+	case fileextract.FieldHCLID:
+		return m.HCLID()
 	case fileextract.FieldSource:
 		return m.Source()
 	case fileextract.FieldDestination:
@@ -15644,8 +15970,8 @@ func (m *FileExtractMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *FileExtractMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case fileextract.FieldHclID:
-		return m.OldHclID(ctx)
+	case fileextract.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case fileextract.FieldSource:
 		return m.OldSource(ctx)
 	case fileextract.FieldDestination:
@@ -15663,12 +15989,12 @@ func (m *FileExtractMutation) OldField(ctx context.Context, name string) (ent.Va
 // type.
 func (m *FileExtractMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case fileextract.FieldHclID:
+	case fileextract.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case fileextract.FieldSource:
 		v, ok := value.(string)
@@ -15747,8 +16073,8 @@ func (m *FileExtractMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *FileExtractMutation) ResetField(name string) error {
 	switch name {
-	case fileextract.FieldHclID:
-		m.ResetHclID()
+	case fileextract.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case fileextract.FieldSource:
 		m.ResetSource()
@@ -15796,8 +16122,6 @@ func (m *FileExtractMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *FileExtractMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -16328,9 +16652,24 @@ func (m *FindingMutation) Where(ps ...predicate.Finding) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the FindingMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *FindingMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Finding, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *FindingMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *FindingMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Finding).
@@ -17000,9 +17339,24 @@ func (m *GinFileMiddlewareMutation) Where(ps ...predicate.GinFileMiddleware) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the GinFileMiddlewareMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *GinFileMiddlewareMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.GinFileMiddleware, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *GinFileMiddlewareMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *GinFileMiddlewareMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (GinFileMiddleware).
@@ -17189,8 +17543,6 @@ func (m *GinFileMiddlewareMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *GinFileMiddlewareMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -17272,12 +17624,17 @@ type HostMutation struct {
 	instance_size                      *string
 	allow_mac_changes                  *bool
 	exposed_tcp_ports                  *[]string
+	appendexposed_tcp_ports            []string
 	exposed_udp_ports                  *[]string
+	appendexposed_udp_ports            []string
 	override_password                  *string
 	vars                               *map[string]string
 	user_groups                        *[]string
+	appenduser_groups                  []string
 	provision_steps                    *[]string
+	appendprovision_steps              []string
 	scheduled_steps                    *[]string
+	appendscheduled_steps              []string
 	tags                               *map[string]string
 	clearedFields                      map[string]struct{}
 	_Disk                              *uuid.UUID
@@ -17405,13 +17762,13 @@ func (m *HostMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *HostMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *HostMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *HostMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *HostMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -17419,25 +17776,25 @@ func (m *HostMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the Host entity.
+// OldHCLID returns the old "hcl_id" field's value of the Host entity.
 // If the Host object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HostMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *HostMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *HostMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *HostMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -17680,6 +18037,7 @@ func (m *HostMutation) ResetAllowMACChanges() {
 // SetExposedTCPPorts sets the "exposed_tcp_ports" field.
 func (m *HostMutation) SetExposedTCPPorts(s []string) {
 	m.exposed_tcp_ports = &s
+	m.appendexposed_tcp_ports = nil
 }
 
 // ExposedTCPPorts returns the value of the "exposed_tcp_ports" field in the mutation.
@@ -17708,14 +18066,29 @@ func (m *HostMutation) OldExposedTCPPorts(ctx context.Context) (v []string, err 
 	return oldValue.ExposedTCPPorts, nil
 }
 
+// AppendExposedTCPPorts adds s to the "exposed_tcp_ports" field.
+func (m *HostMutation) AppendExposedTCPPorts(s []string) {
+	m.appendexposed_tcp_ports = append(m.appendexposed_tcp_ports, s...)
+}
+
+// AppendedExposedTCPPorts returns the list of values that were appended to the "exposed_tcp_ports" field in this mutation.
+func (m *HostMutation) AppendedExposedTCPPorts() ([]string, bool) {
+	if len(m.appendexposed_tcp_ports) == 0 {
+		return nil, false
+	}
+	return m.appendexposed_tcp_ports, true
+}
+
 // ResetExposedTCPPorts resets all changes to the "exposed_tcp_ports" field.
 func (m *HostMutation) ResetExposedTCPPorts() {
 	m.exposed_tcp_ports = nil
+	m.appendexposed_tcp_ports = nil
 }
 
 // SetExposedUDPPorts sets the "exposed_udp_ports" field.
 func (m *HostMutation) SetExposedUDPPorts(s []string) {
 	m.exposed_udp_ports = &s
+	m.appendexposed_udp_ports = nil
 }
 
 // ExposedUDPPorts returns the value of the "exposed_udp_ports" field in the mutation.
@@ -17744,9 +18117,23 @@ func (m *HostMutation) OldExposedUDPPorts(ctx context.Context) (v []string, err 
 	return oldValue.ExposedUDPPorts, nil
 }
 
+// AppendExposedUDPPorts adds s to the "exposed_udp_ports" field.
+func (m *HostMutation) AppendExposedUDPPorts(s []string) {
+	m.appendexposed_udp_ports = append(m.appendexposed_udp_ports, s...)
+}
+
+// AppendedExposedUDPPorts returns the list of values that were appended to the "exposed_udp_ports" field in this mutation.
+func (m *HostMutation) AppendedExposedUDPPorts() ([]string, bool) {
+	if len(m.appendexposed_udp_ports) == 0 {
+		return nil, false
+	}
+	return m.appendexposed_udp_ports, true
+}
+
 // ResetExposedUDPPorts resets all changes to the "exposed_udp_ports" field.
 func (m *HostMutation) ResetExposedUDPPorts() {
 	m.exposed_udp_ports = nil
+	m.appendexposed_udp_ports = nil
 }
 
 // SetOverridePassword sets the "override_password" field.
@@ -17824,6 +18211,7 @@ func (m *HostMutation) ResetVars() {
 // SetUserGroups sets the "user_groups" field.
 func (m *HostMutation) SetUserGroups(s []string) {
 	m.user_groups = &s
+	m.appenduser_groups = nil
 }
 
 // UserGroups returns the value of the "user_groups" field in the mutation.
@@ -17852,14 +18240,29 @@ func (m *HostMutation) OldUserGroups(ctx context.Context) (v []string, err error
 	return oldValue.UserGroups, nil
 }
 
+// AppendUserGroups adds s to the "user_groups" field.
+func (m *HostMutation) AppendUserGroups(s []string) {
+	m.appenduser_groups = append(m.appenduser_groups, s...)
+}
+
+// AppendedUserGroups returns the list of values that were appended to the "user_groups" field in this mutation.
+func (m *HostMutation) AppendedUserGroups() ([]string, bool) {
+	if len(m.appenduser_groups) == 0 {
+		return nil, false
+	}
+	return m.appenduser_groups, true
+}
+
 // ResetUserGroups resets all changes to the "user_groups" field.
 func (m *HostMutation) ResetUserGroups() {
 	m.user_groups = nil
+	m.appenduser_groups = nil
 }
 
 // SetProvisionSteps sets the "provision_steps" field.
 func (m *HostMutation) SetProvisionSteps(s []string) {
 	m.provision_steps = &s
+	m.appendprovision_steps = nil
 }
 
 // ProvisionSteps returns the value of the "provision_steps" field in the mutation.
@@ -17888,9 +18291,23 @@ func (m *HostMutation) OldProvisionSteps(ctx context.Context) (v []string, err e
 	return oldValue.ProvisionSteps, nil
 }
 
+// AppendProvisionSteps adds s to the "provision_steps" field.
+func (m *HostMutation) AppendProvisionSteps(s []string) {
+	m.appendprovision_steps = append(m.appendprovision_steps, s...)
+}
+
+// AppendedProvisionSteps returns the list of values that were appended to the "provision_steps" field in this mutation.
+func (m *HostMutation) AppendedProvisionSteps() ([]string, bool) {
+	if len(m.appendprovision_steps) == 0 {
+		return nil, false
+	}
+	return m.appendprovision_steps, true
+}
+
 // ClearProvisionSteps clears the value of the "provision_steps" field.
 func (m *HostMutation) ClearProvisionSteps() {
 	m.provision_steps = nil
+	m.appendprovision_steps = nil
 	m.clearedFields[host.FieldProvisionSteps] = struct{}{}
 }
 
@@ -17903,12 +18320,14 @@ func (m *HostMutation) ProvisionStepsCleared() bool {
 // ResetProvisionSteps resets all changes to the "provision_steps" field.
 func (m *HostMutation) ResetProvisionSteps() {
 	m.provision_steps = nil
+	m.appendprovision_steps = nil
 	delete(m.clearedFields, host.FieldProvisionSteps)
 }
 
 // SetScheduledSteps sets the "scheduled_steps" field.
 func (m *HostMutation) SetScheduledSteps(s []string) {
 	m.scheduled_steps = &s
+	m.appendscheduled_steps = nil
 }
 
 // ScheduledSteps returns the value of the "scheduled_steps" field in the mutation.
@@ -17937,9 +18356,23 @@ func (m *HostMutation) OldScheduledSteps(ctx context.Context) (v []string, err e
 	return oldValue.ScheduledSteps, nil
 }
 
+// AppendScheduledSteps adds s to the "scheduled_steps" field.
+func (m *HostMutation) AppendScheduledSteps(s []string) {
+	m.appendscheduled_steps = append(m.appendscheduled_steps, s...)
+}
+
+// AppendedScheduledSteps returns the list of values that were appended to the "scheduled_steps" field in this mutation.
+func (m *HostMutation) AppendedScheduledSteps() ([]string, bool) {
+	if len(m.appendscheduled_steps) == 0 {
+		return nil, false
+	}
+	return m.appendscheduled_steps, true
+}
+
 // ClearScheduledSteps clears the value of the "scheduled_steps" field.
 func (m *HostMutation) ClearScheduledSteps() {
 	m.scheduled_steps = nil
+	m.appendscheduled_steps = nil
 	m.clearedFields[host.FieldScheduledSteps] = struct{}{}
 }
 
@@ -17952,6 +18385,7 @@ func (m *HostMutation) ScheduledStepsCleared() bool {
 // ResetScheduledSteps resets all changes to the "scheduled_steps" field.
 func (m *HostMutation) ResetScheduledSteps() {
 	m.scheduled_steps = nil
+	m.appendscheduled_steps = nil
 	delete(m.clearedFields, host.FieldScheduledSteps)
 }
 
@@ -18290,9 +18724,24 @@ func (m *HostMutation) Where(ps ...predicate.Host) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the HostMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *HostMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Host, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *HostMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *HostMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Host).
@@ -18306,7 +18755,7 @@ func (m *HostMutation) Type() string {
 func (m *HostMutation) Fields() []string {
 	fields := make([]string, 0, 15)
 	if m.hcl_id != nil {
-		fields = append(fields, host.FieldHclID)
+		fields = append(fields, host.FieldHCLID)
 	}
 	if m.hostname != nil {
 		fields = append(fields, host.FieldHostname)
@@ -18358,8 +18807,8 @@ func (m *HostMutation) Fields() []string {
 // schema.
 func (m *HostMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case host.FieldHclID:
-		return m.HclID()
+	case host.FieldHCLID:
+		return m.HCLID()
 	case host.FieldHostname:
 		return m.Hostname()
 	case host.FieldDescription:
@@ -18397,8 +18846,8 @@ func (m *HostMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *HostMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case host.FieldHclID:
-		return m.OldHclID(ctx)
+	case host.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case host.FieldHostname:
 		return m.OldHostname(ctx)
 	case host.FieldDescription:
@@ -18436,12 +18885,12 @@ func (m *HostMutation) OldField(ctx context.Context, name string) (ent.Value, er
 // type.
 func (m *HostMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case host.FieldHclID:
+	case host.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case host.FieldHostname:
 		v, ok := value.(string)
@@ -18620,8 +19069,8 @@ func (m *HostMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *HostMutation) ResetField(name string) error {
 	switch name {
-	case host.FieldHclID:
-		m.ResetHclID()
+	case host.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case host.FieldHostname:
 		m.ResetHostname()
@@ -19226,9 +19675,24 @@ func (m *HostDependencyMutation) Where(ps ...predicate.HostDependency) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the HostDependencyMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *HostDependencyMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.HostDependency, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *HostDependencyMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *HostDependencyMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (HostDependency).
@@ -19405,8 +19869,6 @@ func (m *HostDependencyMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *HostDependencyMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -19611,13 +20073,13 @@ func (m *IdentityMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *IdentityMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *IdentityMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *IdentityMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *IdentityMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -19625,25 +20087,25 @@ func (m *IdentityMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the Identity entity.
+// OldHCLID returns the old "hcl_id" field's value of the Identity entity.
 // If the Identity object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IdentityMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *IdentityMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *IdentityMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *IdentityMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -19979,9 +20441,24 @@ func (m *IdentityMutation) Where(ps ...predicate.Identity) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the IdentityMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *IdentityMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Identity, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *IdentityMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *IdentityMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Identity).
@@ -19995,7 +20472,7 @@ func (m *IdentityMutation) Type() string {
 func (m *IdentityMutation) Fields() []string {
 	fields := make([]string, 0, 9)
 	if m.hcl_id != nil {
-		fields = append(fields, identity.FieldHclID)
+		fields = append(fields, identity.FieldHCLID)
 	}
 	if m.first_name != nil {
 		fields = append(fields, identity.FieldFirstName)
@@ -20029,8 +20506,8 @@ func (m *IdentityMutation) Fields() []string {
 // schema.
 func (m *IdentityMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case identity.FieldHclID:
-		return m.HclID()
+	case identity.FieldHCLID:
+		return m.HCLID()
 	case identity.FieldFirstName:
 		return m.FirstName()
 	case identity.FieldLastName:
@@ -20056,8 +20533,8 @@ func (m *IdentityMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *IdentityMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case identity.FieldHclID:
-		return m.OldHclID(ctx)
+	case identity.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case identity.FieldFirstName:
 		return m.OldFirstName(ctx)
 	case identity.FieldLastName:
@@ -20083,12 +20560,12 @@ func (m *IdentityMutation) OldField(ctx context.Context, name string) (ent.Value
 // type.
 func (m *IdentityMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case identity.FieldHclID:
+	case identity.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case identity.FieldFirstName:
 		v, ok := value.(string)
@@ -20195,8 +20672,8 @@ func (m *IdentityMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *IdentityMutation) ResetField(name string) error {
 	switch name {
-	case identity.FieldHclID:
-		m.ResetHclID()
+	case identity.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case identity.FieldFirstName:
 		m.ResetFirstName()
@@ -20256,8 +20733,6 @@ func (m *IdentityMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *IdentityMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -20310,6 +20785,7 @@ type IncludedNetworkMutation struct {
 	id                   *uuid.UUID
 	name                 *string
 	included_hosts       *[]string
+	appendincluded_hosts []string
 	clearedFields        map[string]struct{}
 	_Tags                map[uuid.UUID]struct{}
 	removed_Tags         map[uuid.UUID]struct{}
@@ -20470,6 +20946,7 @@ func (m *IncludedNetworkMutation) ResetName() {
 // SetIncludedHosts sets the "included_hosts" field.
 func (m *IncludedNetworkMutation) SetIncludedHosts(s []string) {
 	m.included_hosts = &s
+	m.appendincluded_hosts = nil
 }
 
 // IncludedHosts returns the value of the "included_hosts" field in the mutation.
@@ -20498,9 +20975,23 @@ func (m *IncludedNetworkMutation) OldIncludedHosts(ctx context.Context) (v []str
 	return oldValue.IncludedHosts, nil
 }
 
+// AppendIncludedHosts adds s to the "included_hosts" field.
+func (m *IncludedNetworkMutation) AppendIncludedHosts(s []string) {
+	m.appendincluded_hosts = append(m.appendincluded_hosts, s...)
+}
+
+// AppendedIncludedHosts returns the list of values that were appended to the "included_hosts" field in this mutation.
+func (m *IncludedNetworkMutation) AppendedIncludedHosts() ([]string, bool) {
+	if len(m.appendincluded_hosts) == 0 {
+		return nil, false
+	}
+	return m.appendincluded_hosts, true
+}
+
 // ResetIncludedHosts resets all changes to the "included_hosts" field.
 func (m *IncludedNetworkMutation) ResetIncludedHosts() {
 	m.included_hosts = nil
+	m.appendincluded_hosts = nil
 }
 
 // AddTagIDs adds the "Tags" edge to the Tag entity by ids.
@@ -20709,9 +21200,24 @@ func (m *IncludedNetworkMutation) Where(ps ...predicate.IncludedNetwork) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the IncludedNetworkMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *IncludedNetworkMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.IncludedNetwork, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *IncludedNetworkMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *IncludedNetworkMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (IncludedNetwork).
@@ -21121,13 +21627,13 @@ func (m *NetworkMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *NetworkMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *NetworkMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *NetworkMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *NetworkMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -21135,25 +21641,25 @@ func (m *NetworkMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the Network entity.
+// OldHCLID returns the old "hcl_id" field's value of the Network entity.
 // If the Network object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NetworkMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *NetworkMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *NetworkMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *NetworkMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -21489,9 +21995,24 @@ func (m *NetworkMutation) Where(ps ...predicate.Network) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the NetworkMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *NetworkMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Network, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *NetworkMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *NetworkMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Network).
@@ -21505,7 +22026,7 @@ func (m *NetworkMutation) Type() string {
 func (m *NetworkMutation) Fields() []string {
 	fields := make([]string, 0, 6)
 	if m.hcl_id != nil {
-		fields = append(fields, network.FieldHclID)
+		fields = append(fields, network.FieldHCLID)
 	}
 	if m.name != nil {
 		fields = append(fields, network.FieldName)
@@ -21530,8 +22051,8 @@ func (m *NetworkMutation) Fields() []string {
 // schema.
 func (m *NetworkMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case network.FieldHclID:
-		return m.HclID()
+	case network.FieldHCLID:
+		return m.HCLID()
 	case network.FieldName:
 		return m.Name()
 	case network.FieldCidr:
@@ -21551,8 +22072,8 @@ func (m *NetworkMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *NetworkMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case network.FieldHclID:
-		return m.OldHclID(ctx)
+	case network.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case network.FieldName:
 		return m.OldName(ctx)
 	case network.FieldCidr:
@@ -21572,12 +22093,12 @@ func (m *NetworkMutation) OldField(ctx context.Context, name string) (ent.Value,
 // type.
 func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case network.FieldHclID:
+	case network.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case network.FieldName:
 		v, ok := value.(string)
@@ -21663,8 +22184,8 @@ func (m *NetworkMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *NetworkMutation) ResetField(name string) error {
 	switch name {
-	case network.FieldHclID:
-		m.ResetHclID()
+	case network.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case network.FieldName:
 		m.ResetName()
@@ -22487,9 +23008,24 @@ func (m *PlanMutation) Where(ps ...predicate.Plan) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the PlanMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PlanMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Plan, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *PlanMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PlanMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Plan).
@@ -23190,9 +23726,24 @@ func (m *PlanDiffMutation) Where(ps ...predicate.PlanDiff) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the PlanDiffMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PlanDiffMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PlanDiff, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *PlanDiffMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PlanDiffMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (PlanDiff).
@@ -23370,8 +23921,6 @@ func (m *PlanDiffMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *PlanDiffMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -24187,9 +24736,24 @@ func (m *ProvisionedHostMutation) Where(ps ...predicate.ProvisionedHost) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the ProvisionedHostMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProvisionedHostMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProvisionedHost, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *ProvisionedHostMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProvisionedHostMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (ProvisionedHost).
@@ -25123,9 +25687,24 @@ func (m *ProvisionedNetworkMutation) Where(ps ...predicate.ProvisionedNetwork) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the ProvisionedNetworkMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProvisionedNetworkMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProvisionedNetwork, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *ProvisionedNetworkMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProvisionedNetworkMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (ProvisionedNetwork).
@@ -26186,9 +26765,24 @@ func (m *ProvisioningScheduledStepMutation) Where(ps ...predicate.ProvisioningSc
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the ProvisioningScheduledStepMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProvisioningScheduledStepMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProvisioningScheduledStep, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *ProvisioningScheduledStepMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProvisioningScheduledStepMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (ProvisioningScheduledStep).
@@ -27338,9 +27932,24 @@ func (m *ProvisioningStepMutation) Where(ps ...predicate.ProvisioningStep) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the ProvisioningStepMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProvisioningStepMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProvisioningStep, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *ProvisioningStepMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProvisioningStepMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (ProvisioningStep).
@@ -27766,24 +28375,25 @@ func (m *ProvisioningStepMutation) ResetEdge(name string) error {
 // RepoCommitMutation represents an operation that mutates the RepoCommit nodes in the graph.
 type RepoCommitMutation struct {
 	config
-	op                 Op
-	typ                string
-	id                 *uuid.UUID
-	revision           *int
-	addrevision        *int
-	hash               *string
-	author             *object.Signature
-	committer          *object.Signature
-	pgp_signature      *string
-	message            *string
-	tree_hash          *string
-	parent_hashes      *[]string
-	clearedFields      map[string]struct{}
-	_Repository        *uuid.UUID
-	cleared_Repository bool
-	done               bool
-	oldValue           func(context.Context) (*RepoCommit, error)
-	predicates         []predicate.RepoCommit
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	revision            *int
+	addrevision         *int
+	hash                *string
+	author              *object.Signature
+	committer           *object.Signature
+	pgp_signature       *string
+	message             *string
+	tree_hash           *string
+	parent_hashes       *[]string
+	appendparent_hashes []string
+	clearedFields       map[string]struct{}
+	_Repository         *uuid.UUID
+	cleared_Repository  bool
+	done                bool
+	oldValue            func(context.Context) (*RepoCommit, error)
+	predicates          []predicate.RepoCommit
 }
 
 var _ ent.Mutation = (*RepoCommitMutation)(nil)
@@ -28165,6 +28775,7 @@ func (m *RepoCommitMutation) ResetTreeHash() {
 // SetParentHashes sets the "parent_hashes" field.
 func (m *RepoCommitMutation) SetParentHashes(s []string) {
 	m.parent_hashes = &s
+	m.appendparent_hashes = nil
 }
 
 // ParentHashes returns the value of the "parent_hashes" field in the mutation.
@@ -28193,9 +28804,23 @@ func (m *RepoCommitMutation) OldParentHashes(ctx context.Context) (v []string, e
 	return oldValue.ParentHashes, nil
 }
 
+// AppendParentHashes adds s to the "parent_hashes" field.
+func (m *RepoCommitMutation) AppendParentHashes(s []string) {
+	m.appendparent_hashes = append(m.appendparent_hashes, s...)
+}
+
+// AppendedParentHashes returns the list of values that were appended to the "parent_hashes" field in this mutation.
+func (m *RepoCommitMutation) AppendedParentHashes() ([]string, bool) {
+	if len(m.appendparent_hashes) == 0 {
+		return nil, false
+	}
+	return m.appendparent_hashes, true
+}
+
 // ResetParentHashes resets all changes to the "parent_hashes" field.
 func (m *RepoCommitMutation) ResetParentHashes() {
 	m.parent_hashes = nil
+	m.appendparent_hashes = nil
 }
 
 // SetRepositoryID sets the "Repository" edge to the Repository entity by id.
@@ -28242,9 +28867,24 @@ func (m *RepoCommitMutation) Where(ps ...predicate.RepoCommit) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the RepoCommitMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *RepoCommitMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.RepoCommit, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *RepoCommitMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *RepoCommitMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (RepoCommit).
@@ -28517,8 +29157,6 @@ func (m *RepoCommitMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *RepoCommitMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -28946,9 +29584,24 @@ func (m *RepositoryMutation) Where(ps ...predicate.Repository) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the RepositoryMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *RepositoryMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Repository, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *RepositoryMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *RepositoryMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Repository).
@@ -29344,13 +29997,13 @@ func (m *ScheduledStepMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *ScheduledStepMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *ScheduledStepMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *ScheduledStepMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *ScheduledStepMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -29358,25 +30011,25 @@ func (m *ScheduledStepMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the ScheduledStep entity.
+// OldHCLID returns the old "hcl_id" field's value of the ScheduledStep entity.
 // If the ScheduledStep object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ScheduledStepMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *ScheduledStepMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *ScheduledStepMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *ScheduledStepMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -29687,9 +30340,24 @@ func (m *ScheduledStepMutation) Where(ps ...predicate.ScheduledStep) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the ScheduledStepMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ScheduledStepMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ScheduledStep, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *ScheduledStepMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ScheduledStepMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (ScheduledStep).
@@ -29703,7 +30371,7 @@ func (m *ScheduledStepMutation) Type() string {
 func (m *ScheduledStepMutation) Fields() []string {
 	fields := make([]string, 0, 7)
 	if m.hcl_id != nil {
-		fields = append(fields, scheduledstep.FieldHclID)
+		fields = append(fields, scheduledstep.FieldHCLID)
 	}
 	if m.name != nil {
 		fields = append(fields, scheduledstep.FieldName)
@@ -29731,8 +30399,8 @@ func (m *ScheduledStepMutation) Fields() []string {
 // schema.
 func (m *ScheduledStepMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case scheduledstep.FieldHclID:
-		return m.HclID()
+	case scheduledstep.FieldHCLID:
+		return m.HCLID()
 	case scheduledstep.FieldName:
 		return m.Name()
 	case scheduledstep.FieldDescription:
@@ -29754,8 +30422,8 @@ func (m *ScheduledStepMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *ScheduledStepMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case scheduledstep.FieldHclID:
-		return m.OldHclID(ctx)
+	case scheduledstep.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case scheduledstep.FieldName:
 		return m.OldName(ctx)
 	case scheduledstep.FieldDescription:
@@ -29777,12 +30445,12 @@ func (m *ScheduledStepMutation) OldField(ctx context.Context, name string) (ent.
 // type.
 func (m *ScheduledStepMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case scheduledstep.FieldHclID:
+	case scheduledstep.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case scheduledstep.FieldName:
 		v, ok := value.(string)
@@ -29905,8 +30573,8 @@ func (m *ScheduledStepMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *ScheduledStepMutation) ResetField(name string) error {
 	switch name {
-	case scheduledstep.FieldHclID:
-		m.ResetHclID()
+	case scheduledstep.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case scheduledstep.FieldName:
 		m.ResetName()
@@ -29960,8 +30628,6 @@ func (m *ScheduledStepMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *ScheduledStepMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -30024,6 +30690,7 @@ type ScriptMutation struct {
 	addtimeout          *int
 	ignore_errors       *bool
 	args                *[]string
+	appendargs          []string
 	disabled            *bool
 	vars                *map[string]string
 	abs_path            *string
@@ -30146,13 +30813,13 @@ func (m *ScriptMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *ScriptMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *ScriptMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *ScriptMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *ScriptMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -30160,25 +30827,25 @@ func (m *ScriptMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the Script entity.
+// OldHCLID returns the old "hcl_id" field's value of the Script entity.
 // If the Script object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ScriptMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *ScriptMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *ScriptMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *ScriptMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -30513,6 +31180,7 @@ func (m *ScriptMutation) ResetIgnoreErrors() {
 // SetArgs sets the "args" field.
 func (m *ScriptMutation) SetArgs(s []string) {
 	m.args = &s
+	m.appendargs = nil
 }
 
 // Args returns the value of the "args" field in the mutation.
@@ -30541,9 +31209,23 @@ func (m *ScriptMutation) OldArgs(ctx context.Context) (v []string, err error) {
 	return oldValue.Args, nil
 }
 
+// AppendArgs adds s to the "args" field.
+func (m *ScriptMutation) AppendArgs(s []string) {
+	m.appendargs = append(m.appendargs, s...)
+}
+
+// AppendedArgs returns the list of values that were appended to the "args" field in this mutation.
+func (m *ScriptMutation) AppendedArgs() ([]string, bool) {
+	if len(m.appendargs) == 0 {
+		return nil, false
+	}
+	return m.appendargs, true
+}
+
 // ResetArgs resets all changes to the "args" field.
 func (m *ScriptMutation) ResetArgs() {
 	m.args = nil
+	m.appendargs = nil
 }
 
 // SetDisabled sets the "disabled" field.
@@ -30842,9 +31524,24 @@ func (m *ScriptMutation) Where(ps ...predicate.Script) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the ScriptMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ScriptMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Script, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *ScriptMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ScriptMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Script).
@@ -30858,7 +31555,7 @@ func (m *ScriptMutation) Type() string {
 func (m *ScriptMutation) Fields() []string {
 	fields := make([]string, 0, 14)
 	if m.hcl_id != nil {
-		fields = append(fields, script.FieldHclID)
+		fields = append(fields, script.FieldHCLID)
 	}
 	if m.name != nil {
 		fields = append(fields, script.FieldName)
@@ -30907,8 +31604,8 @@ func (m *ScriptMutation) Fields() []string {
 // schema.
 func (m *ScriptMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case script.FieldHclID:
-		return m.HclID()
+	case script.FieldHCLID:
+		return m.HCLID()
 	case script.FieldName:
 		return m.Name()
 	case script.FieldLanguage:
@@ -30944,8 +31641,8 @@ func (m *ScriptMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *ScriptMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case script.FieldHclID:
-		return m.OldHclID(ctx)
+	case script.FieldHCLID:
+		return m.OldHCLID(ctx)
 	case script.FieldName:
 		return m.OldName(ctx)
 	case script.FieldLanguage:
@@ -30981,12 +31678,12 @@ func (m *ScriptMutation) OldField(ctx context.Context, name string) (ent.Value, 
 // type.
 func (m *ScriptMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case script.FieldHclID:
+	case script.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	case script.FieldName:
 		v, ok := value.(string)
@@ -31155,8 +31852,8 @@ func (m *ScriptMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *ScriptMutation) ResetField(name string) error {
 	switch name {
-	case script.FieldHclID:
-		m.ResetHclID()
+	case script.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	case script.FieldName:
 		m.ResetName()
@@ -31339,6 +32036,7 @@ type ServerTaskMutation struct {
 	start_time                *time.Time
 	end_time                  *time.Time
 	errors                    *[]string
+	appenderrors              []string
 	log_file_path             *string
 	clearedFields             map[string]struct{}
 	_AuthUser                 *uuid.UUID
@@ -31600,6 +32298,7 @@ func (m *ServerTaskMutation) ResetEndTime() {
 // SetErrors sets the "errors" field.
 func (m *ServerTaskMutation) SetErrors(s []string) {
 	m.errors = &s
+	m.appenderrors = nil
 }
 
 // Errors returns the value of the "errors" field in the mutation.
@@ -31628,9 +32327,23 @@ func (m *ServerTaskMutation) OldErrors(ctx context.Context) (v []string, err err
 	return oldValue.Errors, nil
 }
 
+// AppendErrors adds s to the "errors" field.
+func (m *ServerTaskMutation) AppendErrors(s []string) {
+	m.appenderrors = append(m.appenderrors, s...)
+}
+
+// AppendedErrors returns the list of values that were appended to the "errors" field in this mutation.
+func (m *ServerTaskMutation) AppendedErrors() ([]string, bool) {
+	if len(m.appenderrors) == 0 {
+		return nil, false
+	}
+	return m.appenderrors, true
+}
+
 // ClearErrors clears the value of the "errors" field.
 func (m *ServerTaskMutation) ClearErrors() {
 	m.errors = nil
+	m.appenderrors = nil
 	m.clearedFields[servertask.FieldErrors] = struct{}{}
 }
 
@@ -31643,6 +32356,7 @@ func (m *ServerTaskMutation) ErrorsCleared() bool {
 // ResetErrors resets all changes to the "errors" field.
 func (m *ServerTaskMutation) ResetErrors() {
 	m.errors = nil
+	m.appenderrors = nil
 	delete(m.clearedFields, servertask.FieldErrors)
 }
 
@@ -31949,9 +32663,24 @@ func (m *ServerTaskMutation) Where(ps ...predicate.ServerTask) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the ServerTaskMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ServerTaskMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ServerTask, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *ServerTaskMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ServerTaskMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (ServerTask).
@@ -33117,9 +33846,24 @@ func (m *StatusMutation) Where(ps ...predicate.Status) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the StatusMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *StatusMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Status, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *StatusMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *StatusMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Status).
@@ -33437,8 +34181,6 @@ func (m *StatusMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *StatusMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -33803,9 +34545,24 @@ func (m *TagMutation) Where(ps ...predicate.Tag) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the TagMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TagMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Tag, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *TagMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TagMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Tag).
@@ -34392,9 +35149,24 @@ func (m *TeamMutation) Where(ps ...predicate.Team) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the TeamMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TeamMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Team, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *TeamMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TeamMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Team).
@@ -34930,9 +35702,24 @@ func (m *TokenMutation) Where(ps ...predicate.Token) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the TokenMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TokenMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Token, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *TokenMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TokenMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Token).
@@ -35103,8 +35890,6 @@ func (m *TokenMutation) RemovedEdges() []string {
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *TokenMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
@@ -35383,13 +36168,13 @@ func (m *UserMutation) ResetEmail() {
 	m.email = nil
 }
 
-// SetHclID sets the "hcl_id" field.
-func (m *UserMutation) SetHclID(s string) {
+// SetHCLID sets the "hcl_id" field.
+func (m *UserMutation) SetHCLID(s string) {
 	m.hcl_id = &s
 }
 
-// HclID returns the value of the "hcl_id" field in the mutation.
-func (m *UserMutation) HclID() (r string, exists bool) {
+// HCLID returns the value of the "hcl_id" field in the mutation.
+func (m *UserMutation) HCLID() (r string, exists bool) {
 	v := m.hcl_id
 	if v == nil {
 		return
@@ -35397,25 +36182,25 @@ func (m *UserMutation) HclID() (r string, exists bool) {
 	return *v, true
 }
 
-// OldHclID returns the old "hcl_id" field's value of the User entity.
+// OldHCLID returns the old "hcl_id" field's value of the User entity.
 // If the User object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserMutation) OldHclID(ctx context.Context) (v string, err error) {
+func (m *UserMutation) OldHCLID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHclID is only allowed on UpdateOne operations")
+		return v, errors.New("OldHCLID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHclID requires an ID field in the mutation")
+		return v, errors.New("OldHCLID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHclID: %w", err)
+		return v, fmt.Errorf("querying old value for OldHCLID: %w", err)
 	}
-	return oldValue.HclID, nil
+	return oldValue.HCLID, nil
 }
 
-// ResetHclID resets all changes to the "hcl_id" field.
-func (m *UserMutation) ResetHclID() {
+// ResetHCLID resets all changes to the "hcl_id" field.
+func (m *UserMutation) ResetHCLID() {
 	m.hcl_id = nil
 }
 
@@ -35532,9 +36317,24 @@ func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the UserMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *UserMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.User, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *UserMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *UserMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (User).
@@ -35557,7 +36357,7 @@ func (m *UserMutation) Fields() []string {
 		fields = append(fields, user.FieldEmail)
 	}
 	if m.hcl_id != nil {
-		fields = append(fields, user.FieldHclID)
+		fields = append(fields, user.FieldHCLID)
 	}
 	return fields
 }
@@ -35573,8 +36373,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.UUID()
 	case user.FieldEmail:
 		return m.Email()
-	case user.FieldHclID:
-		return m.HclID()
+	case user.FieldHCLID:
+		return m.HCLID()
 	}
 	return nil, false
 }
@@ -35590,8 +36390,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldUUID(ctx)
 	case user.FieldEmail:
 		return m.OldEmail(ctx)
-	case user.FieldHclID:
-		return m.OldHclID(ctx)
+	case user.FieldHCLID:
+		return m.OldHCLID(ctx)
 	}
 	return nil, fmt.Errorf("unknown User field %s", name)
 }
@@ -35622,12 +36422,12 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetEmail(v)
 		return nil
-	case user.FieldHclID:
+	case user.FieldHCLID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetHclID(v)
+		m.SetHCLID(v)
 		return nil
 	}
 	return fmt.Errorf("unknown User field %s", name)
@@ -35687,8 +36487,8 @@ func (m *UserMutation) ResetField(name string) error {
 	case user.FieldEmail:
 		m.ResetEmail()
 		return nil
-	case user.FieldHclID:
-		m.ResetHclID()
+	case user.FieldHCLID:
+		m.ResetHCLID()
 		return nil
 	}
 	return fmt.Errorf("unknown User field %s", name)

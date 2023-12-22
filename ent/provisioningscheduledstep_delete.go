@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (pssd *ProvisioningScheduledStepDelete) Where(ps ...predicate.ProvisioningS
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (pssd *ProvisioningScheduledStepDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(pssd.hooks) == 0 {
-		affected, err = pssd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ProvisioningScheduledStepMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			pssd.mutation = mutation
-			affected, err = pssd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(pssd.hooks) - 1; i >= 0; i-- {
-			if pssd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pssd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, pssd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, pssd.sqlExec, pssd.mutation, pssd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (pssd *ProvisioningScheduledStepDelete) ExecX(ctx context.Context) int {
 }
 
 func (pssd *ProvisioningScheduledStepDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: provisioningscheduledstep.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: provisioningscheduledstep.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(provisioningscheduledstep.Table, sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID))
 	if ps := pssd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (pssd *ProvisioningScheduledStepDelete) sqlExec(ctx context.Context) (int, 
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	pssd.mutation.done = true
 	return affected, err
 }
 
 // ProvisioningScheduledStepDeleteOne is the builder for deleting a single ProvisioningScheduledStep entity.
 type ProvisioningScheduledStepDeleteOne struct {
 	pssd *ProvisioningScheduledStepDelete
+}
+
+// Where appends a list predicates to the ProvisioningScheduledStepDelete builder.
+func (pssdo *ProvisioningScheduledStepDeleteOne) Where(ps ...predicate.ProvisioningScheduledStep) *ProvisioningScheduledStepDeleteOne {
+	pssdo.pssd.mutation.Where(ps...)
+	return pssdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (pssdo *ProvisioningScheduledStepDeleteOne) Exec(ctx context.Context) error
 
 // ExecX is like Exec, but panics if an error occurs.
 func (pssdo *ProvisioningScheduledStepDeleteOne) ExecX(ctx context.Context) {
-	pssdo.pssd.ExecX(ctx)
+	if err := pssdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

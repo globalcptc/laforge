@@ -3,6 +3,8 @@
 package environment
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -11,8 +13,8 @@ const (
 	Label = "environment"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldHclID holds the string denoting the hcl_id field in the database.
-	FieldHclID = "hcl_id"
+	// FieldHCLID holds the string denoting the hcl_id field in the database.
+	FieldHCLID = "hcl_id"
 	// FieldCompetitionID holds the string denoting the competition_id field in the database.
 	FieldCompetitionID = "competition_id"
 	// FieldName holds the string denoting the name field in the database.
@@ -212,7 +214,7 @@ const (
 // Columns holds all SQL columns for environment fields.
 var Columns = []string{
 	FieldID,
-	FieldHclID,
+	FieldHCLID,
 	FieldCompetitionID,
 	FieldName,
 	FieldDescription,
@@ -254,3 +256,466 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the Environment queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByHCLID orders the results by the hcl_id field.
+func ByHCLID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHCLID, opts...).ToFunc()
+}
+
+// ByCompetitionID orders the results by the competition_id field.
+func ByCompetitionID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCompetitionID, opts...).ToFunc()
+}
+
+// ByName orders the results by the name field.
+func ByName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldName, opts...).ToFunc()
+}
+
+// ByDescription orders the results by the description field.
+func ByDescription(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDescription, opts...).ToFunc()
+}
+
+// ByBuilder orders the results by the builder field.
+func ByBuilder(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBuilder, opts...).ToFunc()
+}
+
+// ByTeamCount orders the results by the team_count field.
+func ByTeamCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTeamCount, opts...).ToFunc()
+}
+
+// ByRevision orders the results by the revision field.
+func ByRevision(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRevision, opts...).ToFunc()
+}
+
+// ByUsersCount orders the results by Users count.
+func ByUsersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newUsersStep(), opts...)
+	}
+}
+
+// ByUsers orders the results by Users terms.
+func ByUsers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newUsersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByHostsCount orders the results by Hosts count.
+func ByHostsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newHostsStep(), opts...)
+	}
+}
+
+// ByHosts orders the results by Hosts terms.
+func ByHosts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newHostsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByCompetitionsCount orders the results by Competitions count.
+func ByCompetitionsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCompetitionsStep(), opts...)
+	}
+}
+
+// ByCompetitions orders the results by Competitions terms.
+func ByCompetitions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCompetitionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByIdentitiesCount orders the results by Identities count.
+func ByIdentitiesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newIdentitiesStep(), opts...)
+	}
+}
+
+// ByIdentities orders the results by Identities terms.
+func ByIdentities(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newIdentitiesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByCommandsCount orders the results by Commands count.
+func ByCommandsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCommandsStep(), opts...)
+	}
+}
+
+// ByCommands orders the results by Commands terms.
+func ByCommands(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCommandsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByScriptsCount orders the results by Scripts count.
+func ByScriptsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newScriptsStep(), opts...)
+	}
+}
+
+// ByScripts orders the results by Scripts terms.
+func ByScripts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newScriptsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByFileDownloadsCount orders the results by FileDownloads count.
+func ByFileDownloadsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newFileDownloadsStep(), opts...)
+	}
+}
+
+// ByFileDownloads orders the results by FileDownloads terms.
+func ByFileDownloads(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFileDownloadsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByFileDeletesCount orders the results by FileDeletes count.
+func ByFileDeletesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newFileDeletesStep(), opts...)
+	}
+}
+
+// ByFileDeletes orders the results by FileDeletes terms.
+func ByFileDeletes(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFileDeletesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByFileExtractsCount orders the results by FileExtracts count.
+func ByFileExtractsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newFileExtractsStep(), opts...)
+	}
+}
+
+// ByFileExtracts orders the results by FileExtracts terms.
+func ByFileExtracts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFileExtractsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByIncludedNetworksCount orders the results by IncludedNetworks count.
+func ByIncludedNetworksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newIncludedNetworksStep(), opts...)
+	}
+}
+
+// ByIncludedNetworks orders the results by IncludedNetworks terms.
+func ByIncludedNetworks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newIncludedNetworksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByFindingsCount orders the results by Findings count.
+func ByFindingsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newFindingsStep(), opts...)
+	}
+}
+
+// ByFindings orders the results by Findings terms.
+func ByFindings(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFindingsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByDNSRecordsCount orders the results by DNSRecords count.
+func ByDNSRecordsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newDNSRecordsStep(), opts...)
+	}
+}
+
+// ByDNSRecords orders the results by DNSRecords terms.
+func ByDNSRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDNSRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByDNSCount orders the results by DNS count.
+func ByDNSCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newDNSStep(), opts...)
+	}
+}
+
+// ByDNS orders the results by DNS terms.
+func ByDNS(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDNSStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByNetworksCount orders the results by Networks count.
+func ByNetworksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newNetworksStep(), opts...)
+	}
+}
+
+// ByNetworks orders the results by Networks terms.
+func ByNetworks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newNetworksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByHostDependenciesCount orders the results by HostDependencies count.
+func ByHostDependenciesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newHostDependenciesStep(), opts...)
+	}
+}
+
+// ByHostDependencies orders the results by HostDependencies terms.
+func ByHostDependencies(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newHostDependenciesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByAnsiblesCount orders the results by Ansibles count.
+func ByAnsiblesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAnsiblesStep(), opts...)
+	}
+}
+
+// ByAnsibles orders the results by Ansibles terms.
+func ByAnsibles(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAnsiblesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByScheduledStepsCount orders the results by ScheduledSteps count.
+func ByScheduledStepsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newScheduledStepsStep(), opts...)
+	}
+}
+
+// ByScheduledSteps orders the results by ScheduledSteps terms.
+func ByScheduledSteps(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newScheduledStepsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByBuildsCount orders the results by Builds count.
+func ByBuildsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newBuildsStep(), opts...)
+	}
+}
+
+// ByBuilds orders the results by Builds terms.
+func ByBuilds(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBuildsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByRepositoriesCount orders the results by Repositories count.
+func ByRepositoriesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newRepositoriesStep(), opts...)
+	}
+}
+
+// ByRepositories orders the results by Repositories terms.
+func ByRepositories(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRepositoriesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByServerTasksCount orders the results by ServerTasks count.
+func ByServerTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newServerTasksStep(), opts...)
+	}
+}
+
+// ByServerTasks orders the results by ServerTasks terms.
+func ByServerTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newServerTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newUsersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(UsersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, UsersTable, UsersPrimaryKey...),
+	)
+}
+func newHostsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(HostsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, HostsTable, HostsColumn),
+	)
+}
+func newCompetitionsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CompetitionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CompetitionsTable, CompetitionsColumn),
+	)
+}
+func newIdentitiesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(IdentitiesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, IdentitiesTable, IdentitiesColumn),
+	)
+}
+func newCommandsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CommandsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CommandsTable, CommandsColumn),
+	)
+}
+func newScriptsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ScriptsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ScriptsTable, ScriptsColumn),
+	)
+}
+func newFileDownloadsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FileDownloadsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, FileDownloadsTable, FileDownloadsColumn),
+	)
+}
+func newFileDeletesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FileDeletesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, FileDeletesTable, FileDeletesColumn),
+	)
+}
+func newFileExtractsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FileExtractsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, FileExtractsTable, FileExtractsColumn),
+	)
+}
+func newIncludedNetworksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(IncludedNetworksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, IncludedNetworksTable, IncludedNetworksPrimaryKey...),
+	)
+}
+func newFindingsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FindingsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, FindingsTable, FindingsColumn),
+	)
+}
+func newDNSRecordsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DNSRecordsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, DNSRecordsTable, DNSRecordsColumn),
+	)
+}
+func newDNSStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DNSInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, DNSTable, DNSPrimaryKey...),
+	)
+}
+func newNetworksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(NetworksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, NetworksTable, NetworksColumn),
+	)
+}
+func newHostDependenciesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(HostDependenciesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, HostDependenciesTable, HostDependenciesColumn),
+	)
+}
+func newAnsiblesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AnsiblesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AnsiblesTable, AnsiblesColumn),
+	)
+}
+func newScheduledStepsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ScheduledStepsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ScheduledStepsTable, ScheduledStepsColumn),
+	)
+}
+func newBuildsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BuildsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, BuildsTable, BuildsColumn),
+	)
+}
+func newRepositoriesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RepositoriesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, RepositoriesTable, RepositoriesPrimaryKey...),
+	)
+}
+func newServerTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ServerTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, ServerTasksTable, ServerTasksColumn),
+	)
+}

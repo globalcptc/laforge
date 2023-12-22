@@ -238,50 +238,8 @@ func (phc *ProvisionedHostCreate) Mutation() *ProvisionedHostMutation {
 
 // Save creates the ProvisionedHost in the database.
 func (phc *ProvisionedHostCreate) Save(ctx context.Context) (*ProvisionedHost, error) {
-	var (
-		err  error
-		node *ProvisionedHost
-	)
 	phc.defaults()
-	if len(phc.hooks) == 0 {
-		if err = phc.check(); err != nil {
-			return nil, err
-		}
-		node, err = phc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ProvisionedHostMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = phc.check(); err != nil {
-				return nil, err
-			}
-			phc.mutation = mutation
-			if node, err = phc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(phc.hooks) - 1; i >= 0; i-- {
-			if phc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = phc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, phc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*ProvisionedHost)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from ProvisionedHostMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, phc.sqlSave, phc.mutation, phc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -343,6 +301,9 @@ func (phc *ProvisionedHostCreate) check() error {
 }
 
 func (phc *ProvisionedHostCreate) sqlSave(ctx context.Context) (*ProvisionedHost, error) {
+	if err := phc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := phc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, phc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -357,46 +318,30 @@ func (phc *ProvisionedHostCreate) sqlSave(ctx context.Context) (*ProvisionedHost
 			return nil, err
 		}
 	}
+	phc.mutation.id = &_node.ID
+	phc.mutation.done = true
 	return _node, nil
 }
 
 func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.CreateSpec) {
 	var (
 		_node = &ProvisionedHost{config: phc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: provisionedhost.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: provisionedhost.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(provisionedhost.Table, sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID))
 	)
 	if id, ok := phc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := phc.mutation.SubnetIP(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: provisionedhost.FieldSubnetIP,
-		})
+		_spec.SetField(provisionedhost.FieldSubnetIP, field.TypeString, value)
 		_node.SubnetIP = value
 	}
 	if value, ok := phc.mutation.AddonType(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: provisionedhost.FieldAddonType,
-		})
+		_spec.SetField(provisionedhost.FieldAddonType, field.TypeEnum, value)
 		_node.AddonType = &value
 	}
 	if value, ok := phc.mutation.Vars(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: provisionedhost.FieldVars,
-		})
+		_spec.SetField(provisionedhost.FieldVars, field.TypeJSON, value)
 		_node.Vars = value
 	}
 	if nodes := phc.mutation.StatusIDs(); len(nodes) > 0 {
@@ -407,10 +352,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Columns: []string{provisionedhost.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: status.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -426,10 +368,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Columns: []string{provisionedhost.ProvisionedNetworkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -446,10 +385,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Columns: []string{provisionedhost.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -466,10 +402,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Columns: []string{provisionedhost.EndStepPlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -486,10 +419,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Columns: []string{provisionedhost.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -506,10 +436,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Columns: []string{provisionedhost.ProvisioningStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -525,10 +452,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Columns: []string{provisionedhost.ProvisioningScheduledStepsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisioningscheduledstep.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisioningscheduledstep.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -544,10 +468,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Columns: []string{provisionedhost.AgentStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agentstatus.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agentstatus.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -563,10 +484,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Columns: []string{provisionedhost.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agenttask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -582,10 +500,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Columns: []string{provisionedhost.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -602,10 +517,7 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 			Columns: []string{provisionedhost.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ginfilemiddleware.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -620,11 +532,15 @@ func (phc *ProvisionedHostCreate) createSpec() (*ProvisionedHost, *sqlgraph.Crea
 // ProvisionedHostCreateBulk is the builder for creating many ProvisionedHost entities in bulk.
 type ProvisionedHostCreateBulk struct {
 	config
+	err      error
 	builders []*ProvisionedHostCreate
 }
 
 // Save creates the ProvisionedHost entities in the database.
 func (phcb *ProvisionedHostCreateBulk) Save(ctx context.Context) ([]*ProvisionedHost, error) {
+	if phcb.err != nil {
+		return nil, phcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(phcb.builders))
 	nodes := make([]*ProvisionedHost, len(phcb.builders))
 	mutators := make([]Mutator, len(phcb.builders))
@@ -641,8 +557,8 @@ func (phcb *ProvisionedHostCreateBulk) Save(ctx context.Context) ([]*Provisioned
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, phcb.builders[i+1].mutation)
 				} else {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/ansible"
 	"github.com/gen0cide/laforge/ent/command"
@@ -35,6 +36,7 @@ type ProvisioningStep struct {
 	// The values are being populated by the ProvisioningStepQuery when eager-loading is set.
 	Edges ProvisioningStepEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Status holds the value of the Status edge.
 	HCLStatus *Status `json:"Status,omitempty"`
@@ -60,7 +62,7 @@ type ProvisioningStep struct {
 	HCLAgentTasks []*AgentTask `json:"AgentTasks,omitempty"`
 	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
 	HCLGinFileMiddleware *GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	gin_file_middleware_provisioning_step *uuid.UUID
 	plan_provisioning_step                *uuid.UUID
 	provisioning_step_provisioned_host    *uuid.UUID
@@ -71,6 +73,7 @@ type ProvisioningStep struct {
 	provisioning_step_file_download       *uuid.UUID
 	provisioning_step_file_extract        *uuid.UUID
 	provisioning_step_ansible             *uuid.UUID
+	selectValues                          sql.SelectValues
 }
 
 // ProvisioningStepEdges holds the relations/edges for other nodes in the graph.
@@ -102,6 +105,10 @@ type ProvisioningStepEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [12]bool
+	// totalCount holds the count of the edges above.
+	totalCount [12]map[string]int
+
+	namedAgentTasks map[string][]*AgentTask
 }
 
 // StatusOrErr returns the Status value or an error if the edge
@@ -109,8 +116,7 @@ type ProvisioningStepEdges struct {
 func (e ProvisioningStepEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[0] {
 		if e.Status == nil {
-			// The edge Status was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
 		return e.Status, nil
@@ -123,8 +129,7 @@ func (e ProvisioningStepEdges) StatusOrErr() (*Status, error) {
 func (e ProvisioningStepEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[1] {
 		if e.ProvisionedHost == nil {
-			// The edge ProvisionedHost was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
 		return e.ProvisionedHost, nil
@@ -137,8 +142,7 @@ func (e ProvisioningStepEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) 
 func (e ProvisioningStepEdges) ScriptOrErr() (*Script, error) {
 	if e.loadedTypes[2] {
 		if e.Script == nil {
-			// The edge Script was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: script.Label}
 		}
 		return e.Script, nil
@@ -151,8 +155,7 @@ func (e ProvisioningStepEdges) ScriptOrErr() (*Script, error) {
 func (e ProvisioningStepEdges) CommandOrErr() (*Command, error) {
 	if e.loadedTypes[3] {
 		if e.Command == nil {
-			// The edge Command was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: command.Label}
 		}
 		return e.Command, nil
@@ -165,8 +168,7 @@ func (e ProvisioningStepEdges) CommandOrErr() (*Command, error) {
 func (e ProvisioningStepEdges) DNSRecordOrErr() (*DNSRecord, error) {
 	if e.loadedTypes[4] {
 		if e.DNSRecord == nil {
-			// The edge DNSRecord was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: dnsrecord.Label}
 		}
 		return e.DNSRecord, nil
@@ -179,8 +181,7 @@ func (e ProvisioningStepEdges) DNSRecordOrErr() (*DNSRecord, error) {
 func (e ProvisioningStepEdges) FileDeleteOrErr() (*FileDelete, error) {
 	if e.loadedTypes[5] {
 		if e.FileDelete == nil {
-			// The edge FileDelete was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: filedelete.Label}
 		}
 		return e.FileDelete, nil
@@ -193,8 +194,7 @@ func (e ProvisioningStepEdges) FileDeleteOrErr() (*FileDelete, error) {
 func (e ProvisioningStepEdges) FileDownloadOrErr() (*FileDownload, error) {
 	if e.loadedTypes[6] {
 		if e.FileDownload == nil {
-			// The edge FileDownload was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: filedownload.Label}
 		}
 		return e.FileDownload, nil
@@ -207,8 +207,7 @@ func (e ProvisioningStepEdges) FileDownloadOrErr() (*FileDownload, error) {
 func (e ProvisioningStepEdges) FileExtractOrErr() (*FileExtract, error) {
 	if e.loadedTypes[7] {
 		if e.FileExtract == nil {
-			// The edge FileExtract was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: fileextract.Label}
 		}
 		return e.FileExtract, nil
@@ -221,8 +220,7 @@ func (e ProvisioningStepEdges) FileExtractOrErr() (*FileExtract, error) {
 func (e ProvisioningStepEdges) AnsibleOrErr() (*Ansible, error) {
 	if e.loadedTypes[8] {
 		if e.Ansible == nil {
-			// The edge Ansible was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: ansible.Label}
 		}
 		return e.Ansible, nil
@@ -235,8 +233,7 @@ func (e ProvisioningStepEdges) AnsibleOrErr() (*Ansible, error) {
 func (e ProvisioningStepEdges) PlanOrErr() (*Plan, error) {
 	if e.loadedTypes[9] {
 		if e.Plan == nil {
-			// The edge Plan was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: plan.Label}
 		}
 		return e.Plan, nil
@@ -258,8 +255,7 @@ func (e ProvisioningStepEdges) AgentTasksOrErr() ([]*AgentTask, error) {
 func (e ProvisioningStepEdges) GinFileMiddlewareOrErr() (*GinFileMiddleware, error) {
 	if e.loadedTypes[11] {
 		if e.GinFileMiddleware == nil {
-			// The edge GinFileMiddleware was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: ginfilemiddleware.Label}
 		}
 		return e.GinFileMiddleware, nil
@@ -268,8 +264,8 @@ func (e ProvisioningStepEdges) GinFileMiddlewareOrErr() (*GinFileMiddleware, err
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*ProvisioningStep) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*ProvisioningStep) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case provisioningstep.FieldStepNumber:
@@ -299,7 +295,7 @@ func (*ProvisioningStep) scanValues(columns []string) ([]interface{}, error) {
 		case provisioningstep.ForeignKeys[9]: // provisioning_step_ansible
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type ProvisioningStep", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -307,7 +303,7 @@ func (*ProvisioningStep) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the ProvisioningStep fields.
-func (ps *ProvisioningStep) assignValues(columns []string, values []interface{}) error {
+func (ps *ProvisioningStep) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -401,86 +397,94 @@ func (ps *ProvisioningStep) assignValues(columns []string, values []interface{})
 				ps.provisioning_step_ansible = new(uuid.UUID)
 				*ps.provisioning_step_ansible = *value.S.(*uuid.UUID)
 			}
+		default:
+			ps.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the ProvisioningStep.
+// This includes values selected through modifiers, order, etc.
+func (ps *ProvisioningStep) Value(name string) (ent.Value, error) {
+	return ps.selectValues.Get(name)
+}
+
 // QueryStatus queries the "Status" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryStatus() *StatusQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryStatus(ps)
+	return NewProvisioningStepClient(ps.config).QueryStatus(ps)
 }
 
 // QueryProvisionedHost queries the "ProvisionedHost" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryProvisionedHost() *ProvisionedHostQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryProvisionedHost(ps)
+	return NewProvisioningStepClient(ps.config).QueryProvisionedHost(ps)
 }
 
 // QueryScript queries the "Script" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryScript() *ScriptQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryScript(ps)
+	return NewProvisioningStepClient(ps.config).QueryScript(ps)
 }
 
 // QueryCommand queries the "Command" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryCommand() *CommandQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryCommand(ps)
+	return NewProvisioningStepClient(ps.config).QueryCommand(ps)
 }
 
 // QueryDNSRecord queries the "DNSRecord" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryDNSRecord() *DNSRecordQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryDNSRecord(ps)
+	return NewProvisioningStepClient(ps.config).QueryDNSRecord(ps)
 }
 
 // QueryFileDelete queries the "FileDelete" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryFileDelete() *FileDeleteQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryFileDelete(ps)
+	return NewProvisioningStepClient(ps.config).QueryFileDelete(ps)
 }
 
 // QueryFileDownload queries the "FileDownload" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryFileDownload() *FileDownloadQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryFileDownload(ps)
+	return NewProvisioningStepClient(ps.config).QueryFileDownload(ps)
 }
 
 // QueryFileExtract queries the "FileExtract" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryFileExtract() *FileExtractQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryFileExtract(ps)
+	return NewProvisioningStepClient(ps.config).QueryFileExtract(ps)
 }
 
 // QueryAnsible queries the "Ansible" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryAnsible() *AnsibleQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryAnsible(ps)
+	return NewProvisioningStepClient(ps.config).QueryAnsible(ps)
 }
 
 // QueryPlan queries the "Plan" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryPlan() *PlanQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryPlan(ps)
+	return NewProvisioningStepClient(ps.config).QueryPlan(ps)
 }
 
 // QueryAgentTasks queries the "AgentTasks" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryAgentTasks() *AgentTaskQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryAgentTasks(ps)
+	return NewProvisioningStepClient(ps.config).QueryAgentTasks(ps)
 }
 
 // QueryGinFileMiddleware queries the "GinFileMiddleware" edge of the ProvisioningStep entity.
 func (ps *ProvisioningStep) QueryGinFileMiddleware() *GinFileMiddlewareQuery {
-	return (&ProvisioningStepClient{config: ps.config}).QueryGinFileMiddleware(ps)
+	return NewProvisioningStepClient(ps.config).QueryGinFileMiddleware(ps)
 }
 
 // Update returns a builder for updating this ProvisioningStep.
 // Note that you need to call ProvisioningStep.Unwrap() before calling this method if this ProvisioningStep
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (ps *ProvisioningStep) Update() *ProvisioningStepUpdateOne {
-	return (&ProvisioningStepClient{config: ps.config}).UpdateOne(ps)
+	return NewProvisioningStepClient(ps.config).UpdateOne(ps)
 }
 
 // Unwrap unwraps the ProvisioningStep entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (ps *ProvisioningStep) Unwrap() *ProvisioningStep {
-	tx, ok := ps.config.driver.(*txDriver)
+	_tx, ok := ps.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: ProvisioningStep is not a transactional entity")
 	}
-	ps.config.driver = tx.drv
+	ps.config.driver = _tx.drv
 	return ps
 }
 
@@ -488,20 +492,39 @@ func (ps *ProvisioningStep) Unwrap() *ProvisioningStep {
 func (ps *ProvisioningStep) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProvisioningStep(")
-	builder.WriteString(fmt.Sprintf("id=%v", ps.ID))
-	builder.WriteString(", type=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", ps.ID))
+	builder.WriteString("type=")
 	builder.WriteString(fmt.Sprintf("%v", ps.Type))
-	builder.WriteString(", step_number=")
+	builder.WriteString(", ")
+	builder.WriteString("step_number=")
 	builder.WriteString(fmt.Sprintf("%v", ps.StepNumber))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// ProvisioningSteps is a parsable slice of ProvisioningStep.
-type ProvisioningSteps []*ProvisioningStep
+// NamedAgentTasks returns the AgentTasks named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (ps *ProvisioningStep) NamedAgentTasks(name string) ([]*AgentTask, error) {
+	if ps.Edges.namedAgentTasks == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := ps.Edges.namedAgentTasks[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (ps ProvisioningSteps) config(cfg config) {
-	for _i := range ps {
-		ps[_i].config = cfg
+func (ps *ProvisioningStep) appendNamedAgentTasks(name string, edges ...*AgentTask) {
+	if ps.Edges.namedAgentTasks == nil {
+		ps.Edges.namedAgentTasks = make(map[string][]*AgentTask)
+	}
+	if len(edges) == 0 {
+		ps.Edges.namedAgentTasks[name] = []*AgentTask{}
+	} else {
+		ps.Edges.namedAgentTasks[name] = append(ps.Edges.namedAgentTasks[name], edges...)
 	}
 }
+
+// ProvisioningSteps is a parsable slice of ProvisioningStep.
+type ProvisioningSteps []*ProvisioningStep

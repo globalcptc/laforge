@@ -127,9 +127,9 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		}
 		return nil, err
 	}
-	entCompetition, err := entEnvironment.QueryCompetitions().Where(competition.HclIDEQ(entEnvironment.CompetitionID)).Only(ctx)
+	entCompetition, err := entEnvironment.QueryCompetitions().Where(competition.HCLIDEQ(entEnvironment.CompetitionID)).Only(ctx)
 	if err != nil {
-		logger.Log.Errorf("Failed to Query Competition %v for Environment %v. Err: %v", len(entEnvironment.CompetitionID), entEnvironment.HclID, err)
+		logger.Log.Errorf("Failed to Query Competition %v for Environment %v. Err: %v", len(entEnvironment.CompetitionID), entEnvironment.HCLID, err)
 		_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
 		if err != nil {
 			return nil, fmt.Errorf("error failing server task: %v", err)
@@ -138,7 +138,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 	}
 	entRepoCommit, err := entEnvironment.QueryRepositories().QueryRepoCommits().Order(ent.Desc(repocommit.FieldRevision)).First(ctx)
 	if err != nil {
-		logger.Log.Errorf("Failed to Query Repository from Environment %v. Err: %v", entEnvironment.HclID, err)
+		logger.Log.Errorf("Failed to Query Repository from Environment %v. Err: %v", entEnvironment.HCLID, err)
 		_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
 		if err != nil {
 			return nil, fmt.Errorf("error failing server task: %v", err)
@@ -155,7 +155,7 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 		SetVars(map[string]string{}).
 		Save(ctx)
 	if err != nil {
-		logger.Log.Errorf("Failed to create Build %v for Environment %v. Err: %v", len(entEnvironment.Edges.Builds), entEnvironment.HclID, err)
+		logger.Log.Errorf("Failed to create Build %v for Environment %v. Err: %v", len(entEnvironment.Edges.Builds), entEnvironment.HCLID, err)
 		_, _, err = utils.FailServerTask(ctx, client, rdb, taskStatus, serverTask, err)
 		if err != nil {
 			return nil, fmt.Errorf("error failing server task: %v", err)
@@ -464,7 +464,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 	).Only(ctx)
 	if err != nil {
 		if err != err.(*ent.NotFoundError) {
-			logger.Log.Errorf("Failed to Query Existing Host %v. Err: %v", entHost.HclID, err)
+			logger.Log.Errorf("Failed to Query Existing Host %v. Err: %v", entHost.HCLID, err)
 			return nil, err
 		}
 	} else {
@@ -510,7 +510,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		).WithPlan().Only(ctx)
 		if err != nil {
 			if err != err.(*ent.NotFoundError) {
-				logger.Log.Errorf("Failed to Query Depended On Host %v for Host %v. Err: %v", entHostDependency.Edges.DependOnHost.HclID, entHost.HclID, err)
+				logger.Log.Errorf("Failed to Query Depended On Host %v for Host %v. Err: %v", entHostDependency.Edges.DependOnHost.HCLID, entHost.HCLID, err)
 				return nil, err
 			} else {
 				dependOnPnetwork, err := client.ProvisionedNetwork.Query().Where(
@@ -527,7 +527,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 					),
 				).Only(ctx)
 				if err != nil {
-					logger.Log.Errorf("Failed to Query Provined Network %v for Depended On Host %v. Err: %v", entHostDependency.Edges.DependOnNetwork.HclID, entHostDependency.Edges.DependOnHost.HclID, err)
+					logger.Log.Errorf("Failed to Query Provined Network %v for Depended On Host %v. Err: %v", entHostDependency.Edges.DependOnNetwork.HCLID, entHostDependency.Edges.DependOnHost.HCLID, err)
 				}
 				dependOnPnetworkPlan, err := dependOnPnetwork.QueryPlan().Only(ctx)
 				if err != nil {
@@ -543,7 +543,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		}
 		dependOnPlan, err := entDependsOnHost.QueryEndStepPlan().Only(ctx)
 		if err != nil && err != err.(*ent.NotFoundError) {
-			logger.Log.Errorf("Failed to Query Depended On Host %v Plan for Host %v. Err: %v", entHostDependency.Edges.DependOnHost.HclID, entHost.HclID, err)
+			logger.Log.Errorf("Failed to Query Depended On Host %v Plan for Host %v. Err: %v", entHostDependency.Edges.DependOnHost.HCLID, entHost.HCLID, err)
 			return nil, err
 		}
 		prevPlans = append(prevPlans, dependOnPlan)
@@ -600,7 +600,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		Save(ctx)
 
 	if err != nil {
-		logger.Log.Errorf("Failed to create Plan Node for Provisioned Host  %v. Err: %v", entHost.HclID, err)
+		logger.Log.Errorf("Failed to create Plan Node for Provisioned Host  %v. Err: %v", entHost.HCLID, err)
 		return nil, err
 	}
 
@@ -648,7 +648,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 				script.HasEnvironmentWith(
 					environment.IDEQ(currentEnvironment.ID),
 				),
-				script.HclIDEQ(userDataScriptID),
+				script.HCLIDEQ(userDataScriptID),
 			),
 		).Only(ctx)
 		if err != nil {
@@ -698,7 +698,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		entScheduledStep, err := client.ScheduledStep.Query().
 			Where(
 				scheduledstep.And(
-					scheduledstep.HclIDEQ(scheduledStepHclId),
+					scheduledstep.HCLIDEQ(scheduledStepHclId),
 					scheduledstep.HasEnvironmentWith(environment.IDEQ(currentBuild.Edges.Environment.ID)),
 				),
 			).
@@ -723,7 +723,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	}
 	logger.Log.WithFields(logrus.Fields{
 		"pHost":               pHost.ID,
-		"pHost.HCLID":         entHost.HclID,
+		"pHost.HCLID":         entHost.HCLID,
 		"pHost.SubnetIP":      pHost.SubnetIP,
 		"stepNumber":          stepNumber,
 		"prevPlan":            prevPlan.ID,
@@ -748,7 +748,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			script.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
-			script.HclIDEQ(hclID),
+			script.HCLIDEQ(hclID),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -763,7 +763,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
 				"pHost":               pHost.ID,
-				"pHost.HCLID":         entHost.HclID,
+				"pHost.HCLID":         entHost.HCLID,
 				"pHost.SubnetIP":      pHost.SubnetIP,
 				"stepNumber":          stepNumber,
 				"prevPlan":            prevPlan.ID,
@@ -784,7 +784,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	} else if err != nil && !ent.IsNotFound(err) {
 		logger.Log.WithFields(logrus.Fields{
 			"pHost":               pHost.ID,
-			"pHost.HCLID":         entHost.HclID,
+			"pHost.HCLID":         entHost.HCLID,
 			"pHost.SubnetIP":      pHost.SubnetIP,
 			"stepNumber":          stepNumber,
 			"prevPlan":            prevPlan.ID,
@@ -799,7 +799,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			command.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
-			command.HclIDEQ(hclID),
+			command.HCLIDEQ(hclID),
 		)).Only(ctx)
 	if err == nil {
 		// Step is a command
@@ -813,7 +813,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
 				"pHost":               pHost.ID,
-				"pHost.HCLID":         entHost.HclID,
+				"pHost.HCLID":         entHost.HCLID,
 				"pHost.SubnetIP":      pHost.SubnetIP,
 				"stepNumber":          stepNumber,
 				"prevPlan":            prevPlan.ID,
@@ -830,7 +830,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	} else if err != nil && !ent.IsNotFound(err) {
 		logger.Log.WithFields(logrus.Fields{
 			"pHost":               pHost.ID,
-			"pHost.HCLID":         entHost.HclID,
+			"pHost.HCLID":         entHost.HCLID,
 			"pHost.SubnetIP":      pHost.SubnetIP,
 			"stepNumber":          stepNumber,
 			"prevPlan":            prevPlan.ID,
@@ -845,7 +845,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			filedownload.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
-			filedownload.HclIDEQ(hclID),
+			filedownload.HCLIDEQ(hclID),
 		)).Only(ctx)
 	if err == nil {
 		// Step is a file download
@@ -859,7 +859,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
 				"pHost":               pHost.ID,
-				"pHost.HCLID":         entHost.HclID,
+				"pHost.HCLID":         entHost.HCLID,
 				"pHost.SubnetIP":      pHost.SubnetIP,
 				"stepNumber":          stepNumber,
 				"prevPlan":            prevPlan.ID,
@@ -880,7 +880,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	} else if err != nil && !ent.IsNotFound(err) {
 		logger.Log.WithFields(logrus.Fields{
 			"pHost":               pHost.ID,
-			"pHost.HCLID":         entHost.HclID,
+			"pHost.HCLID":         entHost.HCLID,
 			"pHost.SubnetIP":      pHost.SubnetIP,
 			"stepNumber":          stepNumber,
 			"prevPlan":            prevPlan.ID,
@@ -895,7 +895,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			fileextract.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
-			fileextract.HclIDEQ(hclID),
+			fileextract.HCLIDEQ(hclID),
 		)).Only(ctx)
 	if err == nil {
 		// Step is a file extract
@@ -909,7 +909,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
 				"pHost":               pHost.ID,
-				"pHost.HCLID":         entHost.HclID,
+				"pHost.HCLID":         entHost.HCLID,
 				"pHost.SubnetIP":      pHost.SubnetIP,
 				"stepNumber":          stepNumber,
 				"prevPlan":            prevPlan.ID,
@@ -926,7 +926,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	} else if err != nil && !ent.IsNotFound(err) {
 		logger.Log.WithFields(logrus.Fields{
 			"pHost":               pHost.ID,
-			"pHost.HCLID":         entHost.HclID,
+			"pHost.HCLID":         entHost.HCLID,
 			"pHost.SubnetIP":      pHost.SubnetIP,
 			"stepNumber":          stepNumber,
 			"prevPlan":            prevPlan.ID,
@@ -941,7 +941,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			filedelete.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
-			filedelete.HclIDEQ(hclID),
+			filedelete.HCLIDEQ(hclID),
 		)).Only(ctx)
 	if err == nil {
 		// Step is a file delete
@@ -954,7 +954,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
 				"pHost":               pHost.ID,
-				"pHost.HCLID":         entHost.HclID,
+				"pHost.HCLID":         entHost.HCLID,
 				"pHost.SubnetIP":      pHost.SubnetIP,
 				"stepNumber":          stepNumber,
 				"prevPlan":            prevPlan.ID,
@@ -971,7 +971,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	} else if err != nil && !ent.IsNotFound(err) {
 		logger.Log.WithFields(logrus.Fields{
 			"pHost":               pHost.ID,
-			"pHost.HCLID":         entHost.HclID,
+			"pHost.HCLID":         entHost.HCLID,
 			"pHost.SubnetIP":      pHost.SubnetIP,
 			"stepNumber":          stepNumber,
 			"prevPlan":            prevPlan.ID,
@@ -986,7 +986,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			dnsrecord.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
-			dnsrecord.HclIDEQ(hclID),
+			dnsrecord.HCLIDEQ(hclID),
 		)).Only(ctx)
 	if err == nil {
 		// Step is a dns record
@@ -999,7 +999,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
 				"pHost":               pHost.ID,
-				"pHost.HCLID":         entHost.HclID,
+				"pHost.HCLID":         entHost.HCLID,
 				"pHost.SubnetIP":      pHost.SubnetIP,
 				"stepNumber":          stepNumber,
 				"prevPlan":            prevPlan.ID,
@@ -1016,7 +1016,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	} else if err != nil && !ent.IsNotFound(err) {
 		logger.Log.WithFields(logrus.Fields{
 			"pHost":               pHost.ID,
-			"pHost.HCLID":         entHost.HclID,
+			"pHost.HCLID":         entHost.HCLID,
 			"pHost.SubnetIP":      pHost.SubnetIP,
 			"stepNumber":          stepNumber,
 			"prevPlan":            prevPlan.ID,
@@ -1031,7 +1031,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 			ansible.HasEnvironmentWith(
 				environment.IDEQ(currentEnvironment.ID),
 			),
-			ansible.HclIDEQ(hclID),
+			ansible.HCLIDEQ(hclID),
 		)).Only(ctx)
 	if err == nil {
 		// Step is an ansible
@@ -1045,7 +1045,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 		if err != nil {
 			logger.Log.WithFields(logrus.Fields{
 				"pHost":               pHost.ID,
-				"pHost.HCLID":         entHost.HclID,
+				"pHost.HCLID":         entHost.HCLID,
 				"pHost.SubnetIP":      pHost.SubnetIP,
 				"stepNumber":          stepNumber,
 				"prevPlan":            prevPlan.ID,
@@ -1066,7 +1066,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	} else if err != nil && !ent.IsNotFound(err) {
 		logger.Log.WithFields(logrus.Fields{
 			"pHost":               pHost.ID,
-			"pHost.HCLID":         entHost.HclID,
+			"pHost.HCLID":         entHost.HCLID,
 			"pHost.SubnetIP":      pHost.SubnetIP,
 			"stepNumber":          stepNumber,
 			"prevPlan":            prevPlan.ID,
@@ -1077,7 +1077,7 @@ func createProvisioningStep(ctx context.Context, client *ent.Client, logger *log
 	}
 	logger.Log.WithFields(logrus.Fields{
 		"pHost":               pHost.ID,
-		"pHost.HCLID":         entHost.HclID,
+		"pHost.HCLID":         entHost.HCLID,
 		"pHost.SubnetIP":      pHost.SubnetIP,
 		"stepNumber":          stepNumber,
 		"prevPlan":            prevPlan.ID,
@@ -1095,7 +1095,7 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 	}
 	logger.Log.WithFields(logrus.Fields{
 		"pHost":               entProvisionedHost.ID,
-		"pHost.HCLID":         entHost.HclID,
+		"pHost.HCLID":         entHost.HCLID,
 		"pHost.SubnetIP":      entProvisionedHost.SubnetIP,
 		"prevPlan":            prevPlan.ID,
 		"prevPlan.Type":       prevPlan.Type,
@@ -1108,7 +1108,7 @@ func createProvisioningScheduledStep(ctx context.Context, client *ent.Client, lo
 	}
 	entCompetition, err := entBuild.QueryCompetition().Only(ctx)
 	if err != nil {
-		logger.Log.Errorf("failed to query competition for provisioned host: %v", entProvisionedHost.ID, err)
+		logger.Log.Errorf("failed to query competition for provisioned host %s: %v", entProvisionedHost.ID, err)
 		return err
 	}
 	// Check the type of scheduled step this is
@@ -1252,7 +1252,7 @@ func GenerateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			script.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			script.HclIDEQ(entScheduledStep.Step),
+			script.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -1269,7 +1269,7 @@ func GenerateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			command.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			command.HclIDEQ(entScheduledStep.Step),
+			command.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -1286,7 +1286,7 @@ func GenerateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			filedownload.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			filedownload.HclIDEQ(entScheduledStep.Step),
+			filedownload.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -1303,7 +1303,7 @@ func GenerateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			fileextract.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			fileextract.HclIDEQ(entScheduledStep.Step),
+			fileextract.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -1320,7 +1320,7 @@ func GenerateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			filedelete.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			filedelete.HclIDEQ(entScheduledStep.Step),
+			filedelete.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -1337,7 +1337,7 @@ func GenerateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			dnsrecord.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			dnsrecord.HclIDEQ(entScheduledStep.Step),
+			dnsrecord.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -1354,7 +1354,7 @@ func GenerateProvisioningScheduledStepByType(ctx context.Context, client *ent.Cl
 			ansible.HasEnvironmentWith(
 				environment.IDEQ(entEnvironment.ID),
 			),
-			ansible.HclIDEQ(entScheduledStep.Step),
+			ansible.HCLIDEQ(entScheduledStep.Step),
 		),
 	).Only(ctx)
 	if err == nil {
@@ -1696,25 +1696,25 @@ func renderAnsible(ctx context.Context, client *ent.Client, logger *logging.Logg
 	ansibleFolder := path.Join(dirAbsPath, currentAnsible.Name)
 	err = os.MkdirAll(ansibleFolder, 0755)
 	if err != nil {
-		logger.Log.Errorf("Failed to create folder for ansible %v. Err: %v", currentAnsible.HclID, err)
+		logger.Log.Errorf("Failed to create folder for ansible %v. Err: %v", currentAnsible.HCLID, err)
 		return "", err
 	}
 
 	data, err := yaml.Marshal(templateData)
 	if err != nil {
-		logger.Log.Errorf("Failed to render vars file for ansible %v. Err: %v", currentAnsible.HclID, err)
+		logger.Log.Errorf("Failed to render vars file for ansible %v. Err: %v", currentAnsible.HCLID, err)
 		return "", err
 	}
 	varFileName := path.Join(ansibleFolder, "laforge_vars.yml")
 	err = os.WriteFile(varFileName, data, 0755)
 	if err != nil {
-		logger.Log.Errorf("Failed to create vars file for ansible %v. Err: %v", currentAnsible.HclID, err)
+		logger.Log.Errorf("Failed to create vars file for ansible %v. Err: %v", currentAnsible.HCLID, err)
 		return "", err
 	}
 
 	err = CopyDir(currentAnsible.AbsPath, ansibleFolder)
 	if err != nil {
-		logger.Log.Errorf("Failed to copy folder for ansible %v. Err: %v", currentAnsible.HclID, err)
+		logger.Log.Errorf("Failed to copy folder for ansible %v. Err: %v", currentAnsible.HCLID, err)
 		return "", err
 	}
 

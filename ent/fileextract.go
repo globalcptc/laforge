@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/environment"
 	"github.com/gen0cide/laforge/ent/fileextract"
@@ -18,8 +19,8 @@ type FileExtract struct {
 	config ` json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// HclID holds the value of the "hcl_id" field.
-	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+	// HCLID holds the value of the "hcl_id" field.
+	HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// Source holds the value of the "source" field.
 	Source string `json:"source,omitempty" hcl:"source,attr"`
 	// Destination holds the value of the "destination" field.
@@ -32,11 +33,13 @@ type FileExtract struct {
 	// The values are being populated by the FileExtractQuery when eager-loading is set.
 	Edges FileExtractEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	environment_file_extracts *uuid.UUID
+	selectValues              sql.SelectValues
 }
 
 // FileExtractEdges holds the relations/edges for other nodes in the graph.
@@ -46,6 +49,8 @@ type FileExtractEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
+	// totalCount holds the count of the edges above.
+	totalCount [1]map[string]int
 }
 
 // EnvironmentOrErr returns the Environment value or an error if the edge
@@ -53,8 +58,7 @@ type FileExtractEdges struct {
 func (e FileExtractEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[0] {
 		if e.Environment == nil {
-			// The edge Environment was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
 		return e.Environment, nil
@@ -63,20 +67,20 @@ func (e FileExtractEdges) EnvironmentOrErr() (*Environment, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*FileExtract) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*FileExtract) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case fileextract.FieldTags:
 			values[i] = new([]byte)
-		case fileextract.FieldHclID, fileextract.FieldSource, fileextract.FieldDestination, fileextract.FieldType:
+		case fileextract.FieldHCLID, fileextract.FieldSource, fileextract.FieldDestination, fileextract.FieldType:
 			values[i] = new(sql.NullString)
 		case fileextract.FieldID:
 			values[i] = new(uuid.UUID)
 		case fileextract.ForeignKeys[0]: // environment_file_extracts
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type FileExtract", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -84,7 +88,7 @@ func (*FileExtract) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the FileExtract fields.
-func (fe *FileExtract) assignValues(columns []string, values []interface{}) error {
+func (fe *FileExtract) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -96,11 +100,11 @@ func (fe *FileExtract) assignValues(columns []string, values []interface{}) erro
 			} else if value != nil {
 				fe.ID = *value
 			}
-		case fileextract.FieldHclID:
+		case fileextract.FieldHCLID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field hcl_id", values[i])
 			} else if value.Valid {
-				fe.HclID = value.String
+				fe.HCLID = value.String
 			}
 		case fileextract.FieldSource:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -135,31 +139,39 @@ func (fe *FileExtract) assignValues(columns []string, values []interface{}) erro
 				fe.environment_file_extracts = new(uuid.UUID)
 				*fe.environment_file_extracts = *value.S.(*uuid.UUID)
 			}
+		default:
+			fe.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the FileExtract.
+// This includes values selected through modifiers, order, etc.
+func (fe *FileExtract) Value(name string) (ent.Value, error) {
+	return fe.selectValues.Get(name)
+}
+
 // QueryEnvironment queries the "Environment" edge of the FileExtract entity.
 func (fe *FileExtract) QueryEnvironment() *EnvironmentQuery {
-	return (&FileExtractClient{config: fe.config}).QueryEnvironment(fe)
+	return NewFileExtractClient(fe.config).QueryEnvironment(fe)
 }
 
 // Update returns a builder for updating this FileExtract.
 // Note that you need to call FileExtract.Unwrap() before calling this method if this FileExtract
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (fe *FileExtract) Update() *FileExtractUpdateOne {
-	return (&FileExtractClient{config: fe.config}).UpdateOne(fe)
+	return NewFileExtractClient(fe.config).UpdateOne(fe)
 }
 
 // Unwrap unwraps the FileExtract entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (fe *FileExtract) Unwrap() *FileExtract {
-	tx, ok := fe.config.driver.(*txDriver)
+	_tx, ok := fe.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: FileExtract is not a transactional entity")
 	}
-	fe.config.driver = tx.drv
+	fe.config.driver = _tx.drv
 	return fe
 }
 
@@ -167,16 +179,20 @@ func (fe *FileExtract) Unwrap() *FileExtract {
 func (fe *FileExtract) String() string {
 	var builder strings.Builder
 	builder.WriteString("FileExtract(")
-	builder.WriteString(fmt.Sprintf("id=%v", fe.ID))
-	builder.WriteString(", hcl_id=")
-	builder.WriteString(fe.HclID)
-	builder.WriteString(", source=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", fe.ID))
+	builder.WriteString("hcl_id=")
+	builder.WriteString(fe.HCLID)
+	builder.WriteString(", ")
+	builder.WriteString("source=")
 	builder.WriteString(fe.Source)
-	builder.WriteString(", destination=")
+	builder.WriteString(", ")
+	builder.WriteString("destination=")
 	builder.WriteString(fe.Destination)
-	builder.WriteString(", type=")
+	builder.WriteString(", ")
+	builder.WriteString("type=")
 	builder.WriteString(fe.Type)
-	builder.WriteString(", tags=")
+	builder.WriteString(", ")
+	builder.WriteString("tags=")
 	builder.WriteString(fmt.Sprintf("%v", fe.Tags))
 	builder.WriteByte(')')
 	return builder.String()
@@ -184,9 +200,3 @@ func (fe *FileExtract) String() string {
 
 // FileExtracts is a parsable slice of FileExtract.
 type FileExtracts []*FileExtract
-
-func (fe FileExtracts) config(cfg config) {
-	for _i := range fe {
-		fe[_i].config = cfg
-	}
-}

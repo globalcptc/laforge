@@ -21,16 +21,16 @@ import (
 // AgentStatusQuery is the builder for querying AgentStatus entities.
 type AgentStatusQuery struct {
 	config
-	limit                  *int
-	offset                 *int
-	unique                 *bool
-	order                  []OrderFunc
-	fields                 []string
+	ctx                    *QueryContext
+	order                  []agentstatus.OrderOption
+	inters                 []Interceptor
 	predicates             []predicate.AgentStatus
 	withProvisionedHost    *ProvisionedHostQuery
 	withProvisionedNetwork *ProvisionedNetworkQuery
 	withBuild              *BuildQuery
 	withFKs                bool
+	modifiers              []func(*sql.Selector)
+	loadTotal              []func(context.Context, []*AgentStatus) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -42,34 +42,34 @@ func (asq *AgentStatusQuery) Where(ps ...predicate.AgentStatus) *AgentStatusQuer
 	return asq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (asq *AgentStatusQuery) Limit(limit int) *AgentStatusQuery {
-	asq.limit = &limit
+	asq.ctx.Limit = &limit
 	return asq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (asq *AgentStatusQuery) Offset(offset int) *AgentStatusQuery {
-	asq.offset = &offset
+	asq.ctx.Offset = &offset
 	return asq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (asq *AgentStatusQuery) Unique(unique bool) *AgentStatusQuery {
-	asq.unique = &unique
+	asq.ctx.Unique = &unique
 	return asq
 }
 
-// Order adds an order step to the query.
-func (asq *AgentStatusQuery) Order(o ...OrderFunc) *AgentStatusQuery {
+// Order specifies how the records should be ordered.
+func (asq *AgentStatusQuery) Order(o ...agentstatus.OrderOption) *AgentStatusQuery {
 	asq.order = append(asq.order, o...)
 	return asq
 }
 
 // QueryProvisionedHost chains the current query on the "ProvisionedHost" edge.
 func (asq *AgentStatusQuery) QueryProvisionedHost() *ProvisionedHostQuery {
-	query := &ProvisionedHostQuery{config: asq.config}
+	query := (&ProvisionedHostClient{config: asq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := asq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -91,7 +91,7 @@ func (asq *AgentStatusQuery) QueryProvisionedHost() *ProvisionedHostQuery {
 
 // QueryProvisionedNetwork chains the current query on the "ProvisionedNetwork" edge.
 func (asq *AgentStatusQuery) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
-	query := &ProvisionedNetworkQuery{config: asq.config}
+	query := (&ProvisionedNetworkClient{config: asq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := asq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -113,7 +113,7 @@ func (asq *AgentStatusQuery) QueryProvisionedNetwork() *ProvisionedNetworkQuery 
 
 // QueryBuild chains the current query on the "Build" edge.
 func (asq *AgentStatusQuery) QueryBuild() *BuildQuery {
-	query := &BuildQuery{config: asq.config}
+	query := (&BuildClient{config: asq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := asq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -136,7 +136,7 @@ func (asq *AgentStatusQuery) QueryBuild() *BuildQuery {
 // First returns the first AgentStatus entity from the query.
 // Returns a *NotFoundError when no AgentStatus was found.
 func (asq *AgentStatusQuery) First(ctx context.Context) (*AgentStatus, error) {
-	nodes, err := asq.Limit(1).All(ctx)
+	nodes, err := asq.Limit(1).All(setContextOp(ctx, asq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func (asq *AgentStatusQuery) FirstX(ctx context.Context) *AgentStatus {
 // Returns a *NotFoundError when no AgentStatus ID was found.
 func (asq *AgentStatusQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = asq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = asq.Limit(1).IDs(setContextOp(ctx, asq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -182,7 +182,7 @@ func (asq *AgentStatusQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one AgentStatus entity is found.
 // Returns a *NotFoundError when no AgentStatus entities are found.
 func (asq *AgentStatusQuery) Only(ctx context.Context) (*AgentStatus, error) {
-	nodes, err := asq.Limit(2).All(ctx)
+	nodes, err := asq.Limit(2).All(setContextOp(ctx, asq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (asq *AgentStatusQuery) OnlyX(ctx context.Context) *AgentStatus {
 // Returns a *NotFoundError when no entities are found.
 func (asq *AgentStatusQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = asq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = asq.Limit(2).IDs(setContextOp(ctx, asq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -235,10 +235,12 @@ func (asq *AgentStatusQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of AgentStatusSlice.
 func (asq *AgentStatusQuery) All(ctx context.Context) ([]*AgentStatus, error) {
+	ctx = setContextOp(ctx, asq.ctx, "All")
 	if err := asq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return asq.sqlAll(ctx)
+	qr := querierAll[[]*AgentStatus, *AgentStatusQuery]()
+	return withInterceptors[[]*AgentStatus](ctx, asq, qr, asq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -251,9 +253,12 @@ func (asq *AgentStatusQuery) AllX(ctx context.Context) []*AgentStatus {
 }
 
 // IDs executes the query and returns a list of AgentStatus IDs.
-func (asq *AgentStatusQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := asq.Select(agentstatus.FieldID).Scan(ctx, &ids); err != nil {
+func (asq *AgentStatusQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if asq.ctx.Unique == nil && asq.path != nil {
+		asq.Unique(true)
+	}
+	ctx = setContextOp(ctx, asq.ctx, "IDs")
+	if err = asq.Select(agentstatus.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -270,10 +275,11 @@ func (asq *AgentStatusQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (asq *AgentStatusQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, asq.ctx, "Count")
 	if err := asq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return asq.sqlCount(ctx)
+	return withInterceptors[int](ctx, asq, querierCount[*AgentStatusQuery](), asq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -287,10 +293,15 @@ func (asq *AgentStatusQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (asq *AgentStatusQuery) Exist(ctx context.Context) (bool, error) {
-	if err := asq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, asq.ctx, "Exist")
+	switch _, err := asq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return asq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -310,24 +321,23 @@ func (asq *AgentStatusQuery) Clone() *AgentStatusQuery {
 	}
 	return &AgentStatusQuery{
 		config:                 asq.config,
-		limit:                  asq.limit,
-		offset:                 asq.offset,
-		order:                  append([]OrderFunc{}, asq.order...),
+		ctx:                    asq.ctx.Clone(),
+		order:                  append([]agentstatus.OrderOption{}, asq.order...),
+		inters:                 append([]Interceptor{}, asq.inters...),
 		predicates:             append([]predicate.AgentStatus{}, asq.predicates...),
 		withProvisionedHost:    asq.withProvisionedHost.Clone(),
 		withProvisionedNetwork: asq.withProvisionedNetwork.Clone(),
 		withBuild:              asq.withBuild.Clone(),
 		// clone intermediate query.
-		sql:    asq.sql.Clone(),
-		path:   asq.path,
-		unique: asq.unique,
+		sql:  asq.sql.Clone(),
+		path: asq.path,
 	}
 }
 
 // WithProvisionedHost tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
 func (asq *AgentStatusQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuery)) *AgentStatusQuery {
-	query := &ProvisionedHostQuery{config: asq.config}
+	query := (&ProvisionedHostClient{config: asq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -338,7 +348,7 @@ func (asq *AgentStatusQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQu
 // WithProvisionedNetwork tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisionedNetwork" edge. The optional arguments are used to configure the query builder of the edge.
 func (asq *AgentStatusQuery) WithProvisionedNetwork(opts ...func(*ProvisionedNetworkQuery)) *AgentStatusQuery {
-	query := &ProvisionedNetworkQuery{config: asq.config}
+	query := (&ProvisionedNetworkClient{config: asq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -349,7 +359,7 @@ func (asq *AgentStatusQuery) WithProvisionedNetwork(opts ...func(*ProvisionedNet
 // WithBuild tells the query-builder to eager-load the nodes that are connected to
 // the "Build" edge. The optional arguments are used to configure the query builder of the edge.
 func (asq *AgentStatusQuery) WithBuild(opts ...func(*BuildQuery)) *AgentStatusQuery {
-	query := &BuildQuery{config: asq.config}
+	query := (&BuildClient{config: asq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -372,16 +382,11 @@ func (asq *AgentStatusQuery) WithBuild(opts ...func(*BuildQuery)) *AgentStatusQu
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (asq *AgentStatusQuery) GroupBy(field string, fields ...string) *AgentStatusGroupBy {
-	grbuild := &AgentStatusGroupBy{config: asq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := asq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return asq.sqlQuery(ctx), nil
-	}
+	asq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &AgentStatusGroupBy{build: asq}
+	grbuild.flds = &asq.ctx.Fields
 	grbuild.label = agentstatus.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -398,15 +403,30 @@ func (asq *AgentStatusQuery) GroupBy(field string, fields ...string) *AgentStatu
 //		Select(agentstatus.FieldClientID).
 //		Scan(ctx, &v)
 func (asq *AgentStatusQuery) Select(fields ...string) *AgentStatusSelect {
-	asq.fields = append(asq.fields, fields...)
-	selbuild := &AgentStatusSelect{AgentStatusQuery: asq}
-	selbuild.label = agentstatus.Label
-	selbuild.flds, selbuild.scan = &asq.fields, selbuild.Scan
-	return selbuild
+	asq.ctx.Fields = append(asq.ctx.Fields, fields...)
+	sbuild := &AgentStatusSelect{AgentStatusQuery: asq}
+	sbuild.label = agentstatus.Label
+	sbuild.flds, sbuild.scan = &asq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a AgentStatusSelect configured with the given aggregations.
+func (asq *AgentStatusQuery) Aggregate(fns ...AggregateFunc) *AgentStatusSelect {
+	return asq.Select().Aggregate(fns...)
 }
 
 func (asq *AgentStatusQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range asq.fields {
+	for _, inter := range asq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, asq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range asq.ctx.Fields {
 		if !agentstatus.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -438,14 +458,17 @@ func (asq *AgentStatusQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, agentstatus.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*AgentStatus).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &AgentStatus{config: asq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(asq.modifiers) > 0 {
+		_spec.Modifiers = asq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -474,6 +497,11 @@ func (asq *AgentStatusQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 			return nil, err
 		}
 	}
+	for i := range asq.loadTotal {
+		if err := asq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -489,6 +517,9 @@ func (asq *AgentStatusQuery) loadProvisionedHost(ctx context.Context, query *Pro
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(provisionedhost.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -519,6 +550,9 @@ func (asq *AgentStatusQuery) loadProvisionedNetwork(ctx context.Context, query *
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(provisionednetwork.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -548,6 +582,9 @@ func (asq *AgentStatusQuery) loadBuild(ctx context.Context, query *BuildQuery, n
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(build.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -567,38 +604,25 @@ func (asq *AgentStatusQuery) loadBuild(ctx context.Context, query *BuildQuery, n
 
 func (asq *AgentStatusQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := asq.querySpec()
-	_spec.Node.Columns = asq.fields
-	if len(asq.fields) > 0 {
-		_spec.Unique = asq.unique != nil && *asq.unique
+	if len(asq.modifiers) > 0 {
+		_spec.Modifiers = asq.modifiers
+	}
+	_spec.Node.Columns = asq.ctx.Fields
+	if len(asq.ctx.Fields) > 0 {
+		_spec.Unique = asq.ctx.Unique != nil && *asq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, asq.driver, _spec)
 }
 
-func (asq *AgentStatusQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := asq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (asq *AgentStatusQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   agentstatus.Table,
-			Columns: agentstatus.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: agentstatus.FieldID,
-			},
-		},
-		From:   asq.sql,
-		Unique: true,
-	}
-	if unique := asq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(agentstatus.Table, agentstatus.Columns, sqlgraph.NewFieldSpec(agentstatus.FieldID, field.TypeUUID))
+	_spec.From = asq.sql
+	if unique := asq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if asq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := asq.fields; len(fields) > 0 {
+	if fields := asq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, agentstatus.FieldID)
 		for i := range fields {
@@ -614,10 +638,10 @@ func (asq *AgentStatusQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := asq.limit; limit != nil {
+	if limit := asq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := asq.offset; offset != nil {
+	if offset := asq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := asq.order; len(ps) > 0 {
@@ -633,7 +657,7 @@ func (asq *AgentStatusQuery) querySpec() *sqlgraph.QuerySpec {
 func (asq *AgentStatusQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(asq.driver.Dialect())
 	t1 := builder.Table(agentstatus.Table)
-	columns := asq.fields
+	columns := asq.ctx.Fields
 	if len(columns) == 0 {
 		columns = agentstatus.Columns
 	}
@@ -642,7 +666,7 @@ func (asq *AgentStatusQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = asq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if asq.unique != nil && *asq.unique {
+	if asq.ctx.Unique != nil && *asq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range asq.predicates {
@@ -651,12 +675,12 @@ func (asq *AgentStatusQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range asq.order {
 		p(selector)
 	}
-	if offset := asq.offset; offset != nil {
+	if offset := asq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := asq.limit; limit != nil {
+	if limit := asq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -664,13 +688,8 @@ func (asq *AgentStatusQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // AgentStatusGroupBy is the group-by builder for AgentStatus entities.
 type AgentStatusGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *AgentStatusQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -679,74 +698,77 @@ func (asgb *AgentStatusGroupBy) Aggregate(fns ...AggregateFunc) *AgentStatusGrou
 	return asgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (asgb *AgentStatusGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := asgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (asgb *AgentStatusGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, asgb.build.ctx, "GroupBy")
+	if err := asgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	asgb.sql = query
-	return asgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*AgentStatusQuery, *AgentStatusGroupBy](ctx, asgb.build, asgb, asgb.build.inters, v)
 }
 
-func (asgb *AgentStatusGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range asgb.fields {
-		if !agentstatus.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (asgb *AgentStatusGroupBy) sqlScan(ctx context.Context, root *AgentStatusQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(asgb.fns))
+	for _, fn := range asgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := asgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*asgb.flds)+len(asgb.fns))
+		for _, f := range *asgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*asgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := asgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := asgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (asgb *AgentStatusGroupBy) sqlQuery() *sql.Selector {
-	selector := asgb.sql.Select()
-	aggregation := make([]string, 0, len(asgb.fns))
-	for _, fn := range asgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(asgb.fields)+len(asgb.fns))
-		for _, f := range asgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(asgb.fields...)...)
-}
-
 // AgentStatusSelect is the builder for selecting fields of AgentStatus entities.
 type AgentStatusSelect struct {
 	*AgentStatusQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (ass *AgentStatusSelect) Aggregate(fns ...AggregateFunc) *AgentStatusSelect {
+	ass.fns = append(ass.fns, fns...)
+	return ass
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (ass *AgentStatusSelect) Scan(ctx context.Context, v interface{}) error {
+func (ass *AgentStatusSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, ass.ctx, "Select")
 	if err := ass.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ass.sql = ass.AgentStatusQuery.sqlQuery(ctx)
-	return ass.sqlScan(ctx, v)
+	return scanWithInterceptors[*AgentStatusQuery, *AgentStatusSelect](ctx, ass.AgentStatusQuery, ass, ass.inters, v)
 }
 
-func (ass *AgentStatusSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (ass *AgentStatusSelect) sqlScan(ctx context.Context, root *AgentStatusQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(ass.fns))
+	for _, fn := range ass.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*ass.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := ass.sql.Query()
+	query, args := selector.Query()
 	if err := ass.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

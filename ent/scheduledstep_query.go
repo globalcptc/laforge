@@ -19,14 +19,14 @@ import (
 // ScheduledStepQuery is the builder for querying ScheduledStep entities.
 type ScheduledStepQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
-	order           []OrderFunc
-	fields          []string
+	ctx             *QueryContext
+	order           []scheduledstep.OrderOption
+	inters          []Interceptor
 	predicates      []predicate.ScheduledStep
 	withEnvironment *EnvironmentQuery
 	withFKs         bool
+	modifiers       []func(*sql.Selector)
+	loadTotal       []func(context.Context, []*ScheduledStep) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -38,34 +38,34 @@ func (ssq *ScheduledStepQuery) Where(ps ...predicate.ScheduledStep) *ScheduledSt
 	return ssq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (ssq *ScheduledStepQuery) Limit(limit int) *ScheduledStepQuery {
-	ssq.limit = &limit
+	ssq.ctx.Limit = &limit
 	return ssq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (ssq *ScheduledStepQuery) Offset(offset int) *ScheduledStepQuery {
-	ssq.offset = &offset
+	ssq.ctx.Offset = &offset
 	return ssq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (ssq *ScheduledStepQuery) Unique(unique bool) *ScheduledStepQuery {
-	ssq.unique = &unique
+	ssq.ctx.Unique = &unique
 	return ssq
 }
 
-// Order adds an order step to the query.
-func (ssq *ScheduledStepQuery) Order(o ...OrderFunc) *ScheduledStepQuery {
+// Order specifies how the records should be ordered.
+func (ssq *ScheduledStepQuery) Order(o ...scheduledstep.OrderOption) *ScheduledStepQuery {
 	ssq.order = append(ssq.order, o...)
 	return ssq
 }
 
 // QueryEnvironment chains the current query on the "Environment" edge.
 func (ssq *ScheduledStepQuery) QueryEnvironment() *EnvironmentQuery {
-	query := &EnvironmentQuery{config: ssq.config}
+	query := (&EnvironmentClient{config: ssq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := ssq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +88,7 @@ func (ssq *ScheduledStepQuery) QueryEnvironment() *EnvironmentQuery {
 // First returns the first ScheduledStep entity from the query.
 // Returns a *NotFoundError when no ScheduledStep was found.
 func (ssq *ScheduledStepQuery) First(ctx context.Context) (*ScheduledStep, error) {
-	nodes, err := ssq.Limit(1).All(ctx)
+	nodes, err := ssq.Limit(1).All(setContextOp(ctx, ssq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (ssq *ScheduledStepQuery) FirstX(ctx context.Context) *ScheduledStep {
 // Returns a *NotFoundError when no ScheduledStep ID was found.
 func (ssq *ScheduledStepQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = ssq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = ssq.Limit(1).IDs(setContextOp(ctx, ssq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +134,7 @@ func (ssq *ScheduledStepQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one ScheduledStep entity is found.
 // Returns a *NotFoundError when no ScheduledStep entities are found.
 func (ssq *ScheduledStepQuery) Only(ctx context.Context) (*ScheduledStep, error) {
-	nodes, err := ssq.Limit(2).All(ctx)
+	nodes, err := ssq.Limit(2).All(setContextOp(ctx, ssq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (ssq *ScheduledStepQuery) OnlyX(ctx context.Context) *ScheduledStep {
 // Returns a *NotFoundError when no entities are found.
 func (ssq *ScheduledStepQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = ssq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = ssq.Limit(2).IDs(setContextOp(ctx, ssq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +187,12 @@ func (ssq *ScheduledStepQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of ScheduledSteps.
 func (ssq *ScheduledStepQuery) All(ctx context.Context) ([]*ScheduledStep, error) {
+	ctx = setContextOp(ctx, ssq.ctx, "All")
 	if err := ssq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return ssq.sqlAll(ctx)
+	qr := querierAll[[]*ScheduledStep, *ScheduledStepQuery]()
+	return withInterceptors[[]*ScheduledStep](ctx, ssq, qr, ssq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -203,9 +205,12 @@ func (ssq *ScheduledStepQuery) AllX(ctx context.Context) []*ScheduledStep {
 }
 
 // IDs executes the query and returns a list of ScheduledStep IDs.
-func (ssq *ScheduledStepQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := ssq.Select(scheduledstep.FieldID).Scan(ctx, &ids); err != nil {
+func (ssq *ScheduledStepQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if ssq.ctx.Unique == nil && ssq.path != nil {
+		ssq.Unique(true)
+	}
+	ctx = setContextOp(ctx, ssq.ctx, "IDs")
+	if err = ssq.Select(scheduledstep.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -222,10 +227,11 @@ func (ssq *ScheduledStepQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (ssq *ScheduledStepQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, ssq.ctx, "Count")
 	if err := ssq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return ssq.sqlCount(ctx)
+	return withInterceptors[int](ctx, ssq, querierCount[*ScheduledStepQuery](), ssq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +245,15 @@ func (ssq *ScheduledStepQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (ssq *ScheduledStepQuery) Exist(ctx context.Context) (bool, error) {
-	if err := ssq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, ssq.ctx, "Exist")
+	switch _, err := ssq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return ssq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -262,22 +273,21 @@ func (ssq *ScheduledStepQuery) Clone() *ScheduledStepQuery {
 	}
 	return &ScheduledStepQuery{
 		config:          ssq.config,
-		limit:           ssq.limit,
-		offset:          ssq.offset,
-		order:           append([]OrderFunc{}, ssq.order...),
+		ctx:             ssq.ctx.Clone(),
+		order:           append([]scheduledstep.OrderOption{}, ssq.order...),
+		inters:          append([]Interceptor{}, ssq.inters...),
 		predicates:      append([]predicate.ScheduledStep{}, ssq.predicates...),
 		withEnvironment: ssq.withEnvironment.Clone(),
 		// clone intermediate query.
-		sql:    ssq.sql.Clone(),
-		path:   ssq.path,
-		unique: ssq.unique,
+		sql:  ssq.sql.Clone(),
+		path: ssq.path,
 	}
 }
 
 // WithEnvironment tells the query-builder to eager-load the nodes that are connected to
 // the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
 func (ssq *ScheduledStepQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *ScheduledStepQuery {
-	query := &EnvironmentQuery{config: ssq.config}
+	query := (&EnvironmentClient{config: ssq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -291,25 +301,20 @@ func (ssq *ScheduledStepQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) 
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ScheduledStep.Query().
-//		GroupBy(scheduledstep.FieldHclID).
+//		GroupBy(scheduledstep.FieldHCLID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (ssq *ScheduledStepQuery) GroupBy(field string, fields ...string) *ScheduledStepGroupBy {
-	grbuild := &ScheduledStepGroupBy{config: ssq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := ssq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return ssq.sqlQuery(ctx), nil
-	}
+	ssq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &ScheduledStepGroupBy{build: ssq}
+	grbuild.flds = &ssq.ctx.Fields
 	grbuild.label = scheduledstep.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -319,22 +324,37 @@ func (ssq *ScheduledStepQuery) GroupBy(field string, fields ...string) *Schedule
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //	}
 //
 //	client.ScheduledStep.Query().
-//		Select(scheduledstep.FieldHclID).
+//		Select(scheduledstep.FieldHCLID).
 //		Scan(ctx, &v)
 func (ssq *ScheduledStepQuery) Select(fields ...string) *ScheduledStepSelect {
-	ssq.fields = append(ssq.fields, fields...)
-	selbuild := &ScheduledStepSelect{ScheduledStepQuery: ssq}
-	selbuild.label = scheduledstep.Label
-	selbuild.flds, selbuild.scan = &ssq.fields, selbuild.Scan
-	return selbuild
+	ssq.ctx.Fields = append(ssq.ctx.Fields, fields...)
+	sbuild := &ScheduledStepSelect{ScheduledStepQuery: ssq}
+	sbuild.label = scheduledstep.Label
+	sbuild.flds, sbuild.scan = &ssq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a ScheduledStepSelect configured with the given aggregations.
+func (ssq *ScheduledStepQuery) Aggregate(fns ...AggregateFunc) *ScheduledStepSelect {
+	return ssq.Select().Aggregate(fns...)
 }
 
 func (ssq *ScheduledStepQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range ssq.fields {
+	for _, inter := range ssq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, ssq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range ssq.ctx.Fields {
 		if !scheduledstep.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -364,14 +384,17 @@ func (ssq *ScheduledStepQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, scheduledstep.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*ScheduledStep).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &ScheduledStep{config: ssq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(ssq.modifiers) > 0 {
+		_spec.Modifiers = ssq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -385,6 +408,11 @@ func (ssq *ScheduledStepQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	if query := ssq.withEnvironment; query != nil {
 		if err := ssq.loadEnvironment(ctx, query, nodes, nil,
 			func(n *ScheduledStep, e *Environment) { n.Edges.Environment = e }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range ssq.loadTotal {
+		if err := ssq.loadTotal[i](ctx, nodes); err != nil {
 			return nil, err
 		}
 	}
@@ -403,6 +431,9 @@ func (ssq *ScheduledStepQuery) loadEnvironment(ctx context.Context, query *Envir
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(environment.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -423,38 +454,25 @@ func (ssq *ScheduledStepQuery) loadEnvironment(ctx context.Context, query *Envir
 
 func (ssq *ScheduledStepQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := ssq.querySpec()
-	_spec.Node.Columns = ssq.fields
-	if len(ssq.fields) > 0 {
-		_spec.Unique = ssq.unique != nil && *ssq.unique
+	if len(ssq.modifiers) > 0 {
+		_spec.Modifiers = ssq.modifiers
+	}
+	_spec.Node.Columns = ssq.ctx.Fields
+	if len(ssq.ctx.Fields) > 0 {
+		_spec.Unique = ssq.ctx.Unique != nil && *ssq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, ssq.driver, _spec)
 }
 
-func (ssq *ScheduledStepQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := ssq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (ssq *ScheduledStepQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   scheduledstep.Table,
-			Columns: scheduledstep.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: scheduledstep.FieldID,
-			},
-		},
-		From:   ssq.sql,
-		Unique: true,
-	}
-	if unique := ssq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(scheduledstep.Table, scheduledstep.Columns, sqlgraph.NewFieldSpec(scheduledstep.FieldID, field.TypeUUID))
+	_spec.From = ssq.sql
+	if unique := ssq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if ssq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := ssq.fields; len(fields) > 0 {
+	if fields := ssq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, scheduledstep.FieldID)
 		for i := range fields {
@@ -470,10 +488,10 @@ func (ssq *ScheduledStepQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := ssq.limit; limit != nil {
+	if limit := ssq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := ssq.offset; offset != nil {
+	if offset := ssq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := ssq.order; len(ps) > 0 {
@@ -489,7 +507,7 @@ func (ssq *ScheduledStepQuery) querySpec() *sqlgraph.QuerySpec {
 func (ssq *ScheduledStepQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(ssq.driver.Dialect())
 	t1 := builder.Table(scheduledstep.Table)
-	columns := ssq.fields
+	columns := ssq.ctx.Fields
 	if len(columns) == 0 {
 		columns = scheduledstep.Columns
 	}
@@ -498,7 +516,7 @@ func (ssq *ScheduledStepQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = ssq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if ssq.unique != nil && *ssq.unique {
+	if ssq.ctx.Unique != nil && *ssq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range ssq.predicates {
@@ -507,12 +525,12 @@ func (ssq *ScheduledStepQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range ssq.order {
 		p(selector)
 	}
-	if offset := ssq.offset; offset != nil {
+	if offset := ssq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := ssq.limit; limit != nil {
+	if limit := ssq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -520,13 +538,8 @@ func (ssq *ScheduledStepQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // ScheduledStepGroupBy is the group-by builder for ScheduledStep entities.
 type ScheduledStepGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *ScheduledStepQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -535,74 +548,77 @@ func (ssgb *ScheduledStepGroupBy) Aggregate(fns ...AggregateFunc) *ScheduledStep
 	return ssgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (ssgb *ScheduledStepGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := ssgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (ssgb *ScheduledStepGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, ssgb.build.ctx, "GroupBy")
+	if err := ssgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ssgb.sql = query
-	return ssgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*ScheduledStepQuery, *ScheduledStepGroupBy](ctx, ssgb.build, ssgb, ssgb.build.inters, v)
 }
 
-func (ssgb *ScheduledStepGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range ssgb.fields {
-		if !scheduledstep.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (ssgb *ScheduledStepGroupBy) sqlScan(ctx context.Context, root *ScheduledStepQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(ssgb.fns))
+	for _, fn := range ssgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := ssgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*ssgb.flds)+len(ssgb.fns))
+		for _, f := range *ssgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*ssgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := ssgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := ssgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (ssgb *ScheduledStepGroupBy) sqlQuery() *sql.Selector {
-	selector := ssgb.sql.Select()
-	aggregation := make([]string, 0, len(ssgb.fns))
-	for _, fn := range ssgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(ssgb.fields)+len(ssgb.fns))
-		for _, f := range ssgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(ssgb.fields...)...)
-}
-
 // ScheduledStepSelect is the builder for selecting fields of ScheduledStep entities.
 type ScheduledStepSelect struct {
 	*ScheduledStepQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (sss *ScheduledStepSelect) Aggregate(fns ...AggregateFunc) *ScheduledStepSelect {
+	sss.fns = append(sss.fns, fns...)
+	return sss
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (sss *ScheduledStepSelect) Scan(ctx context.Context, v interface{}) error {
+func (sss *ScheduledStepSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, sss.ctx, "Select")
 	if err := sss.prepareQuery(ctx); err != nil {
 		return err
 	}
-	sss.sql = sss.ScheduledStepQuery.sqlQuery(ctx)
-	return sss.sqlScan(ctx, v)
+	return scanWithInterceptors[*ScheduledStepQuery, *ScheduledStepSelect](ctx, sss.ScheduledStepQuery, sss, sss.inters, v)
 }
 
-func (sss *ScheduledStepSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (sss *ScheduledStepSelect) sqlScan(ctx context.Context, root *ScheduledStepQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(sss.fns))
+	for _, fn := range sss.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*sss.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := sss.sql.Query()
+	query, args := selector.Query()
 	if err := sss.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

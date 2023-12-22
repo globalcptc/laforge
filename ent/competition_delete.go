@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (cd *CompetitionDelete) Where(ps ...predicate.Competition) *CompetitionDele
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (cd *CompetitionDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(cd.hooks) == 0 {
-		affected, err = cd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*CompetitionMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			cd.mutation = mutation
-			affected, err = cd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(cd.hooks) - 1; i >= 0; i-- {
-			if cd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = cd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, cd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, cd.sqlExec, cd.mutation, cd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (cd *CompetitionDelete) ExecX(ctx context.Context) int {
 }
 
 func (cd *CompetitionDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: competition.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: competition.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(competition.Table, sqlgraph.NewFieldSpec(competition.FieldID, field.TypeUUID))
 	if ps := cd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (cd *CompetitionDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	cd.mutation.done = true
 	return affected, err
 }
 
 // CompetitionDeleteOne is the builder for deleting a single Competition entity.
 type CompetitionDeleteOne struct {
 	cd *CompetitionDelete
+}
+
+// Where appends a list predicates to the CompetitionDelete builder.
+func (cdo *CompetitionDeleteOne) Where(ps ...predicate.Competition) *CompetitionDeleteOne {
+	cdo.cd.mutation.Where(ps...)
+	return cdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (cdo *CompetitionDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (cdo *CompetitionDeleteOne) ExecX(ctx context.Context) {
-	cdo.cd.ExecX(ctx)
+	if err := cdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

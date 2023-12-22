@@ -19,14 +19,14 @@ import (
 // RepoCommitQuery is the builder for querying RepoCommit entities.
 type RepoCommitQuery struct {
 	config
-	limit          *int
-	offset         *int
-	unique         *bool
-	order          []OrderFunc
-	fields         []string
+	ctx            *QueryContext
+	order          []repocommit.OrderOption
+	inters         []Interceptor
 	predicates     []predicate.RepoCommit
 	withRepository *RepositoryQuery
 	withFKs        bool
+	modifiers      []func(*sql.Selector)
+	loadTotal      []func(context.Context, []*RepoCommit) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -38,34 +38,34 @@ func (rcq *RepoCommitQuery) Where(ps ...predicate.RepoCommit) *RepoCommitQuery {
 	return rcq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (rcq *RepoCommitQuery) Limit(limit int) *RepoCommitQuery {
-	rcq.limit = &limit
+	rcq.ctx.Limit = &limit
 	return rcq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (rcq *RepoCommitQuery) Offset(offset int) *RepoCommitQuery {
-	rcq.offset = &offset
+	rcq.ctx.Offset = &offset
 	return rcq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (rcq *RepoCommitQuery) Unique(unique bool) *RepoCommitQuery {
-	rcq.unique = &unique
+	rcq.ctx.Unique = &unique
 	return rcq
 }
 
-// Order adds an order step to the query.
-func (rcq *RepoCommitQuery) Order(o ...OrderFunc) *RepoCommitQuery {
+// Order specifies how the records should be ordered.
+func (rcq *RepoCommitQuery) Order(o ...repocommit.OrderOption) *RepoCommitQuery {
 	rcq.order = append(rcq.order, o...)
 	return rcq
 }
 
 // QueryRepository chains the current query on the "Repository" edge.
 func (rcq *RepoCommitQuery) QueryRepository() *RepositoryQuery {
-	query := &RepositoryQuery{config: rcq.config}
+	query := (&RepositoryClient{config: rcq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := rcq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +88,7 @@ func (rcq *RepoCommitQuery) QueryRepository() *RepositoryQuery {
 // First returns the first RepoCommit entity from the query.
 // Returns a *NotFoundError when no RepoCommit was found.
 func (rcq *RepoCommitQuery) First(ctx context.Context) (*RepoCommit, error) {
-	nodes, err := rcq.Limit(1).All(ctx)
+	nodes, err := rcq.Limit(1).All(setContextOp(ctx, rcq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (rcq *RepoCommitQuery) FirstX(ctx context.Context) *RepoCommit {
 // Returns a *NotFoundError when no RepoCommit ID was found.
 func (rcq *RepoCommitQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rcq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = rcq.Limit(1).IDs(setContextOp(ctx, rcq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +134,7 @@ func (rcq *RepoCommitQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one RepoCommit entity is found.
 // Returns a *NotFoundError when no RepoCommit entities are found.
 func (rcq *RepoCommitQuery) Only(ctx context.Context) (*RepoCommit, error) {
-	nodes, err := rcq.Limit(2).All(ctx)
+	nodes, err := rcq.Limit(2).All(setContextOp(ctx, rcq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (rcq *RepoCommitQuery) OnlyX(ctx context.Context) *RepoCommit {
 // Returns a *NotFoundError when no entities are found.
 func (rcq *RepoCommitQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rcq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = rcq.Limit(2).IDs(setContextOp(ctx, rcq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +187,12 @@ func (rcq *RepoCommitQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of RepoCommits.
 func (rcq *RepoCommitQuery) All(ctx context.Context) ([]*RepoCommit, error) {
+	ctx = setContextOp(ctx, rcq.ctx, "All")
 	if err := rcq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return rcq.sqlAll(ctx)
+	qr := querierAll[[]*RepoCommit, *RepoCommitQuery]()
+	return withInterceptors[[]*RepoCommit](ctx, rcq, qr, rcq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -203,9 +205,12 @@ func (rcq *RepoCommitQuery) AllX(ctx context.Context) []*RepoCommit {
 }
 
 // IDs executes the query and returns a list of RepoCommit IDs.
-func (rcq *RepoCommitQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := rcq.Select(repocommit.FieldID).Scan(ctx, &ids); err != nil {
+func (rcq *RepoCommitQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if rcq.ctx.Unique == nil && rcq.path != nil {
+		rcq.Unique(true)
+	}
+	ctx = setContextOp(ctx, rcq.ctx, "IDs")
+	if err = rcq.Select(repocommit.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -222,10 +227,11 @@ func (rcq *RepoCommitQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (rcq *RepoCommitQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, rcq.ctx, "Count")
 	if err := rcq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return rcq.sqlCount(ctx)
+	return withInterceptors[int](ctx, rcq, querierCount[*RepoCommitQuery](), rcq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +245,15 @@ func (rcq *RepoCommitQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (rcq *RepoCommitQuery) Exist(ctx context.Context) (bool, error) {
-	if err := rcq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, rcq.ctx, "Exist")
+	switch _, err := rcq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return rcq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -262,22 +273,21 @@ func (rcq *RepoCommitQuery) Clone() *RepoCommitQuery {
 	}
 	return &RepoCommitQuery{
 		config:         rcq.config,
-		limit:          rcq.limit,
-		offset:         rcq.offset,
-		order:          append([]OrderFunc{}, rcq.order...),
+		ctx:            rcq.ctx.Clone(),
+		order:          append([]repocommit.OrderOption{}, rcq.order...),
+		inters:         append([]Interceptor{}, rcq.inters...),
 		predicates:     append([]predicate.RepoCommit{}, rcq.predicates...),
 		withRepository: rcq.withRepository.Clone(),
 		// clone intermediate query.
-		sql:    rcq.sql.Clone(),
-		path:   rcq.path,
-		unique: rcq.unique,
+		sql:  rcq.sql.Clone(),
+		path: rcq.path,
 	}
 }
 
 // WithRepository tells the query-builder to eager-load the nodes that are connected to
 // the "Repository" edge. The optional arguments are used to configure the query builder of the edge.
 func (rcq *RepoCommitQuery) WithRepository(opts ...func(*RepositoryQuery)) *RepoCommitQuery {
-	query := &RepositoryQuery{config: rcq.config}
+	query := (&RepositoryClient{config: rcq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -300,16 +310,11 @@ func (rcq *RepoCommitQuery) WithRepository(opts ...func(*RepositoryQuery)) *Repo
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (rcq *RepoCommitQuery) GroupBy(field string, fields ...string) *RepoCommitGroupBy {
-	grbuild := &RepoCommitGroupBy{config: rcq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := rcq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return rcq.sqlQuery(ctx), nil
-	}
+	rcq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &RepoCommitGroupBy{build: rcq}
+	grbuild.flds = &rcq.ctx.Fields
 	grbuild.label = repocommit.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -326,15 +331,30 @@ func (rcq *RepoCommitQuery) GroupBy(field string, fields ...string) *RepoCommitG
 //		Select(repocommit.FieldRevision).
 //		Scan(ctx, &v)
 func (rcq *RepoCommitQuery) Select(fields ...string) *RepoCommitSelect {
-	rcq.fields = append(rcq.fields, fields...)
-	selbuild := &RepoCommitSelect{RepoCommitQuery: rcq}
-	selbuild.label = repocommit.Label
-	selbuild.flds, selbuild.scan = &rcq.fields, selbuild.Scan
-	return selbuild
+	rcq.ctx.Fields = append(rcq.ctx.Fields, fields...)
+	sbuild := &RepoCommitSelect{RepoCommitQuery: rcq}
+	sbuild.label = repocommit.Label
+	sbuild.flds, sbuild.scan = &rcq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a RepoCommitSelect configured with the given aggregations.
+func (rcq *RepoCommitQuery) Aggregate(fns ...AggregateFunc) *RepoCommitSelect {
+	return rcq.Select().Aggregate(fns...)
 }
 
 func (rcq *RepoCommitQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range rcq.fields {
+	for _, inter := range rcq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, rcq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range rcq.ctx.Fields {
 		if !repocommit.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -364,14 +384,17 @@ func (rcq *RepoCommitQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, repocommit.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*RepoCommit).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &RepoCommit{config: rcq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(rcq.modifiers) > 0 {
+		_spec.Modifiers = rcq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -385,6 +408,11 @@ func (rcq *RepoCommitQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if query := rcq.withRepository; query != nil {
 		if err := rcq.loadRepository(ctx, query, nodes, nil,
 			func(n *RepoCommit, e *Repository) { n.Edges.Repository = e }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range rcq.loadTotal {
+		if err := rcq.loadTotal[i](ctx, nodes); err != nil {
 			return nil, err
 		}
 	}
@@ -403,6 +431,9 @@ func (rcq *RepoCommitQuery) loadRepository(ctx context.Context, query *Repositor
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(repository.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -423,38 +454,25 @@ func (rcq *RepoCommitQuery) loadRepository(ctx context.Context, query *Repositor
 
 func (rcq *RepoCommitQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := rcq.querySpec()
-	_spec.Node.Columns = rcq.fields
-	if len(rcq.fields) > 0 {
-		_spec.Unique = rcq.unique != nil && *rcq.unique
+	if len(rcq.modifiers) > 0 {
+		_spec.Modifiers = rcq.modifiers
+	}
+	_spec.Node.Columns = rcq.ctx.Fields
+	if len(rcq.ctx.Fields) > 0 {
+		_spec.Unique = rcq.ctx.Unique != nil && *rcq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, rcq.driver, _spec)
 }
 
-func (rcq *RepoCommitQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := rcq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (rcq *RepoCommitQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   repocommit.Table,
-			Columns: repocommit.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: repocommit.FieldID,
-			},
-		},
-		From:   rcq.sql,
-		Unique: true,
-	}
-	if unique := rcq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(repocommit.Table, repocommit.Columns, sqlgraph.NewFieldSpec(repocommit.FieldID, field.TypeUUID))
+	_spec.From = rcq.sql
+	if unique := rcq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if rcq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := rcq.fields; len(fields) > 0 {
+	if fields := rcq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, repocommit.FieldID)
 		for i := range fields {
@@ -470,10 +488,10 @@ func (rcq *RepoCommitQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := rcq.limit; limit != nil {
+	if limit := rcq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := rcq.offset; offset != nil {
+	if offset := rcq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := rcq.order; len(ps) > 0 {
@@ -489,7 +507,7 @@ func (rcq *RepoCommitQuery) querySpec() *sqlgraph.QuerySpec {
 func (rcq *RepoCommitQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(rcq.driver.Dialect())
 	t1 := builder.Table(repocommit.Table)
-	columns := rcq.fields
+	columns := rcq.ctx.Fields
 	if len(columns) == 0 {
 		columns = repocommit.Columns
 	}
@@ -498,7 +516,7 @@ func (rcq *RepoCommitQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = rcq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if rcq.unique != nil && *rcq.unique {
+	if rcq.ctx.Unique != nil && *rcq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range rcq.predicates {
@@ -507,12 +525,12 @@ func (rcq *RepoCommitQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range rcq.order {
 		p(selector)
 	}
-	if offset := rcq.offset; offset != nil {
+	if offset := rcq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := rcq.limit; limit != nil {
+	if limit := rcq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -520,13 +538,8 @@ func (rcq *RepoCommitQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // RepoCommitGroupBy is the group-by builder for RepoCommit entities.
 type RepoCommitGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *RepoCommitQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -535,74 +548,77 @@ func (rcgb *RepoCommitGroupBy) Aggregate(fns ...AggregateFunc) *RepoCommitGroupB
 	return rcgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (rcgb *RepoCommitGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := rcgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (rcgb *RepoCommitGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, rcgb.build.ctx, "GroupBy")
+	if err := rcgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	rcgb.sql = query
-	return rcgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*RepoCommitQuery, *RepoCommitGroupBy](ctx, rcgb.build, rcgb, rcgb.build.inters, v)
 }
 
-func (rcgb *RepoCommitGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range rcgb.fields {
-		if !repocommit.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (rcgb *RepoCommitGroupBy) sqlScan(ctx context.Context, root *RepoCommitQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(rcgb.fns))
+	for _, fn := range rcgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := rcgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*rcgb.flds)+len(rcgb.fns))
+		for _, f := range *rcgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*rcgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := rcgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := rcgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (rcgb *RepoCommitGroupBy) sqlQuery() *sql.Selector {
-	selector := rcgb.sql.Select()
-	aggregation := make([]string, 0, len(rcgb.fns))
-	for _, fn := range rcgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(rcgb.fields)+len(rcgb.fns))
-		for _, f := range rcgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(rcgb.fields...)...)
-}
-
 // RepoCommitSelect is the builder for selecting fields of RepoCommit entities.
 type RepoCommitSelect struct {
 	*RepoCommitQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (rcs *RepoCommitSelect) Aggregate(fns ...AggregateFunc) *RepoCommitSelect {
+	rcs.fns = append(rcs.fns, fns...)
+	return rcs
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (rcs *RepoCommitSelect) Scan(ctx context.Context, v interface{}) error {
+func (rcs *RepoCommitSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, rcs.ctx, "Select")
 	if err := rcs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	rcs.sql = rcs.RepoCommitQuery.sqlQuery(ctx)
-	return rcs.sqlScan(ctx, v)
+	return scanWithInterceptors[*RepoCommitQuery, *RepoCommitSelect](ctx, rcs.RepoCommitQuery, rcs, rcs.inters, v)
 }
 
-func (rcs *RepoCommitSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (rcs *RepoCommitSelect) sqlScan(ctx context.Context, root *RepoCommitQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(rcs.fns))
+	for _, fn := range rcs.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*rcs.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := rcs.sql.Query()
+	query, args := selector.Query()
 	if err := rcs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

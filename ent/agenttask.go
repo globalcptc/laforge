@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/agenttask"
 	"github.com/gen0cide/laforge/ent/provisionedhost"
@@ -35,6 +36,7 @@ type AgentTask struct {
 	// The values are being populated by the AgentTaskQuery when eager-loading is set.
 	Edges AgentTaskEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// ProvisioningStep holds the value of the ProvisioningStep edge.
 	HCLProvisioningStep *ProvisioningStep `json:"ProvisioningStep,omitempty"`
@@ -44,10 +46,11 @@ type AgentTask struct {
 	HCLProvisionedHost *ProvisionedHost `json:"ProvisionedHost,omitempty"`
 	// AdhocPlans holds the value of the AdhocPlans edge.
 	HCLAdhocPlans []*AdhocPlan `json:"AdhocPlans,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	agent_task_provisioning_step           *uuid.UUID
 	agent_task_provisioning_scheduled_step *uuid.UUID
 	agent_task_provisioned_host            *uuid.UUID
+	selectValues                           sql.SelectValues
 }
 
 // AgentTaskEdges holds the relations/edges for other nodes in the graph.
@@ -63,6 +66,10 @@ type AgentTaskEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [4]bool
+	// totalCount holds the count of the edges above.
+	totalCount [4]map[string]int
+
+	namedAdhocPlans map[string][]*AdhocPlan
 }
 
 // ProvisioningStepOrErr returns the ProvisioningStep value or an error if the edge
@@ -70,8 +77,7 @@ type AgentTaskEdges struct {
 func (e AgentTaskEdges) ProvisioningStepOrErr() (*ProvisioningStep, error) {
 	if e.loadedTypes[0] {
 		if e.ProvisioningStep == nil {
-			// The edge ProvisioningStep was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisioningstep.Label}
 		}
 		return e.ProvisioningStep, nil
@@ -84,8 +90,7 @@ func (e AgentTaskEdges) ProvisioningStepOrErr() (*ProvisioningStep, error) {
 func (e AgentTaskEdges) ProvisioningScheduledStepOrErr() (*ProvisioningScheduledStep, error) {
 	if e.loadedTypes[1] {
 		if e.ProvisioningScheduledStep == nil {
-			// The edge ProvisioningScheduledStep was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisioningscheduledstep.Label}
 		}
 		return e.ProvisioningScheduledStep, nil
@@ -98,8 +103,7 @@ func (e AgentTaskEdges) ProvisioningScheduledStepOrErr() (*ProvisioningScheduled
 func (e AgentTaskEdges) ProvisionedHostOrErr() (*ProvisionedHost, error) {
 	if e.loadedTypes[2] {
 		if e.ProvisionedHost == nil {
-			// The edge ProvisionedHost was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisionedhost.Label}
 		}
 		return e.ProvisionedHost, nil
@@ -117,8 +121,8 @@ func (e AgentTaskEdges) AdhocPlansOrErr() ([]*AdhocPlan, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*AgentTask) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*AgentTask) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case agenttask.FieldNumber:
@@ -134,7 +138,7 @@ func (*AgentTask) scanValues(columns []string) ([]interface{}, error) {
 		case agenttask.ForeignKeys[2]: // agent_task_provisioned_host
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type AgentTask", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -142,7 +146,7 @@ func (*AgentTask) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the AgentTask fields.
-func (at *AgentTask) assignValues(columns []string, values []interface{}) error {
+func (at *AgentTask) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -211,46 +215,54 @@ func (at *AgentTask) assignValues(columns []string, values []interface{}) error 
 				at.agent_task_provisioned_host = new(uuid.UUID)
 				*at.agent_task_provisioned_host = *value.S.(*uuid.UUID)
 			}
+		default:
+			at.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the AgentTask.
+// This includes values selected through modifiers, order, etc.
+func (at *AgentTask) Value(name string) (ent.Value, error) {
+	return at.selectValues.Get(name)
+}
+
 // QueryProvisioningStep queries the "ProvisioningStep" edge of the AgentTask entity.
 func (at *AgentTask) QueryProvisioningStep() *ProvisioningStepQuery {
-	return (&AgentTaskClient{config: at.config}).QueryProvisioningStep(at)
+	return NewAgentTaskClient(at.config).QueryProvisioningStep(at)
 }
 
 // QueryProvisioningScheduledStep queries the "ProvisioningScheduledStep" edge of the AgentTask entity.
 func (at *AgentTask) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
-	return (&AgentTaskClient{config: at.config}).QueryProvisioningScheduledStep(at)
+	return NewAgentTaskClient(at.config).QueryProvisioningScheduledStep(at)
 }
 
 // QueryProvisionedHost queries the "ProvisionedHost" edge of the AgentTask entity.
 func (at *AgentTask) QueryProvisionedHost() *ProvisionedHostQuery {
-	return (&AgentTaskClient{config: at.config}).QueryProvisionedHost(at)
+	return NewAgentTaskClient(at.config).QueryProvisionedHost(at)
 }
 
 // QueryAdhocPlans queries the "AdhocPlans" edge of the AgentTask entity.
 func (at *AgentTask) QueryAdhocPlans() *AdhocPlanQuery {
-	return (&AgentTaskClient{config: at.config}).QueryAdhocPlans(at)
+	return NewAgentTaskClient(at.config).QueryAdhocPlans(at)
 }
 
 // Update returns a builder for updating this AgentTask.
 // Note that you need to call AgentTask.Unwrap() before calling this method if this AgentTask
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (at *AgentTask) Update() *AgentTaskUpdateOne {
-	return (&AgentTaskClient{config: at.config}).UpdateOne(at)
+	return NewAgentTaskClient(at.config).UpdateOne(at)
 }
 
 // Unwrap unwraps the AgentTask entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (at *AgentTask) Unwrap() *AgentTask {
-	tx, ok := at.config.driver.(*txDriver)
+	_tx, ok := at.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: AgentTask is not a transactional entity")
 	}
-	at.config.driver = tx.drv
+	at.config.driver = _tx.drv
 	return at
 }
 
@@ -258,28 +270,51 @@ func (at *AgentTask) Unwrap() *AgentTask {
 func (at *AgentTask) String() string {
 	var builder strings.Builder
 	builder.WriteString("AgentTask(")
-	builder.WriteString(fmt.Sprintf("id=%v", at.ID))
-	builder.WriteString(", command=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", at.ID))
+	builder.WriteString("command=")
 	builder.WriteString(fmt.Sprintf("%v", at.Command))
-	builder.WriteString(", args=")
+	builder.WriteString(", ")
+	builder.WriteString("args=")
 	builder.WriteString(at.Args)
-	builder.WriteString(", number=")
+	builder.WriteString(", ")
+	builder.WriteString("number=")
 	builder.WriteString(fmt.Sprintf("%v", at.Number))
-	builder.WriteString(", output=")
+	builder.WriteString(", ")
+	builder.WriteString("output=")
 	builder.WriteString(at.Output)
-	builder.WriteString(", state=")
+	builder.WriteString(", ")
+	builder.WriteString("state=")
 	builder.WriteString(fmt.Sprintf("%v", at.State))
-	builder.WriteString(", error_message=")
+	builder.WriteString(", ")
+	builder.WriteString("error_message=")
 	builder.WriteString(at.ErrorMessage)
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// AgentTasks is a parsable slice of AgentTask.
-type AgentTasks []*AgentTask
+// NamedAdhocPlans returns the AdhocPlans named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (at *AgentTask) NamedAdhocPlans(name string) ([]*AdhocPlan, error) {
+	if at.Edges.namedAdhocPlans == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := at.Edges.namedAdhocPlans[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (at AgentTasks) config(cfg config) {
-	for _i := range at {
-		at[_i].config = cfg
+func (at *AgentTask) appendNamedAdhocPlans(name string, edges ...*AdhocPlan) {
+	if at.Edges.namedAdhocPlans == nil {
+		at.Edges.namedAdhocPlans = make(map[string][]*AdhocPlan)
+	}
+	if len(edges) == 0 {
+		at.Edges.namedAdhocPlans[name] = []*AdhocPlan{}
+	} else {
+		at.Edges.namedAdhocPlans[name] = append(at.Edges.namedAdhocPlans[name], edges...)
 	}
 }
+
+// AgentTasks is a parsable slice of AgentTask.
+type AgentTasks []*AgentTask

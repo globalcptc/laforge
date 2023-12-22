@@ -23,17 +23,18 @@ import (
 // AgentTaskQuery is the builder for querying AgentTask entities.
 type AgentTaskQuery struct {
 	config
-	limit                         *int
-	offset                        *int
-	unique                        *bool
-	order                         []OrderFunc
-	fields                        []string
+	ctx                           *QueryContext
+	order                         []agenttask.OrderOption
+	inters                        []Interceptor
 	predicates                    []predicate.AgentTask
 	withProvisioningStep          *ProvisioningStepQuery
 	withProvisioningScheduledStep *ProvisioningScheduledStepQuery
 	withProvisionedHost           *ProvisionedHostQuery
 	withAdhocPlans                *AdhocPlanQuery
 	withFKs                       bool
+	modifiers                     []func(*sql.Selector)
+	loadTotal                     []func(context.Context, []*AgentTask) error
+	withNamedAdhocPlans           map[string]*AdhocPlanQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -45,34 +46,34 @@ func (atq *AgentTaskQuery) Where(ps ...predicate.AgentTask) *AgentTaskQuery {
 	return atq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (atq *AgentTaskQuery) Limit(limit int) *AgentTaskQuery {
-	atq.limit = &limit
+	atq.ctx.Limit = &limit
 	return atq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (atq *AgentTaskQuery) Offset(offset int) *AgentTaskQuery {
-	atq.offset = &offset
+	atq.ctx.Offset = &offset
 	return atq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (atq *AgentTaskQuery) Unique(unique bool) *AgentTaskQuery {
-	atq.unique = &unique
+	atq.ctx.Unique = &unique
 	return atq
 }
 
-// Order adds an order step to the query.
-func (atq *AgentTaskQuery) Order(o ...OrderFunc) *AgentTaskQuery {
+// Order specifies how the records should be ordered.
+func (atq *AgentTaskQuery) Order(o ...agenttask.OrderOption) *AgentTaskQuery {
 	atq.order = append(atq.order, o...)
 	return atq
 }
 
 // QueryProvisioningStep chains the current query on the "ProvisioningStep" edge.
 func (atq *AgentTaskQuery) QueryProvisioningStep() *ProvisioningStepQuery {
-	query := &ProvisioningStepQuery{config: atq.config}
+	query := (&ProvisioningStepClient{config: atq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := atq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -94,7 +95,7 @@ func (atq *AgentTaskQuery) QueryProvisioningStep() *ProvisioningStepQuery {
 
 // QueryProvisioningScheduledStep chains the current query on the "ProvisioningScheduledStep" edge.
 func (atq *AgentTaskQuery) QueryProvisioningScheduledStep() *ProvisioningScheduledStepQuery {
-	query := &ProvisioningScheduledStepQuery{config: atq.config}
+	query := (&ProvisioningScheduledStepClient{config: atq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := atq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -116,7 +117,7 @@ func (atq *AgentTaskQuery) QueryProvisioningScheduledStep() *ProvisioningSchedul
 
 // QueryProvisionedHost chains the current query on the "ProvisionedHost" edge.
 func (atq *AgentTaskQuery) QueryProvisionedHost() *ProvisionedHostQuery {
-	query := &ProvisionedHostQuery{config: atq.config}
+	query := (&ProvisionedHostClient{config: atq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := atq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -138,7 +139,7 @@ func (atq *AgentTaskQuery) QueryProvisionedHost() *ProvisionedHostQuery {
 
 // QueryAdhocPlans chains the current query on the "AdhocPlans" edge.
 func (atq *AgentTaskQuery) QueryAdhocPlans() *AdhocPlanQuery {
-	query := &AdhocPlanQuery{config: atq.config}
+	query := (&AdhocPlanClient{config: atq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := atq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -161,7 +162,7 @@ func (atq *AgentTaskQuery) QueryAdhocPlans() *AdhocPlanQuery {
 // First returns the first AgentTask entity from the query.
 // Returns a *NotFoundError when no AgentTask was found.
 func (atq *AgentTaskQuery) First(ctx context.Context) (*AgentTask, error) {
-	nodes, err := atq.Limit(1).All(ctx)
+	nodes, err := atq.Limit(1).All(setContextOp(ctx, atq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +185,7 @@ func (atq *AgentTaskQuery) FirstX(ctx context.Context) *AgentTask {
 // Returns a *NotFoundError when no AgentTask ID was found.
 func (atq *AgentTaskQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = atq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = atq.Limit(1).IDs(setContextOp(ctx, atq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -207,7 +208,7 @@ func (atq *AgentTaskQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one AgentTask entity is found.
 // Returns a *NotFoundError when no AgentTask entities are found.
 func (atq *AgentTaskQuery) Only(ctx context.Context) (*AgentTask, error) {
-	nodes, err := atq.Limit(2).All(ctx)
+	nodes, err := atq.Limit(2).All(setContextOp(ctx, atq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +236,7 @@ func (atq *AgentTaskQuery) OnlyX(ctx context.Context) *AgentTask {
 // Returns a *NotFoundError when no entities are found.
 func (atq *AgentTaskQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = atq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = atq.Limit(2).IDs(setContextOp(ctx, atq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -260,10 +261,12 @@ func (atq *AgentTaskQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of AgentTasks.
 func (atq *AgentTaskQuery) All(ctx context.Context) ([]*AgentTask, error) {
+	ctx = setContextOp(ctx, atq.ctx, "All")
 	if err := atq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return atq.sqlAll(ctx)
+	qr := querierAll[[]*AgentTask, *AgentTaskQuery]()
+	return withInterceptors[[]*AgentTask](ctx, atq, qr, atq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -276,9 +279,12 @@ func (atq *AgentTaskQuery) AllX(ctx context.Context) []*AgentTask {
 }
 
 // IDs executes the query and returns a list of AgentTask IDs.
-func (atq *AgentTaskQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := atq.Select(agenttask.FieldID).Scan(ctx, &ids); err != nil {
+func (atq *AgentTaskQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if atq.ctx.Unique == nil && atq.path != nil {
+		atq.Unique(true)
+	}
+	ctx = setContextOp(ctx, atq.ctx, "IDs")
+	if err = atq.Select(agenttask.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -295,10 +301,11 @@ func (atq *AgentTaskQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (atq *AgentTaskQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, atq.ctx, "Count")
 	if err := atq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return atq.sqlCount(ctx)
+	return withInterceptors[int](ctx, atq, querierCount[*AgentTaskQuery](), atq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -312,10 +319,15 @@ func (atq *AgentTaskQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (atq *AgentTaskQuery) Exist(ctx context.Context) (bool, error) {
-	if err := atq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, atq.ctx, "Exist")
+	switch _, err := atq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return atq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -335,25 +347,24 @@ func (atq *AgentTaskQuery) Clone() *AgentTaskQuery {
 	}
 	return &AgentTaskQuery{
 		config:                        atq.config,
-		limit:                         atq.limit,
-		offset:                        atq.offset,
-		order:                         append([]OrderFunc{}, atq.order...),
+		ctx:                           atq.ctx.Clone(),
+		order:                         append([]agenttask.OrderOption{}, atq.order...),
+		inters:                        append([]Interceptor{}, atq.inters...),
 		predicates:                    append([]predicate.AgentTask{}, atq.predicates...),
 		withProvisioningStep:          atq.withProvisioningStep.Clone(),
 		withProvisioningScheduledStep: atq.withProvisioningScheduledStep.Clone(),
 		withProvisionedHost:           atq.withProvisionedHost.Clone(),
 		withAdhocPlans:                atq.withAdhocPlans.Clone(),
 		// clone intermediate query.
-		sql:    atq.sql.Clone(),
-		path:   atq.path,
-		unique: atq.unique,
+		sql:  atq.sql.Clone(),
+		path: atq.path,
 	}
 }
 
 // WithProvisioningStep tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisioningStep" edge. The optional arguments are used to configure the query builder of the edge.
 func (atq *AgentTaskQuery) WithProvisioningStep(opts ...func(*ProvisioningStepQuery)) *AgentTaskQuery {
-	query := &ProvisioningStepQuery{config: atq.config}
+	query := (&ProvisioningStepClient{config: atq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -364,7 +375,7 @@ func (atq *AgentTaskQuery) WithProvisioningStep(opts ...func(*ProvisioningStepQu
 // WithProvisioningScheduledStep tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisioningScheduledStep" edge. The optional arguments are used to configure the query builder of the edge.
 func (atq *AgentTaskQuery) WithProvisioningScheduledStep(opts ...func(*ProvisioningScheduledStepQuery)) *AgentTaskQuery {
-	query := &ProvisioningScheduledStepQuery{config: atq.config}
+	query := (&ProvisioningScheduledStepClient{config: atq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -375,7 +386,7 @@ func (atq *AgentTaskQuery) WithProvisioningScheduledStep(opts ...func(*Provision
 // WithProvisionedHost tells the query-builder to eager-load the nodes that are connected to
 // the "ProvisionedHost" edge. The optional arguments are used to configure the query builder of the edge.
 func (atq *AgentTaskQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuery)) *AgentTaskQuery {
-	query := &ProvisionedHostQuery{config: atq.config}
+	query := (&ProvisionedHostClient{config: atq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -386,7 +397,7 @@ func (atq *AgentTaskQuery) WithProvisionedHost(opts ...func(*ProvisionedHostQuer
 // WithAdhocPlans tells the query-builder to eager-load the nodes that are connected to
 // the "AdhocPlans" edge. The optional arguments are used to configure the query builder of the edge.
 func (atq *AgentTaskQuery) WithAdhocPlans(opts ...func(*AdhocPlanQuery)) *AgentTaskQuery {
-	query := &AdhocPlanQuery{config: atq.config}
+	query := (&AdhocPlanClient{config: atq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -409,16 +420,11 @@ func (atq *AgentTaskQuery) WithAdhocPlans(opts ...func(*AdhocPlanQuery)) *AgentT
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (atq *AgentTaskQuery) GroupBy(field string, fields ...string) *AgentTaskGroupBy {
-	grbuild := &AgentTaskGroupBy{config: atq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := atq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return atq.sqlQuery(ctx), nil
-	}
+	atq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &AgentTaskGroupBy{build: atq}
+	grbuild.flds = &atq.ctx.Fields
 	grbuild.label = agenttask.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -435,15 +441,30 @@ func (atq *AgentTaskQuery) GroupBy(field string, fields ...string) *AgentTaskGro
 //		Select(agenttask.FieldCommand).
 //		Scan(ctx, &v)
 func (atq *AgentTaskQuery) Select(fields ...string) *AgentTaskSelect {
-	atq.fields = append(atq.fields, fields...)
-	selbuild := &AgentTaskSelect{AgentTaskQuery: atq}
-	selbuild.label = agenttask.Label
-	selbuild.flds, selbuild.scan = &atq.fields, selbuild.Scan
-	return selbuild
+	atq.ctx.Fields = append(atq.ctx.Fields, fields...)
+	sbuild := &AgentTaskSelect{AgentTaskQuery: atq}
+	sbuild.label = agenttask.Label
+	sbuild.flds, sbuild.scan = &atq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a AgentTaskSelect configured with the given aggregations.
+func (atq *AgentTaskQuery) Aggregate(fns ...AggregateFunc) *AgentTaskSelect {
+	return atq.Select().Aggregate(fns...)
 }
 
 func (atq *AgentTaskQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range atq.fields {
+	for _, inter := range atq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, atq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range atq.ctx.Fields {
 		if !agenttask.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -476,14 +497,17 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, agenttask.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*AgentTask).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &AgentTask{config: atq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(atq.modifiers) > 0 {
+		_spec.Modifiers = atq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -519,6 +543,18 @@ func (atq *AgentTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 			return nil, err
 		}
 	}
+	for name, query := range atq.withNamedAdhocPlans {
+		if err := atq.loadAdhocPlans(ctx, query, nodes,
+			func(n *AgentTask) { n.appendNamedAdhocPlans(name) },
+			func(n *AgentTask, e *AdhocPlan) { n.appendNamedAdhocPlans(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range atq.loadTotal {
+		if err := atq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -534,6 +570,9 @@ func (atq *AgentTaskQuery) loadProvisioningStep(ctx context.Context, query *Prov
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(provisioningstep.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -564,6 +603,9 @@ func (atq *AgentTaskQuery) loadProvisioningScheduledStep(ctx context.Context, qu
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(provisioningscheduledstep.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -593,6 +635,9 @@ func (atq *AgentTaskQuery) loadProvisionedHost(ctx context.Context, query *Provi
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(provisionedhost.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -621,7 +666,7 @@ func (atq *AgentTaskQuery) loadAdhocPlans(ctx context.Context, query *AdhocPlanQ
 	}
 	query.withFKs = true
 	query.Where(predicate.AdhocPlan(func(s *sql.Selector) {
-		s.Where(sql.InValues(agenttask.AdhocPlansColumn, fks...))
+		s.Where(sql.InValues(s.C(agenttask.AdhocPlansColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -634,7 +679,7 @@ func (atq *AgentTaskQuery) loadAdhocPlans(ctx context.Context, query *AdhocPlanQ
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "adhoc_plan_agent_task" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "adhoc_plan_agent_task" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -643,38 +688,25 @@ func (atq *AgentTaskQuery) loadAdhocPlans(ctx context.Context, query *AdhocPlanQ
 
 func (atq *AgentTaskQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := atq.querySpec()
-	_spec.Node.Columns = atq.fields
-	if len(atq.fields) > 0 {
-		_spec.Unique = atq.unique != nil && *atq.unique
+	if len(atq.modifiers) > 0 {
+		_spec.Modifiers = atq.modifiers
+	}
+	_spec.Node.Columns = atq.ctx.Fields
+	if len(atq.ctx.Fields) > 0 {
+		_spec.Unique = atq.ctx.Unique != nil && *atq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, atq.driver, _spec)
 }
 
-func (atq *AgentTaskQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := atq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (atq *AgentTaskQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   agenttask.Table,
-			Columns: agenttask.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: agenttask.FieldID,
-			},
-		},
-		From:   atq.sql,
-		Unique: true,
-	}
-	if unique := atq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(agenttask.Table, agenttask.Columns, sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID))
+	_spec.From = atq.sql
+	if unique := atq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if atq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := atq.fields; len(fields) > 0 {
+	if fields := atq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, agenttask.FieldID)
 		for i := range fields {
@@ -690,10 +722,10 @@ func (atq *AgentTaskQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := atq.limit; limit != nil {
+	if limit := atq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := atq.offset; offset != nil {
+	if offset := atq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := atq.order; len(ps) > 0 {
@@ -709,7 +741,7 @@ func (atq *AgentTaskQuery) querySpec() *sqlgraph.QuerySpec {
 func (atq *AgentTaskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(atq.driver.Dialect())
 	t1 := builder.Table(agenttask.Table)
-	columns := atq.fields
+	columns := atq.ctx.Fields
 	if len(columns) == 0 {
 		columns = agenttask.Columns
 	}
@@ -718,7 +750,7 @@ func (atq *AgentTaskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = atq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if atq.unique != nil && *atq.unique {
+	if atq.ctx.Unique != nil && *atq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range atq.predicates {
@@ -727,26 +759,35 @@ func (atq *AgentTaskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range atq.order {
 		p(selector)
 	}
-	if offset := atq.offset; offset != nil {
+	if offset := atq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := atq.limit; limit != nil {
+	if limit := atq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
 }
 
+// WithNamedAdhocPlans tells the query-builder to eager-load the nodes that are connected to the "AdhocPlans"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (atq *AgentTaskQuery) WithNamedAdhocPlans(name string, opts ...func(*AdhocPlanQuery)) *AgentTaskQuery {
+	query := (&AdhocPlanClient{config: atq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if atq.withNamedAdhocPlans == nil {
+		atq.withNamedAdhocPlans = make(map[string]*AdhocPlanQuery)
+	}
+	atq.withNamedAdhocPlans[name] = query
+	return atq
+}
+
 // AgentTaskGroupBy is the group-by builder for AgentTask entities.
 type AgentTaskGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *AgentTaskQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -755,74 +796,77 @@ func (atgb *AgentTaskGroupBy) Aggregate(fns ...AggregateFunc) *AgentTaskGroupBy 
 	return atgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (atgb *AgentTaskGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := atgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (atgb *AgentTaskGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, atgb.build.ctx, "GroupBy")
+	if err := atgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	atgb.sql = query
-	return atgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*AgentTaskQuery, *AgentTaskGroupBy](ctx, atgb.build, atgb, atgb.build.inters, v)
 }
 
-func (atgb *AgentTaskGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range atgb.fields {
-		if !agenttask.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (atgb *AgentTaskGroupBy) sqlScan(ctx context.Context, root *AgentTaskQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(atgb.fns))
+	for _, fn := range atgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := atgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*atgb.flds)+len(atgb.fns))
+		for _, f := range *atgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*atgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := atgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := atgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (atgb *AgentTaskGroupBy) sqlQuery() *sql.Selector {
-	selector := atgb.sql.Select()
-	aggregation := make([]string, 0, len(atgb.fns))
-	for _, fn := range atgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(atgb.fields)+len(atgb.fns))
-		for _, f := range atgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(atgb.fields...)...)
-}
-
 // AgentTaskSelect is the builder for selecting fields of AgentTask entities.
 type AgentTaskSelect struct {
 	*AgentTaskQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (ats *AgentTaskSelect) Aggregate(fns ...AggregateFunc) *AgentTaskSelect {
+	ats.fns = append(ats.fns, fns...)
+	return ats
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (ats *AgentTaskSelect) Scan(ctx context.Context, v interface{}) error {
+func (ats *AgentTaskSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, ats.ctx, "Select")
 	if err := ats.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ats.sql = ats.AgentTaskQuery.sqlQuery(ctx)
-	return ats.sqlScan(ctx, v)
+	return scanWithInterceptors[*AgentTaskQuery, *AgentTaskSelect](ctx, ats.AgentTaskQuery, ats, ats.inters, v)
 }
 
-func (ats *AgentTaskSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (ats *AgentTaskSelect) sqlScan(ctx context.Context, root *AgentTaskQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(ats.fns))
+	for _, fn := range ats.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*ats.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := ats.sql.Query()
+	query, args := selector.Query()
 	if err := ats.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

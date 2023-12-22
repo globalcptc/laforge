@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/dnsrecord"
 	"github.com/gen0cide/laforge/ent/environment"
@@ -18,8 +19,8 @@ type DNSRecord struct {
 	config ` json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// HclID holds the value of the "hcl_id" field.
-	HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+	// HCLID holds the value of the "hcl_id" field.
+	HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty" hcl:"name,attr"`
 	// Values holds the value of the "values" field.
@@ -38,11 +39,13 @@ type DNSRecord struct {
 	// The values are being populated by the DNSRecordQuery when eager-loading is set.
 	Edges DNSRecordEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Environment holds the value of the Environment edge.
 	HCLEnvironment *Environment `json:"Environment,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	environment_dns_records *uuid.UUID
+	selectValues            sql.SelectValues
 }
 
 // DNSRecordEdges holds the relations/edges for other nodes in the graph.
@@ -52,6 +55,8 @@ type DNSRecordEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
+	// totalCount holds the count of the edges above.
+	totalCount [1]map[string]int
 }
 
 // EnvironmentOrErr returns the Environment value or an error if the edge
@@ -59,8 +64,7 @@ type DNSRecordEdges struct {
 func (e DNSRecordEdges) EnvironmentOrErr() (*Environment, error) {
 	if e.loadedTypes[0] {
 		if e.Environment == nil {
-			// The edge Environment was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: environment.Label}
 		}
 		return e.Environment, nil
@@ -69,22 +73,22 @@ func (e DNSRecordEdges) EnvironmentOrErr() (*Environment, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*DNSRecord) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*DNSRecord) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case dnsrecord.FieldValues, dnsrecord.FieldVars, dnsrecord.FieldTags:
 			values[i] = new([]byte)
 		case dnsrecord.FieldDisabled:
 			values[i] = new(sql.NullBool)
-		case dnsrecord.FieldHclID, dnsrecord.FieldName, dnsrecord.FieldType, dnsrecord.FieldZone:
+		case dnsrecord.FieldHCLID, dnsrecord.FieldName, dnsrecord.FieldType, dnsrecord.FieldZone:
 			values[i] = new(sql.NullString)
 		case dnsrecord.FieldID:
 			values[i] = new(uuid.UUID)
 		case dnsrecord.ForeignKeys[0]: // environment_dns_records
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type DNSRecord", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -92,7 +96,7 @@ func (*DNSRecord) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the DNSRecord fields.
-func (dr *DNSRecord) assignValues(columns []string, values []interface{}) error {
+func (dr *DNSRecord) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -104,11 +108,11 @@ func (dr *DNSRecord) assignValues(columns []string, values []interface{}) error 
 			} else if value != nil {
 				dr.ID = *value
 			}
-		case dnsrecord.FieldHclID:
+		case dnsrecord.FieldHCLID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field hcl_id", values[i])
 			} else if value.Valid {
-				dr.HclID = value.String
+				dr.HCLID = value.String
 			}
 		case dnsrecord.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -165,31 +169,39 @@ func (dr *DNSRecord) assignValues(columns []string, values []interface{}) error 
 				dr.environment_dns_records = new(uuid.UUID)
 				*dr.environment_dns_records = *value.S.(*uuid.UUID)
 			}
+		default:
+			dr.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the DNSRecord.
+// This includes values selected through modifiers, order, etc.
+func (dr *DNSRecord) Value(name string) (ent.Value, error) {
+	return dr.selectValues.Get(name)
+}
+
 // QueryEnvironment queries the "Environment" edge of the DNSRecord entity.
 func (dr *DNSRecord) QueryEnvironment() *EnvironmentQuery {
-	return (&DNSRecordClient{config: dr.config}).QueryEnvironment(dr)
+	return NewDNSRecordClient(dr.config).QueryEnvironment(dr)
 }
 
 // Update returns a builder for updating this DNSRecord.
 // Note that you need to call DNSRecord.Unwrap() before calling this method if this DNSRecord
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (dr *DNSRecord) Update() *DNSRecordUpdateOne {
-	return (&DNSRecordClient{config: dr.config}).UpdateOne(dr)
+	return NewDNSRecordClient(dr.config).UpdateOne(dr)
 }
 
 // Unwrap unwraps the DNSRecord entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (dr *DNSRecord) Unwrap() *DNSRecord {
-	tx, ok := dr.config.driver.(*txDriver)
+	_tx, ok := dr.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: DNSRecord is not a transactional entity")
 	}
-	dr.config.driver = tx.drv
+	dr.config.driver = _tx.drv
 	return dr
 }
 
@@ -197,22 +209,29 @@ func (dr *DNSRecord) Unwrap() *DNSRecord {
 func (dr *DNSRecord) String() string {
 	var builder strings.Builder
 	builder.WriteString("DNSRecord(")
-	builder.WriteString(fmt.Sprintf("id=%v", dr.ID))
-	builder.WriteString(", hcl_id=")
-	builder.WriteString(dr.HclID)
-	builder.WriteString(", name=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", dr.ID))
+	builder.WriteString("hcl_id=")
+	builder.WriteString(dr.HCLID)
+	builder.WriteString(", ")
+	builder.WriteString("name=")
 	builder.WriteString(dr.Name)
-	builder.WriteString(", values=")
+	builder.WriteString(", ")
+	builder.WriteString("values=")
 	builder.WriteString(fmt.Sprintf("%v", dr.Values))
-	builder.WriteString(", type=")
+	builder.WriteString(", ")
+	builder.WriteString("type=")
 	builder.WriteString(dr.Type)
-	builder.WriteString(", zone=")
+	builder.WriteString(", ")
+	builder.WriteString("zone=")
 	builder.WriteString(dr.Zone)
-	builder.WriteString(", vars=")
+	builder.WriteString(", ")
+	builder.WriteString("vars=")
 	builder.WriteString(fmt.Sprintf("%v", dr.Vars))
-	builder.WriteString(", disabled=")
+	builder.WriteString(", ")
+	builder.WriteString("disabled=")
 	builder.WriteString(fmt.Sprintf("%v", dr.Disabled))
-	builder.WriteString(", tags=")
+	builder.WriteString(", ")
+	builder.WriteString("tags=")
 	builder.WriteString(fmt.Sprintf("%v", dr.Tags))
 	builder.WriteByte(')')
 	return builder.String()
@@ -220,9 +239,3 @@ func (dr *DNSRecord) String() string {
 
 // DNSRecords is a parsable slice of DNSRecord.
 type DNSRecords []*DNSRecord
-
-func (dr DNSRecords) config(cfg config) {
-	for _i := range dr {
-		dr[_i].config = cfg
-	}
-}

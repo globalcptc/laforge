@@ -11,829 +11,547 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Host(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Host(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.Host(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.Host(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.Host(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.Host(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.Host(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.Host(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.Host(sql.FieldLTE(FieldID, id))
 }
 
-// HclID applies equality check predicate on the "hcl_id" field. It's identical to HclIDEQ.
-func HclID(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldHclID), v))
-	})
+// HCLID applies equality check predicate on the "hcl_id" field. It's identical to HCLIDEQ.
+func HCLID(v string) predicate.Host {
+	return predicate.Host(sql.FieldEQ(FieldHCLID, v))
 }
 
 // Hostname applies equality check predicate on the "hostname" field. It's identical to HostnameEQ.
 func Hostname(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldHostname, v))
 }
 
 // Description applies equality check predicate on the "description" field. It's identical to DescriptionEQ.
 func Description(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldDescription, v))
 }
 
 // OS applies equality check predicate on the "OS" field. It's identical to OSEQ.
 func OS(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldOS, v))
 }
 
 // LastOctet applies equality check predicate on the "last_octet" field. It's identical to LastOctetEQ.
 func LastOctet(v int) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldLastOctet), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldLastOctet, v))
 }
 
 // InstanceSize applies equality check predicate on the "instance_size" field. It's identical to InstanceSizeEQ.
 func InstanceSize(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldInstanceSize, v))
 }
 
 // AllowMACChanges applies equality check predicate on the "allow_mac_changes" field. It's identical to AllowMACChangesEQ.
 func AllowMACChanges(v bool) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldAllowMACChanges), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldAllowMACChanges, v))
 }
 
 // OverridePassword applies equality check predicate on the "override_password" field. It's identical to OverridePasswordEQ.
 func OverridePassword(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldOverridePassword, v))
 }
 
-// HclIDEQ applies the EQ predicate on the "hcl_id" field.
-func HclIDEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldHclID), v))
-	})
+// HCLIDEQ applies the EQ predicate on the "hcl_id" field.
+func HCLIDEQ(v string) predicate.Host {
+	return predicate.Host(sql.FieldEQ(FieldHCLID, v))
 }
 
-// HclIDNEQ applies the NEQ predicate on the "hcl_id" field.
-func HclIDNEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldHclID), v))
-	})
+// HCLIDNEQ applies the NEQ predicate on the "hcl_id" field.
+func HCLIDNEQ(v string) predicate.Host {
+	return predicate.Host(sql.FieldNEQ(FieldHCLID, v))
 }
 
-// HclIDIn applies the In predicate on the "hcl_id" field.
-func HclIDIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldHclID), v...))
-	})
+// HCLIDIn applies the In predicate on the "hcl_id" field.
+func HCLIDIn(vs ...string) predicate.Host {
+	return predicate.Host(sql.FieldIn(FieldHCLID, vs...))
 }
 
-// HclIDNotIn applies the NotIn predicate on the "hcl_id" field.
-func HclIDNotIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldHclID), v...))
-	})
+// HCLIDNotIn applies the NotIn predicate on the "hcl_id" field.
+func HCLIDNotIn(vs ...string) predicate.Host {
+	return predicate.Host(sql.FieldNotIn(FieldHCLID, vs...))
 }
 
-// HclIDGT applies the GT predicate on the "hcl_id" field.
-func HclIDGT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldHclID), v))
-	})
+// HCLIDGT applies the GT predicate on the "hcl_id" field.
+func HCLIDGT(v string) predicate.Host {
+	return predicate.Host(sql.FieldGT(FieldHCLID, v))
 }
 
-// HclIDGTE applies the GTE predicate on the "hcl_id" field.
-func HclIDGTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldHclID), v))
-	})
+// HCLIDGTE applies the GTE predicate on the "hcl_id" field.
+func HCLIDGTE(v string) predicate.Host {
+	return predicate.Host(sql.FieldGTE(FieldHCLID, v))
 }
 
-// HclIDLT applies the LT predicate on the "hcl_id" field.
-func HclIDLT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldHclID), v))
-	})
+// HCLIDLT applies the LT predicate on the "hcl_id" field.
+func HCLIDLT(v string) predicate.Host {
+	return predicate.Host(sql.FieldLT(FieldHCLID, v))
 }
 
-// HclIDLTE applies the LTE predicate on the "hcl_id" field.
-func HclIDLTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldHclID), v))
-	})
+// HCLIDLTE applies the LTE predicate on the "hcl_id" field.
+func HCLIDLTE(v string) predicate.Host {
+	return predicate.Host(sql.FieldLTE(FieldHCLID, v))
 }
 
-// HclIDContains applies the Contains predicate on the "hcl_id" field.
-func HclIDContains(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldHclID), v))
-	})
+// HCLIDContains applies the Contains predicate on the "hcl_id" field.
+func HCLIDContains(v string) predicate.Host {
+	return predicate.Host(sql.FieldContains(FieldHCLID, v))
 }
 
-// HclIDHasPrefix applies the HasPrefix predicate on the "hcl_id" field.
-func HclIDHasPrefix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldHclID), v))
-	})
+// HCLIDHasPrefix applies the HasPrefix predicate on the "hcl_id" field.
+func HCLIDHasPrefix(v string) predicate.Host {
+	return predicate.Host(sql.FieldHasPrefix(FieldHCLID, v))
 }
 
-// HclIDHasSuffix applies the HasSuffix predicate on the "hcl_id" field.
-func HclIDHasSuffix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldHclID), v))
-	})
+// HCLIDHasSuffix applies the HasSuffix predicate on the "hcl_id" field.
+func HCLIDHasSuffix(v string) predicate.Host {
+	return predicate.Host(sql.FieldHasSuffix(FieldHCLID, v))
 }
 
-// HclIDEqualFold applies the EqualFold predicate on the "hcl_id" field.
-func HclIDEqualFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldHclID), v))
-	})
+// HCLIDEqualFold applies the EqualFold predicate on the "hcl_id" field.
+func HCLIDEqualFold(v string) predicate.Host {
+	return predicate.Host(sql.FieldEqualFold(FieldHCLID, v))
 }
 
-// HclIDContainsFold applies the ContainsFold predicate on the "hcl_id" field.
-func HclIDContainsFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldHclID), v))
-	})
+// HCLIDContainsFold applies the ContainsFold predicate on the "hcl_id" field.
+func HCLIDContainsFold(v string) predicate.Host {
+	return predicate.Host(sql.FieldContainsFold(FieldHCLID, v))
 }
 
 // HostnameEQ applies the EQ predicate on the "hostname" field.
 func HostnameEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldHostname, v))
 }
 
 // HostnameNEQ applies the NEQ predicate on the "hostname" field.
 func HostnameNEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldNEQ(FieldHostname, v))
 }
 
 // HostnameIn applies the In predicate on the "hostname" field.
 func HostnameIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldHostname), v...))
-	})
+	return predicate.Host(sql.FieldIn(FieldHostname, vs...))
 }
 
 // HostnameNotIn applies the NotIn predicate on the "hostname" field.
 func HostnameNotIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldHostname), v...))
-	})
+	return predicate.Host(sql.FieldNotIn(FieldHostname, vs...))
 }
 
 // HostnameGT applies the GT predicate on the "hostname" field.
 func HostnameGT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldGT(FieldHostname, v))
 }
 
 // HostnameGTE applies the GTE predicate on the "hostname" field.
 func HostnameGTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldGTE(FieldHostname, v))
 }
 
 // HostnameLT applies the LT predicate on the "hostname" field.
 func HostnameLT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldLT(FieldHostname, v))
 }
 
 // HostnameLTE applies the LTE predicate on the "hostname" field.
 func HostnameLTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldLTE(FieldHostname, v))
 }
 
 // HostnameContains applies the Contains predicate on the "hostname" field.
 func HostnameContains(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldContains(FieldHostname, v))
 }
 
 // HostnameHasPrefix applies the HasPrefix predicate on the "hostname" field.
 func HostnameHasPrefix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldHasPrefix(FieldHostname, v))
 }
 
 // HostnameHasSuffix applies the HasSuffix predicate on the "hostname" field.
 func HostnameHasSuffix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldHasSuffix(FieldHostname, v))
 }
 
 // HostnameEqualFold applies the EqualFold predicate on the "hostname" field.
 func HostnameEqualFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldEqualFold(FieldHostname, v))
 }
 
 // HostnameContainsFold applies the ContainsFold predicate on the "hostname" field.
 func HostnameContainsFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldHostname), v))
-	})
+	return predicate.Host(sql.FieldContainsFold(FieldHostname, v))
 }
 
 // DescriptionEQ applies the EQ predicate on the "description" field.
 func DescriptionEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldDescription, v))
 }
 
 // DescriptionNEQ applies the NEQ predicate on the "description" field.
 func DescriptionNEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldNEQ(FieldDescription, v))
 }
 
 // DescriptionIn applies the In predicate on the "description" field.
 func DescriptionIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldDescription), v...))
-	})
+	return predicate.Host(sql.FieldIn(FieldDescription, vs...))
 }
 
 // DescriptionNotIn applies the NotIn predicate on the "description" field.
 func DescriptionNotIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldDescription), v...))
-	})
+	return predicate.Host(sql.FieldNotIn(FieldDescription, vs...))
 }
 
 // DescriptionGT applies the GT predicate on the "description" field.
 func DescriptionGT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldGT(FieldDescription, v))
 }
 
 // DescriptionGTE applies the GTE predicate on the "description" field.
 func DescriptionGTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldGTE(FieldDescription, v))
 }
 
 // DescriptionLT applies the LT predicate on the "description" field.
 func DescriptionLT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldLT(FieldDescription, v))
 }
 
 // DescriptionLTE applies the LTE predicate on the "description" field.
 func DescriptionLTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldLTE(FieldDescription, v))
 }
 
 // DescriptionContains applies the Contains predicate on the "description" field.
 func DescriptionContains(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldContains(FieldDescription, v))
 }
 
 // DescriptionHasPrefix applies the HasPrefix predicate on the "description" field.
 func DescriptionHasPrefix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldHasPrefix(FieldDescription, v))
 }
 
 // DescriptionHasSuffix applies the HasSuffix predicate on the "description" field.
 func DescriptionHasSuffix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldHasSuffix(FieldDescription, v))
 }
 
 // DescriptionEqualFold applies the EqualFold predicate on the "description" field.
 func DescriptionEqualFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldEqualFold(FieldDescription, v))
 }
 
 // DescriptionContainsFold applies the ContainsFold predicate on the "description" field.
 func DescriptionContainsFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldDescription), v))
-	})
+	return predicate.Host(sql.FieldContainsFold(FieldDescription, v))
 }
 
 // OSEQ applies the EQ predicate on the "OS" field.
 func OSEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldOS, v))
 }
 
 // OSNEQ applies the NEQ predicate on the "OS" field.
 func OSNEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldNEQ(FieldOS, v))
 }
 
 // OSIn applies the In predicate on the "OS" field.
 func OSIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldOS), v...))
-	})
+	return predicate.Host(sql.FieldIn(FieldOS, vs...))
 }
 
 // OSNotIn applies the NotIn predicate on the "OS" field.
 func OSNotIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldOS), v...))
-	})
+	return predicate.Host(sql.FieldNotIn(FieldOS, vs...))
 }
 
 // OSGT applies the GT predicate on the "OS" field.
 func OSGT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldGT(FieldOS, v))
 }
 
 // OSGTE applies the GTE predicate on the "OS" field.
 func OSGTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldGTE(FieldOS, v))
 }
 
 // OSLT applies the LT predicate on the "OS" field.
 func OSLT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldLT(FieldOS, v))
 }
 
 // OSLTE applies the LTE predicate on the "OS" field.
 func OSLTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldLTE(FieldOS, v))
 }
 
 // OSContains applies the Contains predicate on the "OS" field.
 func OSContains(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldContains(FieldOS, v))
 }
 
 // OSHasPrefix applies the HasPrefix predicate on the "OS" field.
 func OSHasPrefix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldHasPrefix(FieldOS, v))
 }
 
 // OSHasSuffix applies the HasSuffix predicate on the "OS" field.
 func OSHasSuffix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldHasSuffix(FieldOS, v))
 }
 
 // OSEqualFold applies the EqualFold predicate on the "OS" field.
 func OSEqualFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldEqualFold(FieldOS, v))
 }
 
 // OSContainsFold applies the ContainsFold predicate on the "OS" field.
 func OSContainsFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldOS), v))
-	})
+	return predicate.Host(sql.FieldContainsFold(FieldOS, v))
 }
 
 // LastOctetEQ applies the EQ predicate on the "last_octet" field.
 func LastOctetEQ(v int) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldLastOctet), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldLastOctet, v))
 }
 
 // LastOctetNEQ applies the NEQ predicate on the "last_octet" field.
 func LastOctetNEQ(v int) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldLastOctet), v))
-	})
+	return predicate.Host(sql.FieldNEQ(FieldLastOctet, v))
 }
 
 // LastOctetIn applies the In predicate on the "last_octet" field.
 func LastOctetIn(vs ...int) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldLastOctet), v...))
-	})
+	return predicate.Host(sql.FieldIn(FieldLastOctet, vs...))
 }
 
 // LastOctetNotIn applies the NotIn predicate on the "last_octet" field.
 func LastOctetNotIn(vs ...int) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldLastOctet), v...))
-	})
+	return predicate.Host(sql.FieldNotIn(FieldLastOctet, vs...))
 }
 
 // LastOctetGT applies the GT predicate on the "last_octet" field.
 func LastOctetGT(v int) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldLastOctet), v))
-	})
+	return predicate.Host(sql.FieldGT(FieldLastOctet, v))
 }
 
 // LastOctetGTE applies the GTE predicate on the "last_octet" field.
 func LastOctetGTE(v int) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldLastOctet), v))
-	})
+	return predicate.Host(sql.FieldGTE(FieldLastOctet, v))
 }
 
 // LastOctetLT applies the LT predicate on the "last_octet" field.
 func LastOctetLT(v int) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldLastOctet), v))
-	})
+	return predicate.Host(sql.FieldLT(FieldLastOctet, v))
 }
 
 // LastOctetLTE applies the LTE predicate on the "last_octet" field.
 func LastOctetLTE(v int) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldLastOctet), v))
-	})
+	return predicate.Host(sql.FieldLTE(FieldLastOctet, v))
 }
 
 // InstanceSizeEQ applies the EQ predicate on the "instance_size" field.
 func InstanceSizeEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldInstanceSize, v))
 }
 
 // InstanceSizeNEQ applies the NEQ predicate on the "instance_size" field.
 func InstanceSizeNEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldNEQ(FieldInstanceSize, v))
 }
 
 // InstanceSizeIn applies the In predicate on the "instance_size" field.
 func InstanceSizeIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldInstanceSize), v...))
-	})
+	return predicate.Host(sql.FieldIn(FieldInstanceSize, vs...))
 }
 
 // InstanceSizeNotIn applies the NotIn predicate on the "instance_size" field.
 func InstanceSizeNotIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldInstanceSize), v...))
-	})
+	return predicate.Host(sql.FieldNotIn(FieldInstanceSize, vs...))
 }
 
 // InstanceSizeGT applies the GT predicate on the "instance_size" field.
 func InstanceSizeGT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldGT(FieldInstanceSize, v))
 }
 
 // InstanceSizeGTE applies the GTE predicate on the "instance_size" field.
 func InstanceSizeGTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldGTE(FieldInstanceSize, v))
 }
 
 // InstanceSizeLT applies the LT predicate on the "instance_size" field.
 func InstanceSizeLT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldLT(FieldInstanceSize, v))
 }
 
 // InstanceSizeLTE applies the LTE predicate on the "instance_size" field.
 func InstanceSizeLTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldLTE(FieldInstanceSize, v))
 }
 
 // InstanceSizeContains applies the Contains predicate on the "instance_size" field.
 func InstanceSizeContains(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldContains(FieldInstanceSize, v))
 }
 
 // InstanceSizeHasPrefix applies the HasPrefix predicate on the "instance_size" field.
 func InstanceSizeHasPrefix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldHasPrefix(FieldInstanceSize, v))
 }
 
 // InstanceSizeHasSuffix applies the HasSuffix predicate on the "instance_size" field.
 func InstanceSizeHasSuffix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldHasSuffix(FieldInstanceSize, v))
 }
 
 // InstanceSizeEqualFold applies the EqualFold predicate on the "instance_size" field.
 func InstanceSizeEqualFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldEqualFold(FieldInstanceSize, v))
 }
 
 // InstanceSizeContainsFold applies the ContainsFold predicate on the "instance_size" field.
 func InstanceSizeContainsFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldInstanceSize), v))
-	})
+	return predicate.Host(sql.FieldContainsFold(FieldInstanceSize, v))
 }
 
 // AllowMACChangesEQ applies the EQ predicate on the "allow_mac_changes" field.
 func AllowMACChangesEQ(v bool) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldAllowMACChanges), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldAllowMACChanges, v))
 }
 
 // AllowMACChangesNEQ applies the NEQ predicate on the "allow_mac_changes" field.
 func AllowMACChangesNEQ(v bool) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldAllowMACChanges), v))
-	})
+	return predicate.Host(sql.FieldNEQ(FieldAllowMACChanges, v))
 }
 
 // OverridePasswordEQ applies the EQ predicate on the "override_password" field.
 func OverridePasswordEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldEQ(FieldOverridePassword, v))
 }
 
 // OverridePasswordNEQ applies the NEQ predicate on the "override_password" field.
 func OverridePasswordNEQ(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldNEQ(FieldOverridePassword, v))
 }
 
 // OverridePasswordIn applies the In predicate on the "override_password" field.
 func OverridePasswordIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldOverridePassword), v...))
-	})
+	return predicate.Host(sql.FieldIn(FieldOverridePassword, vs...))
 }
 
 // OverridePasswordNotIn applies the NotIn predicate on the "override_password" field.
 func OverridePasswordNotIn(vs ...string) predicate.Host {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldOverridePassword), v...))
-	})
+	return predicate.Host(sql.FieldNotIn(FieldOverridePassword, vs...))
 }
 
 // OverridePasswordGT applies the GT predicate on the "override_password" field.
 func OverridePasswordGT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldGT(FieldOverridePassword, v))
 }
 
 // OverridePasswordGTE applies the GTE predicate on the "override_password" field.
 func OverridePasswordGTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldGTE(FieldOverridePassword, v))
 }
 
 // OverridePasswordLT applies the LT predicate on the "override_password" field.
 func OverridePasswordLT(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldLT(FieldOverridePassword, v))
 }
 
 // OverridePasswordLTE applies the LTE predicate on the "override_password" field.
 func OverridePasswordLTE(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldLTE(FieldOverridePassword, v))
 }
 
 // OverridePasswordContains applies the Contains predicate on the "override_password" field.
 func OverridePasswordContains(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldContains(FieldOverridePassword, v))
 }
 
 // OverridePasswordHasPrefix applies the HasPrefix predicate on the "override_password" field.
 func OverridePasswordHasPrefix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldHasPrefix(FieldOverridePassword, v))
 }
 
 // OverridePasswordHasSuffix applies the HasSuffix predicate on the "override_password" field.
 func OverridePasswordHasSuffix(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldHasSuffix(FieldOverridePassword, v))
 }
 
 // OverridePasswordEqualFold applies the EqualFold predicate on the "override_password" field.
 func OverridePasswordEqualFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldEqualFold(FieldOverridePassword, v))
 }
 
 // OverridePasswordContainsFold applies the ContainsFold predicate on the "override_password" field.
 func OverridePasswordContainsFold(v string) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldOverridePassword), v))
-	})
+	return predicate.Host(sql.FieldContainsFold(FieldOverridePassword, v))
 }
 
 // ProvisionStepsIsNil applies the IsNil predicate on the "provision_steps" field.
 func ProvisionStepsIsNil() predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.IsNull(s.C(FieldProvisionSteps)))
-	})
+	return predicate.Host(sql.FieldIsNull(FieldProvisionSteps))
 }
 
 // ProvisionStepsNotNil applies the NotNil predicate on the "provision_steps" field.
 func ProvisionStepsNotNil() predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NotNull(s.C(FieldProvisionSteps)))
-	})
+	return predicate.Host(sql.FieldNotNull(FieldProvisionSteps))
 }
 
 // ScheduledStepsIsNil applies the IsNil predicate on the "scheduled_steps" field.
 func ScheduledStepsIsNil() predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.IsNull(s.C(FieldScheduledSteps)))
-	})
+	return predicate.Host(sql.FieldIsNull(FieldScheduledSteps))
 }
 
 // ScheduledStepsNotNil applies the NotNil predicate on the "scheduled_steps" field.
 func ScheduledStepsNotNil() predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s.Where(sql.NotNull(s.C(FieldScheduledSteps)))
-	})
+	return predicate.Host(sql.FieldNotNull(FieldScheduledSteps))
 }
 
 // HasDisk applies the HasEdge predicate on the "Disk" edge.
@@ -841,7 +559,6 @@ func HasDisk() predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DiskTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, DiskTable, DiskColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -851,11 +568,7 @@ func HasDisk() predicate.Host {
 // HasDiskWith applies the HasEdge predicate on the "Disk" edge with a given conditions (other predicates).
 func HasDiskWith(preds ...predicate.Disk) predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DiskInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, DiskTable, DiskColumn),
-		)
+		step := newDiskStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -869,7 +582,6 @@ func HasUsers() predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UsersTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -879,11 +591,7 @@ func HasUsers() predicate.Host {
 // HasUsersWith applies the HasEdge predicate on the "Users" edge with a given conditions (other predicates).
 func HasUsersWith(preds ...predicate.User) predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UsersInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
-		)
+		step := newUsersStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -897,7 +605,6 @@ func HasEnvironment() predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(EnvironmentTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -907,11 +614,7 @@ func HasEnvironment() predicate.Host {
 // HasEnvironmentWith applies the HasEdge predicate on the "Environment" edge with a given conditions (other predicates).
 func HasEnvironmentWith(preds ...predicate.Environment) predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(EnvironmentInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
-		)
+		step := newEnvironmentStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -925,7 +628,6 @@ func HasIncludedNetworks() predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(IncludedNetworksTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, IncludedNetworksTable, IncludedNetworksPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -935,11 +637,7 @@ func HasIncludedNetworks() predicate.Host {
 // HasIncludedNetworksWith applies the HasEdge predicate on the "IncludedNetworks" edge with a given conditions (other predicates).
 func HasIncludedNetworksWith(preds ...predicate.IncludedNetwork) predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(IncludedNetworksInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, IncludedNetworksTable, IncludedNetworksPrimaryKey...),
-		)
+		step := newIncludedNetworksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -953,7 +651,6 @@ func HasDependOnHostDependencies() predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DependOnHostDependenciesTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, DependOnHostDependenciesTable, DependOnHostDependenciesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -963,11 +660,7 @@ func HasDependOnHostDependencies() predicate.Host {
 // HasDependOnHostDependenciesWith applies the HasEdge predicate on the "DependOnHostDependencies" edge with a given conditions (other predicates).
 func HasDependOnHostDependenciesWith(preds ...predicate.HostDependency) predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DependOnHostDependenciesInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, DependOnHostDependenciesTable, DependOnHostDependenciesColumn),
-		)
+		step := newDependOnHostDependenciesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -981,7 +674,6 @@ func HasRequiredByHostDependencies() predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RequiredByHostDependenciesTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, RequiredByHostDependenciesTable, RequiredByHostDependenciesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -991,11 +683,7 @@ func HasRequiredByHostDependencies() predicate.Host {
 // HasRequiredByHostDependenciesWith applies the HasEdge predicate on the "RequiredByHostDependencies" edge with a given conditions (other predicates).
 func HasRequiredByHostDependenciesWith(preds ...predicate.HostDependency) predicate.Host {
 	return predicate.Host(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RequiredByHostDependenciesInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, RequiredByHostDependenciesTable, RequiredByHostDependenciesColumn),
-		)
+		step := newRequiredByHostDependenciesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -1006,32 +694,15 @@ func HasRequiredByHostDependenciesWith(preds ...predicate.HostDependency) predic
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Host) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Host(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Host) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Host(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Host) predicate.Host {
-	return predicate.Host(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Host(sql.NotPredicates(p))
 }

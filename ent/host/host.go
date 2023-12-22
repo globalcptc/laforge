@@ -3,6 +3,8 @@
 package host
 
 import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -11,8 +13,8 @@ const (
 	Label = "host"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldHclID holds the string denoting the hcl_id field in the database.
-	FieldHclID = "hcl_id"
+	// FieldHCLID holds the string denoting the hcl_id field in the database.
+	FieldHCLID = "hcl_id"
 	// FieldHostname holds the string denoting the hostname field in the database.
 	FieldHostname = "hostname"
 	// FieldDescription holds the string denoting the description field in the database.
@@ -100,7 +102,7 @@ const (
 // Columns holds all SQL columns for host fields.
 var Columns = []string{
 	FieldID,
-	FieldHclID,
+	FieldHCLID,
 	FieldHostname,
 	FieldDescription,
 	FieldOS,
@@ -148,3 +150,163 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// OrderOption defines the ordering options for the Host queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByHCLID orders the results by the hcl_id field.
+func ByHCLID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHCLID, opts...).ToFunc()
+}
+
+// ByHostname orders the results by the hostname field.
+func ByHostname(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHostname, opts...).ToFunc()
+}
+
+// ByDescription orders the results by the description field.
+func ByDescription(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDescription, opts...).ToFunc()
+}
+
+// ByOS orders the results by the OS field.
+func ByOS(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOS, opts...).ToFunc()
+}
+
+// ByLastOctet orders the results by the last_octet field.
+func ByLastOctet(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastOctet, opts...).ToFunc()
+}
+
+// ByInstanceSize orders the results by the instance_size field.
+func ByInstanceSize(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInstanceSize, opts...).ToFunc()
+}
+
+// ByAllowMACChanges orders the results by the allow_mac_changes field.
+func ByAllowMACChanges(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAllowMACChanges, opts...).ToFunc()
+}
+
+// ByOverridePassword orders the results by the override_password field.
+func ByOverridePassword(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOverridePassword, opts...).ToFunc()
+}
+
+// ByDiskField orders the results by Disk field.
+func ByDiskField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDiskStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByUsersCount orders the results by Users count.
+func ByUsersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newUsersStep(), opts...)
+	}
+}
+
+// ByUsers orders the results by Users terms.
+func ByUsers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newUsersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByEnvironmentField orders the results by Environment field.
+func ByEnvironmentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEnvironmentStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByIncludedNetworksCount orders the results by IncludedNetworks count.
+func ByIncludedNetworksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newIncludedNetworksStep(), opts...)
+	}
+}
+
+// ByIncludedNetworks orders the results by IncludedNetworks terms.
+func ByIncludedNetworks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newIncludedNetworksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByDependOnHostDependenciesCount orders the results by DependOnHostDependencies count.
+func ByDependOnHostDependenciesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newDependOnHostDependenciesStep(), opts...)
+	}
+}
+
+// ByDependOnHostDependencies orders the results by DependOnHostDependencies terms.
+func ByDependOnHostDependencies(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDependOnHostDependenciesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByRequiredByHostDependenciesCount orders the results by RequiredByHostDependencies count.
+func ByRequiredByHostDependenciesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newRequiredByHostDependenciesStep(), opts...)
+	}
+}
+
+// ByRequiredByHostDependencies orders the results by RequiredByHostDependencies terms.
+func ByRequiredByHostDependencies(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRequiredByHostDependenciesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newDiskStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DiskInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, DiskTable, DiskColumn),
+	)
+}
+func newUsersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(UsersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
+	)
+}
+func newEnvironmentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EnvironmentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, EnvironmentTable, EnvironmentColumn),
+	)
+}
+func newIncludedNetworksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(IncludedNetworksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, IncludedNetworksTable, IncludedNetworksPrimaryKey...),
+	)
+}
+func newDependOnHostDependenciesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DependOnHostDependenciesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, DependOnHostDependenciesTable, DependOnHostDependenciesColumn),
+	)
+}
+func newRequiredByHostDependenciesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RequiredByHostDependenciesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, RequiredByHostDependenciesTable, RequiredByHostDependenciesColumn),
+	)
+}

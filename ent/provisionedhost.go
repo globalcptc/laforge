@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/ginfilemiddleware"
@@ -33,6 +34,7 @@ type ProvisionedHost struct {
 	// The values are being populated by the ProvisionedHostQuery when eager-loading is set.
 	Edges ProvisionedHostEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Status holds the value of the Status edge.
 	HCLStatus *Status `json:"Status,omitempty"`
@@ -56,13 +58,14 @@ type ProvisionedHost struct {
 	HCLPlan *Plan `json:"Plan,omitempty"`
 	// GinFileMiddleware holds the value of the GinFileMiddleware edge.
 	HCLGinFileMiddleware *GinFileMiddleware `json:"GinFileMiddleware,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	gin_file_middleware_provisioned_host *uuid.UUID
 	plan_provisioned_host                *uuid.UUID
 	provisioned_host_provisioned_network *uuid.UUID
 	provisioned_host_host                *uuid.UUID
 	provisioned_host_end_step_plan       *uuid.UUID
 	provisioned_host_build               *uuid.UUID
+	selectValues                         sql.SelectValues
 }
 
 // ProvisionedHostEdges holds the relations/edges for other nodes in the graph.
@@ -92,6 +95,13 @@ type ProvisionedHostEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [11]bool
+	// totalCount holds the count of the edges above.
+	totalCount [11]map[string]int
+
+	namedProvisioningSteps          map[string][]*ProvisioningStep
+	namedProvisioningScheduledSteps map[string][]*ProvisioningScheduledStep
+	namedAgentStatuses              map[string][]*AgentStatus
+	namedAgentTasks                 map[string][]*AgentTask
 }
 
 // StatusOrErr returns the Status value or an error if the edge
@@ -99,8 +109,7 @@ type ProvisionedHostEdges struct {
 func (e ProvisionedHostEdges) StatusOrErr() (*Status, error) {
 	if e.loadedTypes[0] {
 		if e.Status == nil {
-			// The edge Status was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: status.Label}
 		}
 		return e.Status, nil
@@ -113,8 +122,7 @@ func (e ProvisionedHostEdges) StatusOrErr() (*Status, error) {
 func (e ProvisionedHostEdges) ProvisionedNetworkOrErr() (*ProvisionedNetwork, error) {
 	if e.loadedTypes[1] {
 		if e.ProvisionedNetwork == nil {
-			// The edge ProvisionedNetwork was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: provisionednetwork.Label}
 		}
 		return e.ProvisionedNetwork, nil
@@ -127,8 +135,7 @@ func (e ProvisionedHostEdges) ProvisionedNetworkOrErr() (*ProvisionedNetwork, er
 func (e ProvisionedHostEdges) HostOrErr() (*Host, error) {
 	if e.loadedTypes[2] {
 		if e.Host == nil {
-			// The edge Host was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: host.Label}
 		}
 		return e.Host, nil
@@ -141,8 +148,7 @@ func (e ProvisionedHostEdges) HostOrErr() (*Host, error) {
 func (e ProvisionedHostEdges) EndStepPlanOrErr() (*Plan, error) {
 	if e.loadedTypes[3] {
 		if e.EndStepPlan == nil {
-			// The edge EndStepPlan was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: plan.Label}
 		}
 		return e.EndStepPlan, nil
@@ -155,8 +161,7 @@ func (e ProvisionedHostEdges) EndStepPlanOrErr() (*Plan, error) {
 func (e ProvisionedHostEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[4] {
 		if e.Build == nil {
-			// The edge Build was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
 		return e.Build, nil
@@ -205,8 +210,7 @@ func (e ProvisionedHostEdges) AgentTasksOrErr() ([]*AgentTask, error) {
 func (e ProvisionedHostEdges) PlanOrErr() (*Plan, error) {
 	if e.loadedTypes[9] {
 		if e.Plan == nil {
-			// The edge Plan was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: plan.Label}
 		}
 		return e.Plan, nil
@@ -219,8 +223,7 @@ func (e ProvisionedHostEdges) PlanOrErr() (*Plan, error) {
 func (e ProvisionedHostEdges) GinFileMiddlewareOrErr() (*GinFileMiddleware, error) {
 	if e.loadedTypes[10] {
 		if e.GinFileMiddleware == nil {
-			// The edge GinFileMiddleware was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: ginfilemiddleware.Label}
 		}
 		return e.GinFileMiddleware, nil
@@ -229,8 +232,8 @@ func (e ProvisionedHostEdges) GinFileMiddlewareOrErr() (*GinFileMiddleware, erro
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*ProvisionedHost) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*ProvisionedHost) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case provisionedhost.FieldVars:
@@ -252,7 +255,7 @@ func (*ProvisionedHost) scanValues(columns []string) ([]interface{}, error) {
 		case provisionedhost.ForeignKeys[5]: // provisioned_host_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type ProvisionedHost", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -260,7 +263,7 @@ func (*ProvisionedHost) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the ProvisionedHost fields.
-func (ph *ProvisionedHost) assignValues(columns []string, values []interface{}) error {
+func (ph *ProvisionedHost) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -335,81 +338,89 @@ func (ph *ProvisionedHost) assignValues(columns []string, values []interface{}) 
 				ph.provisioned_host_build = new(uuid.UUID)
 				*ph.provisioned_host_build = *value.S.(*uuid.UUID)
 			}
+		default:
+			ph.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the ProvisionedHost.
+// This includes values selected through modifiers, order, etc.
+func (ph *ProvisionedHost) Value(name string) (ent.Value, error) {
+	return ph.selectValues.Get(name)
+}
+
 // QueryStatus queries the "Status" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryStatus() *StatusQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryStatus(ph)
+	return NewProvisionedHostClient(ph.config).QueryStatus(ph)
 }
 
 // QueryProvisionedNetwork queries the "ProvisionedNetwork" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryProvisionedNetwork() *ProvisionedNetworkQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryProvisionedNetwork(ph)
+	return NewProvisionedHostClient(ph.config).QueryProvisionedNetwork(ph)
 }
 
 // QueryHost queries the "Host" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryHost() *HostQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryHost(ph)
+	return NewProvisionedHostClient(ph.config).QueryHost(ph)
 }
 
 // QueryEndStepPlan queries the "EndStepPlan" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryEndStepPlan() *PlanQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryEndStepPlan(ph)
+	return NewProvisionedHostClient(ph.config).QueryEndStepPlan(ph)
 }
 
 // QueryBuild queries the "Build" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryBuild() *BuildQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryBuild(ph)
+	return NewProvisionedHostClient(ph.config).QueryBuild(ph)
 }
 
 // QueryProvisioningSteps queries the "ProvisioningSteps" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryProvisioningSteps() *ProvisioningStepQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryProvisioningSteps(ph)
+	return NewProvisionedHostClient(ph.config).QueryProvisioningSteps(ph)
 }
 
 // QueryProvisioningScheduledSteps queries the "ProvisioningScheduledSteps" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryProvisioningScheduledSteps() *ProvisioningScheduledStepQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryProvisioningScheduledSteps(ph)
+	return NewProvisionedHostClient(ph.config).QueryProvisioningScheduledSteps(ph)
 }
 
 // QueryAgentStatuses queries the "AgentStatuses" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryAgentStatuses() *AgentStatusQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryAgentStatuses(ph)
+	return NewProvisionedHostClient(ph.config).QueryAgentStatuses(ph)
 }
 
 // QueryAgentTasks queries the "AgentTasks" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryAgentTasks() *AgentTaskQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryAgentTasks(ph)
+	return NewProvisionedHostClient(ph.config).QueryAgentTasks(ph)
 }
 
 // QueryPlan queries the "Plan" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryPlan() *PlanQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryPlan(ph)
+	return NewProvisionedHostClient(ph.config).QueryPlan(ph)
 }
 
 // QueryGinFileMiddleware queries the "GinFileMiddleware" edge of the ProvisionedHost entity.
 func (ph *ProvisionedHost) QueryGinFileMiddleware() *GinFileMiddlewareQuery {
-	return (&ProvisionedHostClient{config: ph.config}).QueryGinFileMiddleware(ph)
+	return NewProvisionedHostClient(ph.config).QueryGinFileMiddleware(ph)
 }
 
 // Update returns a builder for updating this ProvisionedHost.
 // Note that you need to call ProvisionedHost.Unwrap() before calling this method if this ProvisionedHost
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (ph *ProvisionedHost) Update() *ProvisionedHostUpdateOne {
-	return (&ProvisionedHostClient{config: ph.config}).UpdateOne(ph)
+	return NewProvisionedHostClient(ph.config).UpdateOne(ph)
 }
 
 // Unwrap unwraps the ProvisionedHost entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (ph *ProvisionedHost) Unwrap() *ProvisionedHost {
-	tx, ok := ph.config.driver.(*txDriver)
+	_tx, ok := ph.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: ProvisionedHost is not a transactional entity")
 	}
-	ph.config.driver = tx.drv
+	ph.config.driver = _tx.drv
 	return ph
 }
 
@@ -417,24 +428,116 @@ func (ph *ProvisionedHost) Unwrap() *ProvisionedHost {
 func (ph *ProvisionedHost) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProvisionedHost(")
-	builder.WriteString(fmt.Sprintf("id=%v", ph.ID))
-	builder.WriteString(", subnet_ip=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", ph.ID))
+	builder.WriteString("subnet_ip=")
 	builder.WriteString(ph.SubnetIP)
+	builder.WriteString(", ")
 	if v := ph.AddonType; v != nil {
-		builder.WriteString(", addon_type=")
+		builder.WriteString("addon_type=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
-	builder.WriteString(", vars=")
+	builder.WriteString(", ")
+	builder.WriteString("vars=")
 	builder.WriteString(fmt.Sprintf("%v", ph.Vars))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// ProvisionedHosts is a parsable slice of ProvisionedHost.
-type ProvisionedHosts []*ProvisionedHost
+// NamedProvisioningSteps returns the ProvisioningSteps named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (ph *ProvisionedHost) NamedProvisioningSteps(name string) ([]*ProvisioningStep, error) {
+	if ph.Edges.namedProvisioningSteps == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := ph.Edges.namedProvisioningSteps[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (ph ProvisionedHosts) config(cfg config) {
-	for _i := range ph {
-		ph[_i].config = cfg
+func (ph *ProvisionedHost) appendNamedProvisioningSteps(name string, edges ...*ProvisioningStep) {
+	if ph.Edges.namedProvisioningSteps == nil {
+		ph.Edges.namedProvisioningSteps = make(map[string][]*ProvisioningStep)
+	}
+	if len(edges) == 0 {
+		ph.Edges.namedProvisioningSteps[name] = []*ProvisioningStep{}
+	} else {
+		ph.Edges.namedProvisioningSteps[name] = append(ph.Edges.namedProvisioningSteps[name], edges...)
 	}
 }
+
+// NamedProvisioningScheduledSteps returns the ProvisioningScheduledSteps named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (ph *ProvisionedHost) NamedProvisioningScheduledSteps(name string) ([]*ProvisioningScheduledStep, error) {
+	if ph.Edges.namedProvisioningScheduledSteps == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := ph.Edges.namedProvisioningScheduledSteps[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (ph *ProvisionedHost) appendNamedProvisioningScheduledSteps(name string, edges ...*ProvisioningScheduledStep) {
+	if ph.Edges.namedProvisioningScheduledSteps == nil {
+		ph.Edges.namedProvisioningScheduledSteps = make(map[string][]*ProvisioningScheduledStep)
+	}
+	if len(edges) == 0 {
+		ph.Edges.namedProvisioningScheduledSteps[name] = []*ProvisioningScheduledStep{}
+	} else {
+		ph.Edges.namedProvisioningScheduledSteps[name] = append(ph.Edges.namedProvisioningScheduledSteps[name], edges...)
+	}
+}
+
+// NamedAgentStatuses returns the AgentStatuses named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (ph *ProvisionedHost) NamedAgentStatuses(name string) ([]*AgentStatus, error) {
+	if ph.Edges.namedAgentStatuses == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := ph.Edges.namedAgentStatuses[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (ph *ProvisionedHost) appendNamedAgentStatuses(name string, edges ...*AgentStatus) {
+	if ph.Edges.namedAgentStatuses == nil {
+		ph.Edges.namedAgentStatuses = make(map[string][]*AgentStatus)
+	}
+	if len(edges) == 0 {
+		ph.Edges.namedAgentStatuses[name] = []*AgentStatus{}
+	} else {
+		ph.Edges.namedAgentStatuses[name] = append(ph.Edges.namedAgentStatuses[name], edges...)
+	}
+}
+
+// NamedAgentTasks returns the AgentTasks named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (ph *ProvisionedHost) NamedAgentTasks(name string) ([]*AgentTask, error) {
+	if ph.Edges.namedAgentTasks == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := ph.Edges.namedAgentTasks[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (ph *ProvisionedHost) appendNamedAgentTasks(name string, edges ...*AgentTask) {
+	if ph.Edges.namedAgentTasks == nil {
+		ph.Edges.namedAgentTasks = make(map[string][]*AgentTask)
+	}
+	if len(edges) == 0 {
+		ph.Edges.namedAgentTasks[name] = []*AgentTask{}
+	} else {
+		ph.Edges.namedAgentTasks[name] = append(ph.Edges.namedAgentTasks[name], edges...)
+	}
+}
+
+// ProvisionedHosts is a parsable slice of ProvisionedHost.
+type ProvisionedHosts []*ProvisionedHost

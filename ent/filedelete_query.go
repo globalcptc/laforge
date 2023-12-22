@@ -19,14 +19,14 @@ import (
 // FileDeleteQuery is the builder for querying FileDelete entities.
 type FileDeleteQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
-	order           []OrderFunc
-	fields          []string
+	ctx             *QueryContext
+	order           []filedelete.OrderOption
+	inters          []Interceptor
 	predicates      []predicate.FileDelete
 	withEnvironment *EnvironmentQuery
 	withFKs         bool
+	modifiers       []func(*sql.Selector)
+	loadTotal       []func(context.Context, []*FileDelete) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -38,34 +38,34 @@ func (fdq *FileDeleteQuery) Where(ps ...predicate.FileDelete) *FileDeleteQuery {
 	return fdq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (fdq *FileDeleteQuery) Limit(limit int) *FileDeleteQuery {
-	fdq.limit = &limit
+	fdq.ctx.Limit = &limit
 	return fdq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (fdq *FileDeleteQuery) Offset(offset int) *FileDeleteQuery {
-	fdq.offset = &offset
+	fdq.ctx.Offset = &offset
 	return fdq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (fdq *FileDeleteQuery) Unique(unique bool) *FileDeleteQuery {
-	fdq.unique = &unique
+	fdq.ctx.Unique = &unique
 	return fdq
 }
 
-// Order adds an order step to the query.
-func (fdq *FileDeleteQuery) Order(o ...OrderFunc) *FileDeleteQuery {
+// Order specifies how the records should be ordered.
+func (fdq *FileDeleteQuery) Order(o ...filedelete.OrderOption) *FileDeleteQuery {
 	fdq.order = append(fdq.order, o...)
 	return fdq
 }
 
 // QueryEnvironment chains the current query on the "Environment" edge.
 func (fdq *FileDeleteQuery) QueryEnvironment() *EnvironmentQuery {
-	query := &EnvironmentQuery{config: fdq.config}
+	query := (&EnvironmentClient{config: fdq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := fdq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +88,7 @@ func (fdq *FileDeleteQuery) QueryEnvironment() *EnvironmentQuery {
 // First returns the first FileDelete entity from the query.
 // Returns a *NotFoundError when no FileDelete was found.
 func (fdq *FileDeleteQuery) First(ctx context.Context) (*FileDelete, error) {
-	nodes, err := fdq.Limit(1).All(ctx)
+	nodes, err := fdq.Limit(1).All(setContextOp(ctx, fdq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (fdq *FileDeleteQuery) FirstX(ctx context.Context) *FileDelete {
 // Returns a *NotFoundError when no FileDelete ID was found.
 func (fdq *FileDeleteQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = fdq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = fdq.Limit(1).IDs(setContextOp(ctx, fdq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +134,7 @@ func (fdq *FileDeleteQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one FileDelete entity is found.
 // Returns a *NotFoundError when no FileDelete entities are found.
 func (fdq *FileDeleteQuery) Only(ctx context.Context) (*FileDelete, error) {
-	nodes, err := fdq.Limit(2).All(ctx)
+	nodes, err := fdq.Limit(2).All(setContextOp(ctx, fdq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (fdq *FileDeleteQuery) OnlyX(ctx context.Context) *FileDelete {
 // Returns a *NotFoundError when no entities are found.
 func (fdq *FileDeleteQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = fdq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = fdq.Limit(2).IDs(setContextOp(ctx, fdq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +187,12 @@ func (fdq *FileDeleteQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of FileDeletes.
 func (fdq *FileDeleteQuery) All(ctx context.Context) ([]*FileDelete, error) {
+	ctx = setContextOp(ctx, fdq.ctx, "All")
 	if err := fdq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return fdq.sqlAll(ctx)
+	qr := querierAll[[]*FileDelete, *FileDeleteQuery]()
+	return withInterceptors[[]*FileDelete](ctx, fdq, qr, fdq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -203,9 +205,12 @@ func (fdq *FileDeleteQuery) AllX(ctx context.Context) []*FileDelete {
 }
 
 // IDs executes the query and returns a list of FileDelete IDs.
-func (fdq *FileDeleteQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := fdq.Select(filedelete.FieldID).Scan(ctx, &ids); err != nil {
+func (fdq *FileDeleteQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if fdq.ctx.Unique == nil && fdq.path != nil {
+		fdq.Unique(true)
+	}
+	ctx = setContextOp(ctx, fdq.ctx, "IDs")
+	if err = fdq.Select(filedelete.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -222,10 +227,11 @@ func (fdq *FileDeleteQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (fdq *FileDeleteQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, fdq.ctx, "Count")
 	if err := fdq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return fdq.sqlCount(ctx)
+	return withInterceptors[int](ctx, fdq, querierCount[*FileDeleteQuery](), fdq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +245,15 @@ func (fdq *FileDeleteQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (fdq *FileDeleteQuery) Exist(ctx context.Context) (bool, error) {
-	if err := fdq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, fdq.ctx, "Exist")
+	switch _, err := fdq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return fdq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -262,22 +273,21 @@ func (fdq *FileDeleteQuery) Clone() *FileDeleteQuery {
 	}
 	return &FileDeleteQuery{
 		config:          fdq.config,
-		limit:           fdq.limit,
-		offset:          fdq.offset,
-		order:           append([]OrderFunc{}, fdq.order...),
+		ctx:             fdq.ctx.Clone(),
+		order:           append([]filedelete.OrderOption{}, fdq.order...),
+		inters:          append([]Interceptor{}, fdq.inters...),
 		predicates:      append([]predicate.FileDelete{}, fdq.predicates...),
 		withEnvironment: fdq.withEnvironment.Clone(),
 		// clone intermediate query.
-		sql:    fdq.sql.Clone(),
-		path:   fdq.path,
-		unique: fdq.unique,
+		sql:  fdq.sql.Clone(),
+		path: fdq.path,
 	}
 }
 
 // WithEnvironment tells the query-builder to eager-load the nodes that are connected to
 // the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
 func (fdq *FileDeleteQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *FileDeleteQuery {
-	query := &EnvironmentQuery{config: fdq.config}
+	query := (&EnvironmentClient{config: fdq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -291,25 +301,20 @@ func (fdq *FileDeleteQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *Fi
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.FileDelete.Query().
-//		GroupBy(filedelete.FieldHclID).
+//		GroupBy(filedelete.FieldHCLID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (fdq *FileDeleteQuery) GroupBy(field string, fields ...string) *FileDeleteGroupBy {
-	grbuild := &FileDeleteGroupBy{config: fdq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := fdq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return fdq.sqlQuery(ctx), nil
-	}
+	fdq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &FileDeleteGroupBy{build: fdq}
+	grbuild.flds = &fdq.ctx.Fields
 	grbuild.label = filedelete.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -319,22 +324,37 @@ func (fdq *FileDeleteQuery) GroupBy(field string, fields ...string) *FileDeleteG
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //	}
 //
 //	client.FileDelete.Query().
-//		Select(filedelete.FieldHclID).
+//		Select(filedelete.FieldHCLID).
 //		Scan(ctx, &v)
 func (fdq *FileDeleteQuery) Select(fields ...string) *FileDeleteSelect {
-	fdq.fields = append(fdq.fields, fields...)
-	selbuild := &FileDeleteSelect{FileDeleteQuery: fdq}
-	selbuild.label = filedelete.Label
-	selbuild.flds, selbuild.scan = &fdq.fields, selbuild.Scan
-	return selbuild
+	fdq.ctx.Fields = append(fdq.ctx.Fields, fields...)
+	sbuild := &FileDeleteSelect{FileDeleteQuery: fdq}
+	sbuild.label = filedelete.Label
+	sbuild.flds, sbuild.scan = &fdq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a FileDeleteSelect configured with the given aggregations.
+func (fdq *FileDeleteQuery) Aggregate(fns ...AggregateFunc) *FileDeleteSelect {
+	return fdq.Select().Aggregate(fns...)
 }
 
 func (fdq *FileDeleteQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range fdq.fields {
+	for _, inter := range fdq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, fdq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range fdq.ctx.Fields {
 		if !filedelete.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -364,14 +384,17 @@ func (fdq *FileDeleteQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, filedelete.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*FileDelete).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &FileDelete{config: fdq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(fdq.modifiers) > 0 {
+		_spec.Modifiers = fdq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -385,6 +408,11 @@ func (fdq *FileDeleteQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if query := fdq.withEnvironment; query != nil {
 		if err := fdq.loadEnvironment(ctx, query, nodes, nil,
 			func(n *FileDelete, e *Environment) { n.Edges.Environment = e }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range fdq.loadTotal {
+		if err := fdq.loadTotal[i](ctx, nodes); err != nil {
 			return nil, err
 		}
 	}
@@ -403,6 +431,9 @@ func (fdq *FileDeleteQuery) loadEnvironment(ctx context.Context, query *Environm
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(environment.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -423,38 +454,25 @@ func (fdq *FileDeleteQuery) loadEnvironment(ctx context.Context, query *Environm
 
 func (fdq *FileDeleteQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := fdq.querySpec()
-	_spec.Node.Columns = fdq.fields
-	if len(fdq.fields) > 0 {
-		_spec.Unique = fdq.unique != nil && *fdq.unique
+	if len(fdq.modifiers) > 0 {
+		_spec.Modifiers = fdq.modifiers
+	}
+	_spec.Node.Columns = fdq.ctx.Fields
+	if len(fdq.ctx.Fields) > 0 {
+		_spec.Unique = fdq.ctx.Unique != nil && *fdq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, fdq.driver, _spec)
 }
 
-func (fdq *FileDeleteQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := fdq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (fdq *FileDeleteQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   filedelete.Table,
-			Columns: filedelete.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: filedelete.FieldID,
-			},
-		},
-		From:   fdq.sql,
-		Unique: true,
-	}
-	if unique := fdq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(filedelete.Table, filedelete.Columns, sqlgraph.NewFieldSpec(filedelete.FieldID, field.TypeUUID))
+	_spec.From = fdq.sql
+	if unique := fdq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if fdq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := fdq.fields; len(fields) > 0 {
+	if fields := fdq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, filedelete.FieldID)
 		for i := range fields {
@@ -470,10 +488,10 @@ func (fdq *FileDeleteQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := fdq.limit; limit != nil {
+	if limit := fdq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := fdq.offset; offset != nil {
+	if offset := fdq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := fdq.order; len(ps) > 0 {
@@ -489,7 +507,7 @@ func (fdq *FileDeleteQuery) querySpec() *sqlgraph.QuerySpec {
 func (fdq *FileDeleteQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(fdq.driver.Dialect())
 	t1 := builder.Table(filedelete.Table)
-	columns := fdq.fields
+	columns := fdq.ctx.Fields
 	if len(columns) == 0 {
 		columns = filedelete.Columns
 	}
@@ -498,7 +516,7 @@ func (fdq *FileDeleteQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = fdq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if fdq.unique != nil && *fdq.unique {
+	if fdq.ctx.Unique != nil && *fdq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range fdq.predicates {
@@ -507,12 +525,12 @@ func (fdq *FileDeleteQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range fdq.order {
 		p(selector)
 	}
-	if offset := fdq.offset; offset != nil {
+	if offset := fdq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := fdq.limit; limit != nil {
+	if limit := fdq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -520,13 +538,8 @@ func (fdq *FileDeleteQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // FileDeleteGroupBy is the group-by builder for FileDelete entities.
 type FileDeleteGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *FileDeleteQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -535,74 +548,77 @@ func (fdgb *FileDeleteGroupBy) Aggregate(fns ...AggregateFunc) *FileDeleteGroupB
 	return fdgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (fdgb *FileDeleteGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := fdgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (fdgb *FileDeleteGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, fdgb.build.ctx, "GroupBy")
+	if err := fdgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	fdgb.sql = query
-	return fdgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*FileDeleteQuery, *FileDeleteGroupBy](ctx, fdgb.build, fdgb, fdgb.build.inters, v)
 }
 
-func (fdgb *FileDeleteGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range fdgb.fields {
-		if !filedelete.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (fdgb *FileDeleteGroupBy) sqlScan(ctx context.Context, root *FileDeleteQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(fdgb.fns))
+	for _, fn := range fdgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := fdgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*fdgb.flds)+len(fdgb.fns))
+		for _, f := range *fdgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*fdgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := fdgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := fdgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (fdgb *FileDeleteGroupBy) sqlQuery() *sql.Selector {
-	selector := fdgb.sql.Select()
-	aggregation := make([]string, 0, len(fdgb.fns))
-	for _, fn := range fdgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(fdgb.fields)+len(fdgb.fns))
-		for _, f := range fdgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(fdgb.fields...)...)
-}
-
 // FileDeleteSelect is the builder for selecting fields of FileDelete entities.
 type FileDeleteSelect struct {
 	*FileDeleteQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (fds *FileDeleteSelect) Aggregate(fns ...AggregateFunc) *FileDeleteSelect {
+	fds.fns = append(fds.fns, fns...)
+	return fds
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (fds *FileDeleteSelect) Scan(ctx context.Context, v interface{}) error {
+func (fds *FileDeleteSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, fds.ctx, "Select")
 	if err := fds.prepareQuery(ctx); err != nil {
 		return err
 	}
-	fds.sql = fds.FileDeleteQuery.sqlQuery(ctx)
-	return fds.sqlScan(ctx, v)
+	return scanWithInterceptors[*FileDeleteQuery, *FileDeleteSelect](ctx, fds.FileDeleteQuery, fds, fds.inters, v)
 }
 
-func (fds *FileDeleteSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (fds *FileDeleteSelect) sqlScan(ctx context.Context, root *FileDeleteQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(fds.fns))
+	for _, fn := range fds.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*fds.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := fds.sql.Query()
+	query, args := selector.Query()
 	if err := fds.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

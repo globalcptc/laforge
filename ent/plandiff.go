@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/buildcommit"
 	"github.com/gen0cide/laforge/ent/plan"
@@ -26,14 +27,16 @@ type PlanDiff struct {
 	// The values are being populated by the PlanDiffQuery when eager-loading is set.
 	Edges PlanDiffEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// BuildCommit holds the value of the BuildCommit edge.
 	HCLBuildCommit *BuildCommit `json:"BuildCommit,omitempty"`
 	// Plan holds the value of the Plan edge.
 	HCLPlan *Plan `json:"Plan,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	plan_diff_build_commit *uuid.UUID
 	plan_diff_plan         *uuid.UUID
+	selectValues           sql.SelectValues
 }
 
 // PlanDiffEdges holds the relations/edges for other nodes in the graph.
@@ -45,6 +48,8 @@ type PlanDiffEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
+	// totalCount holds the count of the edges above.
+	totalCount [2]map[string]int
 }
 
 // BuildCommitOrErr returns the BuildCommit value or an error if the edge
@@ -52,8 +57,7 @@ type PlanDiffEdges struct {
 func (e PlanDiffEdges) BuildCommitOrErr() (*BuildCommit, error) {
 	if e.loadedTypes[0] {
 		if e.BuildCommit == nil {
-			// The edge BuildCommit was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: buildcommit.Label}
 		}
 		return e.BuildCommit, nil
@@ -66,8 +70,7 @@ func (e PlanDiffEdges) BuildCommitOrErr() (*BuildCommit, error) {
 func (e PlanDiffEdges) PlanOrErr() (*Plan, error) {
 	if e.loadedTypes[1] {
 		if e.Plan == nil {
-			// The edge Plan was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: plan.Label}
 		}
 		return e.Plan, nil
@@ -76,8 +79,8 @@ func (e PlanDiffEdges) PlanOrErr() (*Plan, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*PlanDiff) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*PlanDiff) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case plandiff.FieldRevision:
@@ -91,7 +94,7 @@ func (*PlanDiff) scanValues(columns []string) ([]interface{}, error) {
 		case plandiff.ForeignKeys[1]: // plan_diff_plan
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type PlanDiff", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -99,7 +102,7 @@ func (*PlanDiff) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the PlanDiff fields.
-func (pd *PlanDiff) assignValues(columns []string, values []interface{}) error {
+func (pd *PlanDiff) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -137,36 +140,44 @@ func (pd *PlanDiff) assignValues(columns []string, values []interface{}) error {
 				pd.plan_diff_plan = new(uuid.UUID)
 				*pd.plan_diff_plan = *value.S.(*uuid.UUID)
 			}
+		default:
+			pd.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the PlanDiff.
+// This includes values selected through modifiers, order, etc.
+func (pd *PlanDiff) Value(name string) (ent.Value, error) {
+	return pd.selectValues.Get(name)
+}
+
 // QueryBuildCommit queries the "BuildCommit" edge of the PlanDiff entity.
 func (pd *PlanDiff) QueryBuildCommit() *BuildCommitQuery {
-	return (&PlanDiffClient{config: pd.config}).QueryBuildCommit(pd)
+	return NewPlanDiffClient(pd.config).QueryBuildCommit(pd)
 }
 
 // QueryPlan queries the "Plan" edge of the PlanDiff entity.
 func (pd *PlanDiff) QueryPlan() *PlanQuery {
-	return (&PlanDiffClient{config: pd.config}).QueryPlan(pd)
+	return NewPlanDiffClient(pd.config).QueryPlan(pd)
 }
 
 // Update returns a builder for updating this PlanDiff.
 // Note that you need to call PlanDiff.Unwrap() before calling this method if this PlanDiff
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (pd *PlanDiff) Update() *PlanDiffUpdateOne {
-	return (&PlanDiffClient{config: pd.config}).UpdateOne(pd)
+	return NewPlanDiffClient(pd.config).UpdateOne(pd)
 }
 
 // Unwrap unwraps the PlanDiff entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (pd *PlanDiff) Unwrap() *PlanDiff {
-	tx, ok := pd.config.driver.(*txDriver)
+	_tx, ok := pd.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: PlanDiff is not a transactional entity")
 	}
-	pd.config.driver = tx.drv
+	pd.config.driver = _tx.drv
 	return pd
 }
 
@@ -174,10 +185,11 @@ func (pd *PlanDiff) Unwrap() *PlanDiff {
 func (pd *PlanDiff) String() string {
 	var builder strings.Builder
 	builder.WriteString("PlanDiff(")
-	builder.WriteString(fmt.Sprintf("id=%v", pd.ID))
-	builder.WriteString(", revision=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", pd.ID))
+	builder.WriteString("revision=")
 	builder.WriteString(fmt.Sprintf("%v", pd.Revision))
-	builder.WriteString(", new_state=")
+	builder.WriteString(", ")
+	builder.WriteString("new_state=")
 	builder.WriteString(fmt.Sprintf("%v", pd.NewState))
 	builder.WriteByte(')')
 	return builder.String()
@@ -185,9 +197,3 @@ func (pd *PlanDiff) String() string {
 
 // PlanDiffs is a parsable slice of PlanDiff.
 type PlanDiffs []*PlanDiff
-
-func (pd PlanDiffs) config(cfg config) {
-	for _i := range pd {
-		pd[_i].config = cfg
-	}
-}

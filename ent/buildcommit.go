@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/gen0cide/laforge/ent/build"
 	"github.com/gen0cide/laforge/ent/buildcommit"
@@ -30,6 +31,7 @@ type BuildCommit struct {
 	// The values are being populated by the BuildCommitQuery when eager-loading is set.
 	Edges BuildCommitEdges `json:"edges"`
 
+	// vvvvvvvvvvvv CUSTOM vvvvvvvvvvvv
 	// Edges put into the main struct to be loaded via hcl
 	// Build holds the value of the Build edge.
 	HCLBuild *Build `json:"Build,omitempty"`
@@ -37,8 +39,9 @@ type BuildCommit struct {
 	HCLServerTasks []*ServerTask `json:"ServerTasks,omitempty"`
 	// PlanDiffs holds the value of the PlanDiffs edge.
 	HCLPlanDiffs []*PlanDiff `json:"PlanDiffs,omitempty"`
-	//
+	// ^^^^^^^^^^^^ CUSTOM ^^^^^^^^^^^^^
 	build_commit_build *uuid.UUID
+	selectValues       sql.SelectValues
 }
 
 // BuildCommitEdges holds the relations/edges for other nodes in the graph.
@@ -52,6 +55,11 @@ type BuildCommitEdges struct {
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
+	// totalCount holds the count of the edges above.
+	totalCount [3]map[string]int
+
+	namedServerTasks map[string][]*ServerTask
+	namedPlanDiffs   map[string][]*PlanDiff
 }
 
 // BuildOrErr returns the Build value or an error if the edge
@@ -59,8 +67,7 @@ type BuildCommitEdges struct {
 func (e BuildCommitEdges) BuildOrErr() (*Build, error) {
 	if e.loadedTypes[0] {
 		if e.Build == nil {
-			// The edge Build was loaded in eager-loading,
-			// but was not found.
+			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: build.Label}
 		}
 		return e.Build, nil
@@ -87,8 +94,8 @@ func (e BuildCommitEdges) PlanDiffsOrErr() ([]*PlanDiff, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*BuildCommit) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*BuildCommit) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case buildcommit.FieldRevision:
@@ -102,7 +109,7 @@ func (*BuildCommit) scanValues(columns []string) ([]interface{}, error) {
 		case buildcommit.ForeignKeys[0]: // build_commit_build
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type BuildCommit", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -110,7 +117,7 @@ func (*BuildCommit) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the BuildCommit fields.
-func (bc *BuildCommit) assignValues(columns []string, values []interface{}) error {
+func (bc *BuildCommit) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -153,41 +160,49 @@ func (bc *BuildCommit) assignValues(columns []string, values []interface{}) erro
 				bc.build_commit_build = new(uuid.UUID)
 				*bc.build_commit_build = *value.S.(*uuid.UUID)
 			}
+		default:
+			bc.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the BuildCommit.
+// This includes values selected through modifiers, order, etc.
+func (bc *BuildCommit) Value(name string) (ent.Value, error) {
+	return bc.selectValues.Get(name)
+}
+
 // QueryBuild queries the "Build" edge of the BuildCommit entity.
 func (bc *BuildCommit) QueryBuild() *BuildQuery {
-	return (&BuildCommitClient{config: bc.config}).QueryBuild(bc)
+	return NewBuildCommitClient(bc.config).QueryBuild(bc)
 }
 
 // QueryServerTasks queries the "ServerTasks" edge of the BuildCommit entity.
 func (bc *BuildCommit) QueryServerTasks() *ServerTaskQuery {
-	return (&BuildCommitClient{config: bc.config}).QueryServerTasks(bc)
+	return NewBuildCommitClient(bc.config).QueryServerTasks(bc)
 }
 
 // QueryPlanDiffs queries the "PlanDiffs" edge of the BuildCommit entity.
 func (bc *BuildCommit) QueryPlanDiffs() *PlanDiffQuery {
-	return (&BuildCommitClient{config: bc.config}).QueryPlanDiffs(bc)
+	return NewBuildCommitClient(bc.config).QueryPlanDiffs(bc)
 }
 
 // Update returns a builder for updating this BuildCommit.
 // Note that you need to call BuildCommit.Unwrap() before calling this method if this BuildCommit
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (bc *BuildCommit) Update() *BuildCommitUpdateOne {
-	return (&BuildCommitClient{config: bc.config}).UpdateOne(bc)
+	return NewBuildCommitClient(bc.config).UpdateOne(bc)
 }
 
 // Unwrap unwraps the BuildCommit entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
 func (bc *BuildCommit) Unwrap() *BuildCommit {
-	tx, ok := bc.config.driver.(*txDriver)
+	_tx, ok := bc.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: BuildCommit is not a transactional entity")
 	}
-	bc.config.driver = tx.drv
+	bc.config.driver = _tx.drv
 	return bc
 }
 
@@ -195,24 +210,69 @@ func (bc *BuildCommit) Unwrap() *BuildCommit {
 func (bc *BuildCommit) String() string {
 	var builder strings.Builder
 	builder.WriteString("BuildCommit(")
-	builder.WriteString(fmt.Sprintf("id=%v", bc.ID))
-	builder.WriteString(", type=")
+	builder.WriteString(fmt.Sprintf("id=%v, ", bc.ID))
+	builder.WriteString("type=")
 	builder.WriteString(fmt.Sprintf("%v", bc.Type))
-	builder.WriteString(", revision=")
+	builder.WriteString(", ")
+	builder.WriteString("revision=")
 	builder.WriteString(fmt.Sprintf("%v", bc.Revision))
-	builder.WriteString(", state=")
+	builder.WriteString(", ")
+	builder.WriteString("state=")
 	builder.WriteString(fmt.Sprintf("%v", bc.State))
-	builder.WriteString(", created_at=")
+	builder.WriteString(", ")
+	builder.WriteString("created_at=")
 	builder.WriteString(bc.CreatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// BuildCommits is a parsable slice of BuildCommit.
-type BuildCommits []*BuildCommit
+// NamedServerTasks returns the ServerTasks named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (bc *BuildCommit) NamedServerTasks(name string) ([]*ServerTask, error) {
+	if bc.Edges.namedServerTasks == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := bc.Edges.namedServerTasks[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
 
-func (bc BuildCommits) config(cfg config) {
-	for _i := range bc {
-		bc[_i].config = cfg
+func (bc *BuildCommit) appendNamedServerTasks(name string, edges ...*ServerTask) {
+	if bc.Edges.namedServerTasks == nil {
+		bc.Edges.namedServerTasks = make(map[string][]*ServerTask)
+	}
+	if len(edges) == 0 {
+		bc.Edges.namedServerTasks[name] = []*ServerTask{}
+	} else {
+		bc.Edges.namedServerTasks[name] = append(bc.Edges.namedServerTasks[name], edges...)
 	}
 }
+
+// NamedPlanDiffs returns the PlanDiffs named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (bc *BuildCommit) NamedPlanDiffs(name string) ([]*PlanDiff, error) {
+	if bc.Edges.namedPlanDiffs == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := bc.Edges.namedPlanDiffs[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (bc *BuildCommit) appendNamedPlanDiffs(name string, edges ...*PlanDiff) {
+	if bc.Edges.namedPlanDiffs == nil {
+		bc.Edges.namedPlanDiffs = make(map[string][]*PlanDiff)
+	}
+	if len(edges) == 0 {
+		bc.Edges.namedPlanDiffs[name] = []*PlanDiff{}
+	} else {
+		bc.Edges.namedPlanDiffs[name] = append(bc.Edges.namedPlanDiffs[name], edges...)
+	}
+}
+
+// BuildCommits is a parsable slice of BuildCommit.
+type BuildCommits []*BuildCommit

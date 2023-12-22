@@ -289,50 +289,8 @@ func (psc *ProvisioningStepCreate) Mutation() *ProvisioningStepMutation {
 
 // Save creates the ProvisioningStep in the database.
 func (psc *ProvisioningStepCreate) Save(ctx context.Context) (*ProvisioningStep, error) {
-	var (
-		err  error
-		node *ProvisioningStep
-	)
 	psc.defaults()
-	if len(psc.hooks) == 0 {
-		if err = psc.check(); err != nil {
-			return nil, err
-		}
-		node, err = psc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ProvisioningStepMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = psc.check(); err != nil {
-				return nil, err
-			}
-			psc.mutation = mutation
-			if node, err = psc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(psc.hooks) - 1; i >= 0; i-- {
-			if psc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = psc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, psc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*ProvisioningStep)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from ProvisioningStepMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, psc.sqlSave, psc.mutation, psc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -382,6 +340,9 @@ func (psc *ProvisioningStepCreate) check() error {
 }
 
 func (psc *ProvisioningStepCreate) sqlSave(ctx context.Context) (*ProvisioningStep, error) {
+	if err := psc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := psc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, psc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -396,38 +357,26 @@ func (psc *ProvisioningStepCreate) sqlSave(ctx context.Context) (*ProvisioningSt
 			return nil, err
 		}
 	}
+	psc.mutation.id = &_node.ID
+	psc.mutation.done = true
 	return _node, nil
 }
 
 func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.CreateSpec) {
 	var (
 		_node = &ProvisioningStep{config: psc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: provisioningstep.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: provisioningstep.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(provisioningstep.Table, sqlgraph.NewFieldSpec(provisioningstep.FieldID, field.TypeUUID))
 	)
 	if id, ok := psc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := psc.mutation.GetType(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: provisioningstep.FieldType,
-		})
+		_spec.SetField(provisioningstep.FieldType, field.TypeEnum, value)
 		_node.Type = value
 	}
 	if value, ok := psc.mutation.StepNumber(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: provisioningstep.FieldStepNumber,
-		})
+		_spec.SetField(provisioningstep.FieldStepNumber, field.TypeInt, value)
 		_node.StepNumber = value
 	}
 	if nodes := psc.mutation.StatusIDs(); len(nodes) > 0 {
@@ -438,10 +387,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: status.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -457,10 +403,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.ProvisionedHostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: provisionedhost.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(provisionedhost.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -477,10 +420,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -497,10 +437,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.CommandColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: command.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(command.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -517,10 +454,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.DNSRecordColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dnsrecord.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dnsrecord.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -537,10 +471,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.FileDeleteColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedelete.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedelete.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -557,10 +488,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.FileDownloadColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: filedownload.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filedownload.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -577,10 +505,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.FileExtractColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: fileextract.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(fileextract.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -597,10 +522,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.AnsibleColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ansible.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ansible.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -617,10 +539,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.PlanColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: plan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(plan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -637,10 +556,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.AgentTasksColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: agenttask.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(agenttask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -656,10 +572,7 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 			Columns: []string{provisioningstep.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ginfilemiddleware.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -674,11 +587,15 @@ func (psc *ProvisioningStepCreate) createSpec() (*ProvisioningStep, *sqlgraph.Cr
 // ProvisioningStepCreateBulk is the builder for creating many ProvisioningStep entities in bulk.
 type ProvisioningStepCreateBulk struct {
 	config
+	err      error
 	builders []*ProvisioningStepCreate
 }
 
 // Save creates the ProvisioningStep entities in the database.
 func (pscb *ProvisioningStepCreateBulk) Save(ctx context.Context) ([]*ProvisioningStep, error) {
+	if pscb.err != nil {
+		return nil, pscb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(pscb.builders))
 	nodes := make([]*ProvisioningStep, len(pscb.builders))
 	mutators := make([]Mutator, len(pscb.builders))
@@ -695,8 +612,8 @@ func (pscb *ProvisioningStepCreateBulk) Save(ctx context.Context) ([]*Provisioni
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, pscb.builders[i+1].mutation)
 				} else {

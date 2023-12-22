@@ -147,50 +147,8 @@ func (fc *FindingCreate) Mutation() *FindingMutation {
 
 // Save creates the Finding in the database.
 func (fc *FindingCreate) Save(ctx context.Context) (*Finding, error) {
-	var (
-		err  error
-		node *Finding
-	)
 	fc.defaults()
-	if len(fc.hooks) == 0 {
-		if err = fc.check(); err != nil {
-			return nil, err
-		}
-		node, err = fc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*FindingMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = fc.check(); err != nil {
-				return nil, err
-			}
-			fc.mutation = mutation
-			if node, err = fc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(fc.hooks) - 1; i >= 0; i-- {
-			if fc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = fc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, fc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Finding)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from FindingMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, fc.sqlSave, fc.mutation, fc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -254,6 +212,9 @@ func (fc *FindingCreate) check() error {
 }
 
 func (fc *FindingCreate) sqlSave(ctx context.Context) (*Finding, error) {
+	if err := fc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := fc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, fc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -268,62 +229,38 @@ func (fc *FindingCreate) sqlSave(ctx context.Context) (*Finding, error) {
 			return nil, err
 		}
 	}
+	fc.mutation.id = &_node.ID
+	fc.mutation.done = true
 	return _node, nil
 }
 
 func (fc *FindingCreate) createSpec() (*Finding, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Finding{config: fc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: finding.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: finding.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(finding.Table, sqlgraph.NewFieldSpec(finding.FieldID, field.TypeUUID))
 	)
 	if id, ok := fc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := fc.mutation.Name(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: finding.FieldName,
-		})
+		_spec.SetField(finding.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
 	if value, ok := fc.mutation.Description(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: finding.FieldDescription,
-		})
+		_spec.SetField(finding.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
 	if value, ok := fc.mutation.Severity(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: finding.FieldSeverity,
-		})
+		_spec.SetField(finding.FieldSeverity, field.TypeEnum, value)
 		_node.Severity = value
 	}
 	if value, ok := fc.mutation.Difficulty(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: finding.FieldDifficulty,
-		})
+		_spec.SetField(finding.FieldDifficulty, field.TypeEnum, value)
 		_node.Difficulty = value
 	}
 	if value, ok := fc.mutation.Tags(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: finding.FieldTags,
-		})
+		_spec.SetField(finding.FieldTags, field.TypeJSON, value)
 		_node.Tags = value
 	}
 	if nodes := fc.mutation.UsersIDs(); len(nodes) > 0 {
@@ -334,10 +271,7 @@ func (fc *FindingCreate) createSpec() (*Finding, *sqlgraph.CreateSpec) {
 			Columns: []string{finding.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -353,10 +287,7 @@ func (fc *FindingCreate) createSpec() (*Finding, *sqlgraph.CreateSpec) {
 			Columns: []string{finding.HostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: host.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -373,10 +304,7 @@ func (fc *FindingCreate) createSpec() (*Finding, *sqlgraph.CreateSpec) {
 			Columns: []string{finding.ScriptColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: script.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(script.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -393,10 +321,7 @@ func (fc *FindingCreate) createSpec() (*Finding, *sqlgraph.CreateSpec) {
 			Columns: []string{finding.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -411,11 +336,15 @@ func (fc *FindingCreate) createSpec() (*Finding, *sqlgraph.CreateSpec) {
 // FindingCreateBulk is the builder for creating many Finding entities in bulk.
 type FindingCreateBulk struct {
 	config
+	err      error
 	builders []*FindingCreate
 }
 
 // Save creates the Finding entities in the database.
 func (fcb *FindingCreateBulk) Save(ctx context.Context) ([]*Finding, error) {
+	if fcb.err != nil {
+		return nil, fcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(fcb.builders))
 	nodes := make([]*Finding, len(fcb.builders))
 	mutators := make([]Mutator, len(fcb.builders))
@@ -432,8 +361,8 @@ func (fcb *FindingCreateBulk) Save(ctx context.Context) ([]*Finding, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, fcb.builders[i+1].mutation)
 				} else {

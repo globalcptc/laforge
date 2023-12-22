@@ -24,19 +24,23 @@ import (
 // HostQuery is the builder for querying Host entities.
 type HostQuery struct {
 	config
-	limit                          *int
-	offset                         *int
-	unique                         *bool
-	order                          []OrderFunc
-	fields                         []string
-	predicates                     []predicate.Host
-	withDisk                       *DiskQuery
-	withUsers                      *UserQuery
-	withEnvironment                *EnvironmentQuery
-	withIncludedNetworks           *IncludedNetworkQuery
-	withDependOnHostDependencies   *HostDependencyQuery
-	withRequiredByHostDependencies *HostDependencyQuery
-	withFKs                        bool
+	ctx                                 *QueryContext
+	order                               []host.OrderOption
+	inters                              []Interceptor
+	predicates                          []predicate.Host
+	withDisk                            *DiskQuery
+	withUsers                           *UserQuery
+	withEnvironment                     *EnvironmentQuery
+	withIncludedNetworks                *IncludedNetworkQuery
+	withDependOnHostDependencies        *HostDependencyQuery
+	withRequiredByHostDependencies      *HostDependencyQuery
+	withFKs                             bool
+	modifiers                           []func(*sql.Selector)
+	loadTotal                           []func(context.Context, []*Host) error
+	withNamedUsers                      map[string]*UserQuery
+	withNamedIncludedNetworks           map[string]*IncludedNetworkQuery
+	withNamedDependOnHostDependencies   map[string]*HostDependencyQuery
+	withNamedRequiredByHostDependencies map[string]*HostDependencyQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -48,34 +52,34 @@ func (hq *HostQuery) Where(ps ...predicate.Host) *HostQuery {
 	return hq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (hq *HostQuery) Limit(limit int) *HostQuery {
-	hq.limit = &limit
+	hq.ctx.Limit = &limit
 	return hq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (hq *HostQuery) Offset(offset int) *HostQuery {
-	hq.offset = &offset
+	hq.ctx.Offset = &offset
 	return hq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (hq *HostQuery) Unique(unique bool) *HostQuery {
-	hq.unique = &unique
+	hq.ctx.Unique = &unique
 	return hq
 }
 
-// Order adds an order step to the query.
-func (hq *HostQuery) Order(o ...OrderFunc) *HostQuery {
+// Order specifies how the records should be ordered.
+func (hq *HostQuery) Order(o ...host.OrderOption) *HostQuery {
 	hq.order = append(hq.order, o...)
 	return hq
 }
 
 // QueryDisk chains the current query on the "Disk" edge.
 func (hq *HostQuery) QueryDisk() *DiskQuery {
-	query := &DiskQuery{config: hq.config}
+	query := (&DiskClient{config: hq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -97,7 +101,7 @@ func (hq *HostQuery) QueryDisk() *DiskQuery {
 
 // QueryUsers chains the current query on the "Users" edge.
 func (hq *HostQuery) QueryUsers() *UserQuery {
-	query := &UserQuery{config: hq.config}
+	query := (&UserClient{config: hq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -119,7 +123,7 @@ func (hq *HostQuery) QueryUsers() *UserQuery {
 
 // QueryEnvironment chains the current query on the "Environment" edge.
 func (hq *HostQuery) QueryEnvironment() *EnvironmentQuery {
-	query := &EnvironmentQuery{config: hq.config}
+	query := (&EnvironmentClient{config: hq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -141,7 +145,7 @@ func (hq *HostQuery) QueryEnvironment() *EnvironmentQuery {
 
 // QueryIncludedNetworks chains the current query on the "IncludedNetworks" edge.
 func (hq *HostQuery) QueryIncludedNetworks() *IncludedNetworkQuery {
-	query := &IncludedNetworkQuery{config: hq.config}
+	query := (&IncludedNetworkClient{config: hq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -163,7 +167,7 @@ func (hq *HostQuery) QueryIncludedNetworks() *IncludedNetworkQuery {
 
 // QueryDependOnHostDependencies chains the current query on the "DependOnHostDependencies" edge.
 func (hq *HostQuery) QueryDependOnHostDependencies() *HostDependencyQuery {
-	query := &HostDependencyQuery{config: hq.config}
+	query := (&HostDependencyClient{config: hq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -185,7 +189,7 @@ func (hq *HostQuery) QueryDependOnHostDependencies() *HostDependencyQuery {
 
 // QueryRequiredByHostDependencies chains the current query on the "RequiredByHostDependencies" edge.
 func (hq *HostQuery) QueryRequiredByHostDependencies() *HostDependencyQuery {
-	query := &HostDependencyQuery{config: hq.config}
+	query := (&HostDependencyClient{config: hq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -208,7 +212,7 @@ func (hq *HostQuery) QueryRequiredByHostDependencies() *HostDependencyQuery {
 // First returns the first Host entity from the query.
 // Returns a *NotFoundError when no Host was found.
 func (hq *HostQuery) First(ctx context.Context) (*Host, error) {
-	nodes, err := hq.Limit(1).All(ctx)
+	nodes, err := hq.Limit(1).All(setContextOp(ctx, hq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +235,7 @@ func (hq *HostQuery) FirstX(ctx context.Context) *Host {
 // Returns a *NotFoundError when no Host ID was found.
 func (hq *HostQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = hq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = hq.Limit(1).IDs(setContextOp(ctx, hq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -254,7 +258,7 @@ func (hq *HostQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Host entity is found.
 // Returns a *NotFoundError when no Host entities are found.
 func (hq *HostQuery) Only(ctx context.Context) (*Host, error) {
-	nodes, err := hq.Limit(2).All(ctx)
+	nodes, err := hq.Limit(2).All(setContextOp(ctx, hq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +286,7 @@ func (hq *HostQuery) OnlyX(ctx context.Context) *Host {
 // Returns a *NotFoundError when no entities are found.
 func (hq *HostQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = hq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = hq.Limit(2).IDs(setContextOp(ctx, hq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -307,10 +311,12 @@ func (hq *HostQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Hosts.
 func (hq *HostQuery) All(ctx context.Context) ([]*Host, error) {
+	ctx = setContextOp(ctx, hq.ctx, "All")
 	if err := hq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return hq.sqlAll(ctx)
+	qr := querierAll[[]*Host, *HostQuery]()
+	return withInterceptors[[]*Host](ctx, hq, qr, hq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -323,9 +329,12 @@ func (hq *HostQuery) AllX(ctx context.Context) []*Host {
 }
 
 // IDs executes the query and returns a list of Host IDs.
-func (hq *HostQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := hq.Select(host.FieldID).Scan(ctx, &ids); err != nil {
+func (hq *HostQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if hq.ctx.Unique == nil && hq.path != nil {
+		hq.Unique(true)
+	}
+	ctx = setContextOp(ctx, hq.ctx, "IDs")
+	if err = hq.Select(host.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -342,10 +351,11 @@ func (hq *HostQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (hq *HostQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, hq.ctx, "Count")
 	if err := hq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return hq.sqlCount(ctx)
+	return withInterceptors[int](ctx, hq, querierCount[*HostQuery](), hq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -359,10 +369,15 @@ func (hq *HostQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (hq *HostQuery) Exist(ctx context.Context) (bool, error) {
-	if err := hq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, hq.ctx, "Exist")
+	switch _, err := hq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return hq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -382,9 +397,9 @@ func (hq *HostQuery) Clone() *HostQuery {
 	}
 	return &HostQuery{
 		config:                         hq.config,
-		limit:                          hq.limit,
-		offset:                         hq.offset,
-		order:                          append([]OrderFunc{}, hq.order...),
+		ctx:                            hq.ctx.Clone(),
+		order:                          append([]host.OrderOption{}, hq.order...),
+		inters:                         append([]Interceptor{}, hq.inters...),
 		predicates:                     append([]predicate.Host{}, hq.predicates...),
 		withDisk:                       hq.withDisk.Clone(),
 		withUsers:                      hq.withUsers.Clone(),
@@ -393,16 +408,15 @@ func (hq *HostQuery) Clone() *HostQuery {
 		withDependOnHostDependencies:   hq.withDependOnHostDependencies.Clone(),
 		withRequiredByHostDependencies: hq.withRequiredByHostDependencies.Clone(),
 		// clone intermediate query.
-		sql:    hq.sql.Clone(),
-		path:   hq.path,
-		unique: hq.unique,
+		sql:  hq.sql.Clone(),
+		path: hq.path,
 	}
 }
 
 // WithDisk tells the query-builder to eager-load the nodes that are connected to
 // the "Disk" edge. The optional arguments are used to configure the query builder of the edge.
 func (hq *HostQuery) WithDisk(opts ...func(*DiskQuery)) *HostQuery {
-	query := &DiskQuery{config: hq.config}
+	query := (&DiskClient{config: hq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -413,7 +427,7 @@ func (hq *HostQuery) WithDisk(opts ...func(*DiskQuery)) *HostQuery {
 // WithUsers tells the query-builder to eager-load the nodes that are connected to
 // the "Users" edge. The optional arguments are used to configure the query builder of the edge.
 func (hq *HostQuery) WithUsers(opts ...func(*UserQuery)) *HostQuery {
-	query := &UserQuery{config: hq.config}
+	query := (&UserClient{config: hq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -424,7 +438,7 @@ func (hq *HostQuery) WithUsers(opts ...func(*UserQuery)) *HostQuery {
 // WithEnvironment tells the query-builder to eager-load the nodes that are connected to
 // the "Environment" edge. The optional arguments are used to configure the query builder of the edge.
 func (hq *HostQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *HostQuery {
-	query := &EnvironmentQuery{config: hq.config}
+	query := (&EnvironmentClient{config: hq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -435,7 +449,7 @@ func (hq *HostQuery) WithEnvironment(opts ...func(*EnvironmentQuery)) *HostQuery
 // WithIncludedNetworks tells the query-builder to eager-load the nodes that are connected to
 // the "IncludedNetworks" edge. The optional arguments are used to configure the query builder of the edge.
 func (hq *HostQuery) WithIncludedNetworks(opts ...func(*IncludedNetworkQuery)) *HostQuery {
-	query := &IncludedNetworkQuery{config: hq.config}
+	query := (&IncludedNetworkClient{config: hq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -446,7 +460,7 @@ func (hq *HostQuery) WithIncludedNetworks(opts ...func(*IncludedNetworkQuery)) *
 // WithDependOnHostDependencies tells the query-builder to eager-load the nodes that are connected to
 // the "DependOnHostDependencies" edge. The optional arguments are used to configure the query builder of the edge.
 func (hq *HostQuery) WithDependOnHostDependencies(opts ...func(*HostDependencyQuery)) *HostQuery {
-	query := &HostDependencyQuery{config: hq.config}
+	query := (&HostDependencyClient{config: hq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -457,7 +471,7 @@ func (hq *HostQuery) WithDependOnHostDependencies(opts ...func(*HostDependencyQu
 // WithRequiredByHostDependencies tells the query-builder to eager-load the nodes that are connected to
 // the "RequiredByHostDependencies" edge. The optional arguments are used to configure the query builder of the edge.
 func (hq *HostQuery) WithRequiredByHostDependencies(opts ...func(*HostDependencyQuery)) *HostQuery {
-	query := &HostDependencyQuery{config: hq.config}
+	query := (&HostDependencyClient{config: hq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -471,25 +485,20 @@ func (hq *HostQuery) WithRequiredByHostDependencies(opts ...func(*HostDependency
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Host.Query().
-//		GroupBy(host.FieldHclID).
+//		GroupBy(host.FieldHCLID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (hq *HostQuery) GroupBy(field string, fields ...string) *HostGroupBy {
-	grbuild := &HostGroupBy{config: hq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := hq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return hq.sqlQuery(ctx), nil
-	}
+	hq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &HostGroupBy{build: hq}
+	grbuild.flds = &hq.ctx.Fields
 	grbuild.label = host.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -499,22 +508,37 @@ func (hq *HostQuery) GroupBy(field string, fields ...string) *HostGroupBy {
 // Example:
 //
 //	var v []struct {
-//		HclID string `json:"hcl_id,omitempty" hcl:"id,label"`
+//		HCLID string `json:"hcl_id,omitempty" hcl:"id,label"`
 //	}
 //
 //	client.Host.Query().
-//		Select(host.FieldHclID).
+//		Select(host.FieldHCLID).
 //		Scan(ctx, &v)
 func (hq *HostQuery) Select(fields ...string) *HostSelect {
-	hq.fields = append(hq.fields, fields...)
-	selbuild := &HostSelect{HostQuery: hq}
-	selbuild.label = host.Label
-	selbuild.flds, selbuild.scan = &hq.fields, selbuild.Scan
-	return selbuild
+	hq.ctx.Fields = append(hq.ctx.Fields, fields...)
+	sbuild := &HostSelect{HostQuery: hq}
+	sbuild.label = host.Label
+	sbuild.flds, sbuild.scan = &hq.ctx.Fields, sbuild.Scan
+	return sbuild
+}
+
+// Aggregate returns a HostSelect configured with the given aggregations.
+func (hq *HostQuery) Aggregate(fns ...AggregateFunc) *HostSelect {
+	return hq.Select().Aggregate(fns...)
 }
 
 func (hq *HostQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range hq.fields {
+	for _, inter := range hq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, hq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range hq.ctx.Fields {
 		if !host.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -549,14 +573,17 @@ func (hq *HostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Host, e
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, host.ForeignKeys...)
 	}
-	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Host).scanValues(nil, columns)
 	}
-	_spec.Assign = func(columns []string, values []interface{}) error {
+	_spec.Assign = func(columns []string, values []any) error {
 		node := &Host{config: hq.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(hq.modifiers) > 0 {
+		_spec.Modifiers = hq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -611,6 +638,39 @@ func (hq *HostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Host, e
 			return nil, err
 		}
 	}
+	for name, query := range hq.withNamedUsers {
+		if err := hq.loadUsers(ctx, query, nodes,
+			func(n *Host) { n.appendNamedUsers(name) },
+			func(n *Host, e *User) { n.appendNamedUsers(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for name, query := range hq.withNamedIncludedNetworks {
+		if err := hq.loadIncludedNetworks(ctx, query, nodes,
+			func(n *Host) { n.appendNamedIncludedNetworks(name) },
+			func(n *Host, e *IncludedNetwork) { n.appendNamedIncludedNetworks(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for name, query := range hq.withNamedDependOnHostDependencies {
+		if err := hq.loadDependOnHostDependencies(ctx, query, nodes,
+			func(n *Host) { n.appendNamedDependOnHostDependencies(name) },
+			func(n *Host, e *HostDependency) { n.appendNamedDependOnHostDependencies(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for name, query := range hq.withNamedRequiredByHostDependencies {
+		if err := hq.loadRequiredByHostDependencies(ctx, query, nodes,
+			func(n *Host) { n.appendNamedRequiredByHostDependencies(name) },
+			func(n *Host, e *HostDependency) { n.appendNamedRequiredByHostDependencies(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range hq.loadTotal {
+		if err := hq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -623,7 +683,7 @@ func (hq *HostQuery) loadDisk(ctx context.Context, query *DiskQuery, nodes []*Ho
 	}
 	query.withFKs = true
 	query.Where(predicate.Disk(func(s *sql.Selector) {
-		s.Where(sql.InValues(host.DiskColumn, fks...))
+		s.Where(sql.InValues(s.C(host.DiskColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -636,7 +696,7 @@ func (hq *HostQuery) loadDisk(ctx context.Context, query *DiskQuery, nodes []*Ho
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_disk" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "host_disk" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -654,7 +714,7 @@ func (hq *HostQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*H
 	}
 	query.withFKs = true
 	query.Where(predicate.User(func(s *sql.Selector) {
-		s.Where(sql.InValues(host.UsersColumn, fks...))
+		s.Where(sql.InValues(s.C(host.UsersColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -667,7 +727,7 @@ func (hq *HostQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*H
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_users" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "host_users" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -685,6 +745,9 @@ func (hq *HostQuery) loadEnvironment(ctx context.Context, query *EnvironmentQuer
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(environment.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -725,27 +788,30 @@ func (hq *HostQuery) loadIncludedNetworks(ctx context.Context, query *IncludedNe
 	if err := query.prepareQuery(ctx); err != nil {
 		return err
 	}
-	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
-		assign := spec.Assign
-		values := spec.ScanValues
-		spec.ScanValues = func(columns []string) ([]interface{}, error) {
-			values, err := values(columns[1:])
-			if err != nil {
-				return nil, err
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
 			}
-			return append([]interface{}{new(uuid.UUID)}, values...), nil
-		}
-		spec.Assign = func(columns []string, values []interface{}) error {
-			outValue := *values[0].(*uuid.UUID)
-			inValue := *values[1].(*uuid.UUID)
-			if nids[inValue] == nil {
-				nids[inValue] = map[*Host]struct{}{byID[outValue]: struct{}{}}
-				return assign(columns[1:], values[1:])
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Host]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
 			}
-			nids[inValue][byID[outValue]] = struct{}{}
-			return nil
-		}
+		})
 	})
+	neighbors, err := withInterceptors[[]*IncludedNetwork](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
@@ -772,7 +838,7 @@ func (hq *HostQuery) loadDependOnHostDependencies(ctx context.Context, query *Ho
 	}
 	query.withFKs = true
 	query.Where(predicate.HostDependency(func(s *sql.Selector) {
-		s.Where(sql.InValues(host.DependOnHostDependenciesColumn, fks...))
+		s.Where(sql.InValues(s.C(host.DependOnHostDependenciesColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -785,7 +851,7 @@ func (hq *HostQuery) loadDependOnHostDependencies(ctx context.Context, query *Ho
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_dependency_depend_on_host" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "host_dependency_depend_on_host" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -803,7 +869,7 @@ func (hq *HostQuery) loadRequiredByHostDependencies(ctx context.Context, query *
 	}
 	query.withFKs = true
 	query.Where(predicate.HostDependency(func(s *sql.Selector) {
-		s.Where(sql.InValues(host.RequiredByHostDependenciesColumn, fks...))
+		s.Where(sql.InValues(s.C(host.RequiredByHostDependenciesColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -816,7 +882,7 @@ func (hq *HostQuery) loadRequiredByHostDependencies(ctx context.Context, query *
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "host_dependency_required_by" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "host_dependency_required_by" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -825,38 +891,25 @@ func (hq *HostQuery) loadRequiredByHostDependencies(ctx context.Context, query *
 
 func (hq *HostQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := hq.querySpec()
-	_spec.Node.Columns = hq.fields
-	if len(hq.fields) > 0 {
-		_spec.Unique = hq.unique != nil && *hq.unique
+	if len(hq.modifiers) > 0 {
+		_spec.Modifiers = hq.modifiers
+	}
+	_spec.Node.Columns = hq.ctx.Fields
+	if len(hq.ctx.Fields) > 0 {
+		_spec.Unique = hq.ctx.Unique != nil && *hq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, hq.driver, _spec)
 }
 
-func (hq *HostQuery) sqlExist(ctx context.Context) (bool, error) {
-	n, err := hq.sqlCount(ctx)
-	if err != nil {
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (hq *HostQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   host.Table,
-			Columns: host.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: host.FieldID,
-			},
-		},
-		From:   hq.sql,
-		Unique: true,
-	}
-	if unique := hq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(host.Table, host.Columns, sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID))
+	_spec.From = hq.sql
+	if unique := hq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if hq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := hq.fields; len(fields) > 0 {
+	if fields := hq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, host.FieldID)
 		for i := range fields {
@@ -872,10 +925,10 @@ func (hq *HostQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := hq.limit; limit != nil {
+	if limit := hq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := hq.offset; offset != nil {
+	if offset := hq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := hq.order; len(ps) > 0 {
@@ -891,7 +944,7 @@ func (hq *HostQuery) querySpec() *sqlgraph.QuerySpec {
 func (hq *HostQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(hq.driver.Dialect())
 	t1 := builder.Table(host.Table)
-	columns := hq.fields
+	columns := hq.ctx.Fields
 	if len(columns) == 0 {
 		columns = host.Columns
 	}
@@ -900,7 +953,7 @@ func (hq *HostQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = hq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if hq.unique != nil && *hq.unique {
+	if hq.ctx.Unique != nil && *hq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range hq.predicates {
@@ -909,26 +962,77 @@ func (hq *HostQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range hq.order {
 		p(selector)
 	}
-	if offset := hq.offset; offset != nil {
+	if offset := hq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := hq.limit; limit != nil {
+	if limit := hq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
 }
 
+// WithNamedUsers tells the query-builder to eager-load the nodes that are connected to the "Users"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (hq *HostQuery) WithNamedUsers(name string, opts ...func(*UserQuery)) *HostQuery {
+	query := (&UserClient{config: hq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if hq.withNamedUsers == nil {
+		hq.withNamedUsers = make(map[string]*UserQuery)
+	}
+	hq.withNamedUsers[name] = query
+	return hq
+}
+
+// WithNamedIncludedNetworks tells the query-builder to eager-load the nodes that are connected to the "IncludedNetworks"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (hq *HostQuery) WithNamedIncludedNetworks(name string, opts ...func(*IncludedNetworkQuery)) *HostQuery {
+	query := (&IncludedNetworkClient{config: hq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if hq.withNamedIncludedNetworks == nil {
+		hq.withNamedIncludedNetworks = make(map[string]*IncludedNetworkQuery)
+	}
+	hq.withNamedIncludedNetworks[name] = query
+	return hq
+}
+
+// WithNamedDependOnHostDependencies tells the query-builder to eager-load the nodes that are connected to the "DependOnHostDependencies"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (hq *HostQuery) WithNamedDependOnHostDependencies(name string, opts ...func(*HostDependencyQuery)) *HostQuery {
+	query := (&HostDependencyClient{config: hq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if hq.withNamedDependOnHostDependencies == nil {
+		hq.withNamedDependOnHostDependencies = make(map[string]*HostDependencyQuery)
+	}
+	hq.withNamedDependOnHostDependencies[name] = query
+	return hq
+}
+
+// WithNamedRequiredByHostDependencies tells the query-builder to eager-load the nodes that are connected to the "RequiredByHostDependencies"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (hq *HostQuery) WithNamedRequiredByHostDependencies(name string, opts ...func(*HostDependencyQuery)) *HostQuery {
+	query := (&HostDependencyClient{config: hq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if hq.withNamedRequiredByHostDependencies == nil {
+		hq.withNamedRequiredByHostDependencies = make(map[string]*HostDependencyQuery)
+	}
+	hq.withNamedRequiredByHostDependencies[name] = query
+	return hq
+}
+
 // HostGroupBy is the group-by builder for Host entities.
 type HostGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *HostQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -937,74 +1041,77 @@ func (hgb *HostGroupBy) Aggregate(fns ...AggregateFunc) *HostGroupBy {
 	return hgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
-func (hgb *HostGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := hgb.path(ctx)
-	if err != nil {
+// Scan applies the selector query and scans the result into the given value.
+func (hgb *HostGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, hgb.build.ctx, "GroupBy")
+	if err := hgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	hgb.sql = query
-	return hgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*HostQuery, *HostGroupBy](ctx, hgb.build, hgb, hgb.build.inters, v)
 }
 
-func (hgb *HostGroupBy) sqlScan(ctx context.Context, v interface{}) error {
-	for _, f := range hgb.fields {
-		if !host.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (hgb *HostGroupBy) sqlScan(ctx context.Context, root *HostQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(hgb.fns))
+	for _, fn := range hgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := hgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*hgb.flds)+len(hgb.fns))
+		for _, f := range *hgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*hgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := hgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := hgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (hgb *HostGroupBy) sqlQuery() *sql.Selector {
-	selector := hgb.sql.Select()
-	aggregation := make([]string, 0, len(hgb.fns))
-	for _, fn := range hgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	// If no columns were selected in a custom aggregation function, the default
-	// selection is the fields used for "group-by", and the aggregation functions.
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(hgb.fields)+len(hgb.fns))
-		for _, f := range hgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(hgb.fields...)...)
-}
-
 // HostSelect is the builder for selecting fields of Host entities.
 type HostSelect struct {
 	*HostQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
+}
+
+// Aggregate adds the given aggregation functions to the selector query.
+func (hs *HostSelect) Aggregate(fns ...AggregateFunc) *HostSelect {
+	hs.fns = append(hs.fns, fns...)
+	return hs
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (hs *HostSelect) Scan(ctx context.Context, v interface{}) error {
+func (hs *HostSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, hs.ctx, "Select")
 	if err := hs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	hs.sql = hs.HostQuery.sqlQuery(ctx)
-	return hs.sqlScan(ctx, v)
+	return scanWithInterceptors[*HostQuery, *HostSelect](ctx, hs.HostQuery, hs, hs.inters, v)
 }
 
-func (hs *HostSelect) sqlScan(ctx context.Context, v interface{}) error {
+func (hs *HostSelect) sqlScan(ctx context.Context, root *HostQuery, v any) error {
+	selector := root.sqlQuery(ctx)
+	aggregation := make([]string, 0, len(hs.fns))
+	for _, fn := range hs.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	switch n := len(*hs.selector.flds); {
+	case n == 0 && len(aggregation) > 0:
+		selector.Select(aggregation...)
+	case n != 0 && len(aggregation) > 0:
+		selector.AppendSelect(aggregation...)
+	}
 	rows := &sql.Rows{}
-	query, args := hs.sql.Query()
+	query, args := selector.Query()
 	if err := hs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

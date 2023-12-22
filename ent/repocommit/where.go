@@ -11,568 +11,372 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.RepoCommit(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.RepoCommit(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		v := make([]interface{}, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.RepoCommit(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.RepoCommit(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.RepoCommit(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.RepoCommit(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.RepoCommit(sql.FieldLTE(FieldID, id))
 }
 
 // Revision applies equality check predicate on the "revision" field. It's identical to RevisionEQ.
 func Revision(v int) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRevision), v))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldRevision, v))
 }
 
 // Hash applies equality check predicate on the "hash" field. It's identical to HashEQ.
 func Hash(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldHash, v))
 }
 
 // PgpSignature applies equality check predicate on the "pgp_signature" field. It's identical to PgpSignatureEQ.
 func PgpSignature(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldPgpSignature, v))
 }
 
 // Message applies equality check predicate on the "message" field. It's identical to MessageEQ.
 func Message(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldMessage, v))
 }
 
 // TreeHash applies equality check predicate on the "tree_hash" field. It's identical to TreeHashEQ.
 func TreeHash(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldTreeHash, v))
 }
 
 // RevisionEQ applies the EQ predicate on the "revision" field.
 func RevisionEQ(v int) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRevision), v))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldRevision, v))
 }
 
 // RevisionNEQ applies the NEQ predicate on the "revision" field.
 func RevisionNEQ(v int) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldRevision), v))
-	})
+	return predicate.RepoCommit(sql.FieldNEQ(FieldRevision, v))
 }
 
 // RevisionIn applies the In predicate on the "revision" field.
 func RevisionIn(vs ...int) predicate.RepoCommit {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldRevision), v...))
-	})
+	return predicate.RepoCommit(sql.FieldIn(FieldRevision, vs...))
 }
 
 // RevisionNotIn applies the NotIn predicate on the "revision" field.
 func RevisionNotIn(vs ...int) predicate.RepoCommit {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldRevision), v...))
-	})
+	return predicate.RepoCommit(sql.FieldNotIn(FieldRevision, vs...))
 }
 
 // RevisionGT applies the GT predicate on the "revision" field.
 func RevisionGT(v int) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldRevision), v))
-	})
+	return predicate.RepoCommit(sql.FieldGT(FieldRevision, v))
 }
 
 // RevisionGTE applies the GTE predicate on the "revision" field.
 func RevisionGTE(v int) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldRevision), v))
-	})
+	return predicate.RepoCommit(sql.FieldGTE(FieldRevision, v))
 }
 
 // RevisionLT applies the LT predicate on the "revision" field.
 func RevisionLT(v int) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldRevision), v))
-	})
+	return predicate.RepoCommit(sql.FieldLT(FieldRevision, v))
 }
 
 // RevisionLTE applies the LTE predicate on the "revision" field.
 func RevisionLTE(v int) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldRevision), v))
-	})
+	return predicate.RepoCommit(sql.FieldLTE(FieldRevision, v))
 }
 
 // HashEQ applies the EQ predicate on the "hash" field.
 func HashEQ(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldHash, v))
 }
 
 // HashNEQ applies the NEQ predicate on the "hash" field.
 func HashNEQ(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldNEQ(FieldHash, v))
 }
 
 // HashIn applies the In predicate on the "hash" field.
 func HashIn(vs ...string) predicate.RepoCommit {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldHash), v...))
-	})
+	return predicate.RepoCommit(sql.FieldIn(FieldHash, vs...))
 }
 
 // HashNotIn applies the NotIn predicate on the "hash" field.
 func HashNotIn(vs ...string) predicate.RepoCommit {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldHash), v...))
-	})
+	return predicate.RepoCommit(sql.FieldNotIn(FieldHash, vs...))
 }
 
 // HashGT applies the GT predicate on the "hash" field.
 func HashGT(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldGT(FieldHash, v))
 }
 
 // HashGTE applies the GTE predicate on the "hash" field.
 func HashGTE(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldGTE(FieldHash, v))
 }
 
 // HashLT applies the LT predicate on the "hash" field.
 func HashLT(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldLT(FieldHash, v))
 }
 
 // HashLTE applies the LTE predicate on the "hash" field.
 func HashLTE(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldLTE(FieldHash, v))
 }
 
 // HashContains applies the Contains predicate on the "hash" field.
 func HashContains(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldContains(FieldHash, v))
 }
 
 // HashHasPrefix applies the HasPrefix predicate on the "hash" field.
 func HashHasPrefix(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldHasPrefix(FieldHash, v))
 }
 
 // HashHasSuffix applies the HasSuffix predicate on the "hash" field.
 func HashHasSuffix(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldHasSuffix(FieldHash, v))
 }
 
 // HashEqualFold applies the EqualFold predicate on the "hash" field.
 func HashEqualFold(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldEqualFold(FieldHash, v))
 }
 
 // HashContainsFold applies the ContainsFold predicate on the "hash" field.
 func HashContainsFold(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldContainsFold(FieldHash, v))
 }
 
 // PgpSignatureEQ applies the EQ predicate on the "pgp_signature" field.
 func PgpSignatureEQ(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldPgpSignature, v))
 }
 
 // PgpSignatureNEQ applies the NEQ predicate on the "pgp_signature" field.
 func PgpSignatureNEQ(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldNEQ(FieldPgpSignature, v))
 }
 
 // PgpSignatureIn applies the In predicate on the "pgp_signature" field.
 func PgpSignatureIn(vs ...string) predicate.RepoCommit {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldPgpSignature), v...))
-	})
+	return predicate.RepoCommit(sql.FieldIn(FieldPgpSignature, vs...))
 }
 
 // PgpSignatureNotIn applies the NotIn predicate on the "pgp_signature" field.
 func PgpSignatureNotIn(vs ...string) predicate.RepoCommit {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldPgpSignature), v...))
-	})
+	return predicate.RepoCommit(sql.FieldNotIn(FieldPgpSignature, vs...))
 }
 
 // PgpSignatureGT applies the GT predicate on the "pgp_signature" field.
 func PgpSignatureGT(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldGT(FieldPgpSignature, v))
 }
 
 // PgpSignatureGTE applies the GTE predicate on the "pgp_signature" field.
 func PgpSignatureGTE(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldGTE(FieldPgpSignature, v))
 }
 
 // PgpSignatureLT applies the LT predicate on the "pgp_signature" field.
 func PgpSignatureLT(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldLT(FieldPgpSignature, v))
 }
 
 // PgpSignatureLTE applies the LTE predicate on the "pgp_signature" field.
 func PgpSignatureLTE(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldLTE(FieldPgpSignature, v))
 }
 
 // PgpSignatureContains applies the Contains predicate on the "pgp_signature" field.
 func PgpSignatureContains(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldContains(FieldPgpSignature, v))
 }
 
 // PgpSignatureHasPrefix applies the HasPrefix predicate on the "pgp_signature" field.
 func PgpSignatureHasPrefix(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldHasPrefix(FieldPgpSignature, v))
 }
 
 // PgpSignatureHasSuffix applies the HasSuffix predicate on the "pgp_signature" field.
 func PgpSignatureHasSuffix(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldHasSuffix(FieldPgpSignature, v))
 }
 
 // PgpSignatureEqualFold applies the EqualFold predicate on the "pgp_signature" field.
 func PgpSignatureEqualFold(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldEqualFold(FieldPgpSignature, v))
 }
 
 // PgpSignatureContainsFold applies the ContainsFold predicate on the "pgp_signature" field.
 func PgpSignatureContainsFold(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldPgpSignature), v))
-	})
+	return predicate.RepoCommit(sql.FieldContainsFold(FieldPgpSignature, v))
 }
 
 // MessageEQ applies the EQ predicate on the "message" field.
 func MessageEQ(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldMessage, v))
 }
 
 // MessageNEQ applies the NEQ predicate on the "message" field.
 func MessageNEQ(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldNEQ(FieldMessage, v))
 }
 
 // MessageIn applies the In predicate on the "message" field.
 func MessageIn(vs ...string) predicate.RepoCommit {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldMessage), v...))
-	})
+	return predicate.RepoCommit(sql.FieldIn(FieldMessage, vs...))
 }
 
 // MessageNotIn applies the NotIn predicate on the "message" field.
 func MessageNotIn(vs ...string) predicate.RepoCommit {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldMessage), v...))
-	})
+	return predicate.RepoCommit(sql.FieldNotIn(FieldMessage, vs...))
 }
 
 // MessageGT applies the GT predicate on the "message" field.
 func MessageGT(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldGT(FieldMessage, v))
 }
 
 // MessageGTE applies the GTE predicate on the "message" field.
 func MessageGTE(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldGTE(FieldMessage, v))
 }
 
 // MessageLT applies the LT predicate on the "message" field.
 func MessageLT(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldLT(FieldMessage, v))
 }
 
 // MessageLTE applies the LTE predicate on the "message" field.
 func MessageLTE(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldLTE(FieldMessage, v))
 }
 
 // MessageContains applies the Contains predicate on the "message" field.
 func MessageContains(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldContains(FieldMessage, v))
 }
 
 // MessageHasPrefix applies the HasPrefix predicate on the "message" field.
 func MessageHasPrefix(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldHasPrefix(FieldMessage, v))
 }
 
 // MessageHasSuffix applies the HasSuffix predicate on the "message" field.
 func MessageHasSuffix(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldHasSuffix(FieldMessage, v))
 }
 
 // MessageEqualFold applies the EqualFold predicate on the "message" field.
 func MessageEqualFold(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldEqualFold(FieldMessage, v))
 }
 
 // MessageContainsFold applies the ContainsFold predicate on the "message" field.
 func MessageContainsFold(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldMessage), v))
-	})
+	return predicate.RepoCommit(sql.FieldContainsFold(FieldMessage, v))
 }
 
 // TreeHashEQ applies the EQ predicate on the "tree_hash" field.
 func TreeHashEQ(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldEQ(FieldTreeHash, v))
 }
 
 // TreeHashNEQ applies the NEQ predicate on the "tree_hash" field.
 func TreeHashNEQ(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldNEQ(FieldTreeHash, v))
 }
 
 // TreeHashIn applies the In predicate on the "tree_hash" field.
 func TreeHashIn(vs ...string) predicate.RepoCommit {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldTreeHash), v...))
-	})
+	return predicate.RepoCommit(sql.FieldIn(FieldTreeHash, vs...))
 }
 
 // TreeHashNotIn applies the NotIn predicate on the "tree_hash" field.
 func TreeHashNotIn(vs ...string) predicate.RepoCommit {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldTreeHash), v...))
-	})
+	return predicate.RepoCommit(sql.FieldNotIn(FieldTreeHash, vs...))
 }
 
 // TreeHashGT applies the GT predicate on the "tree_hash" field.
 func TreeHashGT(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldGT(FieldTreeHash, v))
 }
 
 // TreeHashGTE applies the GTE predicate on the "tree_hash" field.
 func TreeHashGTE(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldGTE(FieldTreeHash, v))
 }
 
 // TreeHashLT applies the LT predicate on the "tree_hash" field.
 func TreeHashLT(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldLT(FieldTreeHash, v))
 }
 
 // TreeHashLTE applies the LTE predicate on the "tree_hash" field.
 func TreeHashLTE(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldLTE(FieldTreeHash, v))
 }
 
 // TreeHashContains applies the Contains predicate on the "tree_hash" field.
 func TreeHashContains(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldContains(FieldTreeHash, v))
 }
 
 // TreeHashHasPrefix applies the HasPrefix predicate on the "tree_hash" field.
 func TreeHashHasPrefix(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldHasPrefix(FieldTreeHash, v))
 }
 
 // TreeHashHasSuffix applies the HasSuffix predicate on the "tree_hash" field.
 func TreeHashHasSuffix(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldHasSuffix(FieldTreeHash, v))
 }
 
 // TreeHashEqualFold applies the EqualFold predicate on the "tree_hash" field.
 func TreeHashEqualFold(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldEqualFold(FieldTreeHash, v))
 }
 
 // TreeHashContainsFold applies the ContainsFold predicate on the "tree_hash" field.
 func TreeHashContainsFold(v string) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldTreeHash), v))
-	})
+	return predicate.RepoCommit(sql.FieldContainsFold(FieldTreeHash, v))
 }
 
 // HasRepository applies the HasEdge predicate on the "Repository" edge.
@@ -580,7 +384,6 @@ func HasRepository() predicate.RepoCommit {
 	return predicate.RepoCommit(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RepositoryTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, RepositoryTable, RepositoryColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -590,11 +393,7 @@ func HasRepository() predicate.RepoCommit {
 // HasRepositoryWith applies the HasEdge predicate on the "Repository" edge with a given conditions (other predicates).
 func HasRepositoryWith(preds ...predicate.Repository) predicate.RepoCommit {
 	return predicate.RepoCommit(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RepositoryInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, RepositoryTable, RepositoryColumn),
-		)
+		step := newRepositoryStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -605,32 +404,15 @@ func HasRepositoryWith(preds ...predicate.Repository) predicate.RepoCommit {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.RepoCommit) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.RepoCommit(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.RepoCommit) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.RepoCommit(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.RepoCommit) predicate.RepoCommit {
-	return predicate.RepoCommit(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.RepoCommit(sql.NotPredicates(p))
 }

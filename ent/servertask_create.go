@@ -196,50 +196,8 @@ func (stc *ServerTaskCreate) Mutation() *ServerTaskMutation {
 
 // Save creates the ServerTask in the database.
 func (stc *ServerTaskCreate) Save(ctx context.Context) (*ServerTask, error) {
-	var (
-		err  error
-		node *ServerTask
-	)
 	stc.defaults()
-	if len(stc.hooks) == 0 {
-		if err = stc.check(); err != nil {
-			return nil, err
-		}
-		node, err = stc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ServerTaskMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = stc.check(); err != nil {
-				return nil, err
-			}
-			stc.mutation = mutation
-			if node, err = stc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(stc.hooks) - 1; i >= 0; i-- {
-			if stc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = stc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, stc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*ServerTask)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from ServerTaskMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, stc.sqlSave, stc.mutation, stc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -292,6 +250,9 @@ func (stc *ServerTaskCreate) check() error {
 }
 
 func (stc *ServerTaskCreate) sqlSave(ctx context.Context) (*ServerTask, error) {
+	if err := stc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := stc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, stc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -306,62 +267,38 @@ func (stc *ServerTaskCreate) sqlSave(ctx context.Context) (*ServerTask, error) {
 			return nil, err
 		}
 	}
+	stc.mutation.id = &_node.ID
+	stc.mutation.done = true
 	return _node, nil
 }
 
 func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 	var (
 		_node = &ServerTask{config: stc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: servertask.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: servertask.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(servertask.Table, sqlgraph.NewFieldSpec(servertask.FieldID, field.TypeUUID))
 	)
 	if id, ok := stc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := stc.mutation.GetType(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: servertask.FieldType,
-		})
+		_spec.SetField(servertask.FieldType, field.TypeEnum, value)
 		_node.Type = value
 	}
 	if value, ok := stc.mutation.StartTime(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Value:  value,
-			Column: servertask.FieldStartTime,
-		})
+		_spec.SetField(servertask.FieldStartTime, field.TypeTime, value)
 		_node.StartTime = value
 	}
 	if value, ok := stc.mutation.EndTime(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Value:  value,
-			Column: servertask.FieldEndTime,
-		})
+		_spec.SetField(servertask.FieldEndTime, field.TypeTime, value)
 		_node.EndTime = value
 	}
 	if value, ok := stc.mutation.Errors(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: servertask.FieldErrors,
-		})
+		_spec.SetField(servertask.FieldErrors, field.TypeJSON, value)
 		_node.Errors = value
 	}
 	if value, ok := stc.mutation.LogFilePath(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: servertask.FieldLogFilePath,
-		})
+		_spec.SetField(servertask.FieldLogFilePath, field.TypeString, value)
 		_node.LogFilePath = value
 	}
 	if nodes := stc.mutation.AuthUserIDs(); len(nodes) > 0 {
@@ -372,10 +309,7 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 			Columns: []string{servertask.AuthUserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: authuser.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(authuser.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -392,10 +326,7 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 			Columns: []string{servertask.StatusColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: status.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(status.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -411,10 +342,7 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 			Columns: []string{servertask.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -431,10 +359,7 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 			Columns: []string{servertask.BuildColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: build.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(build.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -451,10 +376,7 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 			Columns: []string{servertask.BuildCommitColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: buildcommit.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(buildcommit.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -471,10 +393,7 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 			Columns: []string{servertask.GinFileMiddlewareColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: ginfilemiddleware.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(ginfilemiddleware.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -488,11 +407,15 @@ func (stc *ServerTaskCreate) createSpec() (*ServerTask, *sqlgraph.CreateSpec) {
 // ServerTaskCreateBulk is the builder for creating many ServerTask entities in bulk.
 type ServerTaskCreateBulk struct {
 	config
+	err      error
 	builders []*ServerTaskCreate
 }
 
 // Save creates the ServerTask entities in the database.
 func (stcb *ServerTaskCreateBulk) Save(ctx context.Context) ([]*ServerTask, error) {
+	if stcb.err != nil {
+		return nil, stcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(stcb.builders))
 	nodes := make([]*ServerTask, len(stcb.builders))
 	mutators := make([]Mutator, len(stcb.builders))
@@ -509,8 +432,8 @@ func (stcb *ServerTaskCreateBulk) Save(ctx context.Context) ([]*ServerTask, erro
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, stcb.builders[i+1].mutation)
 				} else {

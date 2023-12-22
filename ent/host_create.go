@@ -25,9 +25,9 @@ type HostCreate struct {
 	hooks    []Hook
 }
 
-// SetHclID sets the "hcl_id" field.
-func (hc *HostCreate) SetHclID(s string) *HostCreate {
-	hc.mutation.SetHclID(s)
+// SetHCLID sets the "hcl_id" field.
+func (hc *HostCreate) SetHCLID(s string) *HostCreate {
+	hc.mutation.SetHCLID(s)
 	return hc
 }
 
@@ -234,50 +234,8 @@ func (hc *HostCreate) Mutation() *HostMutation {
 
 // Save creates the Host in the database.
 func (hc *HostCreate) Save(ctx context.Context) (*Host, error) {
-	var (
-		err  error
-		node *Host
-	)
 	hc.defaults()
-	if len(hc.hooks) == 0 {
-		if err = hc.check(); err != nil {
-			return nil, err
-		}
-		node, err = hc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*HostMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = hc.check(); err != nil {
-				return nil, err
-			}
-			hc.mutation = mutation
-			if node, err = hc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(hc.hooks) - 1; i >= 0; i-- {
-			if hc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = hc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, hc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Host)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from HostMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, hc.sqlSave, hc.mutation, hc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -312,7 +270,7 @@ func (hc *HostCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (hc *HostCreate) check() error {
-	if _, ok := hc.mutation.HclID(); !ok {
+	if _, ok := hc.mutation.HCLID(); !ok {
 		return &ValidationError{Name: "hcl_id", err: errors.New(`ent: missing required field "Host.hcl_id"`)}
 	}
 	if _, ok := hc.mutation.Hostname(); !ok {
@@ -355,6 +313,9 @@ func (hc *HostCreate) check() error {
 }
 
 func (hc *HostCreate) sqlSave(ctx context.Context) (*Host, error) {
+	if err := hc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := hc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, hc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -369,142 +330,78 @@ func (hc *HostCreate) sqlSave(ctx context.Context) (*Host, error) {
 			return nil, err
 		}
 	}
+	hc.mutation.id = &_node.ID
+	hc.mutation.done = true
 	return _node, nil
 }
 
 func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Host{config: hc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: host.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: host.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(host.Table, sqlgraph.NewFieldSpec(host.FieldID, field.TypeUUID))
 	)
 	if id, ok := hc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := hc.mutation.HclID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldHclID,
-		})
-		_node.HclID = value
+	if value, ok := hc.mutation.HCLID(); ok {
+		_spec.SetField(host.FieldHCLID, field.TypeString, value)
+		_node.HCLID = value
 	}
 	if value, ok := hc.mutation.Hostname(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldHostname,
-		})
+		_spec.SetField(host.FieldHostname, field.TypeString, value)
 		_node.Hostname = value
 	}
 	if value, ok := hc.mutation.Description(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldDescription,
-		})
+		_spec.SetField(host.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
 	if value, ok := hc.mutation.OS(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldOS,
-		})
+		_spec.SetField(host.FieldOS, field.TypeString, value)
 		_node.OS = value
 	}
 	if value, ok := hc.mutation.LastOctet(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: host.FieldLastOctet,
-		})
+		_spec.SetField(host.FieldLastOctet, field.TypeInt, value)
 		_node.LastOctet = value
 	}
 	if value, ok := hc.mutation.InstanceSize(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldInstanceSize,
-		})
+		_spec.SetField(host.FieldInstanceSize, field.TypeString, value)
 		_node.InstanceSize = value
 	}
 	if value, ok := hc.mutation.AllowMACChanges(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeBool,
-			Value:  value,
-			Column: host.FieldAllowMACChanges,
-		})
+		_spec.SetField(host.FieldAllowMACChanges, field.TypeBool, value)
 		_node.AllowMACChanges = value
 	}
 	if value, ok := hc.mutation.ExposedTCPPorts(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldExposedTCPPorts,
-		})
+		_spec.SetField(host.FieldExposedTCPPorts, field.TypeJSON, value)
 		_node.ExposedTCPPorts = value
 	}
 	if value, ok := hc.mutation.ExposedUDPPorts(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldExposedUDPPorts,
-		})
+		_spec.SetField(host.FieldExposedUDPPorts, field.TypeJSON, value)
 		_node.ExposedUDPPorts = value
 	}
 	if value, ok := hc.mutation.OverridePassword(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: host.FieldOverridePassword,
-		})
+		_spec.SetField(host.FieldOverridePassword, field.TypeString, value)
 		_node.OverridePassword = value
 	}
 	if value, ok := hc.mutation.Vars(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldVars,
-		})
+		_spec.SetField(host.FieldVars, field.TypeJSON, value)
 		_node.Vars = value
 	}
 	if value, ok := hc.mutation.UserGroups(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldUserGroups,
-		})
+		_spec.SetField(host.FieldUserGroups, field.TypeJSON, value)
 		_node.UserGroups = value
 	}
 	if value, ok := hc.mutation.ProvisionSteps(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldProvisionSteps,
-		})
+		_spec.SetField(host.FieldProvisionSteps, field.TypeJSON, value)
 		_node.ProvisionSteps = value
 	}
 	if value, ok := hc.mutation.ScheduledSteps(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldScheduledSteps,
-		})
+		_spec.SetField(host.FieldScheduledSteps, field.TypeJSON, value)
 		_node.ScheduledSteps = value
 	}
 	if value, ok := hc.mutation.Tags(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeJSON,
-			Value:  value,
-			Column: host.FieldTags,
-		})
+		_spec.SetField(host.FieldTags, field.TypeJSON, value)
 		_node.Tags = value
 	}
 	if nodes := hc.mutation.DiskIDs(); len(nodes) > 0 {
@@ -515,10 +412,7 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 			Columns: []string{host.DiskColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: disk.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(disk.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -534,10 +428,7 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 			Columns: []string{host.UsersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -553,10 +444,7 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 			Columns: []string{host.EnvironmentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: environment.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(environment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -573,10 +461,7 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 			Columns: host.IncludedNetworksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: includednetwork.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(includednetwork.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -592,10 +477,7 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 			Columns: []string{host.DependOnHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -611,10 +493,7 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 			Columns: []string{host.RequiredByHostDependenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hostdependency.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hostdependency.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -628,11 +507,15 @@ func (hc *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 // HostCreateBulk is the builder for creating many Host entities in bulk.
 type HostCreateBulk struct {
 	config
+	err      error
 	builders []*HostCreate
 }
 
 // Save creates the Host entities in the database.
 func (hcb *HostCreateBulk) Save(ctx context.Context) ([]*Host, error) {
+	if hcb.err != nil {
+		return nil, hcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(hcb.builders))
 	nodes := make([]*Host, len(hcb.builders))
 	mutators := make([]Mutator, len(hcb.builders))
@@ -649,8 +532,8 @@ func (hcb *HostCreateBulk) Save(ctx context.Context) ([]*Host, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, hcb.builders[i+1].mutation)
 				} else {
