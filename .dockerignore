@@ -2,13 +2,13 @@
 **/*.pyc
 *.sqlite
 
-node_modules
-dist
+**/node_modules
+**/dist
 
-*/builds/
-*/logs/
-*/users/
-*/repos/
+**/builds/
+**/logs/
+**/users/
+**/repos/
 
 session.cache
 *.env
