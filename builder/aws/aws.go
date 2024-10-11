@@ -214,6 +214,10 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		amiConfig.Architecture,
 		amiConfig.Owner,
 	)
+	if err != nil {
+		return fmt.Errorf("failed to identify AMI %s: %v", entHost.OS, err)
+	}
+
 
 	vmName := builder.generateVmName(entEnvironment, entTeam, entHost, entBuild, entProNetwork)
 	vpcID, ok := entTeam.Vars["VpcId"]
